@@ -3,21 +3,27 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(MonedaSeeder::class);
+        // Seed core catalogs
+        $this->call(CoreCatalogSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Create a default admin user if not exists
+        if (!User::query()->where('email', 'admin@paucara.test')->exists()) {
+            User::factory()->create([
+                'name' => 'Administrador',
+                'email' => 'admin@paucara.test',
+                'password' => Hash::make('password'),
+            ]);
+        }
+
+        // Seed roles and permissions and assign to admin
+        $this->call(RolesAndPermissionsSeeder::class);
     }
 }

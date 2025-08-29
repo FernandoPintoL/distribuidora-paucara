@@ -5,19 +5,31 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { Folder } from 'lucide-react';
 import AppLogo from './app-logo';
+
+import Controllers from '@/actions/App/Http/Controllers';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
+        title: 'Productos',
+        href: Controllers.ProductoController.index().url,
+        icon: Folder,
+        children: [
+            { title: 'Productos', href: Controllers.ProductoController.index().url, icon: Folder },
+            { title: 'Categorías', href: Controllers.CategoriaController.index().url, icon: Folder },
+            { title: 'Marcas', href: Controllers.MarcaController.index().url, icon: Folder },
+            { title: 'Unidades', href: Controllers.UnidadMedidaController.index().url, icon: Folder },
+            { title: 'Tipo Precios', href: Controllers.TipoPrecioController.index().url, icon: Folder },
+        ],
     },
+    { title: 'Almacenes', href: Controllers.AlmacenController.index().url, icon: Folder },
+    { title: 'Proveedores', href: Controllers.ProveedorController.index().url, icon: Folder },
+    { title: 'Monedas', href: Controllers.MonedaController.index().url, icon: Folder },
 ];
 
 const footerNavItems: NavItem[] = [
-    {
+    /*{
         title: 'Repository',
         href: 'https://github.com/laravel/react-starter-kit',
         icon: Folder,
@@ -26,7 +38,7 @@ const footerNavItems: NavItem[] = [
         title: 'Documentation',
         href: 'https://laravel.com/docs/starter-kits#react',
         icon: BookOpen,
-    },
+    },*/
 ];
 
 export function AppSidebar() {

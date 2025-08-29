@@ -1,27 +1,94 @@
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import { Link } from '@inertiajs/react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import {
+    SidebarGroup,
+    SidebarGroupLabel,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubButton,
+    SidebarMenuSubItem,
+} from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
+import type { NavItem } from '@/types';
 
-export function NavMain({ items = [] }: { items: NavItem[] }) {
-    const page = usePage();
+interface NavMainProps {
+    items: NavItem[];
+}
+
+export function NavMain({ items }: NavMainProps) {
+    // Estado para controlar qué elementos están expandidos
+    const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+    const toggleExpanded = (title: string) => {
+        setExpandedItems(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(title)) {
+                newSet.delete(title);
+            } else {
+                newSet.add(title);
+            }
+            return newSet;
+        });
+    };
+
     return (
-        <SidebarGroup className="px-2 py-0">
+        <SidebarGroup>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
             <SidebarMenu>
-                {items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                            asChild
-                            isActive={page.url.startsWith(typeof item.href === 'string' ? item.href : item.href.url)}
-                            tooltip={{ children: item.title }}
-                        >
-                            <Link href={item.href} prefetch>
-                                {item.icon && <item.icon />}
-                                <span>{item.title}</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
+                {items.map((item) => {
+                    const isExpanded = expandedItems.has(item.title);
+                    const hasChildren = item.children && item.children.length > 0;
+
+                    return (
+                        <SidebarMenuItem key={item.title}>
+                            <SidebarMenuButton
+                                asChild={!hasChildren}
+                                onClick={hasChildren ? () => toggleExpanded(item.title) : undefined}
+                                className={cn(
+                                    hasChildren && "cursor-pointer",
+                                    "group flex items-center justify-between w-full"
+                                )}
+                            >
+                                {hasChildren ? (
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-2">
+                                            {item.icon && <item.icon className="h-4 w-4" />}
+                                            <span>{item.title}</span>
+                                        </div>
+                                        {isExpanded ? (
+                                            <ChevronDown className="h-4 w-4 transition-transform" />
+                                        ) : (
+                                            <ChevronRight className="h-4 w-4 transition-transform" />
+                                        )}
+                                    </div>
+                                ) : (
+                                    <Link href={item.href}>
+                                        {item.icon && <item.icon className="h-4 w-4" />}
+                                        <span>{item.title}</span>
+                                    </Link>
+                                )}
+                            </SidebarMenuButton>
+
+                            {hasChildren && isExpanded && (
+                                <SidebarMenuSub>
+                                    {item.children!.map((child) => (
+                                        <SidebarMenuSubItem key={child.title}>
+                                            <SidebarMenuSubButton asChild>
+                                                <Link href={child.href}>
+                                                    {child.icon && <child.icon className="h-4 w-4" />}
+                                                    <span>{child.title}</span>
+                                                </Link>
+                                            </SidebarMenuSubButton>
+                                        </SidebarMenuSubItem>
+                                    ))}
+                                </SidebarMenuSub>
+                            )}
+                        </SidebarMenuItem>
+                    );
+                })}
             </SidebarMenu>
         </SidebarGroup>
     );
