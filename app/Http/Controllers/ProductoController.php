@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Almacen;
 use App\Models\Categoria;
+use App\Models\CodigoBarra;
 use App\Models\ImagenProducto;
 use App\Models\Marca;
-use App\Models\UnidadMedida;
 use App\Models\PrecioProducto;
 use App\Models\Producto;
-use App\Models\CodigoBarra;
-use App\Models\TipoPrecio; // Cambiar de enum a modelo
+use App\Models\StockProducto; // Cambiar de enum a modelo
+use App\Models\TipoPrecio;
+use App\Models\UnidadMedida;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,16 +31,16 @@ class ProductoController extends Controller
             ->with(['categoria:id,nombre', 'marca:id,nombre', 'unidad:id,codigo,nombre'])
             ->when($q, function ($qq) use ($q) {
                 $qq->where('nombre', 'ilike', "%$q%")
-                   ->orWhere('codigo_barras', 'ilike', "%$q%");
+                    ->orWhere('codigo_barras', 'ilike', "%$q%");
             })
-            ->when($categoriaId, fn($qq)=> $qq->where('categoria_id', $categoriaId))
-            ->when($marcaId, fn($qq)=> $qq->where('marca_id', $marcaId))
+            ->when($categoriaId, fn ($qq) => $qq->where('categoria_id', $categoriaId))
+            ->when($marcaId, fn ($qq) => $qq->where('marca_id', $marcaId))
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
 
-        $categorias = Categoria::query()->orderBy('nombre')->get(['id','nombre']);
-        $marcas = Marca::query()->orderBy('nombre')->get(['id','nombre']);
+        $categorias = Categoria::query()->orderBy('nombre')->get(['id', 'nombre']);
+        $marcas = Marca::query()->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('productos/index', [
             'productos' => $items,
@@ -50,7 +51,7 @@ class ProductoController extends Controller
             ],
             'categorias' => $categorias,
             'marcas' => $marcas,
-            'unidades' => UnidadMedida::orderBy('nombre')->get(['id','codigo','nombre']),
+            'unidades' => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'tipos_precio' => \App\Models\TipoPrecio::getOptions(),
         ]);
     }
@@ -59,10 +60,13 @@ class ProductoController extends Controller
     {
         return Inertia::render('productos/form', [
             'producto' => null,
-            'categorias' => Categoria::orderBy('nombre')->get(['id','nombre']),
-            'marcas' => Marca::orderBy('nombre')->get(['id','nombre']),
-            'unidades' => UnidadMedida::orderBy('nombre')->get(['id','codigo','nombre']),
+            'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'marcas' => Marca::orderBy('nombre')->get(['id', 'nombre']),
+            'unidades' => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'tipos_precio' => \App\Models\TipoPrecio::getOptions(),
+            'configuraciones_ganancias' => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
+            // Opciones de almacenes para el select
+            'almacenes' => Almacen::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -78,7 +82,7 @@ class ProductoController extends Controller
             $codigosLimpios = [];
 
             // Si no es array, convertir a array
-            if (!is_array($requestData['codigos'])) {
+            if (! is_array($requestData['codigos'])) {
                 $requestData['codigos'] = [];
             }
 
@@ -92,10 +96,10 @@ class ProductoController extends Controller
                     // Si es array, buscar la clave 'codigo' o tomar el primer valor válido
                     if (isset($item['codigo']) && is_string($item['codigo'])) {
                         $codigoString = trim($item['codigo']);
-                    } elseif (!empty($item)) {
+                    } elseif (! empty($item)) {
                         // Tomar el primer valor que sea string
                         foreach ($item as $value) {
-                            if (is_string($value) && !empty(trim($value))) {
+                            if (is_string($value) && ! empty(trim($value))) {
                                 $codigoString = trim($value);
                                 break;
                             }
@@ -107,7 +111,7 @@ class ProductoController extends Controller
                 }
 
                 // Solo agregar si no está vacío
-                if (!empty($codigoString)) {
+                if (! empty($codigoString)) {
                     $codigosLimpios[] = $codigoString;
                 }
             }
@@ -116,24 +120,29 @@ class ProductoController extends Controller
         }
 
         $data = $request->merge($requestData)->validate([
-            'nombre' => ['required','string','max:255'],
-            'descripcion' => ['nullable','string'],
-            'peso' => ['nullable','numeric','min:0'],
-            'unidad_medida_id' => ['nullable','exists:unidades_medida,id'],
-            'numero' => ['nullable','string','max:255'],
-            'fecha_vencimiento' => ['nullable','date'],
-            'categoria_id' => ['nullable','exists:categorias,id'],
-            'marca_id' => ['nullable','exists:marcas,id'],
-            'precios' => ['nullable','array'],
-            'precios.*.nombre' => ['required_with:precios.*','string','max:100'],
-            'precios.*.monto' => ['required_with:precios.*','numeric','min:0'],
-            'precios.*.tipo_precio_id' => ['sometimes','integer','in:' . implode(',', $tiposPrecios)],
-            'codigos' => ['nullable','array'],
-            'codigos.*' => ['string','max:255'],
-            'perfil' => ['nullable','file','image','max:4096'],
-            'galeria' => ['nullable','array'],
-            'galeria.*' => ['file','image','max:4096'],
-            'activo' => ['nullable','boolean'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
+            'peso' => ['nullable', 'numeric', 'min:0'],
+            'unidad_medida_id' => ['nullable', 'exists:unidades_medida,id'],
+            'numero' => ['nullable', 'string', 'max:255'],
+            'fecha_vencimiento' => ['nullable', 'date'],
+            'categoria_id' => ['nullable', 'exists:categorias,id'],
+            'marca_id' => ['nullable', 'exists:marcas,id'],
+            'precios' => ['nullable', 'array'],
+            'precios.*.nombre' => ['required_with:precios.*', 'string', 'max:100'],
+            'precios.*.monto' => ['required_with:precios.*', 'numeric', 'min:0'],
+            'precios.*.tipo_precio_id' => ['sometimes', 'integer', 'in:'.implode(',', $tiposPrecios)],
+            'codigos' => ['nullable', 'array'],
+            'codigos.*' => ['string', 'max:255'],
+            'perfil' => ['nullable', 'file', 'image', 'max:4096'],
+            'galeria' => ['nullable', 'array'],
+            'galeria.*' => ['file', 'image', 'max:4096'],
+            'almacenes' => ['nullable', 'array'],
+            'almacenes.*.almacen_id' => ['required_with:almacenes', 'integer', 'exists:almacenes,id'],
+            'almacenes.*.stock' => ['required_with:almacenes', 'numeric', 'min:0'],
+            'almacenes.*.lote' => ['nullable', 'string', 'max:255'],
+            'almacenes.*.fecha_vencimiento' => ['nullable', 'date'],
+            'activo' => ['nullable', 'boolean'],
         ]);
 
         $producto = null;
@@ -144,7 +153,7 @@ class ProductoController extends Controller
             if (isset($data['codigos']) && is_array($data['codigos'])) {
                 foreach ($data['codigos'] as $codigo) {
                     // Asegurarse de que el código sea un string y no esté vacío
-                    if (is_string($codigo) && !empty(trim($codigo))) {
+                    if (is_string($codigo) && ! empty(trim($codigo))) {
                         $codigosValidos[] = trim($codigo);
                     }
                 }
@@ -155,7 +164,7 @@ class ProductoController extends Controller
                 $requestCodigos = $request->get('codigos');
                 if (is_array($requestCodigos)) {
                     foreach ($requestCodigos as $codigo) {
-                        if (is_string($codigo) && !empty(trim($codigo))) {
+                        if (is_string($codigo) && ! empty(trim($codigo))) {
                             $codigosValidos[] = trim($codigo);
                         }
                     }
@@ -179,7 +188,7 @@ class ProductoController extends Controller
             ]);
 
             // Gestionar códigos de barra usando la nueva tabla
-            if (!empty($codigosValidos)) {
+            if (! empty($codigosValidos)) {
                 foreach ($codigosValidos as $index => $codigo) {
                     CodigoBarra::create([
                         'producto_id' => $producto->id,
@@ -195,19 +204,21 @@ class ProductoController extends Controller
                 // Si no hay códigos, crear uno con el ID del producto
                 CodigoBarra::create([
                     'producto_id' => $producto->id,
-                    'codigo' => (string)$producto->id,
+                    'codigo' => (string) $producto->id,
                     'tipo' => 'INTERNAL',
                     'es_principal' => true,
                     'activo' => true,
                 ]);
                 // Actualizar el campo legacy
-                $producto->update(['codigo_barras' => (string)$producto->id]);
+                $producto->update(['codigo_barras' => (string) $producto->id]);
             }
 
             // Precios mejorados usando la nueva tabla de tipos de precio
-            if (!empty($data['precios']) && is_array($data['precios'])) {
+            if (! empty($data['precios']) && is_array($data['precios'])) {
                 foreach ($data['precios'] as $p) {
-                    if (empty($p['monto']) || empty($p['nombre'])) continue;
+                    if (empty($p['monto']) || empty($p['nombre'])) {
+                        continue;
+                    }
 
                     // Determinar tipo de precio ID
                     $tipoPrecioId = $p['tipo_precio_id'] ?? $this->determinarTipoPrecioId($p['nombre']);
@@ -248,6 +259,45 @@ class ProductoController extends Controller
                     ]);
                 }
             }
+
+            // Guardar stock por almacén si viene (normalizando y unificando por almacén+lote)
+            if (! empty($data['almacenes']) && is_array($data['almacenes'])) {
+                $colecta = [];
+                foreach ($data['almacenes'] as $entry) {
+                    $almacenId = isset($entry['almacen_id']) ? (int) $entry['almacen_id'] : 0;
+                    if ($almacenId <= 0) {
+                        continue;
+                    }
+                    $stock = isset($entry['stock']) ? (int) $entry['stock'] : 0;
+                    $lote = isset($entry['lote']) && $entry['lote'] !== '' ? trim((string) $entry['lote']) : null;
+                    $fv = $entry['fecha_vencimiento'] ?? null;
+                    $key = $almacenId.'|'.strtolower($lote ?? '');
+                    if (! isset($colecta[$key])) {
+                        $colecta[$key] = [
+                            'almacen_id' => $almacenId,
+                            'stock' => 0,
+                            'lote' => $lote,
+                            'fecha_vencimiento' => $fv,
+                        ];
+                    }
+                    $colecta[$key]['stock'] += $stock;
+                    // Si se repite, conservar la fecha de vencimiento más próxima si ambas existen
+                    if (! empty($fv)) {
+                        $prev = $colecta[$key]['fecha_vencimiento'] ?? null;
+                        $colecta[$key]['fecha_vencimiento'] = $prev ? min($prev, $fv) : $fv;
+                    }
+                }
+                foreach ($colecta as $row) {
+                    StockProducto::create([
+                        'producto_id' => $producto->id,
+                        'almacen_id' => $row['almacen_id'],
+                        'cantidad' => $row['stock'],
+                        'lote' => $row['lote'],
+                        'fecha_vencimiento' => $row['fecha_vencimiento'] ?? null,
+                        'fecha_actualizacion' => now(),
+                    ]);
+                }
+            }
         });
 
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
@@ -256,17 +306,23 @@ class ProductoController extends Controller
     public function edit(Producto $producto): Response
     {
         $producto->load([
-            'imagenes' => function($q){ $q->orderBy('orden'); },
-            'codigosBarra' => function($q){ $q->where('activo', true)->orderBy('es_principal', 'desc'); }
+            'imagenes' => function ($q) {
+                $q->orderBy('orden');
+            },
+            'codigosBarra' => function ($q) {
+                $q->where('activo', true)->orderBy('es_principal', 'desc');
+            },
         ]);
 
         // Adapt payload for frontend form structure
         $perfil = $producto->imagenes->firstWhere('es_principal', true);
-        $galeria = $producto->imagenes->where('es_principal', false)->values()->map(function($img){ return ['id'=>$img->id, 'url'=>$img->url]; });
-        $precios = $producto->precios()->where('activo', true)->orderByDesc('id')->get()->map(fn($pr)=> ['id'=>$pr->id, 'nombre'=>$pr->nombre ?? 'Precio General', 'monto'=>$pr->precio]);
+        $galeria = $producto->imagenes->where('es_principal', false)->values()->map(function ($img) {
+            return ['id' => $img->id, 'url' => $img->url];
+        });
+        $precios = $producto->precios()->where('activo', true)->orderByDesc('id')->get()->map(fn ($pr) => ['id' => $pr->id, 'nombre' => $pr->nombre ?? 'Precio General', 'monto' => $pr->precio]);
 
         // Obtener códigos de barra de la nueva tabla
-        $codigos = $producto->codigosBarra->map(function($cb) {
+        $codigos = $producto->codigosBarra->map(function ($cb) {
             return ['codigo' => $cb->codigo, 'tipo' => $cb->tipo, 'es_principal' => $cb->es_principal];
         });
 
@@ -275,11 +331,12 @@ class ProductoController extends Controller
             ->where('activo', true)
             ->with('tipoPrecio')
             ->get()
-            ->sortBy(function($precio) {
+            ->sortBy(function ($precio) {
                 return $precio->tipoPrecio ? $precio->tipoPrecio->orden : 999;
             })
-            ->map(function($pr) {
+            ->map(function ($pr) {
                 $tipoPrecioInfo = $pr->getTipoPrecioInfo();
+
                 return [
                     'id' => $pr->id,
                     'nombre' => $pr->nombre ?? $tipoPrecioInfo['nombre'],
@@ -304,18 +361,26 @@ class ProductoController extends Controller
             'unidad_medida_id' => $producto->unidad_medida_id,
             'fecha_vencimiento' => null,
             'activo' => $producto->activo,
-            'perfil' => $perfil ? ['id'=>$perfil->id, 'url'=>$perfil->url] : null,
+            'perfil' => $perfil ? ['id' => $perfil->id, 'url' => $perfil->url] : null,
             'galeria' => $galeria,
             'precios' => $precios,
             'codigos' => $codigos->isNotEmpty() ? $codigos->toArray() : [['codigo' => '']],
+            // mapear stock por almacén para el frontend
+            'almacenes' => StockProducto::where('producto_id', $producto->id)
+                ->get(['almacen_id', 'cantidad as stock', 'lote', 'fecha_vencimiento'])
+                ->map(function ($s) {
+                    return ['almacen_id' => $s->almacen_id, 'stock' => $s->stock, 'lote' => $s->lote, 'fecha_vencimiento' => $s->fecha_vencimiento ? $s->fecha_vencimiento->format('Y-m-d') : null];
+                })->toArray(),
         ];
 
         return Inertia::render('productos/form', [
             'producto' => $payload,
-            'categorias' => Categoria::orderBy('nombre')->get(['id','nombre']),
-            'marcas' => Marca::orderBy('nombre')->get(['id','nombre']),
-            'unidades' => UnidadMedida::orderBy('nombre')->get(['id','codigo','nombre']),
+            'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'marcas' => Marca::orderBy('nombre')->get(['id', 'nombre']),
+            'unidades' => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'tipos_precio' => TipoPrecio::getOptions(),
+            'configuraciones_ganancias' => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
+            'almacenes' => Almacen::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -324,32 +389,37 @@ class ProductoController extends Controller
         $tiposPrecios = TipoPrecio::activos()->pluck('id')->toArray();
 
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'descripcion' => ['nullable','string'],
-            'peso' => ['nullable','numeric','min:0'],
-            'unidad_medida_id' => ['nullable','exists:unidades_medida,id'],
-            'numero' => ['nullable','string','max:255'],
-            'fecha_vencimiento' => ['nullable','date'],
-            'categoria_id' => ['nullable','exists:categorias,id'],
-            'marca_id' => ['nullable','exists:marcas,id'],
-            'precios' => ['nullable','array'],
-            'precios.*.nombre' => ['required','string','max:100'],
-            'precios.*.monto' => ['required','numeric','min:0'],
-            'precios.*.tipo_precio_id' => ['sometimes','integer','in:' . implode(',', $tiposPrecios)],
-            'codigos' => ['nullable','array'],
-            'codigos.*' => ['nullable','string','max:255'],
-            'perfil' => ['nullable','file','image','max:4096'],
-            'galeria' => ['nullable','array'],
-            'galeria.*' => ['file','image','max:4096'],
-            'activo' => ['nullable','boolean'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
+            'peso' => ['nullable', 'numeric', 'min:0'],
+            'unidad_medida_id' => ['nullable', 'exists:unidades_medida,id'],
+            'numero' => ['nullable', 'string', 'max:255'],
+            'fecha_vencimiento' => ['nullable', 'date'],
+            'categoria_id' => ['nullable', 'exists:categorias,id'],
+            'marca_id' => ['nullable', 'exists:marcas,id'],
+            'precios' => ['nullable', 'array'],
+            'precios.*.nombre' => ['required', 'string', 'max:100'],
+            'precios.*.monto' => ['required', 'numeric', 'min:0'],
+            'precios.*.tipo_precio_id' => ['sometimes', 'integer', 'in:'.implode(',', $tiposPrecios)],
+            'codigos' => ['nullable', 'array'],
+            'codigos.*' => ['nullable', 'string', 'max:255'],
+            'perfil' => ['nullable', 'file', 'image', 'max:4096'],
+            'galeria' => ['nullable', 'array'],
+            'galeria.*' => ['file', 'image', 'max:4096'],
+            'almacenes' => ['nullable', 'array'],
+            'almacenes.*.almacen_id' => ['required_with:almacenes', 'integer', 'exists:almacenes,id'],
+            'almacenes.*.stock' => ['required_with:almacenes', 'numeric', 'min:0'],
+            'almacenes.*.lote' => ['nullable', 'string', 'max:255'],
+            'almacenes.*.fecha_vencimiento' => ['nullable', 'date'],
+            'activo' => ['nullable', 'boolean'],
         ]);
 
         DB::transaction(function () use ($data, $request, $producto) {
             // Filtrar códigos válidos (no vacíos)
             $codigosValidos = [];
-            if (!empty($data['codigos']) && is_array($data['codigos'])) {
-                $codigosValidos = array_filter($data['codigos'], function($codigo) {
-                    return !empty(trim($codigo));
+            if (! empty($data['codigos']) && is_array($data['codigos'])) {
+                $codigosValidos = array_filter($data['codigos'], function ($codigo) {
+                    return ! empty(trim($codigo));
                 });
             }
 
@@ -368,7 +438,7 @@ class ProductoController extends Controller
             // Primero desactivar todos los códigos existentes
             $producto->codigosBarra()->update(['activo' => false]);
 
-            if (!empty($codigosValidos)) {
+            if (! empty($codigosValidos)) {
                 foreach ($codigosValidos as $index => $codigo) {
                     // Verificar si ya existe este código para este producto
                     $codigoExistente = $producto->codigosBarra()
@@ -379,7 +449,7 @@ class ProductoController extends Controller
                         // Reactivar código existente
                         $codigoExistente->update([
                             'es_principal' => $index === 0,
-                            'activo' => true
+                            'activo' => true,
                         ]);
                     } else {
                         // Crear nuevo código
@@ -397,23 +467,25 @@ class ProductoController extends Controller
             } else {
                 // Si no hay códigos válidos, mantener el actual o crear uno con ID
                 $codigoPrincipal = $producto->codigosBarra()->principal()->first();
-                if (!$codigoPrincipal) {
+                if (! $codigoPrincipal) {
                     CodigoBarra::create([
                         'producto_id' => $producto->id,
-                        'codigo' => (string)$producto->id,
+                        'codigo' => (string) $producto->id,
                         'tipo' => 'INTERNAL',
                         'es_principal' => true,
                         'activo' => true,
                     ]);
-                    $producto->update(['codigo_barras' => (string)$producto->id]);
+                    $producto->update(['codigo_barras' => (string) $producto->id]);
                 }
             }
 
             // precios: strategy simple = desactivar todos y crear nuevos activos
             $producto->precios()->update(['activo' => false]);
-            if (!empty($data['precios']) && is_array($data['precios'])) {
+            if (! empty($data['precios']) && is_array($data['precios'])) {
                 foreach ($data['precios'] as $p) {
-                    if (empty($p['monto']) || empty($p['nombre'])) continue;
+                    if (empty($p['monto']) || empty($p['nombre'])) {
+                        continue;
+                    }
 
                     // Determinar tipo de precio ID
                     $tipoPrecioId = $p['tipo_precio_id'] ?? $this->determinarTipoPrecioId($p['nombre']);
@@ -458,6 +530,45 @@ class ProductoController extends Controller
             }
         });
 
+        // Actualizar stock por almacén: eliminar actuales y recrear según payload (normalizando y unificando)
+        if (! empty($data['almacenes']) && is_array($data['almacenes'])) {
+            StockProducto::where('producto_id', $producto->id)->delete();
+            $colecta = [];
+            foreach ($data['almacenes'] as $entry) {
+                $almacenId = isset($entry['almacen_id']) ? (int) $entry['almacen_id'] : 0;
+                if ($almacenId <= 0) {
+                    continue;
+                }
+                $stock = isset($entry['stock']) ? (int) $entry['stock'] : 0;
+                $lote = isset($entry['lote']) && $entry['lote'] !== '' ? trim((string) $entry['lote']) : null;
+                $fv = $entry['fecha_vencimiento'] ?? null;
+                $key = $almacenId.'|'.strtolower($lote ?? '');
+                if (! isset($colecta[$key])) {
+                    $colecta[$key] = [
+                        'almacen_id' => $almacenId,
+                        'stock' => 0,
+                        'lote' => $lote,
+                        'fecha_vencimiento' => $fv,
+                    ];
+                }
+                $colecta[$key]['stock'] += $stock;
+                if (! empty($fv)) {
+                    $prev = $colecta[$key]['fecha_vencimiento'] ?? null;
+                    $colecta[$key]['fecha_vencimiento'] = $prev ? min($prev, $fv) : $fv;
+                }
+            }
+            foreach ($colecta as $row) {
+                StockProducto::create([
+                    'producto_id' => $producto->id,
+                    'almacen_id' => $row['almacen_id'],
+                    'cantidad' => $row['stock'],
+                    'lote' => $row['lote'],
+                    'fecha_vencimiento' => $row['fecha_vencimiento'] ?? null,
+                    'fecha_actualizacion' => now(),
+                ]);
+            }
+        }
+
         return redirect()->route('productos.edit', $producto->id)->with('success', 'Producto actualizado correctamente');
     }
 
@@ -472,6 +583,7 @@ class ProductoController extends Controller
         }
         $producto->imagenes()->delete();
         $producto->delete();
+
         return redirect()->route('productos.index')->with('success', 'Producto eliminado');
     }
 

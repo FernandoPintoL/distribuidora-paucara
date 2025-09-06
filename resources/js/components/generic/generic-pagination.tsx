@@ -50,7 +50,7 @@ export default function GenericPagination({ links, isLoading = false }: GenericP
   };
 
   // Función para obtener el icono apropiado
-  const getButtonIcon = (label: string, isActive: boolean = false) => {
+  const getButtonIcon = (label: string) => {
     if (label.includes('pagination.previous') || label.includes('&laquo;')) {
       return (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +77,7 @@ export default function GenericPagination({ links, isLoading = false }: GenericP
       <nav className="flex items-center space-x-1" aria-label="Navegación de páginas">
         {links.map((link, index) => {
           const cleanLabel = getCleanLabel(link.label);
-          const icon = getButtonIcon(link.label, link.active);
+          const icon = getButtonIcon(link.label);
           const isNumericPage = !isNaN(Number(cleanLabel));
           const isPrevNext = cleanLabel === 'Anterior' || cleanLabel === 'Siguiente';
 
@@ -92,7 +92,7 @@ export default function GenericPagination({ links, isLoading = false }: GenericP
                 min-w-[2.5rem] h-9
                 ${link.active
                   ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
-                  : 'hover:bg-blue-50 hover:text-blue-700 border border-gray-200'
+                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 border border-border'
                 }
                 ${isPrevNext ? 'px-3' : 'px-2'}
                 ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}

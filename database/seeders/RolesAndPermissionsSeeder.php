@@ -14,6 +14,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Define roles
         $roles = [
             'SUPERADMIN',
+            'ADMINISTRADOR',
             'CLIENTE',
             'PROVEEDOR',
             'CHOFER',
@@ -23,11 +24,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Minimal permission set for now
         $permissions = [
-            'categorias.view','categorias.create','categorias.update','categorias.delete',
-            'marcas.view','marcas.create','marcas.update','marcas.delete',
-            'almacenes.view','almacenes.create','almacenes.update','almacenes.delete',
-            'proveedores.view','proveedores.create','proveedores.update','proveedores.delete',
-            'productos.view','productos.create','productos.update','productos.delete',
+            'categorias.view', 'categorias.create', 'categorias.update', 'categorias.delete',
+            'marcas.view', 'marcas.create', 'marcas.update', 'marcas.delete',
+            'almacenes.view', 'almacenes.create', 'almacenes.update', 'almacenes.delete',
+            'proveedores.view', 'proveedores.create', 'proveedores.update', 'proveedores.delete',
+            'productos.view', 'productos.create', 'productos.update', 'productos.delete',
         ];
 
         foreach ($permissions as $perm) {
@@ -42,15 +43,17 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Grant all to SUPERADMIN
         $roleModels['SUPERADMIN']->givePermissionTo(Permission::all());
+        // Grant all to ADMINISTRADOR for now (can be tailored later)
+        $roleModels['ADMINISTRADOR']->givePermissionTo(Permission::all());
 
         // Grant typical permissions to VENDEDOR, CAJERO (view + some create/update)
         $roleModels['VENDEDOR']->givePermissionTo([
-            'productos.view','productos.create','productos.update',
-            'categorias.view','marcas.view',
+            'productos.view', 'productos.create', 'productos.update',
+            'categorias.view', 'marcas.view',
             'proveedores.view',
         ]);
         $roleModels['CAJERO']->givePermissionTo([
-            'productos.view','categorias.view','marcas.view','almacenes.view','proveedores.view',
+            'productos.view', 'categorias.view', 'marcas.view', 'almacenes.view', 'proveedores.view',
         ]);
 
         // CHOFER minimal for now
@@ -59,7 +62,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $roleModels['PROVEEDOR']->givePermissionTo([]);
 
         // Ensure default admin has SUPERADMIN
-        $admin = User::query()->where('email','admin@paucara.test')->first();
+        $admin = User::query()->where('email', 'admin@paucara.test')->first();
         if ($admin) {
             $admin->assignRole('SUPERADMIN');
         }

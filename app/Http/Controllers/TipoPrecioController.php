@@ -18,10 +18,10 @@ class TipoPrecioController extends Controller
         $tipos = TipoPrecio::query()
             ->when($q, function ($query) use ($q) {
                 $query->where('nombre', 'ilike', "%$q%")
-                      ->orWhere('codigo', 'ilike', "%$q%")
-                      ->orWhere('descripcion', 'ilike', "%$q%");
+                    ->orWhere('codigo', 'ilike', "%$q%")
+                    ->orWhere('descripcion', 'ilike', "%$q%");
             })
-            ->when($request->has('activo'), fn($query) => $query->where('activo', $activo))
+            ->when($request->has('activo'), fn ($query) => $query->where('activo', $activo))
             ->withCount('precios')
             ->ordenados()
             ->paginate(15)
@@ -75,6 +75,7 @@ class TipoPrecioController extends Controller
             'color' => $data['color'],
             'es_ganancia' => $data['es_ganancia'],
             'es_precio_base' => $data['es_precio_base'] ?? false,
+            'porcentaje_ganancia' => isset($configuracion['porcentaje_ganancia']) ? (float) $configuracion['porcentaje_ganancia'] : null,
             'orden' => $data['orden'],
             'activo' => $data['activo'] ?? true,
             'es_sistema' => false, // Los creados por usuarios no son del sistema
@@ -118,13 +119,14 @@ class TipoPrecioController extends Controller
     public function update(Request $request, TipoPrecio $tipoPrecio): RedirectResponse
     {
         $data = $request->validate([
-            'codigo' => ['required', 'string', 'max:20', 'unique:tipos_precio,codigo,' . $tipoPrecio->id],
+            'codigo' => ['required', 'string', 'max:20', 'unique:tipos_precio,codigo,'.$tipoPrecio->id],
             'nombre' => ['required', 'string', 'max:100'],
             'descripcion' => ['nullable', 'string', 'max:255'],
             'color' => ['required', 'string', 'max:20'],
             'es_ganancia' => ['required', 'boolean'],
             'es_precio_base' => ['nullable', 'boolean'],
             'orden' => ['required', 'integer', 'min:0'],
+            'porcentaje_ganancia' => ['nullable', 'numeric', 'min:0'],
             'activo' => ['nullable', 'boolean'],
             'configuracion' => ['nullable', 'array'],
         ]);
@@ -135,7 +137,7 @@ class TipoPrecioController extends Controller
         }
 
         // Solo puede haber un precio base activo
-        if (($data['es_precio_base'] ?? false) && !$tipoPrecio->es_precio_base) {
+        if (($data['es_precio_base'] ?? false) && ! $tipoPrecio->es_precio_base) {
             TipoPrecio::where('es_precio_base', true)->update(['es_precio_base' => false]);
         }
 
@@ -150,7 +152,8 @@ class TipoPrecioController extends Controller
             'color' => $data['color'],
             'es_ganancia' => $data['es_ganancia'] ?? $tipoPrecio->es_ganancia,
             'es_precio_base' => $data['es_precio_base'] ?? $tipoPrecio->es_precio_base,
-            'orden' => $data['orden'],
+            'porcentaje_ganancia' => isset($configuracionNueva['porcentaje_ganancia']) ? (float) $configuracionNueva['porcentaje_ganancia'] : $tipoPrecio->porcentaje_ganancia,
+            'porcentaje_ganancia' => $data['porcentaje_ganancia'] ?? $tipoPrecio->porcentaje_ganancia,
             'activo' => $data['activo'] ?? $tipoPrecio->activo,
             'configuracion' => $configuracionNueva,
         ]);
@@ -161,7 +164,7 @@ class TipoPrecioController extends Controller
 
     public function destroy(TipoPrecio $tipoPrecio): RedirectResponse
     {
-        if (!$tipoPrecio->puedeEliminarse()) {
+        if (! $tipoPrecio->puedeEliminarse()) {
             return redirect()->route('tipos-precio.index')
                 ->with('error', 'No se puede eliminar este tipo de precio. Tiene precios asociados o es un tipo del sistema.');
         }
@@ -177,7 +180,7 @@ class TipoPrecioController extends Controller
      */
     public function toggleActivo(TipoPrecio $tipoPrecio): RedirectResponse
     {
-        $tipoPrecio->update(['activo' => !$tipoPrecio->activo]);
+        $tipoPrecio->update(['activo' => ! $tipoPrecio->activo]);
 
         $estado = $tipoPrecio->activo ? 'activado' : 'desactivado';
 

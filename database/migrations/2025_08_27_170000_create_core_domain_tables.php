@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         // Basic catalogs: monedas, categorias, marcas, almacenes, clientes, proveedores
@@ -22,7 +23,7 @@ return new class extends Migration {
 
         Schema::create('categorias', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre');
+            $table->string('nombre')->unique();
             $table->text('descripcion')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamp('fecha_creacion')->useCurrent();
@@ -30,7 +31,7 @@ return new class extends Migration {
 
         Schema::create('marcas', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre');
+            $table->string('nombre')->unique();
             $table->text('descripcion')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamp('fecha_creacion')->useCurrent();
@@ -38,7 +39,7 @@ return new class extends Migration {
 
         Schema::create('almacenes', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre');
+            $table->string('nombre')->unique();
             $table->string('direccion')->nullable();
             $table->string('responsable')->nullable();
             $table->string('telefono')->nullable();
@@ -90,7 +91,7 @@ return new class extends Migration {
             $table->timestamp('fecha_actualizacion')->useCurrent();
             $table->string('lote')->nullable();
             $table->date('fecha_vencimiento')->nullable();
-            $table->unique(['producto_id','almacen_id','lote'], 'uq_stock_producto_lote');
+            $table->unique(['producto_id', 'almacen_id', 'lote'], 'uq_stock_producto_lote');
         });
 
         Schema::create('clientes', function (Blueprint $table) {

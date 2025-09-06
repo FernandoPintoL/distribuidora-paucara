@@ -27,8 +27,8 @@ export default function GenericTable<T extends BaseEntity>({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay {entityName}s registrados</h3>
-        <p className="text-gray-500 mb-4">Comienza agregando tu primer {entityName}.</p>
+        <h3 className="text-lg font-semibold text-foreground mb-2">No hay {entityName}s registrados</h3>
+        <p className="text-muted-foreground mb-4">Comienza agregando tu primer {entityName}.</p>
         <div className="flex justify-center">
           <Button className="bg-blue-600 hover:bg-blue-700">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +64,7 @@ export default function GenericTable<T extends BaseEntity>({
         );
       case 'date':
         return value ? (
-          <span className="text-gray-700 font-medium">
+          <span className="text-foreground font-medium">
             {new Date(value).toLocaleDateString('es-ES', {
               year: 'numeric',
               month: 'short',
@@ -72,26 +72,26 @@ export default function GenericTable<T extends BaseEntity>({
             })}
           </span>
         ) : (
-          <span className="text-gray-400 italic">Sin fecha</span>
+          <span className="text-muted-foreground italic">Sin fecha</span>
         );
       case 'number':
         return typeof value === 'number' ? (
-          <span className="font-mono text-gray-800 font-medium">
+          <span className="font-mono text-foreground font-medium">
             {value.toLocaleString('es-ES')}
           </span>
         ) : (
-          <span className="text-gray-400">-</span>
+          <span className="text-muted-foreground">-</span>
         );
       default:
         // Manejar objetos de relación como {id, nombre}
         if (value && typeof value === 'object' && 'nombre' in value) {
-          return <span className="text-gray-700">{value.nombre || '-'}</span>;
+          return <span className="text-foreground">{value.nombre || '-'}</span>;
         }
         // Manejar objetos de relación como {id, codigo, nombre} para unidades
         if (value && typeof value === 'object' && 'codigo' in value && 'nombre' in value) {
           return (
-            <span className="text-gray-700">
-              <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded mr-2">
+            <span className="text-foreground">
+              <span className="font-mono text-xs bg-secondary px-1.5 py-0.5 rounded mr-2">
                 {value.codigo}
               </span>
               {value.nombre}
@@ -107,40 +107,40 @@ export default function GenericTable<T extends BaseEntity>({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-card text-foreground rounded-lg shadow-sm border border-border overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-secondary">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                 >
                   {column.label}
                 </th>
               ))}
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-36">
                 Acciones
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {entities.map((entity, index) => (
               <tr
                 key={entity.id}
-                className={`hover:bg-gray-50 transition-colors duration-150 ${
-                  index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
-                }`}
+                className={`transition-colors duration-150 ${
+                  index % 2 === 0 ? 'bg-card' : 'bg-secondary/40'
+                } hover:bg-muted/60`}
               >
                 {columns.map((column) => (
                   <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap">
                     {column.key === 'id' ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-800">
                         #{entity.id}
                       </span>
                     ) : (
-                      <div className={`${column.key === columns[1]?.key ? 'font-medium text-gray-900' : ''}`}>
+                      <div className={`${column.key === columns[1]?.key ? 'font-medium text-foreground' : ''}`}>
                         {renderCellValue(column, entity)}
                       </div>
                     )}
@@ -153,7 +153,7 @@ export default function GenericTable<T extends BaseEntity>({
                       size="sm"
                       onClick={() => onEdit(entity)}
                       disabled={isLoading}
-                      className="bg-white hover:bg-blue-50 border-blue-200 text-blue-700 hover:border-blue-300 transition-all duration-150"
+                      className="bg-card hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:border-blue-300 transition-all duration-150"
                       title={`Editar ${entityName}`}
                     >
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +166,7 @@ export default function GenericTable<T extends BaseEntity>({
                       size="sm"
                       onClick={() => onDelete(entity)}
                       disabled={isLoading}
-                      className="bg-white hover:bg-red-50 border-red-200 text-red-700 hover:border-red-300 transition-all duration-150"
+                      className="bg-card hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:border-red-300 transition-all duration-150"
                       title={`Eliminar ${entityName}`}
                     >
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

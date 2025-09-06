@@ -18,10 +18,11 @@ class TipoPrecio extends Model
         'color',
         'es_ganancia',
         'es_precio_base',
+        'porcentaje_ganancia',
         'orden',
         'activo',
         'es_sistema',
-        'configuracion'
+        'configuracion',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class TipoPrecio extends Model
         'es_sistema' => 'boolean',
         'configuracion' => 'array',
         'orden' => 'integer',
+        'porcentaje_ganancia' => 'decimal:2',
     ];
 
     /**
@@ -127,6 +129,7 @@ class TipoPrecio extends Model
                     'icono' => $tipo->getIcono(),
                     'tooltip' => $tipo->getTooltip(),
                     'configuracion' => $tipo->configuracion,
+                    'porcentaje_ganancia' => $tipo->porcentaje_ganancia,
                 ];
             })
             ->toArray();

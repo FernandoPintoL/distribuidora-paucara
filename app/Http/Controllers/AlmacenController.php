@@ -14,7 +14,7 @@ class AlmacenController extends Controller
     {
         $q = $request->string('q');
         $items = Almacen::query()
-            ->when($q, fn($qq) => $qq->where('nombre', 'ilike', "%$q%"))
+            ->when($q, fn ($qq) => $qq->where('nombre', 'ilike', "%$q%"))
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
@@ -35,40 +35,43 @@ class AlmacenController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'direccion' => ['nullable','string','max:255'],
-            'responsable' => ['nullable','string','max:255'],
-            'telefono' => ['nullable','string','max:50'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'responsable' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:50'],
             'activo' => ['boolean'],
         ]);
         $data['activo'] = $data['activo'] ?? true;
         Almacen::create($data);
+
         return redirect()->route('almacenes.index')->with('success', 'Almacén creado');
     }
 
-    public function edit(Almacen $almacen): Response
+    public function edit(Almacen $almacene): Response
     {
         return Inertia::render('almacenes/form', [
-            'almacen' => $almacen,
+            'almacen' => $almacene,
         ]);
     }
 
-    public function update(Request $request, Almacen $almacen): RedirectResponse
+    public function update(Request $request, Almacen $almacene): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'direccion' => ['nullable','string','max:255'],
-            'responsable' => ['nullable','string','max:255'],
-            'telefono' => ['nullable','string','max:50'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'responsable' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:50'],
             'activo' => ['boolean'],
         ]);
-        $almacen->update($data);
+        $almacene->update($data);
+
         return redirect()->route('almacenes.index')->with('success', 'Almacén actualizado');
     }
 
-    public function destroy(Almacen $almacen): RedirectResponse
+    public function destroy(Almacen $almacene): RedirectResponse
     {
-        $almacen->delete();
+        $almacene->delete();
+
         return redirect()->route('almacenes.index')->with('success', 'Almacén eliminado');
     }
 }

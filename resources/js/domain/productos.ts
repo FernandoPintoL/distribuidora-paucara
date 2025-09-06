@@ -6,6 +6,9 @@ export interface Precio {
   id?: number;
   nombre: string;
   monto: number;
+  tipo_precio_id?: number; // Agregado para resolver errores
+  tipo_precio?: string;   // Agregado para resolver errores
+  moneda?: string;        // Agregado para resolver errores
 }
 
 export interface CodigoBarra {
@@ -19,6 +22,14 @@ export interface Imagen {
   id?: number;
   url?: string;
   file?: File | null;
+}
+
+export interface StockAlmacen {
+  almacen_id: number | string;
+  almacen_nombre?: string;
+  stock: number;
+  lote?: string | null;
+  fecha_vencimiento?: string | null;
 }
 
 export interface Producto extends BaseEntity {
@@ -47,6 +58,7 @@ export interface Producto extends BaseEntity {
   galeria?: Imagen[];
   precios?: Precio[];
   codigos?: CodigoBarra[];
+  almacenes?: StockAlmacen[];
 }
 
 export interface ProductoFormData extends BaseFormData {
@@ -64,4 +76,5 @@ export interface ProductoFormData extends BaseFormData {
   galeria?: Imagen[];
   precios: Precio[];
   codigos: CodigoBarra[];
+  almacenes?: StockAlmacen[];
 }

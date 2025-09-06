@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('codigo', 20)->unique(); // Código identificador (ej: COSTO, VENTA, etc.)
             $table->string('nombre', 100); // Nombre descriptivo
             $table->string('descripcion', 255)->nullable(); // Descripción detallada
+            $table->decimal('porcentaje_ganancia', 8, 2)->nullable();
             $table->string('color', 20)->default('gray'); // Color para la UI
             $table->boolean('es_ganancia')->default(true); // Si es precio de ganancia o costo base
             $table->boolean('es_precio_base')->default(false); // Si es el precio base para cálculos

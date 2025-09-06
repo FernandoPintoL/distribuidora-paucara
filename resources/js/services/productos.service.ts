@@ -3,36 +3,113 @@
 
 import { router } from '@inertiajs/react';
 import Controllers from '@/actions/App/Http/Controllers';
-import type { Filters } from '@/domain/shared';
+import type { Filters, Id } from '@/domain/shared';
+import type { BaseService } from '@/domain/generic';
+import type { Producto, ProductoFormData } from '@/domain/productos';
+import NotificationService from '@/services/notification.service';
 
-export class ProductosService {
-  indexUrl(params?: { query?: Filters }) {
+export class ProductosService implements BaseService<Producto, ProductoFormData> {
+  indexUrl(params?: { query?: Filters }): string {
     return Controllers.ProductoController.index(params).url;
   }
-  createUrl() {
+
+  createUrl(): string {
     return Controllers.ProductoController.create().url;
   }
-  editUrl(id: number) {
-    return Controllers.ProductoController.edit(id).url;
+
+  editUrl(id: Id): string {
+    return Controllers.ProductoController.edit(Number(id)).url;
   }
-  storeUrl() {
+
+  storeUrl(): string {
     return Controllers.ProductoController.store().url;
   }
-  updateUrl(id: number) {
-    return Controllers.ProductoController.update(id).url;
-  }
-  destroyUrl(id: number) {
-    return Controllers.ProductoController.destroy(id).url;
+
+  updateUrl(id: Id): string {
+    return Controllers.ProductoController.update(Number(id)).url;
   }
 
-  search(filters: Filters) {
-    const url = this.indexUrl({ query: filters });
-    router.get(url);
+  destroyUrl(id: Id): string {
+    return Controllers.ProductoController.destroy(Number(id)).url;
   }
 
-  destroy(id: number) {
-    const url = this.destroyUrl(id);
-    router.delete(url);
+  search(filters: Filters): void {
+    router.get(this.indexUrl({ query: filters }), {}, {
+      preserveState: true,
+      preserveScroll: true,
+      onError: (errors) => {
+        NotificationService.error('Error al realizar la búsqueda');
+        console.error('Search errors:', errors);
+      }
+    });
+  }
+
+  destroy(id: Id): void {
+    const loadingToast = NotificationService.loading('Eliminando producto...');
+
+    router.delete(this.destroyUrl(id), {
+      preserveState: true,
+      onSuccess: () => {
+        NotificationService.dismiss(loadingToast);
+        NotificationService.success('Producto eliminado correctamente');
+        router.reload({ only: ['productos'] });
+      },
+      onError: (errors) => {
+        NotificationService.dismiss(loadingToast);
+        NotificationService.error('Error al eliminar el producto');
+        console.error('Delete errors:', errors);
+      }
+    });
+  }
+
+  // Implementación específica de validación para productos
+  validateData(data: ProductoFormData): string[] {
+    const errors: string[] = [];
+
+    // Validación básica del nombre
+    if (!data.nombre || data.nombre.trim().length === 0) {
+      errors.push('El nombre es requerido');
+    }
+
+    if (data.nombre && data.nombre.length > 255) {
+      errors.push('El nombre no puede tener más de 255 caracteres');
+    }
+
+    // Validaciones específicas para productos
+    if (!data.categoria_id || data.categoria_id === '') {
+      errors.push('La categoría es requerida');
+    }
+
+    if (!data.unidad_medida_id || data.unidad_medida_id === '') {
+      errors.push('La unidad de medida es requerida');
+    }
+
+    if (data.peso && data.peso < 0) {
+      errors.push('El peso no puede ser negativo');
+    }
+
+    // Validar códigos de barras si están presentes
+    if (data.codigos && data.codigos.length > 0) {
+      data.codigos.forEach((codigo, index) => {
+        if (!codigo.codigo || codigo.codigo.trim().length === 0) {
+          errors.push(`El código de barras ${index + 1} no puede estar vacío`);
+        }
+      });
+    }
+
+    // Validar precios si están presentes
+    if (data.precios && data.precios.length > 0) {
+      data.precios.forEach((precio, index) => {
+        if (!precio.nombre || precio.nombre.trim().length === 0) {
+          errors.push(`El nombre del precio ${index + 1} es requerido`);
+        }
+        if (precio.monto < 0) {
+          errors.push(`El monto del precio ${index + 1} no puede ser negativo`);
+        }
+      });
+    }
+
+    return errors;
   }
 }
 

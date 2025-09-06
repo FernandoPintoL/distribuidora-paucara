@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\TipoPrecio;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Enums\TipoPrecio;
 
 class Producto extends Model
 {
@@ -27,7 +27,7 @@ class Producto extends Model
         'fecha_creacion',
         'es_alquilable',
         'categoria_id',
-        'marca_id'
+        'marca_id',
     ];
 
     protected $casts = [
@@ -39,13 +39,40 @@ class Producto extends Model
         'fecha_creacion' => 'datetime',
     ];
 
-    public function categoria(){ return $this->belongsTo(Categoria::class, 'categoria_id'); }
-    public function marca(){ return $this->belongsTo(Marca::class, 'marca_id'); }
-    public function imagenes(){ return $this->hasMany(ImagenProducto::class, 'producto_id'); }
-    public function precios(){ return $this->hasMany(PrecioProducto::class, 'producto_id'); }
-    public function stock(){ return $this->hasMany(StockProducto::class, 'producto_id'); }
-    public function unidad(){ return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id'); }
-    public function codigosBarra(){ return $this->hasMany(CodigoBarra::class, 'producto_id'); }
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class, 'categoria_id');
+    }
+
+    public function marca()
+    {
+        return $this->belongsTo(Marca::class, 'marca_id');
+    }
+
+    public function imagenes()
+    {
+        return $this->hasMany(ImagenProducto::class, 'producto_id');
+    }
+
+    public function precios()
+    {
+        return $this->hasMany(PrecioProducto::class, 'producto_id');
+    }
+
+    public function stock()
+    {
+        return $this->hasMany(StockProducto::class, 'producto_id');
+    }
+
+    public function unidad()
+    {
+        return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id');
+    }
+
+    public function codigosBarra()
+    {
+        return $this->hasMany(CodigoBarra::class, 'producto_id');
+    }
 
     /**
      * Obtener el código de barra principal activo
@@ -91,7 +118,7 @@ class Producto extends Model
             $tipoPrecioId = $tipoPrecioModel?->id;
         }
 
-        if (!$tipoPrecioModel) {
+        if (! $tipoPrecioModel) {
             throw new \InvalidArgumentException("Tipo de precio no válido: $tipoPrecio");
         }
 
@@ -117,7 +144,7 @@ class Producto extends Model
                     'activo' => true,
                 ], $configuracionGanancia)
             );
-        } elseif (!$configuracionGanancia && $tipoPrecioModel->esGanancia()) {
+        } elseif (! $configuracionGanancia && $tipoPrecioModel->esGanancia()) {
             // Usar configuración global por defecto
             $this->configuracionesGanancias()->updateOrCreate(
                 ['tipo_precio_id' => $tipoPrecioId],
@@ -142,6 +169,7 @@ class Producto extends Model
 
         if ($precio) {
             $precio->update(['activo' => false]);
+
             return true;
         }
 
@@ -156,7 +184,7 @@ class Producto extends Model
         $precioCosto = $this->obtenerPrecio(TipoPrecio::costo() ?? 'COSTO');
         $precioVenta = $this->obtenerPrecio($tipoVenta);
 
-        if (!$precioCosto || !$precioVenta) {
+        if (! $precioCosto || ! $precioVenta) {
             return 0;
         }
 
@@ -202,7 +230,11 @@ class Producto extends Model
                 ->get();
 
             foreach ($tiposGanancia as $tipo) {
-                $porcentajeGanancia = ConfiguracionGlobal::porcentajeInteresGeneral();
+                // Determinar el porcentaje a usar por prioridad:
+                // 1) Configuración específica del producto para este tipo (si existe)
+                // 2) Configuración en el propio Tipo de Precio (configuracion.porcentaje_ganancia)
+                // 3) Configuración global
+                $porcentajeGanancia = null;
 
                 // Verificar si ya existe configuración específica para este tipo
                 $configExistente = $this->configuracionesGanancias()
@@ -211,6 +243,18 @@ class Producto extends Model
 
                 if ($configExistente) {
                     $porcentajeGanancia = $configExistente->porcentaje_ganancia_esperado;
+                }
+
+                if ($porcentajeGanancia === null) {
+                    $porcentajeGanancia = $tipo->porcentaje_ganancia !== null
+                        ? (float) $tipo->porcentaje_ganancia
+                        : (is_array($tipo->configuracion) && array_key_exists('porcentaje_ganancia', $tipo->configuracion)
+                            ? (float) $tipo->configuracion['porcentaje_ganancia']
+                            : null);
+                }
+
+                if ($porcentajeGanancia === null) {
+                    $porcentajeGanancia = (float) ConfiguracionGlobal::porcentajeInteresGeneral();
                 }
 
                 $precioVenta = $precioCosto + ($precioCosto * $porcentajeGanancia / 100);
@@ -241,7 +285,7 @@ class Producto extends Model
             $tipoPrecioId = $tipoPrecioModel?->id;
         }
 
-        if (!$tipoPrecioId) {
+        if (! $tipoPrecioId) {
             throw new \InvalidArgumentException("Tipo de precio no válido: $tipoPrecio");
         }
 
@@ -296,7 +340,7 @@ class Producto extends Model
     {
         $precioCosto = $this->obtenerPrecio(TipoPrecio::costo() ?? 'COSTO');
 
-        if (!$precioCosto) {
+        if (! $precioCosto) {
             return;
         }
 
@@ -339,6 +383,7 @@ class Producto extends Model
         }
 
         $tipoPrecioModel = TipoPrecio::porCodigo($tipoPrecio);
+
         return $tipoPrecioModel?->id;
     }
 

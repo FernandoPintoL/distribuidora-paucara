@@ -14,7 +14,14 @@ class Cliente extends Model
     protected $table = 'clientes';
 
     protected $fillable = [
-        'nombre','razon_social','nit','telefono','email','activo','fecha_registro','limite_credito'
+        'nombre',
+        'razon_social',
+        'nit',
+        'telefono',
+        'email',
+        'activo',
+        'fecha_registro',
+        'limite_credito',
     ];
 
     protected $casts = [
@@ -23,6 +30,13 @@ class Cliente extends Model
         'limite_credito' => 'decimal:2',
     ];
 
-    public function direcciones(){ return $this->hasMany(DireccionCliente::class, 'cliente_id'); }
-    public function fotosLugar(){ return $this->hasMany(FotoLugarCliente::class, 'cliente_id'); }
+    public function direcciones()
+    {
+        return $this->hasMany(DireccionCliente::class, 'cliente_id');
+    }
+
+    public function fotosLugar()
+    {
+        return $this->hasMany(FotoLugarCliente::class, 'cliente_id');
+    }
 }

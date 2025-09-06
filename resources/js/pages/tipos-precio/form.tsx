@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import { useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import NotificationService from '@/services/notification.service';
+import { TipoPrecio, TipoPrecioFormData } from '@/domain/tipos-precio';
 
 // Helper para generar rutas
 const route = (name: string, params?: any) => {
@@ -32,7 +33,7 @@ const route = (name: string, params?: any) => {
   return baseRoute;
 };
 
-interface TipoPrecio {
+/*interface TipoPrecio {
   id: number;
   codigo: string;
   nombre: string;
@@ -48,7 +49,7 @@ interface TipoPrecio {
     tooltip?: string;
     [key: string]: any;
   };
-}
+}*/
 
 interface ColorOption {
   value: string;
@@ -62,7 +63,7 @@ interface PageProps {
   puede_eliminar?: boolean;
 }
 
-interface FormData {
+/*interface FormData {
   codigo: string;
   nombre: string;
   descripcion: string;
@@ -74,8 +75,9 @@ interface FormData {
   configuracion: {
     icono: string;
     tooltip: string;
+    porcentaje_ganancia?: number;
   };
-}
+}*/
 
 const iconosDisponibles = [
   '📦', '💰', '🏢', '🎉', '🧾', '⭐', '🔥', '💎', '🎯', '📈',
@@ -85,19 +87,28 @@ const iconosDisponibles = [
 export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede_eliminar }: PageProps) {
   const isEditing = !!tipo_precio?.id;
 
-  const { data, setData, post, put, processing, errors, wasSuccessful, recentlySuccessful } = useForm<FormData>({
-    codigo: tipo_precio?.codigo || '',
-    nombre: tipo_precio?.nombre || '',
-    descripcion: tipo_precio?.descripcion || '',
-    color: tipo_precio?.color || 'gray',
-    es_ganancia: tipo_precio?.es_ganancia ?? true,
-    es_precio_base: tipo_precio?.es_precio_base ?? false,
-    orden: tipo_precio?.orden || 0,
-    activo: tipo_precio?.activo ?? true,
-    configuracion: {
-      icono: tipo_precio?.configuracion?.icono || '💰',
-      tooltip: tipo_precio?.configuracion?.tooltip || '',
-    },
+  const { data, setData, post, put, processing, errors, wasSuccessful, recentlySuccessful } = useForm<TipoPrecioFormData>({
+      id: tipo_precio?.id || undefined,
+      es_sistema: tipo_precio?.es_sistema || false,
+      porcentaje_ganancia: tipo_precio?.porcentaje_ganancia || 0,
+      precios_count: tipo_precio?.precios_count ||  0,
+      codigo: tipo_precio?.codigo || '',
+      nombre: tipo_precio?.nombre || '',
+      descripcion: tipo_precio?.descripcion || '',
+      color: tipo_precio?.color || 'gray',
+      es_ganancia: tipo_precio?.es_ganancia ?? true,
+      es_precio_base: tipo_precio?.es_precio_base ?? false,
+      orden: tipo_precio?.orden || 0,
+      activo: tipo_precio?.activo ?? true,
+      configuracion: {
+          icono: tipo_precio?.configuracion?.icono || '💰',
+          tooltip: tipo_precio?.configuracion?.tooltip || '',
+          porcentaje_ganancia: (typeof tipo_precio?.configuracion?.porcentaje_ganancia === 'number')
+              ? tipo_precio.configuracion.porcentaje_ganancia
+              : (typeof (tipo_precio as any)?.porcentaje_ganancia === 'number'
+                  ? (tipo_precio as any).porcentaje_ganancia
+                  : undefined),
+      }
   });
 
   useEffect(() => {
@@ -298,6 +309,22 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                       maxLength={100}
                     />
                   </div>
+
+                  {data.es_ganancia && (
+                    <div>
+                      <Label htmlFor="porcentaje_ganancia">Porcentaje de ganancia (%)</Label>
+                      <Input
+                        id="porcentaje_ganancia"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={data.porcentaje_ganancia || ''}
+                        onChange={e => setData('porcentaje_ganancia', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                        placeholder="Ej: 25"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Si se especifica, se usará este porcentaje para calcular el precio cuando se cree un producto.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

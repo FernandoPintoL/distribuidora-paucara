@@ -52,6 +52,27 @@ class CoreCatalogSeeder extends Seeder
         ];
         DB::table('estados_pedido')->upsert($estadosPedido, ['codigo'], ['nombre']);
 
+        // almacenes para DEPOSITO Y SALA DE VENTAS
+        $almacenes = [
+            ['nombre' => 'Depósito', 'activo' => true, 'direccion' => 'Ubicación principal del depósito'],
+            ['nombre' => 'Sala de Ventas', 'activo' => true, 'direccion' => 'Ubicación de la sala de ventas'],
+        ];
+        DB::table('almacenes')->upsert($almacenes, ['nombre'], ['activo', 'direccion']);
+
+        // marcas para COCA COLA y PEPSI
+        $marcas = [
+            ['nombre' => 'Coca Cola', 'activo' => true],
+            ['nombre' => 'Pepsi', 'activo' => true],
+        ];
+        DB::table('marcas')->upsert($marcas, ['nombre'], ['activo']);
+
+        // categorias para CERVEZAS, GASEOSA, AGUAS
+        $categorias = [
+            ['nombre' => 'Cervezas', 'activo' => true],
+            ['nombre' => 'Gaseosa', 'activo' => true],
+            ['nombre' => 'AGUAS', 'activo' => true],
+        ];
+        DB::table('categorias')->upsert($categorias, ['nombre'], ['activo']);
         // Monedas básicas
         /*$monedas = [
 

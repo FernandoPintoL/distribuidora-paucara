@@ -1,6 +1,6 @@
 // Application Layer: Generic hook for form management - Updated with notifications (Fixed)
 import { useForm } from '@inertiajs/react';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { BaseEntity, BaseFormData, BaseService } from '@/domain/generic';
 import NotificationService from '@/services/notification.service';
 
@@ -12,6 +12,18 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
   const { data, setData, post, put, processing, errors, reset } = useForm<F>(
     entity ? { ...initialData, ...entity } : initialData
   );
+
+  // Sincronizar cuando cambia la entidad (p. ej., al abrir "editar")
+  // Esto asegura que el formulario se hidrate con los valores actuales del servidor.
+  // También revierte a initialData cuando no hay entidad (modo crear).
+  useEffect(() => {
+    if (entity) {
+      setData((prev) => ({ ...prev, ...entity } as F));
+    } else {
+      setData(initialData);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entity]);
 
   // Validar datos del formulario con notificaciones
   const validateForm = useCallback(() => {

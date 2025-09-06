@@ -15,12 +15,19 @@ class DatabaseSeeder extends Seeder
         $this->call(CoreCatalogSeeder::class);
 
         // Create a default admin user if not exists
-        if (!User::query()->where('email', 'admin@paucara.test')->exists()) {
-            User::factory()->create([
+        $admin = User::query()->where('email', 'admin@paucara.test')->first();
+        if (! $admin) {
+            $admin = User::factory()->create([
                 'name' => 'Administrador',
+                'usernick' => 'admin',
                 'email' => 'admin@paucara.test',
                 'password' => Hash::make('password'),
             ]);
+        } else {
+            // Ensure usernick is set for legacy records
+            if (empty($admin->usernick)) {
+                $admin->forceFill(['usernick' => 'admin'])->save();
+            }
         }
 
         // Seed roles and permissions and assign to admin

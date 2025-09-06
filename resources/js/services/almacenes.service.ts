@@ -18,6 +18,7 @@ export class AlmacenesService extends GenericService<Almacen, AlmacenFormData> {
   }
 
   editUrl(id: Id) {
+      console.log(id);
     return Controllers.AlmacenController.edit(Number(id)).url;
   }
 
@@ -36,9 +37,8 @@ export class AlmacenesService extends GenericService<Almacen, AlmacenFormData> {
   // Override validation for specific fields
   validateData(data: AlmacenFormData): string[] {
     const errors = super.validateData(data);
-
-    if (!data.codigo || data.codigo.trim().length === 0) {
-      errors.push('El código es requerido');
+    if (!data.nombre || data.nombre.trim().length === 0) {
+        errors.push('El nombre es requerido');
     }
 
     return errors;

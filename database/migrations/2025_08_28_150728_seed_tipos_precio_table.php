@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -17,6 +15,7 @@ return new class extends Migration
                 'codigo' => 'COSTO',
                 'nombre' => 'Precio de Costo',
                 'descripcion' => 'Precio de compra o costo del producto, base para calcular ganancias',
+                'porcentaje_ganancia' => 0,
                 'color' => 'blue',
                 'es_ganancia' => false,
                 'es_precio_base' => true,
@@ -25,7 +24,7 @@ return new class extends Migration
                 'es_sistema' => true,
                 'configuracion' => json_encode([
                     'icono' => '📦',
-                    'tooltip' => 'Precio base para cálculos de ganancia'
+                    'tooltip' => 'Precio base para cálculos de ganancia',
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -34,6 +33,7 @@ return new class extends Migration
                 'codigo' => 'VENTA',
                 'nombre' => 'Precio de Venta',
                 'descripcion' => 'Precio de venta al público general',
+                'porcentaje_ganancia' => 20.00,
                 'color' => 'green',
                 'es_ganancia' => true,
                 'es_precio_base' => false,
@@ -42,7 +42,7 @@ return new class extends Migration
                 'es_sistema' => true,
                 'configuracion' => json_encode([
                     'icono' => '💰',
-                    'tooltip' => 'Precio de venta al público'
+                    'tooltip' => 'Precio de venta al público',
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -51,6 +51,7 @@ return new class extends Migration
                 'codigo' => 'POR_MAYOR',
                 'nombre' => 'Precio por Mayor',
                 'descripcion' => 'Precio especial para ventas al por mayor',
+                'porcentaje_ganancia' => 10.00,
                 'color' => 'purple',
                 'es_ganancia' => true,
                 'es_precio_base' => false,
@@ -60,7 +61,7 @@ return new class extends Migration
                 'configuracion' => json_encode([
                     'icono' => '📦',
                     'tooltip' => 'Precio para ventas mayoristas',
-                    'cantidad_minima' => 10
+                    'cantidad_minima' => 10,
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -69,6 +70,7 @@ return new class extends Migration
                 'codigo' => 'FACTURADO',
                 'nombre' => 'Precio Facturado',
                 'descripcion' => 'Precio para ventas con factura fiscal',
+                'porcentaje_ganancia' => 16.00,
                 'color' => 'orange',
                 'es_ganancia' => true,
                 'es_precio_base' => false,
@@ -78,7 +80,7 @@ return new class extends Migration
                 'configuracion' => json_encode([
                     'icono' => '🧾',
                     'tooltip' => 'Precio con factura fiscal',
-                    'incluye_impuestos' => true
+                    'incluye_impuestos' => true,
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -87,6 +89,7 @@ return new class extends Migration
                 'codigo' => 'DISTRIBUIDOR',
                 'nombre' => 'Precio Distribuidor',
                 'descripcion' => 'Precio especial para distribuidores autorizados',
+                'porcentaje_ganancia' => 15.00,
                 'color' => 'indigo',
                 'es_ganancia' => true,
                 'es_precio_base' => false,
@@ -96,7 +99,7 @@ return new class extends Migration
                 'configuracion' => json_encode([
                     'icono' => '🏢',
                     'tooltip' => 'Precio para distribuidores',
-                    'requiere_autorizacion' => true
+                    'requiere_autorizacion' => true,
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -105,6 +108,7 @@ return new class extends Migration
                 'codigo' => 'PROMOCIONAL',
                 'nombre' => 'Precio Promocional',
                 'descripcion' => 'Precio especial para promociones y ofertas',
+                'porcentaje_ganancia' => 11.00,
                 'color' => 'red',
                 'es_ganancia' => true,
                 'es_precio_base' => false,
@@ -114,7 +118,7 @@ return new class extends Migration
                 'configuracion' => json_encode([
                     'icono' => '🎉',
                     'tooltip' => 'Precio promocional',
-                    'temporal' => true
+                    'temporal' => true,
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -130,7 +134,7 @@ return new class extends Migration
     public function down(): void
     {
         DB::table('tipos_precio')->whereIn('codigo', [
-            'COSTO', 'VENTA', 'POR_MAYOR', 'FACTURADO', 'DISTRIBUIDOR', 'PROMOCIONAL'
+            'COSTO', 'VENTA', 'POR_MAYOR', 'FACTURADO', 'DISTRIBUIDOR', 'PROMOCIONAL',
         ])->delete();
     }
 };

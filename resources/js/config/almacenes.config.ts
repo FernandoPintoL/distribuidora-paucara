@@ -15,7 +15,7 @@ export const almacenesConfig: ModuleConfig<Almacen, AlmacenFormData> = {
   // Table configuration
   tableColumns: [
     { key: 'id', label: 'ID', type: 'number' },
-    { key: 'codigo', label: 'Código', type: 'text' },
+    // { key: 'codigo', label: 'Código', type: 'text' },
     { key: 'nombre', label: 'Nombre', type: 'text' },
     { key: 'direccion', label: 'Dirección', type: 'text' },
     { key: 'activo', label: 'Estado', type: 'boolean' },
@@ -23,14 +23,14 @@ export const almacenesConfig: ModuleConfig<Almacen, AlmacenFormData> = {
 
   // Form configuration
   formFields: [
-    {
+    /*{
       key: 'codigo',
       label: 'Código',
       type: 'text',
       required: true,
       placeholder: 'Código único del almacén',
       validation: { maxLength: 10 }
-    },
+    },*/
     {
       key: 'nombre',
       label: 'Nombre',
@@ -46,12 +46,6 @@ export const almacenesConfig: ModuleConfig<Almacen, AlmacenFormData> = {
       placeholder: 'Dirección física del almacén'
     },
     {
-      key: 'descripcion',
-      label: 'Descripción',
-      type: 'textarea',
-      placeholder: 'Descripción adicional del almacén'
-    },
-    {
       key: 'activo',
       label: 'Almacén activo',
       type: 'boolean'
@@ -59,6 +53,6 @@ export const almacenesConfig: ModuleConfig<Almacen, AlmacenFormData> = {
   ],
 
   // Search configuration
-  searchableFields: ['codigo', 'nombre', 'direccion'],
+  searchableFields: ['id','nombre', 'direccion'],
   searchPlaceholder: 'Buscar almacenes...',
 };
