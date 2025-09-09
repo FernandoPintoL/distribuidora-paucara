@@ -174,11 +174,4 @@ class MovimientoInventario extends Model
             'user_id' => $userId ?? auth()->id(),
         ]);
     }
-}space App\Models;
-
-use Illuminate\Database\Eloquent\Model;
-
-class MovimientoInventario extends Model
-{
-    //
 }
