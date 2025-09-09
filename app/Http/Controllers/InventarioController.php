@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApiResponse;
 use App\Models\Almacen;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
@@ -293,6 +294,121 @@ class InventarioController extends Controller
     }
 
     /**
+     * API: Procesar ajuste de inventario
+     */
+    public function procesarAjusteApi(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ajustes' => ['required', 'array'],
+            'ajustes.*.stock_producto_id' => ['required', 'exists:stock_productos,id'],
+            'ajustes.*.nueva_cantidad' => ['required', 'integer', 'min:0'],
+            'ajustes.*.observacion' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $movimientos = [];
+        
+        try {
+            DB::transaction(function () use ($data, &$movimientos) {
+                foreach ($data['ajustes'] as $ajuste) {
+                    $stockProducto = StockProducto::find($ajuste['stock_producto_id']);
+                    $observacion = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
+
+                    if ($stockProducto && $stockProducto->cantidad != $ajuste['nueva_cantidad']) {
+                        $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
+                        $tipo = $diferencia >= 0 ? 
+                            MovimientoInventario::TIPO_ENTRADA_AJUSTE : 
+                            MovimientoInventario::TIPO_SALIDA_AJUSTE;
+
+                        $movimiento = MovimientoInventario::registrar(
+                            $stockProducto,
+                            $diferencia,
+                            $tipo,
+                            $observacion
+                        );
+
+                        $movimientos[] = $movimiento;
+                    }
+                }
+            });
+
+            return ApiResponse::success(
+                $movimientos, 
+                'Se procesaron ' . count($movimientos) . ' ajustes de inventario'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al procesar ajustes: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * API: Listar movimientos de inventario
+     */
+    public function movimientosApi(Request $request): JsonResponse
+    {
+        $perPage = $request->integer('per_page', 15);
+        $almacenId = $request->integer('almacen_id');
+        $productoId = $request->integer('producto_id');
+        $tipo = $request->string('tipo');
+        $fechaInicio = $request->date('fecha_inicio');
+        $fechaFin = $request->date('fecha_fin');
+
+        $movimientos = MovimientoInventario::with([
+                'stockProducto.producto:id,nombre,codigo', 
+                'stockProducto.almacen:id,nombre',
+                'user:id,name'
+            ])
+            ->when($almacenId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId)))
+            ->when($productoId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('producto_id', $productoId)))
+            ->when($tipo, fn($q) => $q->where('tipo', $tipo))
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->orderByDesc('fecha')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+
+        return ApiResponse::success($movimientos);
+    }
+
+    /**
+     * API: Crear movimiento manual de inventario
+     */
+    public function crearMovimiento(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'stock_producto_id' => ['required', 'exists:stock_productos,id'],
+            'cantidad' => ['required', 'integer', 'not_in:0'],
+            'tipo' => ['required', 'in:entrada_ajuste,salida_ajuste'],
+            'observacion' => ['required', 'string', 'max:500'],
+        ]);
+
+        try {
+            $stockProducto = StockProducto::findOrFail($data['stock_producto_id']);
+            
+            $movimiento = MovimientoInventario::registrar(
+                $stockProducto,
+                $data['cantidad'],
+                $data['tipo'],
+                $data['observacion']
+            );
+
+            return ApiResponse::success(
+                $movimiento->load(['stockProducto.producto', 'stockProducto.almacen', 'user']), 
+                'Movimiento registrado exitosamente'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al registrar movimiento: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
      * API: Buscar productos para ajustes
      */
     public function buscarProductos(Request $request): JsonResponse
@@ -301,7 +417,7 @@ class InventarioController extends Controller
         $almacenId = $request->integer('almacen_id');
 
         if (!$q || strlen($q) < 2) {
-            return response()->json(['data' => []]);
+            return ApiResponse::success([]);
         }
 
         $productos = Producto::where('nombre', 'ilike', "%$q%")
@@ -315,7 +431,7 @@ class InventarioController extends Controller
             ->limit(20)
             ->get();
 
-        return response()->json(['data' => $productos]);
+    return ApiResponse::success($productos);
     }
 
     /**
@@ -330,7 +446,7 @@ class InventarioController extends Controller
             ->with('almacen')
             ->get();
 
-        return response()->json([
+        return ApiResponse::success([
             'producto' => [
                 'id' => $producto->id,
                 'nombre' => $producto->nombre,

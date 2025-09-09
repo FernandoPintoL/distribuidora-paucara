@@ -150,6 +150,7 @@ return new class extends Migration
             $table->id();
             $table->string('codigo')->unique();
             $table->string('nombre');
+            $table->string('color', 7)->default('#6B7280'); // Color hexadecimal para UI
             $table->string('descripcion')->nullable();
             $table->boolean('activo')->default(true);
         });

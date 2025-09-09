@@ -12,6 +12,8 @@ use App\Models\Producto;
 use App\Models\StockProducto;
 use App\Models\TipoPrecio;
 use App\Models\UnidadMedida;
+use App\Helpers\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +23,7 @@ use Inertia\Response;
 
 class ProductoController extends Controller
 {
-    public function historialPrecios(Producto $producto): \Illuminate\Http\JsonResponse
+    public function historialPrecios(Producto $producto): JsonResponse
     {
         $producto->load(['precios' => function ($q) {
             $q->where('activo', true)->with(['tipoPrecio', 'historialPrecios' => function ($h) {
@@ -45,7 +47,7 @@ class ProductoController extends Controller
             }
         }
 
-        return response()->json(['data' => $historial]);
+        return ApiResponse::success($historial);
     }
 
     public function index(Request $request): Response
@@ -785,5 +787,184 @@ class ProductoController extends Controller
 
         // Por defecto, precio de venta
         return TipoPrecio::porCodigo('VENTA')?->id ?? 2;
+    }
+
+    // ================================
+    // MÉTODOS API
+    // ================================
+
+    /**
+     * API: Listar productos
+     */
+    public function indexApi(Request $request): JsonResponse
+    {
+        $perPage = $request->integer('per_page', 20);
+        $q = $request->string('q');
+        $categoriaId = $request->integer('categoria_id');
+        $marcaId = $request->integer('marca_id');
+        $activo = $request->boolean('activo', true);
+
+        $productos = Producto::with(['categoria:id,nombre', 'marca:id,nombre', 'unidadMedida:id,nombre'])
+            ->when($q, fn($query) => $query->where('nombre', 'ilike', "%$q%")
+                ->orWhere('codigo', 'ilike', "%$q%"))
+            ->when($categoriaId, fn($query) => $query->where('categoria_id', $categoriaId))
+            ->when($marcaId, fn($query) => $query->where('marca_id', $marcaId))
+            ->where('activo', $activo)
+            ->orderBy('nombre')
+            ->paginate($perPage);
+
+        return ApiResponse::success($productos);
+    }
+
+    /**
+     * API: Mostrar producto específico
+     */
+    public function showApi(Producto $producto): JsonResponse
+    {
+        $producto->load([
+            'categoria:id,nombre',
+            'marca:id,nombre',
+            'unidadMedida:id,nombre',
+            'stock.almacen:id,nombre',
+            'precios.tipoPrecio:id,nombre',
+            'codigosBarra',
+            'imagenes'
+        ]);
+
+        return ApiResponse::success($producto);
+    }
+
+    /**
+     * API: Crear producto
+     */
+    public function storeApi(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'nombre' => ['required', 'string', 'max:255'],
+            'codigo' => ['nullable', 'string', 'max:100', 'unique:productos,codigo'],
+            'descripcion' => ['nullable', 'string'],
+            'categoria_id' => ['required', 'exists:categorias,id'],
+            'marca_id' => ['nullable', 'exists:marcas,id'],
+            'unidad_medida_id' => ['required', 'exists:unidad_medidas,id'],
+            'precio_compra' => ['required', 'numeric', 'min:0'],
+            'precio_venta' => ['required', 'numeric', 'min:0'],
+            'stock_minimo' => ['required', 'integer', 'min:0'],
+            'stock_maximo' => ['required', 'integer', 'min:0'],
+            'activo' => ['boolean'],
+        ]);
+
+        try {
+            $producto = DB::transaction(function () use ($data) {
+                $producto = Producto::create($data);
+                
+                // Crear precio base
+                PrecioProducto::create([
+                    'producto_id' => $producto->id,
+                    'tipo_precio_id' => TipoPrecio::porCodigo('VENTA')?->id ?? 2,
+                    'valor' => $data['precio_venta'],
+                    'activo' => true,
+                ]);
+
+                return $producto;
+            });
+
+            return ApiResponse::success(
+                $producto->load(['categoria', 'marca', 'unidadMedida']),
+                'Producto creado exitosamente',
+                201
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al crear producto: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: Actualizar producto
+     */
+    public function updateApi(Request $request, Producto $producto): JsonResponse
+    {
+        $data = $request->validate([
+            'nombre' => ['sometimes', 'required', 'string', 'max:255'],
+            'codigo' => ['nullable', 'string', 'max:100', 'unique:productos,codigo,' . $producto->id],
+            'descripcion' => ['nullable', 'string'],
+            'categoria_id' => ['sometimes', 'required', 'exists:categorias,id'],
+            'marca_id' => ['nullable', 'exists:marcas,id'],
+            'unidad_medida_id' => ['sometimes', 'required', 'exists:unidad_medidas,id'],
+            'precio_compra' => ['sometimes', 'required', 'numeric', 'min:0'],
+            'precio_venta' => ['sometimes', 'required', 'numeric', 'min:0'],
+            'stock_minimo' => ['sometimes', 'required', 'integer', 'min:0'],
+            'stock_maximo' => ['sometimes', 'required', 'integer', 'min:0'],
+            'activo' => ['boolean'],
+        ]);
+
+        try {
+            $producto->update($data);
+            
+            return ApiResponse::success(
+                $producto->fresh(['categoria', 'marca', 'unidadMedida']),
+                'Producto actualizado exitosamente'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al actualizar producto: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: Eliminar producto
+     */
+    public function destroyApi(Producto $producto): JsonResponse
+    {
+        try {
+            // Verificar si tiene stock
+            $tieneStock = $producto->stock()->where('cantidad', '>', 0)->exists();
+            if ($tieneStock) {
+                return ApiResponse::error('No se puede eliminar un producto con stock', 400);
+            }
+
+            // Verificar si tiene movimientos
+            $tieneMovimientos = $producto->stock()->whereHas('movimientos')->exists();
+            if ($tieneMovimientos) {
+                // Solo desactivar
+                $producto->update(['activo' => false]);
+                return ApiResponse::success(null, 'Producto desactivado (tiene historial de movimientos)');
+            }
+
+            // Eliminar completamente
+            $producto->delete();
+            return ApiResponse::success(null, 'Producto eliminado exitosamente');
+
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al eliminar producto: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: Buscar productos para autocompletado
+     */
+    public function buscarApi(Request $request): JsonResponse
+    {
+        $q = $request->string('q');
+        $limite = $request->integer('limite', 10);
+
+        if (!$q || strlen($q) < 2) {
+            return ApiResponse::success([]);
+        }
+
+        $productos = Producto::select(['id', 'nombre', 'codigo', 'precio_venta'])
+            ->where('activo', true)
+            ->where(function ($query) use ($q) {
+                $query->where('nombre', 'ilike', "%$q%")
+                      ->orWhere('codigo', 'ilike', "%$q%");
+            })
+            ->with(['stock' => function ($query) {
+                $query->select(['producto_id', 'almacen_id', 'cantidad'])
+                      ->with('almacen:id,nombre');
+            }])
+            ->limit($limite)
+            ->get();
+
+        return ApiResponse::success($productos);
     }
 }

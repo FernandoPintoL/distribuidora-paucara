@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -10,18 +9,19 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-    $this->call(MonedaSeeder::class);
-    $this->call(EstadoDocumentoSeeder::class);
-    // Seed core catalogs
-    $this->call(CoreCatalogSeeder::class);
-
+        $this->call(MonedaSeeder::class);
+        $this->call(EstadoDocumentoSeeder::class);
+        // Seed core catalogs
+        $this->call(CoreCatalogSeeder::class);
+        // Seed roles and permissions and assign to admin
+        $this->call(RolesAndPermissionsSeeder::class);
         // Create a default admin user if not exists
         $admin = User::query()->where('email', 'admin@paucara.test')->first();
         if (! $admin) {
             $admin = User::factory()->create([
-                'name' => 'Administrador',
+                'name'     => 'Administrador',
                 'usernick' => 'admin',
-                'email' => 'admin@paucara.test',
+                'email'    => 'admin@paucara.test',
                 'password' => Hash::make('password'),
             ]);
         } else {
@@ -30,8 +30,8 @@ class DatabaseSeeder extends Seeder
                 $admin->forceFill(['usernick' => 'admin'])->save();
             }
         }
+        // darle el rol de admin a $admin
+        $admin->assignRole('Admin');
 
-        // Seed roles and permissions and assign to admin
-        $this->call(RolesAndPermissionsSeeder::class);
     }
 }
