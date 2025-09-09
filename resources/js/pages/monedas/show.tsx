@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit2, ArrowLeft } from 'lucide-react';
 import monedasService from '@/services/monedas.service';
+import { router } from '@inertiajs/react';
 import type { Moneda } from '@/domain/monedas';
 
 interface ShowProps {
@@ -26,12 +27,12 @@ export default function Show({ moneda }: ShowProps) {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => monedasService.index()}
+              onClick={() => router.get(monedasService.indexUrl())}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver
             </Button>
-            <Button onClick={() => monedasService.edit(moneda.id)}>
+            <Button onClick={() => router.get(monedasService.editUrl(moneda.id))}>
               <Edit2 className="h-4 w-4 mr-2" />
               Editar
             </Button>

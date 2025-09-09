@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\PrecioProducto;
+use App\Observers\PrecioProductoObserver;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,5 +25,6 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
+        PrecioProducto::observe(PrecioProductoObserver::class);
     }
 }

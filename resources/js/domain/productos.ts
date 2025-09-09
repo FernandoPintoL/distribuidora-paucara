@@ -47,6 +47,8 @@ export interface Producto extends BaseEntity {
   es_alquilable?: boolean;
   categoria_id?: Id;
   marca_id?: Id;
+  precio_base?: number | null; // Nuevo campo para index / tarjetas
+  stock_total?: number; // Total consolidado de stock
 
   // Relaciones
   categoria?: { id: Id; nombre: string };
@@ -77,4 +79,16 @@ export interface ProductoFormData extends BaseFormData {
   precios: Precio[];
   codigos: CodigoBarra[];
   almacenes?: StockAlmacen[];
+}
+
+export interface HistorialPrecio {
+  id: number;
+  tipo_precio_id: number;
+  tipo_precio_nombre: string;
+  valor_anterior: number;
+  valor_nuevo: number;
+  fecha_cambio: string;
+  motivo: string;
+  usuario: string;
+  porcentaje_cambio: number;
 }

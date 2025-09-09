@@ -11,11 +11,15 @@ interface ProveedoresFormProps {
 
 const initialProveedorData: ProveedorFormData = {
   nombre: '',
-  ruc: '',
+  razon_social: '',
+  nit: '',
   telefono: '',
   email: '',
   direccion: '',
   contacto: '',
+  foto_perfil: null,
+  ci_anverso: null,
+  ci_reverso: null,
   activo: true,
 };
 

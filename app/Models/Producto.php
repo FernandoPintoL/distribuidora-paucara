@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\TipoPrecio;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -404,6 +403,226 @@ class Producto extends Model
                     $producto->actualizarConfiguracionGanancia($tipo);
                 }
             }
+        });
+    }
+
+    /**
+     * ==========================================
+     * MÉTODOS DE INVENTARIO Y STOCK
+     * ==========================================
+     */
+
+    /**
+     * Obtener stock total consolidado de todos los almacenes
+     */
+    public function stockTotal(): int
+    {
+        return $this->stock()->sum('cantidad');
+    }
+
+    /**
+     * Verificar si el producto tiene stock bajo (menor al mínimo)
+     */
+    public function stockBajo(): bool
+    {
+        if ($this->stock_minimo <= 0) {
+            return false;
+        }
+
+        return $this->stockTotal() < $this->stock_minimo;
+    }
+
+    /**
+     * Verificar si el producto excede el stock máximo
+     */
+    public function stockAlto(): bool
+    {
+        if ($this->stock_maximo <= 0) {
+            return false;
+        }
+
+        return $this->stockTotal() > $this->stock_maximo;
+    }
+
+    /**
+     * Verificar si tiene productos próximos a vencer
+     */
+    public function proximoVencer(int $diasAnticipacion = 30): bool
+    {
+        $fechaLimite = now()->addDays($diasAnticipacion);
+
+        return $this->stock()
+            ->whereNotNull('fecha_vencimiento')
+            ->where('fecha_vencimiento', '<=', $fechaLimite)
+            ->where('cantidad', '>', 0)
+            ->exists();
+    }
+
+    /**
+     * Obtener productos que vencen próximamente
+     */
+    public function stockProximoVencer(int $diasAnticipacion = 30): \Illuminate\Database\Eloquent\Collection
+    {
+        $fechaLimite = now()->addDays($diasAnticipacion);
+
+        return $this->stock()
+            ->with('almacen')
+            ->whereNotNull('fecha_vencimiento')
+            ->where('fecha_vencimiento', '<=', $fechaLimite)
+            ->where('cantidad', '>', 0)
+            ->orderBy('fecha_vencimiento')
+            ->get();
+    }
+
+    /**
+     * Obtener productos vencidos
+     */
+    public function stockVencido(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->stock()
+            ->with('almacen')
+            ->whereNotNull('fecha_vencimiento')
+            ->where('fecha_vencimiento', '<', now()->toDateString())
+            ->where('cantidad', '>', 0)
+            ->orderBy('fecha_vencimiento')
+            ->get();
+    }
+
+    /**
+     * Registrar movimiento de inventario
+     */
+    public function registrarMovimiento(
+        int $almacenId,
+        int $cantidad,
+        string $tipo,
+        ?string $observacion = null,
+        ?string $numeroDocumento = null,
+        ?string $lote = null,
+        ?\Carbon\Carbon $fechaVencimiento = null,
+        ?int $userId = null
+    ): MovimientoInventario {
+        // Buscar o crear registro de stock
+        $stockProducto = $this->stock()
+            ->where('almacen_id', $almacenId)
+            ->where(function ($q) use ($lote) {
+                if ($lote) {
+                    $q->where('lote', $lote);
+                } else {
+                    $q->whereNull('lote');
+                }
+            })
+            ->first();
+
+        if (!$stockProducto) {
+            $stockProducto = StockProducto::create([
+                'producto_id' => $this->id,
+                'almacen_id' => $almacenId,
+                'cantidad' => 0,
+                'lote' => $lote,
+                'fecha_vencimiento' => $fechaVencimiento,
+                'fecha_actualizacion' => now(),
+            ]);
+        }
+
+        return MovimientoInventario::registrar(
+            $stockProducto,
+            $cantidad,
+            $tipo,
+            $observacion,
+            $numeroDocumento,
+            $userId
+        );
+    }
+
+    /**
+     * Ajustar stock directo (para correcciones)
+     */
+    public function ajustarStock(
+        int $almacenId,
+        int $nuevaCantidad,
+        string $observacion = 'Ajuste de inventario',
+        ?string $lote = null
+    ): MovimientoInventario {
+        $stockProducto = $this->stock()
+            ->where('almacen_id', $almacenId)
+            ->where(function ($q) use ($lote) {
+                if ($lote) {
+                    $q->where('lote', $lote);
+                } else {
+                    $q->whereNull('lote');
+                }
+            })
+            ->firstOrCreate(
+                [
+                    'producto_id' => $this->id,
+                    'almacen_id' => $almacenId,
+                    'lote' => $lote,
+                ],
+                [
+                    'cantidad' => 0,
+                    'fecha_actualizacion' => now(),
+                ]
+            );
+
+        $diferencia = $nuevaCantidad - $stockProducto->cantidad;
+        $tipo = $diferencia >= 0 ? MovimientoInventario::TIPO_ENTRADA_AJUSTE : MovimientoInventario::TIPO_SALIDA_AJUSTE;
+
+        return MovimientoInventario::registrar(
+            $stockProducto,
+            $diferencia,
+            $tipo,
+            $observacion,
+            null
+        );
+    }
+
+    /**
+     * Obtener historial de movimientos
+     */
+    public function movimientos(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(
+            MovimientoInventario::class,
+            StockProducto::class,
+            'producto_id', // Foreign key en stock_productos
+            'stock_producto_id', // Foreign key en movimientos_inventario
+            'id', // Local key en productos
+            'id' // Local key en stock_productos
+        );
+    }
+
+    /**
+     * Scopes para consultas de inventario
+     */
+    public function scopeStockBajo($query)
+    {
+        return $query->whereColumn('stock_minimo', '>', 0)
+            ->whereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos WHERE producto_id = productos.id) < stock_minimo');
+    }
+
+    public function scopeStockAlto($query)
+    {
+        return $query->whereColumn('stock_maximo', '>', 0)
+            ->whereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos WHERE producto_id = productos.id) > stock_maximo');
+    }
+
+    public function scopeProximosVencer($query, int $diasAnticipacion = 30)
+    {
+        $fechaLimite = now()->addDays($diasAnticipacion)->toDateString();
+
+        return $query->whereHas('stock', function ($q) use ($fechaLimite) {
+            $q->whereNotNull('fecha_vencimiento')
+                ->where('fecha_vencimiento', '<=', $fechaLimite)
+                ->where('cantidad', '>', 0);
+        });
+    }
+
+    public function scopeVencidos($query)
+    {
+        return $query->whereHas('stock', function ($q) {
+            $q->whereNotNull('fecha_vencimiento')
+                ->where('fecha_vencimiento', '<', now()->toDateString())
+                ->where('cantidad', '>', 0);
         });
     }
 }

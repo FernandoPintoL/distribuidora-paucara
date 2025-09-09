@@ -35,6 +35,8 @@ const route = (name: string, params?: any) => {
   return baseRoute;
 };
 
+const ALL_VALUE = 'all';
+
 interface Precio {
   id: number;
   nombre: string;
@@ -98,21 +100,23 @@ export default function ReportePreciosIndex({
   const [formData, setFormData] = useState({
     fecha_desde: filtros.fecha_desde || '',
     fecha_hasta: filtros.fecha_hasta || '',
-    tipo_precio_id: filtros.tipo_precio_id?.toString() || '',
-    categoria_id: filtros.categoria_id?.toString() || '',
+    tipo_precio_id: filtros.tipo_precio_id?.toString() || ALL_VALUE,
+    categoria_id: filtros.categoria_id?.toString() || ALL_VALUE,
   });
 
   const handleFilter = () => {
-    const params = Object.fromEntries(
-      Object.entries(formData).filter(([_, value]) => value !== '')
-    );
+    const paramsRaw = { ...formData } as Record<string,string>;
+    if (paramsRaw.tipo_precio_id === ALL_VALUE) { delete paramsRaw.tipo_precio_id; }
+    if (paramsRaw.categoria_id === ALL_VALUE) { delete paramsRaw.categoria_id; }
+    const params = Object.fromEntries(Object.entries(paramsRaw).filter(([_, v]) => v !== ''));
     router.get(route('reportes.precios.index'), params);
   };
 
   const exportar = () => {
-    const params = Object.fromEntries(
-      Object.entries(formData).filter(([_, value]) => value !== '')
-    );
+    const paramsRaw = { ...formData } as Record<string,string>;
+    if (paramsRaw.tipo_precio_id === ALL_VALUE) { delete paramsRaw.tipo_precio_id; }
+    if (paramsRaw.categoria_id === ALL_VALUE) { delete paramsRaw.categoria_id; }
+    const params = Object.fromEntries(Object.entries(paramsRaw).filter(([_, v]) => v !== ''));
     window.open(route('reportes.precios.export') + '?' + new URLSearchParams(params).toString());
   };
 
@@ -270,12 +274,12 @@ export default function ReportePreciosIndex({
                     <SelectValue placeholder="Todos los tipos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los tipos</SelectItem>
-                    {tipos_precio.map(tipo => (
-                      <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value={ALL_VALUE}>Todos los tipos</SelectItem>
+                      {tipos_precio.map(tipo => (
+                        <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                          {tipo.nombre}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -290,7 +294,7 @@ export default function ReportePreciosIndex({
                     <SelectValue placeholder="Todas las categorías" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las categorías</SelectItem>
+                    <SelectItem value={ALL_VALUE}>Todas las categorías</SelectItem>
                     {categorias.map(categoria => (
                       <SelectItem key={categoria.id} value={categoria.id.toString()}>
                         {categoria.nombre}
@@ -310,8 +314,8 @@ export default function ReportePreciosIndex({
                     setFormData({
                       fecha_desde: '',
                       fecha_hasta: '',
-                      tipo_precio_id: '',
-                      categoria_id: '',
+                      tipo_precio_id: ALL_VALUE,
+                      categoria_id: ALL_VALUE,
                     });
                     router.get(route('reportes.precios.index'));
                   }}

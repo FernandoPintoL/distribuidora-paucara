@@ -7,7 +7,7 @@ interface GenericFormFieldsProps<F extends BaseFormData> {
   data: F;
   errors: Partial<Record<keyof F, string>>;
   fields: FormField<F>[];
-  onChange: (field: keyof F, value: any) => void;
+  onChange: (field: keyof F, value: unknown) => void;
   disabled?: boolean;
 }
 
@@ -21,6 +21,18 @@ export default function GenericFormFields<F extends BaseFormData>({
   const renderField = (field: FormField<F>) => {
     const value = data[field.key];
     const error = errors[field.key];
+
+    // Si el campo tiene un render personalizado, usarlo
+    if (typeof field.render === 'function') {
+      return field.render({
+        value,
+        onChange: (v: any) => onChange(field.key, v),
+        label: field.label,
+        error,
+        disabled,
+        field,
+      });
+    }
 
     switch (field.type) {
       case 'textarea':
@@ -86,6 +98,60 @@ export default function GenericFormFields<F extends BaseFormData>({
           </select>
         );
 
+      case 'file':
+        {
+          const fileValue = value as File | string | null | undefined;
+          let previewSrc: string | null = null;
+          if (fileValue instanceof File) {
+            previewSrc = URL.createObjectURL(fileValue);
+          } else if (typeof fileValue === 'string' && fileValue.length > 0) {
+            // If it's a stored relative path, prefix with /storage; otherwise assume absolute URL
+            previewSrc = fileValue.startsWith('http') || fileValue.startsWith('data:') ? fileValue : `/storage/${fileValue}`;
+          }
+
+          return (
+            <div className="rounded-lg border border-dashed border-gray-300 dark:border-neutral-700 p-4 bg-gray-50/60 dark:bg-neutral-900/40">
+              <div className="flex items-center gap-4">
+                <label htmlFor={String(field.key)} className="flex-1">
+                  <input
+                    id={String(field.key)}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                    disabled={disabled}
+                    className={`block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${error ? 'border-red-500' : ''}`}
+                  />
+                </label>
+                {fileValue && (
+                  <button
+                    type="button"
+                    onClick={() => onChange(field.key, null)}
+                    disabled={disabled}
+                    className="text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-neutral-700 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
+
+              {previewSrc && (
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200 dark:ring-neutral-700 bg-white dark:bg-neutral-800">
+                    <img src={previewSrc} alt="Vista previa" className="h-full w-full object-cover" />
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {fileValue instanceof File ? fileValue.name : 'Imagen actual'}
+                  </div>
+                </div>
+              )}
+
+              {!previewSrc && (
+                <p className="mt-2 text-xs text-muted-foreground">Formatos aceptados: JPG, PNG, GIF. Tamaño máximo 5MB.</p>
+              )}
+            </div>
+          );
+        }
+
       default: // text
         return (
           <Input
@@ -102,21 +168,40 @@ export default function GenericFormFields<F extends BaseFormData>({
     }
   };
 
+  const renderSingleFieldBlock = (field: FormField<F>) => (
+    <div key={String(field.key)} className="space-y-2">
+      {(!field.render && field.type !== 'boolean') && (
+        <Label htmlFor={String(field.key)} className="text-sm font-medium">
+          {field.label} {field.required && '*'}
+        </Label>
+      )}
+      {renderField(field)}
+      {errors[field.key] && (
+        <p className="text-sm text-red-600">{errors[field.key]}</p>
+      )}
+    </div>
+  );
+
+  const rendered: React.ReactNode[] = [];
+  for (let i = 0; i < fields.length; i++) {
+    const f = fields[i];
+    const key = String(f.key);
+    if (key === 'ci_anverso' && i + 1 < fields.length && String(fields[i + 1].key) === 'ci_reverso') {
+      rendered.push(
+        <div key="ci-pair" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {renderSingleFieldBlock(f)}
+          {renderSingleFieldBlock(fields[i + 1])}
+        </div>
+      );
+      i++;
+      continue;
+    }
+    rendered.push(renderSingleFieldBlock(f));
+  }
+
   return (
     <div className="space-y-6">
-      {fields.map((field) => (
-        <div key={String(field.key)} className="space-y-2">
-          {field.type !== 'boolean' && (
-            <Label htmlFor={String(field.key)} className="text-sm font-medium">
-              {field.label} {field.required && '*'}
-            </Label>
-          )}
-          {renderField(field)}
-          {errors[field.key] && (
-            <p className="text-sm text-red-600">{errors[field.key]}</p>
-          )}
-        </div>
-      ))}
+      {rendered}
       <p className="text-xs text-muted-foreground">
         * Campos obligatorios
       </p>

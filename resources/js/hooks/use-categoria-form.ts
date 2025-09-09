@@ -55,7 +55,7 @@ export function useCategoriaForm(categoria?: Categoria | null) {
 
   // Manejar cambios en los campos
   const handleFieldChange = useCallback((field: keyof CategoriaFormData, value: string | boolean) => {
-    setData(field, value);
+    setData(field as unknown as string, value as unknown as CategoriaFormData[keyof CategoriaFormData]);
   }, [setData]);
 
   // Resetear formulario

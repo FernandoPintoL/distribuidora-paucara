@@ -22,6 +22,9 @@ class Cliente extends Model
         'activo',
         'fecha_registro',
         'limite_credito',
+        'foto_perfil',
+        'ci_anverso',
+        'ci_reverso',
     ];
 
     protected $casts = [
@@ -38,5 +41,20 @@ class Cliente extends Model
     public function fotosLugar()
     {
         return $this->hasMany(FotoLugarCliente::class, 'cliente_id');
+    }
+
+    public function ventas()
+    {
+        return $this->hasMany(Venta::class);
+    }
+
+    public function proformas()
+    {
+        return $this->hasMany(Proforma::class);
+    }
+
+    public function cuentasPorCobrar()
+    {
+        return $this->hasMany(CuentaPorCobrar::class);
     }
 }

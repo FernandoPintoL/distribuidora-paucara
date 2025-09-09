@@ -1,4 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
+// Declaración para el helper `route` usado en este archivo (p.ej. Ziggy)
+// Evita errores de TypeScript cuando no existe un tipo global.
+declare const route: (...args: any[]) => string;
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+
+const ALL_VALUE = 'all';
 
 interface Ganancia {
   producto: {
@@ -78,14 +83,15 @@ export default function ReporteGananciasIndex({
   const [formData, setFormData] = useState({
     fecha_desde: filtros.fecha_desde || '',
     fecha_hasta: filtros.fecha_hasta || '',
-    tipo_precio_id: filtros.tipo_precio_id?.toString() || '',
-    categoria_id: filtros.categoria_id?.toString() || '',
+    tipo_precio_id: filtros.tipo_precio_id?.toString() || ALL_VALUE,
+    categoria_id: filtros.categoria_id?.toString() || ALL_VALUE,
   });
 
   const handleFilter = () => {
-    const params = Object.fromEntries(
-      Object.entries(formData).filter(([_, value]) => value !== '')
-    );
+    const paramsRaw = { ...formData } as Record<string,string>;
+    if (paramsRaw.tipo_precio_id === ALL_VALUE) delete paramsRaw.tipo_precio_id;
+    if (paramsRaw.categoria_id === ALL_VALUE) delete paramsRaw.categoria_id;
+    const params = Object.fromEntries(Object.entries(paramsRaw).filter(([_, v]) => v !== ''));
     router.get(route('reportes.ganancias.index'), params);
   };
 
@@ -307,7 +313,7 @@ export default function ReporteGananciasIndex({
                     <SelectValue placeholder="Todos los tipos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los tipos</SelectItem>
+                    <SelectItem value={ALL_VALUE}>Todos los tipos</SelectItem>
                     {tipos_precio.map(tipo => (
                       <SelectItem key={tipo.id} value={tipo.id.toString()}>
                         {tipo.nombre}
@@ -327,7 +333,7 @@ export default function ReporteGananciasIndex({
                     <SelectValue placeholder="Todas las categorías" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las categorías</SelectItem>
+                    <SelectItem value={ALL_VALUE}>Todas las categorías</SelectItem>
                     {categorias.map(categoria => (
                       <SelectItem key={categoria.id} value={categoria.id.toString()}>
                         {categoria.nombre}
@@ -347,8 +353,8 @@ export default function ReporteGananciasIndex({
                     setFormData({
                       fecha_desde: '',
                       fecha_hasta: '',
-                      tipo_precio_id: '',
-                      categoria_id: '',
+                      tipo_precio_id: ALL_VALUE,
+                      categoria_id: ALL_VALUE,
                     });
                     router.get(route('reportes.ganancias.index'));
                   }}

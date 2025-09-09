@@ -1,5 +1,4 @@
-// (Se quitaron las comprobaciones globales de TS para usar tipos correctamente en este archivo)
- import { Head, Link, useForm } from '@inertiajs/react';
+ import { Head, Link, useForm, router } from '@inertiajs/react';
  import Step1DatosProducto from './steps/Step1DatosProducto';
  import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
  import Step3Almacenes from './steps/Step3Almacenes';
@@ -22,6 +21,7 @@
    almacenes?: { id: number; nombre: string }[];
    tipos_precio: TipoPrecio[];
    configuraciones_ganancias?: { porcentaje_interes_general?: number; tipo_precio_ganancia_id?: number };
+   historial_precios?: import('@/domain/productos').HistorialPrecio[];
  }
 
  // Estado del formulario tipado para evitar 'any' implícitos
@@ -57,21 +57,19 @@
    almacenes: [],
  };
 
- export default function ProductoForm({ producto, categorias, marcas, unidades, tipos_precio, configuraciones_ganancias, almacenes }: ProductoFormPageProps) {
+ export default function ProductoForm({ producto, categorias, marcas, unidades, tipos_precio, configuraciones_ganancias, almacenes, historial_precios }: ProductoFormPageProps) {
    // Normalizadores para compatibilidad: el backend puede enviar {id,nombre,...} o {value,label,...}
-   const tpId = (tp: any) => Number((tp?.id ?? tp?.value) ?? 0);
+   /*const tpId = (tp: any) => Number((tp?.id ?? tp?.value) ?? 0);
    const tpNombre = (tp: any) => String(tp?.nombre ?? tp?.label ?? '');
    const tpIcono = (tp: any) => (tp?.configuracion?.icono ?? tp?.icono ?? '');
    const tpEsGanancia = (tp: any) => Boolean(tp?.es_ganancia);
    const tpEsBase = (tp: any) => Boolean(tp?.es_precio_base);
-   const tpColor = (tp: any) => String(tp?.color ?? '');
+   const tpColor = (tp: any) => String(tp?.color ?? '');*/
    const isEditing = !!producto?.id;
    const porcentajeInteres = Number(configuraciones_ganancias?.porcentaje_interes_general ?? 0);
    // Estado para controlar pasos del formulario (wizard)
    const [step, setStep] = useState<number>(1);
    const totalSteps = 4;
-   // Acceso seguro al id objetivo de ganancia (evita error si la propiedad no existe en el tipo inferido)
-   const TARGET_GANANCIA_TIPO_ID = Number((configuraciones_ganancias as { tipo_precio_ganancia_id?: number } | undefined)?.tipo_precio_ganancia_id ?? 2);
    const DRAFT_KEY = 'producto_form_draft_v1';
 
    // Configurar hooks de búsqueda para cada entidad
@@ -84,9 +82,7 @@
    // Select para almacenes reales
    const almacenesSelect = useEntitySelect(almacenes || [], { searchFields: ['nombre'] });
 
-   // useForm: usamos any aquí para evitar errores complejos de inferencia de tipos de TS
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const { data, setData, post, processing, errors, recentlySuccessful, clearErrors } = useForm<any>(
+   const { data, setData, processing, errors, recentlySuccessful, clearErrors } = useForm<any>(
      producto ? {
        nombre: producto.nombre,
        descripcion: producto.descripcion ?? '',
@@ -101,8 +97,72 @@
        galeria: producto.galeria ?? [],
        precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
        codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
+       almacenes: (producto as any)?.almacenes?.length ? (producto as any).almacenes : [],
      } : (initialProductoData as unknown as ProductoFormState)
    );
+
+   // Prefill almacenes por defecto al crear (no editar)
+   useEffect(() => {
+     if (isEditing) { return; }
+     if ((data.almacenes || []).length > 0) { return; }
+     if (!Array.isArray(almacenes) || almacenes.length === 0) { return; }
+     const prefilled = almacenes.map(a => ({
+       almacen_id: a.id,
+       almacen_nombre: a.nombre,
+       stock: 0,
+       lote: '',
+       fecha_vencimiento: ''
+     })) as StockAlmacen[];
+     setData((prev: any) => ({ ...(prev as any), almacenes: prefilled } as any));
+   }, [isEditing, almacenes, data.almacenes]);
+
+   // Autosave: restaurar borrador en carga inicial (solo creación)
+   useEffect(() => {
+     if (typeof window === 'undefined') { return; }
+     if (isEditing) { return; }
+     try {
+       const raw = localStorage.getItem(DRAFT_KEY);
+       if (!raw) { return; }
+       const draftUnknown = JSON.parse(raw) as unknown;
+       if (!draftUnknown || typeof draftUnknown !== 'object') { return; }
+       const draft = draftUnknown as Record<string, unknown>;
+       const nextStep = Number((draft.step as number | string | undefined) ?? 1);
+       if (nextStep >= 1 && nextStep <= totalSteps) {
+         setStep(nextStep);
+       }
+       const restoredData = (draft.data as Record<string, unknown> | undefined);
+       if (restoredData && typeof restoredData === 'object') {
+         try {
+           const set = setData as unknown as (key: string, value: unknown) => void;
+           Object.entries(restoredData).forEach(([k, v]) => {
+             set(k, v);
+           });
+         } catch (err) {
+           console.warn('No se pudo restaurar completamente el borrador', err);
+         }
+         NotificationService.info('Se restauró tu borrador del producto.');
+       }
+     } catch (e) {
+       console.warn('Borrador inválido, se ignora.', e);
+     }
+   }, []);
+
+   // Autosave: guardar borrador al cambiar datos o paso (solo creación)
+   useEffect(() => {
+     if (typeof window === 'undefined') { return; }
+     if (isEditing) { return; }
+     try {
+       const payload = { step, data, ts: Date.now() };
+       const replacer = (key: string, value: unknown) => (key === 'file' ? undefined : value);
+       // Omitimos cualquier propiedad llamada "file" (File/Blob) para evitar errores de serialización
+       localStorage.setItem(
+         DRAFT_KEY,
+         JSON.stringify(payload, replacer as unknown as (this: unknown, key: string, value: unknown) => unknown)
+       );
+     } catch (err) {
+       console.warn('No se pudo guardar el borrador', err);
+     }
+   }, [data, step, isEditing]);
 
    // Mostrar notificaciones de éxito
    useEffect(() => {
@@ -165,6 +225,33 @@
        NotificationService.warning('Debe agregar al menos un precio válido con nombre');
        setStep(2);
        return;
+     }
+
+     // Validación de fechas de vencimiento (si existen)
+     if ((data.almacenes || []).length > 0) {
+       const isIsoDate = (s: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s);
+       const today = new Date();
+       today.setHours(0,0,0,0);
+       for (let i = 0; i < (data.almacenes || []).length; i++) {
+         const a = (data.almacenes as StockAlmacen[])[i];
+         const fv = a?.fecha_vencimiento ? String(a.fecha_vencimiento) : '';
+         if (fv) {
+           if (!isIsoDate(fv)) {
+             NotificationService.error(`La fecha de vencimiento en la fila ${i + 1} (${a.almacen_nombre || 'almacén'}) no tiene formato válido (YYYY-MM-DD).`);
+             setStep(3);
+             window.scrollTo({ top: 0, behavior: 'smooth' });
+             return;
+           }
+           const d = new Date(`${fv}T00:00:00`);
+           d.setHours(0,0,0,0);
+           if (isNaN(d.getTime()) || d < today) {
+             NotificationService.error(`La fecha de vencimiento en la fila ${i + 1} (${a.almacen_nombre || 'almacén'}) no puede ser pasada.`);
+             setStep(3);
+             window.scrollTo({ top: 0, behavior: 'smooth' });
+             return;
+           }
+         }
+       }
      }
 
      const formData = new FormData();
@@ -249,8 +336,12 @@
        if (a.fecha_vencimiento) formData.append(`almacenes[${i}][fecha_vencimiento]`, String(a.fecha_vencimiento));
      });
 
+     let savingToast: string | undefined;
      const options: any = {
        forceFormData: true,
+       onStart: () => {
+         savingToast = NotificationService.loading('Guardando producto...');
+       },
        onSuccess: () => {
          // NotificationService se maneja en el useEffect
          // limpiar draft en localStorage
@@ -260,6 +351,8 @@
            // prevenir fallo si el storage no está disponible (por ejemplo en SSR)
            console.warn('No se pudo eliminar draft:', err);
          }
+         // Redirigir al índice al finalizar correctamente
+         router.visit(productosService.indexUrl());
        },
        onError: (errors: Record<string, string | string[]>) => {
          console.error('Error al guardar producto:', errors);
@@ -268,23 +361,29 @@
              NotificationService.error(`${field}: ${message}`);
            }
          });
+       },
+       onFinish: () => {
+         if (savingToast) {
+           NotificationService.dismiss(savingToast);
+         }
        }
      };
 
      if (isEditing && producto?.id) {
        formData.append('_method', 'PUT');
-       post(productosService.updateUrl(producto.id), options);
+       router.post(productosService.updateUrl(producto.id), formData, options);
      } else {
-       post(productosService.storeUrl(), options);
+       router.post(productosService.storeUrl(), formData, options);
      }
    };
 
    // Almacenes helpers
-   const addAlmacen = () => {
+   const addAlmacen = (prefill?: Partial<StockAlmacen>) => {
      const next = (data.almacenes || []).slice();
-     next.push({ almacen_id: '', almacen_nombre: '', stock: 0, lote: '', fecha_vencimiento: '' } as StockAlmacen);
-     setData('almacenes', next as unknown as StockAlmacen[]);
-     NotificationService.info('Entrada de almacén agregada');
+     const base = { almacen_id: '', almacen_nombre: '', stock: 0, lote: '', fecha_vencimiento: '' } as StockAlmacen;
+     next.push({ ...base, ...(prefill as any) } as StockAlmacen);
+     setData((prev: any) => ({ ...(prev as any), almacenes: next } as any));
+     NotificationService.info(prefill ? 'Lote agregado' : 'Entrada de almacén agregada');
    };
 
    const setAlmacen = (i: number, key: keyof StockAlmacen, value: number | string | undefined) => {
@@ -295,150 +394,64 @@
        const opt = (almacenesSelect.filteredOptions as { value: number | string; label: string }[]).find((o) => String(o.value) === String(value));
        if (opt) next[i].almacen_nombre = opt.label as string;
      }
-     setData('almacenes', next);
+     setData((prev: any) => ({ ...(prev as any), almacenes: next } as any));
    };
 
    const removeAlmacen = async (i: number) => {
      if (!(data.almacenes || []).length) return;
      const confirmed = await NotificationService.confirm('¿Eliminar esta entrada de almacén?', { confirmText: 'Eliminar', cancelText: 'Cancelar' });
-     if (confirmed) setData('almacenes', (data.almacenes || []).filter((_: unknown, idx: number) => idx !== i));
+     if (confirmed) {
+       setData((prev: any) => ({
+         ...(prev as any),
+         almacenes: (((prev as any)?.almacenes) || []).filter((_: unknown, idx: number) => idx !== i)
+       } as any));
+     }
    };
 
-   // Simplificamos la firma para evitar errores complejos de inferencia de tipos de TS
+   // Precios y códigos: funciones reales usadas por Step2
+   const setPrecios = (precios: Precio[]) => {
+     setData((prev: any) => ({ ...(prev as any), precios } as any));
+   };
+
    const setPrecio = (i: number, key: string, value: string | number) => {
      const next = [...data.precios];
-     next[i] = { ...next[i], [key]: value };
-
-     // Si se está modificando el monto del precio base, recalcular los precios de venta
-     // aplicando el porcentaje de interés general y actualizar los precios que sean
-     // de tipo ganancia (es_ganancia === true).
-     try {
-       const tipoId = next[i]?.tipo_precio_id;
-       const tipo = tipos_precio.find((t: any) => tpId(t) === tipoId) as any;
-       const estaModificandoMonto = key === 'monto';
-       const esPrecioBase = !!tipo?.es_precio_base;
-
-       if (estaModificandoMonto && esPrecioBase) {
-         const costo = Number(value) || 0;
-
-         // Recalcular todos los precios de tipos de ganancia presentes usando su porcentaje configurado,
-         // y si no existe, usar el porcentaje global.
-         next.forEach((p: Precio, idx: number) => {
-           const tipoP = tipos_precio.find((t: TipoPrecio) => t.id === p.tipo_precio_id);
-           if (tipoP?.es_ganancia) {
-             const pctSource = (typeof tipoP?.configuracion?.porcentaje_ganancia === 'number')
-              ? Number(tipoP.configuracion.porcentaje_ganancia)
-              : (typeof (tipoP as any)?.porcentaje_ganancia === 'number'
-                ? Number((tipoP as any).porcentaje_ganancia)
-                : Number(porcentajeInteres || 0));
-            const pct = pctSource;
-             const factor = 1 + (pct / 100);
-             const montoVenta = Number((costo * factor).toFixed(2));
-             next[idx] = { ...next[idx], monto: montoVenta };
-           }
-         });
-       }
-     } catch (e) {
-       // En caso de error, no rompemos la UI; igualmente actualizamos el precio específico
-       console.error('Error al recalcular precios de venta:', e);
-     }
-
-     setData('precios', next);
-   };
-
-   const addPrecio = () => {
-     // evitar inferencia profunda de TS al construir arrays complejos
-     const nextPrecios = ([...data.precios, { nombre: 'Precio General', monto: 0, tipo_precio_id: 2 }] as unknown) as Precio[];
-     setData('precios', nextPrecios);
-     NotificationService.info('Precio agregado. Selecciona el tipo y configura el monto correspondiente.');
+     // Mantener el valor tal cual (string o number) para no romper el input controlado
+     next[i] = { ...(next[i] as any), [key]: value } as Precio;
+     setData((prev: any) => ({ ...(prev as any), precios: next } as any));
    };
 
    // Agregar/Quitar un tipo de precio por checkbox
    const toggleTipoPrecio = (tipoId: number, checked: boolean) => {
-     const exists = data.precios.some((p: Precio) => p.tipo_precio_id === tipoId);
+     const exists = (data.precios || []).some((p: Precio) => Number(p.tipo_precio_id) === Number(tipoId));
      if (checked && !exists) {
-       const tipo = tipos_precio.find(t => t.id === tipoId);
-       const nuevo = { nombre: tipo?.nombre || 'Precio', monto: 0, tipo_precio_id: tipoId } as Precio;
-       // Inicializar monto si es tipo de ganancia y hay costo
-       if (tipo?.es_ganancia && precioCosto > 0) {
-         const costoNum = Number(precioCosto) || 0;
-         const pct = (typeof tipo?.configuracion?.porcentaje_ganancia === 'number')
-          ? Number(tipo.configuracion.porcentaje_ganancia)
-          : (typeof (tipo as any)?.porcentaje_ganancia === 'number'
-            ? Number((tipo as any).porcentaje_ganancia)
-            : Number(porcentajeInteres || 0));
-         const factor = 1 + (pct / 100);
-         nuevo.monto = Number((costoNum * factor).toFixed(2));
-       }
-       setData('precios', ([...data.precios, nuevo] as unknown) as Precio[]);
+       const tipo = (tipos_precio || []).find(t => Number((t as any)?.id ?? (t as any)?.value) === Number(tipoId));
+       const nuevo = { nombre: (tipo as any)?.nombre || 'Precio', monto: 0, tipo_precio_id: tipoId } as Precio;
+       setData((prev: any) => ({ ...(prev as any), precios: ([...data.precios, nuevo] as unknown) as Precio[] } as any));
      } else if (!checked && exists) {
-       setData('precios', data.precios.filter((p: Precio) => p.tipo_precio_id !== tipoId));
+       setData((prev: any) => ({
+         ...(prev as any),
+         precios: (((prev as any)?.precios) || []).filter((p: any) => Number(p.tipo_precio_id) !== Number(tipoId))
+       } as any));
      }
    };
-
-   // Ajustando lógica en removePrecio para evitar instanciación profunda
-   const removePrecio = async (i: number) => {
-     if (data.precios.length <= 1) {
-       NotificationService.warning('Debe mantener al menos un precio');
-       return;
-     }
-
-     const confirmed = await NotificationService.confirm(
-       '¿Estás seguro de eliminar este precio?',
-       {
-         confirmText: 'Eliminar',
-         cancelText: 'Cancelar',
-         title: 'Confirmar eliminación'
-       }
-     );
-
-     if (confirmed) {
-       const updatedPrecios = (data.precios.filter((_: unknown, idx: number) => idx !== i) as unknown) as Precio[];
-       setData('precios', updatedPrecios);
-       NotificationService.success('Precio eliminado');
-     }
-   };
-
-   // Función para obtener información del tipo de precio
-   const getTipoPrecioInfo = (tipoPrecioValue: number): any | undefined => {
-    const tp = tipos_precio.find((t: any) => tpId(t) === tipoPrecioValue) as any;
-    if (!tp) return undefined;
-    return {
-      id: tpId(tp),
-      nombre: tpNombre(tp),
-      color: tpColor(tp),
-      es_ganancia: tpEsGanancia(tp),
-      es_precio_base: tpEsBase(tp),
-      porcentaje_ganancia: (typeof (tp as any)?.porcentaje_ganancia === 'number' ? Number((tp as any).porcentaje_ganancia) : undefined),
-      configuracion: tp.configuracion ?? { icono: tpIcono(tp) },
-    };
-  };
-
-   // Función para calcular ganancia basada en precio de costo
-   const calcularGanancia = (precioVenta: number, precioCosto: number): { ganancia: number; porcentaje: number } => {
-     if (precioCosto === 0) return { ganancia: 0, porcentaje: 0 };
-     const ganancia = precioVenta - precioCosto;
-     const porcentaje = (ganancia / precioCosto) * 100;
-     return { ganancia, porcentaje };
-   };
-
-   // Obtener precio de costo para cálculos
-   const baseTipo = tipos_precio.find((t: any) => tpEsBase(t));
-  const precioCosto = baseTipo ? (data.precios.find((p: Precio) => p.tipo_precio_id === tpId(baseTipo as any))?.monto ?? 0) : 0;
 
    const setCodigo = (i: number, value: string) => {
-     const next = [...data.codigos];
-     next[i] = { ...next[i], codigo: value };
-     setData('codigos', next);
+     const next = [...(data.codigos || [])];
+     next[i] = { ...(next[i] || {}), codigo: value } as any;
+     setData((prev: any) => ({ ...(prev as any), codigos: next } as any));
    };
 
    const addCodigo = () => {
-     setData('codigos', [...data.codigos, { codigo: '' }]);
+     setData((prev: any) => ({
+       ...(prev as any),
+       codigos: ([...((prev as any)?.codigos || []), { codigo: '' }] as any)
+     } as any));
      NotificationService.info('Código agregado. Ingresa el código de barras.');
    };
 
    const removeCodigo = async (i: number) => {
-     if (data.codigos.length === 1) {
+     const items = (data.codigos || []);
+     if (items.length <= 1) {
        NotificationService.warning('Debe mantener al menos un código');
        return;
      }
@@ -452,13 +465,16 @@
      );
 
      if (confirmed) {
-       setData('codigos', (data.codigos.filter((_: unknown, idx: number) => idx !== i) as unknown) as CodigoBarra[]);
+       setData((prev: any) => ({
+         ...(prev as any),
+         codigos: ((((prev as any)?.codigos) || []).filter((_: unknown, idx: number) => idx !== i) as any)
+       } as any));
        NotificationService.success('Código eliminado');
      }
    };
 
    const setPerfil = (file: File | undefined) => {
-     setData('perfil', file ? { file } : undefined);
+     setData((prev: any) => ({ ...(prev as any), perfil: file ? { file } : undefined } as any));
      if (file) {
        NotificationService.success('Imagen de perfil seleccionada');
      }
@@ -468,7 +484,7 @@
      if (!files || files.length === 0) return;
 
      const imgs = Array.from(files).map(f => ({ file: f } as Imagen));
-     setData('galeria', [...(data.galeria || []), ...imgs]);
+     setData((prev: any) => ({ ...(prev as any), galeria: ([...(((prev as any)?.galeria) || []), ...imgs] as any) } as any));
      NotificationService.success(`${files.length} imagen(es) agregada(s) a la galería`);
    };
 
@@ -482,7 +498,10 @@
      );
 
      if (confirmed) {
-       setData('galeria', ((data.galeria || []).filter((_: unknown, idx: number) => idx !== i) as unknown) as Imagen[]);
+       setData((prev: any) => ({
+         ...(prev as any),
+         galeria: ((((prev as any)?.galeria) || []).filter((_: unknown, idx: number) => idx !== i) as any)
+       } as any));
        NotificationService.success('Imagen eliminada de la galería');
      }
    };
@@ -532,36 +551,40 @@
                {/* STEP 1: Datos del producto */}
                {step === 1 && (
                 <Step1DatosProducto
-                  data={data}
-                  errors={errors as any}
-                  categoriasOptions={categoriasSelect.filteredOptions}
-                  marcasOptions={marcasSelect.filteredOptions}
-                  unidadesOptions={unidadesSelect.filteredOptions}
-                  setData={setData}
-                  getInputClassName={getInputClassName as any}
+                  {...({
+                    data: data as any,
+                    errors: errors as any,
+                    categoriasOptions: categoriasSelect.filteredOptions,
+                    marcasOptions: marcasSelect.filteredOptions,
+                    unidadesOptions: unidadesSelect.filteredOptions,
+                    setData: setData as any,
+                    getInputClassName: getInputClassName as any,
+                  } as any)}
                 />
-              )}
+               )}
 
                <div className="space-y-6">
                  {/* STEP 2: Precios y códigos */}
                  {step === 2 && (
                   <Step2PreciosCodigos
-                    data={{ precios: data.precios, codigos: data.codigos }}
-                    errors={errors as any}
-                    tipos_precio={tipos_precio}
-                    porcentajeInteres={porcentajeInteres}
-                    precioCosto={precioCosto}
-                    addPrecio={addPrecio}
-                    removePrecio={removePrecio}
-                    setPrecio={setPrecio}
-                    toggleTipoPrecio={toggleTipoPrecio}
-                    getTipoPrecioInfo={getTipoPrecioInfo}
-                    calcularGanancia={calcularGanancia}
-                    addCodigo={addCodigo}
-                    removeCodigo={removeCodigo}
-                    setCodigo={setCodigo}
-                  />
-                )}
+                   data={{ precios: data.precios, codigos: data.codigos }}
+                   errors={errors}
+                   tipos_precio={tipos_precio}
+                   porcentajeInteres={porcentajeInteres}
+                   precioCosto={data.precios?.find((p : Precio) => Number(p.tipo_precio_id) === 1)?.monto ?? 0}
+                   addPrecio={() => {}}
+                   removePrecio={() => {}}
+                   setPrecio={setPrecio}
+                   setPrecios={setPrecios}
+                   toggleTipoPrecio={toggleTipoPrecio}
+                   getTipoPrecioInfo={() => undefined}
+                   calcularGanancia={() => ({ ganancia: 0, porcentaje: 0 })}
+                   addCodigo={addCodigo}
+                   removeCodigo={removeCodigo}
+                   setCodigo={setCodigo}
+                   historial_precios={historial_precios}
+                 />
+               )}
 
                  {/* STEP 4: Imágenes (mostramos sólo en step 4) */}
                  {step === 4 && (

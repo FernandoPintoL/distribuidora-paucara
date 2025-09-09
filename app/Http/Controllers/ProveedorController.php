@@ -13,18 +13,49 @@ class ProveedorController extends Controller
     public function index(Request $request): Response
     {
         $q = (string) $request->string('q');
+
+        // Leer filtros adicionales
+        $activoParam = $request->input('activo');
+        $activo = null;
+        if ($activoParam !== null && $activoParam !== '' && $activoParam !== 'all') {
+            if ($activoParam === '1' || $activoParam === 1 || $activoParam === true || $activoParam === 'true') {
+                $activo = true;
+            } elseif ($activoParam === '0' || $activoParam === 0 || $activoParam === false || $activoParam === 'false') {
+                $activo = false;
+            }
+        }
+
+        $allowedOrderBy = ['id', 'nombre', 'created_at'];
+        $rawOrderBy = (string) $request->string('order_by');
+        $orderBy = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
+
+        $rawOrderDir = strtolower((string) $request->string('order_dir'));
+        $orderDir = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
+
         $items = Proveedor::query()
-            ->when($q, function($qq) use ($q){
-                $qq->where('nombre', 'ilike', "%$q%")
-                   ->orWhere('razon_social', 'ilike', "%$q%");
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('nombre', 'ilike', "%$q%")
+                        ->orWhere('razon_social', 'ilike', "%$q%")
+                        ->orWhere('nit', 'ilike', "%$q%")
+                        ->orWhere('telefono', 'ilike', "%$q%");
+                });
             })
-            ->orderByDesc('id')
+            ->when($activo !== null, function ($query) use ($activo) {
+                $query->where('activo', $activo);
+            })
+            ->orderBy($orderBy, $orderDir)
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('proveedores/index', [
             'proveedores' => $items,
-            'filters' => ['q' => $q],
+            'filters' => [
+                'q' => $q,
+                'activo' => $activo !== null ? ($activo ? '1' : '0') : null,
+                'order_by' => $orderBy,
+                'order_dir' => $orderDir,
+            ],
         ]);
     }
 
@@ -38,46 +69,78 @@ class ProveedorController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'razon_social' => ['nullable','string','max:255'],
-            'nit' => ['nullable','string','max:255'],
-            'telefono' => ['nullable','string','max:100'],
-            'email' => ['nullable','email','max:255'],
-            'direccion' => ['nullable','string','max:255'],
-            'contacto' => ['nullable','string','max:255'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
+            'nit' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:100'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'contacto' => ['nullable', 'string', 'max:255'],
             'activo' => ['boolean'],
+            'foto_perfil' => ['nullable', 'image', 'max:5120'],
+            'ci_anverso' => ['nullable', 'image', 'max:5120'],
+            'ci_reverso' => ['nullable', 'image', 'max:5120'],
         ]);
         $data['activo'] = $data['activo'] ?? true;
+
+        if ($request->hasFile('foto_perfil')) {
+            $data['foto_perfil'] = $request->file('foto_perfil')->store('proveedores', 'public');
+        }
+        if ($request->hasFile('ci_anverso')) {
+            $data['ci_anverso'] = $request->file('ci_anverso')->store('proveedores', 'public');
+        }
+        if ($request->hasFile('ci_reverso')) {
+            $data['ci_reverso'] = $request->file('ci_reverso')->store('proveedores', 'public');
+        }
+
         Proveedor::create($data);
+
         return redirect()->route('proveedores.index')->with('success', 'Proveedor creado');
     }
 
-    public function edit(Proveedor $proveedor): Response
+    public function edit(Proveedor $proveedore): Response
     {
         return Inertia::render('proveedores/form', [
-            'proveedor' => $proveedor,
+            'proveedor' => $proveedore,
         ]);
     }
 
-    public function update(Request $request, Proveedor $proveedor): RedirectResponse
+    public function update(Request $request, Proveedor $proveedore): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'razon_social' => ['nullable','string','max:255'],
-            'nit' => ['nullable','string','max:255'],
-            'telefono' => ['nullable','string','max:100'],
-            'email' => ['nullable','email','max:255'],
-            'direccion' => ['nullable','string','max:255'],
-            'contacto' => ['nullable','string','max:255'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
+            'nit' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:100'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'contacto' => ['nullable', 'string', 'max:255'],
             'activo' => ['boolean'],
+            'foto_perfil' => ['nullable', 'image', 'max:5120'],
+            'ci_anverso' => ['nullable', 'image', 'max:5120'],
+            'ci_reverso' => ['nullable', 'image', 'max:5120'],
         ]);
-        $proveedor->update($data);
+
+        $updates = $data;
+        if ($request->hasFile('foto_perfil')) {
+            $updates['foto_perfil'] = $request->file('foto_perfil')->store('proveedores', 'public');
+        }
+        if ($request->hasFile('ci_anverso')) {
+            $updates['ci_anverso'] = $request->file('ci_anverso')->store('proveedores', 'public');
+        }
+        if ($request->hasFile('ci_reverso')) {
+            $updates['ci_reverso'] = $request->file('ci_reverso')->store('proveedores', 'public');
+        }
+
+        $proveedore->update($updates);
+
         return redirect()->route('proveedores.index')->with('success', 'Proveedor actualizado');
     }
 
-    public function destroy(Proveedor $proveedor): RedirectResponse
+    public function destroy(Proveedor $proveedore): RedirectResponse
     {
-        $proveedor->delete();
+        $proveedore->delete();
+
         return redirect()->route('proveedores.index')->with('success', 'Proveedor eliminado');
     }
 }

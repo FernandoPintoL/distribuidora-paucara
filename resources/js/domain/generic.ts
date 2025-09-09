@@ -33,6 +33,16 @@ export interface ModuleConfig<T extends BaseEntity, F extends BaseFormData> {
   // Search configuration
   searchableFields: (keyof T)[];
   searchPlaceholder: string;
+
+  // Optional enhanced index visualization
+  enableCardView?: boolean; // Permite alternar entre tabla y tarjetas
+  cardRenderer?: (entity: T, actions: { onEdit: (e: T) => void; onDelete: (e: T) => void }) => React.ReactNode; // Renderiza una tarjeta para el entity
+
+  // Optional: show model-specific index filters (e.g., categoria/marca for productos)
+  showIndexFilters?: boolean;
+
+  // Optional: custom index filter renderer per module
+  indexFilterRenderer?: IndexFilterRenderer;
 }
 
 // Table column configuration
@@ -42,14 +52,14 @@ export interface TableColumn<T extends BaseEntity> {
   type: 'text' | 'number' | 'boolean' | 'date' | 'custom';
   sortable?: boolean;
   searchable?: boolean;
-  render?: (value: any, entity: T) => React.ReactNode;
+  render?: (value: any, entity: T, ...extra: any[]) => React.ReactNode;
 }
 
 // Form field configuration
 export interface FormField<F extends BaseFormData> {
   key: keyof F;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'date';
+  type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'date' | 'file';
   required?: boolean;
   placeholder?: string;
   validation?: {
@@ -60,7 +70,24 @@ export interface FormField<F extends BaseFormData> {
     pattern?: string;
   };
   options?: { value: any; label: string }[];
+  // Permite un renderizado personalizado del campo
+  render?: (props: {
+    value: any;
+    onChange: (value: any) => void;
+    label: string;
+    error?: string;
+    disabled?: boolean;
+    field: FormField<F>;
+  }) => React.ReactNode;
 }
+
+// Custom index filter renderer type
+export type IndexFilterRenderer = (args: {
+  current: Filters;
+  apply: (filters: Filters) => void;
+  reset: () => void;
+  extraData?: Record<string, unknown>;
+}) => React.ReactNode;
 
 // Generic service interface
 export interface BaseService<T extends BaseEntity, F extends BaseFormData> {
@@ -78,7 +105,7 @@ export interface BaseService<T extends BaseEntity, F extends BaseFormData> {
 // Generic props interfaces
 export interface GenericIndexProps<T extends BaseEntity> {
   entities: Pagination<T>;
-  filters: { q?: string };
+  filters: Filters;
 }
 
 export interface GenericFormProps<T extends BaseEntity> {

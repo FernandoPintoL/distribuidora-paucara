@@ -4,13 +4,14 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use App\Models\EstadoDocumento;
 
 class CoreCatalogSeeder extends Seeder
 {
     public function run(): void
     {
         // Estados de documento
-        $estadosDocumento = [
+        /* $estadosDocumento = [
             ['codigo' => 'BORRADOR', 'nombre' => 'Borrador'],
             ['codigo' => 'PENDIENTE', 'nombre' => 'Pendiente'],
             ['codigo' => 'APROBADO', 'nombre' => 'Aprobado'],
@@ -18,7 +19,18 @@ class CoreCatalogSeeder extends Seeder
             ['codigo' => 'CANCELADO', 'nombre' => 'Cancelado'],
             ['codigo' => 'FACTURADO', 'nombre' => 'Facturado'],
         ];
-        DB::table('estados_documento')->upsert($estadosDocumento, ['codigo'], ['nombre']);
+        DB::table('estados_documento')->upsert($estadosDocumento, ['codigo'], ['nombre']); */
+        $estados = [
+            ['nombre' => 'Borrador', 'codigo' => 'BORRADOR', 'descripcion' => 'Documento en edición', 'activo' => true],
+            ['nombre' => 'Pendiente', 'codigo' => 'PENDIENTE', 'descripcion' => 'Pendiente de aprobación', 'activo' => true],
+            ['nombre' => 'Aprobado', 'codigo' => 'APROBADO', 'descripcion' => 'Aprobado para su uso', 'activo' => true],
+            ['nombre' => 'Rechazado', 'codigo' => 'RECHAZADO', 'descripcion' => 'Rechazado', 'activo' => true],
+            ['nombre' => 'Cancelado', 'codigo' => 'CANCELADO', 'descripcion' => 'Cancelado', 'activo' => true],
+            ['nombre' => 'Facturado', 'codigo' => 'FACTURADO', 'descripcion' => 'Documento facturado', 'activo' => true],
+        ];
+        foreach ($estados as $estado) {
+            EstadoDocumento::firstOrCreate(['codigo' => $estado['codigo']], $estado);
+        }
 
         // Tipos de pago
         $tiposPago = [

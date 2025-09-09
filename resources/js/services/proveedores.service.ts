@@ -42,9 +42,9 @@ export class ProveedoresService extends GenericService<Proveedor, ProveedorFormD
       errors.push('El formato del email no es válido');
     }
 
-    // Validación específica para RUC (formato peruano básico)
-    if (data.ruc && data.ruc.length !== 11) {
-      errors.push('El RUC debe tener 11 dígitos');
+    // Validación específica para NIT (opcional)
+    if (data.nit && String(data.nit).length > 255) {
+      errors.push('El NIT no puede exceder 255 caracteres');
     }
 
     return errors;

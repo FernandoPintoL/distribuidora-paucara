@@ -54,13 +54,14 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
       // Crear promesa para actualización
       const updatePromise = new Promise<void>((resolve, reject) => {
         put(service.updateUrl(entity.id), {
+          forceFormData: true,
           onSuccess: () => {
             resolve();
           },
           onError: (serverErrors) => {
             // Mostrar errores específicos del servidor
             if (serverErrors && typeof serverErrors === 'object') {
-              Object.values(serverErrors as Record<string, string[]>).flat().forEach((error) => {
+              Object.values(serverErrors as unknown as Record<string, string[]>).flat().forEach((error) => {
                 NotificationService.error(String(error));
               });
             }
@@ -78,13 +79,14 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
       // Crear promesa para creación
       const createPromise = new Promise<void>((resolve, reject) => {
         post(service.storeUrl(), {
+          forceFormData: true,
           onSuccess: () => {
             resolve();
           },
           onError: (serverErrors) => {
             // Mostrar errores específicos del servidor
             if (serverErrors && typeof serverErrors === 'object') {
-              Object.values(serverErrors as Record<string, string[]>).flat().forEach((error) => {
+              Object.values(serverErrors as unknown as Record<string, string[]>).flat().forEach((error) => {
                 NotificationService.error(String(error));
               });
             }
@@ -102,9 +104,9 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
   }, [entity, validateForm, post, put, service, data]);
 
   // Manejar cambios en los campos
-  const handleFieldChange = useCallback((field: keyof F, value: string | number | boolean) => {
-    setData(field as keyof F, value as F[keyof F]);
-  }, [setData]);
+  const handleFieldChange = useCallback((field: keyof F, value: unknown) => {
+    setData({ ...(data as F), [field]: value } as F);
+  }, [setData, data]);
 
   // Resetear formulario con notificación
   const handleReset = useCallback(() => {

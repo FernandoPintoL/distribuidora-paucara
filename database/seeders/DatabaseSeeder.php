@@ -10,9 +10,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call(MonedaSeeder::class);
-        // Seed core catalogs
-        $this->call(CoreCatalogSeeder::class);
+    $this->call(MonedaSeeder::class);
+    $this->call(EstadoDocumentoSeeder::class);
+    // Seed core catalogs
+    $this->call(CoreCatalogSeeder::class);
 
         // Create a default admin user if not exists
         $admin = User::query()->where('email', 'admin@paucara.test')->first();

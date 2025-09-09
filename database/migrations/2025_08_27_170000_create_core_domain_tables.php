@@ -103,6 +103,9 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamp('fecha_registro')->useCurrent();
+            $table->string('foto_perfil')->nullable();
+            $table->string('ci_anverso')->nullable();
+            $table->string('ci_reverso')->nullable();
             $table->decimal('limite_credito', 18, 2)->default(0);
         });
 
@@ -136,6 +139,9 @@ return new class extends Migration
             $table->string('direccion')->nullable();
             $table->string('contacto')->nullable();
             $table->boolean('activo')->default(true);
+            $table->string('foto_perfil')->nullable();
+            $table->string('ci_anverso')->nullable();
+            $table->string('ci_reverso')->nullable();
             $table->timestamp('fecha_registro')->useCurrent();
         });
 
@@ -144,6 +150,8 @@ return new class extends Migration
             $table->id();
             $table->string('codigo')->unique();
             $table->string('nombre');
+            $table->string('descripcion')->nullable();
+            $table->boolean('activo')->default(true);
         });
 
         Schema::create('tipos_pago', function (Blueprint $table) {

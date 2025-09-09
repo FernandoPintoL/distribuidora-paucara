@@ -36,7 +36,7 @@ export function NavMain({ items }: NavMainProps) {
 
     return (
         <SidebarGroup>
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            {/*<SidebarGroupLabel></SidebarGroupLabel>*/}
             <SidebarMenu>
                 {items.map((item) => {
                     const isExpanded = expandedItems.has(item.title);

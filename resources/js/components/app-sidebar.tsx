@@ -25,7 +25,9 @@ const mainNavItems: NavItem[] = [
     },
     { title: 'Almacenes', href: Controllers.AlmacenController.index().url, icon: Folder },
     { title: 'Proveedores', href: Controllers.ProveedorController.index().url, icon: Folder },
+    { title: 'Clientes', href: Controllers.ClienteController.index().url, icon: Folder },
     { title: 'Monedas', href: Controllers.MonedaController.index().url, icon: Folder },
+    { title: 'Tipo Pagos', href: Controllers.TipoPagoController.index().url, icon: Folder },
 ];
 
 const footerNavItems: NavItem[] = [
