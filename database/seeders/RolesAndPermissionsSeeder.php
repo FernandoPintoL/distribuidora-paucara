@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -25,6 +24,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'ventas.detalles.index', 'ventas.detalles.store', 'ventas.detalles.update', 'ventas.detalles.destroy',
             'ventas.verificar-stock',
 
+            // Contabilidad
+            'contabilidad.manage', 'contabilidad.asientos.index', 'contabilidad.asientos.show', 'contabilidad.reportes.libro-mayor', 'contabilidad.reportes.balance-comprobacion',
+
             // Inventario
             'inventario.dashboard', 'inventario.stock-bajo', 'inventario.proximos-vencer', 'inventario.vencidos', 'inventario.movimientos', 'inventario.ajuste.form', 'inventario.ajuste.procesar', 'inventario.api.buscar-productos', 'inventario.api.stock-producto',
 
@@ -40,11 +42,11 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Create roles
-        $admin = Role::findOrCreate('Admin');
-        $vendedor = Role::findOrCreate('Vendedor');
-        $compras = Role::findOrCreate('Compras');
+        $admin      = Role::findOrCreate('Admin');
+        $vendedor   = Role::findOrCreate('Vendedor');
+        $compras    = Role::findOrCreate('Compras');
         $inventario = Role::findOrCreate('Inventario');
-        $reportes = Role::findOrCreate('Reportes');
+        $reportes   = Role::findOrCreate('Reportes');
 
         // Assign permissions to roles
         $admin->givePermissionTo(Permission::all());

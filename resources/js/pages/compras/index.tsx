@@ -1,74 +1,108 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
+import { useAuth } from '@/hooks/use-auth';
+import FiltrosComprasComponent from '@/components/compras/filtros-compras';
+import EstadisticasComprasComponent from '@/components/compras/estadisticas-compras';
+import TablaCompras from '@/components/compras/tabla-compras';
+import { Plus } from 'lucide-react';
 
-interface Proveedor { id: number; nombre: string }
-interface Moneda { id: number; codigo: string }
-interface Usuario { id: number; name: string }
-interface EstadoDocumento { id: number; nombre: string }
-interface Producto { id: number; nombre: string }
+// Importar tipos del domain
+import type {
+  Compra,
+  FiltrosCompras,
+  EstadisticasCompras,
+  DatosParaFiltrosCompras
+} from '@/domain/compras';
+import type { Pagination } from '@/domain/shared';
 
-interface DetalleCompra {
-  id: number;
-  producto: Producto;
-  cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
-}
-
-interface Compra {
-  id: number;
-  numero: string;
-  fecha: string;
-  numero_factura?: string | null;
-  total: number;
-  proveedor?: Proveedor;
-  usuario?: Usuario;
-  estado_documento?: EstadoDocumento;
-  moneda?: Moneda;
-  detalles?: DetalleCompra[];
-}
-
-interface PageProps {
-  compras: Compra[];
+interface PageProps extends InertiaPageProps {
+  compras: Pagination<Compra>;
+  filtros: FiltrosCompras;
+  estadisticas: EstadisticasCompras;
+  datosParaFiltros: DatosParaFiltrosCompras;
 }
 
 export default function ComprasIndex() {
   const { props } = usePage<PageProps>();
-  const compras = props.compras || [];
+  const { can } = useAuth();
+
+  const compras = props.compras;
+  const filtros = props.filtros || {};
+  const estadisticas = props.estadisticas;
+  const datosParaFiltros = props.datosParaFiltros;
 
   return (
-    <AppLayout breadcrumbs={[{ label: 'Compras', href: route('compras.index') }]}>
+    <AppLayout breadcrumbs={[{ title: 'Compras', href: '/compras' }]}>
       <Head title="Compras" />
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Compras</h1>
-        <Link href={route('compras.create')} className="btn btn-primary">Nueva compra</Link>
-      </div>
 
-      <div className="rounded-lg border bg-white dark:bg-zinc-900">
-        <div className="grid grid-cols-12 p-3 text-xs font-medium text-zinc-600 dark:text-zinc-300">
-          <div className="col-span-2">Número</div>
-          <div className="col-span-2">Fecha</div>
-          <div className="col-span-3">Proveedor</div>
-          <div className="col-span-2 text-right">Total</div>
-          <div className="col-span-3 text-right">Acciones</div>
-        </div>
-        <div className="divide-y">
-          {compras.map((c) => (
-            <div key={c.id} className="grid grid-cols-12 p-3 text-sm">
-              <div className="col-span-2">{c.numero}</div>
-              <div className="col-span-2">{new Date(c.fecha).toLocaleDateString()}</div>
-              <div className="col-span-3">{c.proveedor?.nombre ?? '-'}</div>
-              <div className="col-span-2 text-right">{Number(c.total).toFixed(2)}</div>
-              <div className="col-span-3 text-right space-x-2">
-                <Link href={route('compras.show', c.id)} className="text-blue-600 hover:underline">Ver</Link>
-                <Link href={route('compras.edit', c.id)} className="text-amber-600 hover:underline">Editar</Link>
-              </div>
-            </div>
-          ))}
-          {compras.length === 0 && (
-            <div className="p-6 text-center text-zinc-500">No hay compras registradas.</div>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between py-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Compras</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {compras.total > 0
+                ? `${compras.from}-${compras.to} de ${compras.total} compras`
+                : 'No se encontraron compras'
+              }
+            </p>
+          </div>
+          {can('compras.create') && (
+            <Link
+              href="/compras/create"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva compra
+            </Link>
           )}
         </div>
+
+        {/* Estadísticas */}
+        {estadisticas && (
+          <EstadisticasComprasComponent estadisticas={estadisticas} />
+        )}
+
+        {/* Filtros */}
+        <FiltrosComprasComponent
+          filtros={filtros}
+          datosParaFiltros={datosParaFiltros}
+        />
+
+        {/* Tabla de Compras */}
+        <TablaCompras
+          compras={compras.data}
+          sortBy={filtros.sort_by}
+          sortDir={filtros.sort_dir}
+        />
+
+        {/* Paginación */}
+        {compras.last_page > 1 && (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Mostrando {compras.from} a {compras.to} de {compras.total} resultados
+            </div>
+            <div className="flex space-x-1">
+              {compras.links?.map((link, index) => (
+                <Link
+                  key={index}
+                  href={link.url || '#'}
+                  className={`px-3 py-2 text-sm font-medium rounded-md ${link.active
+                    ? 'bg-blue-600 text-white'
+                    : link.url
+                      ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                    }`}
+                  preserveState
+                  replace
+                >
+                  <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

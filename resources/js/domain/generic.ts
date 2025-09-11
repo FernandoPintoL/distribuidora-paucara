@@ -99,7 +99,7 @@ export interface BaseService<T extends BaseEntity, F extends BaseFormData> {
   destroyUrl(id: Id): string;
   search(filters: Filters): void;
   destroy(id: Id): void;
-  validateData(data: F): string[];
+  validateData(data: F): string[] | Promise<string[]>;
 }
 
 // Generic props interfaces

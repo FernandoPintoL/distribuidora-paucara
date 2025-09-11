@@ -10,6 +10,7 @@ import {
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import type { NavItem } from '@/types';
@@ -30,6 +31,7 @@ const getUrlString = (href: NonNullable<InertiaLinkProps['href']>): string => {
 
 export function NavMain({ items }: NavMainProps) {
     const { url } = usePage();
+    const { state } = useSidebar();
     // Estado para controlar qué elementos están expandidos
     const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
@@ -96,6 +98,7 @@ export function NavMain({ items }: NavMainProps) {
                                     itemActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                                 )}
                                 data-active={itemActive}
+                                tooltip={state === "collapsed" ? item.title : undefined}
                             >
                                 {hasChildren ? (
                                     <div className="flex items-center justify-between w-full">

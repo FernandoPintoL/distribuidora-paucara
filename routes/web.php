@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    if (auth()->check()) {
+    if (\Illuminate\Support\Facades\Auth::check()) {
         return Inertia::render('dashboard');
     }
 
@@ -22,7 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('almacenes', \App\Http\Controllers\AlmacenController::class)->middleware('permission:almacenes.manage');
 
     // Incluir rutas de configuración global
-    require __DIR__.'/configuracion.php';
+    require __DIR__ . '/configuracion.php';
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
     Route::resource('clientes', \App\Http\Controllers\ClienteController::class)->middleware('permission:clientes.manage');
@@ -45,35 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('tipos-pago', \App\Http\Controllers\TipoPagoController::class)->parameters(['tipos-pago' => 'tipoPago'])->middleware('permission:tipos-pago.manage');
 
     // Rutas para gestión de compras
-    // UI pages for Compras using Inertia
-    Route::get('compras', function () {
-        $compras = \App\Models\Compra::with(['proveedor', 'moneda'])->latest('fecha')->get();
-
-        return Inertia::render('compras/index', [
-            'compras' => $compras,
-        ]);
-    })->middleware('permission:compras.index')->name('compras.index');
-
-    Route::get('compras/create', function () {
-        return Inertia::render('compras/create', [
-            'proveedores' => \App\Models\Proveedor::select('id', 'nombre')->orderBy('nombre')->get(),
-            'monedas' => \App\Models\Moneda::select('id', 'codigo', 'nombre')->get(),
-            'estados' => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
-            'productos' => \App\Models\Producto::select('id', 'nombre')->where('activo', true)->orderBy('nombre')->get(),
-        ]);
-    })->middleware('permission:compras.create')->name('compras.create');
-
-    Route::post('compras', [\App\Http\Controllers\CompraController::class, 'store'])->name('compras.store');
-    Route::get('compras/{compra}', [\App\Http\Controllers\CompraController::class, 'show'])->name('compras.show');
-    Route::get('compras/{compra}/edit', function (\App\Models\Compra $compra) {
-        return Inertia::render('compras/create', [
-            'proveedores' => \App\Models\Proveedor::select('id', 'nombre')->orderBy('nombre')->get(),
-            'monedas' => \App\Models\Moneda::select('id', 'codigo', 'nombre')->get(),
-            'estados' => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
-            'productos' => \App\Models\Producto::select('id', 'nombre')->where('activo', true)->orderBy('nombre')->get(),
-            // could include existing compra data in future
-        ]);
-    })->middleware('permission:compras.edit')->name('compras.edit');
+    Route::resource('compras', \App\Http\Controllers\CompraController::class)->except(['destroy']);
 
     // Keep nested details routes
     Route::resource('compras.detalles', \App\Http\Controllers\DetalleCompraController::class)->shallow();
@@ -81,6 +53,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Rutas para gestión de ventas
     Route::resource('ventas', \App\Http\Controllers\VentaController::class);
     Route::get('ventas/stock/{producto}', [\App\Http\Controllers\VentaController::class, 'verificarStock'])->name('ventas.verificar-stock');
+
+    // Rutas para contabilidad
+    Route::prefix('contabilidad')->name('contabilidad.')->middleware('permission:contabilidad.manage')->group(function () {
+        Route::get('asientos', [\App\Http\Controllers\AsientoContableController::class, 'index'])->name('asientos.index');
+        Route::get('asientos/{asientoContable}', [\App\Http\Controllers\AsientoContableController::class, 'show'])->name('asientos.show');
+
+        // Reportes contables
+        Route::get('reportes/libro-mayor', [\App\Http\Controllers\AsientoContableController::class, 'libroMayor'])->name('reportes.libro-mayor');
+        Route::get('reportes/balance-comprobacion', [\App\Http\Controllers\AsientoContableController::class, 'balanceComprobacion'])->name('reportes.balance-comprobacion');
+    });
     Route::resource('ventas.detalles', \App\Http\Controllers\DetalleVentaController::class)->shallow();
 
     // Rutas para gestión de inventario
@@ -92,6 +74,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('movimientos', [\App\Http\Controllers\InventarioController::class, 'movimientos'])->middleware('permission:inventario.movimientos')->name('movimientos');
         Route::get('ajuste', [\App\Http\Controllers\InventarioController::class, 'ajusteForm'])->middleware('permission:inventario.ajuste.form')->name('ajuste.form');
         Route::post('ajuste', [\App\Http\Controllers\InventarioController::class, 'procesarAjuste'])->middleware('permission:inventario.ajuste.procesar')->name('ajuste.procesar');
+        Route::get('reportes', [\App\Http\Controllers\InventarioController::class, 'reportes'])->middleware('permission:inventario.reportes.index')->name('reportes');
 
         // API routes para inventario
         Route::get('api/buscar-productos', [\App\Http\Controllers\InventarioController::class, 'buscarProductos'])->middleware('permission:inventario.api.buscar-productos')->name('api.buscar-productos');
@@ -116,5 +99,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';

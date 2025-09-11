@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Http\Requests\StoreVentaRequest;
 use App\Http\Requests\UpdateVentaRequest;
-use App\Models\DetalleVenta;
-use App\Models\MovimientoInventario;
 use App\Models\Venta;
+use App\Services\StockService;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class VentaController extends Controller
 {
@@ -21,20 +21,63 @@ class VentaController extends Controller
         $this->middleware('permission:ventas.store')->only('store');
         $this->middleware('permission:ventas.update')->only('update');
         $this->middleware('permission:ventas.destroy')->only('destroy');
+        $this->middleware('permission:ventas.create')->only('create');
+        $this->middleware('permission:ventas.edit')->only('edit');
         $this->middleware('permission:ventas.verificar-stock')->only('verificarStock');
     }
 
     public function index()
     {
+        // Si es petición API, devolver JSON
+        if (request()->expectsJson() || request()->is('api/*')) {
+            $ventas = Venta::with([
+                'cliente',
+                'usuario',
+                'estadoDocumento',
+                'moneda',
+                'detalles.producto',
+            ])->get();
+
+            return ApiResponse::success($ventas);
+        }
+
+        // Para peticiones web, devolver vista Inertia
         $ventas = Venta::with([
             'cliente',
             'usuario',
             'estadoDocumento',
             'moneda',
-            'detalles.producto',
-        ])->get();
+        ])->latest('fecha')->get();
 
-        return ApiResponse::success($ventas);
+        return Inertia::render('ventas/index', [
+            'ventas' => $ventas,
+        ]);
+    }
+
+    public function create()
+    {
+        $productos = \App\Models\Producto::select('id', 'nombre', 'codigo_barras')
+            ->where('activo', true)
+            ->with(['precios' => function ($query) {
+                $query->where('activo', true)->orderBy('created_at', 'desc');
+            }])
+            ->orderBy('nombre')
+            ->get()
+            ->map(function ($producto) {
+                return [
+                    'id'           => $producto->id,
+                    'nombre'       => $producto->nombre,
+                    'codigo'       => $producto->codigo_barras,
+                    'precio_venta' => $producto->precios->first()?->precio ?? 0,
+                ];
+            });
+
+        return Inertia::render('ventas/create', [
+            'clientes'  => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
+            'productos' => $productos,
+            'monedas'   => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
+            'estados'   => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
+        ]);
     }
 
     public function show($id)
@@ -45,37 +88,96 @@ class VentaController extends Controller
             'estadoDocumento',
             'moneda',
             'detalles.producto',
-            'pagos',
+            'pagos.tipoPago',
             'cuentaPorCobrar',
         ])->findOrFail($id);
 
-        return ApiResponse::success($venta);
+        // Si es petición API, devolver JSON
+        if (request()->expectsJson() || request()->is('api/*')) {
+            return ApiResponse::success($venta);
+        }
+
+        // Para peticiones web, devolver vista Inertia
+        return Inertia::render('ventas/show', [
+            'venta' => $venta,
+        ]);
+    }
+
+    public function edit($id)
+    {
+        $venta = Venta::with([
+            'detalles.producto',
+        ])->findOrFail($id);
+
+        $productos = \App\Models\Producto::select('id', 'nombre', 'codigo_barras')
+            ->where('activo', true)
+            ->with(['precios' => function ($query) {
+                $query->where('activo', true)->orderBy('created_at', 'desc');
+            }])
+            ->orderBy('nombre')
+            ->get()
+            ->map(function ($producto) {
+                return [
+                    'id'           => $producto->id,
+                    'nombre'       => $producto->nombre,
+                    'codigo'       => $producto->codigo_barras,
+                    'precio_venta' => $producto->precios->first()?->precio ?? 0,
+                ];
+            });
+
+        return Inertia::render('ventas/create', [
+            'venta'     => $venta,
+            'clientes'  => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
+            'productos' => $productos,
+            'monedas'   => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
+            'estados'   => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
+        ]);
     }
 
     public function store(StoreVentaRequest $request)
     {
-        $data = $request->validated();
+        $data         = $request->validated();
+        $stockService = app(StockService::class);
 
-        return DB::transaction(function () use ($data) {
-            // Verificar disponibilidad de stock antes de crear la venta
-            $this->verificarDisponibilidadStock($data['detalles']);
+        return DB::transaction(function () use ($data, $request, $stockService) {
+            // Validar stock antes de crear la venta
+            $productosParaValidar = array_map(function ($detalle) {
+                return [
+                    'producto_id' => $detalle['producto_id'],
+                    'cantidad'    => $detalle['cantidad'],
+                ];
+            }, $data['detalles']);
+
+            $validacionStock = $stockService->validarStockDisponible($productosParaValidar);
+
+            if (! $validacionStock['valido']) {
+                throw new Exception('Stock insuficiente: ' . implode(', ', $validacionStock['errores']));
+            }
 
             // Crear la venta
             $venta = Venta::create($data);
 
-            // Crear detalles y registrar movimientos de inventario
+            // Crear los detalles
             foreach ($data['detalles'] as $detalle) {
-                $detalleVenta = $venta->detalles()->create($detalle);
-
-                // Registrar salida de inventario
-                $this->registrarSalidaInventario($detalleVenta, $venta);
+                $venta->detalles()->create($detalle);
             }
 
-            return ApiResponse::success(
-                $venta->load(['detalles.producto']),
-                'Venta creada exitosamente',
-                Response::HTTP_CREATED
-            );
+            // Los movimientos de stock se crean automáticamente por el model event
+            $venta->load(['detalles.producto', 'cliente', 'usuario', 'estadoDocumento', 'moneda']);
+
+            // Si es petición API, devolver JSON
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return ApiResponse::success(
+                    $venta,
+                    'Venta creada exitosamente',
+                    Response::HTTP_CREATED
+                );
+            }
+
+            // Para peticiones web, redirigir con mensaje
+            return redirect()->route('ventas.index')
+                ->with('success', 'Venta creada exitosamente')
+                ->with('stockInfo', $venta->obtenerResumenStock());
         });
     }
 
@@ -84,7 +186,7 @@ class VentaController extends Controller
         $venta = Venta::findOrFail($id);
         $data  = $request->validated();
 
-        return DB::transaction(function () use ($venta, $data) {
+        return DB::transaction(function () use ($venta, $data, $request) {
             $venta->update($data);
 
             // Si se modifican los detalles, ajustar el inventario
@@ -92,7 +194,15 @@ class VentaController extends Controller
                 $this->actualizarInventarioPorCambios($venta, $data['detalles']);
             }
 
-            return ApiResponse::success($venta->fresh(['detalles.producto']), 'Venta actualizada');
+            $venta->fresh(['detalles.producto']);
+
+            // Si es petición API, devolver JSON
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return ApiResponse::success($venta, 'Venta actualizada');
+            }
+
+            // Para peticiones web, redirigir con mensaje
+            return redirect()->route('ventas.index')->with('success', 'Venta actualizada exitosamente');
         });
     }
 
@@ -101,158 +211,127 @@ class VentaController extends Controller
         $venta = Venta::findOrFail($id);
 
         return DB::transaction(function () use ($venta) {
-            // Revertir movimientos de inventario antes de eliminar
-            $this->revertirMovimientosInventario($venta);
-
+            // Los movimientos de stock se revierten automáticamente por el model event
             $venta->delete();
 
-            return ApiResponse::success(null, 'Venta eliminada');
+            // Si es petición API, devolver JSON
+            if (request()->expectsJson() || request()->is('api/*')) {
+                return ApiResponse::success(null, 'Venta eliminada exitosamente');
+            }
+
+            // Para peticiones web, redirigir con mensaje
+            return redirect()->route('ventas.index')->with('success', 'Venta eliminada exitosamente');
         });
     }
 
     /**
-     * Verificar disponibilidad de stock antes de procesar venta
+     * Verificar stock disponible para múltiples productos
      */
-    private function verificarDisponibilidadStock(array $detalles): void
+    public function verificarStock(Request $request)
     {
-        $errores = [];
+        $request->validate([
+            'productos'               => 'required|array',
+            'productos.*.producto_id' => 'required|integer|exists:productos,id',
+            'productos.*.cantidad'    => 'required|integer|min:1',
+            'almacen_id'              => 'integer|exists:almacenes,id',
+        ]);
 
-        foreach ($detalles as $detalle) {
-            $producto        = \App\Models\Producto::findOrFail($detalle['producto_id']);
-            $stockDisponible = $producto->stockTotal();
-
-            if ($stockDisponible < $detalle['cantidad']) {
-                $errores[] = "Stock insuficiente para {$producto->nombre}. Disponible: {$stockDisponible}, Requerido: {$detalle['cantidad']}";
-            }
-        }
-
-        if (! empty($errores)) {
-            throw new \Exception('Stock insuficiente: ' . implode('; ', $errores));
-        }
-    }
-
-    /**
-     * Registrar salida de inventario por venta
-     */
-    private function registrarSalidaInventario(DetalleVenta $detalle, Venta $venta): void
-    {
-        $producto = $detalle->producto;
-
-        // Obtener el almacén principal o usar el primero disponible
-        $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
-
-        if (! $almacenPrincipal) {
-            Log::warning('No hay almacén disponible para registrar salida de inventario', [
-                'venta_id'    => $venta->id,
-                'producto_id' => $producto->id,
-            ]);
-
-            return;
-        }
+        $stockService = app(StockService::class);
+        $almacenId    = $request->get('almacen_id', 1);
 
         try {
-            // Usar el método mejorado del producto que maneja FIFO automáticamente
-            $resultado = $producto->registrarMovimiento(
-                almacenId: $almacenPrincipal->id,
-                cantidad: -(int) $detalle->cantidad, // Negativo para salida
-                tipo: MovimientoInventario::TIPO_SALIDA_VENTA,
-                observacion: "Salida por venta #{$venta->numero}",
-                numeroDocumento: $venta->numero,
-                userId: $venta->usuario_id
-            );
+            $validacion = $stockService->validarStockDisponible($request->productos, $almacenId);
 
-            if ($resultado) {
-                Log::info('Movimiento de inventario registrado por venta', [
-                    'venta_id'    => $venta->id,
-                    'producto_id' => $producto->id,
-                    'cantidad'    => $detalle->cantidad,
-                    'almacen_id'  => $almacenPrincipal->id,
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Error al registrar movimiento de inventario por venta', [
-                'venta_id'    => $venta->id,
-                'producto_id' => $producto->id,
-                'error'       => $e->getMessage(),
+            return ApiResponse::success([
+                'valido'   => $validacion['valido'],
+                'errores'  => $validacion['errores'],
+                'detalles' => $validacion['detalles'],
             ]);
 
-            // Re-lanzar la excepción para detener la transacción
-            throw $e;
+        } catch (Exception $e) {
+            return ApiResponse::error('Error verificando stock: ' . $e->getMessage());
         }
     }
 
     /**
-     * Actualizar inventario por cambios en venta
+     * Obtener stock disponible de un producto específico
      */
-    private function actualizarInventarioPorCambios(Venta $venta, array $nuevosDetalles): void
+    public function obtenerStockProducto(Request $request, int $productoId)
     {
-        // Esta funcionalidad es compleja y puede implementarse según necesidades específicas
-        // Por ahora, registrar un log para implementación futura
-        Log::info('Actualización de venta detectada - requiere ajuste manual de inventario', [
-            'venta_id'   => $venta->id,
-            'usuario_id' => Auth::id(),
+        $request->validate([
+            'almacen_id' => 'integer|exists:almacenes,id',
         ]);
 
-        // Una implementación básica sería:
-        // 1. Calcular diferencias entre detalles originales y nuevos
-        // 2. Aplicar ajustes de inventario según las diferencias
-        // 3. Registrar movimientos de ajuste correspondientes
-    }
+        $stockService = app(StockService::class);
+        $almacenId    = $request->get('almacen_id', 1);
 
-    /**
-     * Revertir movimientos de inventario al eliminar venta
-     */
-    private function revertirMovimientosInventario(Venta $venta): void
-    {
-        foreach ($venta->detalles as $detalle) {
-            $producto         = $detalle->producto;
-            $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
+        try {
+            $stockDisponible = $stockService->obtenerStockDisponible($productoId, $almacenId);
+            $stockPorLotes   = $stockService->obtenerStockPorLotes($productoId, $almacenId);
 
-            if (! $almacenPrincipal) {
-                continue;
-            }
+            return ApiResponse::success([
+                'producto_id' => $productoId,
+                'almacen_id'  => $almacenId,
+                'stock_total' => $stockDisponible,
+                'lotes'       => $stockPorLotes->map(function ($stock) {
+                    return [
+                        'id'                => $stock->id,
+                        'lote'              => $stock->lote,
+                        'cantidad'          => $stock->cantidad,
+                        'fecha_vencimiento' => $stock->fecha_vencimiento,
+                        'dias_vencimiento'  => $stock->diasParaVencer(),
+                    ];
+                }),
+            ]);
 
-            try {
-                // Registrar entrada para revertir la salida original
-                $producto->registrarMovimiento(
-                    almacenId: $almacenPrincipal->id,
-                    cantidad: (int) $detalle->cantidad, // Positivo para entrada
-                    tipo: MovimientoInventario::TIPO_ENTRADA_AJUSTE,
-                    observacion: "Reversión por eliminación de venta #{$venta->numero}",
-                    numeroDocumento: $venta->numero,
-                    userId: Auth::id()
-                );
-
-            } catch (\Exception $e) {
-                Log::error('Error al revertir movimiento de inventario', [
-                    'venta_id'    => $venta->id,
-                    'producto_id' => $producto->id,
-                    'error'       => $e->getMessage(),
-                ]);
-            }
+        } catch (Exception $e) {
+            return ApiResponse::error('Error obteniendo stock: ' . $e->getMessage());
         }
     }
 
     /**
-     * Verificar disponibilidad de producto específico
+     * Obtener productos con stock bajo
      */
-    public function verificarStock($productoId)
+    public function productosStockBajo()
     {
-        $producto = \App\Models\Producto::with('stockProductos.almacen')->findOrFail($productoId);
+        $stockService = app(StockService::class);
 
-        return response()->json([
-            'producto_id'       => $producto->id,
-            'nombre'            => $producto->nombre,
-            'stock_total'       => $producto->stockTotal(),
-            'stock_por_almacen' => $producto->stockProductos->map(function ($stock) {
+        try {
+            $productosStockBajo = $stockService->obtenerProductosStockBajo();
+
+            return ApiResponse::success($productosStockBajo->map(function ($producto) {
                 return [
-                    'almacen'      => $stock->almacen->nombre,
-                    'cantidad'     => $stock->cantidad_actual,
-                    'stock_minimo' => $stock->stock_minimo,
-                    'stock_maximo' => $stock->stock_maximo,
+                    'id'           => $producto->id,
+                    'nombre'       => $producto->nombre,
+                    'stock_minimo' => $producto->stock_minimo,
+                    'stock_actual' => $producto->stocks->sum('cantidad'),
+                    'almacenes'    => $producto->stocks->map(function ($stock) {
+                        return [
+                            'almacen'  => $stock->almacen->nombre,
+                            'cantidad' => $stock->cantidad,
+                        ];
+                    }),
                 ];
-            }),
-        ]);
+            }));
+
+        } catch (Exception $e) {
+            return ApiResponse::error('Error obteniendo productos con stock bajo: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener resumen de stock de una venta
+     */
+    public function obtenerResumenStock(int $ventaId)
+    {
+        try {
+            $venta   = Venta::findOrFail($ventaId);
+            $resumen = $venta->obtenerResumenStock();
+
+            return ApiResponse::success($resumen);
+
+        } catch (Exception $e) {
+            return ApiResponse::error('Error obteniendo resumen de stock: ' . $e->getMessage());
+        }
     }
 }

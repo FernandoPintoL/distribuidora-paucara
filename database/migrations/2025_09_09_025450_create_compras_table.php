@@ -25,6 +25,7 @@ return new class extends Migration
             $table->foreignId('usuario_id')->constrained('users');
             $table->foreignId('estado_documento_id')->constrained('estados_documento');
             $table->foreignId('moneda_id')->constrained('monedas');
+            $table->foreignId('tipo_pago_id')->nullable()->constrained('tipos_pago');
             $table->timestamps();
         });
     }

@@ -1,15 +1,21 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCompraRequest;
 use App\Http\Requests\UpdateCompraRequest;
 use App\Models\Compra;
 use App\Models\DetalleCompra;
+use App\Models\EstadoDocumento;
+use App\Models\Moneda;
 use App\Models\MovimientoInventario;
-use Illuminate\Http\Response;
-use App\Helpers\ApiResponse;
+use App\Models\Producto;
+use App\Models\Proveedor;
+use App\Models\TipoPago;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class CompraController extends Controller
 {
@@ -22,24 +28,191 @@ class CompraController extends Controller
         $this->middleware('permission:compras.destroy')->only('destroy');
     }
 
-
-    public function index()
+    public function index(Request $request)
     {
-        $compras = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'detalles.producto'])->get();
-        return ApiResponse::success($compras);
+        // Validar filtros
+        $filtros = $request->validate([
+            'q'                   => ['nullable', 'string', 'max:255'],
+            'proveedor_id'        => ['nullable', 'exists:proveedores,id'],
+            'estado_documento_id' => ['nullable', 'exists:estados_documento,id'],
+            'moneda_id'           => ['nullable', 'exists:monedas,id'],
+            'tipo_pago_id'        => ['nullable', 'exists:tipos_pago,id'],
+            'fecha_desde'         => ['nullable', 'date'],
+            'fecha_hasta'         => ['nullable', 'date'],
+            'per_page'            => ['nullable', 'integer', 'min:10', 'max:100'],
+            'sort_by'             => ['nullable', 'string', 'in:numero,fecha,proveedor,total,created_at'],
+            'sort_dir'            => ['nullable', 'string', 'in:asc,desc'],
+        ]);
+
+        $query = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'tipoPago']);
+
+        // Filtro de búsqueda general
+        if (! empty($filtros['q'])) {
+            $searchTerm = $filtros['q'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('numero', 'ilike', "%{$searchTerm}%")
+                    ->orWhere('numero_factura', 'ilike', "%{$searchTerm}%")
+                    ->orWhere('observaciones', 'ilike', "%{$searchTerm}%")
+                    ->orWhereHas('proveedor', function ($qq) use ($searchTerm) {
+                        $qq->where('nombre', 'ilike', "%{$searchTerm}%");
+                    });
+            });
+        }
+
+        // Filtros específicos
+        if (! empty($filtros['proveedor_id'])) {
+            $query->where('proveedor_id', $filtros['proveedor_id']);
+        }
+
+        if (! empty($filtros['estado_documento_id'])) {
+            $query->where('estado_documento_id', $filtros['estado_documento_id']);
+        }
+
+        if (! empty($filtros['moneda_id'])) {
+            $query->where('moneda_id', $filtros['moneda_id']);
+        }
+
+        if (! empty($filtros['tipo_pago_id'])) {
+            $query->where('tipo_pago_id', $filtros['tipo_pago_id']);
+        }
+
+        // Filtros de fecha
+        if (! empty($filtros['fecha_desde'])) {
+            $query->whereDate('fecha', '>=', $filtros['fecha_desde']);
+        }
+
+        if (! empty($filtros['fecha_hasta'])) {
+            $query->whereDate('fecha', '<=', $filtros['fecha_hasta']);
+        }
+
+        // Ordenamiento
+        $sortBy  = $filtros['sort_by'] ?? 'created_at';
+        $sortDir = $filtros['sort_dir'] ?? 'desc';
+
+        if ($sortBy === 'proveedor') {
+            $query->leftJoin('proveedores', 'compras.proveedor_id', '=', 'proveedores.id')
+                ->orderBy('proveedores.nombre', $sortDir)
+                ->select('compras.*');
+        } else {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        // Paginación
+        $perPage = $filtros['per_page'] ?? 15;
+        $compras = $query->paginate($perPage)->withQueryString();
+
+        // Estadísticas para el dashboard
+        $estadisticas = $this->calcularEstadisticas($filtros);
+
+        // Datos para filtros - Mostrar todos los elementos activos disponibles
+        $datosParaFiltros = [
+            'proveedores' => Proveedor::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre']),
+            'estados'     => EstadoDocumento::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre']),
+            'monedas'     => Moneda::where('activo', true)
+                ->orderBy('codigo')
+                ->get(['id', 'codigo', 'simbolo']),
+            'tipos_pago'  => TipoPago::orderBy('nombre')
+                ->get(['id', 'codigo', 'nombre']),
+        ];
+
+        return Inertia::render('compras/index', [
+            'compras'          => $compras,
+            'filtros'          => $filtros,
+            'estadisticas'     => $estadisticas,
+            'datosParaFiltros' => $datosParaFiltros,
+        ]);
+    }
+
+    public function create()
+    {
+        // Debug inicial
+        Log::info('CompraController::create - MÉTODO EJECUTADO');
+
+        $tipos_pago = TipoPago::orderBy('nombre')->get(['id', 'codigo', 'nombre']);
+        Log::info('CompraController::create - tipos_pago obtenidos', [
+            'count' => $tipos_pago->count(),
+            'data'  => $tipos_pago->toArray(),
+        ]);
+
+        $data = [
+            'tipos_pago'  => $tipos_pago,
+            'selectores'  => [
+                'tipospagos' => TipoPago::all(),
+            ],
+            'proveedores' => Proveedor::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'email']),
+            'productos'   => Producto::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'codigo_qr', 'codigo_barras'])
+                ->map(function ($producto) {
+                    $producto->codigo = $producto->codigo_qr ?: $producto->codigo_barras;
+                    $producto->stock  = $producto->stockTotal();
+                    unset($producto->codigo_qr, $producto->codigo_barras);
+                    return $producto;
+                }),
+
+            'monedas'     => Moneda::where('activo', true)->orderBy('codigo')->get(['id', 'codigo', 'nombre', 'simbolo']),
+            'estados'     => EstadoDocumento::orderBy('nombre')->get(['id', 'nombre']),
+        ];
+
+        Log::info('CompraController::create - datos finales', [
+            'proveedores_count' => $data['proveedores']->count(),
+            'productos_count'   => $data['productos']->count(),
+            'monedas_count'     => $data['monedas']->count(),
+            'estados_count'     => $data['estados']->count(),
+            'tipos_pago_count'  => $data['tipos_pago']->count(),
+        ]);
+
+        return Inertia::render('compras/create', $data);
     }
 
     public function show($id)
     {
-        $compra = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'detalles.producto'])->findOrFail($id);
-        return ApiResponse::success($compra);
+        $compra = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'tipoPago', 'detalles.producto'])
+            ->findOrFail($id);
+
+        return Inertia::render('compras/show', [
+            'compra' => $compra,
+        ]);
+    }
+
+    public function edit($id)
+    {
+        $compra = Compra::with(['detalles.producto'])->findOrFail($id);
+
+        return Inertia::render('compras/create', [
+            'compra'      => $compra,
+            'tipos_pago'  => TipoPago::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
+            'proveedores' => Proveedor::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'email']),
+            'productos'   => Producto::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'codigo_qr', 'codigo_barras'])
+                ->map(function ($producto) {
+                    $producto->codigo = $producto->codigo_qr ?: $producto->codigo_barras;
+                    $producto->stock  = $producto->stockTotal();
+                    unset($producto->codigo_qr, $producto->codigo_barras);
+                    return $producto;
+                }),
+            'monedas'     => Moneda::where('activo', true)->orderBy('codigo')->get(['id', 'codigo', 'nombre', 'simbolo']),
+            'estados'     => EstadoDocumento::orderBy('nombre')->get(['id', 'nombre']),
+        ]);
     }
 
     public function store(StoreCompraRequest $request)
     {
         $data = $request->validated();
 
-        return DB::transaction(function () use ($data) {
+        try {
+            DB::beginTransaction();
+
+            // Generar número automático si no se proporciona
+            if (empty($data['numero'])) {
+                $data['numero'] = $this->generarNumeroCompra();
+            }
+
             $compra = Compra::create($data);
 
             foreach ($data['detalles'] as $detalle) {
@@ -47,39 +220,80 @@ class CompraController extends Controller
                 $this->registrarEntradaInventario($detalleCompra, $compra);
             }
 
-            return ApiResponse::success(
-                $compra->load(['detalles.producto']),
-                'Compra creada exitosamente',
-                Response::HTTP_CREATED
-            );
-        });
+            DB::commit();
+
+            $numeroGenerado = $compra->numero;
+            $mensaje        = "Compra {$numeroGenerado} creada exitosamente";
+
+            return redirect()->route('compras.index')
+                ->with('success', $mensaje);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Error al crear compra', [
+                'error' => $e->getMessage(),
+                'data'  => $data,
+            ]);
+
+            return back()->withInput()
+                ->withErrors(['error' => 'Error al crear la compra: ' . $e->getMessage()]);
+        }
     }
 
     public function update(UpdateCompraRequest $request, $id)
     {
         $compra = Compra::findOrFail($id);
-        $data = $request->validated();
+        $data   = $request->validated();
 
-        return DB::transaction(function () use ($compra, $data) {
+        try {
+            DB::beginTransaction();
+
             $compra->update($data);
 
             if (isset($data['detalles'])) {
-                $this->actualizarInventarioPorCambios($compra, $data['detalles']);
+                // Eliminar detalles existentes
+                $compra->detalles()->delete();
+
+                // Crear nuevos detalles
+                foreach ($data['detalles'] as $detalle) {
+                    $detalleCompra = $compra->detalles()->create($detalle);
+                    $this->registrarEntradaInventario($detalleCompra, $compra);
+                }
             }
 
-            return ApiResponse::success($compra->fresh(['detalles.producto']), 'Compra actualizada');
-        });
+            DB::commit();
+
+            return redirect()->route('compras.index')
+                ->with('success', 'Compra actualizada exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            return back()->withInput()
+                ->withErrors(['error' => 'Error al actualizar la compra: ' . $e->getMessage()]);
+        }
     }
 
     public function destroy($id)
     {
         $compra = Compra::findOrFail($id);
 
-        return DB::transaction(function () use ($compra) {
+        try {
+            DB::beginTransaction();
+
             $this->revertirMovimientosInventario($compra);
             $compra->delete();
-            return ApiResponse::success(null, 'Compra eliminada');
-        });
+
+            DB::commit();
+
+            return redirect()->route('compras.index')
+                ->with('success', 'Compra eliminada exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            return back()->withErrors(['error' => 'Error al eliminar la compra: ' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -93,8 +307,8 @@ class CompraController extends Controller
         $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
 
         if (! $almacenPrincipal) {
-            \Log::warning('No hay almacén disponible para registrar entrada de inventario', [
-                'compra_id' => $compra->id,
+            Log::warning('No hay almacén disponible para registrar entrada de inventario', [
+                'compra_id'   => $compra->id,
                 'producto_id' => $producto->id,
             ]);
 
@@ -110,22 +324,22 @@ class CompraController extends Controller
                 numeroDocumento: $compra->numero_factura,
                 lote: $detalle->lote,
                 fechaVencimiento: $detalle->fecha_vencimiento ?
-                    \Carbon\Carbon::parse($detalle->fecha_vencimiento) : null,
+                \Carbon\Carbon::parse($detalle->fecha_vencimiento) : null,
                 userId: $compra->usuario_id
             );
 
-            \Log::info('Movimiento de inventario registrado por compra', [
-                'compra_id' => $compra->id,
+            Log::info('Movimiento de inventario registrado por compra', [
+                'compra_id'   => $compra->id,
                 'producto_id' => $producto->id,
-                'cantidad' => $detalle->cantidad,
-                'almacen_id' => $almacenPrincipal->id,
+                'cantidad'    => $detalle->cantidad,
+                'almacen_id'  => $almacenPrincipal->id,
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al registrar movimiento de inventario por compra', [
-                'compra_id' => $compra->id,
+            Log::error('Error al registrar movimiento de inventario por compra', [
+                'compra_id'   => $compra->id,
                 'producto_id' => $producto->id,
-                'error' => $e->getMessage(),
+                'error'       => $e->getMessage(),
             ]);
 
             // No detener la transacción, solo registrar el error
@@ -139,9 +353,9 @@ class CompraController extends Controller
     {
         // Esta funcionalidad es compleja y puede implementarse según necesidades específicas
         // Por ahora, registrar un log para implementación futura
-        \Log::info('Actualización de compra detectada - requiere ajuste manual de inventario', [
-            'compra_id' => $compra->id,
-            'usuario_id' => auth()->id(),
+        Log::info('Actualización de compra detectada - requiere ajuste manual de inventario', [
+            'compra_id'  => $compra->id,
+            'usuario_id' => Auth::id(),
         ]);
     }
 
@@ -151,7 +365,7 @@ class CompraController extends Controller
     private function revertirMovimientosInventario(Compra $compra): void
     {
         foreach ($compra->detalles as $detalle) {
-            $producto = $detalle->producto;
+            $producto         = $detalle->producto;
             $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
 
             if (! $almacenPrincipal) {
@@ -166,16 +380,126 @@ class CompraController extends Controller
                     tipo: MovimientoInventario::TIPO_SALIDA_AJUSTE,
                     observacion: "Reversión por eliminación de compra #{$compra->numero}",
                     numeroDocumento: $compra->numero_factura,
-                    userId: auth()->id()
+                    userId: Auth::id()
                 );
 
             } catch (\Exception $e) {
-                \Log::error('Error al revertir movimiento de inventario', [
-                    'compra_id' => $compra->id,
+                Log::error('Error al revertir movimiento de inventario', [
+                    'compra_id'   => $compra->id,
                     'producto_id' => $producto->id,
-                    'error' => $e->getMessage(),
+                    'error'       => $e->getMessage(),
                 ]);
             }
         }
+    }
+
+    /**
+     * Calcular estadísticas para el dashboard de compras
+     */
+    private function calcularEstadisticas(array $filtros): array
+    {
+        $baseQuery = Compra::query();
+
+        // Aplicar mismos filtros que en el index para estadísticas consistentes
+        if (! empty($filtros['proveedor_id'])) {
+            $baseQuery->where('proveedor_id', $filtros['proveedor_id']);
+        }
+
+        if (! empty($filtros['estado_documento_id'])) {
+            $baseQuery->where('estado_documento_id', $filtros['estado_documento_id']);
+        }
+
+        if (! empty($filtros['moneda_id'])) {
+            $baseQuery->where('moneda_id', $filtros['moneda_id']);
+        }
+
+        if (! empty($filtros['fecha_desde'])) {
+            $baseQuery->whereDate('fecha', '>=', $filtros['fecha_desde']);
+        }
+
+        if (! empty($filtros['fecha_hasta'])) {
+            $baseQuery->whereDate('fecha', '<=', $filtros['fecha_hasta']);
+        }
+
+        // Estadísticas generales
+        $totalCompras   = (clone $baseQuery)->count();
+        $montoTotal     = (clone $baseQuery)->sum('total');
+        $promedioCompra = $totalCompras > 0 ? $montoTotal / $totalCompras : 0;
+
+        // Compras por estado
+        $comprasPorEstado = (clone $baseQuery)
+            ->with('estadoDocumento')
+            ->get()
+            ->groupBy('estado_documento.nombre')
+            ->map(function ($compras, $estado) {
+                return [
+                    'nombre'      => $estado ?? 'Sin estado',
+                    'cantidad'    => $compras->count(),
+                    'monto_total' => $compras->sum('total'),
+                ];
+            })
+            ->values();
+
+        // Compras del mes actual
+        $inicioMes = now()->startOfMonth();
+        $finMes    = now()->endOfMonth();
+
+        $comprasMesActual = Compra::whereBetween('fecha', [$inicioMes, $finMes])->count();
+        $montoMesActual   = Compra::whereBetween('fecha', [$inicioMes, $finMes])->sum('total');
+
+        // Compras del mes anterior para comparación
+        $inicioMesAnterior = now()->subMonth()->startOfMonth();
+        $finMesAnterior    = now()->subMonth()->endOfMonth();
+
+        $comprasMesAnterior = Compra::whereBetween('fecha', [$inicioMesAnterior, $finMesAnterior])->count();
+        $montoMesAnterior   = Compra::whereBetween('fecha', [$inicioMesAnterior, $finMesAnterior])->sum('total');
+
+        // Calcular variaciones porcentuales
+        $variacionCompras = $comprasMesAnterior > 0
+            ? (($comprasMesActual - $comprasMesAnterior) / $comprasMesAnterior) * 100
+            : 0;
+
+        $variacionMonto = $montoMesAnterior > 0
+            ? (($montoMesActual - $montoMesAnterior) / $montoMesAnterior) * 100
+            : 0;
+
+        return [
+            'total_compras'      => $totalCompras,
+            'monto_total'        => $montoTotal,
+            'promedio_compra'    => $promedioCompra,
+            'compras_por_estado' => $comprasPorEstado,
+            'mes_actual'         => [
+                'compras'           => $comprasMesActual,
+                'monto'             => $montoMesActual,
+                'variacion_compras' => round($variacionCompras, 2),
+                'variacion_monto'   => round($variacionMonto, 2),
+            ],
+        ];
+    }
+
+    /**
+     * Generar número automático de compra: COMP + fecha del día + ID incremental
+     */
+    private function generarNumeroCompra(): string
+    {
+        $fecha = date('Ymd'); // Formato: 20240915
+
+        // Buscar el último número de compra del día
+        $ultimaCompra = Compra::where('numero', 'like', "COMP{$fecha}%")
+            ->orderBy('numero', 'desc')
+            ->first();
+
+        $secuencial = 1;
+        if ($ultimaCompra) {
+            // Extraer el número secuencial del último número de compra
+            $ultimoNumero = $ultimaCompra->numero;
+            $partes       = explode('-', $ultimoNumero);
+            if (count($partes) >= 2) {
+                $secuencial = intval($partes[1]) + 1;
+            }
+        }
+
+        // Formato: COMP20240915-001
+        return sprintf('COMP%s-%03d', $fecha, $secuencial);
     }
 }

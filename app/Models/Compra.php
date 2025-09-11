@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +20,7 @@ class Compra extends Model
         'usuario_id',
         'estado_documento_id',
         'moneda_id',
+        'tipo_pago_id',
     ];
 
     // Relaciones
@@ -44,8 +44,18 @@ class Compra extends Model
         return $this->belongsTo(Moneda::class, 'moneda_id');
     }
 
+    public function tipoPago()
+    {
+        return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+    }
+
     public function detalles()
     {
         return $this->hasMany(DetalleCompra::class, 'compra_id');
+    }
+
+    public function cuentaPorPagar()
+    {
+        return $this->hasOne(CuentaPorPagar::class, 'compra_id');
     }
 }

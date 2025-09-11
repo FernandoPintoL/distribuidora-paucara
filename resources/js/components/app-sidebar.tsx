@@ -55,21 +55,21 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Ventas',
-        href: Controllers.VentaController.index['/ventas'].url(),
+        href: '/ventas',
         icon: ShoppingCart,
-        // children: [
-        //     { title: 'Gestionar Ventas', href: Controllers.VentaController.index['/ventas'].url(), icon: ShoppingCart },
-        //     { title: 'Nueva Venta', href: Controllers.VentaController.create().url, icon: ShoppingCart },
-        // ],
+        children: [
+            { title: 'Lista de Ventas', href: '/ventas', icon: ShoppingCart },
+            { title: 'Nueva Venta', href: '/ventas/create', icon: ShoppingCart },
+        ],
     },
     {
         title: 'Compras',
-        href: Controllers.CompraController.index().url,
+        href: '/compras',
         icon: Truck,
-        // children: [
-        //     { title: 'Gestionar Compras', href: Controllers.CompraController.index().url, icon: Truck },
-        //     { title: 'Nueva Compra', href: Controllers.CompraController.create().url, icon: Truck },
-        // ],
+        children: [
+            { title: 'Lista de Compras', href: '/compras', icon: Truck },
+            { title: 'Nueva Compra', href: '/compras/create', icon: Truck },
+        ],
     },
     { title: 'Almacenes', href: Controllers.AlmacenController.index().url, icon: Building2 },
     { title: 'Proveedores', href: Controllers.ProveedorController.index().url, icon: Truck },
@@ -79,11 +79,11 @@ const mainNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
-    {
+    /* {
         title: 'Configuración',
         href: Controllers.ConfiguracionGlobalController.index().url,
         icon: Settings,
-    },
+    }, */
     /*{
         title: 'Repository',
         href: 'https://github.com/laravel/react-starter-kit',

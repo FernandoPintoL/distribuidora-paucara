@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,5 +20,10 @@ class TipoPago extends Model
     public function pagos()
     {
         return $this->hasMany(Pago::class, 'tipo_pago_id');
+    }
+
+    public function compras()
+    {
+        return $this->hasMany(Compra::class, 'tipo_pago_id');
     }
 }

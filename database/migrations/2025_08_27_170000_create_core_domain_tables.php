@@ -13,7 +13,7 @@ return new class extends Migration
             $table->id();
             $table->string('codigo', 3)->unique(); // USD, EUR, ARS, etc.
             $table->string('nombre', 50)->unique();
-            $table->string('simbolo', 5); // $, €, etc.
+            $table->string('simbolo', 5);                             // $, €, etc.
             $table->decimal('tasa_cambio', 15, 6)->default(1.000000); // Tasa de cambio respecto a moneda base
             $table->integer('decimales')->default(2);
             $table->boolean('es_moneda_base')->default(false); // Solo una puede ser true
@@ -148,11 +148,32 @@ return new class extends Migration
         // Tipos y estados básicos
         Schema::create('estados_documento', function (Blueprint $table) {
             $table->id();
-            $table->string('codigo')->unique();
-            $table->string('nombre');
-            $table->string('color', 7)->default('#6B7280'); // Color hexadecimal para UI
+            $table->string('codigo', 10)->unique();
+            $table->string('nombre', 100);
             $table->string('descripcion')->nullable();
+            $table->string('color', 7)->default('#6B7280'); // Color hexadecimal para UI
+            $table->boolean('permite_edicion')->default(true);
+            $table->boolean('permite_anulacion')->default(true);
+            $table->boolean('es_estado_final')->default(false);
             $table->boolean('activo')->default(true);
+            $table->timestamps();
+
+        });
+
+        Schema::create('tipos_documento', function (Blueprint $table) {
+            $table->id();
+            $table->string('codigo', 10)->unique(); // Ej: FAC, BOL, REC, NOT
+            $table->string('nombre', 100);          // Factura, Boleta, Recibo, Nota de Crédito
+            $table->string('descripcion')->nullable();
+            $table->boolean('genera_inventario')->default(true);      // Si afecta inventario
+            $table->boolean('requiere_autorizacion')->default(false); // Para facturación electrónica
+            $table->string('formato_numeracion')->nullable();         // Ej: FAC-{YYYY}-{####}
+            $table->integer('siguiente_numero')->default(1);          // Para auto-numeración
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+
+            // Índices
+            $table->index(['codigo', 'activo']);
         });
 
         Schema::create('tipos_pago', function (Blueprint $table) {
@@ -248,6 +269,7 @@ return new class extends Migration
         Schema::dropIfExists('tipo_operacion_caja');
         Schema::dropIfExists('tipos_pago');
         Schema::dropIfExists('estados_documento');
+        Schema::dropIfExists('tipos_documento');
         Schema::dropIfExists('proveedores');
         Schema::dropIfExists('fotos_lugar_cliente');
         Schema::dropIfExists('direcciones_cliente');

@@ -1,10 +1,8 @@
 <?php
-
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
 
 class Moneda extends Model
 {
@@ -18,13 +16,13 @@ class Moneda extends Model
         'simbolo',
         'tasa_cambio',
         'es_moneda_base',
-        'activo'
+        'activo',
     ];
 
     protected $casts = [
-        'tasa_cambio' => 'decimal:6',
+        'tasa_cambio'    => 'decimal:6',
         'es_moneda_base' => 'boolean',
-        'activo' => 'boolean'
+        'activo'         => 'boolean',
     ];
 
     // Scopes
@@ -48,7 +46,7 @@ class Moneda extends Model
     {
         $monedaBase = static::getMonedaBase();
 
-        if (!$monedaBase) {
+        if (! $monedaBase) {
             throw new \Exception('No hay moneda base configurada');
         }
 
@@ -59,13 +57,13 @@ class Moneda extends Model
 
         // Convertir a moneda base primero
         $montoEnBase = $monedaOrigen->es_moneda_base ?
-            $monto :
-            $monto / $monedaOrigen->tasa_cambio;
+        $monto :
+        $monto / $monedaOrigen->tasa_cambio;
 
         // Convertir de moneda base a destino
         $montoConvertido = $monedaDestino->es_moneda_base ?
-            $montoEnBase :
-            $montoEnBase * $monedaDestino->tasa_cambio;
+        $montoEnBase :
+        $montoEnBase * $monedaDestino->tasa_cambio;
 
         return round($montoConvertido, 6);
     }
@@ -94,6 +92,11 @@ class Moneda extends Model
     public function preciosProductos()
     {
         return $this->hasMany(PrecioProducto::class);
+    }
+
+    public function compras()
+    {
+        return $this->hasMany(Compra::class, 'moneda_id');
     }
 
     // Accessors

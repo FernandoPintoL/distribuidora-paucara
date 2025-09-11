@@ -1,17 +1,32 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\CompraController;
-use App\Http\Controllers\VentaController;
-use App\Http\Controllers\InventarioController;
-use App\Http\Controllers\ReporteInventarioApiController;
-use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\CompraController;
 use App\Http\Controllers\DireccionClienteApiController;
+use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ReporteInventarioApiController;
+use App\Http\Controllers\VentaController;
+use Illuminate\Support\Facades\Route;
 
 // Rutas API básicas con nombres únicos para evitar conflictos con rutas web
 Route::apiResource('compras', CompraController::class)->names('api.compras');
 Route::apiResource('ventas', VentaController::class)->names('api.ventas');
+
+// Rutas adicionales para ventas
+Route::group(['prefix' => 'ventas'], function () {
+    Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
+    Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);
+    Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
+    Route::get('{venta}/resumen-stock', [VentaController::class, 'obtenerResumenStock']);
+});
+
+// Rutas API para contabilidad
+Route::group(['prefix' => 'contabilidad'], function () {
+    Route::get('asientos', [AsientoContableController::class, 'indexApi']);
+    Route::get('asientos/{asientoContable}', [AsientoContableController::class, 'showApi']);
+});
 
 // Rutas API para inventario
 Route::group(['prefix' => 'inventario'], function () {
@@ -20,7 +35,7 @@ Route::group(['prefix' => 'inventario'], function () {
     Route::post('ajustes', [InventarioController::class, 'procesarAjusteApi']);
     Route::get('movimientos', [InventarioController::class, 'movimientosApi']);
     Route::post('movimientos', [InventarioController::class, 'crearMovimiento']);
-    
+
     // Reportes
     Route::group(['prefix' => 'reportes'], function () {
         Route::get('estadisticas', [ReporteInventarioApiController::class, 'estadisticasGenerales']);
@@ -54,7 +69,7 @@ Route::group(['prefix' => 'clientes'], function () {
     Route::delete('{cliente}', [ClienteController::class, 'destroyApi']);
     Route::get('{cliente}/saldo-cuentas', [ClienteController::class, 'saldoCuentasPorCobrar']);
     Route::get('{cliente}/historial-ventas', [ClienteController::class, 'historialVentas']);
-    
+
     // Gestión de direcciones
     Route::get('{cliente}/direcciones', [DireccionClienteApiController::class, 'index']);
     Route::post('{cliente}/direcciones', [DireccionClienteApiController::class, 'store']);

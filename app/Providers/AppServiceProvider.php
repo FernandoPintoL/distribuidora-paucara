@@ -1,8 +1,9 @@
 <?php
-
 namespace App\Providers;
 
+use App\Models\Compra;
 use App\Models\PrecioProducto;
+use App\Observers\CompraObserver;
 use App\Observers\PrecioProductoObserver;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -26,5 +27,6 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
         PrecioProducto::observe(PrecioProductoObserver::class);
+        Compra::observe(CompraObserver::class);
     }
 }
