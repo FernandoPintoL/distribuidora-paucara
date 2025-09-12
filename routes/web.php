@@ -23,11 +23,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('almacenes', \App\Http\Controllers\AlmacenController::class)->middleware('permission:almacenes.manage');
 
     // Incluir rutas de configuración global
-    require __DIR__ . '/configuracion.php';
+    require __DIR__.'/configuracion.php';
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
     Route::resource('clientes', \App\Http\Controllers\ClienteController::class)->middleware('permission:clientes.manage');
     Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
+    Route::get('productos/crear/moderno', [\App\Http\Controllers\ProductoController::class, 'createModerno'])->middleware('permission:productos.manage')->name('productos.create.moderno');
     Route::get('productos/{producto}/historial-precios', [\App\Http\Controllers\ProductoController::class, 'historialPrecios'])->middleware('permission:productos.manage')->name('productos.historial-precios');
     Route::resource('unidades', \App\Http\Controllers\UnidadMedidaController::class)->parameters(['unidades' => 'unidad'])->middleware('permission:unidades.manage');
 
@@ -196,5 +197,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';

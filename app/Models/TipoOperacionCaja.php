@@ -10,7 +10,7 @@ class TipoOperacionCaja extends Model
     use HasFactory;
 
     protected $table = 'tipo_operacion_caja';
-    
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -26,9 +26,14 @@ class TipoOperacionCaja extends Model
 
     // Constantes para los tipos
     const APERTURA = 'APERTURA';
+
     const CIERRE = 'CIERRE';
+
     const VENTA = 'VENTA';
+
     const COMPRA = 'COMPRA';
+
     const GASTO = 'GASTO';
+
     const INGRESO_EXTRA = 'INGRESO_EXTRA';
 }

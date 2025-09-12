@@ -106,7 +106,7 @@ class TipoPrecio extends Model
 
     public function getTooltip(): string
     {
-        return $this->configuracion['tooltip'] ?? $this->descripcion;
+        return $this->configuracion['tooltip'] ?? $this->descripcion ?? '';
     }
 
     /**

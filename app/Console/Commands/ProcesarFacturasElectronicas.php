@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Services\FacturacionElectronicaService;
@@ -83,7 +84,7 @@ class ProcesarFacturasElectronicas extends Command
         $this->info("📋 Encontradas {$facturas->count()} facturas para verificar");
 
         $procesadas = 0;
-        $vigentes   = 0;
+        $vigentes = 0;
         $observadas = 0;
 
         foreach ($facturas as $factura) {
@@ -91,10 +92,10 @@ class ProcesarFacturasElectronicas extends Command
 
             if ($this->facturacionService->verificarEstadoFactura($factura)) {
                 $vigentes++;
-                $this->line("  ✅ Factura vigente");
+                $this->line('  ✅ Factura vigente');
             } else {
                 $observadas++;
-                $this->line("  ⚠️  Factura observada o con errores");
+                $this->line('  ⚠️  Factura observada o con errores');
             }
 
             $procesadas++;

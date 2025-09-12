@@ -49,6 +49,7 @@ class CierreCaja extends Model
     public function scopeDelDia($query, $fecha = null)
     {
         $fecha = $fecha ?? today();
+
         return $query->whereDate('fecha', $fecha);
     }
 

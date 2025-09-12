@@ -23,7 +23,7 @@ return new class extends Migration
             $table->enum('estado', ['borrador', 'confirmado', 'anulado'])->default('confirmado');
             $table->text('observaciones')->nullable();
 
-                                          // Relaciones polimórficas para vincular con ventas, compras, etc.
+            // Relaciones polimórficas para vincular con ventas, compras, etc.
             $table->morphs('asientable'); // asientable_type, asientable_id
 
             // Usuario que creó el asiento

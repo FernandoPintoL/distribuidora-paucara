@@ -10,7 +10,7 @@ class MovimientoCaja extends Model
     use HasFactory;
 
     protected $table = 'movimientos_caja';
-    
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -58,6 +58,7 @@ class MovimientoCaja extends Model
     public function scopeDelDia($query, $fecha = null)
     {
         $fecha = $fecha ?? today();
+
         return $query->whereDate('fecha', $fecha);
     }
 }

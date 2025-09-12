@@ -18,20 +18,20 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
-    'ses'      => [
-        'key'    => env('AWS_ACCESS_KEY_ID'),
+    'ses' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    'resend'   => [
+    'resend' => [
         'key' => env('RESEND_KEY'),
     ],
 
-    'slack'    => [
+    'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel'              => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
 
@@ -44,14 +44,14 @@ return [
     | Electrónica del SIN de Bolivia.
     |
     */
-    'sin'      => [
-        'api_url'            => env('SIN_API_URL', 'https://pilotosiatservicios.impuestos.gob.bo/v2/FacturacionCodigos'),
-        'nit_emisor'         => env('SIN_NIT_EMISOR'),
+    'sin' => [
+        'api_url' => env('SIN_API_URL', 'https://pilotosiatservicios.impuestos.gob.bo/v2/FacturacionCodigos'),
+        'nit_emisor' => env('SIN_NIT_EMISOR'),
         'codigo_punto_venta' => env('SIN_CODIGO_PUNTO_VENTA', 0),
-        'codigo_sucursal'    => env('SIN_CODIGO_SUCURSAL', 0),
-        'token'              => env('SIN_TOKEN'),
-        'ambiente'           => env('SIN_AMBIENTE', 'piloto'), // piloto o produccion
-        'modalidad'          => env('SIN_MODALIDAD', 1),       // 1=Electronico, 2=Computarizada
+        'codigo_sucursal' => env('SIN_CODIGO_SUCURSAL', 0),
+        'token' => env('SIN_TOKEN'),
+        'ambiente' => env('SIN_AMBIENTE', 'piloto'), // piloto o produccion
+        'modalidad' => env('SIN_MODALIDAD', 1),       // 1=Electronico, 2=Computarizada
     ],
 
 ];

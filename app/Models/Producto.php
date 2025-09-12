@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,11 +30,11 @@ class Producto extends Model
     ];
 
     protected $casts = [
-        'peso'           => 'float',
-        'stock_minimo'   => 'integer',
-        'stock_maximo'   => 'integer',
-        'activo'         => 'boolean',
-        'es_alquilable'  => 'boolean',
+        'peso' => 'float',
+        'stock_minimo' => 'integer',
+        'stock_maximo' => 'integer',
+        'activo' => 'boolean',
+        'es_alquilable' => 'boolean',
         'fecha_creacion' => 'datetime',
     ];
 
@@ -90,7 +91,7 @@ class Producto extends Model
     /**
      * Obtener el precio de un tipo específico
      */
-    public function obtenerPrecio(TipoPrecio | int | string $tipoPrecio): ?PrecioProducto
+    public function obtenerPrecio(TipoPrecio|int|string $tipoPrecio): ?PrecioProducto
     {
         return $this->precios()
             ->activos()
@@ -101,19 +102,19 @@ class Producto extends Model
     /**
      * Agregar un nuevo precio con configuración de ganancia
      */
-    public function agregarPrecio(string $nombre, float $precio, TipoPrecio | int | string $tipoPrecio, ?array $configuracionGanancia = null): PrecioProducto
+    public function agregarPrecio(string $nombre, float $precio, TipoPrecio|int|string $tipoPrecio, ?array $configuracionGanancia = null): PrecioProducto
     {
         // Obtener el ID del tipo de precio
         $tipoPrecioId = null;
         if ($tipoPrecio instanceof TipoPrecio) {
-            $tipoPrecioId    = $tipoPrecio->id;
+            $tipoPrecioId = $tipoPrecio->id;
             $tipoPrecioModel = $tipoPrecio;
         } elseif (is_numeric($tipoPrecio)) {
-            $tipoPrecioId    = $tipoPrecio;
+            $tipoPrecioId = $tipoPrecio;
             $tipoPrecioModel = TipoPrecio::find($tipoPrecio);
         } else {
             $tipoPrecioModel = TipoPrecio::porCodigo($tipoPrecio);
-            $tipoPrecioId    = $tipoPrecioModel?->id;
+            $tipoPrecioId = $tipoPrecioModel?->id;
         }
 
         if (! $tipoPrecioModel) {
@@ -122,11 +123,11 @@ class Producto extends Model
 
         // Crear el precio
         $precioProducto = $this->precios()->create([
-            'nombre'                     => $nombre,
-            'precio'                     => $precio,
-            'tipo_precio_id'             => $tipoPrecioId,
-            'es_precio_base'             => $tipoPrecioModel->es_precio_base,
-            'activo'                     => true,
+            'nombre' => $nombre,
+            'precio' => $precio,
+            'tipo_precio_id' => $tipoPrecioId,
+            'es_precio_base' => $tipoPrecioModel->es_precio_base,
+            'activo' => true,
             'fecha_ultima_actualizacion' => now(),
         ]);
 
@@ -136,10 +137,10 @@ class Producto extends Model
             $this->configuracionesGanancias()->updateOrCreate(
                 ['tipo_precio_id' => $tipoPrecioId],
                 array_merge([
-                    'margen_minimo'                => ConfiguracionGlobal::margenMinimoGlobal(),
+                    'margen_minimo' => ConfiguracionGlobal::margenMinimoGlobal(),
                     'porcentaje_ganancia_esperado' => ConfiguracionGlobal::porcentajeInteresGeneral(),
-                    'calcular_automatico'          => ConfiguracionGlobal::aplicarInteresAutomatico(),
-                    'activo'                       => true,
+                    'calcular_automatico' => ConfiguracionGlobal::aplicarInteresAutomatico(),
+                    'activo' => true,
                 ], $configuracionGanancia)
             );
         } elseif (! $configuracionGanancia && $tipoPrecioModel->esGanancia()) {
@@ -147,10 +148,10 @@ class Producto extends Model
             $this->configuracionesGanancias()->updateOrCreate(
                 ['tipo_precio_id' => $tipoPrecioId],
                 [
-                    'margen_minimo'                => ConfiguracionGlobal::margenMinimoGlobal(),
+                    'margen_minimo' => ConfiguracionGlobal::margenMinimoGlobal(),
                     'porcentaje_ganancia_esperado' => ConfiguracionGlobal::porcentajeInteresGeneral(),
-                    'calcular_automatico'          => ConfiguracionGlobal::aplicarInteresAutomatico(),
-                    'activo'                       => true,
+                    'calcular_automatico' => ConfiguracionGlobal::aplicarInteresAutomatico(),
+                    'activo' => true,
                 ]
             );
         }
@@ -161,7 +162,7 @@ class Producto extends Model
     /**
      * Eliminar precio de un tipo específico
      */
-    public function eliminarPrecio(TipoPrecio | int | string $tipoPrecio): bool
+    public function eliminarPrecio(TipoPrecio|int|string $tipoPrecio): bool
     {
         $precio = $this->obtenerPrecio($tipoPrecio);
 
@@ -177,7 +178,7 @@ class Producto extends Model
     /**
      * Calcular ganancia para un tipo de venta específico
      */
-    public function calcularGanancia(TipoPrecio | int | string $tipoVenta): float
+    public function calcularGanancia(TipoPrecio|int|string $tipoVenta): float
     {
         $precioCosto = $this->obtenerPrecio(TipoPrecio::costo() ?? 'COSTO');
         $precioVenta = $this->obtenerPrecio($tipoVenta);
@@ -271,7 +272,7 @@ class Producto extends Model
     /**
      * Actualizar configuración de ganancia con valores globales como respaldo
      */
-    public function actualizarConfiguracionGanancia(TipoPrecio | int | string $tipoPrecio, array $configuracion = []): ConfiguracionGanancia
+    public function actualizarConfiguracionGanancia(TipoPrecio|int|string $tipoPrecio, array $configuracion = []): ConfiguracionGanancia
     {
         $tipoPrecioId = null;
         if ($tipoPrecio instanceof TipoPrecio) {
@@ -280,7 +281,7 @@ class Producto extends Model
             $tipoPrecioId = $tipoPrecio;
         } else {
             $tipoPrecioModel = TipoPrecio::porCodigo($tipoPrecio);
-            $tipoPrecioId    = $tipoPrecioModel?->id;
+            $tipoPrecioId = $tipoPrecioModel?->id;
         }
 
         if (! $tipoPrecioId) {
@@ -289,10 +290,10 @@ class Producto extends Model
 
         // Combinar configuración proporcionada con valores globales como respaldo
         $configuracionCompleta = array_merge([
-            'margen_minimo'                => ConfiguracionGlobal::margenMinimoGlobal(),
+            'margen_minimo' => ConfiguracionGlobal::margenMinimoGlobal(),
             'porcentaje_ganancia_esperado' => ConfiguracionGlobal::porcentajeInteresGeneral(),
-            'calcular_automatico'          => ConfiguracionGlobal::aplicarInteresAutomatico(),
-            'activo'                       => true,
+            'calcular_automatico' => ConfiguracionGlobal::aplicarInteresAutomatico(),
+            'activo' => true,
         ], $configuracion);
 
         return $this->configuracionesGanancias()->updateOrCreate(
@@ -304,7 +305,7 @@ class Producto extends Model
     /**
      * Obtener porcentaje de ganancia efectivo (específico del producto o global)
      */
-    public function obtenerPorcentajeGananciaEfectivo(TipoPrecio | int | string $tipoPrecio): float
+    public function obtenerPorcentajeGananciaEfectivo(TipoPrecio|int|string $tipoPrecio): float
     {
         $configuracion = $this->configuracionesGanancias()
             ->where('tipo_precio_id', $this->obtenerTipoPrecioId($tipoPrecio))
@@ -319,7 +320,7 @@ class Producto extends Model
     /**
      * Obtener margen mínimo efectivo (específico del producto o global)
      */
-    public function obtenerMargenMinimoEfectivo(TipoPrecio | int | string $tipoPrecio): float
+    public function obtenerMargenMinimoEfectivo(TipoPrecio|int|string $tipoPrecio): float
     {
         $configuracion = $this->configuracionesGanancias()
             ->where('tipo_precio_id', $this->obtenerTipoPrecioId($tipoPrecio))
@@ -370,7 +371,7 @@ class Producto extends Model
     /**
      * Método auxiliar para obtener ID de tipo de precio
      */
-    private function obtenerTipoPrecioId(TipoPrecio | int | string $tipoPrecio): ?int
+    private function obtenerTipoPrecioId(TipoPrecio|int|string $tipoPrecio): ?int
     {
         if ($tipoPrecio instanceof TipoPrecio) {
             return $tipoPrecio->id;
@@ -497,9 +498,9 @@ class Producto extends Model
         ?string $observacion = null,
         ?string $numeroDocumento = null,
         ?string $lote = null,
-        ? \Carbon\Carbon $fechaVencimiento = null,
+        ?\Carbon\Carbon $fechaVencimiento = null,
         ?int $userId = null
-    ) : MovimientoInventario {
+    ): MovimientoInventario {
         // Buscar o crear registro de stock
         $stockProducto = $this->stock()
             ->where('almacen_id', $almacenId)
@@ -514,11 +515,11 @@ class Producto extends Model
 
         if (! $stockProducto) {
             $stockProducto = StockProducto::create([
-                'producto_id'         => $this->id,
-                'almacen_id'          => $almacenId,
-                'cantidad'            => 0,
-                'lote'                => $lote,
-                'fecha_vencimiento'   => $fechaVencimiento,
+                'producto_id' => $this->id,
+                'almacen_id' => $almacenId,
+                'cantidad' => 0,
+                'lote' => $lote,
+                'fecha_vencimiento' => $fechaVencimiento,
                 'fecha_actualizacion' => now(),
             ]);
         }
@@ -554,17 +555,17 @@ class Producto extends Model
             ->firstOrCreate(
                 [
                     'producto_id' => $this->id,
-                    'almacen_id'  => $almacenId,
-                    'lote'        => $lote,
+                    'almacen_id' => $almacenId,
+                    'lote' => $lote,
                 ],
                 [
-                    'cantidad'            => 0,
+                    'cantidad' => 0,
                     'fecha_actualizacion' => now(),
                 ]
             );
 
         $diferencia = $nuevaCantidad - $stockProducto->cantidad;
-        $tipo       = $diferencia >= 0 ? MovimientoInventario::TIPO_ENTRADA_AJUSTE : MovimientoInventario::TIPO_SALIDA_AJUSTE;
+        $tipo = $diferencia >= 0 ? MovimientoInventario::TIPO_ENTRADA_AJUSTE : MovimientoInventario::TIPO_SALIDA_AJUSTE;
 
         return MovimientoInventario::registrar(
             $stockProducto,

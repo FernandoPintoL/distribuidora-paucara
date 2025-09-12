@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature;
 
 use App\Models\User;
@@ -21,7 +22,7 @@ class VentasStockApiTest extends TestCase
             $this->user = User::factory()->create();
         } catch (\Exception $e) {
             // Si no hay factory o tabla, crear manualmente o usar usuario existente
-            $this->user     = new User();
+            $this->user = new User;
             $this->user->id = 1;
         }
     }
@@ -31,7 +32,7 @@ class VentasStockApiTest extends TestCase
         // Test del endpoint POST /api/ventas/verificar-stock
         $response = $this->actingAs($this->user)
             ->postJson('/api/ventas/verificar-stock', [
-                'productos'  => [],
+                'productos' => [],
                 'almacen_id' => 1,
             ]);
 
@@ -83,7 +84,7 @@ class VentasStockApiTest extends TestCase
     {
         // Verificar que las rutas existen usando artisan route:list
         $exitCode = Artisan::call('route:list', ['--json' => true]);
-        $routes   = json_decode(Artisan::output(), true);
+        $routes = json_decode(Artisan::output(), true);
 
         $expectedRoutes = [
             'POST api/ventas/verificar-stock',
@@ -93,8 +94,8 @@ class VentasStockApiTest extends TestCase
 
         $foundRoutes = [];
         foreach ($routes as $route) {
-            $method        = $route['method'][0] ?? '';
-            $uri           = $route['uri'] ?? '';
+            $method = $route['method'][0] ?? '';
+            $uri = $route['uri'] ?? '';
             $foundRoutes[] = "$method $uri";
         }
 

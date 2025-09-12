@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Helpers\ApiResponse;
 use App\Models\Cliente;
 use App\Models\DireccionCliente;
-use App\Helpers\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +13,7 @@ class DireccionClienteApiController extends Controller
     public function __construct()
     {
         $this->middleware('permission:clientes.manage')->only([
-            'index', 'store', 'update', 'destroy', 'establecerPrincipal'
+            'index', 'store', 'update', 'destroy', 'establecerPrincipal',
         ]);
     }
 
@@ -67,7 +66,7 @@ class DireccionClienteApiController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al crear dirección: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al crear dirección: '.$e->getMessage(), 500);
         }
     }
 
@@ -104,7 +103,7 @@ class DireccionClienteApiController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al actualizar dirección: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al actualizar dirección: '.$e->getMessage(), 500);
         }
     }
 
@@ -124,7 +123,7 @@ class DireccionClienteApiController extends Controller
             return ApiResponse::success(null, 'Dirección eliminada exitosamente');
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al eliminar dirección: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al eliminar dirección: '.$e->getMessage(), 500);
         }
     }
 
@@ -151,7 +150,7 @@ class DireccionClienteApiController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al establecer dirección principal: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al establecer dirección principal: '.$e->getMessage(), 500);
         }
     }
 }

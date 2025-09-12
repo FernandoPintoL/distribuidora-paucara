@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,19 +22,17 @@ class PrecioProducto extends Model
         'margen_ganancia',
         'porcentaje_ganancia',
         'es_precio_base',
-        'fecha_ultima_actualizacion',
-        'motivo_cambio'
+        'motivo_cambio',
     ];
 
     protected $casts = [
-        'precio' => 'decimal:2',
-        'fecha_inicio' => 'date',
-        'fecha_fin' => 'date',
-        'activo' => 'boolean',
-        'margen_ganancia' => 'decimal:2',
+        'precio'              => 'decimal:2',
+        'fecha_inicio'        => 'date',
+        'fecha_fin'           => 'date',
+        'activo'              => 'boolean',
+        'margen_ganancia'     => 'decimal:2',
         'porcentaje_ganancia' => 'decimal:2',
-        'es_precio_base' => 'boolean',
-        'fecha_ultima_actualizacion' => 'datetime',
+        'es_precio_base'      => 'boolean',
     ];
 
     /**
@@ -54,7 +51,7 @@ class PrecioProducto extends Model
     public function configuracionGanancia()
     {
         return $this->hasOne(ConfiguracionGanancia::class, 'producto_id', 'producto_id')
-                    ->where('tipo_precio_id', $this->tipo_precio_id);
+            ->where('tipo_precio_id', $this->tipo_precio_id);
     }
 
     public function historialPrecios()
@@ -65,7 +62,7 @@ class PrecioProducto extends Model
     /**
      * Scopes
      */
-    public function scopePorTipo($query, TipoPrecio|int|string $tipo)
+    public function scopePorTipo($query, TipoPrecio | int | string $tipo)
     {
         if ($tipo instanceof TipoPrecio) {
             return $query->where('tipo_precio_id', $tipo->id);
@@ -92,9 +89,9 @@ class PrecioProducto extends Model
     public function scopePrecioBase($query)
     {
         return $query->where('es_precio_base', true)
-                    ->orWhereHas('tipoPrecio', function($q) {
-                        $q->where('es_precio_base', true);
-                    });
+            ->orWhereHas('tipoPrecio', function ($q) {
+                $q->where('es_precio_base', true);
+            });
     }
 
     /**
@@ -107,7 +104,7 @@ class PrecioProducto extends Model
             ->precioBase()
             ->first();
 
-        if (!$precioBase || $precioBase->precio == 0) {
+        if (! $precioBase || $precioBase->precio == 0) {
             return 0;
         }
 
@@ -121,7 +118,7 @@ class PrecioProducto extends Model
             ->precioBase()
             ->first();
 
-        if (!$precioBase || $precioBase->precio == 0) {
+        if (! $precioBase || $precioBase->precio == 0) {
             return 0;
         }
 
@@ -138,21 +135,21 @@ class PrecioProducto extends Model
         // Registrar en historial antes de actualizar
         HistorialPrecio::create([
             'precio_producto_id' => $this->id,
-            'valor_anterior' => $valorAnterior,
-            'valor_nuevo' => $nuevoPrecio,
-            'fecha_cambio' => now(),
-            'motivo' => $motivo,
-            'usuario' => $usuario,
-            'tipo_precio_id' => $this->tipo_precio_id, // Usar tipo_precio_id en lugar de tipo_precio
+            'valor_anterior'     => $valorAnterior,
+            'valor_nuevo'        => $nuevoPrecio,
+            'fecha_cambio'       => now(),
+            'motivo'             => $motivo,
+            'usuario'            => $usuario,
+            'tipo_precio_id'     => $this->tipo_precio_id, // Usar tipo_precio_id en lugar de tipo_precio
         ]);
 
         // Actualizar precio
         $this->update([
-            'precio' => $nuevoPrecio,
+            'precio'                     => $nuevoPrecio,
             'fecha_ultima_actualizacion' => now(),
-            'motivo_cambio' => $motivo,
-            'margen_ganancia' => $this->calcularGanancia(),
-            'porcentaje_ganancia' => $this->calcularPorcentajeGanancia(),
+            'motivo_cambio'              => $motivo,
+            'margen_ganancia'            => $this->calcularGanancia(),
+            'porcentaje_ganancia'        => $this->calcularPorcentajeGanancia(),
         ]);
     }
 
@@ -185,27 +182,27 @@ class PrecioProducto extends Model
      */
     public function getTipoPrecioInfo(): array
     {
-        if (!$this->tipoPrecio) {
+        if (! $this->tipoPrecio) {
             return [
-                'id' => null,
-                'codigo' => 'DESCONOCIDO',
-                'nombre' => 'Tipo Desconocido',
-                'color' => 'gray',
+                'id'          => null,
+                'codigo'      => 'DESCONOCIDO',
+                'nombre'      => 'Tipo Desconocido',
+                'color'       => 'gray',
                 'es_ganancia' => true,
-                'icono' => '❓',
+                'icono'       => '❓',
             ];
         }
 
         return [
-            'id' => $this->tipoPrecio->id,
-            'codigo' => $this->tipoPrecio->codigo,
-            'nombre' => $this->tipoPrecio->nombre,
-            'descripcion' => $this->tipoPrecio->descripcion,
-            'color' => $this->tipoPrecio->color,
-            'es_ganancia' => $this->tipoPrecio->es_ganancia,
+            'id'             => $this->tipoPrecio->id,
+            'codigo'         => $this->tipoPrecio->codigo,
+            'nombre'         => $this->tipoPrecio->nombre,
+            'descripcion'    => $this->tipoPrecio->descripcion,
+            'color'          => $this->tipoPrecio->color,
+            'es_ganancia'    => $this->tipoPrecio->es_ganancia,
             'es_precio_base' => $this->tipoPrecio->es_precio_base,
-            'icono' => $this->tipoPrecio->getIcono(),
-            'tooltip' => $this->tipoPrecio->getTooltip(),
+            'icono'          => $this->tipoPrecio->getIcono(),
+            'tooltip'        => $this->tipoPrecio->getTooltip(),
         ];
     }
 }

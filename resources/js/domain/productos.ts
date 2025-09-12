@@ -4,11 +4,11 @@ import type { BaseEntity, BaseFormData } from './generic';
 
 export interface Precio {
   id?: number;
-  nombre: string;
   monto: number;
-  tipo_precio_id?: number; // Agregado para resolver errores
-  tipo_precio?: string;   // Agregado para resolver errores
-  moneda?: string;        // Agregado para resolver errores
+  tipo_precio_id: number;
+  moneda?: string;
+  motivo_cambio?: string;
+  fecha_aplicacion?: string;
 }
 
 export interface CodigoBarra {
@@ -73,6 +73,8 @@ export interface ProductoFormData extends BaseFormData {
   fecha_vencimiento?: string | null;
   categoria_id?: Id | '';
   marca_id?: Id | '';
+  stock_minimo?: number | null;
+  stock_maximo?: number | null;
   activo?: boolean;
   perfil?: Imagen | null;
   galeria?: Imagen[];
@@ -92,3 +94,34 @@ export interface HistorialPrecio {
   usuario: string;
   porcentaje_cambio: number;
 }
+
+// Funciones utilitarias para cálculos de precios
+export const calcularPrecioConGanancia = (precioCosto: number, porcentajeGanancia: number): number => {
+  if (!Number.isFinite(precioCosto) || precioCosto < 0) return 0;
+  if (!Number.isFinite(porcentajeGanancia)) return precioCosto;
+
+  return Number((precioCosto * (1 + porcentajeGanancia / 100)).toFixed(2));
+};
+
+export const calcularPorcentajeGanancia = (precioVenta: number, precioCosto: number): number => {
+  if (!Number.isFinite(precioVenta) || !Number.isFinite(precioCosto) || precioCosto <= 0) return 0;
+
+  return Number((((precioVenta - precioCosto) / precioCosto) * 100).toFixed(2));
+};
+
+export const obtenerPrecioCosto = (precios: Precio[], tiposPrecio: Array<{ id?: number; value?: number; label?: string; nombre?: string; codigo?: string }>): number => {
+  const tipoCosto = tiposPrecio.find(tp =>
+    tp.label?.toLowerCase().includes('costo') ||
+    tp.nombre?.toLowerCase().includes('costo') ||
+    tp.codigo?.toLowerCase().includes('costo')
+  );
+
+  if (!tipoCosto) return 0;
+
+  const precioCosto = precios.find(p =>
+    p.tipo_precio_id === tipoCosto.value ||
+    p.tipo_precio_id === tipoCosto.id
+  );
+
+  return precioCosto?.monto || 0;
+};

@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Cliente;
-use App\Models\DireccionCliente;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -29,12 +28,12 @@ it('puede listar clientes via API', function () {
                         'telefono',
                         'activo',
                         'fecha_registro',
-                    ]
+                    ],
                 ],
                 'current_page',
                 'total',
             ],
-            'message'
+            'message',
         ]);
 
     expect($response->json('data.data'))->toHaveCount(3);
@@ -81,8 +80,8 @@ it('puede crear cliente con direcciones via API', function () {
                 'ciudad' => 'El Alto',
                 'departamento' => 'La Paz',
                 'es_principal' => false,
-            ]
-        ]
+            ],
+        ],
     ];
 
     $response = $this->postJson('/api/clientes', $clienteData);
@@ -135,8 +134,8 @@ it('puede buscar clientes via API', function () {
                     'nit',
                     'telefono',
                     'email',
-                ]
-            ]
+                ],
+            ],
         ]);
 
     expect($response->json('data'))->toHaveCount(1);
@@ -159,8 +158,8 @@ it('puede obtener saldo de cuentas por cobrar', function () {
                 ],
                 'saldo_total',
                 'cuentas_vencidas',
-                'cuentas_detalle'
-            ]
+                'cuentas_detalle',
+            ],
         ]);
 });
 
@@ -176,7 +175,7 @@ it('puede obtener historial de ventas', function () {
                 'data' => [],
                 'current_page',
                 'total',
-            ]
+            ],
         ]);
 });
 
@@ -203,7 +202,7 @@ it('puede gestionar direcciones de cliente', function () {
     $response->assertStatus(201)
         ->assertJson([
             'success' => true,
-            'message' => 'Dirección creada exitosamente'
+            'message' => 'Dirección creada exitosamente',
         ]);
 
     // Listar direcciones
@@ -217,24 +216,24 @@ it('puede gestionar direcciones de cliente', function () {
     $updateData = ['ciudad' => 'El Alto'];
 
     $response = $this->putJson("/api/clientes/{$cliente->id}/direcciones/{$direccion->id}", $updateData);
-    
+
     $response->assertSuccessful();
-    
+
     $direccion->refresh();
     expect($direccion->ciudad)->toBe('El Alto');
 
     // Establecer como principal
     $response = $this->patchJson("/api/clientes/{$cliente->id}/direcciones/{$direccion->id}/principal");
-    
+
     $response->assertSuccessful()
         ->assertJson([
             'success' => true,
-            'message' => 'Dirección establecida como principal'
+            'message' => 'Dirección establecida como principal',
         ]);
 
     // Eliminar dirección
     $response = $this->deleteJson("/api/clientes/{$cliente->id}/direcciones/{$direccion->id}");
-    
+
     $response->assertSuccessful();
     expect($cliente->direcciones()->count())->toBe(0);
 });

@@ -1,4 +1,4 @@
-// Application Layer: Generic container - Updated with enhanced UI
+// Application Layer: Generic container - Updated with Modern Filters
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import GenericSearchBar from '@/components/generic/generic-search-bar';
 import GenericTable from '@/components/generic/generic-table';
 import GenericPagination from '@/components/generic/generic-pagination';
+import ModernFilters from '@/components/generic/modern-filters';
 import { useGenericEntities } from '@/hooks/use-generic-entities';
 import type { Pagination } from '@/domain/shared';
 import type { BaseEntity, BaseService, ModuleConfig, BaseFormData } from '@/domain/generic';
@@ -16,10 +17,10 @@ const ALL_VALUE = 'all';
 
 interface GenericContainerProps<T extends BaseEntity, F extends BaseFormData> {
   entities: Pagination<T>;
-  filters: { q?: string; categoria_id?: number|string|null; marca_id?: number|string|null; order_by?: string|null; order_dir?: string|null };
+  filters: Record<string, string | number | boolean | null | undefined>;
   config: ModuleConfig<T, F>;
   service: BaseService<T, F>;
-  extraData?: { categorias?: {id:number; nombre:string}[]; marcas?: {id:number; nombre:string}[]; [key:string]: unknown };
+  extraData?: { categorias?: { id: number; nombre: string }[]; marcas?: { id: number; nombre: string }[];[key: string]: unknown };
 }
 
 export default function GenericContainer<T extends BaseEntity, F extends BaseFormData>({
@@ -44,9 +45,9 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
   const [viewMode, setViewMode] = useState<'table' | 'cards'>(config.enableCardView ? 'cards' : 'table');
   const [categoria, setCategoria] = useState<string>(filters.categoria_id ? String(filters.categoria_id) : ALL_VALUE);
   const [marca, setMarca] = useState<string>(filters.marca_id ? String(filters.marca_id) : ALL_VALUE);
-  const [orderBy, setOrderBy] = useState<string>(filters.order_by || 'id');
-  const [orderDir, setOrderDir] = useState<'asc'|'desc'>(filters.order_dir === 'asc' ? 'asc' : 'desc');
-  const initialActivo = (filters as { activo?: string | number | boolean }).activo;
+  const [orderBy, setOrderBy] = useState<string>(String(filters.order_by || 'id'));
+  const [orderDir, setOrderDir] = useState<'asc' | 'desc'>(filters.order_dir === 'asc' ? 'asc' : 'desc');
+  const initialActivo = filters.activo;
   const [estado, setEstado] = useState<string>(initialActivo !== undefined && initialActivo !== null ? String(initialActivo) : ALL_VALUE);
 
   // Sincronizar el estado local con los filtros del servidor una sola vez al montar
@@ -172,7 +173,20 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
 
           <CardContent className="p-6">
             <div className="space-y-6">
-              {config.showIndexFilters && (
+              {/* Modern Filters */}
+              {config.indexFilters && (
+                <ModernFilters
+                  config={config.indexFilters}
+                  currentFilters={filters as Record<string, string | number | boolean | undefined>}
+                  onApplyFilters={(newFilters) => searchEntities(newFilters)}
+                  onResetFilters={clearFilters}
+                  extraData={extraData}
+                  isLoading={isLoading}
+                />
+              )}
+
+              {/* Legacy Filters Support - Deprecated */}
+              {!config.indexFilters && config.showIndexFilters && (
                 config.moduleName === 'productos' ? (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
@@ -183,7 +197,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={ALL_VALUE}>Todas</SelectItem>
-                          {extraData?.categorias?.map(c=> <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
+                          {extraData?.categorias?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -195,7 +209,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={ALL_VALUE}>Todas</SelectItem>
-                          {extraData?.marcas?.map(m=> <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>)}
+                          {extraData?.marcas?.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -212,7 +226,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                       </Select>
                     </div>
                     <div className="flex items-end gap-2">
-                      <Button size="sm" onClick={()=> setOrderDir(orderDir==='asc'?'desc':'asc')} variant="outline" className="h-8 w-20">{orderDir==='asc'?'Asc':'Desc'}</Button>
+                      <Button size="sm" onClick={() => setOrderDir(orderDir === 'asc' ? 'desc' : 'asc')} variant="outline" className="h-8 w-20">{orderDir === 'asc' ? 'Asc' : 'Desc'}</Button>
                       <Button size="sm" onClick={applyFilters} className="h-8">Aplicar</Button>
                       <Button size="sm" variant="ghost" onClick={resetAll} className="h-8">Limpiar</Button>
                     </div>
@@ -244,7 +258,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                       </Select>
                     </div>
                     <div className="flex items-end gap-2">
-                      <Button size="sm" onClick={()=> setOrderDir(orderDir==='asc'?'desc':'asc')} variant="outline" className="h-8 w-20">{orderDir==='asc'?'Asc':'Desc'}</Button>
+                      <Button size="sm" onClick={() => setOrderDir(orderDir === 'asc' ? 'desc' : 'asc')} variant="outline" className="h-8 w-20">{orderDir === 'asc' ? 'Asc' : 'Desc'}</Button>
                       <Button size="sm" onClick={applyProveedorFilters} className="h-8">Aplicar</Button>
                       <Button size="sm" variant="ghost" onClick={resetProveedorFilters} className="h-8">Limpiar</Button>
                     </div>
@@ -278,7 +292,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
 
               {isLoading && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {Array.from({length:8}).map((_,i)=>(
+                  {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="border border-border rounded-xl p-3 space-y-3">
                       <Skeleton className="w-full h-32 rounded-md" />
                       <Skeleton className="h-4 w-3/4" />

@@ -1,12 +1,11 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\AperturaCaja;
-use App\Models\AsientoContable;
 use App\Models\Caja;
 use App\Models\Cliente;
 use App\Models\DetalleVenta;
-use App\Models\MovimientoCaja;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\TipoPago;
@@ -53,7 +52,7 @@ class ProbarAutomatizacionCommand extends Command
             $this->info('✅ Prueba completada exitosamente!');
 
         } catch (\Exception $e) {
-            $this->error('❌ Error en la prueba: ' . $e->getMessage());
+            $this->error('❌ Error en la prueba: '.$e->getMessage());
             $this->error($e->getTraceAsString());
         }
     }
@@ -63,27 +62,27 @@ class ProbarAutomatizacionCommand extends Command
         // Crear caja si no existe
         if (! Caja::first()) {
             $caja = Caja::create([
-                'nombre'      => 'Caja Principal',
+                'nombre' => 'Caja Principal',
                 'descripcion' => 'Caja principal de prueba',
-                'activa'      => true,
+                'activa' => true,
             ]);
         } else {
             $caja = Caja::first();
         }
 
         // Crear apertura de caja si no existe (usar user_id en lugar de usuario_id)
-        $usuario           = User::first();
+        $usuario = User::first();
         $aperturaExistente = AperturaCaja::where('user_id', $usuario->id)
             ->whereDate('fecha', today())
             ->first();
 
         if (! $aperturaExistente) {
             AperturaCaja::create([
-                'caja_id'        => $caja->id,
-                'user_id'        => $usuario->id,
-                'fecha'          => today(),
+                'caja_id' => $caja->id,
+                'user_id' => $usuario->id,
+                'fecha' => today(),
                 'monto_apertura' => 1000,
-                'observaciones'  => 'Apertura de prueba para automatización',
+                'observaciones' => 'Apertura de prueba para automatización',
             ]);
         }
 
@@ -92,28 +91,28 @@ class ProbarAutomatizacionCommand extends Command
 
     private function crearVentaPrueba()
     {
-        $cliente         = Cliente::first();
-        $usuario         = User::first();
-        $producto        = Producto::first();
+        $cliente = Cliente::first();
+        $usuario = User::first();
+        $producto = Producto::first();
         $tipoPagoContado = TipoPago::where('codigo', 'CONTADO')->first();
 
         // Crear datos básicos si no existen
         if (! $cliente) {
             $cliente = Cliente::create([
-                'nombre'   => 'Cliente Prueba',
-                'nit'      => '123456789',
+                'nombre' => 'Cliente Prueba',
+                'nit' => '123456789',
                 'telefono' => '70000000',
-                'email'    => 'prueba@test.com',
+                'email' => 'prueba@test.com',
             ]);
         }
 
         if (! $producto) {
             $producto = Producto::create([
-                'codigo'        => 'TEST001',
-                'nombre'        => 'Producto Prueba',
-                'precio_venta'  => 50.00,
+                'codigo' => 'TEST001',
+                'nombre' => 'Producto Prueba',
+                'precio_venta' => 50.00,
                 'precio_compra' => 30.00,
-                'activo'        => true,
+                'activo' => true,
             ]);
         }
 
@@ -126,26 +125,26 @@ class ProbarAutomatizacionCommand extends Command
         }
 
         $venta = Venta::create([
-            'numero'              => 'TEST-' . now()->format('YmdHis'),
-            'fecha'               => today(),
-            'subtotal'            => 100.00,
-            'impuesto'            => 13.00,
-            'total'               => 113.00,
-            'cliente_id'          => $cliente->id,
-            'usuario_id'          => $usuario->id,
-            'tipo_pago_id'        => $tipoPagoContado->id,
+            'numero' => 'TEST-'.now()->format('YmdHis'),
+            'fecha' => today(),
+            'subtotal' => 100.00,
+            'impuesto' => 13.00,
+            'total' => 113.00,
+            'cliente_id' => $cliente->id,
+            'usuario_id' => $usuario->id,
+            'tipo_pago_id' => $tipoPagoContado->id,
             'estado_documento_id' => 1,
-            'moneda_id'           => 1, // BOB por defecto
-            'observaciones'       => 'Venta de prueba para automatización',
+            'moneda_id' => 1, // BOB por defecto
+            'observaciones' => 'Venta de prueba para automatización',
         ]);
 
         // Crear detalle de venta
         DetalleVenta::create([
-            'venta_id'        => $venta->id,
-            'producto_id'     => $producto->id,
-            'cantidad'        => 2,
+            'venta_id' => $venta->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
             'precio_unitario' => 50.00,
-            'subtotal'        => 100.00,
+            'subtotal' => 100.00,
         ]);
 
         $this->info("  ✓ Venta #{$venta->numero} creada");
@@ -161,10 +160,10 @@ class ProbarAutomatizacionCommand extends Command
             $this->info("  ✅ Asiento contable #{$asiento->numero} generado automáticamente");
             $this->info("    - Total Debe: {$asiento->total_debe}");
             $this->info("    - Total Haber: {$asiento->total_haber}");
-            $this->info("    - Balanceado: " . ($asiento->estaBalanceado() ? 'SÍ' : 'NO'));
+            $this->info('    - Balanceado: '.($asiento->estaBalanceado() ? 'SÍ' : 'NO'));
             $this->info("    - Detalles: {$asiento->detalles->count()} registros");
         } else {
-            $this->error("  ❌ No se generó asiento contable automáticamente");
+            $this->error('  ❌ No se generó asiento contable automáticamente');
         }
 
         // 2. Verificar movimiento de inventario
@@ -177,17 +176,17 @@ class ProbarAutomatizacionCommand extends Command
                 $this->info("    - Tipo: {$movimiento->tipo}");
             }
         } else {
-            $this->error("  ❌ No se generaron movimientos de inventario");
+            $this->error('  ❌ No se generaron movimientos de inventario');
         }
 
         // 3. Verificar movimiento de caja
         $movimientoCaja = $venta->movimientoCaja;
         if ($movimientoCaja) {
-            $this->info("  ✅ Movimiento de caja generado automáticamente");
+            $this->info('  ✅ Movimiento de caja generado automáticamente');
             $this->info("    - Monto entrada: {$movimientoCaja->monto_entrada}");
             $this->info("    - Descripción: {$movimientoCaja->descripcion}");
         } else {
-            $this->error("  ❌ No se generó movimiento de caja automáticamente");
+            $this->error('  ❌ No se generó movimiento de caja automáticamente');
         }
     }
 }

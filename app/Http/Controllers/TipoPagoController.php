@@ -60,7 +60,7 @@ class TipoPagoController extends Controller
     public function update(Request $request, TipoPago $tipoPago): RedirectResponse
     {
         $data = $request->validate([
-            'codigo' => ['required', 'string', 'max:255', 'unique:tipos_pago,codigo,' . $tipoPago->id],
+            'codigo' => ['required', 'string', 'max:255', 'unique:tipos_pago,codigo,'.$tipoPago->id],
             'nombre' => ['required', 'string', 'max:255'],
         ]);
 

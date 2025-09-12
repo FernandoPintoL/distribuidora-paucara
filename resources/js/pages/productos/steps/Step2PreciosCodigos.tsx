@@ -7,6 +7,8 @@ import type { TipoPrecio } from '@/domain/tipos-precio';
 import tiposPrecioService from '@/services/tipos-precio.service';
 import { Link } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+// Importar react-qr-barcode-scanner
+import BarcodeScannerComponent from 'react-qr-barcode-scanner';
 // Importar ZXing como fallback
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
 import { openCameraStream, stopStream as stopCameraStream } from '@/services/image.service';
@@ -65,7 +67,10 @@ export default function Step2PreciosCodigos(props: Step2Props) {
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [photos, setPhotos] = useState<string[]>([]);
     const [supportsGetUserMedia, setSupportsGetUserMedia] = useState<boolean>(false);
-    const [compactCodigos, setCompactCodigos] = useState<boolean>(false);
+    const [compactCodigos] = useState<boolean>(false);
+    // Estados para react-qr-barcode-scanner
+    const [useModernScanner, setUseModernScanner] = useState<boolean>(true);
+    const [modernScannerError, setModernScannerError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const codeInputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -80,6 +85,25 @@ export default function Step2PreciosCodigos(props: Step2Props) {
     // Agregar ref para ZXing
     const zxingReaderRef = useRef<BrowserMultiFormatReader | null>(null);
     const VIDEO_ELEMENT_ID = 'barcode-video';
+
+    const initializeZXingFallback = useCallback(() => {
+        try {
+            const hints = new Map();
+            hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+                BarcodeFormat.QR_CODE,
+                BarcodeFormat.EAN_13,
+                BarcodeFormat.EAN_8,
+                BarcodeFormat.CODE_128,
+                BarcodeFormat.UPC_E,
+                BarcodeFormat.UPC_A,
+            ]);
+            zxingReaderRef.current = new BrowserMultiFormatReader(hints);
+            setScanSupported(true);
+        } catch (error) {
+            console.warn('ZXing fallback failed to initialize:', error);
+            setScanSupported(false);
+        }
+    }, []);
 
     // Detectar soporte de BarcodeDetector (para QR y códigos de barras)
     useEffect(() => {
@@ -103,26 +127,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         // Detectar soporte de getUserMedia (algunos móviles en HTTP no lo exponen)
         const hasMediaDevices = typeof navigator !== 'undefined' && !!navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
         setSupportsGetUserMedia(hasMediaDevices);
-    }, []);
-
-    const initializeZXingFallback = useCallback(() => {
-        try {
-            const hints = new Map();
-            hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-                BarcodeFormat.QR_CODE,
-                BarcodeFormat.EAN_13,
-                BarcodeFormat.EAN_8,
-                BarcodeFormat.CODE_128,
-                BarcodeFormat.UPC_E,
-                BarcodeFormat.UPC_A,
-            ]);
-            zxingReaderRef.current = new BrowserMultiFormatReader(hints);
-            setScanSupported(true);
-        } catch (error) {
-            console.warn('ZXing fallback failed to initialize:', error);
-            setScanSupported(false);
-        }
-    }, []);
+    }, [initializeZXingFallback]);
 
     const stopCamera = useCallback(() => {
         if (rafIdRef.current !== null) {
@@ -260,7 +265,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                 videoRef.current.srcObject = stream;
                 await videoRef.current.play();
                 console.log('Video debería estar reproduciéndose');
-            }else{
+            } else {
                 console.warn('videoRef.current es null');
             }
             setCameraOpen(true);
@@ -338,6 +343,36 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         } catch {
             // ignorar
         }
+    }, []);
+
+    // Funciones para react-qr-barcode-scanner
+    const startModernScanner = useCallback((index: number) => {
+        setModernScannerError(null);
+        setTargetIndex(index);
+        setCameraMode('scan');
+        setCameraOpen(true);
+    }, []);
+
+    const handleModernScannerResult = useCallback((result: string) => {
+        if (result && targetIndex !== null) {
+            setCodigo(targetIndex, result);
+            closeCamera();
+        }
+    }, [setCodigo, targetIndex, closeCamera]);
+
+    const handleModernScannerError = useCallback((error: string) => {
+        setModernScannerError(error);
+        console.warn('Modern scanner error:', error);
+    }, []);
+
+    const switchToFallbackScanner = useCallback(() => {
+        setUseModernScanner(false);
+        setModernScannerError(null);
+    }, []);
+
+    const switchToModernScanner = useCallback(() => {
+        setUseModernScanner(true);
+        setModernScannerError(null);
     }, []);
 
     // Limpiar recursos al desmontar
@@ -567,9 +602,19 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                         >
                                             🗑️
                                         </Button>
-                                        <Button type="button" className="mr-2" size="sm" variant="outline" onClick={() => startCamera('scan', i)} disabled={!scanSupported}>
-                                            {scanSupported ? 'Escanear' : 'Escaneo no soportado'}
+                                        <Button type="button" className="mr-2" size="sm" variant="outline" onClick={() => useModernScanner ? startModernScanner(i) : startCamera('scan', i)} disabled={!scanSupported && !useModernScanner}>
+                                            {useModernScanner ? 'Escanear QR/Código' : (scanSupported ? 'Escanear (Fallback)' : 'Escaneo no soportado')}
                                         </Button>
+                                        {useModernScanner && (
+                                            <Button type="button" className="mr-2" size="sm" variant="ghost" onClick={switchToFallbackScanner} title="Cambiar a escáner alternativo">
+                                                🔄
+                                            </Button>
+                                        )}
+                                        {!useModernScanner && (
+                                            <Button type="button" className="mr-2" size="sm" variant="ghost" onClick={switchToModernScanner} title="Cambiar a escáner moderno">
+                                                ⚡
+                                            </Button>
+                                        )}
                                         {/*<Button type="button" className="mr-2" size="sm" variant="outline" onClick={() => startCamera('photo', null)}>
                                             Tomar foto
                                         </Button>*/}
@@ -657,8 +702,31 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                 {cameraError}
                             </div>
                         )}
+                        {modernScannerError && (
+                            <div className="mb-2 rounded bg-orange-50 p-2 text-xs text-orange-700 dark:bg-orange-900/20 dark:text-orange-300">
+                                {modernScannerError}
+                                <Button type="button" size="sm" variant="outline" className="ml-2" onClick={switchToFallbackScanner}>
+                                    Usar escáner alternativo
+                                </Button>
+                            </div>
+                        )}
                         <div className="aspect-video w-full overflow-hidden rounded bg-black">
-                            {supportsGetUserMedia ? (
+                            {useModernScanner && cameraMode === 'scan' ? (
+                                <BarcodeScannerComponent
+                                    width="100%"
+                                    height="100%"
+                                    onUpdate={(err, result) => {
+                                        if (err) {
+                                            const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Error del escáner');
+                                            handleModernScannerError(errorMessage);
+                                        }
+                                        if (result) {
+                                            handleModernScannerResult(result.getText());
+                                        }
+                                    }}
+                                    facingMode="environment"
+                                />
+                            ) : supportsGetUserMedia ? (
                                 <video id={VIDEO_ELEMENT_ID} ref={videoRef} className="h-full w-full object-contain" playsInline muted />
                             ) : (
                                 <div className="flex h-full w-full items-center justify-center p-2 text-xs text-white/80">
@@ -669,7 +737,13 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                         <canvas ref={canvasRef} className="hidden" />
                         <div className="mt-3 flex items-center justify-between">
                             <div className="text-xs text-muted-foreground">
-                                {cameraMode === 'scan' ? 'Apunta la cámara al código de barras o QR' : 'Ajusta el encuadre y presiona Capturar'}
+                                {cameraMode === 'scan'
+                                    ? (useModernScanner
+                                        ? 'Escáner moderno - Apunta la cámara al código de barras o QR'
+                                        : 'Escáner alternativo - Apunta la cámara al código de barras o QR'
+                                    )
+                                    : 'Ajusta el encuadre y presiona Capturar'
+                                }
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button type="button" size="sm" variant="outline" onClick={triggerFileInput}>

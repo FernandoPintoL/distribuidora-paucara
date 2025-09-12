@@ -6,7 +6,6 @@ use App\Models\Producto;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\DatabaseMessage;
 use Illuminate\Notifications\Notification;
 
 class StockBajoNotification extends Notification implements ShouldQueue
@@ -35,10 +34,10 @@ class StockBajoNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $ubicacion = $this->almacenNombre ? " en almacén {$this->almacenNombre}" : "";
-        
+        $ubicacion = $this->almacenNombre ? " en almacén {$this->almacenNombre}" : '';
+
         return (new MailMessage)
-            ->subject('⚠️ Alerta de Stock Bajo - ' . $this->producto->nombre)
+            ->subject('⚠️ Alerta de Stock Bajo - '.$this->producto->nombre)
             ->greeting('¡Atención!')
             ->line("El producto **{$this->producto->nombre}**{$ubicacion} tiene stock bajo.")
             ->line("Stock actual: **{$this->stockActual}** unidades")

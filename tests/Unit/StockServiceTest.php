@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use App\Models\Almacen;
@@ -14,29 +15,31 @@ class StockServiceTest extends TestCase
     use RefreshDatabase;
 
     private StockService $stockService;
+
     private Producto $producto;
+
     private Almacen $almacen;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
-        $this->stockService = new StockService();
+        $this->stockService = new StockService;
 
         // Crear productos y almacenes de prueba
         $this->almacen = Almacen::create([
-            'codigo'      => 'ALM001',
-            'nombre'      => 'Almacén Principal',
+            'codigo' => 'ALM001',
+            'nombre' => 'Almacén Principal',
             'descripcion' => 'Almacén principal para pruebas',
-            'activo'      => true,
+            'activo' => true,
         ]);
 
         $this->producto = Producto::create([
-            'codigo'       => 'PROD001',
-            'nombre'       => 'Producto de prueba',
-            'descripcion'  => 'Producto para testing',
+            'codigo' => 'PROD001',
+            'nombre' => 'Producto de prueba',
+            'descripcion' => 'Producto para testing',
             'categoria_id' => 1, // Asumimos que existe
-            'unidad_id'    => 1, // Asumimos que existe
-            'activo'       => true,
+            'unidad_id' => 1, // Asumimos que existe
+            'activo' => true,
         ]);
     }
 
@@ -44,13 +47,13 @@ class StockServiceTest extends TestCase
     {
         // Crear stock disponible
         StockProducto::create([
-            'producto_id'         => $this->producto->id,
-            'almacen_id'          => $this->almacen->id,
+            'producto_id' => $this->producto->id,
+            'almacen_id' => $this->almacen->id,
             'cantidad_disponible' => 100,
-            'costo_unitario'      => 10.00,
-            'precio_compra'       => 10.00,
-            'fecha_ingreso'       => now(),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 10.00,
+            'precio_compra' => 10.00,
+            'fecha_ingreso' => now(),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         $resultado = $this->stockService->validarStockDisponible([
@@ -65,13 +68,13 @@ class StockServiceTest extends TestCase
     {
         // Crear stock limitado
         StockProducto::create([
-            'producto_id'         => $this->producto->id,
-            'almacen_id'          => $this->almacen->id,
+            'producto_id' => $this->producto->id,
+            'almacen_id' => $this->almacen->id,
             'cantidad_disponible' => 30,
-            'costo_unitario'      => 10.00,
-            'precio_compra'       => 10.00,
-            'fecha_ingreso'       => now(),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 10.00,
+            'precio_compra' => 10.00,
+            'fecha_ingreso' => now(),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         $resultado = $this->stockService->validarStockDisponible([
@@ -87,23 +90,23 @@ class StockServiceTest extends TestCase
     {
         // Crear múltiples lotes con diferentes fechas
         $lote1 = StockProducto::create([
-            'producto_id'         => $this->producto->id,
-            'almacen_id'          => $this->almacen->id,
+            'producto_id' => $this->producto->id,
+            'almacen_id' => $this->almacen->id,
             'cantidad_disponible' => 50,
-            'costo_unitario'      => 10.00,
-            'precio_compra'       => 10.00,
-            'fecha_ingreso'       => now()->subDays(10),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 10.00,
+            'precio_compra' => 10.00,
+            'fecha_ingreso' => now()->subDays(10),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         $lote2 = StockProducto::create([
-            'producto_id'         => $this->producto->id,
-            'almacen_id'          => $this->almacen->id,
+            'producto_id' => $this->producto->id,
+            'almacen_id' => $this->almacen->id,
             'cantidad_disponible' => 30,
-            'costo_unitario'      => 12.00,
-            'precio_compra'       => 12.00,
-            'fecha_ingreso'       => now()->subDays(5),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 12.00,
+            'precio_compra' => 12.00,
+            'fecha_ingreso' => now()->subDays(5),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         $this->stockService->procesarSalidaVenta([
@@ -126,30 +129,30 @@ class StockServiceTest extends TestCase
     {
         // Crear stock en múltiples almacenes
         StockProducto::create([
-            'producto_id'         => $this->producto->id,
-            'almacen_id'          => $this->almacen->id,
+            'producto_id' => $this->producto->id,
+            'almacen_id' => $this->almacen->id,
             'cantidad_disponible' => 50,
-            'costo_unitario'      => 10.00,
-            'precio_compra'       => 10.00,
-            'fecha_ingreso'       => now(),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 10.00,
+            'precio_compra' => 10.00,
+            'fecha_ingreso' => now(),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         $almacen2 = Almacen::create([
-            'codigo'      => 'ALM002',
-            'nombre'      => 'Almacén Secundario',
+            'codigo' => 'ALM002',
+            'nombre' => 'Almacén Secundario',
             'descripcion' => 'Segundo almacén',
-            'activo'      => true,
+            'activo' => true,
         ]);
 
         StockProducto::create([
-            'producto_id'         => $this->producto->id,
-            'almacen_id'          => $almacen2->id,
+            'producto_id' => $this->producto->id,
+            'almacen_id' => $almacen2->id,
             'cantidad_disponible' => 30,
-            'costo_unitario'      => 10.00,
-            'precio_compra'       => 10.00,
-            'fecha_ingreso'       => now(),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 10.00,
+            'precio_compra' => 10.00,
+            'fecha_ingreso' => now(),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         $stockTotal = $this->stockService->obtenerStockTotalProducto($this->producto->id);
@@ -161,33 +164,33 @@ class StockServiceTest extends TestCase
     {
         // Crear producto con stock bajo
         StockProducto::create([
-            'producto_id'         => $this->producto->id,
-            'almacen_id'          => $this->almacen->id,
+            'producto_id' => $this->producto->id,
+            'almacen_id' => $this->almacen->id,
             'cantidad_disponible' => 5, // Stock muy bajo
-            'costo_unitario'      => 10.00,
-            'precio_compra'       => 10.00,
-            'fecha_ingreso'       => now(),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 10.00,
+            'precio_compra' => 10.00,
+            'fecha_ingreso' => now(),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         // Crear otro producto con stock normal
         $producto2 = Producto::create([
-            'codigo'       => 'PROD002',
-            'nombre'       => 'Producto normal',
-            'descripcion'  => 'Producto con stock normal',
+            'codigo' => 'PROD002',
+            'nombre' => 'Producto normal',
+            'descripcion' => 'Producto con stock normal',
             'categoria_id' => 1,
-            'unidad_id'    => 1,
-            'activo'       => true,
+            'unidad_id' => 1,
+            'activo' => true,
         ]);
 
         StockProducto::create([
-            'producto_id'         => $producto2->id,
-            'almacen_id'          => $this->almacen->id,
+            'producto_id' => $producto2->id,
+            'almacen_id' => $this->almacen->id,
             'cantidad_disponible' => 100,
-            'costo_unitario'      => 10.00,
-            'precio_compra'       => 10.00,
-            'fecha_ingreso'       => now(),
-            'fecha_vencimiento'   => now()->addMonths(6),
+            'costo_unitario' => 10.00,
+            'precio_compra' => 10.00,
+            'fecha_ingreso' => now(),
+            'fecha_vencimiento' => now()->addMonths(6),
         ]);
 
         $productosStockBajo = $this->stockService->obtenerProductosStockBajo(10);

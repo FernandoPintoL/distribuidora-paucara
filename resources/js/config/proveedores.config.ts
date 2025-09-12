@@ -127,6 +127,47 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
     searchableFields: ['nombre', 'razon_social', 'nit', 'email', 'telefono'],
     searchPlaceholder: 'Buscar proveedores...',
 
-    // Index filters (specific for proveedores)
+    // Modern Index filters configuration
+    indexFilters: {
+        filters: [
+            {
+                key: 'activo',
+                label: 'Estado',
+                type: 'boolean',
+                placeholder: 'Todos los estados',
+                width: 'sm'
+            },
+            {
+                key: 'tipo_proveedor',
+                label: 'Tipo de proveedor',
+                type: 'select',
+                placeholder: 'Todos los tipos',
+                options: [
+                    { value: 'local', label: 'Local' },
+                    { value: 'nacional', label: 'Nacional' },
+                    { value: 'internacional', label: 'Internacional' }
+                ],
+                width: 'md'
+            },
+            {
+                key: 'tiene_contacto',
+                label: 'Con contacto',
+                type: 'boolean',
+                placeholder: 'Todos',
+                width: 'sm'
+            }
+        ],
+        sortOptions: [
+            { value: 'id', label: 'ID' },
+            { value: 'nombre', label: 'Nombre' },
+            { value: 'razon_social', label: 'Razón Social' },
+            { value: 'created_at', label: 'Fecha registro' },
+            { value: 'updated_at', label: 'Última actualización' }
+        ],
+        defaultSort: { field: 'nombre', direction: 'asc' },
+        layout: 'grid'
+    },
+
+    // Legacy support (deprecated)
     showIndexFilters: true,
 };

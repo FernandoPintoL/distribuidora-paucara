@@ -16,11 +16,11 @@ beforeEach(function () {
     $this->artisan('db:seed', ['--class' => 'CuentaContableSeeder']);
 
     // Crear datos de prueba
-    $this->user     = User::factory()->create();
-    $this->cliente  = Cliente::factory()->create();
+    $this->user = User::factory()->create();
+    $this->cliente = Cliente::factory()->create();
     $this->producto = Producto::factory()->create([
         'precio_compra' => 30.00,
-        'precio_venta'  => 50.00,
+        'precio_venta' => 50.00,
     ]);
     $this->tipoPago = TipoPago::factory()->create(['codigo' => 'CONTADO']);
 
@@ -30,18 +30,18 @@ beforeEach(function () {
 test('crea asiento contable automáticamente en venta', function () {
     // Crear venta
     $venta = Venta::factory()->create([
-        'cliente_id'   => $this->cliente->id,
-        'usuario_id'   => $this->user->id,
-        'total'        => 100.00,
+        'cliente_id' => $this->cliente->id,
+        'usuario_id' => $this->user->id,
+        'total' => 100.00,
         'tipo_pago_id' => $this->tipoPago->id,
-        'estado'       => 'FINALIZADA',
+        'estado' => 'FINALIZADA',
     ]);
 
     // Crear detalle de venta
     DetalleVenta::factory()->create([
-        'venta_id'        => $venta->id,
-        'producto_id'     => $this->producto->id,
-        'cantidad'        => 2,
+        'venta_id' => $venta->id,
+        'producto_id' => $this->producto->id,
+        'cantidad' => 2,
         'precio_unitario' => 50.00,
     ]);
 
@@ -60,10 +60,10 @@ test('crea asiento contable automáticamente en venta', function () {
 test('genera número secuencial automáticamente', function () {
     // Crear primer asiento
     $asiento1 = AsientoContable::create([
-        'fecha'          => today(),
-        'concepto'       => 'Asiento de prueba 1',
+        'fecha' => today(),
+        'concepto' => 'Asiento de prueba 1',
         'tipo_documento' => 'AJUSTE',
-        'usuario_id'     => $this->user->id,
+        'usuario_id' => $this->user->id,
     ]);
 
     // Verificar que se asigna número automáticamente
@@ -71,10 +71,10 @@ test('genera número secuencial automáticamente', function () {
 
     // Crear segundo asiento
     $asiento2 = AsientoContable::create([
-        'fecha'          => today(),
-        'concepto'       => 'Asiento de prueba 2',
+        'fecha' => today(),
+        'concepto' => 'Asiento de prueba 2',
         'tipo_documento' => 'AJUSTE',
-        'usuario_id'     => $this->user->id,
+        'usuario_id' => $this->user->id,
     ]);
 
     // Verificar que el número es secuencial
@@ -85,11 +85,11 @@ test('genera número secuencial automáticamente', function () {
 test('elimina asiento al eliminar venta', function () {
     // Crear venta
     $venta = Venta::factory()->create([
-        'cliente_id'   => $this->cliente->id,
-        'usuario_id'   => $this->user->id,
-        'total'        => 100.00,
+        'cliente_id' => $this->cliente->id,
+        'usuario_id' => $this->user->id,
+        'total' => 100.00,
         'tipo_pago_id' => $this->tipoPago->id,
-        'estado'       => 'FINALIZADA',
+        'estado' => 'FINALIZADA',
     ]);
 
     // Verificar que se creó el asiento
@@ -110,37 +110,36 @@ test('elimina asiento al eliminar venta', function () {
 test('interfaz web muestra asientos', function () {
     // Crear algunos asientos
     $venta1 = Venta::factory()->create([
-        'cliente_id'   => $this->cliente->id,
-        'usuario_id'   => $this->user->id,
-        'total'        => 100.00,
+        'cliente_id' => $this->cliente->id,
+        'usuario_id' => $this->user->id,
+        'total' => 100.00,
         'tipo_pago_id' => $this->tipoPago->id,
-        'estado'       => 'FINALIZADA',
+        'estado' => 'FINALIZADA',
     ]);
 
     $venta2 = Venta::factory()->create([
-        'cliente_id'   => $this->cliente->id,
-        'usuario_id'   => $this->user->id,
-        'total'        => 150.00,
+        'cliente_id' => $this->cliente->id,
+        'usuario_id' => $this->user->id,
+        'total' => 150.00,
         'tipo_pago_id' => $this->tipoPago->id,
-        'estado'       => 'FINALIZADA',
+        'estado' => 'FINALIZADA',
     ]);
 
     // Hacer petición a la interfaz
     $this->get('/contabilidad/asientos')
         ->assertStatus(200)
-        ->assertInertia(fn($page) =>
-            $page->component('Contabilidad/AsientosContables/Index')
+        ->assertInertia(fn ($page) => $page->component('Contabilidad/AsientosContables/Index')
         );
 });
 
 test('puede ver detalle de asiento', function () {
     // Crear venta que genere asiento
     $venta = Venta::factory()->create([
-        'cliente_id'   => $this->cliente->id,
-        'usuario_id'   => $this->user->id,
-        'total'        => 100.00,
+        'cliente_id' => $this->cliente->id,
+        'usuario_id' => $this->user->id,
+        'total' => 100.00,
         'tipo_pago_id' => $this->tipoPago->id,
-        'estado'       => 'FINALIZADA',
+        'estado' => 'FINALIZADA',
     ]);
 
     $asiento = AsientoContable::where('asientable_type', 'App\Models\Venta')
@@ -148,10 +147,9 @@ test('puede ver detalle de asiento', function () {
         ->first();
 
     // Hacer petición al detalle
-    $this->get('/contabilidad/asientos/' . $asiento->id)
+    $this->get('/contabilidad/asientos/'.$asiento->id)
         ->assertStatus(200)
-        ->assertInertia(fn($page) =>
-            $page->component('Contabilidad/AsientosContables/Show')
-                ->has('asiento')
+        ->assertInertia(fn ($page) => $page->component('Contabilidad/AsientosContables/Show')
+            ->has('asiento')
         );
 });

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Cliente;
 use App\Helpers\ApiResponse;
+use App\Models\Cliente;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -239,7 +239,7 @@ class ClienteController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al crear cliente: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al crear cliente: '.$e->getMessage(), 500);
         }
     }
 
@@ -264,14 +264,14 @@ class ClienteController extends Controller
 
         try {
             $cliente->update($data);
-            
+
             return ApiResponse::success(
                 $cliente->fresh('direcciones'),
                 'Cliente actualizado exitosamente'
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al actualizar cliente: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al actualizar cliente: '.$e->getMessage(), 500);
         }
     }
 
@@ -292,15 +292,17 @@ class ClienteController extends Controller
             if ($tieneVentas) {
                 // Solo desactivar
                 $cliente->update(['activo' => false]);
+
                 return ApiResponse::success(null, 'Cliente desactivado (tiene historial de ventas)');
             }
 
             // Eliminar completamente
             $cliente->delete();
+
             return ApiResponse::success(null, 'Cliente eliminado exitosamente');
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al eliminar cliente: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al eliminar cliente: '.$e->getMessage(), 500);
         }
     }
 
@@ -312,7 +314,7 @@ class ClienteController extends Controller
         $q = $request->string('q');
         $limite = $request->integer('limite', 10);
 
-        if (!$q || strlen($q) < 2) {
+        if (! $q || strlen($q) < 2) {
             return ApiResponse::success([]);
         }
 
@@ -320,9 +322,9 @@ class ClienteController extends Controller
             ->where('activo', true)
             ->where(function ($query) use ($q) {
                 $query->where('nombre', 'ilike', "%$q%")
-                      ->orWhere('razon_social', 'ilike', "%$q%")
-                      ->orWhere('nit', 'ilike', "%$q%")
-                      ->orWhere('telefono', 'ilike', "%$q%");
+                    ->orWhere('razon_social', 'ilike', "%$q%")
+                    ->orWhere('nit', 'ilike', "%$q%")
+                    ->orWhere('telefono', 'ilike', "%$q%");
             })
             ->limit($limite)
             ->get();
@@ -351,7 +353,7 @@ class ClienteController extends Controller
             ],
             'saldo_total' => $saldoTotal,
             'cuentas_vencidas' => $cuentasVencidas,
-            'cuentas_detalle' => $cuentas
+            'cuentas_detalle' => $cuentas,
         ]);
     }
 
@@ -366,8 +368,8 @@ class ClienteController extends Controller
 
         $ventas = $cliente->ventas()
             ->with(['estadoDocumento', 'moneda', 'detalles.producto:id,nombre'])
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->when($fechaInicio, fn ($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn ($q) => $q->whereDate('fecha', '<=', $fechaFin))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate($perPage);

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApiResponse;
 use App\Models\Almacen;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
-use App\Helpers\ApiResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReporteInventarioApiController extends Controller
@@ -21,7 +21,7 @@ class ReporteInventarioApiController extends Controller
             'proximosVencer',
             'vencidos',
             'movimientosPorPeriodo',
-            'productosMasMovidos'
+            'productosMasMovidos',
         ]);
     }
 
@@ -47,7 +47,7 @@ class ReporteInventarioApiController extends Controller
                         'almacen_nombre' => $almacen->nombre,
                         'stock_total' => $almacen->stock_productos_sum_cantidad ?? 0,
                     ];
-                })
+                }),
         ];
 
         return ApiResponse::success($estadisticas);
@@ -151,15 +151,15 @@ class ReporteInventarioApiController extends Controller
         $tipo = $request->string('tipo');
 
         $movimientos = MovimientoInventario::with([
-                'stockProducto.producto:id,nombre,codigo',
-                'stockProducto.almacen:id,nombre',
-                'user:id,name'
-            ])
+            'stockProducto.producto:id,nombre,codigo',
+            'stockProducto.almacen:id,nombre',
+            'user:id,name',
+        ])
             ->whereBetween('fecha', [$fechaInicio, $fechaFin])
             ->when($almacenId, function ($q) use ($almacenId) {
-                $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId));
+                $q->whereHas('stockProducto', fn ($sq) => $sq->where('almacen_id', $almacenId));
             })
-            ->when($tipo, fn($q) => $q->where('tipo', $tipo))
+            ->when($tipo, fn ($q) => $q->where('tipo', $tipo))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->get();
@@ -172,7 +172,7 @@ class ReporteInventarioApiController extends Controller
                 'cantidad_total' => $items->sum('cantidad'),
                 'valor_total' => $items->sum(function ($mov) {
                     return abs($mov->cantidad) * ($mov->stockProducto->producto->precio_compra ?? 0);
-                })
+                }),
             ];
         })->values();
 
@@ -182,8 +182,8 @@ class ReporteInventarioApiController extends Controller
             'total_movimientos' => $movimientos->count(),
             'periodo' => [
                 'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-                'fecha_fin' => $fechaFin->format('Y-m-d')
-            ]
+                'fecha_fin' => $fechaFin->format('Y-m-d'),
+            ],
         ]);
     }
 
@@ -204,12 +204,12 @@ class ReporteInventarioApiController extends Controller
                 'productos.codigo',
                 DB::raw('COUNT(*) as total_movimientos'),
                 DB::raw('SUM(ABS(movimientos_inventario.cantidad)) as cantidad_total'),
-                DB::raw('AVG(ABS(movimientos_inventario.cantidad)) as promedio_movimiento')
+                DB::raw('AVG(ABS(movimientos_inventario.cantidad)) as promedio_movimiento'),
             ])
             ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
             ->join('productos', 'stock_productos.producto_id', '=', 'productos.id')
             ->whereBetween('movimientos_inventario.fecha', [$fechaInicio, $fechaFin])
-            ->when($almacenId, fn($q) => $q->where('stock_productos.almacen_id', $almacenId))
+            ->when($almacenId, fn ($q) => $q->where('stock_productos.almacen_id', $almacenId))
             ->groupBy('productos.id', 'productos.nombre', 'productos.codigo')
             ->orderByDesc('total_movimientos')
             ->limit($limite)
@@ -219,8 +219,8 @@ class ReporteInventarioApiController extends Controller
             'productos' => $productos,
             'periodo' => [
                 'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-                'fecha_fin' => $fechaFin->format('Y-m-d')
-            ]
+                'fecha_fin' => $fechaFin->format('Y-m-d'),
+            ],
         ]);
     }
 
@@ -267,7 +267,7 @@ class ReporteInventarioApiController extends Controller
                         'valor_total_compra' => $stock->cantidad * ($stock->producto->precio_compra ?? 0),
                         'valor_total_venta' => $stock->cantidad * ($stock->producto->precio_venta ?? 0),
                     ];
-                })
+                }),
             ];
         });
 

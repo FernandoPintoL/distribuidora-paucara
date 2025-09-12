@@ -14,8 +14,8 @@ class MarcaController extends Controller
     {
         $q = $request->string('q');
         $items = Marca::query()
-            ->when($q, fn($qq) => $qq->where('nombre', 'ilike', "%$q%"))
-            ->orderBy('id','desc')
+            ->when($q, fn ($qq) => $qq->where('nombre', 'ilike', "%$q%"))
+            ->orderBy('id', 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -35,12 +35,13 @@ class MarcaController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'descripcion' => ['nullable','string'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
             'activo' => ['boolean'],
         ]);
         $data['activo'] = $data['activo'] ?? true;
         Marca::create($data);
+
         return redirect()->route('marcas.index')->with('success', 'Marca creada');
     }
 
@@ -54,17 +55,19 @@ class MarcaController extends Controller
     public function update(Request $request, Marca $marca): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'descripcion' => ['nullable','string'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
             'activo' => ['boolean'],
         ]);
         $marca->update($data);
+
         return redirect()->route('marcas.index')->with('success', 'Marca actualizada');
     }
 
     public function destroy(Marca $marca): RedirectResponse
     {
         $marca->delete();
+
         return redirect()->route('marcas.index')->with('success', 'Marca eliminada');
     }
 }

@@ -22,7 +22,7 @@ class ConfiguracionGlobal extends Model
         'categoria',
         'activo',
         'es_sistema',
-        'metadatos'
+        'metadatos',
     ];
 
     protected $casts = [
@@ -60,7 +60,7 @@ class ConfiguracionGlobal extends Model
                 ->where('activo', true)
                 ->first();
 
-            if (!$config) {
+            if (! $config) {
                 return $valorPorDefecto;
             }
 
@@ -131,7 +131,7 @@ class ConfiguracionGlobal extends Model
                 ->get()
                 ->mapWithKeys(function ($config) {
                     return [
-                        $config->clave => self::convertirValor($config->valor, $config->tipo_valor)
+                        $config->clave => self::convertirValor($config->valor, $config->tipo_valor),
                     ];
                 })
                 ->toArray();
@@ -157,10 +157,19 @@ class ConfiguracionGlobal extends Model
      */
     private static function detectarTipoValor($valor): string
     {
-        if (is_bool($valor)) return 'boolean';
-        if (is_int($valor)) return 'integer';
-        if (is_float($valor)) return 'decimal';
-        if (is_array($valor)) return 'array';
+        if (is_bool($valor)) {
+            return 'boolean';
+        }
+        if (is_int($valor)) {
+            return 'integer';
+        }
+        if (is_float($valor)) {
+            return 'decimal';
+        }
+        if (is_array($valor)) {
+            return 'array';
+        }
+
         return 'string';
     }
 
@@ -169,8 +178,13 @@ class ConfiguracionGlobal extends Model
      */
     private static function convertirATexto($valor): string
     {
-        if (is_bool($valor)) return $valor ? 'true' : 'false';
-        if (is_array($valor)) return json_encode($valor);
+        if (is_bool($valor)) {
+            return $valor ? 'true' : 'false';
+        }
+        if (is_array($valor)) {
+            return json_encode($valor);
+        }
+
         return (string) $valor;
     }
 

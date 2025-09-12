@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,7 @@ class Proveedor extends Model
     ];
 
     protected $casts = [
-        'activo'         => 'boolean',
+        'activo' => 'boolean',
         'fecha_registro' => 'datetime',
     ];
 

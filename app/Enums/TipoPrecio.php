@@ -13,7 +13,7 @@ enum TipoPrecio: string
 
     public function getDescripcion(): string
     {
-        return match($this) {
+        return match ($this) {
             self::COSTO => 'Precio de Costo',
             self::VENTA => 'Precio de Venta',
             self::POR_MAYOR => 'Precio por Mayor',
@@ -30,7 +30,7 @@ enum TipoPrecio: string
 
     public function getColor(): string
     {
-        return match($this) {
+        return match ($this) {
             self::COSTO => 'blue',
             self::VENTA => 'green',
             self::POR_MAYOR => 'purple',
@@ -42,7 +42,7 @@ enum TipoPrecio: string
 
     public static function getOptions(): array
     {
-        return collect(self::cases())->map(fn($tipo) => [
+        return collect(self::cases())->map(fn ($tipo) => [
             'value' => $tipo->value,
             'label' => $tipo->getDescripcion(),
             'color' => $tipo->getColor(),

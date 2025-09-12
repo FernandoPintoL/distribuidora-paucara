@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -19,8 +20,8 @@ class CuentaPorPagar extends Model
 
     protected $casts = [
         'fecha_vencimiento' => 'date',
-        'monto_original'    => 'decimal:2',
-        'saldo_pendiente'   => 'decimal:2',
+        'monto_original' => 'decimal:2',
+        'saldo_pendiente' => 'decimal:2',
     ];
 
     // Relaciones

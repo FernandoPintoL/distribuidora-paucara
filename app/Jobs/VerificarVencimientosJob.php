@@ -37,9 +37,9 @@ class VerificarVencimientosJob implements ShouldQueue
         }
 
         // Obtener usuarios que deben recibir notificaciones
-        $usuarios = User::whereHas('roles', function($q) {
-                $q->whereIn('name', ['admin', 'gerente', 'encargado_inventario']);
-            })
+        $usuarios = User::whereHas('roles', function ($q) {
+            $q->whereIn('name', ['admin', 'gerente', 'encargado_inventario']);
+        })
             ->orWhere('email', 'like', '%admin%')
             ->get();
 
@@ -67,17 +67,17 @@ class VerificarVencimientosJob implements ShouldQueue
         }
 
         // Log
-        \Log::info("Notificación de productos próximos a vencer enviada", [
+        \Log::info('Notificación de productos próximos a vencer enviada', [
             'cantidad_productos' => $productosProximosVencer->count(),
             'dias_anticipacion' => $this->diasAnticipacion,
             'usuarios_notificados' => $usuarios->count(),
-            'productos' => $productosProximosVencer->take(5)->map(function($item) {
+            'productos' => $productosProximosVencer->take(5)->map(function ($item) {
                 return [
                     'producto' => $item->producto->nombre,
                     'fecha_vencimiento' => $item->fecha_vencimiento?->format('Y-m-d'),
-                    'almacen' => $item->almacen->nombre ?? 'Sin almacén'
+                    'almacen' => $item->almacen->nombre ?? 'Sin almacén',
                 ];
-            })->toArray()
+            })->toArray(),
         ]);
     }
 
@@ -89,7 +89,7 @@ class VerificarVencimientosJob implements ShouldQueue
         \Log::error('Error en VerificarVencimientosJob', [
             'dias_anticipacion' => $this->diasAnticipacion,
             'error' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString()
+            'trace' => $exception->getTraceAsString(),
         ]);
     }
 }

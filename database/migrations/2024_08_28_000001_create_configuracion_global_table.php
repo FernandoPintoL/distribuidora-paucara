@@ -44,7 +44,7 @@ return new class extends Migration
                 'metadatos' => json_encode([
                     'min_valor' => 0,
                     'max_valor' => 100,
-                    'unidad' => 'porcentaje'
+                    'unidad' => 'porcentaje',
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -62,7 +62,7 @@ return new class extends Migration
                 'metadatos' => json_encode([
                     'min_valor' => 0,
                     'max_valor' => 100,
-                    'unidad' => 'porcentaje'
+                    'unidad' => 'porcentaje',
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -80,7 +80,7 @@ return new class extends Migration
                 'metadatos' => json_encode([]),
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]
+            ],
         ]);
     }
 

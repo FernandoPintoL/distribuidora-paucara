@@ -30,27 +30,27 @@ class ReporteInventarioController extends Controller
             ->where('cantidad', '>', 0);
 
         // Aplicar filtros
-        if (!empty($filtros['almacen_id'])) {
+        if (! empty($filtros['almacen_id'])) {
             $query->where('almacen_id', $filtros['almacen_id']);
         }
 
-        if (!empty($filtros['categoria_id'])) {
-            $query->whereHas('producto', function($q) use ($filtros) {
+        if (! empty($filtros['categoria_id'])) {
+            $query->whereHas('producto', function ($q) use ($filtros) {
                 $q->where('categoria_id', $filtros['categoria_id']);
             });
         }
 
-        if (!empty($filtros['stock_bajo'])) {
-            $query->whereHas('producto', function($q) {
+        if (! empty($filtros['stock_bajo'])) {
+            $query->whereHas('producto', function ($q) {
                 $q->whereColumn('stock_minimo', '>', 0)
-                 ->whereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos sp WHERE sp.producto_id = productos.id) < stock_minimo');
+                    ->whereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos sp WHERE sp.producto_id = productos.id) < stock_minimo');
             });
         }
 
-        if (!empty($filtros['stock_alto'])) {
-            $query->whereHas('producto', function($q) {
+        if (! empty($filtros['stock_alto'])) {
+            $query->whereHas('producto', function ($q) {
                 $q->whereColumn('stock_maximo', '>', 0)
-                 ->whereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos sp WHERE sp.producto_id = productos.id) > stock_maximo');
+                    ->whereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos sp WHERE sp.producto_id = productos.id) > stock_maximo');
             });
         }
 
@@ -99,7 +99,7 @@ class ReporteInventarioController extends Controller
             $query->where('fecha_vencimiento', '<=', $fechaLimite);
         }
 
-        if (!empty($filtros['almacen_id'])) {
+        if (! empty($filtros['almacen_id'])) {
             $query->where('almacen_id', $filtros['almacen_id']);
         }
 
@@ -144,17 +144,17 @@ class ReporteInventarioController extends Controller
 
         // Productos con más salidas (mayor rotación)
         $rotacionQuery = MovimientoInventario::select([
-                'stock_productos.producto_id',
-                DB::raw('COUNT(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN 1 END) as total_salidas'),
-                DB::raw('SUM(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) as cantidad_vendida'),
-                DB::raw('AVG(stock_productos.cantidad) as stock_promedio'),
-                DB::raw('CASE WHEN AVG(stock_productos.cantidad) > 0 THEN SUM(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) / AVG(stock_productos.cantidad) ELSE 0 END as indice_rotacion')
-            ])
+            'stock_productos.producto_id',
+            DB::raw('COUNT(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN 1 END) as total_salidas'),
+            DB::raw('SUM(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) as cantidad_vendida'),
+            DB::raw('AVG(stock_productos.cantidad) as stock_promedio'),
+            DB::raw('CASE WHEN AVG(stock_productos.cantidad) > 0 THEN SUM(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) / AVG(stock_productos.cantidad) ELSE 0 END as indice_rotacion'),
+        ])
             ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
             ->whereBetween('fecha', [$fechaInicio, $fechaFin])
             ->groupBy('stock_productos.producto_id');
 
-        if (!empty($filtros['almacen_id'])) {
+        if (! empty($filtros['almacen_id'])) {
             $rotacionQuery->where('stock_productos.almacen_id', $filtros['almacen_id']);
         }
 
@@ -167,7 +167,7 @@ class ReporteInventarioController extends Controller
         // Estadísticas de rotación
         $estadisticas = [
             'productos_con_movimiento' => $rotacionQuery->having('total_salidas', '>', 0)->count(),
-            'productos_sin_movimiento' => Producto::whereDoesntHave('movimientos', function($q) use ($fechaInicio, $fechaFin) {
+            'productos_sin_movimiento' => Producto::whereDoesntHave('movimientos', function ($q) use ($fechaInicio, $fechaFin) {
                 $q->whereBetween('fecha', [$fechaInicio, $fechaFin]);
             })->count(),
             'rotacion_promedio' => $rotacionQuery->avg('indice_rotacion') ?? 0,
@@ -199,25 +199,25 @@ class ReporteInventarioController extends Controller
         $fechaFin = $filtros['fecha_fin'] ?? now();
 
         $movimientos = MovimientoInventario::with([
-                'stockProducto.producto:id,nombre',
-                'stockProducto.almacen:id,nombre',
-                'user:id,name'
-            ])
+            'stockProducto.producto:id,nombre',
+            'stockProducto.almacen:id,nombre',
+            'user:id,name',
+        ])
             ->whereBetween('fecha', [$fechaInicio, $fechaFin]);
 
         // Aplicar filtros adicionales
-        if (!empty($filtros['tipo'])) {
+        if (! empty($filtros['tipo'])) {
             $movimientos->where('tipo', $filtros['tipo']);
         }
 
-        if (!empty($filtros['almacen_id'])) {
-            $movimientos->whereHas('stockProducto', function($q) use ($filtros) {
+        if (! empty($filtros['almacen_id'])) {
+            $movimientos->whereHas('stockProducto', function ($q) use ($filtros) {
                 $q->where('almacen_id', $filtros['almacen_id']);
             });
         }
 
-        if (!empty($filtros['producto_id'])) {
-            $movimientos->whereHas('stockProducto', function($q) use ($filtros) {
+        if (! empty($filtros['producto_id'])) {
+            $movimientos->whereHas('stockProducto', function ($q) use ($filtros) {
                 $q->where('producto_id', $filtros['producto_id']);
             });
         }
@@ -250,10 +250,10 @@ class ReporteInventarioController extends Controller
     public function export(Request $request): JsonResponse
     {
         $tipo = $request->string('tipo'); // 'stock-actual', 'vencimientos', 'rotacion', 'movimientos'
-        
+
         // Aquí puedes implementar la exportación usando Laravel Excel o similar
         // Por ahora retornamos los datos para que puedan ser procesados en el frontend
-        
+
         switch ($tipo) {
             case 'stock-actual':
                 $datos = $this->obtenerDatosStockActual($request->all());
@@ -273,7 +273,7 @@ class ReporteInventarioController extends Controller
 
         return response()->json([
             'data' => $datos,
-            'filename' => "reporte_inventario_{$tipo}_" . now()->format('Y-m-d_H-i-s') . '.xlsx'
+            'filename' => "reporte_inventario_{$tipo}_".now()->format('Y-m-d_H-i-s').'.xlsx',
         ]);
     }
 

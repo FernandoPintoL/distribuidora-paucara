@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,10 +24,10 @@ class TipoDocumento extends Model
     ];
 
     protected $casts = [
-        'genera_inventario'     => 'boolean',
+        'genera_inventario' => 'boolean',
         'requiere_autorizacion' => 'boolean',
-        'siguiente_numero'      => 'integer',
-        'activo'                => 'boolean',
+        'siguiente_numero' => 'integer',
+        'activo' => 'boolean',
     ];
 
     /**

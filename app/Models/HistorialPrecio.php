@@ -19,7 +19,7 @@ class HistorialPrecio extends Model
         'motivo',
         'usuario',
         'tipo_precio_id', // Cambiar de 'tipo_precio' a 'tipo_precio_id'
-        'porcentaje_cambio'
+        'porcentaje_cambio',
     ];
 
     protected $casts = [
@@ -64,6 +64,7 @@ class HistorialPrecio extends Model
 
         if (is_string($tipoPrecio)) {
             $tipo = TipoPrecio::porCodigo($tipoPrecio);
+
             return $query->where('tipo_precio_id', $tipo?->id);
         }
 

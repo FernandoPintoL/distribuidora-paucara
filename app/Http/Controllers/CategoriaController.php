@@ -14,8 +14,8 @@ class CategoriaController extends Controller
     {
         $q = $request->string('q');
         $categorias = Categoria::query()
-            ->when($q, fn($qq) => $qq->where('nombre', 'ilike', "%$q%"))
-            ->orderBy('id','desc')
+            ->when($q, fn ($qq) => $qq->where('nombre', 'ilike', "%$q%"))
+            ->orderBy('id', 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -35,12 +35,13 @@ class CategoriaController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'descripcion' => ['nullable','string'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
             'activo' => ['boolean'],
         ]);
         $data['activo'] = $data['activo'] ?? true;
         Categoria::create($data);
+
         return redirect()->route('categorias.index')->with('success', 'Categoría creada');
     }
 
@@ -54,17 +55,19 @@ class CategoriaController extends Controller
     public function update(Request $request, Categoria $categoria): RedirectResponse
     {
         $data = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'descripcion' => ['nullable','string'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'descripcion' => ['nullable', 'string'],
             'activo' => ['boolean'],
         ]);
         $categoria->update($data);
+
         return redirect()->route('categorias.index')->with('success', 'Categoría actualizada');
     }
 
     public function destroy(Categoria $categoria): RedirectResponse
     {
         $categoria->delete();
+
         return redirect()->route('categorias.index')->with('success', 'Categoría eliminada');
     }
 }

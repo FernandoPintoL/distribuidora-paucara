@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,8 +21,8 @@ class VentaImpuesto extends Model
     ];
 
     protected $casts = [
-        'base_imponible'      => 'decimal:2',
-        'monto_impuesto'      => 'decimal:2',
+        'base_imponible' => 'decimal:2',
+        'monto_impuesto' => 'decimal:2',
         'porcentaje_aplicado' => 'decimal:4',
     ];
 

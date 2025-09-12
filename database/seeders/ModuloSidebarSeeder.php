@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\ModuloSidebar;
@@ -15,11 +16,11 @@ class ModuloSidebarSeeder extends Seeder
         $productos = ModuloSidebar::firstOrCreate(
             ['titulo' => 'Productos', 'ruta' => '/productos', 'es_submenu' => false],
             [
-                'icono'       => 'Package',
+                'icono' => 'Package',
                 'descripcion' => 'Gestión de productos y catálogo',
-                'orden'       => 1,
-                'categoria'   => 'Inventario',
-                'activo'      => true,
+                'orden' => 1,
+                'categoria' => 'Inventario',
+                'activo' => true,
             ]
         );
 
@@ -35,14 +36,14 @@ class ModuloSidebarSeeder extends Seeder
         foreach ($submenuProductos as $submenu) {
             ModuloSidebar::firstOrCreate(
                 [
-                    'titulo'          => $submenu['titulo'],
-                    'ruta'            => $submenu['ruta'],
-                    'es_submenu'      => true,
+                    'titulo' => $submenu['titulo'],
+                    'ruta' => $submenu['ruta'],
+                    'es_submenu' => true,
                     'modulo_padre_id' => $productos->id,
                 ],
                 [
-                    'icono'  => $submenu['icono'],
-                    'orden'  => $submenu['orden'],
+                    'icono' => $submenu['icono'],
+                    'orden' => $submenu['orden'],
                     'activo' => true,
                 ]
             );
@@ -52,11 +53,11 @@ class ModuloSidebarSeeder extends Seeder
         $inventario = ModuloSidebar::firstOrCreate(
             ['titulo' => 'Inventario', 'ruta' => '/inventario/dashboard', 'es_submenu' => false],
             [
-                'icono'       => 'Boxes',
+                'icono' => 'Boxes',
                 'descripcion' => 'Control y gestión de inventario',
-                'orden'       => 2,
-                'categoria'   => 'Inventario',
-                'activo'      => true,
+                'orden' => 2,
+                'categoria' => 'Inventario',
+                'activo' => true,
             ]
         );
 
@@ -73,14 +74,14 @@ class ModuloSidebarSeeder extends Seeder
         foreach ($submenuInventario as $submenu) {
             ModuloSidebar::firstOrCreate(
                 [
-                    'titulo'          => $submenu['titulo'],
-                    'ruta'            => $submenu['ruta'],
-                    'es_submenu'      => true,
+                    'titulo' => $submenu['titulo'],
+                    'ruta' => $submenu['ruta'],
+                    'es_submenu' => true,
                     'modulo_padre_id' => $inventario->id,
                 ],
                 [
-                    'icono'  => $submenu['icono'],
-                    'orden'  => $submenu['orden'],
+                    'icono' => $submenu['icono'],
+                    'orden' => $submenu['orden'],
                     'activo' => true,
                 ]
             );
@@ -90,11 +91,11 @@ class ModuloSidebarSeeder extends Seeder
         $ventas = ModuloSidebar::firstOrCreate(
             ['titulo' => 'Ventas', 'ruta' => '/ventas', 'es_submenu' => false],
             [
-                'icono'       => 'ShoppingCart',
+                'icono' => 'ShoppingCart',
                 'descripcion' => 'Gestión de ventas y facturación',
-                'orden'       => 3,
-                'categoria'   => 'Comercial',
-                'activo'      => true,
+                'orden' => 3,
+                'categoria' => 'Comercial',
+                'activo' => true,
             ]
         );
 
@@ -107,14 +108,14 @@ class ModuloSidebarSeeder extends Seeder
         foreach ($submenuVentas as $submenu) {
             ModuloSidebar::firstOrCreate(
                 [
-                    'titulo'          => $submenu['titulo'],
-                    'ruta'            => $submenu['ruta'],
-                    'es_submenu'      => true,
+                    'titulo' => $submenu['titulo'],
+                    'ruta' => $submenu['ruta'],
+                    'es_submenu' => true,
                     'modulo_padre_id' => $ventas->id,
                 ],
                 [
-                    'icono'  => $submenu['icono'],
-                    'orden'  => $submenu['orden'],
+                    'icono' => $submenu['icono'],
+                    'orden' => $submenu['orden'],
                     'activo' => true,
                 ]
             );
@@ -124,11 +125,11 @@ class ModuloSidebarSeeder extends Seeder
         $compras = ModuloSidebar::firstOrCreate(
             ['titulo' => 'Compras', 'ruta' => '/compras', 'es_submenu' => false],
             [
-                'icono'       => 'Truck',
+                'icono' => 'Truck',
                 'descripcion' => 'Gestión de compras y proveedores',
-                'orden'       => 4,
-                'categoria'   => 'Comercial',
-                'activo'      => true,
+                'orden' => 4,
+                'categoria' => 'Comercial',
+                'activo' => true,
             ]
         );
 
@@ -141,14 +142,14 @@ class ModuloSidebarSeeder extends Seeder
         foreach ($submenuCompras as $submenu) {
             ModuloSidebar::firstOrCreate(
                 [
-                    'titulo'          => $submenu['titulo'],
-                    'ruta'            => $submenu['ruta'],
-                    'es_submenu'      => true,
+                    'titulo' => $submenu['titulo'],
+                    'ruta' => $submenu['ruta'],
+                    'es_submenu' => true,
                     'modulo_padre_id' => $compras->id,
                 ],
                 [
-                    'icono'  => $submenu['icono'],
-                    'orden'  => $submenu['orden'],
+                    'icono' => $submenu['icono'],
+                    'orden' => $submenu['orden'],
                     'activo' => true,
                 ]
             );
@@ -157,52 +158,52 @@ class ModuloSidebarSeeder extends Seeder
         // Módulos principales sin submódulos
         $modulosPrincipales = [
             [
-                'titulo'      => 'Gestión de Cajas',
-                'ruta'        => '/cajas',
-                'icono'       => 'Wallet',
+                'titulo' => 'Gestión de Cajas',
+                'ruta' => '/cajas',
+                'icono' => 'Wallet',
                 'descripcion' => 'Control de cajas y tesorería',
-                'orden'       => 5,
-                'categoria'   => 'Finanzas',
+                'orden' => 5,
+                'categoria' => 'Finanzas',
             ],
             [
-                'titulo'      => 'Almacenes',
-                'ruta'        => '/almacenes',
-                'icono'       => 'Building2',
+                'titulo' => 'Almacenes',
+                'ruta' => '/almacenes',
+                'icono' => 'Building2',
                 'descripcion' => 'Gestión de almacenes',
-                'orden'       => 6,
-                'categoria'   => 'Logística',
+                'orden' => 6,
+                'categoria' => 'Logística',
             ],
             [
-                'titulo'      => 'Proveedores',
-                'ruta'        => '/proveedores',
-                'icono'       => 'Users',
+                'titulo' => 'Proveedores',
+                'ruta' => '/proveedores',
+                'icono' => 'Users',
                 'descripcion' => 'Gestión de proveedores',
-                'orden'       => 7,
-                'categoria'   => 'Comercial',
+                'orden' => 7,
+                'categoria' => 'Comercial',
             ],
             [
-                'titulo'      => 'Clientes',
-                'ruta'        => '/clientes',
-                'icono'       => 'UserCheck',
+                'titulo' => 'Clientes',
+                'ruta' => '/clientes',
+                'icono' => 'UserCheck',
                 'descripcion' => 'Gestión de clientes',
-                'orden'       => 8,
-                'categoria'   => 'Comercial',
+                'orden' => 8,
+                'categoria' => 'Comercial',
             ],
             [
-                'titulo'      => 'Monedas',
-                'ruta'        => '/monedas',
-                'icono'       => 'DollarSign',
+                'titulo' => 'Monedas',
+                'ruta' => '/monedas',
+                'icono' => 'DollarSign',
                 'descripcion' => 'Gestión de monedas',
-                'orden'       => 9,
-                'categoria'   => 'Configuración',
+                'orden' => 9,
+                'categoria' => 'Configuración',
             ],
             [
-                'titulo'      => 'Tipo Pagos',
-                'ruta'        => '/tipos-pago',
-                'icono'       => 'CreditCard',
+                'titulo' => 'Tipo Pagos',
+                'ruta' => '/tipos-pago',
+                'icono' => 'CreditCard',
                 'descripcion' => 'Gestión de tipos de pago',
-                'orden'       => 10,
-                'categoria'   => 'Configuración',
+                'orden' => 10,
+                'categoria' => 'Configuración',
             ],
         ];
 
@@ -210,11 +211,11 @@ class ModuloSidebarSeeder extends Seeder
             ModuloSidebar::firstOrCreate(
                 ['titulo' => $modulo['titulo'], 'ruta' => $modulo['ruta'], 'es_submenu' => false],
                 [
-                    'icono'       => $modulo['icono'],
+                    'icono' => $modulo['icono'],
                     'descripcion' => $modulo['descripcion'],
-                    'orden'       => $modulo['orden'],
-                    'categoria'   => $modulo['categoria'],
-                    'activo'      => true,
+                    'orden' => $modulo['orden'],
+                    'categoria' => $modulo['categoria'],
+                    'activo' => true,
                 ]
             );
         }

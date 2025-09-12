@@ -19,7 +19,7 @@ class ConfiguracionGanancia extends Model
         'porcentaje_ganancia_esperado',
         'precio_base_referencia',
         'calcular_automatico',
-        'activo'
+        'activo',
     ];
 
     protected $casts = [
@@ -54,7 +54,10 @@ class ConfiguracionGanancia extends Model
      */
     public function calcularPorcentajeGanancia(float $precioCosto, float $precioVenta): float
     {
-        if ($precioCosto == 0) return 0;
+        if ($precioCosto == 0) {
+            return 0;
+        }
+
         return (($precioVenta - $precioCosto) / $precioCosto) * 100;
     }
 
@@ -63,8 +66,13 @@ class ConfiguracionGanancia extends Model
      */
     public function validarMargen(float $ganancia): bool
     {
-        if ($ganancia < $this->margen_minimo) return false;
-        if ($this->margen_maximo && $ganancia > $this->margen_maximo) return false;
+        if ($ganancia < $this->margen_minimo) {
+            return false;
+        }
+        if ($this->margen_maximo && $ganancia > $this->margen_maximo) {
+            return false;
+        }
+
         return true;
     }
 
@@ -73,9 +81,12 @@ class ConfiguracionGanancia extends Model
      */
     public function calcularPrecioAutomatico(float $precioCosto): float
     {
-        if (!$this->calcular_automatico) return 0;
+        if (! $this->calcular_automatico) {
+            return 0;
+        }
 
         $gananciaEsperada = ($precioCosto * $this->porcentaje_ganancia_esperado) / 100;
+
         return $precioCosto + $gananciaEsperada;
     }
 

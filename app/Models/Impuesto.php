@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,12 +25,12 @@ class Impuesto extends Model
     ];
 
     protected $casts = [
-        'porcentaje'         => 'decimal:2',
-        'monto_fijo'         => 'decimal:2',
+        'porcentaje' => 'decimal:2',
+        'monto_fijo' => 'decimal:2',
         'incluido_en_precio' => 'boolean',
-        'aplica_ventas'      => 'boolean',
-        'aplica_compras'     => 'boolean',
-        'activo'             => 'boolean',
+        'aplica_ventas' => 'boolean',
+        'aplica_compras' => 'boolean',
+        'activo' => 'boolean',
     ];
 
     /**

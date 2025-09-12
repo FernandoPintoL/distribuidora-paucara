@@ -14,6 +14,8 @@ export interface Step1Props {
     categoria_id?: number | string;
     marca_id?: number | string;
     activo?: boolean;
+    stock_minimo?: number | null;
+    stock_maximo?: number | null;
   };
   errors: Record<string, string>;
   categoriasOptions: Option[];
@@ -36,7 +38,7 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
           <Input
             id="nombre"
             value={data.nombre}
-            onChange={e=>setData('nombre', e.target.value)}
+            onChange={e => setData('nombre', e.target.value)}
             required
             className={getInputClassName('nombre')}
           />
@@ -47,7 +49,7 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
           <Input
             id="descripcion"
             value={data.descripcion ?? ''}
-            onChange={e=>setData('descripcion', e.target.value)}
+            onChange={e => setData('descripcion', e.target.value)}
             className={getInputClassName('descripcion')}
           />
           {errors.descripcion && <div className="text-red-500 text-sm mt-1">⚠️ {errors.descripcion}</div>}
@@ -89,7 +91,7 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
             type="number"
             step="0.001"
             value={data.peso ?? ''}
-            onChange={e=>setData('peso', e.target.value? Number(e.target.value): null)}
+            onChange={e => setData('peso', e.target.value ? Number(e.target.value) : null)}
             className={getInputClassName('peso')}
           />
           {errors.peso && <div className="text-red-500 text-sm mt-1">⚠️ {errors.peso}</div>}
@@ -121,8 +123,39 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
           />
         </div>
         <div className="flex items-center gap-2 mt-6">
-          <Checkbox id="activo" checked={!!data.activo} onCheckedChange={(v)=>setData('activo', !!v)} />
+          <Checkbox id="activo" checked={!!data.activo} onCheckedChange={(v) => setData('activo', !!v)} />
           <Label htmlFor="activo">Activo</Label>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label htmlFor="stock_minimo">Stock Mínimo</Label>
+          <Input
+            id="stock_minimo"
+            type="number"
+            min="0"
+            step="1"
+            value={data.stock_minimo ?? ''}
+            onChange={e => setData('stock_minimo', e.target.value ? Number(e.target.value) : null)}
+            className={getInputClassName('stock_minimo')}
+            placeholder="Cantidad mínima en stock"
+          />
+          {errors.stock_minimo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.stock_minimo}</div>}
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="stock_maximo">Stock Máximo</Label>
+          <Input
+            id="stock_maximo"
+            type="number"
+            min="0"
+            step="1"
+            value={data.stock_maximo ?? ''}
+            onChange={e => setData('stock_maximo', e.target.value ? Number(e.target.value) : null)}
+            className={getInputClassName('stock_maximo')}
+            placeholder="Cantidad máxima en stock"
+          />
+          {errors.stock_maximo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.stock_maximo}</div>}
         </div>
       </div>
     </div>

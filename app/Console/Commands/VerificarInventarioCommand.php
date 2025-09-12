@@ -37,7 +37,7 @@ class VerificarInventarioCommand extends Command
         $dias = (int) $this->option('dias');
 
         // Si no se especifica ninguna opción, ejecutar ambas verificaciones
-        if (!$stockBajo && !$vencimientos) {
+        if (! $stockBajo && ! $vencimientos) {
             $stockBajo = true;
             $vencimientos = true;
         }
@@ -56,11 +56,11 @@ class VerificarInventarioCommand extends Command
             }
 
             $this->info('🎉 Verificación de inventario completada exitosamente');
-            
+
             return self::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('❌ Error durante la verificación de inventario: ' . $e->getMessage());
-            
+            $this->error('❌ Error durante la verificación de inventario: '.$e->getMessage());
+
             return self::FAILURE;
         }
     }

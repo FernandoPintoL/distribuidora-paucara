@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
@@ -65,18 +66,18 @@ class VentaController extends Controller
             ->get()
             ->map(function ($producto) {
                 return [
-                    'id'           => $producto->id,
-                    'nombre'       => $producto->nombre,
-                    'codigo'       => $producto->codigo_barras,
+                    'id' => $producto->id,
+                    'nombre' => $producto->nombre,
+                    'codigo' => $producto->codigo_barras,
                     'precio_venta' => $producto->precios->first()?->precio ?? 0,
                 ];
             });
 
         return Inertia::render('ventas/create', [
-            'clientes'  => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
+            'clientes' => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
             'productos' => $productos,
-            'monedas'   => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
-            'estados'   => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
+            'monedas' => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
+            'estados' => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
         ]);
     }
 
@@ -118,25 +119,25 @@ class VentaController extends Controller
             ->get()
             ->map(function ($producto) {
                 return [
-                    'id'           => $producto->id,
-                    'nombre'       => $producto->nombre,
-                    'codigo'       => $producto->codigo_barras,
+                    'id' => $producto->id,
+                    'nombre' => $producto->nombre,
+                    'codigo' => $producto->codigo_barras,
                     'precio_venta' => $producto->precios->first()?->precio ?? 0,
                 ];
             });
 
         return Inertia::render('ventas/create', [
-            'venta'     => $venta,
-            'clientes'  => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
+            'venta' => $venta,
+            'clientes' => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
             'productos' => $productos,
-            'monedas'   => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
-            'estados'   => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
+            'monedas' => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
+            'estados' => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
         ]);
     }
 
     public function store(StoreVentaRequest $request)
     {
-        $data         = $request->validated();
+        $data = $request->validated();
         $stockService = app(StockService::class);
 
         return DB::transaction(function () use ($data, $request, $stockService) {
@@ -144,14 +145,14 @@ class VentaController extends Controller
             $productosParaValidar = array_map(function ($detalle) {
                 return [
                     'producto_id' => $detalle['producto_id'],
-                    'cantidad'    => $detalle['cantidad'],
+                    'cantidad' => $detalle['cantidad'],
                 ];
             }, $data['detalles']);
 
             $validacionStock = $stockService->validarStockDisponible($productosParaValidar);
 
             if (! $validacionStock['valido']) {
-                throw new Exception('Stock insuficiente: ' . implode(', ', $validacionStock['errores']));
+                throw new Exception('Stock insuficiente: '.implode(', ', $validacionStock['errores']));
             }
 
             // Crear la venta
@@ -184,7 +185,7 @@ class VentaController extends Controller
     public function update(UpdateVentaRequest $request, $id)
     {
         $venta = Venta::findOrFail($id);
-        $data  = $request->validated();
+        $data = $request->validated();
 
         return DB::transaction(function () use ($venta, $data, $request) {
             $venta->update($data);
@@ -230,26 +231,26 @@ class VentaController extends Controller
     public function verificarStock(Request $request)
     {
         $request->validate([
-            'productos'               => 'required|array',
+            'productos' => 'required|array',
             'productos.*.producto_id' => 'required|integer|exists:productos,id',
-            'productos.*.cantidad'    => 'required|integer|min:1',
-            'almacen_id'              => 'integer|exists:almacenes,id',
+            'productos.*.cantidad' => 'required|integer|min:1',
+            'almacen_id' => 'integer|exists:almacenes,id',
         ]);
 
         $stockService = app(StockService::class);
-        $almacenId    = $request->get('almacen_id', 1);
+        $almacenId = $request->get('almacen_id', 1);
 
         try {
             $validacion = $stockService->validarStockDisponible($request->productos, $almacenId);
 
             return ApiResponse::success([
-                'valido'   => $validacion['valido'],
-                'errores'  => $validacion['errores'],
+                'valido' => $validacion['valido'],
+                'errores' => $validacion['errores'],
                 'detalles' => $validacion['detalles'],
             ]);
 
         } catch (Exception $e) {
-            return ApiResponse::error('Error verificando stock: ' . $e->getMessage());
+            return ApiResponse::error('Error verificando stock: '.$e->getMessage());
         }
     }
 
@@ -263,29 +264,29 @@ class VentaController extends Controller
         ]);
 
         $stockService = app(StockService::class);
-        $almacenId    = $request->get('almacen_id', 1);
+        $almacenId = $request->get('almacen_id', 1);
 
         try {
             $stockDisponible = $stockService->obtenerStockDisponible($productoId, $almacenId);
-            $stockPorLotes   = $stockService->obtenerStockPorLotes($productoId, $almacenId);
+            $stockPorLotes = $stockService->obtenerStockPorLotes($productoId, $almacenId);
 
             return ApiResponse::success([
                 'producto_id' => $productoId,
-                'almacen_id'  => $almacenId,
+                'almacen_id' => $almacenId,
                 'stock_total' => $stockDisponible,
-                'lotes'       => $stockPorLotes->map(function ($stock) {
+                'lotes' => $stockPorLotes->map(function ($stock) {
                     return [
-                        'id'                => $stock->id,
-                        'lote'              => $stock->lote,
-                        'cantidad'          => $stock->cantidad,
+                        'id' => $stock->id,
+                        'lote' => $stock->lote,
+                        'cantidad' => $stock->cantidad,
                         'fecha_vencimiento' => $stock->fecha_vencimiento,
-                        'dias_vencimiento'  => $stock->diasParaVencer(),
+                        'dias_vencimiento' => $stock->diasParaVencer(),
                     ];
                 }),
             ]);
 
         } catch (Exception $e) {
-            return ApiResponse::error('Error obteniendo stock: ' . $e->getMessage());
+            return ApiResponse::error('Error obteniendo stock: '.$e->getMessage());
         }
     }
 
@@ -301,13 +302,13 @@ class VentaController extends Controller
 
             return ApiResponse::success($productosStockBajo->map(function ($producto) {
                 return [
-                    'id'           => $producto->id,
-                    'nombre'       => $producto->nombre,
+                    'id' => $producto->id,
+                    'nombre' => $producto->nombre,
                     'stock_minimo' => $producto->stock_minimo,
                     'stock_actual' => $producto->stocks->sum('cantidad'),
-                    'almacenes'    => $producto->stocks->map(function ($stock) {
+                    'almacenes' => $producto->stocks->map(function ($stock) {
                         return [
-                            'almacen'  => $stock->almacen->nombre,
+                            'almacen' => $stock->almacen->nombre,
                             'cantidad' => $stock->cantidad,
                         ];
                     }),
@@ -315,7 +316,7 @@ class VentaController extends Controller
             }));
 
         } catch (Exception $e) {
-            return ApiResponse::error('Error obteniendo productos con stock bajo: ' . $e->getMessage());
+            return ApiResponse::error('Error obteniendo productos con stock bajo: '.$e->getMessage());
         }
     }
 
@@ -325,13 +326,13 @@ class VentaController extends Controller
     public function obtenerResumenStock(int $ventaId)
     {
         try {
-            $venta   = Venta::findOrFail($ventaId);
+            $venta = Venta::findOrFail($ventaId);
             $resumen = $venta->obtenerResumenStock();
 
             return ApiResponse::success($resumen);
 
         } catch (Exception $e) {
-            return ApiResponse::error('Error obteniendo resumen de stock: ' . $e->getMessage());
+            return ApiResponse::error('Error obteniendo resumen de stock: '.$e->getMessage());
         }
     }
 }

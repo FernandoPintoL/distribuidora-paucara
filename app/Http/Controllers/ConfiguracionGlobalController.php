@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ConfiguracionGlobal;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class ConfiguracionGlobalController extends Controller
 {
@@ -21,7 +20,7 @@ class ConfiguracionGlobalController extends Controller
 
         return response()->json([
             'configuraciones' => $configuraciones,
-            'categorias' => $configuraciones->keys()
+            'categorias' => $configuraciones->keys(),
         ]);
     }
 
@@ -34,7 +33,7 @@ class ConfiguracionGlobalController extends Controller
             ->where('activo', true)
             ->first();
 
-        if (!$configuracion) {
+        if (! $configuracion) {
             return response()->json(['error' => 'Configuración no encontrada'], 404);
         }
 
@@ -48,7 +47,7 @@ class ConfiguracionGlobalController extends Controller
     {
         $configuracion = ConfiguracionGlobal::where('clave', $clave)->first();
 
-        if (!$configuracion) {
+        if (! $configuracion) {
             return response()->json(['error' => 'Configuración no encontrada'], 404);
         }
 
@@ -77,7 +76,7 @@ class ConfiguracionGlobalController extends Controller
 
         return response()->json([
             'message' => 'Configuración actualizada correctamente',
-            'configuracion' => $configuracion->fresh()
+            'configuracion' => $configuracion->fresh(),
         ]);
     }
 
@@ -118,7 +117,7 @@ class ConfiguracionGlobalController extends Controller
 
         return response()->json([
             'message' => 'Configuraciones de ganancias actualizadas correctamente',
-            'configuraciones' => ConfiguracionGlobal::configuracionesGanancias()
+            'configuraciones' => ConfiguracionGlobal::configuracionesGanancias(),
         ]);
     }
 
@@ -154,7 +153,7 @@ class ConfiguracionGlobalController extends Controller
 
         return response()->json([
             'message' => 'Configuración creada correctamente',
-            'configuracion' => $configuracion
+            'configuracion' => $configuracion,
         ], 201);
     }
 
@@ -165,11 +164,11 @@ class ConfiguracionGlobalController extends Controller
     {
         $configuracion = ConfiguracionGlobal::where('clave', $clave)->first();
 
-        if (!$configuracion) {
+        if (! $configuracion) {
             return response()->json(['error' => 'Configuración no encontrada'], 404);
         }
 
-        if (!$configuracion->es_sistema) {
+        if (! $configuracion->es_sistema) {
             return response()->json(['error' => 'Solo se pueden resetear configuraciones del sistema'], 400);
         }
 
@@ -180,7 +179,7 @@ class ConfiguracionGlobalController extends Controller
             'aplicar_interes_automatico' => 'true',
         ];
 
-        if (!isset($valoresPorDefecto[$clave])) {
+        if (! isset($valoresPorDefecto[$clave])) {
             return response()->json(['error' => 'No hay valor por defecto para esta configuración'], 400);
         }
 
@@ -197,7 +196,7 @@ class ConfiguracionGlobalController extends Controller
 
         return response()->json([
             'message' => 'Configuración reseteada a valor por defecto',
-            'configuracion' => $configuracion->fresh()
+            'configuracion' => $configuracion->fresh(),
         ]);
     }
 
@@ -206,8 +205,13 @@ class ConfiguracionGlobalController extends Controller
      */
     private function convertirATexto($valor): string
     {
-        if (is_bool($valor)) return $valor ? 'true' : 'false';
-        if (is_array($valor)) return json_encode($valor);
+        if (is_bool($valor)) {
+            return $valor ? 'true' : 'false';
+        }
+        if (is_array($valor)) {
+            return json_encode($valor);
+        }
+
         return (string) $valor;
     }
 }

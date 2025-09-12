@@ -46,4 +46,25 @@ export const categoriasConfig: ModuleConfig<Categoria, CategoriaFormData> = {
   // Search configuration
   searchableFields: ['nombre', 'descripcion'],
   searchPlaceholder: 'Buscar categorías...',
+
+  // Modern Index filters configuration
+  indexFilters: {
+    filters: [
+      {
+        key: 'activo',
+        label: 'Estado',
+        type: 'boolean',
+        placeholder: 'Todos los estados',
+        width: 'sm'
+      }
+    ],
+    sortOptions: [
+      { value: 'id', label: 'ID' },
+      { value: 'nombre', label: 'Nombre' },
+      { value: 'created_at', label: 'Fecha creación' },
+      { value: 'updated_at', label: 'Última actualización' }
+    ],
+    defaultSort: { field: 'nombre', direction: 'asc' },
+    layout: 'inline'
+  },
 };

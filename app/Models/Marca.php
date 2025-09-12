@@ -14,7 +14,7 @@ class Marca extends Model
     protected $table = 'marcas';
 
     protected $fillable = [
-        'nombre','descripcion','activo','fecha_creacion'
+        'nombre', 'descripcion', 'activo', 'fecha_creacion',
     ];
 
     protected $casts = [

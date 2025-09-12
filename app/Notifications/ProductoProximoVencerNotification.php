@@ -2,8 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Models\Producto;
-use App\Models\StockProducto;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -36,7 +34,7 @@ class ProductoProximoVencerNotification extends Notification implements ShouldQu
     {
         $cantidad = $this->productosProximosVencer->count();
         $diasTexto = $this->diasAnticipacion == 1 ? '1 día' : "{$this->diasAnticipacion} días";
-        
+
         $mail = (new MailMessage)
             ->subject("📅 Productos Próximos a Vencer - {$cantidad} productos")
             ->greeting('¡Atención!')
@@ -44,12 +42,12 @@ class ProductoProximoVencerNotification extends Notification implements ShouldQu
 
         // Agregar lista de productos (máximo 10)
         $productosAMostrar = $this->productosProximosVencer->take(10);
-        
+
         foreach ($productosAMostrar as $item) {
             $fechaVencimiento = $item->fecha_vencimiento?->format('d/m/Y');
             $almacen = $item->almacen?->nombre ?? 'Sin almacén';
             $lote = $item->lote ? " (Lote: {$item->lote})" : '';
-            
+
             $mail->line("• **{$item->producto->nombre}**{$lote} - {$almacen} - Vence: {$fechaVencimiento}");
         }
 
@@ -70,7 +68,7 @@ class ProductoProximoVencerNotification extends Notification implements ShouldQu
     {
         $cantidad = $this->productosProximosVencer->count();
         $diasTexto = $this->diasAnticipacion == 1 ? '1 día' : "{$this->diasAnticipacion} días";
-        
+
         // Crear lista simple de productos para la base de datos
         $productos = $this->productosProximosVencer->take(5)->map(function ($item) {
             return [

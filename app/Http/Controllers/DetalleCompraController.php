@@ -22,12 +22,14 @@ class DetalleCompraController extends Controller
     public function index()
     {
         $detalles = DetalleCompra::with(['compra', 'producto'])->get();
+
         return ApiResponse::success($detalles);
     }
 
     public function show($id)
     {
         $detalle = DetalleCompra::with(['compra', 'producto'])->findOrFail($id);
+
         return ApiResponse::success($detalle);
     }
 
@@ -35,6 +37,7 @@ class DetalleCompraController extends Controller
     {
         $data = $request->validated();
         $detalle = DetalleCompra::create($data);
+
         return ApiResponse::success($detalle->load(['compra', 'producto']), 'Detalle de compra creado', Response::HTTP_CREATED);
     }
 
@@ -43,6 +46,7 @@ class DetalleCompraController extends Controller
         $detalle = DetalleCompra::findOrFail($id);
         $data = $request->validated();
         $detalle->update($data);
+
         return ApiResponse::success($detalle->fresh(['compra', 'producto']), 'Detalle de compra actualizado');
     }
 
@@ -50,6 +54,7 @@ class DetalleCompraController extends Controller
     {
         $detalle = DetalleCompra::findOrFail($id);
         $detalle->delete();
+
         return ApiResponse::success(null, 'Detalle de compra eliminado');
     }
 }

@@ -14,7 +14,7 @@ class Categoria extends Model
     protected $table = 'categorias';
 
     protected $fillable = [
-        'nombre','descripcion','activo','fecha_creacion'
+        'nombre', 'descripcion', 'activo', 'fecha_creacion',
     ];
 
     protected $casts = [

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\Impuesto;
@@ -32,11 +33,11 @@ class TributarioService
             $montoImpuesto = $impuesto->calcularMonto($baseImponible);
 
             $resultados[] = [
-                'impuesto_id'    => $impuesto->id,
-                'codigo'         => $impuesto->codigo,
-                'nombre'         => $impuesto->nombre,
+                'impuesto_id' => $impuesto->id,
+                'codigo' => $impuesto->codigo,
+                'nombre' => $impuesto->nombre,
                 'base_imponible' => $baseImponible,
-                'tasa_aplicada'  => $impuesto->porcentaje,
+                'tasa_aplicada' => $impuesto->porcentaje,
                 'monto_impuesto' => $montoImpuesto,
             ];
         }
@@ -54,15 +55,15 @@ class TributarioService
             VentaImpuesto::where('venta_id', $venta->id)->delete();
 
             $calculosImpuestos = $this->calcularImpuestos($venta, $impuestos);
-            $totalImpuestos    = 0;
+            $totalImpuestos = 0;
 
             foreach ($calculosImpuestos as $calculo) {
                 VentaImpuesto::create([
-                    'venta_id'            => $venta->id,
-                    'impuesto_id'         => $calculo['impuesto_id'],
-                    'base_imponible'      => $calculo['base_imponible'],
+                    'venta_id' => $venta->id,
+                    'impuesto_id' => $calculo['impuesto_id'],
+                    'base_imponible' => $calculo['base_imponible'],
                     'porcentaje_aplicado' => $calculo['tasa_aplicada'],
-                    'monto_impuesto'      => $calculo['monto_impuesto'],
+                    'monto_impuesto' => $calculo['monto_impuesto'],
                 ]);
 
                 $totalImpuestos += $calculo['monto_impuesto'];
@@ -71,7 +72,7 @@ class TributarioService
             // Actualizar totales de la venta usando los campos existentes
             $venta->update([
                 'impuesto' => $totalImpuestos,
-                'total'    => $venta->subtotal + $totalImpuestos,
+                'total' => $venta->subtotal + $totalImpuestos,
             ]);
 
             // Si es una factura con IVA, registrar en libro de ventas
@@ -88,30 +89,30 @@ class TributarioService
      */
     public function registrarEnLibroVentas(Venta $venta): LibroVentasIva
     {
-        $impuestoIva      = $venta->impuestos()->where('codigo', 'IVA')->first();
+        $impuestoIva = $venta->impuestos()->where('codigo', 'IVA')->first();
         $ventaImpuestoIva = $venta->ventaImpuestos()->whereHas('impuesto', function ($q) {
             $q->where('codigo', 'IVA');
         })->first();
 
         return LibroVentasIva::create([
-            'fecha'                => $venta->fecha,
-            'numero_factura'       => $venta->numero ?? $this->generarNumeroDocumento($venta),
-            'numero_autorizacion'  => $venta->numero_autorizacion ?? '',
-            'nit_ci_cliente'       => $venta->cliente?->nit ?? '0',
+            'fecha' => $venta->fecha,
+            'numero_factura' => $venta->numero ?? $this->generarNumeroDocumento($venta),
+            'numero_autorizacion' => $venta->numero_autorizacion ?? '',
+            'nit_ci_cliente' => $venta->cliente?->nit ?? '0',
             'razon_social_cliente' => $venta->cliente?->nombre ?? 'Sin nombre',
-            'importe_total'        => $venta->total,
-            'importe_ice'          => 0,
-            'importe_iehd'         => 0,
-            'importe_ipj'          => 0,
-            'tasas'                => 0,
-            'importe_gift_card'    => 0,
-            'descuentos'           => $venta->descuento,
-            'importe_base_cf'      => $ventaImpuestoIva?->base_imponible ?? $venta->subtotal,
-            'credito_fiscal'       => $ventaImpuestoIva?->monto_impuesto ?? 0,
-            'estado_factura'       => 'vigente',
-            'codigo_control'       => $venta->codigo_control ?? '',
-            'venta_id'             => $venta->id,
-            'tipo_documento_id'    => $venta->tipo_documento_id,
+            'importe_total' => $venta->total,
+            'importe_ice' => 0,
+            'importe_iehd' => 0,
+            'importe_ipj' => 0,
+            'tasas' => 0,
+            'importe_gift_card' => 0,
+            'descuentos' => $venta->descuento,
+            'importe_base_cf' => $ventaImpuestoIva?->base_imponible ?? $venta->subtotal,
+            'credito_fiscal' => $ventaImpuestoIva?->monto_impuesto ?? 0,
+            'estado_factura' => 'vigente',
+            'codigo_control' => $venta->codigo_control ?? '',
+            'venta_id' => $venta->id,
+            'tipo_documento_id' => $venta->tipo_documento_id,
         ]);
     }
 
@@ -153,19 +154,19 @@ class TributarioService
         $impuestos = $venta->ventaImpuestos()->with('impuesto')->get();
 
         $resumen = [
-            'subtotal'          => $venta->subtotal ?? $venta->total,
-            'total_impuestos'   => $venta->impuesto ?? 0,
-            'total_general'     => $venta->total,
+            'subtotal' => $venta->subtotal ?? $venta->total,
+            'total_impuestos' => $venta->impuesto ?? 0,
+            'total_general' => $venta->total,
             'detalle_impuestos' => [],
         ];
 
         foreach ($impuestos as $ventaImpuesto) {
             $resumen['detalle_impuestos'][] = [
-                'codigo'         => $ventaImpuesto->impuesto->codigo,
-                'nombre'         => $ventaImpuesto->impuesto->nombre,
+                'codigo' => $ventaImpuesto->impuesto->codigo,
+                'nombre' => $ventaImpuesto->impuesto->nombre,
                 'base_imponible' => $ventaImpuesto->base_imponible,
-                'tasa'           => $ventaImpuesto->porcentaje_aplicado,
-                'monto'          => $ventaImpuesto->monto_impuesto,
+                'tasa' => $ventaImpuesto->porcentaje_aplicado,
+                'monto' => $ventaImpuesto->monto_impuesto,
             ];
         }
 
@@ -198,7 +199,7 @@ class TributarioService
         }
 
         return [
-            'valido'  => empty($errores),
+            'valido' => empty($errores),
             'errores' => $errores,
         ];
     }

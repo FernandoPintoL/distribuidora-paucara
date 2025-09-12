@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\Venta;
@@ -28,6 +29,7 @@ class TestAsientoCommand extends Command
         $venta = Venta::latest()->first();
         if (! $venta) {
             $this->error('No hay ventas disponibles');
+
             return;
         }
 
@@ -44,10 +46,10 @@ class TestAsientoCommand extends Command
                 $this->info("   - Haber: {$asiento->total_haber}");
                 $this->info("   - Detalles: {$asiento->detalles->count()}");
             } else {
-                $this->error("❌ No se generó el asiento contable");
+                $this->error('❌ No se generó el asiento contable');
             }
         } catch (\Exception $e) {
-            $this->error("Error: " . $e->getMessage());
+            $this->error('Error: '.$e->getMessage());
         }
     }
 }

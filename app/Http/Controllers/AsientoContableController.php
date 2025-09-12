@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\AsientoContable;
@@ -37,8 +38,8 @@ class AsientoContableController extends Controller
         $asientos = $query->paginate(15)->withQueryString();
 
         return Inertia::render('Contabilidad/AsientosContables/Index', [
-            'asientos'        => $asientos,
-            'filtros'         => $request->only(['fecha_desde', 'fecha_hasta', 'tipo_documento', 'numero']),
+            'asientos' => $asientos,
+            'filtros' => $request->only(['fecha_desde', 'fecha_hasta', 'tipo_documento', 'numero']),
             'tipos_documento' => ['VENTA', 'COMPRA', 'AJUSTE'],
         ]);
     }
@@ -114,8 +115,8 @@ class AsientoContableController extends Controller
 
         $request->validate([
             'cuenta_codigo' => 'required|exists:cuenta_contables,codigo',
-            'fecha_desde'   => 'required|date',
-            'fecha_hasta'   => 'required|date|after_or_equal:fecha_desde',
+            'fecha_desde' => 'required|date',
+            'fecha_hasta' => 'required|date|after_or_equal:fecha_desde',
         ]);
 
         $cuenta = CuentaContable::where('codigo', $request->cuenta_codigo)->first();
@@ -136,7 +137,7 @@ class AsientoContableController extends Controller
             ->get();
 
         // Calcular saldos
-        $saldo       = 0;
+        $saldo = 0;
         $movimientos = $movimientos->map(function ($movimiento) use (&$saldo, $cuenta) {
             if ($cuenta->naturaleza === 'deudora') {
                 $saldo += $movimiento->debe - $movimiento->haber;
@@ -144,6 +145,7 @@ class AsientoContableController extends Controller
                 $saldo += $movimiento->haber - $movimiento->debe;
             }
             $movimiento->saldo = $saldo;
+
             return $movimiento;
         });
 
@@ -152,11 +154,11 @@ class AsientoContableController extends Controller
             ->get(['codigo', 'nombre', 'tipo', 'naturaleza']);
 
         return Inertia::render('Contabilidad/Reportes/LibroMayor', [
-            'cuenta'              => $cuenta,
-            'movimientos'         => $movimientos,
-            'fecha_desde'         => $request->fecha_desde,
-            'fecha_hasta'         => $request->fecha_hasta,
-            'saldo_final'         => $saldo,
+            'cuenta' => $cuenta,
+            'movimientos' => $movimientos,
+            'fecha_desde' => $request->fecha_desde,
+            'fecha_hasta' => $request->fecha_hasta,
+            'saldo_final' => $saldo,
             'cuentas_disponibles' => $cuentas_disponibles,
         ]);
     }
@@ -193,7 +195,7 @@ class AsientoContableController extends Controller
                     ->selectRaw('SUM(detalle_asiento_contables.debe) as total_debe, SUM(detalle_asiento_contables.haber) as total_haber')
                     ->first();
 
-                $totalDebe  = $movimientos->total_debe ?? 0;
+                $totalDebe = $movimientos->total_debe ?? 0;
                 $totalHaber = $movimientos->total_haber ?? 0;
 
                 // Calcular saldo según naturaleza de la cuenta
@@ -204,13 +206,13 @@ class AsientoContableController extends Controller
                 }
 
                 return [
-                    'codigo'     => $cuenta->codigo,
-                    'nombre'     => $cuenta->nombre,
-                    'tipo'       => $cuenta->tipo,
+                    'codigo' => $cuenta->codigo,
+                    'nombre' => $cuenta->nombre,
+                    'tipo' => $cuenta->tipo,
                     'naturaleza' => $cuenta->naturaleza,
-                    'debe'       => $totalDebe,
-                    'haber'      => $totalHaber,
-                    'saldo'      => $saldo,
+                    'debe' => $totalDebe,
+                    'haber' => $totalHaber,
+                    'saldo' => $saldo,
                 ];
             })
             ->filter(function ($cuenta) {
@@ -219,13 +221,13 @@ class AsientoContableController extends Controller
             });
 
         $totales = [
-            'debe'  => $cuentas->sum('debe'),
+            'debe' => $cuentas->sum('debe'),
             'haber' => $cuentas->sum('haber'),
         ];
 
         return Inertia::render('Contabilidad/Reportes/BalanceComprobacion', [
-            'cuentas'     => $cuentas->values(),
-            'totales'     => $totales,
+            'cuentas' => $cuentas->values(),
+            'totales' => $totales,
             'fecha_desde' => $request->fecha_desde,
             'fecha_hasta' => $request->fecha_hasta,
         ]);

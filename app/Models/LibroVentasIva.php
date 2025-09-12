@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,16 +34,16 @@ class LibroVentasIva extends Model
     ];
 
     protected $casts = [
-        'fecha'             => 'date',
-        'importe_total'     => 'decimal:2',
-        'importe_ice'       => 'decimal:2',
-        'importe_iehd'      => 'decimal:2',
-        'importe_ipj'       => 'decimal:2',
-        'tasas'             => 'decimal:2',
+        'fecha' => 'date',
+        'importe_total' => 'decimal:2',
+        'importe_ice' => 'decimal:2',
+        'importe_iehd' => 'decimal:2',
+        'importe_ipj' => 'decimal:2',
+        'tasas' => 'decimal:2',
         'importe_gift_card' => 'decimal:2',
-        'descuentos'        => 'decimal:2',
-        'importe_base_cf'   => 'decimal:2',
-        'credito_fiscal'    => 'decimal:2',
+        'descuentos' => 'decimal:2',
+        'importe_base_cf' => 'decimal:2',
+        'credito_fiscal' => 'decimal:2',
     ];
 
     /**

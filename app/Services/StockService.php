@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\MovimientoInventario;
@@ -16,19 +17,19 @@ class StockService
     public function validarStockDisponible(array $productos, int $almacenId = 1): array
     {
         $resultados = [];
-        $errores    = [];
+        $errores = [];
 
         foreach ($productos as $item) {
-            $productoId         = $item['producto_id'] ?? $item['id'];
+            $productoId = $item['producto_id'] ?? $item['id'];
             $cantidadSolicitada = $item['cantidad'];
 
             $stockDisponible = $this->obtenerStockDisponible($productoId, $almacenId);
 
             $resultado = [
-                'producto_id'         => $productoId,
+                'producto_id' => $productoId,
                 'cantidad_solicitada' => $cantidadSolicitada,
-                'stock_disponible'    => $stockDisponible,
-                'suficiente'          => $stockDisponible >= $cantidadSolicitada,
+                'stock_disponible' => $stockDisponible,
+                'suficiente' => $stockDisponible >= $cantidadSolicitada,
             ];
 
             if (! $resultado['suficiente']) {
@@ -39,8 +40,8 @@ class StockService
         }
 
         return [
-            'valido'   => empty($errores),
-            'errores'  => $errores,
+            'valido' => empty($errores),
+            'errores' => $errores,
             'detalles' => $resultados,
         ];
     }
@@ -79,7 +80,7 @@ class StockService
 
         try {
             foreach ($productos as $item) {
-                $productoId        = $item['producto_id'] ?? $item['id'];
+                $productoId = $item['producto_id'] ?? $item['id'];
                 $cantidadNecesaria = $item['cantidad'];
 
                 // Obtener stock por lotes usando FIFO
@@ -113,6 +114,7 @@ class StockService
             }
 
             DB::commit();
+
             return $movimientos;
 
         } catch (Exception $e) {
@@ -132,20 +134,20 @@ class StockService
 
         try {
             foreach ($productos as $item) {
-                $productoId       = $item['producto_id'] ?? $item['id'];
-                $cantidad         = $item['cantidad'];
-                $lote             = $item['lote'] ?? null;
+                $productoId = $item['producto_id'] ?? $item['id'];
+                $cantidad = $item['cantidad'];
+                $lote = $item['lote'] ?? null;
                 $fechaVencimiento = $item['fecha_vencimiento'] ?? null;
 
                 // Buscar o crear stock para este producto/almacén/lote
                 $stockProducto = StockProducto::firstOrCreate([
                     'producto_id' => $productoId,
-                    'almacen_id'  => $almacenId,
-                    'lote'        => $lote,
+                    'almacen_id' => $almacenId,
+                    'lote' => $lote,
                 ], [
-                    'cantidad'            => 0,
+                    'cantidad' => 0,
                     'fecha_actualizacion' => now(),
-                    'fecha_vencimiento'   => $fechaVencimiento,
+                    'fecha_vencimiento' => $fechaVencimiento,
                 ]);
 
                 // Registrar movimiento de entrada
@@ -161,6 +163,7 @@ class StockService
             }
 
             DB::commit();
+
             return $movimientos;
 
         } catch (Exception $e) {
@@ -227,14 +230,14 @@ class StockService
                 ->first();
 
             if (! $stockProducto) {
-                throw new Exception("No se encontró stock para el producto en el almacén especificado");
+                throw new Exception('No se encontró stock para el producto en el almacén especificado');
             }
 
             $cantidadAnterior = $stockProducto->cantidad;
-            $diferencia       = $nuevaCantidad - $cantidadAnterior;
+            $diferencia = $nuevaCantidad - $cantidadAnterior;
 
             if ($diferencia == 0) {
-                throw new Exception("La cantidad nueva es igual a la actual");
+                throw new Exception('La cantidad nueva es igual a la actual');
             }
 
             $tipo = $diferencia > 0 ?
@@ -250,6 +253,7 @@ class StockService
             );
 
             DB::commit();
+
             return $movimiento;
 
         } catch (Exception $e) {

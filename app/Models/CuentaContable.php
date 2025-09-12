@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ class CuentaContable extends Model
 
     protected $casts = [
         'acepta_movimiento' => 'boolean',
-        'activa'            => 'boolean',
+        'activa' => 'boolean',
     ];
 
     /**
@@ -45,7 +46,7 @@ class CuentaContable extends Model
     public function getJerarquiaCompleta(): string
     {
         $jerarquia = [$this->nombre];
-        $cuenta    = $this;
+        $cuenta = $this;
 
         while ($cuenta->cuentaPadre) {
             $cuenta = $cuenta->cuentaPadre;

@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Notifications\StockBajoNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Notification;
 
 class VerificarStockBajoJob implements ShouldQueue
 {
@@ -38,9 +37,9 @@ class VerificarStockBajoJob implements ShouldQueue
 
         // Obtener usuarios que deben recibir notificaciones
         // Puedes ajustar esto según tus roles/permisos
-        $usuarios = User::whereHas('roles', function($q) {
-                $q->whereIn('name', ['admin', 'gerente', 'encargado_inventario']);
-            })
+        $usuarios = User::whereHas('roles', function ($q) {
+            $q->whereIn('name', ['admin', 'gerente', 'encargado_inventario']);
+        })
             ->orWhere('email', 'like', '%admin%') // Fallback si no hay roles
             ->get();
 
@@ -51,7 +50,7 @@ class VerificarStockBajoJob implements ShouldQueue
 
         foreach ($productosStockBajo as $producto) {
             $stockActual = $producto->stockTotal();
-            
+
             // Verificar si ya se envió notificación recientemente (evitar spam)
             $notificacionReciente = \DB::table('notifications')
                 ->where('type', StockBajoNotification::class)
@@ -73,19 +72,19 @@ class VerificarStockBajoJob implements ShouldQueue
             }
 
             // Log para debugging
-            \Log::info("Notificación de stock bajo enviada", [
+            \Log::info('Notificación de stock bajo enviada', [
                 'producto_id' => $producto->id,
                 'producto_nombre' => $producto->nombre,
                 'stock_actual' => $stockActual,
                 'stock_minimo' => $producto->stock_minimo,
-                'usuarios_notificados' => $usuarios->count()
+                'usuarios_notificados' => $usuarios->count(),
             ]);
         }
 
         // Log resumen
-        \Log::info("Verificación de stock bajo completada", [
+        \Log::info('Verificación de stock bajo completada', [
             'productos_stock_bajo' => $productosStockBajo->count(),
-            'usuarios_notificados' => $usuarios->count()
+            'usuarios_notificados' => $usuarios->count(),
         ]);
     }
 
@@ -96,7 +95,7 @@ class VerificarStockBajoJob implements ShouldQueue
     {
         \Log::error('Error en VerificarStockBajoJob', [
             'error' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString()
+            'trace' => $exception->getTraceAsString(),
         ]);
     }
 }

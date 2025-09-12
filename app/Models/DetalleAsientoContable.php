@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ class DetalleAsientoContable extends Model
     ];
 
     protected $casts = [
-        'debe'  => 'decimal:2',
+        'debe' => 'decimal:2',
         'haber' => 'decimal:2',
     ];
 

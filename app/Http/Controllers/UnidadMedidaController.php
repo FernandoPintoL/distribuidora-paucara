@@ -14,8 +14,8 @@ class UnidadMedidaController extends Controller
     {
         $q = $request->string('q');
         $items = UnidadMedida::query()
-            ->when($q, fn($qq) => $qq->where('nombre', 'ilike', "%$q%")->orWhere('codigo', 'ilike', "%$q%"))
-            ->orderBy('id','desc')
+            ->when($q, fn ($qq) => $qq->where('nombre', 'ilike', "%$q%")->orWhere('codigo', 'ilike', "%$q%"))
+            ->orderBy('id', 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -35,12 +35,13 @@ class UnidadMedidaController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'codigo' => ['required','string','max:10','unique:unidades_medida,codigo'],
-            'nombre' => ['required','string','max:255'],
+            'codigo' => ['required', 'string', 'max:10', 'unique:unidades_medida,codigo'],
+            'nombre' => ['required', 'string', 'max:255'],
             'activo' => ['boolean'],
         ]);
         $data['activo'] = $data['activo'] ?? true;
         UnidadMedida::create($data);
+
         return redirect()->route('unidades.index')->with('success', 'Unidad creada');
     }
 
@@ -54,17 +55,19 @@ class UnidadMedidaController extends Controller
     public function update(Request $request, UnidadMedida $unidad): RedirectResponse
     {
         $data = $request->validate([
-            'codigo' => ['required','string','max:10','unique:unidades_medida,codigo,'.$unidad->id],
-            'nombre' => ['required','string','max:255'],
+            'codigo' => ['required', 'string', 'max:10', 'unique:unidades_medida,codigo,'.$unidad->id],
+            'nombre' => ['required', 'string', 'max:255'],
             'activo' => ['boolean'],
         ]);
         $unidad->update($data);
+
         return redirect()->route('unidades.index')->with('success', 'Unidad actualizada');
     }
 
     public function destroy(UnidadMedida $unidad): RedirectResponse
     {
         $unidad->delete();
+
         return redirect()->route('unidades.index')->with('success', 'Unidad eliminada');
     }
 }

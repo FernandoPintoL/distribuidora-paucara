@@ -115,6 +115,41 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
     searchableFields: ['nombre', 'razon_social', 'nit', 'email', 'telefono'],
     searchPlaceholder: 'Buscar clientes...',
 
-    // Index filters
+    // Modern Index filters configuration
+    indexFilters: {
+        filters: [
+            {
+                key: 'activo',
+                label: 'Estado',
+                type: 'boolean',
+                placeholder: 'Todos los estados',
+                width: 'sm'
+            },
+            {
+                key: 'tipo_documento',
+                label: 'Tipo de documento',
+                type: 'select',
+                placeholder: 'Todos los tipos',
+                options: [
+                    { value: 'ci', label: 'Cédula de Identidad' },
+                    { value: 'nit', label: 'NIT' },
+                    { value: 'pasaporte', label: 'Pasaporte' },
+                    { value: 'ruc', label: 'RUC' }
+                ],
+                width: 'md'
+            }
+        ],
+        sortOptions: [
+            { value: 'id', label: 'ID' },
+            { value: 'nombre', label: 'Nombre' },
+            { value: 'razon_social', label: 'Razón Social' },
+            { value: 'created_at', label: 'Fecha registro' },
+            { value: 'updated_at', label: 'Última actualización' }
+        ],
+        defaultSort: { field: 'nombre', direction: 'asc' },
+        layout: 'grid'
+    },
+
+    // Legacy support (deprecated)
     showIndexFilters: true,
 };

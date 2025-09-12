@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,9 +21,9 @@ class Moneda extends Model
     ];
 
     protected $casts = [
-        'tasa_cambio'    => 'decimal:6',
+        'tasa_cambio' => 'decimal:6',
         'es_moneda_base' => 'boolean',
-        'activo'         => 'boolean',
+        'activo' => 'boolean',
     ];
 
     // Scopes
@@ -107,6 +108,6 @@ class Moneda extends Model
 
     public function formatMonto($monto, $decimales = 2)
     {
-        return $this->simbolo . ' ' . number_format($monto, $decimales, ',', '.');
+        return $this->simbolo.' '.number_format($monto, $decimales, ',', '.');
     }
 }

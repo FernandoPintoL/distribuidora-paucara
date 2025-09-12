@@ -53,6 +53,27 @@ export const unidadesConfig: ModuleConfig<UnidadMedida, UnidadMedidaFormData> = 
   ],
 
   // Search configuration
-  searchableFields: ['codigo', 'nombre', 'abreviatura'],
+  searchableFields: ['codigo', 'nombre'],
   searchPlaceholder: 'Buscar unidades...',
+
+  // Modern Index filters configuration
+  indexFilters: {
+    filters: [
+      {
+        key: 'activo',
+        label: 'Estado',
+        type: 'boolean',
+        placeholder: 'Todos los estados',
+        width: 'sm'
+      }
+    ],
+    sortOptions: [
+      { value: 'id', label: 'ID' },
+      { value: 'codigo', label: 'Código' },
+      { value: 'nombre', label: 'Nombre' },
+      { value: 'created_at', label: 'Fecha creación' }
+    ],
+    defaultSort: { field: 'codigo', direction: 'asc' },
+    layout: 'inline'
+  },
 };

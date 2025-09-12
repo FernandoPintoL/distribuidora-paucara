@@ -12,7 +12,7 @@ class ImagenProducto extends Model
     protected $table = 'imagenes_producto';
 
     protected $fillable = [
-        'producto_id','url','es_principal','orden'
+        'producto_id', 'url', 'es_principal', 'orden',
     ];
 
     protected $casts = [
@@ -20,5 +20,8 @@ class ImagenProducto extends Model
         'orden' => 'integer',
     ];
 
-    public function producto(){ return $this->belongsTo(Producto::class, 'producto_id'); }
+    public function producto()
+    {
+        return $this->belongsTo(Producto::class, 'producto_id');
+    }
 }

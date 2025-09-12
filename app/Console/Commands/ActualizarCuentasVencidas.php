@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\CuentaPorPagar;
@@ -53,7 +54,7 @@ class ActualizarCuentasVencidas extends Command
 
                     if ($cuenta->estado !== $nuevoEstado || $cuenta->dias_vencido !== $diasVencido) {
                         $cuenta->update([
-                            'estado'       => $nuevoEstado,
+                            'estado' => $nuevoEstado,
                             'dias_vencido' => $diasVencido,
                         ]);
                         $cuentasActualizadas++;
@@ -62,6 +63,7 @@ class ActualizarCuentasVencidas extends Command
             });
 
         $this->info("Se actualizaron {$cuentasActualizadas} cuentas por pagar.");
+
         return 0;
     }
 }

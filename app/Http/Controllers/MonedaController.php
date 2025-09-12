@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Moneda;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class MonedaController extends Controller
 {
@@ -18,8 +18,8 @@ class MonedaController extends Controller
         if ($q) {
             $query->where(function ($subQuery) use ($q) {
                 $subQuery->where('nombre', 'ilike', "%{$q}%")
-                        ->orWhere('codigo', 'ilike', "%{$q}%")
-                        ->orWhere('simbolo', 'ilike', "%{$q}%");
+                    ->orWhere('codigo', 'ilike', "%{$q}%")
+                    ->orWhere('simbolo', 'ilike', "%{$q}%");
             });
         }
 
@@ -46,7 +46,7 @@ class MonedaController extends Controller
     public function create()
     {
         return Inertia::render('monedas/create', [
-            'moneda' => new Moneda()
+            'moneda' => new Moneda,
         ]);
     }
 
@@ -58,7 +58,7 @@ class MonedaController extends Controller
             'simbolo' => 'required|string|max:5',
             'tasa_cambio' => 'required|numeric|min:0.000001',
             'es_moneda_base' => 'boolean',
-            'activo' => 'boolean'
+            'activo' => 'boolean',
         ]);
 
         // Convertir código a mayúsculas
@@ -67,20 +67,20 @@ class MonedaController extends Controller
         $moneda = Moneda::create($validated);
 
         return redirect()->route('monedas.index')
-                        ->with('success', 'Moneda creada exitosamente.');
+            ->with('success', 'Moneda creada exitosamente.');
     }
 
     public function show(Moneda $moneda)
     {
         return Inertia::render('monedas/show', [
-            'moneda' => $moneda
+            'moneda' => $moneda,
         ]);
     }
 
     public function edit(Moneda $moneda)
     {
         return Inertia::render('monedas/edit', [
-            'moneda' => $moneda
+            'moneda' => $moneda,
         ]);
     }
 
@@ -92,7 +92,7 @@ class MonedaController extends Controller
             'simbolo' => 'required|string|max:5',
             'tasa_cambio' => 'required|numeric|min:0.000001',
             'es_moneda_base' => 'boolean',
-            'activo' => 'boolean'
+            'activo' => 'boolean',
         ]);
 
         // Convertir código a mayúsculas
@@ -101,7 +101,7 @@ class MonedaController extends Controller
         $moneda->update($validated);
 
         return redirect()->route('monedas.index')
-                        ->with('success', 'Moneda actualizada exitosamente.');
+            ->with('success', 'Moneda actualizada exitosamente.');
     }
 
     public function destroy(Moneda $moneda)
@@ -119,7 +119,7 @@ class MonedaController extends Controller
         $moneda->delete();
 
         return redirect()->route('monedas.index')
-                        ->with('success', 'Moneda eliminada exitosamente.');
+            ->with('success', 'Moneda eliminada exitosamente.');
     }
 
     // Métodos API adicionales
@@ -135,7 +135,7 @@ class MonedaController extends Controller
         $validated = $request->validate([
             'monto' => 'required|numeric|min:0',
             'moneda_origen_id' => 'required|exists:monedas,id',
-            'moneda_destino_id' => 'required|exists:monedas,id'
+            'moneda_destino_id' => 'required|exists:monedas,id',
         ]);
 
         $monedaOrigen = Moneda::find($validated['moneda_origen_id']);
@@ -154,13 +154,13 @@ class MonedaController extends Controller
                 'moneda_origen' => [
                     'nombre' => $monedaOrigen->nombre,
                     'codigo' => $monedaOrigen->codigo,
-                    'simbolo' => $monedaOrigen->simbolo
+                    'simbolo' => $monedaOrigen->simbolo,
                 ],
                 'moneda_destino' => [
                     'nombre' => $monedaDestino->nombre,
                     'codigo' => $monedaDestino->codigo,
-                    'simbolo' => $monedaDestino->simbolo
-                ]
+                    'simbolo' => $monedaDestino->simbolo,
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
@@ -169,23 +169,23 @@ class MonedaController extends Controller
 
     public function toggleActivo(Moneda $moneda)
     {
-        $moneda->update(['activo' => !$moneda->activo]);
+        $moneda->update(['activo' => ! $moneda->activo]);
 
         $status = $moneda->activo ? 'activada' : 'desactivada';
 
         return redirect()->back()
-                        ->with('success', "Moneda {$status} exitosamente.");
+            ->with('success', "Moneda {$status} exitosamente.");
     }
 
     public function establecerBase(Moneda $moneda)
     {
-        if (!$moneda->activo) {
+        if (! $moneda->activo) {
             return back()->withErrors(['error' => 'No se puede establecer como base una moneda inactiva.']);
         }
 
         $moneda->update(['es_moneda_base' => true]);
 
         return redirect()->back()
-                        ->with('success', 'Moneda establecida como base exitosamente.');
+            ->with('success', 'Moneda establecida como base exitosamente.');
     }
 }

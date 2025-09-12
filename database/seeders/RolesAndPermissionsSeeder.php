@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -42,11 +43,11 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Create roles
-        $admin      = Role::findOrCreate('Admin');
-        $vendedor   = Role::findOrCreate('Vendedor');
-        $compras    = Role::findOrCreate('Compras');
+        $admin = Role::findOrCreate('Admin');
+        $vendedor = Role::findOrCreate('Vendedor');
+        $compras = Role::findOrCreate('Compras');
         $inventario = Role::findOrCreate('Inventario');
-        $reportes   = Role::findOrCreate('Reportes');
+        $reportes = Role::findOrCreate('Reportes');
 
         // Assign permissions to roles
         $admin->givePermissionTo(Permission::all());

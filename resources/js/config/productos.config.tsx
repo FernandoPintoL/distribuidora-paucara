@@ -125,7 +125,53 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
   searchableFields: ['nombre', 'codigo_barras', 'descripcion'],
   searchPlaceholder: 'Buscar productos...',
 
-  // Index filters (specific for productos)
+  // Modern Index filters configuration
+  indexFilters: {
+    filters: [
+      {
+        key: 'categoria_id',
+        label: 'Categoría',
+        type: 'select',
+        placeholder: 'Todas las categorías',
+        extraDataKey: 'categorias',
+        width: 'md'
+      },
+      {
+        key: 'marca_id',
+        label: 'Marca',
+        type: 'select',
+        placeholder: 'Todas las marcas',
+        extraDataKey: 'marcas',
+        width: 'md'
+      },
+      {
+        key: 'activo',
+        label: 'Estado',
+        type: 'boolean',
+        placeholder: 'Todos los estados',
+        width: 'sm'
+      },
+      {
+        key: 'stock_minimo',
+        label: 'Stock mínimo',
+        type: 'number',
+        placeholder: 'Cantidad mínima',
+        width: 'sm'
+      }
+    ],
+    sortOptions: [
+      { value: 'id', label: 'ID' },
+      { value: 'nombre', label: 'Nombre' },
+      { value: 'precio_base', label: 'Precio' },
+      { value: 'stock_total', label: 'Stock' },
+      { value: 'created_at', label: 'Fecha creación' },
+      { value: 'updated_at', label: 'Última actualización' }
+    ],
+    defaultSort: { field: 'nombre', direction: 'asc' },
+    layout: 'grid'
+  },
+
+  // Legacy support (deprecated)
   showIndexFilters: true,
 
   // Enhanced visualization
@@ -162,9 +208,8 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
             </div>
             <div>
               <span className="block text-[10px] uppercase tracking-wide">Stock</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
-                (p.stock_total ?? 0) === 0 ? 'bg-red-100 text-red-700' : (p.stock_total ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
-              }`}>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${(p.stock_total ?? 0) === 0 ? 'bg-red-100 text-red-700' : (p.stock_total ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                }`}>
                 {(p.stock_total ?? 0)}
               </span>
             </div>

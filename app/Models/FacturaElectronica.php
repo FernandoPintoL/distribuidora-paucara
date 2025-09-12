@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,15 +38,15 @@ class FacturaElectronica extends Model
     ];
 
     protected $casts = [
-        'fecha_emision'                 => 'date',
-        'hora_emision'                  => 'datetime:H:i:s',
-        'monto_total'                   => 'decimal:2',
-        'monto_total_sujeto_iva'        => 'decimal:2',
+        'fecha_emision' => 'date',
+        'hora_emision' => 'datetime:H:i:s',
+        'monto_total' => 'decimal:2',
+        'monto_total_sujeto_iva' => 'decimal:2',
         'monto_total_moneda_extranjera' => 'decimal:2',
-        'tipo_cambio'                   => 'decimal:4',
-        'codigo_moneda'                 => 'integer',
-        'fecha_envio_sin'               => 'datetime',
-        'fecha_procesamiento_sin'       => 'datetime',
+        'tipo_cambio' => 'decimal:4',
+        'codigo_moneda' => 'integer',
+        'fecha_envio_sin' => 'datetime',
+        'fecha_procesamiento_sin' => 'datetime',
     ];
 
     /**

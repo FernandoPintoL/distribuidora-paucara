@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature;
 
 use App\Models\User;
@@ -19,7 +20,7 @@ class VentasStockApiDebugTest extends TestCase
         try {
             $this->user = User::factory()->create();
         } catch (\Exception $e) {
-            $this->user     = new User();
+            $this->user = new User;
             $this->user->id = 1;
         }
     }
@@ -28,12 +29,12 @@ class VentasStockApiDebugTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->postJson('/api/ventas/verificar-stock', [
-                'productos'  => [],
+                'productos' => [],
                 'almacen_id' => 1,
             ]);
 
-        echo "\nVerificar Stock - Status: " . $response->status();
-        echo "\nResponse: " . $response->getContent();
+        echo "\nVerificar Stock - Status: ".$response->status();
+        echo "\nResponse: ".$response->getContent();
 
         // Solo verificar que no sea 404 (ruta no encontrada)
         $this->assertNotEquals(404, $response->status());
@@ -44,8 +45,8 @@ class VentasStockApiDebugTest extends TestCase
         $response = $this->actingAs($this->user)
             ->getJson('/api/ventas/1/stock');
 
-        echo "\nObtener Stock Producto - Status: " . $response->status();
-        echo "\nResponse: " . $response->getContent();
+        echo "\nObtener Stock Producto - Status: ".$response->status();
+        echo "\nResponse: ".$response->getContent();
 
         // Solo verificar que no sea 404 (ruta no encontrada)
         $this->assertNotEquals(404, $response->status());
@@ -56,8 +57,8 @@ class VentasStockApiDebugTest extends TestCase
         $response = $this->actingAs($this->user)
             ->getJson('/api/ventas/productos/stock-bajo');
 
-        echo "\nProductos Stock Bajo - Status: " . $response->status();
-        echo "\nResponse: " . $response->getContent();
+        echo "\nProductos Stock Bajo - Status: ".$response->status();
+        echo "\nResponse: ".$response->getContent();
 
         // Solo verificar que no sea 404 (ruta no encontrada)
         $this->assertNotEquals(404, $response->status());

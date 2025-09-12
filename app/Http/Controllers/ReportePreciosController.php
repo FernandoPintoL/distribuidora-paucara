@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
 use App\Models\PrecioProducto;
+use App\Models\Producto;
 use App\Models\TipoPrecio;
-use App\Models\HistorialPrecio;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\JsonResponse;
-use Carbon\Carbon;
 
 class ReportePreciosController extends Controller
 {
@@ -29,25 +27,25 @@ class ReportePreciosController extends Controller
             ->where('activo', true);
 
         // Aplicar filtros
-        if (!empty($filtros['fecha_desde'])) {
+        if (! empty($filtros['fecha_desde'])) {
             $query->whereDate('fecha_ultima_actualizacion', '>=', $filtros['fecha_desde']);
         }
 
-        if (!empty($filtros['fecha_hasta'])) {
+        if (! empty($filtros['fecha_hasta'])) {
             $query->whereDate('fecha_ultima_actualizacion', '<=', $filtros['fecha_hasta']);
         }
 
-        if (!empty($filtros['tipo_precio_id'])) {
+        if (! empty($filtros['tipo_precio_id'])) {
             $query->where('tipo_precio_id', $filtros['tipo_precio_id']);
         }
 
-        if (!empty($filtros['categoria_id'])) {
-            $query->whereHas('producto', function($q) use ($filtros) {
+        if (! empty($filtros['categoria_id'])) {
+            $query->whereHas('producto', function ($q) use ($filtros) {
                 $q->where('categoria_id', $filtros['categoria_id']);
             });
         }
 
-        if (!empty($filtros['producto_id'])) {
+        if (! empty($filtros['producto_id'])) {
             $query->where('producto_id', $filtros['producto_id']);
         }
 
@@ -77,7 +75,7 @@ class ReportePreciosController extends Controller
         // Obtener precio de costo base
         $tipoCosto = TipoPrecio::precioBase()->first();
 
-        if (!$tipoCosto) {
+        if (! $tipoCosto) {
             return Inertia::render('reportes/ganancias/index', [
                 'error' => 'No se encontró un tipo de precio base (costo) configurado.',
                 'ganancias' => collect([]),
@@ -91,30 +89,30 @@ class ReportePreciosController extends Controller
             ->with(['producto.categoria', 'tipoPrecio'])
             ->where('activo', true)
             ->where('tipo_precio_id', '!=', $tipoCosto->id)
-            ->whereHas('tipoPrecio', function($q) {
+            ->whereHas('tipoPrecio', function ($q) {
                 $q->where('es_ganancia', true);
             });
 
         // Aplicar filtros
-        if (!empty($filtros['fecha_desde'])) {
+        if (! empty($filtros['fecha_desde'])) {
             $gananciasQuery->whereDate('fecha_ultima_actualizacion', '>=', $filtros['fecha_desde']);
         }
 
-        if (!empty($filtros['fecha_hasta'])) {
+        if (! empty($filtros['fecha_hasta'])) {
             $gananciasQuery->whereDate('fecha_ultima_actualizacion', '<=', $filtros['fecha_hasta']);
         }
 
-        if (!empty($filtros['tipo_precio_id'])) {
+        if (! empty($filtros['tipo_precio_id'])) {
             $gananciasQuery->where('tipo_precio_id', $filtros['tipo_precio_id']);
         }
 
-        if (!empty($filtros['categoria_id'])) {
-            $gananciasQuery->whereHas('producto', function($q) use ($filtros) {
+        if (! empty($filtros['categoria_id'])) {
+            $gananciasQuery->whereHas('producto', function ($q) use ($filtros) {
                 $q->where('categoria_id', $filtros['categoria_id']);
             });
         }
 
-        $ganancias = $gananciasQuery->get()->map(function($precio) use ($tipoCosto) {
+        $ganancias = $gananciasQuery->get()->map(function ($precio) use ($tipoCosto) {
             $precioCosto = PrecioProducto::where('producto_id', $precio->producto_id)
                 ->where('tipo_precio_id', $tipoCosto->id)
                 ->where('activo', true)
@@ -172,25 +170,25 @@ class ReportePreciosController extends Controller
             ->where('activo', true);
 
         // Aplicar mismos filtros que en index
-        if (!empty($filtros['fecha_desde'])) {
+        if (! empty($filtros['fecha_desde'])) {
             $precios->whereDate('fecha_ultima_actualizacion', '>=', $filtros['fecha_desde']);
         }
 
-        if (!empty($filtros['fecha_hasta'])) {
+        if (! empty($filtros['fecha_hasta'])) {
             $precios->whereDate('fecha_ultima_actualizacion', '<=', $filtros['fecha_hasta']);
         }
 
-        if (!empty($filtros['tipo_precio_id'])) {
+        if (! empty($filtros['tipo_precio_id'])) {
             $precios->where('tipo_precio_id', $filtros['tipo_precio_id']);
         }
 
-        if (!empty($filtros['categoria_id'])) {
-            $precios->whereHas('producto', function($q) use ($filtros) {
+        if (! empty($filtros['categoria_id'])) {
+            $precios->whereHas('producto', function ($q) use ($filtros) {
                 $q->where('categoria_id', $filtros['categoria_id']);
             });
         }
 
-        $datosExport = $precios->get()->map(function($precio) {
+        $datosExport = $precios->get()->map(function ($precio) {
             return [
                 'Producto' => $precio->producto->nombre,
                 'Categoría' => $precio->producto->categoria?->nombre ?? 'Sin categoría',
@@ -203,7 +201,7 @@ class ReportePreciosController extends Controller
 
         return response()->json([
             'data' => $datosExport,
-            'filename' => 'reporte_precios_' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+            'filename' => 'reporte_precios_'.now()->format('Y-m-d_H-i-s').'.xlsx',
         ]);
     }
 
@@ -219,7 +217,7 @@ class ReportePreciosController extends Controller
         // Mismo cálculo que en ganancias() pero para export
         $tipoCosto = TipoPrecio::precioBase()->first();
 
-        if (!$tipoCosto) {
+        if (! $tipoCosto) {
             return response()->json(['error' => 'No se encontró tipo de precio base'], 400);
         }
 
@@ -227,30 +225,30 @@ class ReportePreciosController extends Controller
             ->with(['producto.categoria', 'tipoPrecio'])
             ->where('activo', true)
             ->where('tipo_precio_id', '!=', $tipoCosto->id)
-            ->whereHas('tipoPrecio', function($q) {
+            ->whereHas('tipoPrecio', function ($q) {
                 $q->where('es_ganancia', true);
             });
 
         // Aplicar filtros...
-        if (!empty($filtros['fecha_desde'])) {
+        if (! empty($filtros['fecha_desde'])) {
             $gananciasQuery->whereDate('fecha_ultima_actualizacion', '>=', $filtros['fecha_desde']);
         }
 
-        if (!empty($filtros['fecha_hasta'])) {
+        if (! empty($filtros['fecha_hasta'])) {
             $gananciasQuery->whereDate('fecha_ultima_actualizacion', '<=', $filtros['fecha_hasta']);
         }
 
-        if (!empty($filtros['tipo_precio_id'])) {
+        if (! empty($filtros['tipo_precio_id'])) {
             $gananciasQuery->where('tipo_precio_id', $filtros['tipo_precio_id']);
         }
 
-        if (!empty($filtros['categoria_id'])) {
-            $gananciasQuery->whereHas('producto', function($q) use ($filtros) {
+        if (! empty($filtros['categoria_id'])) {
+            $gananciasQuery->whereHas('producto', function ($q) use ($filtros) {
                 $q->where('categoria_id', $filtros['categoria_id']);
             });
         }
 
-        $datosExport = $gananciasQuery->get()->map(function($precio) use ($tipoCosto) {
+        $datosExport = $gananciasQuery->get()->map(function ($precio) use ($tipoCosto) {
             $precioCosto = PrecioProducto::where('producto_id', $precio->producto_id)
                 ->where('tipo_precio_id', $tipoCosto->id)
                 ->where('activo', true)
@@ -271,14 +269,14 @@ class ReportePreciosController extends Controller
                 'Precio Costo' => number_format($precioCosto?->precio ?? 0, 2),
                 'Precio Venta' => number_format($precio->precio, 2),
                 'Ganancia' => number_format($ganancia, 2),
-                'Porcentaje Ganancia' => number_format($porcentajeGanancia, 2) . '%',
+                'Porcentaje Ganancia' => number_format($porcentajeGanancia, 2).'%',
                 'Última Actualización' => $precio->fecha_ultima_actualizacion?->format('d/m/Y H:i'),
             ];
         });
 
         return response()->json([
             'data' => $datosExport,
-            'filename' => 'reporte_ganancias_' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+            'filename' => 'reporte_ganancias_'.now()->format('Y-m-d_H-i-s').'.xlsx',
         ]);
     }
 
@@ -287,20 +285,20 @@ class ReportePreciosController extends Controller
         $query = PrecioProducto::query()->where('activo', true);
 
         // Aplicar mismos filtros
-        if (!empty($filtros['fecha_desde'])) {
+        if (! empty($filtros['fecha_desde'])) {
             $query->whereDate('fecha_ultima_actualizacion', '>=', $filtros['fecha_desde']);
         }
 
-        if (!empty($filtros['fecha_hasta'])) {
+        if (! empty($filtros['fecha_hasta'])) {
             $query->whereDate('fecha_ultima_actualizacion', '<=', $filtros['fecha_hasta']);
         }
 
-        if (!empty($filtros['tipo_precio_id'])) {
+        if (! empty($filtros['tipo_precio_id'])) {
             $query->where('tipo_precio_id', $filtros['tipo_precio_id']);
         }
 
-        if (!empty($filtros['categoria_id'])) {
-            $query->whereHas('producto', function($q) use ($filtros) {
+        if (! empty($filtros['categoria_id'])) {
+            $query->whereHas('producto', function ($q) use ($filtros) {
                 $q->where('categoria_id', $filtros['categoria_id']);
             });
         }

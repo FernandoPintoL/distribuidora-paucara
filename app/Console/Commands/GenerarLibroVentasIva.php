@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\LibroVentasIva;
@@ -31,8 +32,8 @@ class GenerarLibroVentasIva extends Command
      */
     public function handle()
     {
-        $mes     = $this->argument('mes') ?? now()->month;
-        $anio    = $this->argument('anio') ?? now()->year;
+        $mes = $this->argument('mes') ?? now()->month;
+        $anio = $this->argument('anio') ?? now()->year;
         $formato = $this->option('formato');
 
         $this->info("📚 Generando Libro de Ventas IVA - {$mes}/{$anio}");
@@ -47,6 +48,7 @@ class GenerarLibroVentasIva extends Command
 
         if ($ventas->isEmpty()) {
             $this->warn('⚠️  No se encontraron ventas con IVA para el período especificado');
+
             return Command::SUCCESS;
         }
 
@@ -71,11 +73,13 @@ class GenerarLibroVentasIva extends Command
     {
         if ($mes < 1 || $mes > 12) {
             $this->error('❌ El mes debe estar entre 1 y 12');
+
             return false;
         }
 
         if ($anio < 2020 || $anio > now()->year + 1) {
             $this->error('❌ Año inválido');
+
             return false;
         }
 
@@ -88,7 +92,7 @@ class GenerarLibroVentasIva extends Command
     private function obtenerVentasDelPeriodo($mes, $anio)
     {
         $fechaInicio = Carbon::create($anio, $mes, 1)->startOfMonth();
-        $fechaFin    = Carbon::create($anio, $mes, 1)->endOfMonth();
+        $fechaFin = Carbon::create($anio, $mes, 1)->endOfMonth();
 
         return LibroVentasIva::with(['venta.cliente', 'tipoDocumento'])
             ->whereBetween('fecha', [$fechaInicio, $fechaFin])
@@ -104,15 +108,15 @@ class GenerarLibroVentasIva extends Command
     private function generarResumen($ventas): array
     {
         return [
-            'total_ventas'       => $ventas->count(),
-            'monto_total'        => $ventas->sum('importe_total'),
-            'monto_gravado'      => $ventas->sum('importe_base_cf'),
-            'monto_no_gravado'   => $ventas->sum('descuentos'),
-            'credito_fiscal'     => $ventas->sum('credito_fiscal'),
+            'total_ventas' => $ventas->count(),
+            'monto_total' => $ventas->sum('importe_total'),
+            'monto_gravado' => $ventas->sum('importe_base_cf'),
+            'monto_no_gravado' => $ventas->sum('descuentos'),
+            'credito_fiscal' => $ventas->sum('credito_fiscal'),
             'por_tipo_documento' => $ventas->groupBy('tipoDocumento.codigo')->map(function ($group) {
                 return [
-                    'cantidad'       => $group->count(),
-                    'monto_total'    => $group->sum('importe_total'),
+                    'cantidad' => $group->count(),
+                    'monto_total' => $group->sum('importe_total'),
                     'credito_fiscal' => $group->sum('credito_fiscal'),
                 ];
             })->toArray(),
@@ -128,16 +132,16 @@ class GenerarLibroVentasIva extends Command
 
         $this->newLine();
         $this->info("📈 RESUMEN DEL LIBRO DE VENTAS IVA - {$nombreMes} {$anio}");
-        $this->info('=' . str_repeat('=', 60));
+        $this->info('='.str_repeat('=', 60));
 
         $this->table(
             ['Concepto', 'Valor'],
             [
                 ['Total de ventas', number_format($resumen['total_ventas'])],
-                ['Monto total', 'Bs. ' . number_format($resumen['monto_total'], 2)],
-                ['Monto gravado (IVA)', 'Bs. ' . number_format($resumen['monto_gravado'], 2)],
-                ['Monto no gravado', 'Bs. ' . number_format($resumen['monto_no_gravado'], 2)],
-                ['Crédito fiscal (IVA)', 'Bs. ' . number_format($resumen['credito_fiscal'], 2)],
+                ['Monto total', 'Bs. '.number_format($resumen['monto_total'], 2)],
+                ['Monto gravado (IVA)', 'Bs. '.number_format($resumen['monto_gravado'], 2)],
+                ['Monto no gravado', 'Bs. '.number_format($resumen['monto_no_gravado'], 2)],
+                ['Crédito fiscal (IVA)', 'Bs. '.number_format($resumen['credito_fiscal'], 2)],
             ]
         );
 
@@ -150,8 +154,8 @@ class GenerarLibroVentasIva extends Command
                 $filas[] = [
                     $tipo,
                     number_format($datos['cantidad']),
-                    'Bs. ' . number_format($datos['monto_total'], 2),
-                    'Bs. ' . number_format($datos['credito_fiscal'], 2),
+                    'Bs. '.number_format($datos['monto_total'], 2),
+                    'Bs. '.number_format($datos['credito_fiscal'], 2),
                 ];
             }
 
@@ -167,7 +171,7 @@ class GenerarLibroVentasIva extends Command
      */
     private function exportarReporte($ventas, array $resumen, $mes, $anio, string $formato): void
     {
-        $nombreMes     = Carbon::create($anio, $mes, 1)->format('m');
+        $nombreMes = Carbon::create($anio, $mes, 1)->format('m');
         $nombreArchivo = "libro_ventas_iva_{$anio}_{$nombreMes}";
 
         switch ($formato) {
@@ -182,6 +186,7 @@ class GenerarLibroVentasIva extends Command
                 break;
             default:
                 $this->error("❌ Formato '{$formato}' no soportado");
+
                 return;
         }
     }

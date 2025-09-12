@@ -38,10 +38,12 @@ export interface ModuleConfig<T extends BaseEntity, F extends BaseFormData> {
   enableCardView?: boolean; // Permite alternar entre tabla y tarjetas
   cardRenderer?: (entity: T, actions: { onEdit: (e: T) => void; onDelete: (e: T) => void }) => React.ReactNode; // Renderiza una tarjeta para el entity
 
-  // Optional: show model-specific index filters (e.g., categoria/marca for productos)
-  showIndexFilters?: boolean;
+  // Modern index filters configuration
+  indexFilters?: IndexFiltersConfig;
 
-  // Optional: custom index filter renderer per module
+  // Legacy: show model-specific index filters (deprecated)
+  showIndexFilters?: boolean;
+  // Legacy: custom index filter renderer per module (deprecated)
   indexFilterRenderer?: IndexFilterRenderer;
 }
 
@@ -79,6 +81,32 @@ export interface FormField<F extends BaseFormData> {
     disabled?: boolean;
     field: FormField<F>;
   }) => React.ReactNode;
+}
+
+// Filter field configuration for dynamic filters
+export interface FilterField {
+  key: string;
+  label: string;
+  type: 'text' | 'select' | 'boolean' | 'date' | 'number' | 'range' | 'multiselect';
+  placeholder?: string;
+  options?: { value: string | number; label: string }[];
+  defaultValue?: any;
+  extraDataKey?: string; // For options coming from extraData (e.g., 'categorias', 'marcas')
+  width?: 'sm' | 'md' | 'lg' | 'full'; // Column width in grid
+}
+
+// Sort configuration
+export interface SortOption {
+  value: string;
+  label: string;
+}
+
+// Index filters configuration
+export interface IndexFiltersConfig {
+  filters: FilterField[];
+  sortOptions: SortOption[];
+  defaultSort?: { field: string; direction: 'asc' | 'desc' };
+  layout?: 'grid' | 'inline'; // Layout style
 }
 
 // Custom index filter renderer type
