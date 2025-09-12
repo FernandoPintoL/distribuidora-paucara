@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -9,19 +10,29 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call(MonedaSeeder::class);
-        $this->call(EstadoDocumentoSeeder::class);
-        // Seed core catalogs
         $this->call(CoreCatalogSeeder::class);
+        $this->call(CajaSeeder::class);
+        $this->call(ClienteTestSeeder::class);
+        $this->call(CuentaContableSeeder::class);
+        $this->call(EmpleadoRolesSeeder::class);
+        $this->call(EstadoDocumentoSeeder::class);
+        $this->call(ImpuestoSeeder::class);
+        $this->call(ModuloSidebarSeeder::class);
+        $this->call(MonedaSeeder::class);
+        $this->call(ProformaAppExternaSeeder::class);
+        $this->call(TipoDocumentoSeeder::class);
+        $this->call(TipoOperacionCajaSeeder::class);
+        $this->call(VehiculoSeeder::class);
+        // Seed core catalogs
         // Seed roles and permissions and assign to admin
         $this->call(RolesAndPermissionsSeeder::class);
         // Create a default admin user if not exists
         $admin = User::query()->where('email', 'admin@paucara.test')->first();
         if (! $admin) {
             $admin = User::factory()->create([
-                'name'     => 'Administrador',
+                'name' => 'Administrador',
                 'usernick' => 'admin',
-                'email'    => 'admin@paucara.test',
+                'email' => 'admin@paucara.test',
                 'password' => Hash::make('password'),
             ]);
         } else {

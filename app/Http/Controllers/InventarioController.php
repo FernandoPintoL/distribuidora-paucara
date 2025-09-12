@@ -1,15 +1,21 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Models\Almacen;
 use App\Models\Categoria;
+use App\Models\Chofer;
+use App\Models\DetalleTransferenciaInventario;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
+use App\Models\TransferenciaInventario;
+use App\Models\Vehiculo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,10 +28,10 @@ class InventarioController extends Controller
     public function dashboard(): Response
     {
         // Estadísticas generales
-        $totalProductos          = Producto::where('activo', true)->count();
-        $productosStockBajo      = Producto::where('activo', true)->stockBajo()->count();
+        $totalProductos = Producto::where('activo', true)->count();
+        $productosStockBajo = Producto::where('activo', true)->stockBajo()->count();
         $productosProximosVencer = Producto::where('activo', true)->proximosVencer(30)->count();
-        $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
+        $productosVencidos = Producto::where('activo', true)->vencidos()->count();
 
         // Stock total por almacén
         $stockPorAlmacen = Almacen::withSum('stockProductos', 'cantidad')
@@ -33,7 +39,7 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($almacen) {
                 return [
-                    'nombre'      => $almacen->nombre,
+                    'nombre' => $almacen->nombre,
                     'stock_total' => $almacen->stock_productos_sum_cantidad ?? 0,
                 ];
             });
@@ -60,13 +66,13 @@ class InventarioController extends Controller
             ->get();
 
         return Inertia::render('inventario/index', [
-            'estadisticas'          => [
-                'total_productos'           => $totalProductos,
-                'productos_stock_bajo'      => $productosStockBajo,
+            'estadisticas' => [
+                'total_productos' => $totalProductos,
+                'productos_stock_bajo' => $productosStockBajo,
                 'productos_proximos_vencer' => $productosProximosVencer,
-                'productos_vencidos'        => $productosVencidos,
+                'productos_vencidos' => $productosVencidos,
             ],
-            'stock_por_almacen'     => $stockPorAlmacen,
+            'stock_por_almacen' => $stockPorAlmacen,
             'movimientos_recientes' => $movimientosRecientes,
             'productos_mas_movidos' => $productosMasMovidos,
         ]);
@@ -77,7 +83,7 @@ class InventarioController extends Controller
      */
     public function stockBajo(Request $request): Response
     {
-        $q         = (string) $request->string('q');
+        $q = (string) $request->string('q');
         $almacenId = $request->integer('almacen_id');
 
         // Obtener productos con stock bajo directamente desde StockProducto
@@ -102,20 +108,20 @@ class InventarioController extends Controller
         $productos = $query->get()
             ->map(function ($stock) {
                 return [
-                    'id'                => $stock->id,
-                    'producto'          => [
-                        'id'        => $stock->producto->id,
-                        'nombre'    => $stock->producto->nombre,
+                    'id' => $stock->id,
+                    'producto' => [
+                        'id' => $stock->producto->id,
+                        'nombre' => $stock->producto->nombre,
                         'categoria' => [
                             'nombre' => $stock->producto->categoria->nombre ?? 'Sin categoría',
                         ],
                     ],
-                    'almacen'           => [
-                        'id'     => $stock->almacen->id,
+                    'almacen' => [
+                        'id' => $stock->almacen->id,
                         'nombre' => $stock->almacen->nombre,
                     ],
-                    'stock_actual'      => $stock->cantidad,
-                    'stock_minimo'      => $stock->producto->stock_minimo,
+                    'stock_actual' => $stock->cantidad,
+                    'stock_minimo' => $stock->producto->stock_minimo,
                     'fecha_vencimiento' => $stock->fecha_vencimiento,
                 ];
             });
@@ -125,8 +131,8 @@ class InventarioController extends Controller
         return Inertia::render('inventario/stock-bajo', [
             'productos' => $productos,
             'almacenes' => $almacenes,
-            'filters'   => [
-                'q'          => $q,
+            'filters' => [
+                'q' => $q,
                 'almacen_id' => $almacenId,
             ],
         ]);
@@ -138,7 +144,7 @@ class InventarioController extends Controller
     public function proximosVencer(Request $request): Response
     {
         $diasAnticipacion = $request->integer('dias', 30);
-        $almacenId        = $request->integer('almacen_id');
+        $almacenId = $request->integer('almacen_id');
 
         // Obtener productos próximos a vencer directamente desde StockProducto
         $fechaLimite = now()->addDays($diasAnticipacion);
@@ -160,21 +166,21 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($stock) {
                 return [
-                    'id'                => $stock->id,
-                    'producto'          => [
-                        'id'        => $stock->producto->id,
-                        'nombre'    => $stock->producto->nombre,
+                    'id' => $stock->id,
+                    'producto' => [
+                        'id' => $stock->producto->id,
+                        'nombre' => $stock->producto->nombre,
                         'categoria' => [
                             'nombre' => $stock->producto->categoria->nombre ?? 'Sin categoría',
                         ],
                     ],
-                    'almacen'           => [
-                        'id'     => $stock->almacen->id,
+                    'almacen' => [
+                        'id' => $stock->almacen->id,
                         'nombre' => $stock->almacen->nombre,
                     ],
-                    'stock_actual'      => $stock->cantidad,
+                    'stock_actual' => $stock->cantidad,
                     'fecha_vencimiento' => $stock->fecha_vencimiento,
-                    'dias_para_vencer'  => now()->diffInDays($stock->fecha_vencimiento, false),
+                    'dias_para_vencer' => now()->diffInDays($stock->fecha_vencimiento, false),
                 ];
             });
 
@@ -183,8 +189,8 @@ class InventarioController extends Controller
         return Inertia::render('inventario/proximos-vencer', [
             'productos' => $productos,
             'almacenes' => $almacenes,
-            'filters'   => [
-                'dias'       => $diasAnticipacion,
+            'filters' => [
+                'dias' => $diasAnticipacion,
                 'almacen_id' => $almacenId,
             ],
         ]);
@@ -214,21 +220,21 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($stock) {
                 return [
-                    'id'                => $stock->id,
-                    'producto'          => [
-                        'id'        => $stock->producto->id,
-                        'nombre'    => $stock->producto->nombre,
+                    'id' => $stock->id,
+                    'producto' => [
+                        'id' => $stock->producto->id,
+                        'nombre' => $stock->producto->nombre,
                         'categoria' => [
                             'nombre' => $stock->producto->categoria->nombre ?? 'Sin categoría',
                         ],
                     ],
-                    'almacen'           => [
-                        'id'     => $stock->almacen->id,
+                    'almacen' => [
+                        'id' => $stock->almacen->id,
                         'nombre' => $stock->almacen->nombre,
                     ],
-                    'stock_actual'      => $stock->cantidad,
+                    'stock_actual' => $stock->cantidad,
                     'fecha_vencimiento' => $stock->fecha_vencimiento,
-                    'dias_vencido'      => now()->diffInDays($stock->fecha_vencimiento, false) * -1,
+                    'dias_vencido' => now()->diffInDays($stock->fecha_vencimiento, false) * -1,
                 ];
             });
 
@@ -237,7 +243,7 @@ class InventarioController extends Controller
         return Inertia::render('inventario/vencidos', [
             'productos' => $productos,
             'almacenes' => $almacenes,
-            'filters'   => [
+            'filters' => [
                 'almacen_id' => $almacenId,
             ],
         ]);
@@ -249,10 +255,10 @@ class InventarioController extends Controller
     public function movimientos(Request $request): Response
     {
         $fechaInicio = $request->date('fecha_inicio') ?? now()->subMonth();
-        $fechaFin    = $request->date('fecha_fin') ?? now();
-        $tipo        = $request->filled('tipo') ? $request->string('tipo') : null;
-        $almacenId   = $request->filled('almacen_id') ? $request->integer('almacen_id') : null;
-        $productoId  = $request->filled('producto_id') ? $request->integer('producto_id') : null;
+        $fechaFin = $request->date('fecha_fin') ?? now();
+        $tipo = $request->filled('tipo') ? $request->string('tipo') : null;
+        $almacenId = $request->filled('almacen_id') ? $request->integer('almacen_id') : null;
+        $productoId = $request->filled('producto_id') ? $request->integer('producto_id') : null;
 
         $query = MovimientoInventario::with([
             'stockProducto.producto:id,nombre',
@@ -276,43 +282,43 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($movimiento) {
                 return [
-                    'id'             => $movimiento->id,
-                    'tipo'           => $this->mapearTipoMovimiento($movimiento->tipo),
-                    'motivo'         => $this->obtenerMotivoMovimiento($movimiento->tipo),
-                    'cantidad'       => $movimiento->cantidad,
+                    'id' => $movimiento->id,
+                    'tipo' => $this->mapearTipoMovimiento($movimiento->tipo),
+                    'motivo' => $this->obtenerMotivoMovimiento($movimiento->tipo),
+                    'cantidad' => $movimiento->cantidad,
                     'stock_anterior' => $movimiento->cantidad_anterior,
-                    'stock_nuevo'    => $movimiento->cantidad_posterior,
-                    'fecha'          => $movimiento->fecha->toISOString(),
-                    'usuario'        => [
+                    'stock_nuevo' => $movimiento->cantidad_posterior,
+                    'fecha' => $movimiento->fecha->toISOString(),
+                    'usuario' => [
                         'name' => $movimiento->user->name ?? 'Sistema',
                     ],
-                    'producto'       => [
-                        'nombre'    => $movimiento->stockProducto->producto->nombre,
+                    'producto' => [
+                        'nombre' => $movimiento->stockProducto->producto->nombre,
                         'categoria' => [
                             'nombre' => 'General', // Simplificado por ahora
                         ],
                     ],
-                    'almacen'        => [
+                    'almacen' => [
                         'nombre' => $movimiento->stockProducto->almacen->nombre,
                     ],
-                    'referencia'     => $movimiento->numero_documento,
-                    'observaciones'  => $movimiento->observacion,
+                    'referencia' => $movimiento->numero_documento,
+                    'observaciones' => $movimiento->observacion,
                 ];
             });
 
-        $tipos     = MovimientoInventario::getTipos();
+        $tipos = MovimientoInventario::getTipos();
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/movimientos', [
             'movimientos' => $movimientos,
-            'tipos'       => $tipos,
-            'almacenes'   => $almacenes,
-            'filtros'     => [
+            'tipos' => $tipos,
+            'almacenes' => $almacenes,
+            'filtros' => [
                 'fecha_inicio' => $fechaInicio->toDateString(),
-                'fecha_fin'    => $fechaFin->toDateString(),
-                'tipo'         => $tipo,
-                'almacen_id'   => $almacenId,
-                'producto_id'  => $productoId,
+                'fecha_fin' => $fechaFin->toDateString(),
+                'tipo' => $tipo,
+                'almacen_id' => $almacenId,
+                'producto_id' => $productoId,
             ],
         ]);
     }
@@ -337,6 +343,7 @@ class InventarioController extends Controller
     private function obtenerMotivoMovimiento(string $tipo): string
     {
         $tipos = MovimientoInventario::getTipos();
+
         return $tipos[$tipo] ?? 'Movimiento desconocido';
     }
 
@@ -358,8 +365,8 @@ class InventarioController extends Controller
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/ajuste', [
-            'almacenes'            => $almacenes,
-            'stock_productos'      => $stockProductos,
+            'almacenes' => $almacenes,
+            'stock_productos' => $stockProductos,
             'almacen_seleccionado' => $almacenId,
         ]);
     }
@@ -370,10 +377,10 @@ class InventarioController extends Controller
     public function procesarAjuste(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'ajustes'                     => ['required', 'array'],
+            'ajustes' => ['required', 'array'],
             'ajustes.*.stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'ajustes.*.nueva_cantidad'    => ['required', 'integer', 'min:0'],
-            'ajustes.*.observacion'       => ['nullable', 'string', 'max:500'],
+            'ajustes.*.nueva_cantidad' => ['required', 'integer', 'min:0'],
+            'ajustes.*.observacion' => ['nullable', 'string', 'max:500'],
         ]);
 
         $movimientos = [];
@@ -381,11 +388,11 @@ class InventarioController extends Controller
         DB::transaction(function () use ($data, &$movimientos) {
             foreach ($data['ajustes'] as $ajuste) {
                 $stockProducto = StockProducto::find($ajuste['stock_producto_id']);
-                $observacion   = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
+                $observacion = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
 
                 if ($stockProducto && $stockProducto->cantidad != $ajuste['nueva_cantidad']) {
                     $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
-                    $tipo       = $diferencia >= 0 ?
+                    $tipo = $diferencia >= 0 ?
                     MovimientoInventario::TIPO_ENTRADA_AJUSTE :
                     MovimientoInventario::TIPO_SALIDA_AJUSTE;
 
@@ -402,7 +409,7 @@ class InventarioController extends Controller
         });
 
         return redirect()->route('inventario.ajuste.form')
-            ->with('success', 'Se procesaron ' . count($movimientos) . ' ajustes de inventario');
+            ->with('success', 'Se procesaron '.count($movimientos).' ajustes de inventario');
     }
 
     /**
@@ -411,10 +418,10 @@ class InventarioController extends Controller
     public function procesarAjusteApi(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'ajustes'                     => ['required', 'array'],
+            'ajustes' => ['required', 'array'],
             'ajustes.*.stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'ajustes.*.nueva_cantidad'    => ['required', 'integer', 'min:0'],
-            'ajustes.*.observacion'       => ['nullable', 'string', 'max:500'],
+            'ajustes.*.nueva_cantidad' => ['required', 'integer', 'min:0'],
+            'ajustes.*.observacion' => ['nullable', 'string', 'max:500'],
         ]);
 
         $movimientos = [];
@@ -423,11 +430,11 @@ class InventarioController extends Controller
             DB::transaction(function () use ($data, &$movimientos) {
                 foreach ($data['ajustes'] as $ajuste) {
                     $stockProducto = StockProducto::find($ajuste['stock_producto_id']);
-                    $observacion   = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
+                    $observacion = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
 
                     if ($stockProducto && $stockProducto->cantidad != $ajuste['nueva_cantidad']) {
                         $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
-                        $tipo       = $diferencia >= 0 ?
+                        $tipo = $diferencia >= 0 ?
                         MovimientoInventario::TIPO_ENTRADA_AJUSTE :
                         MovimientoInventario::TIPO_SALIDA_AJUSTE;
 
@@ -445,12 +452,12 @@ class InventarioController extends Controller
 
             return ApiResponse::success(
                 $movimientos,
-                'Se procesaron ' . count($movimientos) . ' ajustes de inventario'
+                'Se procesaron '.count($movimientos).' ajustes de inventario'
             );
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al procesar ajustes: ' . $e->getMessage(),
+                'Error al procesar ajustes: '.$e->getMessage(),
                 500
             );
         }
@@ -461,23 +468,23 @@ class InventarioController extends Controller
      */
     public function movimientosApi(Request $request): JsonResponse
     {
-        $perPage     = $request->integer('per_page', 15);
-        $almacenId   = $request->integer('almacen_id');
-        $productoId  = $request->integer('producto_id');
-        $tipo        = $request->string('tipo');
+        $perPage = $request->integer('per_page', 15);
+        $almacenId = $request->integer('almacen_id');
+        $productoId = $request->integer('producto_id');
+        $tipo = $request->string('tipo');
         $fechaInicio = $request->date('fecha_inicio');
-        $fechaFin    = $request->date('fecha_fin');
+        $fechaFin = $request->date('fecha_fin');
 
         $movimientos = MovimientoInventario::with([
             'stockProducto.producto:id,nombre,codigo',
             'stockProducto.almacen:id,nombre',
             'user:id,name',
         ])
-            ->when($almacenId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId)))
-            ->when($productoId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('producto_id', $productoId)))
-            ->when($tipo, fn($q) => $q->where('tipo', $tipo))
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->when($almacenId, fn ($q) => $q->whereHas('stockProducto', fn ($sq) => $sq->where('almacen_id', $almacenId)))
+            ->when($productoId, fn ($q) => $q->whereHas('stockProducto', fn ($sq) => $sq->where('producto_id', $productoId)))
+            ->when($tipo, fn ($q) => $q->where('tipo', $tipo))
+            ->when($fechaInicio, fn ($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn ($q) => $q->whereDate('fecha', '<=', $fechaFin))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate($perPage);
@@ -492,9 +499,9 @@ class InventarioController extends Controller
     {
         $data = $request->validate([
             'stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'cantidad'          => ['required', 'integer', 'not_in:0'],
-            'tipo'              => ['required', 'in:entrada_ajuste,salida_ajuste'],
-            'observacion'       => ['required', 'string', 'max:500'],
+            'cantidad' => ['required', 'integer', 'not_in:0'],
+            'tipo' => ['required', 'in:entrada_ajuste,salida_ajuste'],
+            'observacion' => ['required', 'string', 'max:500'],
         ]);
 
         try {
@@ -514,7 +521,7 @@ class InventarioController extends Controller
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al registrar movimiento: ' . $e->getMessage(),
+                'Error al registrar movimiento: '.$e->getMessage(),
                 500
             );
         }
@@ -525,7 +532,7 @@ class InventarioController extends Controller
      */
     public function buscarProductos(Request $request): JsonResponse
     {
-        $q         = $request->string('q');
+        $q = $request->string('q');
         $almacenId = $request->integer('almacen_id');
 
         if (! $q || strlen($q) < 2) {
@@ -554,18 +561,18 @@ class InventarioController extends Controller
         $almacenId = $request->integer('almacen_id');
 
         $stock = $producto->stock()
-            ->when($almacenId, fn($q) => $q->where('almacen_id', $almacenId))
+            ->when($almacenId, fn ($q) => $q->where('almacen_id', $almacenId))
             ->with('almacen')
             ->get();
 
         return ApiResponse::success([
-            'producto'          => [
-                'id'           => $producto->id,
-                'nombre'       => $producto->nombre,
+            'producto' => [
+                'id' => $producto->id,
+                'nombre' => $producto->nombre,
                 'stock_minimo' => $producto->stock_minimo,
                 'stock_maximo' => $producto->stock_maximo,
-                'stock_total'  => $producto->stockTotal(),
-                'stock_bajo'   => $producto->stockBajo(),
+                'stock_total' => $producto->stockTotal(),
+                'stock_bajo' => $producto->stockBajo(),
             ],
             'stock_por_almacen' => $stock,
         ]);
@@ -577,11 +584,320 @@ class InventarioController extends Controller
     public function reportes(): Response
     {
         $categorias = Categoria::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
-        $almacenes  = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/reportes', [
             'categorias' => $categorias,
-            'almacenes'  => $almacenes,
+            'almacenes' => $almacenes,
         ]);
+    }
+
+    /**
+     * Listado de transferencias entre almacenes
+     */
+    public function transferencias(Request $request): Response
+    {
+        $query = TransferenciaInventario::with([
+            'almacenOrigen:id,nombre',
+            'almacenDestino:id,nombre',
+            'usuario:id,name',
+            'vehiculo:id,placa',
+            'chofer:id,licencia',
+        ]);
+
+        if ($request->filled('estado')) {
+            $query->porEstado($request->string('estado'));
+        }
+
+        if ($request->filled('almacen_id')) {
+            $query->porAlmacen($request->integer('almacen_id'));
+        }
+
+        if ($request->filled('fecha_inicio')) {
+            $query->porFecha($request->date('fecha_inicio'), $request->date('fecha_fin'));
+        }
+
+        $transferencias = $query->orderByDesc('fecha')
+            ->paginate(15)
+            ->withQueryString();
+
+        $almacenes = Almacen::where('activo', true)->get(['id', 'nombre']);
+        $vehiculos = Vehiculo::activos()->get(['id', 'placa']);
+        $choferes = Chofer::activos()->with('usuario:id,name')->get();
+        $estados = TransferenciaInventario::getEstados();
+
+        return Inertia::render('inventario/transferencias', [
+            'transferencias' => $transferencias,
+            'almacenes' => $almacenes,
+            'vehiculos' => $vehiculos,
+            'choferes' => $choferes,
+            'estados' => $estados,
+            'filtros' => $request->only(['estado', 'almacen_id', 'fecha_inicio', 'fecha_fin']),
+        ]);
+    }
+
+    /**
+     * Crear nueva transferencia
+     */
+    public function crearTransferencia(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'almacen_origen_id' => ['required', 'exists:almacenes,id'],
+            'almacen_destino_id' => ['required', 'exists:almacenes,id', 'different:almacen_origen_id'],
+            'vehiculo_id' => ['nullable', 'exists:vehiculos,id'],
+            'chofer_id' => ['nullable', 'exists:chofers,id'],
+            'observaciones' => ['nullable', 'string', 'max:500'],
+            'detalles' => ['required', 'array', 'min:1'],
+            'detalles.*.producto_id' => ['required', 'exists:productos,id'],
+            'detalles.*.cantidad' => ['required', 'integer', 'min:1'],
+            'detalles.*.lote' => ['nullable', 'string', 'max:50'],
+            'detalles.*.fecha_vencimiento' => ['nullable', 'date'],
+        ]);
+
+        try {
+            $transferencia = DB::transaction(function () use ($data) {
+                // Generar número
+                $ultimoNumero = TransferenciaInventario::max('numero') ?? 'TRF-000000';
+                $numero = (int) substr($ultimoNumero, 4);
+                $nuevoNumero = 'TRF-'.str_pad($numero + 1, 6, '0', STR_PAD_LEFT);
+
+                // Crear transferencia
+                $transferencia = TransferenciaInventario::create([
+                    'numero' => $nuevoNumero,
+                    'fecha' => now(),
+                    'almacen_origen_id' => $data['almacen_origen_id'],
+                    'almacen_destino_id' => $data['almacen_destino_id'],
+                    'usuario_id' => Auth::id(),
+                    'estado' => TransferenciaInventario::ESTADO_BORRADOR,
+                    'vehiculo_id' => $data['vehiculo_id'] ?? null,
+                    'chofer_id' => $data['chofer_id'] ?? null,
+                    'observaciones' => $data['observaciones'] ?? null,
+                    'total_productos' => count($data['detalles']),
+                    'total_cantidad' => array_sum(array_column($data['detalles'], 'cantidad')),
+                ]);
+
+                // Crear detalles
+                foreach ($data['detalles'] as $detalle) {
+                    DetalleTransferenciaInventario::create([
+                        'transferencia_id' => $transferencia->id,
+                        'producto_id' => $detalle['producto_id'],
+                        'cantidad' => $detalle['cantidad'],
+                        'lote' => $detalle['lote'] ?? null,
+                        'fecha_vencimiento' => $detalle['fecha_vencimiento'] ?? null,
+                    ]);
+                }
+
+                return $transferencia;
+            });
+
+            return ApiResponse::success(
+                $transferencia->load(['almacenOrigen', 'almacenDestino', 'detalles.producto']),
+                'Transferencia creada exitosamente'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al crear transferencia: '.$e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Registrar merma de inventario
+     */
+    public function registrarMerma(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'stock_producto_id' => ['required', 'exists:stock_productos,id'],
+            'cantidad' => ['required', 'integer', 'min:1'],
+            'motivo' => ['required', 'string', 'max:500'],
+            'fecha_merma' => ['nullable', 'date'],
+        ]);
+
+        try {
+            $stockProducto = StockProducto::findOrFail($data['stock_producto_id']);
+
+            if ($stockProducto->cantidad < $data['cantidad']) {
+                return ApiResponse::error('Stock insuficiente para registrar la merma', 400);
+            }
+
+            $movimiento = MovimientoInventario::registrar(
+                $stockProducto,
+                -$data['cantidad'],
+                MovimientoInventario::TIPO_SALIDA_MERMA,
+                $data['motivo'],
+                'MERMA-'.now()->format('Ymd-His')
+            );
+
+            return ApiResponse::success(
+                $movimiento->load(['stockProducto.producto', 'stockProducto.almacen']),
+                'Merma registrada exitosamente'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al registrar merma: '.$e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Mostrar formulario para crear transferencia
+     */
+    public function formularioCrearTransferencia(): Response
+    {
+        $almacenes = Almacen::where('activo', true)->get();
+        $vehiculos = Vehiculo::activos()->get();
+        $choferes = Chofer::with('user')->get();
+
+        return Inertia::render('Inventario/Transferencias/Crear', [
+            'almacenes' => $almacenes,
+            'vehiculos' => $vehiculos,
+            'choferes' => $choferes,
+        ]);
+    }
+
+    /**
+     * Ver detalles de una transferencia
+     */
+    public function verTransferencia(TransferenciaInventario $transferencia): Response
+    {
+        $transferencia->load([
+            'almacenOrigen',
+            'almacenDestino',
+            'vehiculo',
+            'chofer.user',
+            'creadoPor',
+            'detalles.stockProducto.producto',
+        ]);
+
+        return Inertia::render('Inventario/Transferencias/Ver', [
+            'transferencia' => $transferencia,
+        ]);
+    }
+
+    /**
+     * Enviar transferencia
+     */
+    public function enviarTransferencia(Request $request, TransferenciaInventario $transferencia): JsonResponse
+    {
+        try {
+            $transferencia->enviar();
+
+            return ApiResponse::success(
+                $transferencia->load(['almacenOrigen', 'almacenDestino']),
+                'Transferencia enviada exitosamente'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al enviar transferencia: '.$e->getMessage(),
+                400
+            );
+        }
+    }
+
+    /**
+     * Recibir transferencia
+     */
+    public function recibirTransferencia(Request $request, TransferenciaInventario $transferencia): JsonResponse
+    {
+        try {
+            $transferencia->recibir();
+
+            return ApiResponse::success(
+                $transferencia->load(['almacenOrigen', 'almacenDestino']),
+                'Transferencia recibida exitosamente'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al recibir transferencia: '.$e->getMessage(),
+                400
+            );
+        }
+    }
+
+    /**
+     * Cancelar transferencia
+     */
+    public function cancelarTransferencia(Request $request, TransferenciaInventario $transferencia): JsonResponse
+    {
+        $data = $request->validate([
+            'motivo_cancelacion' => ['required', 'string', 'max:500'],
+        ]);
+
+        try {
+            $transferencia->cancelar($data['motivo_cancelacion']);
+
+            return ApiResponse::success(
+                $transferencia->load(['almacenOrigen', 'almacenDestino']),
+                'Transferencia cancelada exitosamente'
+            );
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al cancelar transferencia: '.$e->getMessage(),
+                400
+            );
+        }
+    }
+
+    /**
+     * Listar mermas
+     */
+    public function mermas(Request $request): Response
+    {
+        $mermas = MovimientoInventario::with(['stockProducto.producto', 'stockProducto.almacen', 'user'])
+            ->where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)
+            ->orderByDesc('fecha')
+            ->paginate(15);
+
+        return Inertia::render('Inventario/Mermas/Index', [
+            'mermas' => $mermas,
+        ]);
+    }
+
+    /**
+     * Mostrar formulario para registrar merma
+     */
+    public function formularioRegistrarMerma(): Response
+    {
+        $almacenes = Almacen::where('activo', true)->get();
+
+        return Inertia::render('Inventario/Mermas/Registrar', [
+            'almacenes' => $almacenes,
+        ]);
+    }
+
+    /**
+     * API: Obtener vehículos activos
+     */
+    public function apiVehiculos(): JsonResponse
+    {
+        $vehiculos = Vehiculo::activos()->get();
+
+        return ApiResponse::success($vehiculos);
+    }
+
+    /**
+     * API: Obtener choferes
+     */
+    public function apiChoferes(): JsonResponse
+    {
+        $choferes = Chofer::with('user')->get()->map(function ($chofer) {
+            return [
+                'id' => $chofer->id,
+                'user_id' => $chofer->user_id,
+                'nombre' => $chofer->user->name,
+                'licencia' => $chofer->licencia,
+                'telefono' => $chofer->telefono,
+                'activo' => $chofer->activo,
+            ];
+        });
+
+        return ApiResponse::success($choferes);
     }
 }

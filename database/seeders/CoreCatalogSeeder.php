@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use App\Models\EstadoDocumento;
 
 class CoreCatalogSeeder extends Seeder
 {
@@ -20,7 +19,7 @@ class CoreCatalogSeeder extends Seeder
             ['codigo' => 'FACTURADO', 'nombre' => 'Facturado'],
         ];
         DB::table('estados_documento')->upsert($estadosDocumento, ['codigo'], ['nombre']); */
-        $estados = [
+        /* $estados = [
             ['nombre' => 'Borrador', 'codigo' => 'BORRADOR', 'descripcion' => 'Documento en edición', 'activo' => true],
             ['nombre' => 'Pendiente', 'codigo' => 'PENDIENTE', 'descripcion' => 'Pendiente de aprobación', 'activo' => true],
             ['nombre' => 'Aprobado', 'codigo' => 'APROBADO', 'descripcion' => 'Aprobado para su uso', 'activo' => true],
@@ -30,7 +29,7 @@ class CoreCatalogSeeder extends Seeder
         ];
         foreach ($estados as $estado) {
             EstadoDocumento::firstOrCreate(['codigo' => $estado['codigo']], $estado);
-        }
+        } */
 
         // Tipos de pago
         $tiposPago = [
@@ -42,7 +41,7 @@ class CoreCatalogSeeder extends Seeder
         DB::table('tipos_pago')->upsert($tiposPago, ['codigo'], ['nombre']);
 
         // Tipo operación de caja
-        $tiposOpCaja = [
+        /* $tiposOpCaja = [
             ['codigo' => 'APERTURA', 'nombre' => 'Apertura'],
             ['codigo' => 'CIERRE', 'nombre' => 'Cierre'],
             ['codigo' => 'VENTA', 'nombre' => 'Venta'],
@@ -50,7 +49,7 @@ class CoreCatalogSeeder extends Seeder
             ['codigo' => 'GASTO', 'nombre' => 'Gasto'],
             ['codigo' => 'INGRESO_EXTRA', 'nombre' => 'Ingreso extra'],
         ];
-        DB::table('tipo_operacion_caja')->upsert($tiposOpCaja, ['codigo'], ['nombre']);
+        DB::table('tipo_operacion_caja')->upsert($tiposOpCaja, ['codigo'], ['nombre']); */
 
         // Estados de pedido
         $estadosPedido = [

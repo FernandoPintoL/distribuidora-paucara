@@ -26,7 +26,19 @@ return new class extends Migration
             $table->foreignId('moneda_id')->constrained('monedas');
             $table->foreignId('tipo_pago_id')->nullable()->constrained('tipos_pago');
             $table->foreignId('proforma_id')->nullable()->constrained('proformas');
+            // Campos para el flujo con app externa
+            $table->boolean('requiere_envio')->default(false);
+            $table->enum('canal_origen', ['APP_EXTERNA', 'WEB', 'PRESENCIAL'])
+                ->default('WEB');
+            $table->enum('estado_logistico', ['PENDIENTE_ENVIO', 'PREPARANDO', 'ENVIADO', 'ENTREGADO'])
+                ->nullable();
             $table->timestamps();
+
+            // Índices para optimización
+            $table->index(['canal_origen', 'created_at']);
+            $table->index(['estado_logistico', 'created_at']);
+            $table->index('requiere_envio');
+
         });
     }
 

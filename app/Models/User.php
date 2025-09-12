@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -46,5 +47,39 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Relación con datos del empleado si es que los tiene
+     */
+    public function empleado(): HasOne
+    {
+        return $this->hasOne(Empleado::class);
+    }
+
+    /**
+     * Verificar si el usuario es un empleado
+     */
+    public function esEmpleado(): bool
+    {
+        return $this->empleado !== null;
+    }
+
+    /**
+     * Verificar si el empleado puede acceder al sistema
+     */
+    public function puedeAccederSistema(): bool
+    {
+        return $this->empleado?->puedeAccederSistema() ?? true; // Si no es empleado, puede acceder por defecto
+    }
+
+    /**
+     * Actualizar último acceso si es empleado
+     */
+    public function actualizarUltimoAccesoEmpleado(): void
+    {
+        if ($this->esEmpleado()) {
+            $this->empleado->actualizarUltimoAcceso();
+        }
     }
 }

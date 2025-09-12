@@ -1,0 +1,258 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+
+class TransferenciaInventario extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'numero',
+        'fecha',
+        'almacen_origen_id',
+        'almacen_destino_id',
+        'vehiculo_id',
+        'chofer_id',
+        'usuario_id',
+        'fecha_envio',
+        'fecha_recepcion',
+        'estado',
+        'observaciones',
+        'total_productos',
+        'total_cantidad',
+    ];
+
+    protected $casts = [
+        'fecha' => 'datetime',
+        'fecha_envio' => 'datetime',
+        'fecha_recepcion' => 'datetime',
+    ];
+
+    // Estados de transferencia
+    const ESTADO_BORRADOR = 'BORRADOR';
+
+    const ESTADO_ENVIADO = 'ENVIADO';
+
+    const ESTADO_RECIBIDO = 'RECIBIDO';
+
+    const ESTADO_CANCELADO = 'CANCELADO';
+
+    /**
+     * Almacén origen
+     */
+    public function almacenOrigen(): BelongsTo
+    {
+        return $this->belongsTo(Almacen::class, 'almacen_origen_id');
+    }
+
+    /**
+     * Almacén destino
+     */
+    public function almacenDestino(): BelongsTo
+    {
+        return $this->belongsTo(Almacen::class, 'almacen_destino_id');
+    }
+
+    /**
+     * Vehículo asignado
+     */
+    public function vehiculo(): BelongsTo
+    {
+        return $this->belongsTo(Vehiculo::class);
+    }
+
+    /**
+     * Chofer asignado
+     */
+    public function chofer(): BelongsTo
+    {
+        return $this->belongsTo(Chofer::class);
+    }
+
+    /**
+     * Usuario que creó la transferencia
+     */
+    public function creadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'usuario_id');
+    }
+
+    /**
+     * Detalles de la transferencia
+     */
+    public function detalles(): HasMany
+    {
+        return $this->hasMany(DetalleTransferenciaInventario::class, 'transferencia_id');
+    }
+
+    /**
+     * Enviar transferencia
+     */
+    public function enviar(): void
+    {
+        if ($this->estado !== self::ESTADO_BORRADOR) {
+            throw new \Exception('Solo se pueden enviar transferencias en borrador');
+        }
+
+        DB::transaction(function () {
+            // Crear movimientos de salida en el almacén origen
+            foreach ($this->detalles as $detalle) {
+                // Buscar el stock del producto en el almacén origen
+                $stockProducto = StockProducto::where('producto_id', $detalle->producto_id)
+                    ->where('almacen_id', $this->almacen_origen_id)
+                    ->first();
+
+                if (! $stockProducto) {
+                    throw new \Exception("No se encontró stock para el producto {$detalle->producto->nombre} en el almacén origen");
+                }
+
+                if ($stockProducto->cantidad < $detalle->cantidad) {
+                    throw new \Exception("Stock insuficiente para el producto {$detalle->producto->nombre}. Disponible: {$stockProducto->cantidad}, Requerido: {$detalle->cantidad}");
+                }
+
+                MovimientoInventario::registrar(
+                    $stockProducto,
+                    -$detalle->cantidad,
+                    MovimientoInventario::TIPO_TRANSFERENCIA_SALIDA,
+                    "Transferencia {$this->numero} - Envío a {$this->almacenDestino->nombre}",
+                    $this->numero,
+                    $this->usuario_id
+                );
+            }
+
+            $this->update([
+                'estado' => self::ESTADO_ENVIADO,
+                'fecha_envio' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * Recibir transferencia
+     */
+    public function recibir(): void
+    {
+        if ($this->estado !== self::ESTADO_ENVIADO) {
+            throw new \Exception('Solo se pueden recibir transferencias enviadas');
+        }
+
+        DB::transaction(function () {
+            // Crear movimientos de entrada en el almacén destino
+            foreach ($this->detalles as $detalle) {
+                // Buscar o crear stock en el almacén destino
+                $stockOrigen = StockProducto::where('producto_id', $detalle->producto_id)
+                    ->where('almacen_id', $this->almacen_origen_id)
+                    ->first();
+
+                $stockDestino = StockProducto::firstOrCreate(
+                    [
+                        'producto_id' => $detalle->producto_id,
+                        'almacen_id' => $this->almacen_destino_id,
+                    ],
+                    [
+                        'cantidad' => 0,
+                        'precio_promedio' => $stockOrigen ? $stockOrigen->precio_promedio : $detalle->producto->precio_compra,
+                        'stock_minimo' => $stockOrigen ? $stockOrigen->stock_minimo : 0,
+                        'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                    ]
+                );
+
+                MovimientoInventario::registrar(
+                    $stockDestino,
+                    $detalle->cantidad,
+                    MovimientoInventario::TIPO_TRANSFERENCIA_ENTRADA,
+                    "Transferencia {$this->numero} - Recepción desde {$this->almacenOrigen->nombre}",
+                    $this->numero,
+                    $this->usuario_id
+                );
+
+                // Actualizar cantidad recibida en el detalle
+                $detalle->update([
+                    'cantidad_recibida' => $detalle->cantidad,
+                ]);
+            }
+
+            $this->update([
+                'estado' => self::ESTADO_RECIBIDO,
+                'fecha_recepcion' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * Cancelar transferencia
+     */
+    public function cancelar(string $motivo): void
+    {
+        if ($this->estado === self::ESTADO_RECIBIDO) {
+            throw new \Exception('No se puede cancelar una transferencia ya recibida');
+        }
+
+        DB::transaction(function () use ($motivo) {
+            // Si ya fue enviada, restaurar stock en el almacén origen
+            if ($this->estado === self::ESTADO_ENVIADO) {
+                foreach ($this->detalles as $detalle) {
+                    $stockProducto = StockProducto::where('producto_id', $detalle->producto_id)
+                        ->where('almacen_id', $this->almacen_origen_id)
+                        ->first();
+
+                    if ($stockProducto) {
+                        MovimientoInventario::registrar(
+                            $stockProducto,
+                            $detalle->cantidad,
+                            MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                            "Cancelación transferencia {$this->numero} - {$motivo}",
+                            "CANCEL-{$this->numero}",
+                            $this->usuario_id
+                        );
+                    }
+                }
+            }
+
+            $this->update([
+                'estado' => self::ESTADO_CANCELADO,
+                'observaciones' => ($this->observaciones ? $this->observaciones."\n" : '').'CANCELADO: '.$motivo,
+            ]);
+        });
+    }
+
+    /**
+     * Generar número de transferencia
+     */
+    public static function generarNumero(): string
+    {
+        $ultimo = self::whereDate('created_at', today())->count();
+
+        return 'TRANS-'.today()->format('Ymd').'-'.str_pad($ultimo + 1, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Scope para transferencias por estado
+     */
+    public function scopePorEstado($query, string $estado)
+    {
+        return $query->where('estado', $estado);
+    }
+
+    /**
+     * Scope para transferencias pendientes
+     */
+    public function scopePendientes($query)
+    {
+        return $query->where('estado', self::ESTADO_BORRADOR);
+    }
+
+    /**
+     * Scope para transferencias enviadas
+     */
+    public function scopeEnviadas($query)
+    {
+        return $query->where('estado', self::ESTADO_ENVIADO);
+    }
+}

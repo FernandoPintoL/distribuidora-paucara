@@ -34,11 +34,22 @@ class MovimientoInventario extends Model
 
     // Constantes para tipos de movimiento
     const TIPO_ENTRADA_COMPRA = 'ENTRADA_COMPRA';
+
     const TIPO_ENTRADA_AJUSTE = 'ENTRADA_AJUSTE';
+
     const TIPO_ENTRADA_DEVOLUCION = 'ENTRADA_DEVOLUCION';
+
+    const TIPO_TRANSFERENCIA_ENTRADA = 'TRANSFERENCIA_ENTRADA';
+
     const TIPO_SALIDA_VENTA = 'SALIDA_VENTA';
+
     const TIPO_SALIDA_AJUSTE = 'SALIDA_AJUSTE';
-    const TIPO_SALIDA_PERDIDA = 'SALIDA_PERDIDA';
+
+    const TIPO_SALIDA_MERMA = 'SALIDA_MERMA';
+
+    const TIPO_SALIDA_DEVOLUCION = 'SALIDA_DEVOLUCION';
+
+    const TIPO_TRANSFERENCIA_SALIDA = 'TRANSFERENCIA_SALIDA';
 
     /**
      * Relaciones
@@ -58,10 +69,10 @@ class MovimientoInventario extends Model
         return $this->hasOneThrough(
             Producto::class,
             StockProducto::class,
-            'id', // Foreign key en stock_productos
-            'id', // Foreign key en productos
+            'id',                // Foreign key en stock_productos
+            'id',                // Foreign key en productos
             'stock_producto_id', // Local key en movimientos_inventario
-            'producto_id' // Local key en stock_productos
+            'producto_id'        // Local key en stock_productos
         );
     }
 
@@ -70,10 +81,10 @@ class MovimientoInventario extends Model
         return $this->hasOneThrough(
             Almacen::class,
             StockProducto::class,
-            'id', // Foreign key en stock_productos
-            'id', // Foreign key en almacenes
+            'id',                // Foreign key en stock_productos
+            'id',                // Foreign key en almacenes
             'stock_producto_id', // Local key en movimientos_inventario
-            'almacen_id' // Local key en stock_productos
+            'almacen_id'         // Local key en stock_productos
         );
     }
 
@@ -91,6 +102,7 @@ class MovimientoInventario extends Model
         if ($fechaFin) {
             $query->whereDate('fecha', '<=', $fechaFin);
         }
+
         return $query;
     }
 
@@ -137,9 +149,12 @@ class MovimientoInventario extends Model
             self::TIPO_ENTRADA_COMPRA => 'Entrada por Compra',
             self::TIPO_ENTRADA_AJUSTE => 'Entrada por Ajuste',
             self::TIPO_ENTRADA_DEVOLUCION => 'Entrada por Devolución',
+            self::TIPO_TRANSFERENCIA_ENTRADA => 'Transferencia - Entrada',
             self::TIPO_SALIDA_VENTA => 'Salida por Venta',
             self::TIPO_SALIDA_AJUSTE => 'Salida por Ajuste',
-            self::TIPO_SALIDA_PERDIDA => 'Salida por Pérdida',
+            self::TIPO_SALIDA_MERMA => 'Salida por Merma',
+            self::TIPO_SALIDA_DEVOLUCION => 'Salida por Devolución',
+            self::TIPO_TRANSFERENCIA_SALIDA => 'Transferencia - Salida',
         ];
     }
 
@@ -155,7 +170,7 @@ class MovimientoInventario extends Model
         ?int $userId = null
     ): self {
         $cantidadAnterior = $stockProducto->cantidad;
-        
+
         // Actualizar el stock
         $stockProducto->cantidad += $cantidadMovimiento;
         $stockProducto->fecha_actualizacion = now();
@@ -171,7 +186,7 @@ class MovimientoInventario extends Model
             'cantidad_anterior' => $cantidadAnterior,
             'cantidad_posterior' => $stockProducto->cantidad,
             'tipo' => $tipo,
-            'user_id' => $userId ?? auth()->id(),
+            'user_id' => $userId ?? (\Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null),
         ]);
     }
 }

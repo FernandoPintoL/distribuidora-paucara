@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -72,15 +73,46 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        Schema::create('tipos_precio', function (Blueprint $table) {
+            $table->id();
+            $table->string('codigo', 20)->unique();         // Código identificador (ej: COSTO, VENTA, etc.)
+            $table->string('nombre', 100);                  // Nombre descriptivo
+            $table->string('descripcion', 255)->nullable(); // Descripción detallada
+            $table->decimal('porcentaje_ganancia', 8, 2)->nullable();
+            $table->string('color', 20)->default('gray');      // Color para la UI
+            $table->boolean('es_ganancia')->default(true);     // Si es precio de ganancia o costo base
+            $table->boolean('es_precio_base')->default(false); // Si es el precio base para cálculos
+            $table->integer('orden')->default(0);              // Orden de visualización
+            $table->boolean('activo')->default(true);          // Estado activo/inactivo
+            $table->boolean('es_sistema')->default(false);     // Si es un tipo del sistema (no editable)
+            $table->json('configuracion')->nullable();         // Configuraciones adicionales
+            $table->timestamps();
+
+            // Índices
+            $table->index(['activo', 'orden']);
+            $table->index('es_ganancia');
+            $table->index('es_precio_base');
+        });
+
         Schema::create('precios_producto', function (Blueprint $table) {
             $table->id();
             $table->foreignId('producto_id')->constrained('productos')->cascadeOnDelete();
+            $table->foreignId('tipo_precio_id')->constrained('tipos_precio')->onDelete('restrict')->onUpdate('cascade');
+            $table->string('nombre', 100)->default('Precio General');
             $table->decimal('precio', 18, 2);
+            $table->decimal('margen_ganancia', 8, 2)->nullable();
+            $table->decimal('porcentaje_ganancia', 5, 2)->nullable();
+            $table->boolean('es_precio_base')->default(false);
             $table->date('fecha_inicio')->nullable();
             $table->date('fecha_fin')->nullable();
             $table->boolean('activo')->default(true);
+            $table->string('motivo_cambio')->nullable();
             $table->string('tipo_cliente')->nullable();
             $table->timestamps();
+
+            // Índices para mejor rendimiento
+            $table->index(['producto_id', 'tipo_precio_id', 'activo']);
+            $table->index('tipo_precio_id');
         });
 
         Schema::create('stock_productos', function (Blueprint $table) {
@@ -91,8 +123,13 @@ return new class extends Migration
             $table->timestamp('fecha_actualizacion')->useCurrent();
             $table->string('lote')->nullable();
             $table->date('fecha_vencimiento')->nullable();
+            $table->integer('cantidad_reservada')->default(0);
+            $table->integer('cantidad_disponible')->default(0);
             $table->unique(['producto_id', 'almacen_id', 'lote'], 'uq_stock_producto_lote');
         });
+
+        // Actualizar cantidad_disponible con la cantidad existente después de crear la tabla
+        DB::statement('UPDATE stock_productos SET cantidad_disponible = cantidad');
 
         Schema::create('clientes', function (Blueprint $table) {
             $table->id();
@@ -275,7 +312,8 @@ return new class extends Migration
         Schema::dropIfExists('direcciones_cliente');
         Schema::dropIfExists('clientes');
         Schema::dropIfExists('stock_productos');
-        Schema::dropIfExists('precios_producto');
+        Schema::dropIfExists('precios_producto'); // Eliminar antes que tipos_precio
+        Schema::dropIfExists('tipos_precio');     // Eliminar después
         Schema::dropIfExists('imagenes_producto');
         Schema::dropIfExists('productos');
         Schema::dropIfExists('almacenes');

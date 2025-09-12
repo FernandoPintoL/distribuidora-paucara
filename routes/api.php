@@ -1,14 +1,77 @@
 <?php
 
+use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\DireccionClienteApiController;
+use App\Http\Controllers\EnvioController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ReporteInventarioApiController;
 use App\Http\Controllers\VentaController;
 use Illuminate\Support\Facades\Route;
+
+// ==========================================
+// 📱 RUTAS PARA APP EXTERNA (Flutter)
+// ==========================================
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Productos para la app
+    Route::get('/app/productos', [ProductoController::class, 'indexApi']);
+    Route::get('/app/productos/{producto}', [ProductoController::class, 'showApi']);
+    Route::get('/app/productos/buscar', [ProductoController::class, 'buscarApi']);
+
+    // Proformas desde app externa
+    Route::prefix('app/proformas')->group(function () {
+        Route::get('/', [ApiProformaController::class, 'index']);
+        Route::post('/', [ApiProformaController::class, 'store']);
+        Route::get('/{proforma}', [ApiProformaController::class, 'show']);
+        Route::get('/{proforma}/estado', [ApiProformaController::class, 'verificarEstado']);
+        Route::get('/{proforma}/reservas', [ApiProformaController::class, 'verificarReservas']);
+        Route::post('/{proforma}/extender-reservas', [ApiProformaController::class, 'extenderReservas']);
+    });
+
+    // Verificación de stock
+    Route::post('/app/verificar-stock', [ApiProformaController::class, 'verificarStock']);
+
+    // Cliente puede ver sus datos desde la app
+    Route::prefix('app/cliente')->group(function () {
+        Route::get('/proformas', [ApiProformaController::class, 'index']);
+        Route::get('/ventas', [VentaController::class, 'ventasCliente']);
+        Route::get('/envios', [EnvioController::class, 'enviosCliente']);
+    });
+
+    // Seguimiento de envíos desde la app
+    Route::prefix('app/envios')->group(function () {
+        Route::get('/{envio}/seguimiento', [EnvioController::class, 'seguimientoApi']);
+        Route::post('/{envio}/ubicacion', [EnvioController::class, 'actualizarUbicacion']);
+    });
+
+    // Catálogo de productos para la app
+    Route::get('/app/productos-disponibles', [ApiProformaController::class, 'obtenerProductosDisponibles']);
+});
+
+// ==========================================
+// 📊 RUTAS PARA DASHBOARD DE LOGÍSTICA
+// ==========================================
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Estadísticas del dashboard
+    Route::get('/logistica/dashboard/stats', [EnvioController::class, 'dashboardStats']);
+
+    // Gestión de proformas
+    Route::get('/proformas', [ApiProformaController::class, 'listarParaDashboard']);
+    Route::post('/proformas/{proforma}/aprobar', [ApiProformaController::class, 'aprobar']);
+    Route::post('/proformas/{proforma}/rechazar', [ApiProformaController::class, 'rechazar']);
+
+    // Gestión de envíos
+    Route::get('/envios', [EnvioController::class, 'index']);
+    Route::get('/envios/{envio}/seguimiento', [EnvioController::class, 'seguimiento']);
+    Route::post('/envios/{envio}/estado', [EnvioController::class, 'actualizarEstado']);
+});
+
+// ==========================================
+// RUTAS API EXISTENTES
+// ==========================================
 
 // Rutas API básicas con nombres únicos para evitar conflictos con rutas web
 Route::apiResource('compras', CompraController::class)->names('api.compras');

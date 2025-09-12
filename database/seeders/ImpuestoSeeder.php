@@ -53,7 +53,10 @@ class ImpuestoSeeder extends Seeder
         ];
 
         foreach ($impuestos as $impuesto) {
-            \App\Models\Impuesto::create($impuesto);
+            \App\Models\Impuesto::firstOrCreate(
+                ['codigo' => $impuesto['codigo']],
+                $impuesto
+            );
         }
     }
 }

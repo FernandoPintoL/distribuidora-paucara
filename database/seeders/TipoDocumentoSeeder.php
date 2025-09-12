@@ -64,7 +64,10 @@ class TipoDocumentoSeeder extends Seeder
         ];
 
         foreach ($tiposDocumento as $tipo) {
-            \App\Models\TipoDocumento::create($tipo);
+            \App\Models\TipoDocumento::firstOrCreate(
+                ['codigo' => $tipo['codigo']],
+                $tipo
+            );
         }
     }
 }

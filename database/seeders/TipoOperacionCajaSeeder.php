@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\TipoOperacionCaja;
@@ -31,6 +32,10 @@ class TipoOperacionCajaSeeder extends Seeder
             [
                 'codigo' => 'CIERRE',
                 'nombre' => 'Cierre de Caja',
+            ],
+            [
+                'codigo' => 'AJUSTE',
+                'nombre' => 'Ajuste de Caja',
             ],
         ];
 
