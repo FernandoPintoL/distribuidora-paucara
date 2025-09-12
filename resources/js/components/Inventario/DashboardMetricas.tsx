@@ -56,6 +56,21 @@ export const DashboardMetricas: React.FC<DashboardMetricasProps> = ({
     periodo = 'Mes actual',
     comparacion
 }) => {
+    // Validación defensiva para evitar errores cuando estadisticas es undefined
+    if (!estadisticas) {
+        return (
+            <div className="space-y-6">
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="text-center text-gray-500">
+                            Cargando estadísticas...
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     const formatearValor = (valor: number, formato: 'numero' | 'moneda' | 'porcentaje') => {
         switch (formato) {
             case 'numero':
@@ -79,53 +94,53 @@ export const DashboardMetricas: React.FC<DashboardMetricasProps> = ({
         };
     };
 
-    // KPIs principales
+    // KPIs principales con valores por defecto
     const kpis: MetricaKPI[] = [
         {
             titulo: 'Total Movimientos',
-            valor: estadisticas.total_movimientos,
+            valor: estadisticas.total_movimientos || 0,
             formato: 'numero',
-            ...calcularTendencia(estadisticas.total_movimientos, comparacion?.total_movimientos),
+            ...calcularTendencia(estadisticas.total_movimientos || 0, comparacion?.total_movimientos),
             descripcion: 'Todos los movimientos del período',
             icon: Activity,
             color: 'text-blue-600'
         },
         {
             titulo: 'Valor Total Entradas',
-            valor: estadisticas.valor_total_entradas,
+            valor: estadisticas.valor_total_entradas || 0,
             formato: 'moneda',
-            ...calcularTendencia(estadisticas.valor_total_entradas, comparacion?.valor_total_entradas),
+            ...calcularTendencia(estadisticas.valor_total_entradas || 0, comparacion?.valor_total_entradas),
             descripcion: 'Valor monetario de las entradas',
             icon: TrendingUp,
             color: 'text-green-600'
         },
         {
             titulo: 'Valor Total Salidas',
-            valor: estadisticas.valor_total_salidas,
+            valor: estadisticas.valor_total_salidas || 0,
             formato: 'moneda',
-            ...calcularTendencia(estadisticas.valor_total_salidas, comparacion?.valor_total_salidas),
+            ...calcularTendencia(estadisticas.valor_total_salidas || 0, comparacion?.valor_total_salidas),
             descripcion: 'Valor monetario de las salidas',
             icon: TrendingDown,
             color: 'text-red-600'
         },
         {
             titulo: 'Movimientos Pendientes',
-            valor: estadisticas.movimientos_pendientes,
+            valor: estadisticas.movimientos_pendientes || 0,
             formato: 'numero',
-            ...calcularTendencia(estadisticas.movimientos_pendientes, comparacion?.movimientos_pendientes),
+            ...calcularTendencia(estadisticas.movimientos_pendientes || 0, comparacion?.movimientos_pendientes),
             descripcion: 'Requieren atención inmediata',
             icon: AlertTriangle,
             color: 'text-orange-600'
         }
     ];
 
-    // Métricas por tipo de movimiento
+    // Métricas por tipo de movimiento con valores por defecto
     const tiposMovimiento = [
-        { tipo: 'ENTRADA', valor: estadisticas.total_entradas, color: 'bg-green-100 text-green-800' },
-        { tipo: 'SALIDA', valor: estadisticas.total_salidas, color: 'bg-red-100 text-red-800' },
-        { tipo: 'TRANSFERENCIA', valor: estadisticas.total_transferencias, color: 'bg-purple-100 text-purple-800' },
-        { tipo: 'MERMA', valor: estadisticas.total_mermas, color: 'bg-orange-100 text-orange-800' },
-        { tipo: 'AJUSTE', valor: estadisticas.total_ajustes, color: 'bg-blue-100 text-blue-800' }
+        { tipo: 'ENTRADA', valor: estadisticas.total_entradas || 0, color: 'bg-green-100 text-green-800' },
+        { tipo: 'SALIDA', valor: estadisticas.total_salidas || 0, color: 'bg-red-100 text-red-800' },
+        { tipo: 'TRANSFERENCIA', valor: estadisticas.total_transferencias || 0, color: 'bg-purple-100 text-purple-800' },
+        { tipo: 'MERMA', valor: estadisticas.total_mermas || 0, color: 'bg-orange-100 text-orange-800' },
+        { tipo: 'AJUSTE', valor: estadisticas.total_ajustes || 0, color: 'bg-blue-100 text-blue-800' }
     ];
 
     const totalMovimientosTipo = tiposMovimiento.reduce((sum, tipo) => sum + tipo.valor, 0);

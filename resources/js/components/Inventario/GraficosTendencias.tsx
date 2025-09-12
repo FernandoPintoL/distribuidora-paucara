@@ -119,59 +119,73 @@ export const GraficosTendencias: React.FC<GraficosTendenciasProps> = ({
     periodo = 'semanal',
     onPeriodoChange
 }) => {
-    // Preparar datos para gráfico de tipos de movimiento
+    // Validación defensiva para evitar errores cuando estadisticas es undefined
+    if (!estadisticas) {
+        return (
+            <div className="space-y-6">
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="text-center text-gray-500">
+                            Cargando estadísticas...
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+    // Preparar datos para gráfico de tipos de movimiento con valores por defecto
     const datosTipos = [
         {
             label: 'Entradas',
-            valor: estadisticas.total_entradas,
+            valor: estadisticas.total_entradas || 0,
             color: 'bg-green-500'
         },
         {
             label: 'Salidas',
-            valor: estadisticas.total_salidas,
+            valor: estadisticas.total_salidas || 0,
             color: 'bg-red-500'
         },
         {
             label: 'Transferencias',
-            valor: estadisticas.total_transferencias,
+            valor: estadisticas.total_transferencias || 0,
             color: 'bg-purple-500'
         },
         {
             label: 'Mermas',
-            valor: estadisticas.total_mermas,
+            valor: estadisticas.total_mermas || 0,
             color: 'bg-orange-500'
         },
         {
             label: 'Ajustes',
-            valor: estadisticas.total_ajustes,
+            valor: estadisticas.total_ajustes || 0,
             color: 'bg-blue-500'
         }
     ].filter(item => item.valor > 0);
 
-    // Preparar datos para gráfico de valores
+    // Preparar datos para gráfico de valores con valores por defecto
     const datosValores = [
         {
             label: 'Valor Entradas',
-            valor: estadisticas.valor_total_entradas,
+            valor: estadisticas.valor_total_entradas || 0,
             color: 'bg-green-500'
         },
         {
             label: 'Valor Salidas',
-            valor: estadisticas.valor_total_salidas,
+            valor: estadisticas.valor_total_salidas || 0,
             color: 'bg-red-500'
         },
         {
             label: 'Valor Mermas',
-            valor: estadisticas.valor_total_mermas,
+            valor: estadisticas.valor_total_mermas || 0,
             color: 'bg-orange-500'
         }
     ].filter(item => item.valor > 0);
 
-    // Calcular ratios y métricas derivadas
-    const totalMovimientos = estadisticas.total_movimientos;
-    const ratioEntradas = totalMovimientos > 0 ? (estadisticas.total_entradas / totalMovimientos) * 100 : 0;
-    const ratioSalidas = totalMovimientos > 0 ? (estadisticas.total_salidas / totalMovimientos) * 100 : 0;
-    const ratioMermas = totalMovimientos > 0 ? (estadisticas.total_mermas / totalMovimientos) * 100 : 0;
+    // Calcular ratios y métricas derivadas con valores por defecto
+    const totalMovimientos = estadisticas.total_movimientos || 0;
+    const ratioEntradas = totalMovimientos > 0 ? ((estadisticas.total_entradas || 0) / totalMovimientos) * 100 : 0;
+    const ratioSalidas = totalMovimientos > 0 ? ((estadisticas.total_salidas || 0) / totalMovimientos) * 100 : 0;
+    const ratioMermas = totalMovimientos > 0 ? ((estadisticas.total_mermas || 0) / totalMovimientos) * 100 : 0;
 
     const datosRatios = [
         {

@@ -180,7 +180,7 @@ export default function MovimientosInventario() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Movimientos de Inventario" />
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 p-6">
                 {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>

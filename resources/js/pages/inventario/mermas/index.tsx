@@ -51,6 +51,15 @@ export default function MermasIndex() {
     const { mermas, filtros, almacenes, estadisticas } = props;
     const { can } = useAuth();
 
+    // Validación defensiva para estadísticas
+    const estadisticasSeguras = estadisticas || {
+        total_mermas: 0,
+        total_pendientes: 0,
+        total_aprobadas: 0,
+        total_rechazadas: 0,
+        costo_total_mes: 0
+    };
+
     const [filtrosLocales, setFiltrosLocales] = useState<FiltrosMermas>(filtros);
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
@@ -206,7 +215,7 @@ export default function MermasIndex() {
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Mermas</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                    {estadisticas.total_mermas}
+                                    {estadisticasSeguras.total_mermas}
                                 </p>
                             </div>
                         </div>
@@ -218,7 +227,7 @@ export default function MermasIndex() {
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pendientes</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                    {estadisticas.total_pendientes}
+                                    {estadisticasSeguras.total_pendientes}
                                 </p>
                             </div>
                         </div>
@@ -230,7 +239,7 @@ export default function MermasIndex() {
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Aprobadas</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                    {estadisticas.total_aprobadas}
+                                    {estadisticasSeguras.total_aprobadas}
                                 </p>
                             </div>
                         </div>
@@ -242,7 +251,7 @@ export default function MermasIndex() {
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Rechazadas</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                    {estadisticas.total_rechazadas}
+                                    {estadisticasSeguras.total_rechazadas}
                                 </p>
                             </div>
                         </div>
@@ -259,7 +268,7 @@ export default function MermasIndex() {
                                     {new Intl.NumberFormat('es-BO', {
                                         style: 'currency',
                                         currency: 'BOB'
-                                    }).format(estadisticas.costo_total_mes)}
+                                    }).format(estadisticasSeguras.costo_total_mes)}
                                 </p>
                             </div>
                         </div>

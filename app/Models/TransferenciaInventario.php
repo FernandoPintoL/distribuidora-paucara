@@ -255,4 +255,56 @@ class TransferenciaInventario extends Model
     {
         return $query->where('estado', self::ESTADO_ENVIADO);
     }
+
+    /**
+     * Obtener lista de estados disponibles
+     */
+    public static function getEstados(): array
+    {
+        return [
+            [
+                'value' => self::ESTADO_BORRADOR,
+                'label' => 'Borrador',
+                'color' => 'gray',
+            ],
+            [
+                'value' => self::ESTADO_ENVIADO,
+                'label' => 'Enviado',
+                'color' => 'blue',
+            ],
+            [
+                'value' => self::ESTADO_RECIBIDO,
+                'label' => 'Recibido',
+                'color' => 'green',
+            ],
+            [
+                'value' => self::ESTADO_CANCELADO,
+                'label' => 'Cancelado',
+                'color' => 'red',
+            ],
+        ];
+    }
+
+    /**
+     * Scope para transferencias por almacén (origen o destino)
+     */
+    public function scopePorAlmacen($query, int $almacenId)
+    {
+        return $query->where(function ($q) use ($almacenId) {
+            $q->where('almacen_origen_id', $almacenId)
+                ->orWhere('almacen_destino_id', $almacenId);
+        });
+    }
+
+    /**
+     * Scope para transferencias por rango de fechas
+     */
+    public function scopePorFecha($query, $fechaInicio, $fechaFin = null)
+    {
+        if (! $fechaFin) {
+            $fechaFin = $fechaInicio;
+        }
+
+        return $query->whereBetween('fecha', [$fechaInicio, $fechaFin]);
+    }
 }

@@ -71,7 +71,7 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Movimientos de Inventario" />
 
-            <div className="space-y-6">
+            <div className="space-y-6 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -110,8 +110,8 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                         <button
                             onClick={() => setActiveTab('lista')}
                             className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === 'lista'
-                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                                 }`}
                         >
                             <List className="w-4 h-4" />
@@ -120,8 +120,8 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                         <button
                             onClick={() => setActiveTab('estadisticas')}
                             className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === 'estadisticas'
-                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                                 }`}
                         >
                             <BarChart3 className="w-4 h-4" />
