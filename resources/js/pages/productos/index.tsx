@@ -8,10 +8,10 @@ import type { Producto, ProductoFormData } from '@/domain/productos';
 
 interface ProductosIndexProps {
   productos: Pagination<Producto>;
-  filters: { q?: string; categoria_id?: number|string|null; marca_id?: number|string|null; order_by?: string|null; order_dir?: string|null };
-  categorias?: {id:number; nombre:string}[];
-  marcas?: {id:number; nombre:string}[];
-  unidades?: {id:number; codigo:string; nombre:string}[];
+  filters: { q?: string; categoria_id?: number | string | null; marca_id?: number | string | null; order_by?: string | null; order_dir?: string | null };
+  categorias?: { id: number; nombre: string }[];
+  marcas?: { id: number; nombre: string }[];
+  unidades?: { id: number; codigo: string; nombre: string }[];
 }
 
 export default function ProductosIndex({ productos, filters, categorias, marcas }: ProductosIndexProps) {

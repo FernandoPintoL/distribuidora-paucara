@@ -125,3 +125,24 @@ export const obtenerPrecioCosto = (precios: Precio[], tiposPrecio: Array<{ id?: 
 
   return precioCosto?.monto || 0;
 };
+
+// =============== FILTROS ===============
+
+export interface FiltrosProductos {
+  q?: string;
+  categoria_id?: string;
+  marca_id?: string;
+  activo?: string;
+  stock_minimo?: string;
+  stock_maximo?: string;
+  precio_desde?: string;
+  precio_hasta?: string;
+  sort_by?: string;
+  sort_dir?: string;
+  [key: string]: string | undefined;
+}
+
+export interface DatosParaFiltrosProductos {
+  categorias: Array<{ id: Id; nombre: string }>;
+  marcas: Array<{ id: Id; nombre: string }>;
+}

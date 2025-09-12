@@ -900,4 +900,171 @@ class InventarioController extends Controller
 
         return ApiResponse::success($choferes);
     }
+
+    /**
+     * Formulario para editar transferencia
+     */
+    public function editarTransferencia(TransferenciaInventario $transferencia): Response
+    {
+        $transferencia->load(['detalles.stockProducto.producto', 'almacenOrigen', 'almacenDestino', 'vehiculo', 'chofer.user']);
+
+        $almacenes = Almacen::where('activo', true)->get();
+        $vehiculos = Vehiculo::where('activo', true)->get();
+        $choferes = Chofer::with('user')->get();
+
+        return Inertia::render('inventario/transferencias/editar', [
+            'transferencia' => $transferencia,
+            'almacenes' => $almacenes,
+            'vehiculos' => $vehiculos,
+            'choferes' => $choferes,
+        ]);
+    }
+
+    /**
+     * Actualizar transferencia
+     */
+    public function actualizarTransferencia(Request $request, TransferenciaInventario $transferencia): RedirectResponse
+    {
+        $request->validate([
+            'almacen_destino_id' => 'required|exists:almacenes,id',
+            'vehiculo_id' => 'nullable|exists:vehiculos,id',
+            'chofer_id' => 'nullable|exists:choferes,id',
+            'observaciones' => 'nullable|string|max:500',
+            'productos' => 'required|array|min:1',
+            'productos.*.stock_producto_id' => 'required|exists:stock_productos,id',
+            'productos.*.cantidad' => 'required|numeric|min:0.01',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Solo permitir editar si está en estado pendiente
+            if ($transferencia->estado !== 'pendiente') {
+                return back()->withErrors(['error' => 'Solo se pueden editar transferencias pendientes']);
+            }
+
+            // Actualizar datos principales
+            $transferencia->update([
+                'almacen_destino_id' => $request->almacen_destino_id,
+                'vehiculo_id' => $request->vehiculo_id,
+                'chofer_id' => $request->chofer_id,
+                'observaciones' => $request->observaciones,
+            ]);
+
+            // Eliminar detalles existentes
+            $transferencia->detalles()->delete();
+
+            // Recrear detalles
+            foreach ($request->productos as $producto) {
+                DetalleTransferenciaInventario::create([
+                    'transferencia_inventario_id' => $transferencia->id,
+                    'stock_producto_id' => $producto['stock_producto_id'],
+                    'cantidad_solicitada' => $producto['cantidad'],
+                    'cantidad_enviada' => 0,
+                    'cantidad_recibida' => 0,
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('inventario.transferencias.ver', $transferencia->id)
+                ->with('success', 'Transferencia actualizada exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors(['error' => 'Error al actualizar la transferencia: '.$e->getMessage()]);
+        }
+    }
+
+    /**
+     * Listado de mermas
+     */
+    public function indexMermas(Request $request): Response
+    {
+        // Aquí iría la lógica para obtener mermas desde la base de datos
+        // Por ahora simulamos datos para que funcione el frontend
+        $mermas = collect([]);
+        $estadisticas = [
+            'total_mermas' => 0,
+            'valor_total_perdido' => 0,
+            'mermas_pendientes' => 0,
+            'mermas_aprobadas' => 0,
+            'mermas_rechazadas' => 0,
+        ];
+
+        return Inertia::render('inventario/mermas/index', [
+            'mermas' => $mermas,
+            'estadisticas' => $estadisticas,
+            'filtros' => $request->all(),
+        ]);
+    }
+
+    /**
+     * Formulario para registrar mermas
+     */
+    public function registrarMermasForm(): Response
+    {
+        $almacenes = Almacen::where('activo', true)->get();
+
+        return Inertia::render('inventario/mermas/registrar', [
+            'almacenes' => $almacenes,
+        ]);
+    }
+
+    /**
+     * Ver detalle de merma
+     */
+    public function verMerma($id): Response
+    {
+        // Simulamos datos hasta implementar el modelo
+        $merma = [
+            'id' => $id,
+            'codigo' => 'MER-'.str_pad($id, 6, '0', STR_PAD_LEFT),
+            'almacen' => ['nombre' => 'Almacén Principal'],
+            'tipo_merma' => 'vencimiento',
+            'estado' => 'pendiente',
+            'fecha_registro' => now()->format('Y-m-d H:i:s'),
+            'observaciones' => 'Productos vencidos del lote ABC123',
+            'detalles' => [],
+            'valor_total' => 0,
+        ];
+
+        return Inertia::render('inventario/mermas/ver', [
+            'merma' => $merma,
+        ]);
+    }
+
+    /**
+     * Aprobar merma
+     */
+    public function aprobarMerma(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'observaciones_aprobacion' => 'nullable|string|max:500',
+        ]);
+
+        // Lógica de aprobación aquí
+
+        return ApiResponse::success([
+            'message' => 'Merma aprobada exitosamente',
+            'merma_id' => $id,
+        ]);
+    }
+
+    /**
+     * Rechazar merma
+     */
+    public function rechazarMerma(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'observaciones_rechazo' => 'required|string|max:500',
+        ]);
+
+        // Lógica de rechazo aquí
+
+        return ApiResponse::success([
+            'message' => 'Merma rechazada exitosamente',
+            'merma_id' => $id,
+        ]);
+    }
 }

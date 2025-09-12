@@ -7,6 +7,8 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency } from '@/lib/utils';
 import { NotificationService } from '@/services/notification.service';
 import SearchSelect, { SelectOption } from '@/components/ui/search-select';
+import InputSearch from '@/components/ui/input-search';
+import { useProveedorSearch, useProductoSearch } from '@/hooks/use-api-search';
 
 // Importar tipos del domain
 import type {
@@ -95,6 +97,10 @@ export default function CompraForm() {
   const isEditing = Boolean(props.compra);
   const title = isEditing ? 'Editar Compra' : 'Nueva Compra';
 
+  // Hooks para búsqueda con autocompletado
+  const proveedorSearch = useProveedorSearch();
+  const productoSearch = useProductoSearch();
+
   // Estados según el flujo documentado
   const estadoActual = props.compra?.estadoDocumento?.nombre;
   const puedeEditarBasico = !estadoActual || ['BORRADOR', 'RECHAZADO'].includes(estadoActual);
@@ -157,12 +163,38 @@ export default function CompraForm() {
 
     try {
       const estadoPendienteId = props.estados?.find(e => e.nombre === 'Pendiente')?.id;
+
+      // Preparar datos con tipos correctos para autoguardado
       const dataToSave = {
-        ...data,
-        // Si es nuevo y tiene contenido, cambiar a PENDIENTE automáticamente
-        estado_documento_id: !isEditing && estadoPendienteId ? estadoPendienteId : data.estado_documento_id,
-        // Filtrar detalles válidos
-        detalles: data.detalles.filter(d => d.producto_id !== '')
+        numero: data.numero || undefined,
+        fecha: data.fecha,
+        numero_factura: data.numero_factura || '',
+        subtotal: parseFloat(String(data.subtotal)),
+        descuento: parseFloat(String(data.descuento || 0)),
+        impuesto: parseFloat(String(data.impuesto || 0)),
+        total: parseFloat(String(data.total)),
+        observaciones: data.observaciones || '',
+        proveedor_id: parseInt(String(data.proveedor_id)),
+        usuario_id: parseInt(String(data.usuario_id)),
+        estado_documento_id: !isEditing && estadoPendienteId
+          ? parseInt(String(estadoPendienteId))
+          : parseInt(String(data.estado_documento_id)),
+        moneda_id: parseInt(String(data.moneda_id)),
+        tipo_pago_id: data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null,
+        // Filtrar detalles válidos y convertir tipos
+        detalles: data.detalles
+          .filter(d => d.producto_id !== '')
+          .map(detalle => ({
+            id: detalle.id || undefined,
+            producto_id: parseInt(String(detalle.producto_id)),
+            cantidad: parseInt(String(detalle.cantidad)),
+            precio_unitario: parseFloat(String(detalle.precio_unitario)),
+            descuento: parseFloat(String(detalle.descuento || 0)),
+            subtotal: parseFloat(String(detalle.subtotal)),
+            lote: detalle.lote || '',
+            fecha_vencimiento: detalle.fecha_vencimiento || null,
+          })),
+        _autoguardado: true, // Flag para indicar que es autoguardado
       };
 
       const response = await fetch(isEditing ? `/compras/${props.compra?.id}` : '/compras', {
@@ -172,10 +204,7 @@ export default function CompraForm() {
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          ...dataToSave,
-          _autoguardado: true, // Flag para indicar que es autoguardado
-        }),
+        body: JSON.stringify(dataToSave),
       });
 
       if (response.ok) {
@@ -257,20 +286,6 @@ export default function CompraForm() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [hasUnsavedChanges, hasMinimumContent, autoSave]);
-
-  // Convertir proveedores a opciones para SearchSelect
-  const proveedorOptions: SelectOption[] = props.proveedores?.map(proveedor => ({
-    value: proveedor.id,
-    label: proveedor.nombre,
-    description: proveedor.email ? `Email: ${proveedor.email}` : undefined,
-  })) ?? [];
-
-  // Convertir productos a opciones para SearchSelect
-  const productoOptions: SelectOption[] = props.productos?.map(producto => ({
-    value: producto.id,
-    label: producto.nombre,
-    description: `Código: ${producto.codigo} - Stock: ${producto.stock || 0}`,
-  })) ?? [];
 
   // Convertir tipos de pago a opciones para SearchSelect
   const tipoPagoOptions: SelectOption[] = props.tipos_pago?.map(tipo => ({
@@ -395,12 +410,10 @@ export default function CompraForm() {
       return;
     }
 
-    const submitData = {
-      ...data,
-      detalles: data.detalles.filter(d => d.producto_id !== '')
-    };
+    // Filtrar detalles válidos
+    const detallesValidos = data.detalles.filter(d => d.producto_id !== '');
 
-    if (submitData.detalles.length === 0) {
+    if (detallesValidos.length === 0) {
       NotificationService.error('Debe agregar al menos un producto');
       return;
     }
@@ -446,6 +459,32 @@ export default function CompraForm() {
           NotificationService.dismiss(loadingToast);
         }
       },
+      // Transformar datos antes de enviar
+      transform: (data: CompraFormData) => ({
+        numero: data.numero || undefined,
+        fecha: data.fecha,
+        numero_factura: data.numero_factura || '',
+        subtotal: parseFloat(String(data.subtotal)),
+        descuento: parseFloat(String(data.descuento || 0)),
+        impuesto: parseFloat(String(data.impuesto || 0)),
+        total: parseFloat(String(data.total)),
+        observaciones: data.observaciones || '',
+        proveedor_id: parseInt(String(data.proveedor_id)),
+        usuario_id: parseInt(String(data.usuario_id)),
+        estado_documento_id: parseInt(String(data.estado_documento_id)),
+        moneda_id: parseInt(String(data.moneda_id)),
+        tipo_pago_id: data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null,
+        detalles: detallesValidos.map(detalle => ({
+          id: detalle.id || undefined,
+          producto_id: parseInt(String(detalle.producto_id)),
+          cantidad: parseInt(String(detalle.cantidad)),
+          precio_unitario: parseFloat(String(detalle.precio_unitario)),
+          descuento: parseFloat(String(detalle.descuento || 0)),
+          subtotal: parseFloat(String(detalle.subtotal)),
+          lote: detalle.lote || '',
+          fecha_vencimiento: detalle.fecha_vencimiento || null,
+        })),
+      }),
     };
 
     if (isEditing && props.compra) {
@@ -560,18 +599,21 @@ export default function CompraForm() {
             </div>
 
             <div>
-              <SearchSelect
-                id="proveedor_id"
+              <InputSearch
+                id="proveedor_search"
                 label="Proveedor"
-                required
-                disabled={soloLectura || (puedeEditarSupervisor && !puedeEditarBasico)}
                 value={data.proveedor_id}
-                options={proveedorOptions}
-                onChange={(value) => setData('proveedor_id', value || '')}
-                placeholder="Seleccionar proveedor"
+                onSearch={proveedorSearch.search}
+                onChange={(value) => {
+                  setData('proveedor_id', value || '');
+                }}
+                placeholder="Escribir nombre del proveedor..."
                 emptyText="No se encontraron proveedores"
-                searchPlaceholder="Buscar proveedor..."
                 error={errors.proveedor_id}
+                disabled={soloLectura || (puedeEditarSupervisor && !puedeEditarBasico)}
+                required={true}
+                allowScanner={false}
+                className="w-full"
               />
             </div>
 
@@ -678,15 +720,18 @@ export default function CompraForm() {
                 {data.detalles.map((detalle: DetalleForm, idx: number) => (
                   <tr key={idx}>
                     <td className="px-4 py-3">
-                      <SearchSelect
+                      <InputSearch
                         value={detalle.producto_id}
-                        options={productoOptions}
-                        onChange={(value) => updateDetalle(idx, 'producto_id', value || '')}
-                        placeholder="Seleccionar producto"
+                        onSearch={productoSearch.search}
+                        onChange={(value) => {
+                          updateDetalle(idx, 'producto_id', value || '');
+                        }}
+                        placeholder="Escribir nombre del producto..."
                         emptyText="No se encontraron productos"
-                        searchPlaceholder="Buscar producto..."
                         error={errors[`detalles.${idx}.producto_id`]}
                         className="min-w-[200px]"
+                        allowScanner={true}
+                        scannerLabel="Escanear código de barras"
                       />
                     </td>
                     <td className="px-4 py-3">

@@ -1,19 +1,15 @@
 // Application Layer: Generic container - Updated with Modern Filters
 import { Head, Link } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import GenericSearchBar from '@/components/generic/generic-search-bar';
 import GenericTable from '@/components/generic/generic-table';
 import GenericPagination from '@/components/generic/generic-pagination';
 import ModernFilters from '@/components/generic/modern-filters';
 import { useGenericEntities } from '@/hooks/use-generic-entities';
 import type { Pagination } from '@/domain/shared';
 import type { BaseEntity, BaseService, ModuleConfig, BaseFormData } from '@/domain/generic';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const ALL_VALUE = 'all';
 
 interface GenericContainerProps<T extends BaseEntity, F extends BaseFormData> {
   entities: Pagination<T>;
@@ -32,61 +28,16 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
 }: GenericContainerProps<T, F>) {
   const {
     isLoading,
-    searchQuery,
     searchEntities,
     deleteEntity,
     navigateToEdit,
-    handleSearchChange,
-    handleSearch,
     clearFilters,
-    syncWithFilters,
   } = useGenericEntities<T, F>(service);
 
   const [viewMode, setViewMode] = useState<'table' | 'cards'>(config.enableCardView ? 'cards' : 'table');
-  const [categoria, setCategoria] = useState<string>(filters.categoria_id ? String(filters.categoria_id) : ALL_VALUE);
-  const [marca, setMarca] = useState<string>(filters.marca_id ? String(filters.marca_id) : ALL_VALUE);
-  const [orderBy, setOrderBy] = useState<string>(String(filters.order_by || 'id'));
-  const [orderDir, setOrderDir] = useState<'asc' | 'desc'>(filters.order_dir === 'asc' ? 'asc' : 'desc');
-  const initialActivo = filters.activo;
-  const [estado, setEstado] = useState<string>(initialActivo !== undefined && initialActivo !== null ? String(initialActivo) : ALL_VALUE);
-
-  // Sincronizar el estado local con los filtros del servidor una sola vez al montar
-  useEffect(() => {
-    syncWithFilters(filters);
-  }, [filters?.q]); // Solo sincroniza cuando cambia el filtro 'q' del servidor
 
   const handleDelete = (entity: T) => {
     deleteEntity(entity, config.singularName);
-  };
-
-  const applyFilters = () => {
-    searchEntities({
-      q: searchQuery || undefined,
-      categoria_id: categoria === ALL_VALUE ? undefined : categoria,
-      marca_id: marca === ALL_VALUE ? undefined : marca,
-      order_by: orderBy,
-      order_dir: orderDir
-    });
-  };
-
-  const resetAll = () => {
-    setCategoria(ALL_VALUE); setMarca(ALL_VALUE); setOrderBy('id'); setOrderDir('desc'); clearFilters();
-  };
-
-  const applyProveedorFilters = () => {
-    searchEntities({
-      q: searchQuery || undefined,
-      activo: estado === ALL_VALUE ? undefined : estado,
-      order_by: orderBy,
-      order_dir: orderDir
-    });
-  };
-
-  const resetProveedorFilters = () => {
-    setEstado(ALL_VALUE);
-    setOrderBy('id');
-    setOrderDir('desc');
-    clearFilters();
   };
 
   const renderCards = () => {
@@ -184,96 +135,6 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                   isLoading={isLoading}
                 />
               )}
-
-              {/* Legacy Filters Support - Deprecated */}
-              {!config.indexFilters && config.showIndexFilters && (
-                config.moduleName === 'productos' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Categoría</label>
-                      <Select value={categoria} onValueChange={setCategoria}>
-                        <SelectTrigger className="h-8">
-                          <SelectValue placeholder="Todas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={ALL_VALUE}>Todas</SelectItem>
-                          {extraData?.categorias?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Marca</label>
-                      <Select value={marca} onValueChange={setMarca}>
-                        <SelectTrigger className="h-8">
-                          <SelectValue placeholder="Todas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={ALL_VALUE}>Todas</SelectItem>
-                          {extraData?.marcas?.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Ordenar por</label>
-                      <Select value={orderBy} onValueChange={setOrderBy}>
-                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="id">ID</SelectItem>
-                          <SelectItem value="nombre">Nombre</SelectItem>
-                          <SelectItem value="precio_base">Precio</SelectItem>
-                          <SelectItem value="fecha_creacion">Creación</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <Button size="sm" onClick={() => setOrderDir(orderDir === 'asc' ? 'desc' : 'asc')} variant="outline" className="h-8 w-20">{orderDir === 'asc' ? 'Asc' : 'Desc'}</Button>
-                      <Button size="sm" onClick={applyFilters} className="h-8">Aplicar</Button>
-                      <Button size="sm" variant="ghost" onClick={resetAll} className="h-8">Limpiar</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Estado</label>
-                      <Select value={estado} onValueChange={setEstado}>
-                        <SelectTrigger className="h-8">
-                          <SelectValue placeholder="Todos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={ALL_VALUE}>Todos</SelectItem>
-                          <SelectItem value="1">Activos</SelectItem>
-                          <SelectItem value="0">Inactivos</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Ordenar por</label>
-                      <Select value={orderBy} onValueChange={setOrderBy}>
-                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="id">ID</SelectItem>
-                          <SelectItem value="nombre">Nombre</SelectItem>
-                          <SelectItem value="created_at">Creación</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <Button size="sm" onClick={() => setOrderDir(orderDir === 'asc' ? 'desc' : 'asc')} variant="outline" className="h-8 w-20">{orderDir === 'asc' ? 'Asc' : 'Desc'}</Button>
-                      <Button size="sm" onClick={applyProveedorFilters} className="h-8">Aplicar</Button>
-                      <Button size="sm" variant="ghost" onClick={resetProveedorFilters} className="h-8">Limpiar</Button>
-                    </div>
-                  </div>
-                )
-              )}
-
-              <GenericSearchBar
-                searchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-                onSearch={handleSearch}
-                onClear={clearFilters}
-                placeholder={config.searchPlaceholder}
-                isLoading={isLoading}
-              />
 
               {viewMode === 'table' && (
                 <GenericTable<T>

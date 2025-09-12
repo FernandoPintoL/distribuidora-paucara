@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { formatCurrency } from '@/lib/utils';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
+import VentaStockSummary from '@/components/ventas/venta-stock-summary';
 
 interface Cliente {
     id: number;
@@ -471,6 +472,9 @@ export default function VentaShow() {
                             </div>
                         </div>
                     )}
+
+                    {/* Resumen de Stock */}
+                    <VentaStockSummary ventaId={venta.id} />
                 </div>
             </div>
         </AppLayout>

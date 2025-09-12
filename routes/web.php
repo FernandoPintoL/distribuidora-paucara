@@ -14,16 +14,23 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+
+    // API routes para el dashboard
+    Route::prefix('api/dashboard')->group(function () {
+        Route::get('metricas', [App\Http\Controllers\DashboardController::class, 'metricas'])->name('api.dashboard.metricas');
+        Route::get('graficos', [App\Http\Controllers\DashboardController::class, 'graficos'])->name('api.dashboard.graficos');
+        Route::get('productos-mas-vendidos', [App\Http\Controllers\DashboardController::class, 'productosMasVendidos'])->name('api.dashboard.productos-mas-vendidos');
+        Route::get('alertas-stock', [App\Http\Controllers\DashboardController::class, 'alertasStock'])->name('api.dashboard.alertas-stock');
+        Route::get('ventas-por-canal', [App\Http\Controllers\DashboardController::class, 'ventasPorCanal'])->name('api.dashboard.ventas-por-canal');
+    });
 
     Route::resource('categorias', CategoriaController::class)->middleware('permission:categorias.manage');
     Route::resource('marcas', \App\Http\Controllers\MarcaController::class)->middleware('permission:marcas.manage');
     Route::resource('almacenes', \App\Http\Controllers\AlmacenController::class)->middleware('permission:almacenes.manage');
 
     // Incluir rutas de configuración global
-    require __DIR__.'/configuracion.php';
+    require __DIR__ . '/configuracion.php';
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
     Route::resource('clientes', \App\Http\Controllers\ClienteController::class)->middleware('permission:clientes.manage');
@@ -82,9 +89,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Keep nested details routes
     Route::resource('compras.detalles', \App\Http\Controllers\DetalleCompraController::class)->shallow();
 
+    // Rutas adicionales para módulo de compras
+    Route::prefix('compras')->name('compras.')->group(function () {
+        // Gestión de Cuentas por Pagar
+        Route::get('cuentas-por-pagar', [\App\Http\Controllers\CuentaPorPagarController::class, 'index'])->name('cuentas-por-pagar.index');
+        Route::get('cuentas-por-pagar/{cuenta}/show', [\App\Http\Controllers\CuentaPorPagarController::class, 'show'])->name('cuentas-por-pagar.show');
+        Route::patch('cuentas-por-pagar/{cuenta}/estado', [\App\Http\Controllers\CuentaPorPagarController::class, 'actualizarEstado'])->name('cuentas-por-pagar.actualizar-estado');
+        Route::get('cuentas-por-pagar/export', [\App\Http\Controllers\CuentaPorPagarController::class, 'export'])->name('cuentas-por-pagar.export');
+
+        // Sistema de Pagos
+        Route::get('pagos', [\App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');
+        Route::get('pagos/create', [\App\Http\Controllers\PagoController::class, 'create'])->name('pagos.create');
+        Route::post('pagos', [\App\Http\Controllers\PagoController::class, 'store'])->name('pagos.store');
+        Route::get('pagos/{pago}', [\App\Http\Controllers\PagoController::class, 'show'])->name('pagos.show');
+        Route::delete('pagos/{pago}', [\App\Http\Controllers\PagoController::class, 'destroy'])->name('pagos.destroy');
+        Route::get('pagos/export', [\App\Http\Controllers\PagoController::class, 'export'])->name('pagos.export');
+
+        // Gestión de Lotes y Vencimientos
+        Route::get('lotes-vencimientos', [\App\Http\Controllers\LoteVencimientoController::class, 'index'])->name('lotes-vencimientos.index');
+        Route::patch('lotes-vencimientos/{lote}/actualizar-estado', [\App\Http\Controllers\LoteVencimientoController::class, 'actualizarEstado'])->name('lotes-vencimientos.actualizar-estado');
+        Route::patch('lotes-vencimientos/{lote}/cantidad', [\App\Http\Controllers\LoteVencimientoController::class, 'actualizarCantidad'])->name('lotes-vencimientos.actualizar-cantidad');
+        Route::get('lotes-vencimientos/export', [\App\Http\Controllers\LoteVencimientoController::class, 'export'])->name('lotes-vencimientos.export');
+
+        // Reportes Específicos
+        Route::get('reportes', [\App\Http\Controllers\ReporteComprasController::class, 'index'])->name('reportes.index');
+        Route::get('reportes/export', [\App\Http\Controllers\ReporteComprasController::class, 'export'])->name('reportes.export');
+        Route::get('reportes/export-pdf', [\App\Http\Controllers\ReporteComprasController::class, 'exportPdf'])->name('reportes.export-pdf');
+    });
+
     // Rutas para gestión de ventas
     Route::resource('ventas', \App\Http\Controllers\VentaController::class);
-    Route::get('ventas/stock/{producto}', [\App\Http\Controllers\VentaController::class, 'verificarStock'])->name('ventas.verificar-stock');
+
+    // Rutas para gestión de stock en ventas
+    Route::prefix('ventas/stock')->name('ventas.stock.')->group(function () {
+        Route::post('verificar', [\App\Http\Controllers\VentaController::class, 'verificarStock'])->name('verificar');
+        Route::get('producto/{producto}', [\App\Http\Controllers\VentaController::class, 'obtenerStockProducto'])->name('producto');
+        Route::get('bajo', [\App\Http\Controllers\VentaController::class, 'productosStockBajo'])->name('bajo');
+    });
+
+    // Ruta para resumen de stock de una venta específica
+    Route::get('ventas/{venta}/stock/resumen', [\App\Http\Controllers\VentaController::class, 'obtenerResumenStock'])->name('ventas.stock.resumen');
 
     // Rutas para gestión de proformas con app externa
     Route::prefix('proformas')->name('proformas.')->group(function () {
@@ -148,6 +192,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('crear', [\App\Http\Controllers\InventarioController::class, 'formularioCrearTransferencia'])->middleware('permission:inventario.transferencias.crear')->name('crear');
             Route::post('crear', [\App\Http\Controllers\InventarioController::class, 'crearTransferencia'])->middleware('permission:inventario.transferencias.crear')->name('store');
             Route::get('{transferencia}', [\App\Http\Controllers\InventarioController::class, 'verTransferencia'])->middleware('permission:inventario.transferencias.ver')->name('show');
+            Route::get('{transferencia}/edit', [\App\Http\Controllers\InventarioController::class, 'editarTransferencia'])->middleware('permission:inventario.transferencias.edit')->name('edit');
+            Route::put('{transferencia}', [\App\Http\Controllers\InventarioController::class, 'actualizarTransferencia'])->middleware('permission:inventario.transferencias.edit')->name('update');
             Route::post('{transferencia}/enviar', [\App\Http\Controllers\InventarioController::class, 'enviarTransferencia'])->middleware('permission:inventario.transferencias.enviar')->name('enviar');
             Route::post('{transferencia}/recibir', [\App\Http\Controllers\InventarioController::class, 'recibirTransferencia'])->middleware('permission:inventario.transferencias.recibir')->name('recibir');
             Route::post('{transferencia}/cancelar', [\App\Http\Controllers\InventarioController::class, 'cancelarTransferencia'])->middleware('permission:inventario.transferencias.cancelar')->name('cancelar');
@@ -158,6 +204,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [\App\Http\Controllers\InventarioController::class, 'mermas'])->middleware('permission:inventario.mermas.index')->name('index');
             Route::get('registrar', [\App\Http\Controllers\InventarioController::class, 'formularioRegistrarMerma'])->middleware('permission:inventario.mermas.registrar')->name('registrar');
             Route::post('registrar', [\App\Http\Controllers\InventarioController::class, 'registrarMerma'])->middleware('permission:inventario.mermas.registrar')->name('store');
+            Route::get('{merma}', [\App\Http\Controllers\InventarioController::class, 'verMerma'])->middleware('permission:inventario.mermas.ver')->name('show');
+            Route::post('{merma}/aprobar', [\App\Http\Controllers\InventarioController::class, 'aprobarMerma'])->middleware('permission:inventario.mermas.aprobar')->name('aprobar');
+            Route::post('{merma}/rechazar', [\App\Http\Controllers\InventarioController::class, 'rechazarMerma'])->middleware('permission:inventario.mermas.rechazar')->name('rechazar');
         });
     });
 
@@ -179,6 +228,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('api/vehiculos', [\App\Http\Controllers\InventarioController::class, 'apiVehiculos'])->middleware('permission:inventario.api.vehiculos')->name('api.vehiculos');
     Route::get('api/choferes', [\App\Http\Controllers\InventarioController::class, 'apiChoferes'])->middleware('permission:inventario.api.choferes')->name('api.choferes');
 
+    // API routes para autocompletado
+    Route::get('api/proveedores/buscar', [\App\Http\Controllers\ProveedorController::class, 'buscarApi'])->name('api.proveedores.buscar');
+    Route::get('api/productos/buscar', [\App\Http\Controllers\ProductoController::class, 'buscarApi'])->name('api.productos.buscar');
+
     // Rutas para reportes de precios
     Route::prefix('reportes')->name('reportes.')->group(function () {
         Route::get('precios', [\App\Http\Controllers\ReportePreciosController::class, 'index'])->middleware('permission:reportes.precios.index')->name('precios.index');
@@ -197,5 +250,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';

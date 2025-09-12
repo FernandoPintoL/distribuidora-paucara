@@ -1,7 +1,8 @@
 import { Link } from '@inertiajs/react';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { Eye, Edit, ChevronUp, ChevronDown, CheckCircle, XCircle, Truck, CreditCard, Ban, Clock } from 'lucide-react';
+import { Eye, Edit, ChevronUp, ChevronDown } from 'lucide-react';
+import EliminarCompraDialog from './eliminar-compra-dialog';
 import { ComprasService } from '@/services/compras.service';
 
 // Importar tipos del domain
@@ -249,6 +250,12 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Link>
+                                        )}
+                                        {can('compras.delete') && (
+                                            <EliminarCompraDialog
+                                                compra={compra}
+                                                onSuccess={() => window.location.reload()}
+                                            />
                                         )}
                                     </div>
                                 </td>

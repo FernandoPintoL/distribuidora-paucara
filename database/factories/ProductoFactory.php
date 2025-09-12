@@ -23,16 +23,15 @@ class ProductoFactory extends Factory
             'nombre' => fake()->words(3, true),
             'descripcion' => fake()->sentence(),
             'peso' => fake()->randomFloat(2, 0.1, 100),
-            'unidad_medida_id' => 1, // Crear una unidad por defecto si no existe
+            'unidad_medida_id' => \App\Models\UnidadMedida::factory(),
             'codigo_barras' => fake()->ean13(),
             'stock_minimo' => fake()->numberBetween(5, 20),
             'stock_maximo' => fake()->numberBetween(50, 200),
             'activo' => true,
             'fecha_creacion' => now(),
             'es_alquilable' => false,
-            'categoria_id' => 1, // Crear una categoría por defecto si no existe
-            'marca_id' => 1, // Crear una marca por defecto si no existe
-            'precio_venta' => fake()->randomFloat(2, 10, 500),
+            'categoria_id' => \App\Models\Categoria::factory(),
+            'marca_id' => \App\Models\Marca::factory(),
         ];
     }
 }

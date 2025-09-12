@@ -44,6 +44,17 @@ export class ProductosService implements BaseService<Producto, ProductoFormData>
     });
   }
 
+  clearFilters(): void {
+    router.get(this.indexUrl(), {}, {
+      preserveState: true,
+      preserveScroll: true,
+      onError: (errors) => {
+        NotificationService.error('Error al limpiar filtros');
+        console.error('Clear filters errors:', errors);
+      }
+    });
+  }
+
   destroy(id: Id): void {
     const loadingToast = NotificationService.loading('Eliminando producto...');
 
@@ -100,8 +111,8 @@ export class ProductosService implements BaseService<Producto, ProductoFormData>
     // Validar precios si están presentes
     if (data.precios && data.precios.length > 0) {
       data.precios.forEach((precio, index) => {
-        if (!precio.nombre || precio.nombre.trim().length === 0) {
-          errors.push(`El nombre del precio ${index + 1} es requerido`);
+        if (!precio.tipo_precio_id) {
+          errors.push(`El tipo de precio ${index + 1} es requerido`);
         }
         if (precio.monto < 0) {
           errors.push(`El monto del precio ${index + 1} no puede ser negativo`);

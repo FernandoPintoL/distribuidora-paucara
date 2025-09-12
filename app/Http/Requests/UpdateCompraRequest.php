@@ -29,6 +29,16 @@ class UpdateCompraRequest extends FormRequest
             'estado_documento_id' => 'sometimes|exists:estados_documento,id',
             'moneda_id' => 'sometimes|exists:monedas,id',
             'tipo_pago_id' => 'nullable|exists:tipos_pago,id',
+            // Agregar validación de detalles para actualizaciones
+            'detalles' => 'sometimes|array',
+            'detalles.*.id' => 'nullable|exists:detalle_compras,id',
+            'detalles.*.producto_id' => 'required|exists:productos,id',
+            'detalles.*.cantidad' => 'required|integer|min:1',
+            'detalles.*.precio_unitario' => 'required|numeric|min:0',
+            'detalles.*.descuento' => 'nullable|numeric|min:0',
+            'detalles.*.subtotal' => 'required|numeric|min:0',
+            'detalles.*.lote' => 'nullable|string',
+            'detalles.*.fecha_vencimiento' => 'nullable|date',
         ];
     }
 }

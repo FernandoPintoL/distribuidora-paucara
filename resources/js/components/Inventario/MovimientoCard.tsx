@@ -1,134 +1,298 @@
 // Presentation Layer: MovimientoCard Component
-// Componente de tarjeta individual para mostrar un movimiento de inventario
+// Componente de tarjeta universal para mostrar cualquier tipo de movimiento de inventario
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { MovimientoInventario } from '@/domain/movimientos-inventario';
-import { TIPOS_MOVIMIENTO } from '@/domain/movimientos-inventario';
-import { MovimientosInventarioService } from '@/services/movimientos-inventario.service';
-import { Clock, User, Package, MapPin, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowLeftRight,
+    Settings,
+    AlertTriangle,
+    Factory,
+    Undo,
+    Eye,
+    Edit,
+    Calendar,
+    User,
+    Package,
+    MapPin,
+    TrendingUp,
+    TrendingDown
+} from 'lucide-react';
+import { router } from '@inertiajs/react';
+import type { MovimientoUnificado } from '@/types/inventario';
+import { CONFIGURACION_MOVIMIENTOS } from '@/types/inventario';
 
 interface MovimientoCardProps {
-    movimiento: MovimientoInventario;
+    movimiento: MovimientoUnificado;
+    showActions?: boolean;
     compact?: boolean;
 }
 
+const iconMap = {
+    ArrowDown,
+    ArrowUp,
+    ArrowLeftRight,
+    Settings,
+    AlertTriangle,
+    Factory,
+    Undo
+};
+
 export const MovimientoCard: React.FC<MovimientoCardProps> = ({
     movimiento,
+    showActions = true,
     compact = false
 }) => {
-    const tipoInfo = TIPOS_MOVIMIENTO[movimiento.tipo];
-    const esEntrada = movimiento.tipo.startsWith('ENTRADA') || movimiento.tipo === 'TRANSFERENCIA_ENTRADA';
+    const config = CONFIGURACION_MOVIMIENTOS[movimiento.tipo];
+    const IconComponent = iconMap[config.icon as keyof typeof iconMap] || Package;
+
+    const getStockChangeIcon = () => {
+        if (config.afecta_stock === 'POSITIVO') return TrendingUp;
+        if (config.afecta_stock === 'NEGATIVO') return TrendingDown;
+        return ArrowLeftRight;
+    };
+
+    const StockIcon = getStockChangeIcon();
+
+    const handleVerDetalle = () => {
+        if (movimiento.referencia_tipo === 'transferencia') {
+            router.visit(`/inventario/transferencias/${movimiento.referencia_id}`);
+        } else if (movimiento.referencia_tipo === 'merma') {
+            router.visit(`/inventario/mermas/${movimiento.referencia_id}`);
+        }
+        // Agregar más tipos según se implementen
+    };
+
+    const formatCurrency = (value?: number) => {
+        if (!value) return 'Bs. 0.00';
+        return `Bs. ${value.toFixed(2)}`;
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    };
+
+    const formatTime = (timeString: string) => {
+        return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
     if (compact) {
         return (
-            <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+            <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                    <div className="text-lg">{tipoInfo.icon}</div>
-                    <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {movimiento.stockProducto?.producto?.nombre || 'N/A'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {movimiento.stockProducto?.almacen?.nombre || 'N/A'}
+                    <div className={`p-2 rounded-full ${config.bgColor}`}>
+                        <IconComponent className={`h-4 w-4 ${config.textColor}`} />
+                    </div>
+                    <div>
+                        <p className="font-medium text-sm">{movimiento.producto.nombre}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {movimiento.almacen.nombre} • {formatDate(movimiento.fecha)}
                         </p>
                     </div>
                 </div>
-
                 <div className="text-right">
-                    <p className={`text-sm font-medium ${esEntrada ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                        }`}>
-                        {MovimientosInventarioService.formatCantidad(
-                            esEntrada ? movimiento.cantidad : -movimiento.cantidad
-                        )}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {MovimientosInventarioService.formatFechaCorta(movimiento.created_at || '')}
-                    </p>
+                    <div className="flex items-center gap-1">
+                        <StockIcon className="h-3 w-3" />
+                        <span className="text-sm font-medium">
+                            {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
+                        </span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                        {config.label}
+                    </Badge>
                 </div>
             </div>
         );
     }
 
     return (
-        <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <Badge className={tipoInfo.color}>
-                            <span className="mr-1">{tipoInfo.icon}</span>
-                            {tipoInfo.label}
-                        </Badge>
-                    </div>
-                    <div className="text-right">
-                        <p className={`text-lg font-bold ${esEntrada ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                            }`}>
-                            {MovimientosInventarioService.formatCantidad(
-                                esEntrada ? movimiento.cantidad : -movimiento.cantidad
-                            )}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Stock: {movimiento.stock_anterior} → {movimiento.stock_nuevo}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Información del producto */}
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-gray-400" />
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {movimiento.stockProducto?.producto?.nombre || 'N/A'}
-                            </p>
-                            {movimiento.stockProducto?.producto?.categoria && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {movimiento.stockProducto.producto.categoria.nombre}
+        <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-full ${config.bgColor}`}>
+                            <IconComponent className={`h-5 w-5 ${config.textColor}`} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-lg">{config.label}</h3>
+                                <Badge
+                                    variant="outline"
+                                    className={`${config.bgColor} ${config.textColor} border-current`}
+                                >
+                                    {movimiento.subtipo.replace('_', ' ')}
+                                </Badge>
+                            </div>
+                            {movimiento.numero_referencia && (
+                                <p className="text-sm text-muted-foreground">
+                                    Ref: {movimiento.numero_referencia}
                                 </p>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {movimiento.stockProducto?.almacen?.nombre || 'N/A'}
-                        </p>
+                    {movimiento.estado && (
+                        <Badge
+                            variant={movimiento.estado === 'PROCESADO' ? 'default' : 'secondary'}
+                            className="ml-auto"
+                        >
+                            {movimiento.estado}
+                        </Badge>
+                    )}
+                </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+                {/* Información del Producto */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{movimiento.producto.nombre}</span>
+                        </div>
+                        {movimiento.producto.codigo && (
+                            <p className="text-sm text-muted-foreground pl-6">
+                                Código: {movimiento.producto.codigo}
+                            </p>
+                        )}
+                        {movimiento.producto.categoria && (
+                            <p className="text-sm text-muted-foreground pl-6">
+                                Categoría: {movimiento.producto.categoria.nombre}
+                            </p>
+                        )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {MovimientosInventarioService.formatFecha(movimiento.created_at || '')}
-                        </p>
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{movimiento.almacen.nombre}</span>
+                        </div>
+                        {movimiento.almacen_origen && movimiento.almacen_destino && (
+                            <p className="text-sm text-muted-foreground pl-6">
+                                {movimiento.almacen_origen.nombre} → {movimiento.almacen_destino.nombre}
+                            </p>
+                        )}
                     </div>
+                </div>
 
-                    {movimiento.user && (
-                        <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-gray-400" />
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                                {movimiento.user.name}
-                            </p>
+                {/* Información de Cantidad y Stock */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Cantidad</p>
+                        <div className="flex items-center justify-center gap-1">
+                            <StockIcon className="h-4 w-4" />
+                            <span className="font-bold text-lg">
+                                {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
+                            </span>
                         </div>
-                    )}
-
-                    {movimiento.numero_documento && (
-                        <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-gray-400" />
-                            <p className="text-sm font-mono text-gray-600 dark:text-gray-300">
-                                {movimiento.numero_documento}
-                            </p>
-                        </div>
-                    )}
-
-                    {movimiento.observacion && (
-                        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm text-gray-600 dark:text-gray-300">
-                            {movimiento.observacion}
+                    </div>
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Stock Anterior</p>
+                        <p className="font-medium">{movimiento.cantidad_anterior}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Stock Nuevo</p>
+                        <p className="font-medium">{movimiento.cantidad_nueva}</p>
+                    </div>
+                    {movimiento.valor_total && (
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Valor Total</p>
+                            <p className="font-medium">{formatCurrency(movimiento.valor_total)}</p>
                         </div>
                     )}
                 </div>
+
+                {/* Información Adicional */}
+                <div className="space-y-2">
+                    {movimiento.lote && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Lote:</span>
+                            <Badge variant="outline">{movimiento.lote}</Badge>
+                        </div>
+                    )}
+
+                    {movimiento.fecha_vencimiento && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Vencimiento:</span>
+                            <span className="text-sm">{formatDate(movimiento.fecha_vencimiento)}</span>
+                        </div>
+                    )}
+
+                    <div className="text-sm">
+                        <span className="text-muted-foreground">Motivo:</span>
+                        <span className="ml-2">{movimiento.motivo}</span>
+                    </div>
+
+                    {movimiento.observaciones && (
+                        <div className="text-sm">
+                            <span className="text-muted-foreground">Observaciones:</span>
+                            <p className="mt-1 p-2 bg-muted rounded text-sm">{movimiento.observaciones}</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Información de Usuario y Fecha */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{movimiento.usuario.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{formatDate(movimiento.fecha)} {formatTime(movimiento.hora)}</span>
+                    </div>
+                </div>
+
+                {/* Información de Aprobación */}
+                {movimiento.aprobado_por && (
+                    <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                        <span className="text-sm text-green-800 dark:text-green-300">
+                            Aprobado por: {movimiento.aprobado_por.name}
+                        </span>
+                        <span className="text-xs text-green-600">
+                            {movimiento.fecha_aprobacion && formatDate(movimiento.fecha_aprobacion)}
+                        </span>
+                    </div>
+                )}
+
+                {/* Acciones */}
+                {showActions && (
+                    <div className="flex gap-2 pt-2">
+                        {movimiento.referencia_id && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleVerDetalle}
+                                className="flex items-center gap-2"
+                            >
+                                <Eye className="h-4 w-4" />
+                                Ver Detalle
+                            </Button>
+                        )}
+
+                        {config.permite_edicion && movimiento.estado === 'PENDIENTE' && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
+                            >
+                                <Edit className="h-4 w-4" />
+                                Editar
+                            </Button>
+                        )}
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

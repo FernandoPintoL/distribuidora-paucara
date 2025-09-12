@@ -7,9 +7,9 @@ import type { BaseService } from '@/domain/generic';
 import type {
     Venta,
     VentaFormData,
-    FiltrosVentas,
-    VentaValidationErrors
+    FiltrosVentas
 } from '@/domain/ventas';
+import stockService, { ResumenStock } from '@/services/stock.service';
 import NotificationService from '@/services/notification.service';
 
 export class VentasService implements BaseService<Venta, VentaFormData> {
@@ -504,6 +504,41 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
             console.error('Error obteniendo productos con stock bajo:', error);
             throw error;
         }
+    }
+
+    /**
+     * Obtener resumen de stock para una venta específica
+     */
+    async obtenerResumenStock(ventaId: Id): Promise<ResumenStock | null> {
+        try {
+            const response = await fetch(`/ventas/${ventaId}/stock/resumen`, {
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error obteniendo resumen de stock');
+            }
+
+            const result = await response.json();
+            return result.data;
+        } catch (error) {
+            console.error('Error obteniendo resumen de stock:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Navegar a la página de gestión de stock
+     */
+    navigateToStockManagement(): void {
+        router.get('/inventario/stock-bajo', {}, {
+            onError: (errors) => {
+                NotificationService.error('Error al acceder a la gestión de stock');
+                console.error('Stock management navigation errors:', errors);
+            }
+        });
     }
 }
 

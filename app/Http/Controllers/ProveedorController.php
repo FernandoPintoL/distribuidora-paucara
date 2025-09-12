@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Proveedor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -49,13 +50,45 @@ class ProveedorController extends Controller
             ->withQueryString();
 
         return Inertia::render('proveedores/index', [
-            'proveedores' => $items,
+            'items' => $items,
             'filters' => [
                 'q' => $q,
-                'activo' => $activo !== null ? ($activo ? '1' : '0') : null,
+                'activo' => $activo,
                 'order_by' => $orderBy,
                 'order_dir' => $orderDir,
             ],
+        ]);
+    }
+
+    /**
+     * API: Buscar proveedores para autocompletado
+     */
+    public function buscarApi(Request $request): JsonResponse
+    {
+        $q = $request->string('q');
+        $limite = $request->integer('limite', 10);
+
+        if (! $q || strlen($q) < 2) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+            ]);
+        }
+
+        $proveedores = Proveedor::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
+            ->where('activo', true)
+            ->where(function ($query) use ($q) {
+                $query->where('nombre', 'ilike', "%$q%")
+                    ->orWhere('razon_social', 'ilike', "%$q%")
+                    ->orWhere('nit', 'ilike', "%$q%")
+                    ->orWhere('telefono', 'ilike', "%$q%");
+            })
+            ->limit($limite)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $proveedores,
         ]);
     }
 

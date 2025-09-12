@@ -1,8 +1,6 @@
 // Configuration: Productos module configuration
 import type { ModuleConfig } from '@/domain/generic';
 import type { Producto, ProductoFormData } from '@/domain/productos';
-import { Link } from '@inertiajs/react';
-import productosService from '@/services/productos.service';
 
 const currency = (n?: number | null) => {
   if (n === undefined || n === null) return '-';
@@ -131,32 +129,32 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       {
         key: 'categoria_id',
         label: 'Categoría',
-        type: 'select',
+        type: 'select' as const,
         placeholder: 'Todas las categorías',
         extraDataKey: 'categorias',
-        width: 'md'
+        width: 'md' as const
       },
       {
         key: 'marca_id',
         label: 'Marca',
-        type: 'select',
+        type: 'select' as const,
         placeholder: 'Todas las marcas',
         extraDataKey: 'marcas',
-        width: 'md'
+        width: 'md' as const
       },
       {
         key: 'activo',
         label: 'Estado',
-        type: 'boolean',
+        type: 'boolean' as const,
         placeholder: 'Todos los estados',
-        width: 'sm'
+        width: 'sm' as const
       },
       {
         key: 'stock_minimo',
         label: 'Stock mínimo',
-        type: 'number',
+        type: 'number' as const,
         placeholder: 'Cantidad mínima',
-        width: 'sm'
+        width: 'sm' as const
       }
     ],
     sortOptions: [
@@ -167,8 +165,8 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       { value: 'created_at', label: 'Fecha creación' },
       { value: 'updated_at', label: 'Última actualización' }
     ],
-    defaultSort: { field: 'nombre', direction: 'asc' },
-    layout: 'grid'
+    defaultSort: { field: 'nombre', direction: 'asc' as const },
+    layout: 'grid' as const
   },
 
   // Legacy support (deprecated)

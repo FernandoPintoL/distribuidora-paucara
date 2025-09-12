@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import FiltrosVentasComponent from '@/components/ventas/filtros-ventas';
 import EstadisticasVentasComponent from '@/components/ventas/estadisticas-ventas';
 import TablaVentas from '@/components/ventas/tabla-ventas';
+import StockBajoAlerts from '@/components/ventas/stock-bajo-alerts';
 import { Plus } from 'lucide-react';
 
 // Importar tipos del domain
@@ -42,6 +43,9 @@ export default function VentasIndex() {
             <Head title="Ventas" />
 
             <div className="space-y-6 p-6">
+                {/* Alertas de stock bajo */}
+                <StockBajoAlerts />
+
                 {/* Header */}
                 <div className="flex items-center justify-between py-4">
                     <div>
