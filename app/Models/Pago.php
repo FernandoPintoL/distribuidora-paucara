@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +13,7 @@ class Pago extends Model
         'venta_id', // Mantener para compatibilidad con ventas
         'tipo_pago_id',
         'monto',
+        'fecha',
         'fecha_pago',
         'numero_recibo',
         'numero_transferencia',
@@ -24,7 +24,8 @@ class Pago extends Model
     ];
 
     protected $casts = [
-        'monto' => 'decimal:2',
+        'monto'      => 'decimal:2',
+        'fecha'      => 'datetime',
         'fecha_pago' => 'date',
     ];
 
@@ -67,7 +68,7 @@ class Pago extends Model
 
     public function scopePorMes($query, $mes = null, $año = null)
     {
-        $mes = $mes ?? now()->month;
+        $mes  = $mes ?? now()->month;
         $año = $año ?? now()->year;
 
         return $query->whereMonth('fecha_pago', $mes)

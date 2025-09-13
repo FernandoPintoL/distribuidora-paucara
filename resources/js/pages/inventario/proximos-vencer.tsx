@@ -87,7 +87,7 @@ export default function ProximosVencer() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Productos Próximos a Vencer" />
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>

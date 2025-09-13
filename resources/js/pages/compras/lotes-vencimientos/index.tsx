@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import type { Pagination } from '@/domain/shared';
 import {
     Package,
     AlertTriangle,
@@ -44,7 +45,7 @@ interface EstadisticasLotes {
 }
 
 interface Props {
-    lotes: LoteDetalle[];
+    lotes: Pagination<LoteDetalle>;
     estadisticas: EstadisticasLotes;
     productos: Producto[];
     proveedores: Proveedor[];
@@ -243,14 +244,14 @@ const GestionLotesVencimientos: React.FC<Props> = ({
                                     Producto
                                 </label>
                                 <Select
-                                    value={filtroLocal.producto_id || ''}
-                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, producto_id: value }))}
+                                    value={filtroLocal.producto_id || 'all'}
+                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, producto_id: value === 'all' ? '' : value }))}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los productos" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los productos</SelectItem>
+                                        <SelectItem value="all">Todos los productos</SelectItem>
                                         {productos.map((producto) => (
                                             <SelectItem key={producto.id} value={producto.id.toString()}>
                                                 {producto.nombre}
@@ -265,14 +266,14 @@ const GestionLotesVencimientos: React.FC<Props> = ({
                                     Proveedor
                                 </label>
                                 <Select
-                                    value={filtroLocal.proveedor_id || ''}
-                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, proveedor_id: value }))}
+                                    value={filtroLocal.proveedor_id || 'all'}
+                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, proveedor_id: value === 'all' ? '' : value }))}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los proveedores" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los proveedores</SelectItem>
+                                        <SelectItem value="all">Todos los proveedores</SelectItem>
                                         {proveedores.map((proveedor) => (
                                             <SelectItem key={proveedor.id} value={proveedor.id.toString()}>
                                                 {proveedor.nombre}
@@ -287,14 +288,14 @@ const GestionLotesVencimientos: React.FC<Props> = ({
                                     Estado de Vencimiento
                                 </label>
                                 <Select
-                                    value={filtroLocal.estado_vencimiento || ''}
-                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, estado_vencimiento: value }))}
+                                    value={filtroLocal.estado_vencimiento || 'all'}
+                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, estado_vencimiento: value === 'all' ? '' : value }))}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los estados" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los estados</SelectItem>
+                                        <SelectItem value="all">Todos los estados</SelectItem>
                                         <SelectItem value="VIGENTE">Vigente</SelectItem>
                                         <SelectItem value="PROXIMO_VENCER">Próximo a Vencer</SelectItem>
                                         <SelectItem value="CRITICO">Crítico</SelectItem>
@@ -321,11 +322,11 @@ const GestionLotesVencimientos: React.FC<Props> = ({
                     <CardHeader>
                         <CardTitle>Lista de Lotes</CardTitle>
                         <CardDescription>
-                            {lotes.length} lote{lotes.length !== 1 ? 's' : ''} encontrado{lotes.length !== 1 ? 's' : ''}
+                            {lotes.total} lote{lotes.total !== 1 ? 's' : ''} encontrado{lotes.total !== 1 ? 's' : ''}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {lotes.length === 0 ? (
+                        {lotes.data.length === 0 ? (
                             <div className="text-center py-12">
                                 <Package className="mx-auto h-12 w-12 text-gray-400" />
                                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -367,7 +368,7 @@ const GestionLotesVencimientos: React.FC<Props> = ({
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        {lotes.map((lote) => (
+                                        {lotes.data.map((lote) => (
                                             <tr key={lote.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
@@ -534,9 +535,9 @@ const GestionLotesVencimientos: React.FC<Props> = ({
                                         <div>
                                             <span className="block text-sm text-gray-600 mb-1">Días para vencer:</span>
                                             <span className={`font-medium ${loteSeleccionado.dias_para_vencer < 0 ? 'text-red-600' :
-                                                    loteSeleccionado.dias_para_vencer <= 7 ? 'text-orange-600' :
-                                                        loteSeleccionado.dias_para_vencer <= 30 ? 'text-yellow-600' :
-                                                            'text-green-600'
+                                                loteSeleccionado.dias_para_vencer <= 7 ? 'text-orange-600' :
+                                                    loteSeleccionado.dias_para_vencer <= 30 ? 'text-yellow-600' :
+                                                        'text-green-600'
                                                 }`}>
                                                 {loteSeleccionado.dias_para_vencer >= 0
                                                     ? `${loteSeleccionado.dias_para_vencer} días`

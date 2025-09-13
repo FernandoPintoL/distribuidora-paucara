@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,10 +25,10 @@ class MovimientoInventario extends Model
     ];
 
     protected $casts = [
-        'cantidad' => 'integer',
-        'cantidad_anterior' => 'integer',
+        'cantidad'           => 'integer',
+        'cantidad_anterior'  => 'integer',
         'cantidad_posterior' => 'integer',
-        'fecha' => 'datetime',
+        'fecha'              => 'datetime',
     ];
 
     // Constantes para tipos de movimiento
@@ -50,6 +49,10 @@ class MovimientoInventario extends Model
     const TIPO_SALIDA_DEVOLUCION = 'SALIDA_DEVOLUCION';
 
     const TIPO_TRANSFERENCIA_SALIDA = 'TRANSFERENCIA_SALIDA';
+
+    const TIPO_SALIDA_ENVIO = 'SALIDA_ENVIO';
+
+    const TIPO_ENTRADA_CANCELACION_ENVIO = 'ENTRADA_CANCELACION_ENVIO';
 
     /**
      * Relaciones
@@ -146,15 +149,15 @@ class MovimientoInventario extends Model
     public static function getTipos(): array
     {
         return [
-            self::TIPO_ENTRADA_COMPRA => 'Entrada por Compra',
-            self::TIPO_ENTRADA_AJUSTE => 'Entrada por Ajuste',
-            self::TIPO_ENTRADA_DEVOLUCION => 'Entrada por Devolución',
+            self::TIPO_ENTRADA_COMPRA        => 'Entrada por Compra',
+            self::TIPO_ENTRADA_AJUSTE        => 'Entrada por Ajuste',
+            self::TIPO_ENTRADA_DEVOLUCION    => 'Entrada por Devolución',
             self::TIPO_TRANSFERENCIA_ENTRADA => 'Transferencia - Entrada',
-            self::TIPO_SALIDA_VENTA => 'Salida por Venta',
-            self::TIPO_SALIDA_AJUSTE => 'Salida por Ajuste',
-            self::TIPO_SALIDA_MERMA => 'Salida por Merma',
-            self::TIPO_SALIDA_DEVOLUCION => 'Salida por Devolución',
-            self::TIPO_TRANSFERENCIA_SALIDA => 'Transferencia - Salida',
+            self::TIPO_SALIDA_VENTA          => 'Salida por Venta',
+            self::TIPO_SALIDA_AJUSTE         => 'Salida por Ajuste',
+            self::TIPO_SALIDA_MERMA          => 'Salida por Merma',
+            self::TIPO_SALIDA_DEVOLUCION     => 'Salida por Devolución',
+            self::TIPO_TRANSFERENCIA_SALIDA  => 'Transferencia - Salida',
         ];
     }
 
@@ -178,15 +181,15 @@ class MovimientoInventario extends Model
 
         // Crear el movimiento
         return self::create([
-            'stock_producto_id' => $stockProducto->id,
-            'cantidad' => $cantidadMovimiento,
-            'fecha' => now(),
-            'observacion' => $observacion,
-            'numero_documento' => $numeroDocumento,
-            'cantidad_anterior' => $cantidadAnterior,
+            'stock_producto_id'  => $stockProducto->id,
+            'cantidad'           => $cantidadMovimiento,
+            'fecha'              => now(),
+            'observacion'        => $observacion,
+            'numero_documento'   => $numeroDocumento,
+            'cantidad_anterior'  => $cantidadAnterior,
             'cantidad_posterior' => $stockProducto->cantidad,
-            'tipo' => $tipo,
-            'user_id' => $userId ?? (\Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null),
+            'tipo'               => $tipo,
+            'user_id'            => $userId ?? (\Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null),
         ]);
     }
 }

@@ -9,9 +9,12 @@ import { Label } from '@/components/ui/label';
 import {
     Almacen,
     ProductoInventario,
-    TIPOS_MERMA,
-    TipoMerma
+    TipoMerma,
+    TIPOS_MERMA
 } from '@/types/inventario';
+import { useTipoMermas } from '@/stores/useTipoMermas';
+import { TipoMermaCrudModal } from '@/components/inventario/TipoMermaCrudModal';
+import { EstadoMermaCrudModal } from '@/components/inventario/EstadoMermaCrudModal';
 import {
     Search,
     Package,
@@ -36,7 +39,11 @@ interface ProductoMermaForm {
     observaciones?: string;
 }
 
-export default function RegistrarMerma() {
+const RegistrarMermaPage: React.FC = () => {
+    const { tipos, fetchTipos } = useTipoMermas();
+    React.useEffect(() => { fetchTipos(); }, [fetchTipos]);
+    const [openTipoModal, setOpenTipoModal] = useState(false);
+    const [openEstadoModal, setOpenEstadoModal] = useState(false);
     const { props } = usePage<PageProps>();
     const { almacenes } = props;
     const { can } = useAuth();
@@ -216,7 +223,10 @@ export default function RegistrarMerma() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Registrar Merma" />
 
-            <div className="flex flex-col gap-6">
+            <TipoMermaCrudModal open={openTipoModal} onOpenChange={setOpenTipoModal} />
+            <EstadoMermaCrudModal open={openEstadoModal} onOpenChange={setOpenEstadoModal} />
+
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -245,6 +255,14 @@ export default function RegistrarMerma() {
                             </span>
                         </Button>
                     </div>
+                </div>
+                <div className="flex gap-2 mb-2">
+                    <Button type="button" variant="secondary" onClick={() => setOpenTipoModal(true)}>
+                        Gestionar Tipos de Merma
+                    </Button>
+                    <Button type="button" variant="secondary" onClick={() => setOpenEstadoModal(true)}>
+                        Gestionar Estados de Merma
+                    </Button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -295,9 +313,9 @@ export default function RegistrarMerma() {
                                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <option value="">Seleccionar tipo</option>
-                                        {Object.entries(TIPOS_MERMA).map(([key, config]) => (
-                                            <option key={key} value={key}>
-                                                {config.label} - {config.descripcion}
+                                        {tipos.map(tipo => (
+                                            <option key={tipo.clave} value={tipo.clave}>
+                                                {tipo.label} - {tipo.descripcion}
                                             </option>
                                         ))}
                                     </select>
@@ -333,7 +351,7 @@ export default function RegistrarMerma() {
                                 </div>
                             </div>
 
-                            {formData.tipo_merma && TIPOS_MERMA[formData.tipo_merma as TipoMerma]?.requiere_aprobacion && (
+                            {formData.tipo_merma && tipos.find(t => t.clave === formData.tipo_merma)?.requiere_aprobacion && (
                                 <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                                     <div className="flex items-center">
                                         <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" />
@@ -555,4 +573,6 @@ export default function RegistrarMerma() {
             </div>
         </AppLayout>
     );
-}
+};
+
+export default RegistrarMermaPage;

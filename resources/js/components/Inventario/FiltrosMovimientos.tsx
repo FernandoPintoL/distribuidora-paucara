@@ -127,14 +127,14 @@ export default function FiltrosMovimientos({
                             <div className="space-y-2">
                                 <Label>Tipo de movimiento</Label>
                                 <Select
-                                    value={filtros.tipo || ''}
-                                    onValueChange={(value) => updateFiltro('tipo', value)}
+                                    value={filtros.tipo || 'all'}
+                                    onValueChange={(value) => updateFiltro('tipo', value === 'all' ? undefined : value)}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los tipos" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los tipos</SelectItem>
+                                        <SelectItem value="all">Todos los tipos</SelectItem>
                                         {tiposMovimiento.map((tipo) => (
                                             <SelectItem key={tipo.value} value={tipo.value}>
                                                 {tipo.label}
@@ -148,16 +148,16 @@ export default function FiltrosMovimientos({
                             <div className="space-y-2">
                                 <Label>Almacén</Label>
                                 <Select
-                                    value={filtros.almacen_id?.toString() || ''}
+                                    value={filtros.almacen_id?.toString() || 'all'}
                                     onValueChange={(value) =>
-                                        updateFiltro('almacen_id', value ? parseInt(value) : undefined)
+                                        updateFiltro('almacen_id', value === 'all' ? undefined : parseInt(value))
                                     }
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los almacenes" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los almacenes</SelectItem>
+                                        <SelectItem value="all">Todos los almacenes</SelectItem>
                                         {almacenes.map((almacen) => (
                                             <SelectItem key={almacen.id} value={almacen.id.toString()}>
                                                 {almacen.nombre}
@@ -204,16 +204,16 @@ export default function FiltrosMovimientos({
                                 <div className="space-y-2">
                                     <Label>Producto</Label>
                                     <Select
-                                        value={filtros.producto_id?.toString() || ''}
+                                        value={filtros.producto_id?.toString() || 'all'}
                                         onValueChange={(value) =>
-                                            updateFiltro('producto_id', value ? parseInt(value) : undefined)
+                                            updateFiltro('producto_id', value === 'all' ? undefined : parseInt(value))
                                         }
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Todos los productos" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos los productos</SelectItem>
+                                            <SelectItem value="all">Todos los productos</SelectItem>
                                             {productos.map((producto) => (
                                                 <SelectItem key={producto.id} value={producto.id.toString()}>
                                                     {producto.codigo ? `${producto.codigo} - ` : ''}{producto.nombre}

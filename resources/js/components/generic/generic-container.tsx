@@ -12,7 +12,7 @@ import type { BaseEntity, BaseService, ModuleConfig, BaseFormData } from '@/doma
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface GenericContainerProps<T extends BaseEntity, F extends BaseFormData> {
-  entities: Pagination<T>;
+  entities: Pagination<T> | undefined;
   filters: Record<string, string | number | boolean | null | undefined>;
   config: ModuleConfig<T, F>;
   service: BaseService<T, F>;
@@ -35,6 +35,21 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
   } = useGenericEntities<T, F>(service);
 
   const [viewMode, setViewMode] = useState<'table' | 'cards'>(config.enableCardView ? 'cards' : 'table');
+
+  // Verificación defensiva para entities
+  if (!entities) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <p className="text-muted-foreground">Cargando datos...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleDelete = (entity: T) => {
     deleteEntity(entity, config.singularName);
@@ -65,9 +80,9 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
   return (
     <>
       <Head title={config.displayName} />
-      <div className="space-y-6">
+      <div>
         <Card className="shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-secondary to-secondary/70 dark:from-secondary/40 dark:to-secondary/20 border-b border-border p-4">
+          <CardHeader className="bg-gradient-to-r from-secondary to-secondary/70 dark:from-secondary/40 dark:to-secondary/20 border-b border-border">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="space-y-1">
                 <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -78,11 +93,11 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                   </div>
                   {config.displayName}
                 </CardTitle>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground p-2">
                   <span>{config.description}</span>
                   <div className="flex items-center gap-1">
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-800">
-                      {entities.total} total
+                      {entities?.total || 0} total
                     </span>
                   </div>
                 </div>
@@ -122,7 +137,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
             </div>
           </CardHeader>
 
-          <CardContent className="p-6">
+          <CardContent className="">
             <div className="space-y-6">
               {/* Modern Filters */}
               {config.indexFilters && (

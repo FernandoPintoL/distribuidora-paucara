@@ -71,9 +71,9 @@ interface PageProps {
 export default function EmpleadosIndex() {
     const { empleados, departamentos, filters } = usePage<PageProps>().props
     const [searchTerm, setSearchTerm] = useState(filters.search || '')
-    const [selectedDepartamento, setSelectedDepartamento] = useState(filters.departamento || '')
-    const [selectedEstado, setSelectedEstado] = useState(filters.estado || '')
-    const [selectedAccesoSistema, setSelectedAccesoSistema] = useState(filters.acceso_sistema || '')
+    const [selectedDepartamento, setSelectedDepartamento] = useState(filters.departamento || 'all')
+    const [selectedEstado, setSelectedEstado] = useState(filters.estado || 'all')
+    const [selectedAccesoSistema, setSelectedAccesoSistema] = useState(filters.acceso_sistema || 'all')
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -84,9 +84,9 @@ export default function EmpleadosIndex() {
         e.preventDefault()
         router.get('/empleados', {
             search: searchTerm,
-            departamento: selectedDepartamento,
-            estado: selectedEstado,
-            acceso_sistema: selectedAccesoSistema,
+            departamento: selectedDepartamento === 'all' ? '' : selectedDepartamento,
+            estado: selectedEstado === 'all' ? '' : selectedEstado,
+            acceso_sistema: selectedAccesoSistema === 'all' ? '' : selectedAccesoSistema,
         }, {
             preserveState: true,
             preserveScroll: true,
@@ -122,9 +122,9 @@ export default function EmpleadosIndex() {
 
     const clearFilters = () => {
         setSearchTerm('')
-        setSelectedDepartamento('')
-        setSelectedEstado('')
-        setSelectedAccesoSistema('')
+        setSelectedDepartamento('all')
+        setSelectedEstado('all')
+        setSelectedAccesoSistema('all')
         router.get('/empleados')
     }
 
@@ -227,7 +227,7 @@ export default function EmpleadosIndex() {
                                             <SelectValue placeholder="Todos" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos</SelectItem>
+                                            <SelectItem value="all">Todos</SelectItem>
                                             {departamentos.map((dept) => (
                                                 <SelectItem key={dept} value={dept}>
                                                     {dept}
@@ -244,7 +244,7 @@ export default function EmpleadosIndex() {
                                             <SelectValue placeholder="Todos" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos</SelectItem>
+                                            <SelectItem value="all">Todos</SelectItem>
                                             <SelectItem value="activo">Activo</SelectItem>
                                             <SelectItem value="inactivo">Inactivo</SelectItem>
                                             <SelectItem value="vacaciones">Vacaciones</SelectItem>
@@ -260,7 +260,7 @@ export default function EmpleadosIndex() {
                                             <SelectValue placeholder="Todos" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos</SelectItem>
+                                            <SelectItem value="all">Todos</SelectItem>
                                             <SelectItem value="1">Con acceso</SelectItem>
                                             <SelectItem value="0">Sin acceso</SelectItem>
                                         </SelectContent>

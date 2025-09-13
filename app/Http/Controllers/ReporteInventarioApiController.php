@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
@@ -31,21 +30,21 @@ class ReporteInventarioApiController extends Controller
     public function estadisticasGenerales(): JsonResponse
     {
         $estadisticas = [
-            'total_productos' => Producto::where('activo', true)->count(),
-            'productos_stock_bajo' => Producto::stockBajo()->count(),
-            'productos_proximos_vencer' => Producto::proximosVencer(30)->count(),
-            'productos_vencidos' => Producto::vencidos()->count(),
-            'valor_total_inventario' => StockProducto::join('productos', 'stock_productos.producto_id', '=', 'productos.id')
+            'total_productos'           => Producto::where('activo', true)->count(),
+            'productos_stock_bajo'      => Producto::query()->stockBajo()->count(),
+            'productos_proximos_vencer' => Producto::query()->proximosVencer(30)->count(),
+            'productos_vencidos'        => Producto::query()->vencidos()->count(),
+            'valor_total_inventario'    => StockProducto::join('productos', 'stock_productos.producto_id', '=', 'productos.id')
                 ->selectRaw('SUM(stock_productos.cantidad * productos.precio_compra) as total')
                 ->value('total') ?? 0,
-            'stock_por_almacen' => Almacen::withSum('stockProductos', 'cantidad')
+            'stock_por_almacen'         => Almacen::withSum('stockProductos', 'cantidad')
                 ->where('activo', true)
                 ->get(['id', 'nombre'])
                 ->map(function ($almacen) {
                     return [
-                        'almacen_id' => $almacen->id,
+                        'almacen_id'     => $almacen->id,
                         'almacen_nombre' => $almacen->nombre,
-                        'stock_total' => $almacen->stock_productos_sum_cantidad ?? 0,
+                        'stock_total'    => $almacen->stock_productos_sum_cantidad ?? 0,
                     ];
                 }),
         ];
@@ -59,9 +58,9 @@ class ReporteInventarioApiController extends Controller
     public function stockBajo(Request $request): JsonResponse
     {
         $almacenId = $request->integer('almacen_id');
-        $perPage = $request->integer('per_page', 20);
+        $perPage   = $request->integer('per_page', 20);
 
-        $productos = Producto::stockBajo()
+        $productos = Producto::query()->stockBajo()
             ->with(['categoria:id,nombre', 'marca:id,nombre'])
             ->with(['stock' => function ($query) use ($almacenId) {
                 if ($almacenId) {
@@ -87,9 +86,9 @@ class ReporteInventarioApiController extends Controller
      */
     public function proximosVencer(Request $request): JsonResponse
     {
-        $dias = $request->integer('dias', 30);
+        $dias      = $request->integer('dias', 30);
         $almacenId = $request->integer('almacen_id');
-        $perPage = $request->integer('per_page', 20);
+        $perPage   = $request->integer('per_page', 20);
 
         $productos = Producto::proximosVencer($dias)
             ->with(['categoria:id,nombre', 'marca:id,nombre'])
@@ -117,9 +116,9 @@ class ReporteInventarioApiController extends Controller
     public function vencidos(Request $request): JsonResponse
     {
         $almacenId = $request->integer('almacen_id');
-        $perPage = $request->integer('per_page', 20);
+        $perPage   = $request->integer('per_page', 20);
 
-        $productos = Producto::vencidos()
+        $productos = Producto::query()->vencidos()
             ->with(['categoria:id,nombre', 'marca:id,nombre'])
             ->with(['stock' => function ($query) use ($almacenId) {
                 if ($almacenId) {
@@ -146,9 +145,9 @@ class ReporteInventarioApiController extends Controller
     public function movimientosPorPeriodo(Request $request): JsonResponse
     {
         $fechaInicio = $request->date('fecha_inicio', now()->subMonth());
-        $fechaFin = $request->date('fecha_fin', now());
-        $almacenId = $request->integer('almacen_id');
-        $tipo = $request->string('tipo');
+        $fechaFin    = $request->date('fecha_fin', now());
+        $almacenId   = $request->integer('almacen_id');
+        $tipo        = $request->string('tipo');
 
         $movimientos = MovimientoInventario::with([
             'stockProducto.producto:id,nombre,codigo',
@@ -157,9 +156,9 @@ class ReporteInventarioApiController extends Controller
         ])
             ->whereBetween('fecha', [$fechaInicio, $fechaFin])
             ->when($almacenId, function ($q) use ($almacenId) {
-                $q->whereHas('stockProducto', fn ($sq) => $sq->where('almacen_id', $almacenId));
+                $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId));
             })
-            ->when($tipo, fn ($q) => $q->where('tipo', $tipo))
+            ->when($tipo, fn($q) => $q->where('tipo', $tipo))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->get();
@@ -167,22 +166,22 @@ class ReporteInventarioApiController extends Controller
         // Agrupar por tipo
         $resumenPorTipo = $movimientos->groupBy('tipo')->map(function ($items, $tipo) {
             return [
-                'tipo' => $tipo,
+                'tipo'                 => $tipo,
                 'cantidad_movimientos' => $items->count(),
-                'cantidad_total' => $items->sum('cantidad'),
-                'valor_total' => $items->sum(function ($mov) {
+                'cantidad_total'       => $items->sum('cantidad'),
+                'valor_total'          => $items->sum(function ($mov) {
                     return abs($mov->cantidad) * ($mov->stockProducto->producto->precio_compra ?? 0);
                 }),
             ];
         })->values();
 
         return ApiResponse::success([
-            'movimientos' => $movimientos,
-            'resumen_por_tipo' => $resumenPorTipo,
+            'movimientos'       => $movimientos,
+            'resumen_por_tipo'  => $resumenPorTipo,
             'total_movimientos' => $movimientos->count(),
-            'periodo' => [
+            'periodo'           => [
                 'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-                'fecha_fin' => $fechaFin->format('Y-m-d'),
+                'fecha_fin'    => $fechaFin->format('Y-m-d'),
             ],
         ]);
     }
@@ -193,9 +192,9 @@ class ReporteInventarioApiController extends Controller
     public function productosMasMovidos(Request $request): JsonResponse
     {
         $fechaInicio = $request->date('fecha_inicio', now()->subMonth());
-        $fechaFin = $request->date('fecha_fin', now());
-        $limite = $request->integer('limite', 20);
-        $almacenId = $request->integer('almacen_id');
+        $fechaFin    = $request->date('fecha_fin', now());
+        $limite      = $request->integer('limite', 20);
+        $almacenId   = $request->integer('almacen_id');
 
         $productos = DB::table('movimientos_inventario')
             ->select([
@@ -209,7 +208,7 @@ class ReporteInventarioApiController extends Controller
             ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
             ->join('productos', 'stock_productos.producto_id', '=', 'productos.id')
             ->whereBetween('movimientos_inventario.fecha', [$fechaInicio, $fechaFin])
-            ->when($almacenId, fn ($q) => $q->where('stock_productos.almacen_id', $almacenId))
+            ->when($almacenId, fn($q) => $q->where('stock_productos.almacen_id', $almacenId))
             ->groupBy('productos.id', 'productos.nombre', 'productos.codigo')
             ->orderByDesc('total_movimientos')
             ->limit($limite)
@@ -217,9 +216,9 @@ class ReporteInventarioApiController extends Controller
 
         return ApiResponse::success([
             'productos' => $productos,
-            'periodo' => [
+            'periodo'   => [
                 'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-                'fecha_fin' => $fechaFin->format('Y-m-d'),
+                'fecha_fin'    => $fechaFin->format('Y-m-d'),
             ],
         ]);
     }
@@ -250,22 +249,22 @@ class ReporteInventarioApiController extends Controller
             });
 
             return [
-                'almacen' => $almacenNombre,
+                'almacen'         => $almacenNombre,
                 'total_productos' => $items->count(),
-                'cantidad_total' => $items->sum('cantidad'),
-                'valor_compra' => $valorCompra,
-                'valor_venta' => $valorVenta,
-                'margen_bruto' => $valorVenta - $valorCompra,
-                'productos' => $items->map(function ($stock) {
+                'cantidad_total'  => $items->sum('cantidad'),
+                'valor_compra'    => $valorCompra,
+                'valor_venta'     => $valorVenta,
+                'margen_bruto'    => $valorVenta - $valorCompra,
+                'productos'       => $items->map(function ($stock) {
                     return [
-                        'producto_id' => $stock->producto->id,
-                        'producto_nombre' => $stock->producto->nombre,
-                        'producto_codigo' => $stock->producto->codigo,
-                        'cantidad' => $stock->cantidad,
-                        'precio_compra' => $stock->producto->precio_compra,
-                        'precio_venta' => $stock->producto->precio_venta,
+                        'producto_id'        => $stock->producto->id,
+                        'producto_nombre'    => $stock->producto->nombre,
+                        'producto_codigo'    => $stock->producto->codigo,
+                        'cantidad'           => $stock->cantidad,
+                        'precio_compra'      => $stock->producto->precio_compra,
+                        'precio_venta'       => $stock->producto->precio_venta,
                         'valor_total_compra' => $stock->cantidad * ($stock->producto->precio_compra ?? 0),
-                        'valor_total_venta' => $stock->cantidad * ($stock->producto->precio_venta ?? 0),
+                        'valor_total_venta'  => $stock->cantidad * ($stock->producto->precio_venta ?? 0),
                     ];
                 }),
             ];

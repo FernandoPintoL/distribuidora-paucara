@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,8 +28,8 @@ class TransferenciaInventario extends Model
     ];
 
     protected $casts = [
-        'fecha' => 'datetime',
-        'fecha_envio' => 'datetime',
+        'fecha'           => 'datetime',
+        'fecha_envio'     => 'datetime',
         'fecha_recepcion' => 'datetime',
     ];
 
@@ -84,6 +83,14 @@ class TransferenciaInventario extends Model
     }
 
     /**
+     * Alias para la relación creadoPor (para compatibilidad)
+     */
+    public function usuario(): BelongsTo
+    {
+        return $this->creadoPor();
+    }
+
+    /**
      * Detalles de la transferencia
      */
     public function detalles(): HasMany
@@ -127,7 +134,7 @@ class TransferenciaInventario extends Model
             }
 
             $this->update([
-                'estado' => self::ESTADO_ENVIADO,
+                'estado'      => self::ESTADO_ENVIADO,
                 'fecha_envio' => now(),
             ]);
         });
@@ -153,12 +160,12 @@ class TransferenciaInventario extends Model
                 $stockDestino = StockProducto::firstOrCreate(
                     [
                         'producto_id' => $detalle->producto_id,
-                        'almacen_id' => $this->almacen_destino_id,
+                        'almacen_id'  => $this->almacen_destino_id,
                     ],
                     [
-                        'cantidad' => 0,
-                        'precio_promedio' => $stockOrigen ? $stockOrigen->precio_promedio : $detalle->producto->precio_compra,
-                        'stock_minimo' => $stockOrigen ? $stockOrigen->stock_minimo : 0,
+                        'cantidad'          => 0,
+                        'precio_promedio'   => $stockOrigen ? $stockOrigen->precio_promedio : $detalle->producto->precio_compra,
+                        'stock_minimo'      => $stockOrigen ? $stockOrigen->stock_minimo : 0,
                         'fecha_vencimiento' => $detalle->fecha_vencimiento,
                     ]
                 );
@@ -179,7 +186,7 @@ class TransferenciaInventario extends Model
             }
 
             $this->update([
-                'estado' => self::ESTADO_RECIBIDO,
+                'estado'          => self::ESTADO_RECIBIDO,
                 'fecha_recepcion' => now(),
             ]);
         });
@@ -216,8 +223,8 @@ class TransferenciaInventario extends Model
             }
 
             $this->update([
-                'estado' => self::ESTADO_CANCELADO,
-                'observaciones' => ($this->observaciones ? $this->observaciones."\n" : '').'CANCELADO: '.$motivo,
+                'estado'        => self::ESTADO_CANCELADO,
+                'observaciones' => ($this->observaciones ? $this->observaciones . "\n" : '') . 'CANCELADO: ' . $motivo,
             ]);
         });
     }
@@ -229,7 +236,7 @@ class TransferenciaInventario extends Model
     {
         $ultimo = self::whereDate('created_at', today())->count();
 
-        return 'TRANS-'.today()->format('Ymd').'-'.str_pad($ultimo + 1, 4, '0', STR_PAD_LEFT);
+        return 'TRANS-' . today()->format('Ymd') . '-' . str_pad($ultimo + 1, 4, '0', STR_PAD_LEFT);
     }
 
     /**

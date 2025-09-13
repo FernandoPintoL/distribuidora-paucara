@@ -622,7 +622,7 @@ class InventarioController extends Controller
 
         $almacenes = Almacen::where('activo', true)->get(['id', 'nombre']);
         $vehiculos = Vehiculo::activos()->get(['id', 'placa']);
-        $choferes  = Chofer::activos()->with('usuario:id,name')->get();
+        $choferes  = Chofer::activos()->with('user:id,name')->get();
         $estados   = TransferenciaInventario::getEstados();
 
         return Inertia::render('inventario/transferencias/index', [
@@ -636,15 +636,15 @@ class InventarioController extends Controller
     }
 
     /**
-     * Crear nueva transferencia
+     * Crear nueva transferencia de inventario
      */
-    public function crearTransferencia(Request $request): JsonResponse
+    public function crearTransferencia(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'almacen_origen_id'            => ['required', 'exists:almacenes,id'],
             'almacen_destino_id'           => ['required', 'exists:almacenes,id', 'different:almacen_origen_id'],
             'vehiculo_id'                  => ['nullable', 'exists:vehiculos,id'],
-            'chofer_id'                    => ['nullable', 'exists:chofers,id'],
+            'chofer_id'                    => ['nullable', 'exists:choferes,id'],
             'observaciones'                => ['nullable', 'string', 'max:500'],
             'detalles'                     => ['required', 'array', 'min:1'],
             'detalles.*.producto_id'       => ['required', 'exists:productos,id'],
@@ -689,16 +689,15 @@ class InventarioController extends Controller
                 return $transferencia;
             });
 
-            return ApiResponse::success(
-                $transferencia->load(['almacenOrigen', 'almacenDestino', 'detalles.producto']),
-                'Transferencia creada exitosamente'
-            );
+            return redirect()
+                ->route('inventario.transferencias.show', $transferencia)
+                ->with('success', "Transferencia {$transferencia->numero} creada exitosamente");
 
         } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Error al crear transferencia: ' . $e->getMessage(),
-                500
-            );
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al crear transferencia: ' . $e->getMessage()]);
         }
     }
 
@@ -747,14 +746,37 @@ class InventarioController extends Controller
      */
     public function formularioCrearTransferencia(): Response
     {
-        $almacenes = Almacen::where('activo', true)->get();
+        $almacenes = Almacen::where('activo', true)
+            ->select('id', 'nombre', 'direccion', 'ubicacion_fisica', 'requiere_transporte_externo')
+            ->get();
         $vehiculos = Vehiculo::activos()->get();
         $choferes  = Chofer::with('user')->get();
+        $productos = Producto::where('activo', true)
+            ->with(['codigoPrincipal', 'stock' => function ($query) {
+                $query->select('producto_id', 'almacen_id', 'cantidad')
+                    ->where('cantidad', '>', 0);
+            }])
+            ->select('id', 'nombre', 'codigo_qr')
+            ->orderBy('nombre')
+            ->get()
+            ->map(function ($producto) {
+                $stockTotal = $producto->stock->sum('cantidad');
+                return [
+                    'id'                => $producto->id,
+                    'nombre'            => $producto->nombre,
+                    'codigo'            => $producto->codigoPrincipal?->codigo ?? $producto->codigo_qr ?? 'SIN-CODIGO',
+                    'stock_disponible'  => $stockTotal,
+                    'stock_por_almacen' => $producto->stock->groupBy('almacen_id')->map(function ($stock) {
+                        return $stock->sum('cantidad');
+                    })->toArray(),
+                ];
+            });
 
         return Inertia::render('inventario/transferencias/crear', [
             'almacenes' => $almacenes,
             'vehiculos' => $vehiculos,
             'choferes'  => $choferes,
+            'productos' => $productos,
         ]);
     }
 
@@ -769,7 +791,7 @@ class InventarioController extends Controller
             'vehiculo',
             'chofer.user',
             'creadoPor',
-            'detalles.stockProducto.producto',
+            'detalles.producto',
         ]);
 
         return Inertia::render('inventario/transferencias/ver', [
@@ -915,7 +937,7 @@ class InventarioController extends Controller
      */
     public function editarTransferencia(TransferenciaInventario $transferencia): Response
     {
-        $transferencia->load(['detalles.stockProducto.producto', 'almacenOrigen', 'almacenDestino', 'vehiculo', 'chofer.user']);
+        $transferencia->load(['detalles.producto', 'almacenOrigen', 'almacenDestino', 'vehiculo', 'chofer.user']);
 
         $almacenes = Almacen::where('activo', true)->get();
         $vehiculos = Vehiculo::where('activo', true)->get();

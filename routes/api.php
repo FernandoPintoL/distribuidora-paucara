@@ -1,6 +1,7 @@
 <?php
-
 use App\Http\Controllers\Api\ApiProformaController;
+use App\Http\Controllers\Api\EstadoMermaController;
+use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CompraController;
@@ -11,6 +12,10 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ReporteInventarioApiController;
 use App\Http\Controllers\VentaController;
 use Illuminate\Support\Facades\Route;
+
+// Catálogos de mermas
+Route::apiResource('tipo-mermas', TipoMermaController::class);
+Route::apiResource('estado-mermas', EstadoMermaController::class);
 
 // ==========================================
 // 📱 RUTAS PARA APP EXTERNA (Flutter)

@@ -2,7 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -57,7 +57,7 @@ interface FiltrosAsientos {
 }
 
 interface PageProps extends InertiaPageProps {
-    asientos: Pagination<AsientoContable>;
+    asientos: Pagination<AsientoContable> | undefined;
     filtros: FiltrosAsientos;
     tipos_documento: string[];
 }
@@ -67,6 +67,27 @@ export default function AsientosContablesIndex() {
     const { asientos, filtros, tipos_documento } = props;
 
     const [filtrosLocal, setFiltrosLocal] = useState<FiltrosAsientos>(filtros);
+
+    // Verificación defensiva para asientos
+    if (!asientos) {
+        return (
+            <AppLayout
+                breadcrumbs={[
+                    { title: 'Contabilidad', href: '/contabilidad/asientos' },
+                    { title: 'Asientos Contables', href: '/contabilidad/asientos' }
+                ]}
+            >
+                <Head title="Asientos Contables" />
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="text-center">
+                            <p className="text-muted-foreground">Cargando asientos contables...</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </AppLayout>
+        );
+    }
 
     const aplicarFiltros = () => {
         router.get('/contabilidad/asientos', filtrosLocal, {
@@ -133,7 +154,7 @@ export default function AsientosContablesIndex() {
                             Asientos Contables
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400">
-                            {asientos.total > 0
+                            {asientos?.total && asientos.total > 0
                                 ? `${asientos.from}-${asientos.to} de ${asientos.total} asientos`
                                 : 'No se encontraron asientos contables'
                             }
@@ -186,14 +207,14 @@ export default function AsientosContablesIndex() {
                                 Tipo Documento
                             </label>
                             <Select
-                                value={filtrosLocal.tipo_documento || ''}
-                                onValueChange={(value) => setFiltrosLocal({ ...filtrosLocal, tipo_documento: value || undefined })}
+                                value={filtrosLocal.tipo_documento || 'all'}
+                                onValueChange={(value) => setFiltrosLocal({ ...filtrosLocal, tipo_documento: value === 'all' ? undefined : value })}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Todos los tipos" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todos los tipos</SelectItem>
+                                    <SelectItem value="all">Todos los tipos</SelectItem>
                                     {tipos_documento.map((tipo) => (
                                         <SelectItem key={tipo} value={tipo}>
                                             {tipo}

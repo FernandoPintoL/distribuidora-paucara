@@ -6,6 +6,8 @@ export interface Almacen extends BaseEntity {
   id: Id;
   nombre: string;
   direccion?: string | null;
+  ubicacion_fisica?: string | null;
+  requiere_transporte_externo?: boolean;
   responsable?: string | null;
   telefono?: string | null;
   activo: boolean;
@@ -15,6 +17,8 @@ export interface AlmacenFormData extends BaseFormData {
   id?: Id;
   nombre: string;
   direccion?: string | null;
+  ubicacion_fisica?: string | null;
+  requiere_transporte_externo?: boolean;
   responsable?: string | null;
   telefono?: string | null;
   activo?: boolean;

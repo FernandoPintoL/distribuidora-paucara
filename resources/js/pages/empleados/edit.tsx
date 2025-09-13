@@ -293,12 +293,15 @@ export default function EmpleadosEdit() {
                                 </div>
                                 <div>
                                     <Label htmlFor="supervisor_id">Supervisor</Label>
-                                    <Select value={formData.supervisor_id} onValueChange={handleInputChange('supervisor_id')}>
+                                    <Select
+                                        value={formData.supervisor_id || 'none'}
+                                        onValueChange={(value) => handleInputChange('supervisor_id')(value === 'none' ? '' : value)}
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Sin supervisor" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Sin supervisor</SelectItem>
+                                            <SelectItem value="none">Sin supervisor</SelectItem>
                                             {supervisores.map((supervisor) => (
                                                 <SelectItem key={supervisor.id} value={supervisor.id.toString()}>
                                                     {supervisor.nombre} - {supervisor.cargo}

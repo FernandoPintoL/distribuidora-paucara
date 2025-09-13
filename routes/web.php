@@ -83,19 +83,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('empleados/{empleado}/toggle-estado', [\App\Http\Controllers\EmpleadoController::class, 'toggleEstado'])->name('empleados.toggle-estado');
     Route::patch('empleados/{empleado}/toggle-acceso-sistema', [\App\Http\Controllers\EmpleadoController::class, 'toggleAccesoSistema'])->name('empleados.toggle-acceso-sistema');
 
-    // Rutas para gestión de compras
-    Route::resource('compras', \App\Http\Controllers\CompraController::class)->except(['destroy']);
-
-    // Keep nested details routes
-    Route::resource('compras.detalles', \App\Http\Controllers\DetalleCompraController::class)->shallow();
-
-    // Rutas adicionales para módulo de compras
+    // Rutas adicionales para módulo de compras (ANTES de resource para evitar conflictos)
     Route::prefix('compras')->name('compras.')->group(function () {
         // Gestión de Cuentas por Pagar
         Route::get('cuentas-por-pagar', [\App\Http\Controllers\CuentaPorPagarController::class, 'index'])->name('cuentas-por-pagar.index');
+        Route::get('cuentas-por-pagar/export', [\App\Http\Controllers\CuentaPorPagarController::class, 'export'])->name('cuentas-por-pagar.export');
         Route::get('cuentas-por-pagar/{cuenta}/show', [\App\Http\Controllers\CuentaPorPagarController::class, 'show'])->name('cuentas-por-pagar.show');
         Route::patch('cuentas-por-pagar/{cuenta}/estado', [\App\Http\Controllers\CuentaPorPagarController::class, 'actualizarEstado'])->name('cuentas-por-pagar.actualizar-estado');
-        Route::get('cuentas-por-pagar/export', [\App\Http\Controllers\CuentaPorPagarController::class, 'export'])->name('cuentas-por-pagar.export');
 
         // Sistema de Pagos
         Route::get('pagos', [\App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');
@@ -117,6 +111,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('reportes/export-pdf', [\App\Http\Controllers\ReporteComprasController::class, 'exportPdf'])->name('reportes.export-pdf');
     });
 
+    // Rutas para gestión de compras (después de rutas específicas para evitar conflictos)
+    Route::resource('compras', \App\Http\Controllers\CompraController::class)->except(['destroy']);
+
+    // Keep nested details routes
+    Route::resource('compras.detalles', \App\Http\Controllers\DetalleCompraController::class)->shallow();
+
     // Rutas para gestión de ventas
     Route::resource('ventas', \App\Http\Controllers\VentaController::class);
 
@@ -137,21 +137,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{proforma}/aprobar', [\App\Http\Controllers\ProformaController::class, 'aprobar'])->name('aprobar');
         Route::post('/{proforma}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
         Route::post('/{proforma}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])->name('convertir-venta');
-    });
-
-    // Rutas para gestión de envíos y logística
-    Route::prefix('envios')->name('envios.')->group(function () {
-        Route::get('/', [EnvioController::class, 'index'])->name('index');
-        Route::get('/{envio}', [EnvioController::class, 'show'])->name('show');
-        Route::post('/ventas/{venta}/programar', [EnvioController::class, 'programar'])->name('programar');
-        Route::post('/{envio}/iniciar-preparacion', [EnvioController::class, 'iniciarPreparacion'])->name('iniciar-preparacion');
-        Route::post('/{envio}/confirmar-salida', [EnvioController::class, 'confirmarSalida'])->name('confirmar-salida');
-        Route::post('/{envio}/confirmar-entrega', [EnvioController::class, 'confirmarEntrega'])->name('confirmar-entrega');
-        Route::post('/{envio}/cancelar', [EnvioController::class, 'cancelar'])->name('cancelar');
-
-        // API para obtener datos
-        Route::get('/api/vehiculos-disponibles', [EnvioController::class, 'obtenerVehiculosDisponibles'])->name('vehiculos-disponibles');
-        Route::get('/api/choferes-disponibles', [EnvioController::class, 'obtenerChoferesDisponibles'])->name('choferes-disponibles');
     });
 
     // Rutas para gestión de cajas
@@ -216,13 +201,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('envios/{envio}/seguimiento', [App\Http\Controllers\Web\LogisticaController::class, 'seguimiento'])->name('envios.seguimiento');
     });
 
-    // Rutas de envíos (evitar duplicación con las de arriba)
-    Route::resource('envios', EnvioController::class);
-    Route::post('envios/{envio}/iniciar-preparacion', [EnvioController::class, 'iniciarPreparacion'])->name('envios.iniciar-preparacion');
-    Route::post('envios/{envio}/confirmar-salida', [EnvioController::class, 'confirmarSalida'])->name('envios.confirmar-salida');
-    Route::post('envios/{envio}/confirmar-entrega', [EnvioController::class, 'confirmarEntrega'])->name('envios.confirmar-entrega');
+    // Rutas de envíos - todas en un grupo para evitar conflictos
+    Route::prefix('envios')->name('envios.')->group(function () {
+        // API para obtener datos - DEBEN IR ANTES de las rutas con parámetros
+        Route::get('api/vehiculos-disponibles', [EnvioController::class, 'obtenerVehiculosDisponibles'])->name('vehiculos-disponibles');
+        Route::get('api/choferes-disponibles', [EnvioController::class, 'obtenerChoferesDisponibles'])->name('choferes-disponibles');
 
-    // API routes para inventario
+        // Rutas básicas de resource
+        Route::get('/', [EnvioController::class, 'index'])->name('index');
+        Route::get('create', [EnvioController::class, 'create'])->name('create');
+        Route::post('/', [EnvioController::class, 'store'])->name('store');
+
+        // Rutas para acciones específicas de envíos
+        Route::post('ventas/{venta}/programar', [EnvioController::class, 'programar'])->name('programar');
+        Route::post('{envio}/iniciar-preparacion', [EnvioController::class, 'iniciarPreparacion'])->name('iniciar-preparacion');
+        Route::post('{envio}/confirmar-salida', [EnvioController::class, 'confirmarSalida'])->name('confirmar-salida');
+        Route::post('{envio}/confirmar-entrega', [EnvioController::class, 'confirmarEntrega'])->name('confirmar-entrega');
+        Route::post('{envio}/cancelar', [EnvioController::class, 'cancelar'])->name('cancelar');
+
+        // Esta ruta DEBE ser la última porque captura cualquier cosa
+        Route::get('{envio}', [EnvioController::class, 'show'])->name('show');
+    }); // API routes para inventario
     Route::get('api/buscar-productos', [\App\Http\Controllers\InventarioController::class, 'buscarProductos'])->middleware('permission:inventario.api.buscar-productos')->name('api.buscar-productos');
     Route::get('api/stock-producto/{producto}', [\App\Http\Controllers\InventarioController::class, 'stockProducto'])->middleware('permission:inventario.api.stock-producto')->name('api.stock-producto');
     Route::get('api/vehiculos', [\App\Http\Controllers\InventarioController::class, 'apiVehiculos'])->middleware('permission:inventario.api.vehiculos')->name('api.vehiculos');
@@ -252,3 +251,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
+require __DIR__ . '/test.php';

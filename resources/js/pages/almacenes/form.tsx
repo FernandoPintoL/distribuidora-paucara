@@ -12,6 +12,8 @@ interface AlmacenesFormProps {
 const initialAlmacenData: AlmacenFormData = {
     nombre: '',
     direccion: '',
+    ubicacion_fisica: '',
+    requiere_transporte_externo: false,
     responsable: '',
     telefono: '',
     activo: true,

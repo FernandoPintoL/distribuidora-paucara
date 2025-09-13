@@ -19,17 +19,15 @@ import { NotificationService } from '@/services/notification.service';
 interface PageProps extends InertiaPageProps {
     transferencias: {
         data: TransferenciaInventario[];
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
         links: Array<{
             url: string | null;
             label: string;
             active: boolean;
         }>;
-        meta: {
-            current_page: number;
-            last_page: number;
-            per_page: number;
-            total: number;
-        };
     };
     filtros: FiltrosTransferencias;
     almacenes: Almacen[];
@@ -172,7 +170,7 @@ export default function TransferenciasIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Transferencias de Inventario" />
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -359,7 +357,7 @@ export default function TransferenciasIndex() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {transferencias.data.length === 0 ? (
+                                {!transferencias?.data || transferencias.data.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                             <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -478,25 +476,29 @@ export default function TransferenciasIndex() {
                     </div>
 
                     {/* Paginación */}
-                    {transferencias.data.length > 0 && transferencias.meta.last_page > 1 && (
+                    {transferencias?.data?.length > 0 && transferencias?.last_page > 1 && (
                         <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
                             <div className="flex items-center justify-between">
                                 <div className="text-sm text-gray-700 dark:text-gray-300">
-                                    Mostrando {((transferencias.meta.current_page - 1) * transferencias.meta.per_page) + 1} a{' '}
-                                    {Math.min(transferencias.meta.current_page * transferencias.meta.per_page, transferencias.meta.total)} de{' '}
-                                    {transferencias.meta.total} resultados
+                                    {transferencias && (
+                                        <>
+                                            Mostrando {((transferencias.current_page - 1) * transferencias.per_page) + 1} a{' '}
+                                            {Math.min(transferencias.current_page * transferencias.per_page, transferencias.total)} de{' '}
+                                            {transferencias.total} resultados
+                                        </>
+                                    )}
                                 </div>
                                 <div className="flex gap-2">
-                                    {transferencias.links.map((link, index) => (
+                                    {transferencias.links?.map((link, index) => (
                                         <button
                                             key={index}
                                             onClick={() => link.url && router.get(link.url)}
                                             disabled={!link.url}
                                             className={`px-3 py-1 text-sm rounded ${link.active
-                                                    ? 'bg-blue-600 text-white'
-                                                    : link.url
-                                                        ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                                                ? 'bg-blue-600 text-white'
+                                                : link.url
+                                                    ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                                 }`}
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />

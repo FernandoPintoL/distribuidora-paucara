@@ -1,8 +1,9 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\LoteVencimiento;
+use App\Models\Producto;
+use App\Models\Proveedor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -13,11 +14,11 @@ class LoteVencimientoController extends Controller
     {
         $query = LoteVencimiento::with(['detalleCompra.compra.proveedor', 'detalleCompra.producto'])
             ->when($request->estado, function ($q) use ($request) {
-                $q->where('estado', $request->estado);
+                $q->where('estado_vencimiento', $request->estado);
             })
             ->when($request->dias_vencimiento, function ($q) use ($request) {
                 $diasVencimiento = (int) $request->dias_vencimiento;
-                $fechaLimite = now()->addDays($diasVencimiento);
+                $fechaLimite     = now()->addDays($diasVencimiento);
                 $q->where('fecha_vencimiento', '<=', $fechaLimite);
             })
             ->when($request->proveedor, function ($q) use ($request) {
@@ -40,20 +41,23 @@ class LoteVencimientoController extends Controller
 
         // Estadísticas
         $estadisticas = [
-            'total_lotes_activos' => LoteVencimiento::where('estado', 'ACTIVO')->count(),
-            'lotes_vencidos' => LoteVencimiento::where('fecha_vencimiento', '<', now())
-                ->where('estado', 'ACTIVO')->count(),
-            'lotes_por_vencer' => LoteVencimiento::where('fecha_vencimiento', '<=', now()->addDays(30))
+            'total_lotes_activos'    => LoteVencimiento::where('estado_vencimiento', 'ACTIVO')->count(),
+            'lotes_vencidos'         => LoteVencimiento::where('fecha_vencimiento', '<', now())
+                ->where('estado_vencimiento', 'ACTIVO')->count(),
+            'lotes_por_vencer'       => LoteVencimiento::where('fecha_vencimiento', '<=', now()->addDays(30))
                 ->where('fecha_vencimiento', '>=', now())
-                ->where('estado', 'ACTIVO')->count(),
-            'valor_total_inventario' => LoteVencimiento::where('estado', 'ACTIVO')
-                ->sum(DB::raw('cantidad_disponible * precio_unitario')),
+                ->where('estado_vencimiento', 'ACTIVO')->count(),
+            'valor_total_inventario' => LoteVencimiento::join('detalle_compras', 'lotes_vencimientos.detalle_compra_id', '=', 'detalle_compras.id')
+                ->where('estado_vencimiento', 'ACTIVO')
+                ->sum(DB::raw('cantidad_actual * detalle_compras.precio_unitario')),
         ];
 
         return Inertia::render('compras/lotes-vencimientos/index', [
-            'lotes' => $lotes,
-            'filtros' => $request->only(['estado', 'dias_vencimiento', 'proveedor', 'producto']),
+            'lotes'        => $lotes,
+            'filtros'      => $request->only(['estado', 'dias_vencimiento', 'proveedor', 'producto']),
             'estadisticas' => $estadisticas,
+            'productos'    => \App\Models\Producto::select('id', 'nombre')->orderBy('nombre')->get(),
+            'proveedores'  => \App\Models\Proveedor::select('id', 'nombre')->orderBy('nombre')->get(),
         ]);
     }
 
@@ -73,7 +77,7 @@ class LoteVencimientoController extends Controller
     public function actualizarCantidad(Request $request, LoteVencimiento $lote)
     {
         $request->validate([
-            'cantidad_disponible' => 'required|numeric|min:0|max:'.$lote->cantidad_inicial,
+            'cantidad_disponible' => 'required|numeric|min:0|max:' . $lote->cantidad_inicial,
         ]);
 
         $lote->update([
@@ -92,11 +96,11 @@ class LoteVencimientoController extends Controller
     {
         $query = LoteVencimiento::with(['detalleCompra.compra.proveedor', 'detalleCompra.producto'])
             ->when($request->estado, function ($q) use ($request) {
-                $q->where('estado', $request->estado);
+                $q->where('estado_vencimiento', $request->estado);
             })
             ->when($request->dias_vencimiento, function ($q) use ($request) {
                 $diasVencimiento = (int) $request->dias_vencimiento;
-                $fechaLimite = now()->addDays($diasVencimiento);
+                $fechaLimite     = now()->addDays($diasVencimiento);
                 $q->where('fecha_vencimiento', '<=', $fechaLimite);
             });
 

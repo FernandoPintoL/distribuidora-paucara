@@ -66,7 +66,7 @@ export default function EmpleadosCreate() {
         cargo: '',
         puesto: '',
         departamento: '',
-        supervisor_id: '',
+        supervisor_id: 'sin-supervisor',
         fecha_ingreso: new Date().toISOString().split('T')[0],
         tipo_contrato: 'indefinido',
         salario_base: '',
@@ -97,7 +97,10 @@ export default function EmpleadosCreate() {
         e.preventDefault()
         setLoading(true)
 
-        const submitData = { ...formData }
+        const submitData = {
+            ...formData,
+            supervisor_id: formData.supervisor_id === 'sin-supervisor' ? '' : formData.supervisor_id
+        }
         router.post('/empleados', submitData, {
             onSuccess: () => {
                 toast.success('Empleado creado exitosamente')
@@ -261,12 +264,12 @@ export default function EmpleadosCreate() {
                                 </div>
                                 <div>
                                     <Label htmlFor="supervisor_id">Supervisor</Label>
-                                    <Select value={formData.supervisor_id} onValueChange={handleInputChange('supervisor_id')}>
+                                    <Select value={formData.supervisor_id || 'sin-supervisor'} onValueChange={handleInputChange('supervisor_id')}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Sin supervisor" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Sin supervisor</SelectItem>
+                                            <SelectItem value="sin-supervisor">Sin supervisor</SelectItem>
                                             {supervisores.map((supervisor) => (
                                                 <SelectItem key={supervisor.id} value={supervisor.id.toString()}>
                                                     {supervisor.nombre} - {supervisor.cargo}

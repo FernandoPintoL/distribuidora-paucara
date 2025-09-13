@@ -28,8 +28,24 @@ interface Props extends InertiaPageProps {
 }
 
 const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
-    const [filtros, setFiltros] = useState<FiltrosCuentasPorPagar>(cuentasPorPagar.filtros);
+    // Inicializar hooks con valores por defecto seguros
+    const filtrosDefault: FiltrosCuentasPorPagar = {};
+    const [filtros, setFiltros] = useState<FiltrosCuentasPorPagar>(cuentasPorPagar?.filtros || filtrosDefault);
     const [modalDetalle, setModalDetalle] = useState<{ isOpen: boolean; cuenta?: CuentaPorPagar }>({ isOpen: false });
+
+    // Validación defensiva para evitar errores si cuentasPorPagar es undefined
+    if (!cuentasPorPagar || !cuentasPorPagar.filtros) {
+        return (
+            <AppLayout>
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Cargando...</h2>
+                        <p className="text-gray-600 dark:text-gray-400">Por favor espere mientras se cargan los datos.</p>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
 
     const handleFiltroChange = (field: keyof FiltrosCuentasPorPagar, value: string | boolean) => {
         const nuevosFiltros = { ...filtros, [field]: value };

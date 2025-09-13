@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Almacen;
@@ -20,10 +19,10 @@ class ReporteInventarioController extends Controller
     public function stockActual(Request $request): Response
     {
         $filtros = $request->validate([
-            'almacen_id' => ['nullable', 'exists:almacenes,id'],
+            'almacen_id'   => ['nullable', 'exists:almacenes,id'],
             'categoria_id' => ['nullable', 'exists:categorias,id'],
-            'stock_bajo' => ['nullable', 'boolean'],
-            'stock_alto' => ['nullable', 'boolean'],
+            'stock_bajo'   => ['nullable', 'boolean'],
+            'stock_alto'   => ['nullable', 'boolean'],
         ]);
 
         $query = StockProducto::with(['producto.categoria', 'almacen'])
@@ -58,19 +57,19 @@ class ReporteInventarioController extends Controller
 
         // Estadísticas generales
         $estadisticas = [
-            'total_productos' => StockProducto::distinct('producto_id')->count(),
-            'total_stock' => StockProducto::sum('cantidad'),
-            'productos_stock_bajo' => Producto::stockBajo()->count(),
-            'productos_stock_alto' => Producto::stockAlto()->count(),
+            'total_productos'        => StockProducto::distinct('producto_id')->count(),
+            'total_stock'            => StockProducto::sum('cantidad'),
+            'productos_stock_bajo'   => Producto::query()->stockBajo()->count(),
+            'productos_stock_alto'   => Producto::query()->stockAlto()->count(),
             'valor_total_inventario' => $this->calcularValorInventario($filtros),
         ];
 
         return Inertia::render('reportes/inventario/stock-actual', [
-            'stock' => $stock,
+            'stock'        => $stock,
             'estadisticas' => $estadisticas,
-            'filtros' => $filtros,
-            'almacenes' => Almacen::orderBy('nombre')->get(['id', 'nombre']),
-            'categorias' => \App\Models\Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'filtros'      => $filtros,
+            'almacenes'    => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'categorias'   => \App\Models\Categoria::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -80,13 +79,13 @@ class ReporteInventarioController extends Controller
     public function vencimientos(Request $request): Response
     {
         $filtros = $request->validate([
-            'almacen_id' => ['nullable', 'exists:almacenes,id'],
+            'almacen_id'        => ['nullable', 'exists:almacenes,id'],
             'dias_anticipacion' => ['nullable', 'integer', 'min:1', 'max:365'],
-            'solo_vencidos' => ['nullable', 'boolean'],
+            'solo_vencidos'     => ['nullable', 'boolean'],
         ]);
 
         $diasAnticipacion = $filtros['dias_anticipacion'] ?? 30;
-        $soloVencidos = $filtros['solo_vencidos'] ?? false;
+        $soloVencidos     = $filtros['solo_vencidos'] ?? false;
 
         $query = StockProducto::with(['producto.categoria', 'almacen'])
             ->whereNotNull('fecha_vencimiento')
@@ -107,7 +106,7 @@ class ReporteInventarioController extends Controller
 
         // Estadísticas
         $estadisticas = [
-            'productos_vencidos' => StockProducto::whereNotNull('fecha_vencimiento')
+            'productos_vencidos'        => StockProducto::whereNotNull('fecha_vencimiento')
                 ->where('fecha_vencimiento', '<', now())
                 ->where('cantidad', '>', 0)
                 ->count(),
@@ -116,14 +115,14 @@ class ReporteInventarioController extends Controller
                 ->where('fecha_vencimiento', '>=', now())
                 ->where('cantidad', '>', 0)
                 ->count(),
-            'valor_productos_vencidos' => $this->calcularValorVencidos(),
+            'valor_productos_vencidos'  => $this->calcularValorVencidos(),
         ];
 
         return Inertia::render('reportes/inventario/vencimientos', [
-            'productos' => $productos,
+            'productos'    => $productos,
             'estadisticas' => $estadisticas,
-            'filtros' => $filtros,
-            'almacenes' => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'filtros'      => $filtros,
+            'almacenes'    => Almacen::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -134,21 +133,21 @@ class ReporteInventarioController extends Controller
     {
         $filtros = $request->validate([
             'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date'],
-            'almacen_id' => ['nullable', 'exists:almacenes,id'],
+            'fecha_fin'    => ['nullable', 'date'],
+            'almacen_id'   => ['nullable', 'exists:almacenes,id'],
             'categoria_id' => ['nullable', 'exists:categorias,id'],
         ]);
 
         $fechaInicio = $filtros['fecha_inicio'] ?? now()->subMonths(3);
-        $fechaFin = $filtros['fecha_fin'] ?? now();
+        $fechaFin    = $filtros['fecha_fin'] ?? now();
 
         // Productos con más salidas (mayor rotación)
         $rotacionQuery = MovimientoInventario::select([
             'stock_productos.producto_id',
-            DB::raw('COUNT(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN 1 END) as total_salidas'),
-            DB::raw('SUM(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) as cantidad_vendida'),
+            DB::raw("COUNT(CASE WHEN movimientos_inventario.tipo LIKE 'SALIDA_%' THEN 1 END) as total_salidas"),
+            DB::raw("SUM(CASE WHEN movimientos_inventario.tipo LIKE 'SALIDA_%' THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) as cantidad_vendida"),
             DB::raw('AVG(stock_productos.cantidad) as stock_promedio'),
-            DB::raw('CASE WHEN AVG(stock_productos.cantidad) > 0 THEN SUM(CASE WHEN movimientos_inventario.tipo LIKE "SALIDA_%" THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) / AVG(stock_productos.cantidad) ELSE 0 END as indice_rotacion'),
+            DB::raw("CASE WHEN AVG(stock_productos.cantidad) > 0 THEN SUM(CASE WHEN movimientos_inventario.tipo LIKE 'SALIDA_%' THEN ABS(movimientos_inventario.cantidad) ELSE 0 END) / AVG(stock_productos.cantidad) ELSE 0 END as indice_rotacion"),
         ])
             ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
             ->whereBetween('fecha', [$fechaInicio, $fechaFin])
@@ -158,27 +157,38 @@ class ReporteInventarioController extends Controller
             $rotacionQuery->where('stock_productos.almacen_id', $filtros['almacen_id']);
         }
 
-        $rotacion = $rotacionQuery->having('total_salidas', '>', 0)
+        // Para evitar problemas con count() en consultas complejas, obtenemos el total primero
+        $totalQuery         = clone $rotacionQuery;
+        $totalResultados    = $totalQuery->havingRaw("COUNT(CASE WHEN movimientos_inventario.tipo LIKE 'SALIDA_%' THEN 1 END) > 0")->get();
+        $totalConMovimiento = $totalResultados->count();
+
+        $rotacion = $rotacionQuery->havingRaw("COUNT(CASE WHEN movimientos_inventario.tipo LIKE 'SALIDA_%' THEN 1 END) > 0")
             ->orderByDesc('indice_rotacion')
-            ->with('producto:id,nombre')
             ->paginate(50)
             ->withQueryString();
 
+        // Cargar productos para cada resultado
+        $rotacion->getCollection()->transform(function ($item) {
+            $producto       = Producto::find($item->producto_id);
+            $item->producto = $producto ? $producto->only(['id', 'nombre']) : null;
+            return $item;
+        });
+
         // Estadísticas de rotación
         $estadisticas = [
-            'productos_con_movimiento' => $rotacionQuery->having('total_salidas', '>', 0)->count(),
+            'productos_con_movimiento' => $totalConMovimiento,
             'productos_sin_movimiento' => Producto::whereDoesntHave('movimientos', function ($q) use ($fechaInicio, $fechaFin) {
                 $q->whereBetween('fecha', [$fechaInicio, $fechaFin]);
             })->count(),
-            'rotacion_promedio' => $rotacionQuery->avg('indice_rotacion') ?? 0,
+            'rotacion_promedio'        => $totalResultados->avg('indice_rotacion') ?? 0,
         ];
 
         return Inertia::render('reportes/inventario/rotacion', [
-            'rotacion' => $rotacion,
+            'rotacion'     => $rotacion,
             'estadisticas' => $estadisticas,
-            'filtros' => $filtros,
-            'almacenes' => Almacen::orderBy('nombre')->get(['id', 'nombre']),
-            'categorias' => \App\Models\Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'filtros'      => $filtros,
+            'almacenes'    => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'categorias'   => \App\Models\Categoria::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -189,14 +199,14 @@ class ReporteInventarioController extends Controller
     {
         $filtros = $request->validate([
             'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date'],
-            'tipo' => ['nullable', 'string'],
-            'almacen_id' => ['nullable', 'exists:almacenes,id'],
-            'producto_id' => ['nullable', 'exists:productos,id'],
+            'fecha_fin'    => ['nullable', 'date'],
+            'tipo'         => ['nullable', 'string'],
+            'almacen_id'   => ['nullable', 'exists:almacenes,id'],
+            'producto_id'  => ['nullable', 'exists:productos,id'],
         ]);
 
         $fechaInicio = $filtros['fecha_inicio'] ?? now()->subMonth();
-        $fechaFin = $filtros['fecha_fin'] ?? now();
+        $fechaFin    = $filtros['fecha_fin'] ?? now();
 
         $movimientos = MovimientoInventario::with([
             'stockProducto.producto:id,nombre',
@@ -226,21 +236,21 @@ class ReporteInventarioController extends Controller
 
         // Estadísticas de movimientos
         $estadisticas = [
-            'total_entradas' => MovimientoInventario::entradas()
+            'total_entradas'       => MovimientoInventario::entradas()
                 ->whereBetween('fecha', [$fechaInicio, $fechaFin])
                 ->sum('cantidad'),
-            'total_salidas' => MovimientoInventario::salidas()
+            'total_salidas'        => MovimientoInventario::salidas()
                 ->whereBetween('fecha', [$fechaInicio, $fechaFin])
                 ->sum(DB::raw('ABS(cantidad)')),
             'movimientos_por_tipo' => $this->obtenerMovimientosPorTipo($fechaInicio, $fechaFin),
         ];
 
         return Inertia::render('reportes/inventario/movimientos', [
-            'movimientos' => $movimientos,
+            'movimientos'  => $movimientos,
             'estadisticas' => $estadisticas,
-            'filtros' => $filtros,
-            'tipos' => MovimientoInventario::getTipos(),
-            'almacenes' => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'filtros'      => $filtros,
+            'tipos'        => MovimientoInventario::getTipos(),
+            'almacenes'    => Almacen::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -272,8 +282,8 @@ class ReporteInventarioController extends Controller
         }
 
         return response()->json([
-            'data' => $datos,
-            'filename' => "reporte_inventario_{$tipo}_".now()->format('Y-m-d_H-i-s').'.xlsx',
+            'data'     => $datos,
+            'filename' => "reporte_inventario_{$tipo}_" . now()->format('Y-m-d_H-i-s') . '.xlsx',
         ]);
     }
 
@@ -282,14 +292,14 @@ class ReporteInventarioController extends Controller
      */
     private function calcularValorInventario(array $filtros): float
     {
-        // Implementar cálculo del valor total del inventario
-        // usando precios de costo de los productos
+                    // Implementar cálculo del valor total del inventario
+                    // usando precios de costo de los productos
         return 0.0; // Placeholder
     }
 
     private function calcularValorVencidos(): float
     {
-        // Implementar cálculo del valor de productos vencidos
+                    // Implementar cálculo del valor de productos vencidos
         return 0.0; // Placeholder
     }
 
@@ -304,25 +314,25 @@ class ReporteInventarioController extends Controller
 
     private function obtenerDatosStockActual(array $filtros): array
     {
-        // Implementar obtención de datos para exportación
+                   // Implementar obtención de datos para exportación
         return []; // Placeholder
     }
 
     private function obtenerDatosVencimientos(array $filtros): array
     {
-        // Implementar obtención de datos para exportación
+                   // Implementar obtención de datos para exportación
         return []; // Placeholder
     }
 
     private function obtenerDatosRotacion(array $filtros): array
     {
-        // Implementar obtención de datos para exportación
+                   // Implementar obtención de datos para exportación
         return []; // Placeholder
     }
 
     private function obtenerDatosMovimientos(array $filtros): array
     {
-        // Implementar obtención de datos para exportación
+                   // Implementar obtención de datos para exportación
         return []; // Placeholder
     }
 }

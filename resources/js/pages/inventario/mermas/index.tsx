@@ -9,11 +9,11 @@ import {
     MermaInventario,
     FiltrosMermas,
     Almacen,
-    TIPOS_MERMA,
-    ESTADOS_MERMA,
     TipoMerma,
     EstadoMerma
 } from '@/types/inventario';
+import { useTipoMermas } from '@/stores/useTipoMermas';
+import { useEstadoMermas } from '@/stores/useEstadoMermas';
 import {
     Plus,
     Filter,
@@ -50,6 +50,12 @@ export default function MermasIndex() {
     const { props } = usePage<PageProps>();
     const { mermas, filtros, almacenes, estadisticas } = props;
     const { can } = useAuth();
+    const { tipos, fetchTipos } = useTipoMermas();
+    const { estados, fetchEstados } = useEstadoMermas();
+    React.useEffect(() => {
+        fetchTipos();
+        fetchEstados();
+    }, [fetchTipos, fetchEstados]);
 
     // Validación defensiva para estadísticas
     const estadisticasSeguras = estadisticas || {
@@ -140,18 +146,20 @@ export default function MermasIndex() {
     };
 
     const TipoMermaBadge = ({ tipo }: { tipo: TipoMerma }) => {
-        const config = TIPOS_MERMA[tipo];
+        const config = tipos.find(t => t.clave === tipo);
+        if (!config) return null;
         return (
-            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bgColor} ${config.textColor}`}>
+            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bg_color} ${config.text_color}`}>
                 {config.label}
             </span>
         );
     };
 
     const EstadoMermaBadge = ({ estado }: { estado: EstadoMerma }) => {
-        const config = ESTADOS_MERMA[estado];
+        const config = estados.find(e => e.clave === estado);
+        if (!config) return null;
         return (
-            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bgColor} ${config.textColor}`}>
+            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bg_color} ${config.text_color}`}>
                 {config.label}
             </span>
         );
@@ -177,7 +185,7 @@ export default function MermasIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Mermas de Inventario" />
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 p-6">
                 {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -296,8 +304,8 @@ export default function MermasIndex() {
                                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <option value="">Todos los tipos</option>
-                                    {Object.entries(TIPOS_MERMA).map(([key, config]) => (
-                                        <option key={key} value={key}>{config.label}</option>
+                                    {tipos.map(tipo => (
+                                        <option key={tipo.clave} value={tipo.clave}>{tipo.label}</option>
                                     ))}
                                 </select>
                             </div>
@@ -315,8 +323,8 @@ export default function MermasIndex() {
                                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <option value="">Todos los estados</option>
-                                    {Object.entries(ESTADOS_MERMA).map(([key, config]) => (
-                                        <option key={key} value={key}>{config.label}</option>
+                                    {estados.map(estado => (
+                                        <option key={estado.clave} value={estado.clave}>{estado.label}</option>
                                     ))}
                                 </select>
                             </div>

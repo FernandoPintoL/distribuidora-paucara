@@ -93,8 +93,27 @@ const ReportesCompras: React.FC<Props> = ({
     monedas,
     filtros
 }) => {
-    const [filtroLocal, setFiltroLocal] = useState(filtros);
+    const [filtroLocal, setFiltroLocal] = useState(filtros || {
+        fecha_inicio: '',
+        fecha_fin: '',
+        proveedor_id: '',
+        moneda_id: '',
+        tipo_reporte: ''
+    });
     const [cargandoReporte, setCargandoReporte] = useState(false);
+
+    // Valores por defecto para estadísticas generales
+    const estadisticasPorDefecto: EstadisticasGenerales = {
+        total_compras_periodo: 0,
+        cantidad_compras_periodo: 0,
+        promedio_compra_periodo: 0,
+        variacion_mes_anterior: 0,
+        proveedor_principal: { id: 0, nombre: 'N/A' } as Proveedor,
+        categoria_principal: 'N/A',
+        mes_mayor_compra: 'N/A'
+    };
+
+    const estadisticasSeguras = estadisticas_generales || estadisticasPorDefecto;
 
     const formatCurrency = (amount: number): string => {
         return new Intl.NumberFormat('es-BO', {
@@ -231,19 +250,25 @@ const ReportesCompras: React.FC<Props> = ({
                                     Proveedor
                                 </label>
                                 <Select
-                                    value={filtroLocal.proveedor_id || ''}
-                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, proveedor_id: value }))}
+                                    value={filtroLocal.proveedor_id || 'all'}
+                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, proveedor_id: value === 'all' ? '' : value }))}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los proveedores" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los proveedores</SelectItem>
-                                        {proveedores.map((proveedor) => (
-                                            <SelectItem key={proveedor.id} value={proveedor.id.toString()}>
-                                                {proveedor.nombre}
-                                            </SelectItem>
-                                        ))}
+                                        <SelectItem value="all">Todos los proveedores</SelectItem>
+                                        {(proveedores || [])
+                                            .filter(proveedor => proveedor.id && Number(proveedor.id) > 0)
+                                            .map((proveedor) => {
+                                                const valueId = String(proveedor.id).trim();
+                                                return valueId !== '' ? (
+                                                    <SelectItem key={proveedor.id} value={valueId}>
+                                                        {proveedor.nombre}
+                                                    </SelectItem>
+                                                ) : null;
+                                            })
+                                            .filter(Boolean)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -253,19 +278,25 @@ const ReportesCompras: React.FC<Props> = ({
                                     Moneda
                                 </label>
                                 <Select
-                                    value={filtroLocal.moneda_id || ''}
-                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, moneda_id: value }))}
+                                    value={filtroLocal.moneda_id || 'all'}
+                                    onValueChange={(value) => setFiltroLocal(prev => ({ ...prev, moneda_id: value === 'all' ? '' : value }))}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todas las monedas" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todas las monedas</SelectItem>
-                                        {monedas.map((moneda) => (
-                                            <SelectItem key={moneda.id} value={moneda.id.toString()}>
-                                                {moneda.nombre} ({moneda.codigo})
-                                            </SelectItem>
-                                        ))}
+                                        <SelectItem value="all">Todas las monedas</SelectItem>
+                                        {(monedas || [])
+                                            .filter(moneda => moneda.id && Number(moneda.id) > 0)
+                                            .map((moneda) => {
+                                                const valueId = String(moneda.id).trim();
+                                                return valueId !== '' ? (
+                                                    <SelectItem key={moneda.id} value={valueId}>
+                                                        {moneda.nombre} ({moneda.codigo})
+                                                    </SelectItem>
+                                                ) : null;
+                                            })
+                                            .filter(Boolean)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -296,12 +327,12 @@ const ReportesCompras: React.FC<Props> = ({
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {formatCurrency(estadisticas_generales.total_compras_periodo)}
+                                {formatCurrency(estadisticasSeguras.total_compras_periodo)}
                             </div>
-                            <div className={`flex items-center text-xs ${getVariacionColor(estadisticas_generales.variacion_mes_anterior)}`}>
-                                {getVariacionIcon(estadisticas_generales.variacion_mes_anterior)}
+                            <div className={`flex items-center text-xs ${getVariacionColor(estadisticasSeguras.variacion_mes_anterior)}`}>
+                                {getVariacionIcon(estadisticasSeguras.variacion_mes_anterior)}
                                 <span className="ml-1">
-                                    {formatPercentage(estadisticas_generales.variacion_mes_anterior)} vs mes anterior
+                                    {formatPercentage(estadisticasSeguras.variacion_mes_anterior)} vs mes anterior
                                 </span>
                             </div>
                         </CardContent>
@@ -314,10 +345,10 @@ const ReportesCompras: React.FC<Props> = ({
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {estadisticas_generales.cantidad_compras_periodo}
+                                {estadisticasSeguras.cantidad_compras_periodo}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Promedio: {formatCurrency(estadisticas_generales.promedio_compra_periodo)}
+                                Promedio: {formatCurrency(estadisticasSeguras.promedio_compra_periodo)}
                             </p>
                         </CardContent>
                     </Card>
@@ -329,7 +360,7 @@ const ReportesCompras: React.FC<Props> = ({
                         </CardHeader>
                         <CardContent>
                             <div className="text-lg font-bold">
-                                {estadisticas_generales.proveedor_principal?.nombre || 'N/A'}
+                                {estadisticasSeguras.proveedor_principal?.nombre || 'N/A'}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 Mayor volumen de compras
@@ -344,7 +375,7 @@ const ReportesCompras: React.FC<Props> = ({
                         </CardHeader>
                         <CardContent>
                             <div className="text-lg font-bold">
-                                {estadisticas_generales.mes_mayor_compra || 'N/A'}
+                                {estadisticasSeguras.mes_mayor_compra || 'N/A'}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 Mes con mayores compras
@@ -376,7 +407,7 @@ const ReportesCompras: React.FC<Props> = ({
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {tendencias_mensuales.map((tendencia, index) => (
+                                    {(tendencias_mensuales || []).map((tendencia, index) => (
                                         <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                                             <div className="flex-1">
                                                 <h4 className="font-medium">{tendencia.mes}</h4>
@@ -437,7 +468,7 @@ const ReportesCompras: React.FC<Props> = ({
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {compras_por_proveedor.map((item, index) => (
+                                            {(compras_por_proveedor || []).map((item, index) => (
                                                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="flex items-center">
@@ -496,7 +527,7 @@ const ReportesCompras: React.FC<Props> = ({
                             </CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {compras_por_categoria.map((categoria, index) => (
+                                    {(compras_por_categoria || []).map((categoria, index) => (
                                         <div key={index} className="p-4 border rounded-lg">
                                             <div className="flex justify-between items-start mb-2">
                                                 <h4 className="font-medium text-lg">{categoria.categoria}</h4>
@@ -566,7 +597,7 @@ const ReportesCompras: React.FC<Props> = ({
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {resumen_por_periodo.map((periodo, index) => (
+                                            {(resumen_por_periodo || []).map((periodo, index) => (
                                                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                                         {periodo.periodo}

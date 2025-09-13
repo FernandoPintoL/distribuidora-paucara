@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\CuentaPorPagar;
@@ -41,20 +40,33 @@ class CuentaPorPagarController extends Controller
 
         // Estadísticas
         $estadisticas = [
-            'total_pendiente' => CuentaPorPagar::where('estado', '!=', 'PAGADO')->sum('saldo_pendiente'),
-            'cuentas_vencidas' => CuentaPorPagar::where('estado', '!=', 'PAGADO')
+            'monto_total_pendiente' => CuentaPorPagar::where('estado', '!=', 'PAGADO')->sum('saldo_pendiente'),
+            'cuentas_vencidas'      => CuentaPorPagar::where('estado', '!=', 'PAGADO')
                 ->where('fecha_vencimiento', '<', now())->count(),
-            'total_vencido' => CuentaPorPagar::where('estado', '!=', 'PAGADO')
+            'monto_total_vencido'   => CuentaPorPagar::where('estado', '!=', 'PAGADO')
                 ->where('fecha_vencimiento', '<', now())->sum('saldo_pendiente'),
-            'total_mes' => CuentaPorPagar::whereMonth('created_at', now()->month)
+            'total_mes'             => CuentaPorPagar::whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)->sum('monto_original'),
+            'promedio_dias_pago'    => 0, // Calcular promedio de días de pago si es necesario
         ];
 
         return Inertia::render('compras/cuentas-por-pagar/index', [
-            'cuentas' => $cuentas,
-            'proveedores' => Proveedor::select('id', 'nombre')->get(),
-            'filtros' => $request->only(['estado', 'proveedor_id', 'search', 'fecha_desde', 'fecha_hasta']),
-            'estadisticas' => $estadisticas,
+            'cuentasPorPagar' => [
+                'cuentas_por_pagar' => [
+                    'data'         => $cuentas->items(),
+                    'current_page' => $cuentas->currentPage(),
+                    'last_page'    => $cuentas->lastPage(),
+                    'per_page'     => $cuentas->perPage(),
+                    'total'        => $cuentas->total(),
+                    'links'        => $cuentas->linkCollection()->toArray(),
+                ],
+                'filtros'           => $request->only(['estado', 'proveedor_id', 'search', 'fecha_desde', 'fecha_hasta']),
+                'estadisticas'      => $estadisticas,
+                'datosParaFiltros'  => [
+                    'proveedores' => Proveedor::select('id', 'nombre')->get(),
+                    'tipos_pago'  => [], // Agregar tipos de pago si es necesario
+                ],
+            ],
         ]);
     }
 

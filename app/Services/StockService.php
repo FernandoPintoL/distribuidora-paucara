@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\Models\MovimientoInventario;
@@ -17,19 +16,19 @@ class StockService
     public function validarStockDisponible(array $productos, int $almacenId = 1): array
     {
         $resultados = [];
-        $errores = [];
+        $errores    = [];
 
         foreach ($productos as $item) {
-            $productoId = $item['producto_id'] ?? $item['id'];
+            $productoId         = $item['producto_id'] ?? $item['id'];
             $cantidadSolicitada = $item['cantidad'];
 
             $stockDisponible = $this->obtenerStockDisponible($productoId, $almacenId);
 
             $resultado = [
-                'producto_id' => $productoId,
+                'producto_id'         => $productoId,
                 'cantidad_solicitada' => $cantidadSolicitada,
-                'stock_disponible' => $stockDisponible,
-                'suficiente' => $stockDisponible >= $cantidadSolicitada,
+                'stock_disponible'    => $stockDisponible,
+                'suficiente'          => $stockDisponible >= $cantidadSolicitada,
             ];
 
             if (! $resultado['suficiente']) {
@@ -40,8 +39,8 @@ class StockService
         }
 
         return [
-            'valido' => empty($errores),
-            'errores' => $errores,
+            'valido'   => empty($errores),
+            'errores'  => $errores,
             'detalles' => $resultados,
         ];
     }
@@ -80,7 +79,7 @@ class StockService
 
         try {
             foreach ($productos as $item) {
-                $productoId = $item['producto_id'] ?? $item['id'];
+                $productoId        = $item['producto_id'] ?? $item['id'];
                 $cantidadNecesaria = $item['cantidad'];
 
                 // Obtener stock por lotes usando FIFO
@@ -134,20 +133,20 @@ class StockService
 
         try {
             foreach ($productos as $item) {
-                $productoId = $item['producto_id'] ?? $item['id'];
-                $cantidad = $item['cantidad'];
-                $lote = $item['lote'] ?? null;
+                $productoId       = $item['producto_id'] ?? $item['id'];
+                $cantidad         = $item['cantidad'];
+                $lote             = $item['lote'] ?? null;
                 $fechaVencimiento = $item['fecha_vencimiento'] ?? null;
 
                 // Buscar o crear stock para este producto/almacén/lote
                 $stockProducto = StockProducto::firstOrCreate([
                     'producto_id' => $productoId,
-                    'almacen_id' => $almacenId,
-                    'lote' => $lote,
+                    'almacen_id'  => $almacenId,
+                    'lote'        => $lote,
                 ], [
-                    'cantidad' => 0,
+                    'cantidad'            => 0,
                     'fecha_actualizacion' => now(),
-                    'fecha_vencimiento' => $fechaVencimiento,
+                    'fecha_vencimiento'   => $fechaVencimiento,
                 ]);
 
                 // Registrar movimiento de entrada
@@ -234,7 +233,7 @@ class StockService
             }
 
             $cantidadAnterior = $stockProducto->cantidad;
-            $diferencia = $nuevaCantidad - $cantidadAnterior;
+            $diferencia       = $nuevaCantidad - $cantidadAnterior;
 
             if ($diferencia == 0) {
                 throw new Exception('La cantidad nueva es igual a la actual');
@@ -269,5 +268,106 @@ class StockService
     {
         return StockProducto::where('producto_id', $productoId)
             ->sum('cantidad_disponible');
+    }
+
+    /**
+     * Procesar salida de stock por envío
+     */
+    public function procesarSalidaEnvio(array $productos, string $numeroEnvio, int $almacenId = 1): array
+    {
+        $movimientos = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($productos as $item) {
+                $productoId        = $item['producto_id'] ?? $item['id'];
+                $cantidadNecesaria = $item['cantidad'];
+
+                // Obtener stock por lotes usando FIFO
+                $stocksLotes = $this->obtenerStockPorLotes($productoId, $almacenId);
+
+                $cantidadRestante = $cantidadNecesaria;
+
+                foreach ($stocksLotes as $stockLote) {
+                    if ($cantidadRestante <= 0) {
+                        break;
+                    }
+
+                    $cantidadTomar = min($cantidadRestante, $stockLote->cantidad);
+
+                    // Registrar movimiento de salida por envío
+                    $movimiento = MovimientoInventario::registrar(
+                        $stockLote,
+                        -$cantidadTomar, // Negativo para salida
+                        MovimientoInventario::TIPO_SALIDA_ENVIO,
+                        "Envío #{$numeroEnvio}",
+                        $numeroEnvio
+                    );
+
+                    $movimientos[] = $movimiento;
+                    $cantidadRestante -= $cantidadTomar;
+                }
+
+                if ($cantidadRestante > 0) {
+                    throw new Exception("Stock insuficiente para producto ID {$productoId}. Faltan {$cantidadRestante} unidades.");
+                }
+            }
+
+            DB::commit();
+
+            return $movimientos;
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Procesar entrada de stock por cancelación de envío
+     */
+    public function procesarEntradaCancelacionEnvio(array $productos, string $numeroEnvio, int $almacenId = 1): array
+    {
+        $movimientos = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($productos as $item) {
+                $productoId = $item['producto_id'] ?? $item['id'];
+                $cantidad   = $item['cantidad'];
+
+                // Buscar o crear stock para este producto
+                $stockProducto = StockProducto::firstOrCreate([
+                    'producto_id' => $productoId,
+                    'almacen_id'  => $almacenId,
+                    'lote'        => $item['lote'] ?? 'REPOSICION-' . now()->format('Ymd'),
+                ], [
+                    'cantidad'            => 0,
+                    'cantidad_disponible' => 0,
+                    'fecha_vencimiento'   => $item['fecha_vencimiento'] ?? now()->addYears(5),
+                ]);
+
+                // Registrar movimiento de entrada por cancelación
+                $movimiento = MovimientoInventario::registrar(
+                    $stockProducto,
+                    $cantidad, // Positivo para entrada
+                    MovimientoInventario::TIPO_ENTRADA_CANCELACION_ENVIO,
+                    "Cancelación envío #{$numeroEnvio}",
+                    $numeroEnvio
+                );
+
+                $movimientos[] = $movimiento;
+            }
+
+            DB::commit();
+
+            return $movimientos;
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 }

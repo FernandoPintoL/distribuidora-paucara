@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Envio;
@@ -10,8 +9,10 @@ use App\Models\Venta;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class EnvioController extends Controller
 {
@@ -24,6 +25,77 @@ class EnvioController extends Controller
         return Inertia::render('Envios/Index', [
             'envios' => $envios,
         ]);
+    }
+
+    public function create(): Response
+    {
+        // Obtener ventas confirmadas que requieren envío
+        $ventas = Venta::with(['cliente', 'detalles.producto'])
+            ->whereIn('estado_documento_id', [3, 4]) // APROBADO o FACTURADO
+            ->where('requiere_envio', true)
+            ->whereDoesntHave('envio')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Obtener vehículos disponibles
+        $vehiculos = Vehiculo::where('activo', true)
+            ->orderBy('placa')
+            ->get();
+
+        // Obtener choferes disponibles (usuarios con rol de Logística o todos los usuarios activos)
+        $choferes = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', ['Logística', 'Empleado']);
+        })->orWhere(function ($query) {
+            // Fallback: usuarios activos sin roles específicos
+            $query->whereDoesntHave('roles');
+        })->orderBy('name')->get();
+
+        return Inertia::render('Envios/Create', [
+            'ventas'    => $ventas,
+            'vehiculos' => $vehiculos,
+            'choferes'  => $choferes,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'venta_id'          => 'required|exists:ventas,id',
+            'vehiculo_id'       => 'required|exists:vehiculos,id',
+            'chofer_id'         => 'required|exists:users,id',
+            'fecha_programada'  => 'required|date|after:now',
+            'direccion_entrega' => 'nullable|string|max:500',
+            'observaciones'     => 'nullable|string|max:1000',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Verificar que la venta no tenga ya un envío
+            $venta = Venta::findOrFail($request->venta_id);
+            if ($venta->envio) {
+                return back()->withErrors(['venta_id' => 'Esta venta ya tiene un envío asignado.']);
+            }
+
+            // Crear el envío
+            $envio = Envio::create([
+                'venta_id'          => $request->venta_id,
+                'vehiculo_id'       => $request->vehiculo_id,
+                'chofer_id'         => $request->chofer_id,
+                'fecha_programada'  => $request->fecha_programada,
+                'direccion_entrega' => $request->direccion_entrega,
+                'observaciones'     => $request->observaciones,
+                'estado'            => 'programado',
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('envios.show', $envio)
+                ->with('success', 'Envío creado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->withErrors(['error' => 'Error al crear el envío: ' . $e->getMessage()]);
+        }
     }
 
     public function show(Envio $envio)
@@ -44,9 +116,9 @@ class EnvioController extends Controller
     public function programar(Venta $venta, Request $request)
     {
         $request->validate([
-            'vehiculo_id' => 'required|exists:vehiculos,id',
-            'chofer_id' => 'required|exists:users,id',
-            'fecha_programada' => 'required|date|after:now',
+            'vehiculo_id'       => 'required|exists:vehiculos,id',
+            'chofer_id'         => 'required|exists:users,id',
+            'fecha_programada'  => 'required|date|after:now',
             'direccion_entrega' => 'nullable|string|max:500',
         ]);
 
@@ -64,9 +136,9 @@ class EnvioController extends Controller
         try {
             // Programar envío
             $envio = $venta->programarEnvio([
-                'vehiculo_id' => $request->vehiculo_id,
-                'chofer_id' => $request->chofer_id,
-                'fecha_programada' => $request->fecha_programada,
+                'vehiculo_id'       => $request->vehiculo_id,
+                'chofer_id'         => $request->chofer_id,
+                'fecha_programada'  => $request->fecha_programada,
                 'direccion_entrega' => $request->direccion_entrega,
             ]);
 
@@ -75,7 +147,7 @@ class EnvioController extends Controller
 
             // Crear seguimiento inicial
             $envio->agregarSeguimiento('PROGRAMADO', [
-                'observaciones' => 'Envío programado para '.$request->fecha_programada,
+                'observaciones' => 'Envío programado para ' . $request->fecha_programada,
             ]);
 
             DB::commit();
@@ -86,7 +158,7 @@ class EnvioController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->withErrors(['error' => 'Error al programar el envío: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al programar el envío: ' . $e->getMessage()]);
         }
     }
 
@@ -119,7 +191,7 @@ class EnvioController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->withErrors(['error' => 'Error al iniciar preparación: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al iniciar preparación: ' . $e->getMessage()]);
         }
     }
 
@@ -130,7 +202,7 @@ class EnvioController extends Controller
         }
 
         $envio->update([
-            'estado' => Envio::EN_RUTA,
+            'estado'       => Envio::EN_RUTA,
             'fecha_salida' => now(),
         ]);
 
@@ -147,9 +219,9 @@ class EnvioController extends Controller
     public function confirmarEntrega(Envio $envio, Request $request)
     {
         $request->validate([
-            'receptor_nombre' => 'required|string|max:255',
-            'receptor_documento' => 'nullable|string|max:20',
-            'foto_entrega' => 'nullable|image|max:2048',
+            'receptor_nombre'       => 'required|string|max:255',
+            'receptor_documento'    => 'nullable|string|max:20',
+            'foto_entrega'          => 'nullable|image|max:2048',
             'observaciones_entrega' => 'nullable|string|max:500',
         ]);
 
@@ -165,11 +237,11 @@ class EnvioController extends Controller
             }
 
             $envio->update([
-                'estado' => Envio::ENTREGADO,
-                'fecha_entrega' => now(),
-                'receptor_nombre' => $request->receptor_nombre,
+                'estado'             => Envio::ENTREGADO,
+                'fecha_entrega'      => now(),
+                'receptor_nombre'    => $request->receptor_nombre,
                 'receptor_documento' => $request->receptor_documento,
-                'foto_entrega' => $fotoPath,
+                'foto_entrega'       => $fotoPath,
             ]);
 
             $envio->venta->update(['estado_logistico' => Venta::ESTADO_ENTREGADO]);
@@ -179,7 +251,7 @@ class EnvioController extends Controller
 
             // Crear seguimiento final
             $envio->agregarSeguimiento('ENTREGADO', [
-                'observaciones' => 'Entregado a: '.$request->receptor_nombre.'. '.($request->observaciones_entrega ?? ''),
+                'observaciones' => 'Entregado a: ' . $request->receptor_nombre . '. ' . ($request->observaciones_entrega ?? ''),
             ]);
 
             DB::commit();
@@ -189,7 +261,7 @@ class EnvioController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->withErrors(['error' => 'Error al confirmar entrega: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al confirmar entrega: ' . $e->getMessage()]);
         }
     }
 
@@ -214,7 +286,7 @@ class EnvioController extends Controller
 
             // Crear seguimiento
             $envio->agregarSeguimiento('CANCELADO', [
-                'observaciones' => 'Cancelado: '.$request->motivo_cancelacion,
+                'observaciones' => 'Cancelado: ' . $request->motivo_cancelacion,
             ]);
 
             DB::commit();
@@ -224,7 +296,7 @@ class EnvioController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->withErrors(['error' => 'Error al cancelar envío: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al cancelar envío: ' . $e->getMessage()]);
         }
     }
 
@@ -250,30 +322,36 @@ class EnvioController extends Controller
     {
         $stockService = app(StockService::class);
 
-        foreach ($envio->venta->detalles as $detalle) {
-            $stockService->reducirStock(
-                $detalle->producto_id,
-                $detalle->cantidad,
-                'ENVIO',
-                "Envío #{$envio->numero_envio}",
-                1// almacen_id por defecto
-            );
-        }
+        $productos = $envio->venta->detalles->map(function ($detalle) {
+            return [
+                'producto_id' => $detalle->producto_id,
+                'cantidad'    => $detalle->cantidad,
+            ];
+        })->toArray();
+
+        $stockService->procesarSalidaEnvio(
+            $productos,
+            $envio->numero_envio ?? 'ENV-' . $envio->id,
+            1// almacen_id por defecto
+        );
     }
 
     private function revertirStockDelEnvio(Envio $envio)
     {
         $stockService = app(StockService::class);
 
-        foreach ($envio->venta->detalles as $detalle) {
-            $stockService->aumentarStock(
-                $detalle->producto_id,
-                $detalle->cantidad,
-                'CANCELACION_ENVIO',
-                "Cancelación envío #{$envio->numero_envio}",
-                1// almacen_id por defecto
-            );
-        }
+        $productos = $envio->venta->detalles->map(function ($detalle) {
+            return [
+                'producto_id' => $detalle->producto_id,
+                'cantidad'    => $detalle->cantidad,
+            ];
+        })->toArray();
+
+        $stockService->procesarEntradaCancelacionEnvio(
+            $productos,
+            $envio->numero_envio ?? 'ENV-' . $envio->id,
+            1// almacen_id por defecto
+        );
     }
 
     // ==========================================
@@ -286,11 +364,11 @@ class EnvioController extends Controller
     public function dashboardStats(): JsonResponse
     {
         $stats = [
-            'proformas_pendientes' => Proforma::where('estado', 'PENDIENTE')
+            'proformas_pendientes'  => Proforma::where('estado', 'PENDIENTE')
                 ->where('canal_origen', 'APP_EXTERNA')
                 ->count(),
-            'envios_programados' => Envio::where('estado', 'PROGRAMADO')->count(),
-            'envios_en_transito' => Envio::where('estado', 'EN_TRANSITO')->count(),
+            'envios_programados'    => Envio::where('estado', 'PROGRAMADO')->count(),
+            'envios_en_transito'    => Envio::where('estado', 'EN_TRANSITO')->count(),
             'envios_entregados_hoy' => Envio::where('estado', 'ENTREGADO')
                 ->whereDate('updated_at', today())
                 ->count(),
@@ -321,10 +399,10 @@ class EnvioController extends Controller
     public function actualizarEstado(Envio $envio, Request $request): JsonResponse
     {
         $request->validate([
-            'estado' => 'required|in:PROGRAMADO,EN_PREPARACION,EN_TRANSITO,ENTREGADO,FALLIDO',
-            'descripcion' => 'required|string|max:500',
-            'ubicacion' => 'nullable|array',
-            'ubicacion.latitud' => 'nullable|numeric',
+            'estado'             => 'required|in:PROGRAMADO,EN_PREPARACION,EN_TRANSITO,ENTREGADO,FALLIDO',
+            'descripcion'        => 'required|string|max:500',
+            'ubicacion'          => 'nullable|array',
+            'ubicacion.latitud'  => 'nullable|numeric',
             'ubicacion.longitud' => 'nullable|numeric',
         ]);
 
@@ -337,11 +415,11 @@ class EnvioController extends Controller
 
             // Crear registro de seguimiento
             $envio->seguimientos()->create([
-                'estado' => $request->estado,
+                'estado'      => $request->estado,
                 'descripcion' => $request->descripcion,
-                'ubicacion' => $request->ubicacion,
-                'usuario_id' => auth()->id(),
-                'fecha' => now(),
+                'ubicacion'   => $request->ubicacion,
+                'usuario_id'  => Auth::id(),
+                'fecha'       => now(),
             ]);
 
             // Lógica específica según el estado
@@ -365,7 +443,7 @@ class EnvioController extends Controller
 
             return response()->json([
                 'message' => 'Estado actualizado correctamente',
-                'envio' => $envio->fresh(['seguimientos']),
+                'envio'   => $envio->fresh(['seguimientos']),
             ]);
 
         } catch (\Exception $e) {
@@ -373,7 +451,7 @@ class EnvioController extends Controller
 
             return response()->json([
                 'message' => 'Error al actualizar el estado',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -383,7 +461,7 @@ class EnvioController extends Controller
      */
     public function enviosCliente(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         // Si es un cliente desde la app externa, buscar por cliente_app_id
         $envios = Envio::whereHas('venta', function ($query) use ($user) {
@@ -404,19 +482,19 @@ class EnvioController extends Controller
     public function seguimientoApi(Envio $envio): JsonResponse
     {
         $envio->load([
-            'venta' => function ($query) {
+            'venta'         => function ($query) {
                 $query->select('id', 'numero', 'total', 'cliente_id');
             },
             'venta.cliente' => function ($query) {
                 $query->select('id', 'nombre', 'telefono');
             },
-            'vehiculo' => function ($query) {
+            'vehiculo'      => function ($query) {
                 $query->select('id', 'placa', 'marca', 'modelo');
             },
-            'chofer' => function ($query) {
+            'chofer'        => function ($query) {
                 $query->select('id', 'name');
             },
-            'seguimientos' => function ($query) {
+            'seguimientos'  => function ($query) {
                 $query->orderBy('fecha', 'desc');
             },
         ]);
@@ -430,19 +508,19 @@ class EnvioController extends Controller
     public function actualizarUbicacion(Envio $envio, Request $request): JsonResponse
     {
         $request->validate([
-            'latitud' => 'required|numeric',
+            'latitud'  => 'required|numeric',
             'longitud' => 'required|numeric',
         ]);
 
         $envio->seguimientos()->create([
-            'estado' => $envio->estado,
+            'estado'      => $envio->estado,
             'descripcion' => 'Actualización de ubicación automática',
-            'ubicacion' => [
-                'latitud' => $request->latitud,
+            'ubicacion'   => [
+                'latitud'  => $request->latitud,
                 'longitud' => $request->longitud,
             ],
-            'usuario_id' => auth()->id(),
-            'fecha' => now(),
+            'usuario_id'  => Auth::id(),
+            'fecha'       => now(),
         ]);
 
         return response()->json(['message' => 'Ubicación actualizada']);
@@ -451,7 +529,7 @@ class EnvioController extends Controller
     private function marcarVentaComoEntregada(Envio $envio): void
     {
         $envio->venta->update([
-            'entregado' => true,
+            'entregado'     => true,
             'fecha_entrega' => now(),
         ]);
     }
@@ -462,5 +540,47 @@ class EnvioController extends Controller
         if ($envio->estado === 'EN_PREPARACION' || $envio->estado === 'EN_TRANSITO') {
             $this->restaurarStock($envio);
         }
+    }
+
+    /**
+     * Reducir stock cuando se inicia la preparación
+     */
+    private function reducirStockPreparacion(Envio $envio): void
+    {
+        $stockService = app(StockService::class);
+
+        $productos = $envio->venta->detalles->map(function ($detalle) {
+            return [
+                'producto_id' => $detalle->producto_id,
+                'cantidad'    => $detalle->cantidad,
+            ];
+        })->toArray();
+
+        $stockService->procesarSalidaEnvio(
+            $productos,
+            $envio->numero_envio ?? 'ENV-' . $envio->id,
+            1// almacen_id por defecto
+        );
+    }
+
+    /**
+     * Restaurar stock cuando un envío falla o se cancela
+     */
+    private function restaurarStock(Envio $envio): void
+    {
+        $stockService = app(StockService::class);
+
+        $productos = $envio->venta->detalles->map(function ($detalle) {
+            return [
+                'producto_id' => $detalle->producto_id,
+                'cantidad'    => $detalle->cantidad,
+            ];
+        })->toArray();
+
+        $stockService->procesarEntradaCancelacionEnvio(
+            $productos,
+            $envio->numero_envio ?? 'ENV-' . $envio->id,
+            1// almacen_id por defecto
+        );
     }
 }

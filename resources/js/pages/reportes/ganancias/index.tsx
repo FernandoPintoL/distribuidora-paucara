@@ -1,9 +1,26 @@
 import { Head, Link, router } from '@inertiajs/react';
-// Declaración para el helper `route` usado en este archivo (p.ej. Ziggy)
-// Evita errores de TypeScript cuando no existe un tipo global.
-declare const route: (...args: any[]) => string;
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+
+// Helper para generar rutas
+const route = (name: string, params?: any) => {
+  const routes: Record<string, string> = {
+    'dashboard': '/dashboard',
+    'reportes.ganancias.index': '/reportes/ganancias',
+    'reportes.ganancias.export': '/reportes/ganancias/export',
+    'tipos-precio.index': '/tipos-precio',
+    'reportes.precios.index': '/reportes/precios',
+    'productos.edit': '/productos',
+  };
+
+  const baseRoute = routes[name] || '/';
+
+  if (params && name === 'productos.edit') {
+    return `${baseRoute}/${params}/edit`;
+  }
+
+  return baseRoute;
+};
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,7 +105,7 @@ export default function ReporteGananciasIndex({
   });
 
   const handleFilter = () => {
-    const paramsRaw = { ...formData } as Record<string,string>;
+    const paramsRaw = { ...formData } as Record<string, string>;
     if (paramsRaw.tipo_precio_id === ALL_VALUE) delete paramsRaw.tipo_precio_id;
     if (paramsRaw.categoria_id === ALL_VALUE) delete paramsRaw.categoria_id;
     const params = Object.fromEntries(Object.entries(paramsRaw).filter(([_, v]) => v !== ''));

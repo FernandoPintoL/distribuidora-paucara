@@ -159,7 +159,7 @@ export default function VerTransferencia() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Transferencia ${transferencia.numero}`} />
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -374,8 +374,8 @@ export default function VerTransferencia() {
                                                     {transferencia.estado === 'RECIBIDO' && (
                                                         <td className="py-3 px-4 text-center">
                                                             <span className={`font-medium ${detalle.cantidad_recibida === detalle.cantidad
-                                                                    ? 'text-green-600'
-                                                                    : 'text-orange-600'
+                                                                ? 'text-green-600'
+                                                                : 'text-orange-600'
                                                                 }`}>
                                                                 {detalle.cantidad_recibida || 0}
                                                             </span>
