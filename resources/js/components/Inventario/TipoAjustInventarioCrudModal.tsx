@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogClose, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useTipoMermas, TipoMermaApi } from '@/stores/useTipoMermas';
-import { TipoMermaService } from '@/services/tipoMermaService';
+import { useTipoAjustInventario } from '@/stores/useTipoAjustInventario';
+import { TipoAjustInventarioService, TipoAjustInventarioApi } from '@/services/tipoAjustInventarioService';
 
-export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-    const { tipos, fetchTipos } = useTipoMermas();
-    const [editing, setEditing] = useState<TipoMermaApi | null>(null);
-    const [form, setForm] = useState<Partial<TipoMermaApi>>({});
+export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+    const { tipos, fetchTipos } = useTipoAjustInventario();
+    const [editing, setEditing] = useState<TipoAjustInventarioApi | null>(null);
+    const [form, setForm] = useState<Partial<TipoAjustInventarioApi>>({});
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (open) fetchTipos();
     }, [open, fetchTipos]);
 
-    const handleEdit = (tipo: TipoMermaApi) => {
+    const handleEdit = (tipo: TipoAjustInventarioApi) => {
         setEditing(tipo);
         setForm(tipo);
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('¿Eliminar tipo de merma?')) return;
+        if (!confirm('¿Eliminar tipo de ajuste?')) return;
         setLoading(true);
-        await TipoMermaService.remove(id);
+        await TipoAjustInventarioService.remove(id);
         await fetchTipos();
         setLoading(false);
     };
@@ -32,9 +32,9 @@ export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOp
         e.preventDefault();
         setLoading(true);
         if (editing) {
-            await TipoMermaService.update(editing.id, form);
+            await TipoAjustInventarioService.update(editing.id, form);
         } else {
-            await TipoMermaService.create(form);
+            await TipoAjustInventarioService.create(form);
         }
         setEditing(null);
         setForm({});
@@ -47,15 +47,20 @@ export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOp
             <DialogPortal>
                 <DialogOverlay />
                 <DialogContent className="max-w-lg w-full p-6 rounded-lg bg-white dark:bg-gray-900">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold">Gestionar Tipos de Merma</h2>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cerrar</Button>
-                        </DialogClose>
-                    </div>
+                    <DialogTitle asChild>
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-xl font-bold">Gestionar Tipos de Ajuste de Inventario</span>
+                            <DialogClose asChild>
+                                <Button variant="ghost">Cerrar</Button>
+                            </DialogClose>
+                        </div>
+                    </DialogTitle>
+                    <DialogDescription className="mb-4">
+                        Crea, edita o elimina los tipos de ajuste disponibles para los movimientos de inventario.
+                    </DialogDescription>
                     <form onSubmit={handleSubmit} className="space-y-3 mb-6">
                         <Input
-                            placeholder="Clave (ej: VENCIMIENTO)"
+                            placeholder="Clave (ej: AJUSTE_FISICO)"
                             value={form.clave || ''}
                             onChange={e => setForm(f => ({ ...f, clave: e.target.value }))}
                             required
@@ -89,14 +94,6 @@ export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOp
                                 onChange={e => setForm(f => ({ ...f, text_color: e.target.value }))}
                             />
                         </div>
-                        <label className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                checked={!!form.requiere_aprobacion}
-                                onChange={e => setForm(f => ({ ...f, requiere_aprobacion: e.target.checked }))}
-                            />
-                            Requiere aprobación
-                        </label>
                         <Button type="submit" disabled={loading}>
                             {editing ? 'Actualizar' : 'Crear'}
                         </Button>

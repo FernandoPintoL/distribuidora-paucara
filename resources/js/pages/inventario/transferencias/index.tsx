@@ -202,7 +202,7 @@ export default function TransferenciasIndex() {
 
                 {/* Estadísticas */}
                 {estadisticas && (
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4">
                         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                             <div className="text-center">
                                 <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -248,7 +248,7 @@ export default function TransferenciasIndex() {
 
                 {/* Panel de Filtros */}
                 {mostrarFiltros && (
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

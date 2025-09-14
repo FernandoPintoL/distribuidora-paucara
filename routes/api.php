@@ -1,6 +1,7 @@
 <?php
 use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\EstadoMermaController;
+use App\Http\Controllers\Api\TipoAjustInventarioController;
 use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\ClienteController;
@@ -13,6 +14,8 @@ use App\Http\Controllers\ReporteInventarioApiController;
 use App\Http\Controllers\VentaController;
 use Illuminate\Support\Facades\Route;
 
+// Catálogo de tipos de ajuste de inventario
+Route::apiResource('tipos-ajuste-inventario', TipoAjustInventarioController::class);
 // Catálogos de mermas
 Route::apiResource('tipo-mermas', TipoMermaController::class);
 Route::apiResource('estado-mermas', EstadoMermaController::class);
