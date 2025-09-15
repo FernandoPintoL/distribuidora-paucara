@@ -26,7 +26,7 @@ export default function GenericFormFields<F extends BaseFormData>({
     if (typeof field.render === 'function') {
       return field.render({
         value,
-        onChange: (v: any) => onChange(field.key, v),
+        onChange: (v: unknown) => onChange(field.key, v),
         label: field.label,
         error,
         disabled,

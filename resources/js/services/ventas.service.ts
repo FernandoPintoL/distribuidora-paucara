@@ -9,7 +9,7 @@ import type {
     VentaFormData,
     FiltrosVentas
 } from '@/domain/ventas';
-import stockService, { ResumenStock } from '@/services/stock.service';
+import { ResumenStock } from '@/services/stock.service';
 import NotificationService from '@/services/notification.service';
 
 export class VentasService implements BaseService<Venta, VentaFormData> {
