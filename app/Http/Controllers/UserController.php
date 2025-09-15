@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -50,24 +49,24 @@ class UserController extends Controller
         $roles = Role::all();
 
         return Inertia::render('usuarios/index', [
-            'users' => $users,
-            'roles' => $roles,
+            'users'   => $users,
+            'roles'   => $roles,
             'filters' => [
                 'search' => $request->search,
-                'role' => $request->role,
+                'role'   => $request->role,
             ],
         ]);
     }
 
     public function create()
     {
-        $roles = Role::all();
+        $roles       = Role::all();
         $permissions = Permission::all()->groupBy(function ($permission) {
             return explode('.', $permission->name)[0];
         });
 
         return Inertia::render('usuarios/create', [
-            'roles' => $roles,
+            'roles'       => $roles,
             'permissions' => $permissions,
         ]);
     }
@@ -75,20 +74,20 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'usernick' => ['required', 'string', 'max:255', 'unique:users'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'roles' => ['array'],
-            'roles.*' => ['exists:roles,id'],
-            'permissions' => ['array'],
+            'name'          => ['required', 'string', 'max:255'],
+            'usernick'      => ['required', 'string', 'max:255', 'unique:users'],
+            'email'         => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password'      => ['required', 'string', 'min:8', 'confirmed'],
+            'roles'         => ['array'],
+            'roles.*'       => ['exists:roles,id'],
+            'permissions'   => ['array'],
             'permissions.*' => ['exists:permissions,id'],
         ]);
 
         $user = User::create([
-            'name' => $validated['name'],
+            'name'     => $validated['name'],
             'usernick' => $validated['usernick'],
-            'email' => $validated['email'],
+            'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
 
@@ -111,26 +110,26 @@ class UserController extends Controller
         $user->load(['roles', 'permissions']);
 
         return Inertia::render('usuarios/show', [
-            'user' => $user,
-            'userRoles' => $user->roles,
+            'user'            => $user,
+            'userRoles'       => $user->roles,
             'userPermissions' => $user->permissions,
-            'allPermissions' => $user->getAllPermissions(),
+            'allPermissions'  => $user->getAllPermissions(),
         ]);
     }
 
     public function edit(User $user)
     {
         $user->load(['roles', 'permissions']);
-        $roles = Role::all();
+        $roles       = Role::all();
         $permissions = Permission::all()->groupBy(function ($permission) {
             return explode('.', $permission->name)[0];
         });
 
         return Inertia::render('usuarios/edit', [
-            'user' => $user,
-            'roles' => $roles,
-            'permissions' => $permissions,
-            'userRoles' => $user->roles->pluck('id'),
+            'user'            => $user,
+            'roles'           => $roles,
+            'permissions'     => $permissions,
+            'userRoles'       => $user->roles->pluck('id'),
             'userPermissions' => $user->permissions->pluck('id'),
         ]);
     }
@@ -138,20 +137,20 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'usernick' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-            'roles' => ['array'],
-            'roles.*' => ['exists:roles,id'],
-            'permissions' => ['array'],
+            'name'          => ['required', 'string', 'max:255'],
+            'usernick'      => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'email'         => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'password'      => ['nullable', 'string', 'min:8', 'confirmed'],
+            'roles'         => ['array'],
+            'roles.*'       => ['exists:roles,id'],
+            'permissions'   => ['array'],
             'permissions.*' => ['exists:permissions,id'],
         ]);
 
         $user->update([
-            'name' => $validated['name'],
+            'name'     => $validated['name'],
             'usernick' => $validated['usernick'],
-            'email' => $validated['email'],
+            'email'    => $validated['email'],
         ]);
 
         // Actualizar contraseña solo si se proporciona
@@ -188,6 +187,20 @@ class UserController extends Controller
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuario eliminado exitosamente.');
+    }
+
+    public function toggleStatus(User $user)
+    {
+        // Evitar que el usuario se desactive a sí mismo
+        if ($user->id === Auth::id()) {
+            return back()->with('error', 'No puedes desactivar tu propia cuenta.');
+        }
+
+        $user->update(['activo' => ! $user->activo]);
+
+        $status = $user->activo ? 'activado' : 'desactivado';
+
+        return back()->with('success', "Usuario {$status} exitosamente.");
     }
 
     public function assignRole(Request $request, User $user)

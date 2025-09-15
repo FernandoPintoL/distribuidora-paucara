@@ -45,6 +45,7 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
     { key: 'codigo_barras', label: 'Código', type: 'text', sortable: true },
     { key: 'marca', label: 'Marca', type: 'text' },
     { key: 'categoria', label: 'Categoría', type: 'text' },
+    { key: 'proveedor', label: 'Proveedor', type: 'text' },
     { key: 'precio_base', label: 'Precio', type: 'custom', sortable: true, render: v => <span className="font-mono text-sm">{currency(v)}</span> },
     { key: 'stock_total', label: 'Stock', type: 'number', sortable: true },
     { key: 'activo', label: 'Estado', type: 'boolean' },
@@ -96,6 +97,12 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       placeholder: 'Seleccione una marca'
     },
     {
+      key: 'proveedor_id',
+      label: 'Proveedor',
+      type: 'select',
+      placeholder: 'Seleccione un proveedor'
+    },
+    {
       key: 'peso',
       label: 'Peso',
       type: 'number',
@@ -140,6 +147,14 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         type: 'select' as const,
         placeholder: 'Todas las marcas',
         extraDataKey: 'marcas',
+        width: 'md' as const
+      },
+      {
+        key: 'proveedor_id',
+        label: 'Proveedor',
+        type: 'select' as const,
+        placeholder: 'Todos los proveedores',
+        extraDataKey: 'proveedores',
         width: 'md' as const
       },
       {

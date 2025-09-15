@@ -47,12 +47,14 @@ export interface Producto extends BaseEntity {
   es_alquilable?: boolean;
   categoria_id?: Id;
   marca_id?: Id;
+  proveedor_id?: Id;
   precio_base?: number | null; // Nuevo campo para index / tarjetas
   stock_total?: number; // Total consolidado de stock
 
   // Relaciones
   categoria?: { id: Id; nombre: string };
   marca?: { id: Id; nombre: string };
+  proveedor?: { id: Id; nombre: string; razon_social?: string };
   unidad?: { id: Id; codigo: string; nombre: string };
 
   // Campos complejos del frontend
@@ -73,6 +75,7 @@ export interface ProductoFormData extends BaseFormData {
   fecha_vencimiento?: string | null;
   categoria_id?: Id | '';
   marca_id?: Id | '';
+  proveedor_id?: Id | '';
   stock_minimo?: number | null;
   stock_maximo?: number | null;
   activo?: boolean;

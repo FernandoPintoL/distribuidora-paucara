@@ -13,8 +13,8 @@ import {
     TIPOS_MERMA
 } from '@/types/inventario';
 import { useTipoMermas } from '@/stores/useTipoMermas';
-import { TipoMermaCrudModal } from '@/components/inventario/TipoMermaCrudModal';
-import { EstadoMermaCrudModal } from '@/components/inventario/EstadoMermaCrudModal';
+import { TipoMermaCrudModal } from '@/components/Inventario/TipoMermaCrudModal';
+import { EstadoMermaCrudModal } from '@/components/Inventario/EstadoMermaCrudModal';
 import {
     Search,
     Package,

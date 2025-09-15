@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -88,15 +87,21 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Create roles
-        $admin = Role::findOrCreate('Admin');
-        $vendedor = Role::findOrCreate('Vendedor');
-        $compras = Role::findOrCreate('Compras');
-        $inventario = Role::findOrCreate('Inventario');
-        $reportes = Role::findOrCreate('Reportes');
-        $logistica = Role::findOrCreate('Logística');
+        $admin        = Role::findOrCreate('Admin');
+        $vendedor     = Role::findOrCreate('Vendedor');
+        $compras      = Role::findOrCreate('Compras');
+        $inventario   = Role::findOrCreate('Inventario');
+        $reportes     = Role::findOrCreate('Reportes');
+        $logistica    = Role::findOrCreate('Logística');
         $contabilidad = Role::findOrCreate('Contabilidad');
-        $gerente = Role::findOrCreate('Gerente');
-        $cajero = Role::findOrCreate('Cajero');
+        $gerente      = Role::findOrCreate('Gerente');
+        $cajero       = Role::findOrCreate('Cajero');
+
+        // Nuevos roles para tipos de empleados específicos
+        $chofer        = Role::findOrCreate('Chofer');
+        $gestorAlmacen = Role::findOrCreate('Gestor de Almacén');
+        $comprador     = Role::findOrCreate('Comprador');
+        $manager       = Role::findOrCreate('Manager');
 
         // Assign permissions to roles
         $admin->givePermissionTo(Permission::all());
@@ -173,7 +178,54 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
         $cajero->syncPermissions($cajeroPerms);
 
-        // Optionally assign Admin role to the first user
+        // Nuevos roles - Asignar permisos específicos
+        $choferPerms = [
+            'envios.index', 'envios.show',
+            'logistica.dashboard', 'logistica.envios.seguimiento',
+            'empleados.show', // Para ver su propio perfil
+        ];
+        $chofer->syncPermissions($choferPerms);
+
+        $gestorAlmacenPerms = [
+            'inventario.dashboard', 'inventario.stock-bajo', 'inventario.proximos-vencer', 'inventario.vencidos', 'inventario.movimientos',
+            'inventario.ajuste.form', 'inventario.ajuste.procesar',
+            'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver',
+            'inventario.transferencias.enviar', 'inventario.transferencias.recibir',
+            'inventario.mermas.index', 'inventario.mermas.registrar', 'inventario.mermas.store', 'inventario.mermas.show',
+            'almacenes.manage',
+            'productos.manage', // Para gestionar productos en almacén
+            'reportes.inventario.stock-actual', 'reportes.inventario.vencimientos', 'reportes.inventario.movimientos',
+        ];
+        $gestorAlmacen->syncPermissions($gestorAlmacenPerms);
+
+        $compradorPerms = [
+            'compras.index', 'compras.create', 'compras.store', 'compras.show', 'compras.edit', 'compras.update',
+            'compras.detalles.index', 'compras.detalles.store', 'compras.detalles.update', 'compras.detalles.destroy',
+            'compras.cuentas-por-pagar.index', 'compras.cuentas-por-pagar.show',
+            'compras.pagos.index', 'compras.pagos.create', 'compras.pagos.store', 'compras.pagos.show',
+            'compras.lotes-vencimientos.index', 'compras.lotes-vencimientos.actualizar-estado', 'compras.lotes-vencimientos.actualizar-cantidad',
+            'proveedores.manage',
+            'productos.manage', // Para gestionar productos que compra
+            'reportes.precios.index', 'reportes.precios.export',
+        ];
+        $comprador->syncPermissions($compradorPerms);
+
+        $managerPerms = [
+            // Supervisión completa de operaciones
+            'ventas.index', 'ventas.show', 'compras.index', 'compras.show',
+            'inventario.dashboard', 'cajas.index', 'cajas.estado',
+            'empleados.index', 'empleados.show',
+            // Reportes gerenciales
+            'reportes.precios.index', 'reportes.precios.export',
+            'reportes.ganancias.index', 'reportes.ganancias.export',
+            'reportes.inventario.stock-actual', 'reportes.inventario.vencimientos', 'reportes.inventario.rotacion',
+            'reportes.inventario.movimientos', 'reportes.inventario.export',
+            // Configuración limitada
+            'configuracion-global.ganancias',
+            // Gestión de usuarios básica (solo ver)
+            'usuarios.index', 'usuarios.show',
+        ];
+        $manager->syncPermissions($managerPerms);
         $firstUser = User::query()->orderBy('id')->first();
         if ($firstUser !== null && ! $firstUser->hasRole('Admin')) {
             $firstUser->assignRole('Admin');

@@ -16,6 +16,7 @@ interface ProductoFormPageProps {
   producto?: Producto | null;
   categorias: { id: number; nombre: string }[];
   marcas: { id: number; nombre: string }[];
+  proveedores: { id: number; nombre: string; razon_social?: string }[];
   unidades: { id: number; codigo: string; nombre: string }[];
   tipos_precio: TipoPrecio[];
   configuraciones_ganancias?: { porcentaje_interes_general?: number; tipo_precio_ganancia_id?: number };
@@ -49,7 +50,7 @@ const initialProductoData: ProductoFormData = {
   codigos: [{ codigo: '' }],
 };
 
-export default function ProductoForm({ producto, categorias, marcas, unidades, tipos_precio, configuraciones_ganancias, historial_precios }: ProductoFormPageProps) {
+export default function ProductoForm({ producto, categorias, marcas, proveedores, unidades, tipos_precio, configuraciones_ganancias, historial_precios }: ProductoFormPageProps) {
   // Normalizadores para compatibilidad: el backend puede enviar {id,nombre,...} o {value,label,...}
   const isEditing = !!producto?.id;
   const porcentajeInteres = Number(configuraciones_ganancias?.porcentaje_interes_general ?? 0);
@@ -61,6 +62,10 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
   // Configurar hooks de búsqueda para cada entidad
   const categoriasSelect = useEntitySelect(categorias);
   const marcasSelect = useEntitySelect(marcas);
+  const proveedoresSelect = useEntitySelect(proveedores, {
+    searchFields: ['nombre', 'razon_social'],
+    descriptionField: 'razon_social'
+  });
   const unidadesSelect = useEntitySelect(unidades, {
     searchFields: ['nombre', 'codigo'],
     descriptionField: 'codigo'
@@ -76,6 +81,7 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
       fecha_vencimiento: null,
       categoria_id: producto.categoria_id ? Number(producto.categoria_id) : '',
       marca_id: producto.marca_id ? Number(producto.marca_id) : '',
+      proveedor_id: producto.proveedor_id ? Number(producto.proveedor_id) : '',
       activo: producto.activo ?? true,
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
