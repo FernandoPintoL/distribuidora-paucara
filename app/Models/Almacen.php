@@ -11,7 +11,13 @@ class Almacen extends Model
     protected $table = 'almacenes';
 
     protected $fillable = [
-        'nombre', 'direccion', 'ubicacion_fisica', 'requiere_transporte_externo', 'responsable', 'telefono', 'activo',
+        'nombre',
+        'direccion',
+        'ubicacion_fisica',
+        'requiere_transporte_externo',
+        'responsable',
+        'telefono',
+        'activo',
     ];
 
     protected $casts = [

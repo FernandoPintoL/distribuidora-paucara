@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MovimientoInventario extends Model
 {
@@ -14,14 +15,25 @@ class MovimientoInventario extends Model
 
     protected $fillable = [
         'stock_producto_id',
+        'cantidad_anterior',
         'cantidad',
+        'cantidad_posterior',
         'fecha',
         'observacion',
         'numero_documento',
-        'cantidad_anterior',
-        'cantidad_posterior',
         'tipo',
         'user_id',
+        'tipo_ajuste_inventario_id',
+        'tipo_merma_id',
+        'estado_merma_id',
+        'anulado',
+        'motivo_anulacion',
+        'user_anulacion_id',
+        'fecha_anulacion',
+        'referencia_tipo',
+        'referencia_id',
+        'ip_dispositivo',
+        'deleted_at',
     ];
 
     protected $casts = [
@@ -32,27 +44,15 @@ class MovimientoInventario extends Model
     ];
 
     // Constantes para tipos de movimiento
-    const TIPO_ENTRADA_COMPRA = 'ENTRADA_COMPRA';
-
     const TIPO_ENTRADA_AJUSTE = 'ENTRADA_AJUSTE';
-
-    const TIPO_ENTRADA_DEVOLUCION = 'ENTRADA_DEVOLUCION';
-
-    const TIPO_TRANSFERENCIA_ENTRADA = 'TRANSFERENCIA_ENTRADA';
-
-    const TIPO_SALIDA_VENTA = 'SALIDA_VENTA';
 
     const TIPO_SALIDA_AJUSTE = 'SALIDA_AJUSTE';
 
     const TIPO_SALIDA_MERMA = 'SALIDA_MERMA';
 
-    const TIPO_SALIDA_DEVOLUCION = 'SALIDA_DEVOLUCION';
+    const TIPO_SALIDA_VENTA = 'SALIDA_VENTA';
 
-    const TIPO_TRANSFERENCIA_SALIDA = 'TRANSFERENCIA_SALIDA';
-
-    const TIPO_SALIDA_ENVIO = 'SALIDA_ENVIO';
-
-    const TIPO_ENTRADA_CANCELACION_ENVIO = 'ENTRADA_CANCELACION_ENVIO';
+    const TIPO_ENTRADA_COMPRA = 'ENTRADA_COMPRA';
 
     /**
      * Relaciones
@@ -65,6 +65,24 @@ class MovimientoInventario extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Relación con el tipo de ajuste
+     */
+    public function tipoAjusteInventario(): BelongsTo
+    {
+        return $this->belongsTo(TipoAjustInventario::class, 'tipo_ajuste_inventario_id');
+    }
+
+    public function tipoMerma(): BelongsTo
+    {
+        return $this->belongsTo(TipoMerma::class, 'tipo_merma_id');
+    }
+
+    public function estadoMerma(): BelongsTo
+    {
+        return $this->belongsTo(EstadoMerma::class, 'estado_merma_id');
     }
 
     public function producto()
@@ -146,31 +164,22 @@ class MovimientoInventario extends Model
         return str_starts_with($this->tipo, 'SALIDA_');
     }
 
-    public static function getTipos(): array
-    {
-        return [
-            self::TIPO_ENTRADA_COMPRA        => 'Entrada por Compra',
-            self::TIPO_ENTRADA_AJUSTE        => 'Entrada por Ajuste',
-            self::TIPO_ENTRADA_DEVOLUCION    => 'Entrada por Devolución',
-            self::TIPO_TRANSFERENCIA_ENTRADA => 'Transferencia - Entrada',
-            self::TIPO_SALIDA_VENTA          => 'Salida por Venta',
-            self::TIPO_SALIDA_AJUSTE         => 'Salida por Ajuste',
-            self::TIPO_SALIDA_MERMA          => 'Salida por Merma',
-            self::TIPO_SALIDA_DEVOLUCION     => 'Salida por Devolución',
-            self::TIPO_TRANSFERENCIA_SALIDA  => 'Transferencia - Salida',
-        ];
-    }
-
     /**
      * Crear movimiento de inventario automáticamente
      */
-    public static function registrar(
+    public static function registrarStockProducto(
         StockProducto $stockProducto,
         int $cantidadMovimiento,
         string $tipo,
         ?string $observacion = null,
         ?string $numeroDocumento = null,
-        ?int $userId = null
+        ?int $userId = null,
+        ?int $tipoAjusteInventarioId = null,
+        ?int $tipoMermaId = null,
+        ?int $estadoMermaId = null,
+        ?string $referenciaTipo = null,
+        ?int $referenciaId = null,
+        ?string $ipDispositivo = null
     ): self {
         $cantidadAnterior = $stockProducto->cantidad;
 
@@ -181,15 +190,54 @@ class MovimientoInventario extends Model
 
         // Crear el movimiento
         return self::create([
-            'stock_producto_id'  => $stockProducto->id,
-            'cantidad'           => $cantidadMovimiento,
-            'fecha'              => now(),
-            'observacion'        => $observacion,
-            'numero_documento'   => $numeroDocumento,
-            'cantidad_anterior'  => $cantidadAnterior,
-            'cantidad_posterior' => $stockProducto->cantidad,
-            'tipo'               => $tipo,
-            'user_id'            => $userId ?? (\Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null),
+            'stock_producto_id'         => $stockProducto->id,
+            'cantidad'                  => $cantidadMovimiento,
+            'fecha'                     => now(),
+            'observacion'               => $observacion,
+            'numero_documento'          => $numeroDocumento,
+            'cantidad_anterior'         => $cantidadAnterior,
+            'cantidad_posterior'        => $stockProducto->cantidad,
+            'tipo'                      => $tipo,
+            'user_id'                   => $userId ?? (\Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null),
+            'tipo_ajuste_inventario_id' => $tipoAjusteInventarioId,
+            'tipo_merma_id'             => $tipoMermaId,
+            'estado_merma_id'           => $estadoMermaId,
+            'referencia_tipo'           => $referenciaTipo,
+            'referencia_id'             => $referenciaId,
+            'ip_dispositivo'            => $ipDispositivo,
         ]);
+    }
+
+    /**
+     * Obtener todos los tipos de movimientos disponibles desde la base de datos
+     */
+    public static function getTipos(): array
+    {
+        $tipos = [];
+
+        // Tipos de ajuste de inventario
+        $tiposAjuste = TipoAjustInventario::where('activo', true)
+            ->orderBy('label')
+            ->get(['clave', 'label', 'descripcion', 'color', 'bg_color', 'text_color']);
+
+        foreach ($tiposAjuste as $tipo) {
+            $tipos['ENTRADA_AJUSTE_' . $tipo->clave] = $tipo->label . ' (Entrada)';
+            $tipos['SALIDA_AJUSTE_' . $tipo->clave]  = $tipo->label . ' (Salida)';
+        }
+
+        // Tipos de merma
+        $tiposMerma = TipoMerma::where('activo', true)
+            ->orderBy('label')
+            ->get(['clave', 'label', 'descripcion', 'color', 'bg_color', 'text_color']);
+
+        foreach ($tiposMerma as $tipo) {
+            $tipos['SALIDA_MERMA_' . $tipo->clave] = $tipo->label;
+        }
+
+        // Tipos fijos del sistema
+        $tipos['SALIDA_VENTA']   = 'Venta';
+        $tipos['ENTRADA_COMPRA'] = 'Compra';
+
+        return $tipos;
     }
 }

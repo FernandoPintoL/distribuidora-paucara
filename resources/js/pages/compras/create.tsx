@@ -8,17 +8,17 @@ import { formatCurrency } from '@/lib/utils';
 import { NotificationService } from '@/services/notification.service';
 import SearchSelect, { SelectOption } from '@/components/ui/search-select';
 import InputSearch from '@/components/ui/input-search';
-import { useProveedorSearch, useProductoSearch } from '@/hooks/use-api-search';
+import ModalCrearProveedor from '@/components/ui/modal-crear-proveedor';
+import ProductosTable from '@/components/ProductosTable';
+import { useProveedorSearch } from '@/hooks/use-api-search';
 
 // Importar tipos del domain
-import type {
-  Proveedor,
-  Moneda,
-  EstadoDocumento,
-  Producto,
-  Compra,
-  TipoPago
-} from '@/domain/compras';
+import type { Compra } from '@/domain/compras';
+import type { Proveedor } from '@/domain/proveedores';
+import type { Moneda } from '@/domain/monedas';
+import type { EstadoDocumento } from '@/domain/estados-documento';
+import type { Producto } from '@/domain/productos';
+import type { TipoPago } from '@/domain/tipos-pago';
 
 // Form types locales (específicos del formulario)
 interface DetalleForm {
@@ -99,7 +99,6 @@ export default function CompraForm() {
 
   // Hooks para búsqueda con autocompletado
   const proveedorSearch = useProveedorSearch();
-  const productoSearch = useProductoSearch();
 
   // Estados según el flujo documentado
   const estadoActual = props.compra?.estadoDocumento?.nombre;
@@ -134,9 +133,7 @@ export default function CompraForm() {
       subtotal: d.subtotal,
       lote: d.lote ?? '',
       fecha_vencimiento: d.fecha_vencimiento ?? '',
-    })) ?? [
-        { producto_id: '', cantidad: 1, precio_unitario: 0, descuento: 0, subtotal: 0, lote: '', fecha_vencimiento: '' },
-      ],
+    })) ?? [],
   });
 
   const canCreate = can('compras.create');
@@ -146,6 +143,60 @@ export default function CompraForm() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedData, setLastSavedData] = useState<string>('');
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Estado para manejar el valor y display del InputSearch de proveedor
+  const [proveedorValue, setProveedorValue] = useState<string | number | null>(data.proveedor_id);
+  const [proveedorDisplay, setProveedorDisplay] = useState<string>('');
+
+  // Estado para el modal de crear proveedor
+  const [showCreateProveedorModal, setShowCreateProveedorModal] = useState(false);
+  const [proveedorSearchQuery, setProveedorSearchQuery] = useState('');
+
+  // Sincronizar el estado del InputSearch con los datos del formulario
+  useEffect(() => {
+    if (data.proveedor_id !== proveedorValue) {
+      setProveedorValue(data.proveedor_id);
+    }
+  }, [data.proveedor_id, proveedorValue]);
+
+  // Función para manejar la creación de proveedor
+  const handleCreateProveedor = (searchQuery: string) => {
+    setProveedorSearchQuery(searchQuery);
+    setShowCreateProveedorModal(true);
+  };
+
+  // Función para manejar cuando se crea un proveedor exitosamente
+  const handleProveedorCreated = (proveedor: Proveedor) => {
+    // Actualizar el valor del proveedor en el formulario
+    setData('proveedor_id', proveedor.id);
+
+    // Actualizar el estado del InputSearch
+    setProveedorValue(proveedor.id);
+    setProveedorDisplay(proveedor.nombre);
+
+    // Crear una descripción completa del proveedor para mostrar en la notificación
+    const descripcionProveedor = [
+      proveedor.nombre,
+      proveedor.razon_social && proveedor.razon_social !== proveedor.nombre ? `(${proveedor.razon_social})` : '',
+      proveedor.nit ? `NIT: ${proveedor.nit}` : '',
+      proveedor.telefono ? `Tel: ${proveedor.telefono}` : '',
+      proveedor.email ? `Email: ${proveedor.email}` : ''
+    ].filter(Boolean).join(' • ');
+
+    // Mostrar notificación detallada del proveedor creado y seleccionado
+    try {
+      NotificationService.success(
+        `✅ Proveedor creado y seleccionado: ${descripcionProveedor}`
+      );
+    } catch (error) {
+      console.error('Error en NotificationService:', error);
+      // Fallback: mostrar mensaje básico
+      console.log(`✅ Proveedor creado y seleccionado: ${descripcionProveedor}`);
+    }
+
+    // Limpiar la query de búsqueda ya que ahora tenemos el proveedor seleccionado
+    setProveedorSearchQuery('');
+  };
 
   // Función para validar si la compra tiene contenido mínimo para autoguardar
   const hasMinimumContent = useCallback(() => {
@@ -362,23 +413,7 @@ export default function CompraForm() {
     setData(prev => ({ ...prev, subtotal, total }));
   }, [data.detalles, data.impuesto, data.descuento, setData]);
 
-  const addRow = () => {
-    setData('detalles', [...data.detalles, {
-      producto_id: '',
-      cantidad: 1,
-      precio_unitario: 0,
-      descuento: 0,
-      subtotal: 0,
-      lote: '',
-      fecha_vencimiento: ''
-    }]);
-  };
-
   const removeRow = (idx: number) => {
-    if (data.detalles.length <= 1) {
-      NotificationService.error('Debe mantener al menos un detalle');
-      return;
-    }
     setData('detalles', data.detalles.filter((_: DetalleForm, i: number) => i !== idx));
   };
 
@@ -602,10 +637,17 @@ export default function CompraForm() {
               <InputSearch
                 id="proveedor_search"
                 label="Proveedor"
-                value={data.proveedor_id}
+                value={proveedorValue}
+                displayValue={proveedorDisplay}
                 onSearch={proveedorSearch.search}
-                onChange={(value) => {
+                onChange={(value, option) => {
                   setData('proveedor_id', value || '');
+                  setProveedorValue(value);
+                  if (option) {
+                    setProveedorDisplay(option.label);
+                  } else {
+                    setProveedorDisplay('');
+                  }
                 }}
                 placeholder="Escribir nombre del proveedor..."
                 emptyText="No se encontraron proveedores"
@@ -613,6 +655,11 @@ export default function CompraForm() {
                 disabled={soloLectura || (puedeEditarSupervisor && !puedeEditarBasico)}
                 required={true}
                 allowScanner={false}
+                showCreateButton={true}
+                onCreateClick={handleCreateProveedor}
+                createButtonText="Crear Proveedor"
+                showCreateIconButton={true}
+                createIconButtonTitle="Crear nuevo proveedor"
                 className="w-full"
               />
             </div>
@@ -684,100 +731,45 @@ export default function CompraForm() {
 
         {/* Detalles de productos */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Productos</h3>
-            <button
-              type="button"
-              onClick={addRow}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Agregar Producto
-            </button>
-          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Productos</h3>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Producto *
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Cantidad *
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Precio Unit. *
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Subtotal
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {data.detalles.map((detalle: DetalleForm, idx: number) => (
-                  <tr key={idx}>
-                    <td className="px-4 py-3">
-                      <InputSearch
-                        value={detalle.producto_id}
-                        onSearch={productoSearch.search}
-                        onChange={(value) => {
-                          updateDetalle(idx, 'producto_id', value || '');
-                        }}
-                        placeholder="Escribir nombre del producto..."
-                        emptyText="No se encontraron productos"
-                        error={errors[`detalles.${idx}.producto_id`]}
-                        className="min-w-[200px]"
-                        allowScanner={true}
-                        scannerLabel="Escanear código de barras"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-right focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        value={detalle.cantidad}
-                        onChange={e => updateDetalle(idx, 'cantidad', Number(e.target.value))}
-                      />
-                      {errors[`detalles.${idx}.cantidad`] && (
-                        <p className="text-red-600 text-xs mt-1">{errors[`detalles.${idx}.cantidad`]}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-right focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        value={detalle.precio_unitario}
-                        onChange={e => updateDetalle(idx, 'precio_unitario', Number(e.target.value))}
-                      />
-                      {errors[`detalles.${idx}.precio_unitario`] && (
-                        <p className="text-red-600 text-xs mt-1">{errors[`detalles.${idx}.precio_unitario`]}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-sm">
-                      {formatCurrency(detalle.subtotal, selectedMoneda?.simbolo)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => removeRow(idx)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                        disabled={data.detalles.length <= 1}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ProductosTable
+            productos={props.productos.map(p => ({
+              id: p.id,
+              nombre: p.nombre,
+              codigo: p.codigo,
+              codigo_barras: p.codigo_barras || undefined,
+              precio_venta: p.precio_venta,
+              precio_compra: p.precio_compra
+            }))}
+            detalles={data.detalles}
+            onAddProduct={(producto) => {
+              // Adaptar la función para agregar producto
+              const newDetalle: DetalleForm = {
+                producto_id: producto.id,
+                cantidad: 1,
+                precio_unitario: producto.precio_compra || 0,
+                descuento: 0,
+                subtotal: producto.precio_compra || 0,
+                lote: '',
+                fecha_vencimiento: ''
+              };
+              const newDetalles = [...data.detalles, newDetalle];
+              setData('detalles', newDetalles);
+            }}
+            onUpdateDetail={(index, field, value) => {
+              updateDetalle(index, field as keyof DetalleForm, value);
+            }}
+            onRemoveDetail={(index) => {
+              removeRow(index);
+            }}
+            onTotalsChange={() => {
+              // Los totales se recalculan automáticamente por el useEffect
+            }}
+            tipo="compra"
+            errors={errors}
+            showLoteFields={true}
+          />
         </div>
 
         {/* Resumen financiero */}
@@ -804,7 +796,7 @@ export default function CompraForm() {
                   <span className="font-mono">{formatCurrency(data.descuento, selectedMoneda?.simbolo)}</span>
                 </div>
               </div>
-              <div className="flex justify-between text-sm">
+              {/* <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Impuestos:</span>
                 <div className="flex items-center space-x-2">
                   <input
@@ -817,7 +809,7 @@ export default function CompraForm() {
                   />
                   <span className="font-mono">{formatCurrency(data.impuesto, selectedMoneda?.simbolo)}</span>
                 </div>
-              </div>
+              </div> */}
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total:</span>
@@ -828,6 +820,14 @@ export default function CompraForm() {
           </div>
         </div>
       </form>
+
+      {/* Modal para crear proveedor */}
+      <ModalCrearProveedor
+        isOpen={showCreateProveedorModal}
+        onClose={() => setShowCreateProveedorModal(false)}
+        onProveedorCreated={handleProveedorCreated}
+        searchQuery={proveedorSearchQuery}
+      />
     </AppLayout>
   );
 }

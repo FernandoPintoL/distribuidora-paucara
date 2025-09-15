@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -7,7 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class TipoMerma extends Model
 {
     use HasFactory;
-    protected $table    = 'tipo_mermas';
+
+    protected $table = 'tipo_mermas';
+
     protected $fillable = [
         'clave',
         'label',
@@ -18,8 +21,14 @@ class TipoMerma extends Model
         'requiere_aprobacion',
         'activo',
     ];
+
     protected $casts = [
         'requiere_aprobacion' => 'boolean',
-        'activo'              => 'boolean',
+        'activo' => 'boolean',
     ];
+
+    public function movimientosInventario()
+    {
+        return $this->hasMany(MovimientoInventario::class, 'tipo_merma_id');
+    }
 }

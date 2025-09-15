@@ -182,7 +182,7 @@ export default function ReporteGananciasIndex({
     ]}>
       <Head title="Reporte de Ganancias" />
 
-      <div className="space-y-6">
+      <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Reporte de Ganancias</h1>
@@ -430,7 +430,7 @@ export default function ReporteGananciasIndex({
                       <TableCell>
                         <Badge className={getColorClass(item.tipo_precio.color)}>
                           <span className="mr-1">
-                            {item.tipo_precio.configuracion.icono || '💰'}
+                            {item.tipo_precio.configuracion?.icono || '💰'}
                           </span>
                           {item.tipo_precio.nombre}
                         </Badge>

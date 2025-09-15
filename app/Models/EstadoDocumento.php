@@ -15,6 +15,11 @@ class EstadoDocumento extends Model
         'codigo',
         'descripcion',
         'activo',
+        'permite_edicion',
+        'permite_anulacion',
+        'es_estado_final',
+        'color',
+        'activo',
     ];
 
     protected $casts = [

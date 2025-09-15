@@ -1,52 +1,14 @@
 // Domain: Compras
 import type { Id } from './shared';
 import type { BaseEntity, BaseFormData } from './generic';
+import type { EstadoDocumento } from './estados-documento';
+import type { Usuario } from './usuarios';
+import type { Moneda } from './monedas';
+import type { TipoPago } from './tipos-pago';
+import type { Proveedor } from './proveedores';
+import type { Producto } from './productos';
 
 // =============== INTERFACES BÁSICAS ===============
-
-export interface EstadoDocumento extends BaseEntity {
-    id: Id;
-    nombre: string;
-}
-
-export interface Usuario extends BaseEntity {
-    id: Id;
-    name: string;
-    email?: string;
-}
-
-export interface Moneda extends BaseEntity {
-    id: Id;
-    codigo: string;
-    nombre: string;
-    simbolo: string;
-}
-
-export interface TipoPago extends BaseEntity {
-    id: Id;
-    codigo: string;
-    nombre: string;
-}
-
-export interface Proveedor extends BaseEntity {
-    id: Id;
-    nombre: string;
-    razon_social?: string;
-    nit?: string;
-    telefono?: string;
-    email?: string;
-    direccion?: string;
-    contacto?: string;
-}
-
-export interface Producto extends BaseEntity {
-    id: Id;
-    nombre: string;
-    codigo?: string;
-    descripcion?: string;
-    precio_base?: number;
-    stock?: number;
-}
 
 export interface CuentaPorPagar extends BaseEntity {
     id: Id;

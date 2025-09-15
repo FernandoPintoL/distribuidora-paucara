@@ -22,7 +22,8 @@ import {
     Filter,
     RefreshCw
 } from 'lucide-react';
-import type { Proveedor, Moneda } from '@/domain/compras';
+import type { Proveedor } from '@/domain/proveedores';
+import type { Moneda } from '@/domain/monedas';
 
 // Interfaces para reportes
 interface ResumenComprasPorPeriodo {

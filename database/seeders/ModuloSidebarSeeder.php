@@ -281,7 +281,7 @@ class ModuloSidebarSeeder extends Seeder
         }
 
         // Módulo de Contabilidad
-        $contabilidad = ModuloSidebar::firstOrCreate(
+        /* $contabilidad = ModuloSidebar::firstOrCreate(
             ['titulo' => 'Contabilidad', 'ruta' => '/contabilidad/asientos', 'es_submenu' => false],
             [
                 'icono'       => 'Calculator',
@@ -313,7 +313,7 @@ class ModuloSidebarSeeder extends Seeder
                     'activo' => true,
                 ]
             );
-        }
+        } */
 
         // Módulos principales sin submódulos
         $modulosPrincipales = [

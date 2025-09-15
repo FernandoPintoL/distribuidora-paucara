@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +13,11 @@ class TipoPago extends Model
     protected $table = 'tipos_pago';
 
     protected $fillable = [
-        'codigo', 'nombre',
+        'codigo', 'nombre', 'activo',
+    ];
+
+    protected $casts = [
+        'activo' => 'boolean',
     ];
 
     // Relaciones

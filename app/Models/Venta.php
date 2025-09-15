@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use App\Services\StockService;
@@ -36,11 +35,11 @@ class Venta extends Model
     ];
 
     protected $casts = [
-        'fecha' => 'date',
-        'subtotal' => 'decimal:2',
-        'descuento' => 'decimal:2',
-        'impuesto' => 'decimal:2',
-        'total' => 'decimal:2',
+        'fecha'          => 'date',
+        'subtotal'       => 'decimal:2',
+        'descuento'      => 'decimal:2',
+        'impuesto'       => 'decimal:2',
+        'total'          => 'decimal:2',
         'requiere_envio' => 'boolean',
     ];
 
@@ -149,13 +148,13 @@ class Venta extends Model
     public function programarEnvio(array $datos): Envio
     {
         return Envio::create([
-            'numero_envio' => Envio::generarNumeroEnvio(),
-            'venta_id' => $this->id,
-            'vehiculo_id' => $datos['vehiculo_id'],
-            'chofer_id' => $datos['chofer_id'],
-            'fecha_programada' => $datos['fecha_programada'],
+            'numero_envio'      => Envio::generarNumeroEnvio(),
+            'venta_id'          => $this->id,
+            'vehiculo_id'       => $datos['vehiculo_id'],
+            'chofer_id'         => $datos['chofer_id'],
+            'fecha_programada'  => $datos['fecha_programada'],
             'direccion_entrega' => $this->cliente->direccion ?? $datos['direccion_entrega'],
-            'estado' => Envio::PROGRAMADO,
+            'estado'            => Envio::PROGRAMADO,
         ]);
     }
 
@@ -181,6 +180,24 @@ class Venta extends Model
     }
 
     /**
+     * Generar número automático para la venta
+     * Formato: VEN + FECHA_ACTUAL + ID_VENTA
+     */
+    public static function generarNumero(): string
+    {
+        $fecha       = now()->format('Ymd');
+        $ultimaVenta = self::whereDate('created_at', today())->latest()->first();
+
+        if ($ultimaVenta) {
+            $numeroSecuencial = intval(substr($ultimaVenta->numero, -4)) + 1;
+        } else {
+            $numeroSecuencial = 1;
+        }
+
+        return 'VEN' . $fecha . str_pad($numeroSecuencial, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Validar stock disponible antes de crear la venta
      */
     public function validarStock(int $almacenId = 1): array
@@ -190,7 +207,7 @@ class Venta extends Model
         $productos = $this->detalles->map(function ($detalle) {
             return [
                 'producto_id' => $detalle->producto_id,
-                'cantidad' => $detalle->cantidad,
+                'cantidad'    => $detalle->cantidad,
             ];
         })->toArray();
 
@@ -211,7 +228,7 @@ class Venta extends Model
         $productos = $this->detalles->map(function ($detalle) {
             return [
                 'producto_id' => $detalle->producto_id,
-                'cantidad' => $detalle->cantidad,
+                'cantidad'    => $detalle->cantidad,
             ];
         })->toArray();
 
@@ -220,14 +237,14 @@ class Venta extends Model
             $validacion = $stockService->validarStockDisponible($productos, $almacenId);
 
             if (! $validacion['valido']) {
-                throw new Exception('Stock insuficiente: '.implode(', ', $validacion['errores']));
+                throw new Exception('Stock insuficiente: ' . implode(', ', $validacion['errores']));
             }
 
             // Procesar salida de stock
             $stockService->procesarSalidaVenta($productos, $this->numero, $almacenId);
 
         } catch (Exception $e) {
-            Log::error("Error procesando stock para venta {$this->numero}: ".$e->getMessage());
+            Log::error("Error procesando stock para venta {$this->numero}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -255,14 +272,14 @@ class Venta extends Model
                 // Crear movimiento de reversión
                 MovimientoInventario::create([
                     'stock_producto_id' => $stockProducto->id,
-                    'cantidad' => abs($movimiento->cantidad),
-                    'fecha' => now(),
-                    'observacion' => "Reversión de venta #{$this->numero}",
-                    'numero_documento' => $this->numero.'-REV',
-                    'cantidad_anterior' => $stockProducto->cantidad - abs($movimiento->cantidad),
+                    'cantidad'          => abs($movimiento->cantidad),
+                    'fecha'             => now(),
+                    'observacion'       => "Reversión de venta #{$this->numero}",
+                    'numero_documento'   => $this->numero . '-REV',
+                    'cantidad_anterior'  => $stockProducto->cantidad - abs($movimiento->cantidad),
                     'cantidad_posterior' => $stockProducto->cantidad,
-                    'tipo' => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
-                    'user_id' => Auth::id(),
+                    'tipo'               => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                    'user_id'            => Auth::id(),
                 ]);
             }
 
@@ -284,11 +301,11 @@ class Venta extends Model
 
         return $movimientos->map(function ($movimiento) {
             return [
-                'producto' => $movimiento->stockProducto->producto->nombre,
-                'almacen' => $movimiento->stockProducto->almacen->nombre,
+                'producto'        => $movimiento->stockProducto->producto->nombre,
+                'almacen'         => $movimiento->stockProducto->almacen->nombre,
                 'cantidad_movida' => abs($movimiento->cantidad),
-                'stock_anterior' => $movimiento->cantidad_anterior,
-                'stock_actual' => $movimiento->cantidad_posterior,
+                'stock_anterior'  => $movimiento->cantidad_anterior,
+                'stock_actual'    => $movimiento->cantidad_posterior,
             ];
         })->toArray();
     }
@@ -308,7 +325,7 @@ class Venta extends Model
 
             Log::info("Asiento contable generado para venta {$this->numero}");
         } catch (Exception $e) {
-            Log::error("Error generando asiento contable para venta {$this->numero}: ".$e->getMessage());
+            Log::error("Error generando asiento contable para venta {$this->numero}: " . $e->getMessage());
         }
     }
 
@@ -323,7 +340,7 @@ class Venta extends Model
                 Log::info("Asiento contable eliminado para venta {$this->numero}");
             }
         } catch (Exception $e) {
-            Log::error("Error eliminando asiento contable para venta {$this->numero}: ".$e->getMessage());
+            Log::error("Error eliminando asiento contable para venta {$this->numero}: " . $e->getMessage());
         }
     }
 
@@ -364,18 +381,18 @@ class Venta extends Model
             }
 
             MovimientoCaja::create([
-                'caja_id' => $cajaAbierta->caja_id,
+                'caja_id'           => $cajaAbierta->caja_id,
                 'tipo_operacion_id' => $tipoOperacion->id,
-                'numero_documento' => $this->numero,
-                'descripcion' => "Venta #{$this->numero} - Cliente: {$this->cliente?->nombre}",
-                'monto' => $this->total,
-                'fecha' => $this->fecha,
+                'numero_documento'  => $this->numero,
+                'descripcion'       => "Venta #{$this->numero} - Cliente: {$this->cliente?->nombre}",
+                'monto'   => $this->total,
+                'fecha'   => $this->fecha,
                 'user_id' => $this->usuario_id,
             ]);
 
             Log::info("Movimiento de caja generado para venta {$this->numero}");
         } catch (Exception $e) {
-            Log::error("Error generando movimiento de caja para venta {$this->numero}: ".$e->getMessage());
+            Log::error("Error generando movimiento de caja para venta {$this->numero}: " . $e->getMessage());
         }
     }
 

@@ -13,6 +13,11 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// Ruta de prueba para verificar CSRF token
+Route::post('/test-csrf', function () {
+    return response()->json(['message' => 'CSRF token is valid', 'success' => true]);
+})->name('test.csrf');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
@@ -169,7 +174,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('movimientos', [\App\Http\Controllers\InventarioController::class, 'movimientos'])->middleware('permission:inventario.movimientos')->name('movimientos');
         Route::get('ajuste', [\App\Http\Controllers\InventarioController::class, 'ajusteForm'])->middleware('permission:inventario.ajuste.form')->name('ajuste.form');
         Route::post('ajuste', [\App\Http\Controllers\InventarioController::class, 'procesarAjuste'])->middleware('permission:inventario.ajuste.procesar')->name('ajuste.procesar');
-        Route::get('reportes', [\App\Http\Controllers\InventarioController::class, 'reportes'])->middleware('permission:inventario.reportes.index')->name('reportes');
+        Route::get('reportes', [\App\Http\Controllers\InventarioController::class, 'reportes'])->middleware('permission:inventario.reportes')->name('reportes');
 
         // Rutas para transferencias de inventario
         Route::prefix('transferencias')->name('transferencias.')->group(function () {

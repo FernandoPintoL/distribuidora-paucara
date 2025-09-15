@@ -7,11 +7,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class ProveedorController extends Controller
 {
-    public function index(Request $request): Response
+    use Traits\ApiInertiaResponseTrait;
+
+    public function index(Request $request): InertiaResponse
     {
         $q = (string) $request->string('q');
 
@@ -36,10 +39,12 @@ class ProveedorController extends Controller
         $items = Proveedor::query()
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
-                    $sub->where('nombre', 'ilike', "%$q%")
-                        ->orWhere('razon_social', 'ilike', "%$q%")
-                        ->orWhere('nit', 'ilike', "%$q%")
-                        ->orWhere('telefono', 'ilike', "%$q%");
+                    $sub->where('nombre', 'like', "%$q%")
+                        ->orWhere('razon_social', 'like', "%$q%")
+                        ->orWhere('nit', 'like', "%$q%")
+                        ->orWhere('telefono', 'like', "%$q%")
+                        ->orWhere('email', 'like', "%$q%")
+                        ->orWhere('contacto', 'like', "%$q%");
                 });
             })
             ->when($activo !== null, function ($query) use ($activo) {
@@ -50,7 +55,7 @@ class ProveedorController extends Controller
             ->withQueryString();
 
         return Inertia::render('proveedores/index', [
-            'items' => $items,
+            'proveedores' => $items,
             'filters' => [
                 'q' => $q,
                 'activo' => $activo,
@@ -75,13 +80,15 @@ class ProveedorController extends Controller
             ]);
         }
 
-        $proveedores = Proveedor::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
+        $proveedores = Proveedor::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email', 'contacto', 'activo'])
             ->where('activo', true)
             ->where(function ($query) use ($q) {
-                $query->where('nombre', 'ilike', "%$q%")
-                    ->orWhere('razon_social', 'ilike', "%$q%")
-                    ->orWhere('nit', 'ilike', "%$q%")
-                    ->orWhere('telefono', 'ilike', "%$q%");
+                $query->where('nombre', 'like', "%$q%")
+                    ->orWhere('razon_social', 'like', "%$q%")
+                    ->orWhere('nit', 'like', "%$q%")
+                    ->orWhere('telefono', 'like', "%$q%")
+                    ->orWhere('email', 'like', "%$q%")
+                    ->orWhere('contacto', 'like', "%$q%");
             })
             ->limit($limite)
             ->get();
@@ -92,16 +99,18 @@ class ProveedorController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(): InertiaResponse
     {
         return Inertia::render('proveedores/form', [
             'proveedor' => null,
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse|Response
     {
-        $data = $request->validate([
+        $isModalRequest = $this->isModalRequest($request);
+
+        $validationRules = [
             'nombre' => ['required', 'string', 'max:255'],
             'razon_social' => ['nullable', 'string', 'max:255'],
             'nit' => ['nullable', 'string', 'max:255'],
@@ -110,35 +119,54 @@ class ProveedorController extends Controller
             'direccion' => ['nullable', 'string', 'max:255'],
             'contacto' => ['nullable', 'string', 'max:255'],
             'activo' => ['boolean'],
-            'foto_perfil' => ['nullable', 'image', 'max:5120'],
-            'ci_anverso' => ['nullable', 'image', 'max:5120'],
-            'ci_reverso' => ['nullable', 'image', 'max:5120'],
-        ]);
+        ];
+
+        // Solo validar archivos si no es una petición de modal
+        if (! $isModalRequest) {
+            $validationRules = array_merge($validationRules, [
+                'foto_perfil' => ['nullable', 'image', 'max:5120'],
+                'ci_anverso' => ['nullable', 'image', 'max:5120'],
+                'ci_reverso' => ['nullable', 'image', 'max:5120'],
+            ]);
+        }
+
+        $data = $request->validate($validationRules);
+
         $data['activo'] = $data['activo'] ?? true;
 
-        if ($request->hasFile('foto_perfil')) {
-            $data['foto_perfil'] = $request->file('foto_perfil')->store('proveedores', 'public');
-        }
-        if ($request->hasFile('ci_anverso')) {
-            $data['ci_anverso'] = $request->file('ci_anverso')->store('proveedores', 'public');
-        }
-        if ($request->hasFile('ci_reverso')) {
-            $data['ci_reverso'] = $request->file('ci_reverso')->store('proveedores', 'public');
+        // Procesar archivos solo si no es una petición de modal
+        if (! $isModalRequest) {
+            if ($request->hasFile('foto_perfil')) {
+                $data['foto_perfil'] = $request->file('foto_perfil')->store('proveedores', 'public');
+            }
+            if ($request->hasFile('ci_anverso')) {
+                $data['ci_anverso'] = $request->file('ci_anverso')->store('proveedores', 'public');
+            }
+            if ($request->hasFile('ci_reverso')) {
+                $data['ci_reverso'] = $request->file('ci_reverso')->store('proveedores', 'public');
+            }
         }
 
-        Proveedor::create($data);
+        return $this->handleCrudOperation(
+            $request,
+            function () use ($data) {
+                $proveedor = Proveedor::create($data);
 
-        return redirect()->route('proveedores.index')->with('success', 'Proveedor creado');
+                return ['proveedor' => $proveedor];
+            },
+            'Proveedor creado exitosamente',
+            'proveedores.index'
+        );
     }
 
-    public function edit(Proveedor $proveedore): Response
+    public function edit(Proveedor $proveedore): InertiaResponse
     {
         return Inertia::render('proveedores/form', [
             'proveedor' => $proveedore,
         ]);
     }
 
-    public function update(Request $request, Proveedor $proveedore): RedirectResponse
+    public function update(Request $request, Proveedor $proveedore): RedirectResponse|JsonResponse|Response
     {
         $data = $request->validate([
             'nombre' => ['required', 'string', 'max:255'],
@@ -154,26 +182,42 @@ class ProveedorController extends Controller
             'ci_reverso' => ['nullable', 'image', 'max:5120'],
         ]);
 
-        $updates = $data;
-        if ($request->hasFile('foto_perfil')) {
-            $updates['foto_perfil'] = $request->file('foto_perfil')->store('proveedores', 'public');
-        }
-        if ($request->hasFile('ci_anverso')) {
-            $updates['ci_anverso'] = $request->file('ci_anverso')->store('proveedores', 'public');
-        }
-        if ($request->hasFile('ci_reverso')) {
-            $updates['ci_reverso'] = $request->file('ci_reverso')->store('proveedores', 'public');
-        }
+        return $this->handleCrudOperation(
+            $request,
+            function () use ($data, $proveedore) {
+                $updates = $data;
 
-        $proveedore->update($updates);
+                // Procesar archivos si existen
+                if (request()->hasFile('foto_perfil')) {
+                    $updates['foto_perfil'] = request()->file('foto_perfil')->store('proveedores', 'public');
+                }
+                if (request()->hasFile('ci_anverso')) {
+                    $updates['ci_anverso'] = request()->file('ci_anverso')->store('proveedores', 'public');
+                }
+                if (request()->hasFile('ci_reverso')) {
+                    $updates['ci_reverso'] = request()->file('ci_reverso')->store('proveedores', 'public');
+                }
 
-        return redirect()->route('proveedores.index')->with('success', 'Proveedor actualizado');
+                $proveedore->update($updates);
+
+                return ['proveedor' => $proveedore->fresh()];
+            },
+            'Proveedor actualizado exitosamente',
+            'proveedores.index'
+        );
     }
 
-    public function destroy(Proveedor $proveedore): RedirectResponse
+    public function destroy(Request $request, Proveedor $proveedore): RedirectResponse|JsonResponse|Response
     {
-        $proveedore->delete();
+        return $this->handleCrudOperation(
+            $request,
+            function () use ($proveedore) {
+                $proveedore->delete();
 
-        return redirect()->route('proveedores.index')->with('success', 'Proveedor eliminado');
+                return [];
+            },
+            'Proveedor eliminado exitosamente',
+            'proveedores.index'
+        );
     }
 }

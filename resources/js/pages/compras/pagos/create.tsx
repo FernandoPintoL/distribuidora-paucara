@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, CreditCard, Save, ArrowLeft } from 'lucide-react';
-import type { CuentaPorPagar, TipoPago } from '@/domain/compras';
+import type { CuentaPorPagar } from '@/domain/compras';
+import type { TipoPago } from '@/domain/tipos-pago';
 
 // Helper functions
 const formatCurrency = (amount: number): string => {

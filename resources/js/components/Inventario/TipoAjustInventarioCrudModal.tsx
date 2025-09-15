@@ -6,10 +6,10 @@ import { useTipoAjustInventario } from '@/stores/useTipoAjustInventario';
 import { TipoAjustInventarioService, TipoAjustInventarioApi } from '@/services/tipoAjustInventarioService';
 
 export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-    const { tipos, fetchTipos } = useTipoAjustInventario();
+    const { tipos, fetchTipos, loading, error } = useTipoAjustInventario();
     const [editing, setEditing] = useState<TipoAjustInventarioApi | null>(null);
     const [form, setForm] = useState<Partial<TipoAjustInventarioApi>>({});
-    const [loading, setLoading] = useState(false);
+    const [localLoading, setLocalLoading] = useState(false);
 
     useEffect(() => {
         if (open) fetchTipos();
@@ -22,15 +22,15 @@ export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boo
 
     const handleDelete = async (id: number) => {
         if (!confirm('¿Eliminar tipo de ajuste?')) return;
-        setLoading(true);
+        setLocalLoading(true);
         await TipoAjustInventarioService.remove(id);
         await fetchTipos();
-        setLoading(false);
+        setLocalLoading(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
+        setLocalLoading(true);
         if (editing) {
             await TipoAjustInventarioService.update(editing.id, form);
         } else {
@@ -39,7 +39,7 @@ export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boo
         setEditing(null);
         setForm({});
         await fetchTipos();
-        setLoading(false);
+        setLocalLoading(false);
     };
 
     return (
@@ -58,6 +58,21 @@ export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boo
                     <DialogDescription className="mb-4">
                         Crea, edita o elimina los tipos de ajuste disponibles para los movimientos de inventario.
                     </DialogDescription>
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                            <p>{error}</p>
+                        </div>
+                    )}
+                    {loading && (
+                        <div className="mb-4 text-center">
+                            <p>Cargando tipos de ajuste...</p>
+                        </div>
+                    )}
+                    {!loading && tipos.length === 0 && !error && (
+                        <div className="mb-4 text-center text-gray-500">
+                            <p>No hay tipos de ajuste registrados.</p>
+                        </div>
+                    )}
                     <form onSubmit={handleSubmit} className="space-y-3 mb-6">
                         <Input
                             placeholder="Clave (ej: AJUSTE_FISICO)"
@@ -77,7 +92,7 @@ export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boo
                             value={form.descripcion || ''}
                             onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
                         />
-                        <div className="flex gap-2">
+                        {/* <div className="flex gap-2">
                             <Input
                                 placeholder="Color"
                                 value={form.color || ''}
@@ -93,9 +108,9 @@ export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boo
                                 value={form.text_color || ''}
                                 onChange={e => setForm(f => ({ ...f, text_color: e.target.value }))}
                             />
-                        </div>
-                        <Button type="submit" disabled={loading}>
-                            {editing ? 'Actualizar' : 'Crear'}
+                        </div> */}
+                        <Button type="submit" disabled={loading || localLoading}>
+                            {localLoading ? 'Procesando...' : (editing ? 'Actualizar' : 'Crear')}
                         </Button>
                         {editing && (
                             <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({}); }}>

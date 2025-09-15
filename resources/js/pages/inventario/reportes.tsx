@@ -234,7 +234,7 @@ export default function Reportes() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reportes y Análisis - Inventario" />
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header moderno */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>

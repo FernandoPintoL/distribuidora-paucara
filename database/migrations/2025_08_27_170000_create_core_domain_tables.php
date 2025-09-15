@@ -280,24 +280,83 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        Schema::create('tipos_ajuste_inventario', function (Blueprint $table) {
+            $table->id();
+            $table->string('clave')->unique(); // Ej: AJUSTE_FISICO, DONACION, CORRECCION
+            $table->string('label');           // Nombre visible
+            $table->string('descripcion')->nullable();
+            $table->string('color')->nullable();
+            $table->string('bg_color')->nullable();
+            $table->string('text_color')->nullable();
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('tipo_mermas', function (Blueprint $table) {
+            $table->id();
+            $table->string('clave')->unique(); // Ej: VENCIMIENTO, DETERIORO
+            $table->string('label');           // Nombre visible
+            $table->string('descripcion')->nullable();
+            $table->string('color')->nullable();
+            $table->string('bg_color')->nullable();
+            $table->string('text_color')->nullable();
+            $table->boolean('requiere_aprobacion')->default(true);
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('estado_mermas', function (Blueprint $table) {
+            $table->id();
+            $table->string('clave')->unique(); // Ej: PENDIENTE, APROBADO
+            $table->string('label');
+            $table->string('color')->nullable();
+            $table->string('bg_color')->nullable();
+            $table->string('text_color')->nullable();
+            $table->json('actions')->nullable();
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+        });
+
         // Movimiento de inventario básico
         Schema::create('movimientos_inventario', function (Blueprint $table) {
             $table->id();
             $table->foreignId('stock_producto_id')->constrained('stock_productos');
+            $table->integer('cantidad_anterior')->nullable();
             $table->integer('cantidad');
+            $table->integer('cantidad_posterior')->nullable();
             $table->timestamp('fecha')->useCurrent();
             $table->string('observacion')->nullable();
-            $table->string('numero_documento')->nullable();
-            $table->integer('cantidad_anterior')->nullable();
-            $table->integer('cantidad_posterior')->nullable();
-            $table->string('tipo')->index(); // ENTRADA_*, SALIDA_* etc.
+            $table->string('numero_documento')->nullable(); // Ej: número de factura, pedido, etc. de referencia externo al sistema
+            $table->string('tipo')->index();                // ENTRADA_*, SALIDA_* etc.
             $table->foreignId('user_id')->constrained('users');
+
+            $table->foreignId('tipo_ajuste_inventario_id')->nullable()->constrained('tipos_ajuste_inventario')->nullOnDelete();
+            $table->foreignId('tipo_merma_id')->nullable()->constrained('tipo_mermas')->nullOnDelete();
+            $table->foreignId('estado_merma_id')->nullable()->constrained('estado_mermas')->nullOnDelete();
+            // soporte de anulación
+            $table->boolean('anulado')->default(false);
+            $table->string('motivo_anulacion')->nullable();
+            $table->foreignId('user_anulacion_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('fecha_anulacion')->nullable();
+                                                           // referencias externas
+            $table->string('referencia_tipo')->nullable(); // Ej: PEDIDO, FACTURA, AJUSTE
+            $table->unsignedBigInteger('referencia_id')->nullable();
+            $table->index(['referencia_tipo', 'referencia_id']);
+            // ip o dispositivo
+            $table->string('ip_dispositivo')->nullable();
+            // soft deletes
+            $table->softDeletes();
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('movimientos_inventario');
+                                                         // Eliminar tablas en orden inverso, respetando dependencias de clave foránea
+        Schema::dropIfExists('movimientos_inventario');  // Eliminar primero (tiene FKs)
+        Schema::dropIfExists('tipos_ajuste_inventario'); // Luego eliminar padre
+        Schema::dropIfExists('estado_mermas');
+        Schema::dropIfExists('tipo_mermas');
         Schema::dropIfExists('detalles_pedido');
         Schema::dropIfExists('pedidos');
         Schema::dropIfExists('movimientos_caja');

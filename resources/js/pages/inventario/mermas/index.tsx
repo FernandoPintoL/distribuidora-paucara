@@ -14,6 +14,8 @@ import {
 } from '@/types/inventario';
 import { useTipoMermas } from '@/stores/useTipoMermas';
 import { useEstadoMermas } from '@/stores/useEstadoMermas';
+import { TipoMermaCrudModal } from '@/components/Inventario/TipoMermaCrudModal';
+import { EstadoMermaCrudModal } from '@/components/Inventario/EstadoMermaCrudModal';
 import {
     Plus,
     Filter,
@@ -68,6 +70,8 @@ export default function MermasIndex() {
 
     const [filtrosLocales, setFiltrosLocales] = useState<FiltrosMermas>(filtros);
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
+    const [modalTipoMermaOpen, setModalTipoMermaOpen] = useState(false);
+    const [modalEstadoMermaOpen, setModalEstadoMermaOpen] = useState(false);
 
     const breadcrumbs = [
         {
@@ -203,6 +207,18 @@ export default function MermasIndex() {
                         >
                             <Filter className="w-4 h-4" />
                             <span className="ml-2">Filtros</span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setModalTipoMermaOpen(true)}
+                        >
+                            <span className="ml-2">Tipos de Merma</span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setModalEstadoMermaOpen(true)}
+                        >
+                            <span className="ml-2">Estados de Merma</span>
                         </Button>
                         {can('inventario.mermas.registrar') && (
                             <Link href="/inventario/mermas/registrar">
@@ -531,6 +547,16 @@ export default function MermasIndex() {
                     )}
                 </div>
             </div>
+
+            {/* Modales CRUD */}
+            <TipoMermaCrudModal
+                open={modalTipoMermaOpen}
+                onOpenChange={setModalTipoMermaOpen}
+            />
+            <EstadoMermaCrudModal
+                open={modalEstadoMermaOpen}
+                onOpenChange={setModalEstadoMermaOpen}
+            />
         </AppLayout>
     );
 }

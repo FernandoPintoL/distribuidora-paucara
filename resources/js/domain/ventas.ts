@@ -1,6 +1,10 @@
 // Domain: Ventas
 import type { Id } from './shared';
 import type { BaseEntity, BaseFormData } from './generic';
+import type { TipoPago } from './tipos-pago';
+import type { TipoDocumento } from './tipos-documento';
+import type { Proforma } from './proformas';
+import type { Envio } from './envios';
 
 // =============== INTERFACES BÁSICAS ===============
 
@@ -66,12 +70,22 @@ export interface Venta extends BaseEntity {
     usuario_id: Id;
     estado_documento_id: Id;
     moneda_id: Id;
+    proforma_id?: Id;
+    tipo_pago_id?: Id;
+    tipo_documento_id?: Id;
+    requiere_envio?: boolean;
+    canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
+    estado_logistico?: 'PENDIENTE_ENVIO' | 'PREPARANDO' | 'ENVIADO' | 'ENTREGADO';
 
     // Relaciones
     cliente?: Cliente;
     usuario?: Usuario;
     estado_documento?: EstadoDocumento;
     moneda?: Moneda;
+    tipo_pago?: TipoPago;
+    tipo_documento?: TipoDocumento;
+    proforma?: Proforma;
+    envio?: Envio;
     detalles?: DetalleVenta[];
 
     // Timestamps
@@ -103,6 +117,12 @@ export interface VentaFormData extends BaseFormData {
     usuario_id: Id;
     estado_documento_id: Id;
     moneda_id: Id;
+    proforma_id?: Id;
+    tipo_pago_id?: Id;
+    tipo_documento_id?: Id;
+    requiere_envio?: boolean;
+    canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
+    estado_logistico?: 'PENDIENTE_ENVIO' | 'PREPARANDO' | 'ENVIADO' | 'ENTREGADO';
     detalles: DetalleVentaFormData[];
 }
 

@@ -105,7 +105,7 @@ export default function ReportePreciosIndex({
   });
 
   const handleFilter = () => {
-    const paramsRaw = { ...formData } as Record<string,string>;
+    const paramsRaw = { ...formData } as Record<string, string>;
     if (paramsRaw.tipo_precio_id === ALL_VALUE) { delete paramsRaw.tipo_precio_id; }
     if (paramsRaw.categoria_id === ALL_VALUE) { delete paramsRaw.categoria_id; }
     const params = Object.fromEntries(Object.entries(paramsRaw).filter(([_, v]) => v !== ''));
@@ -113,7 +113,7 @@ export default function ReportePreciosIndex({
   };
 
   const exportar = () => {
-    const paramsRaw = { ...formData } as Record<string,string>;
+    const paramsRaw = { ...formData } as Record<string, string>;
     if (paramsRaw.tipo_precio_id === ALL_VALUE) { delete paramsRaw.tipo_precio_id; }
     if (paramsRaw.categoria_id === ALL_VALUE) { delete paramsRaw.categoria_id; }
     const params = Object.fromEntries(Object.entries(paramsRaw).filter(([_, v]) => v !== ''));
@@ -144,7 +144,7 @@ export default function ReportePreciosIndex({
     ]}>
       <Head title="Reporte de Precios" />
 
-      <div className="space-y-6">
+      <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Reporte de Precios</h1>
@@ -275,11 +275,11 @@ export default function ReportePreciosIndex({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL_VALUE}>Todos los tipos</SelectItem>
-                      {tipos_precio.map(tipo => (
-                        <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                          {tipo.nombre}
-                        </SelectItem>
-                      ))}
+                    {tipos_precio.map(tipo => (
+                      <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                        {tipo.nombre}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -372,7 +372,7 @@ export default function ReportePreciosIndex({
                       <TableCell>
                         <Badge className={getColorClass(precio.tipo_precio.color)}>
                           <span className="mr-1">
-                            {precio.tipo_precio.configuracion.icono || '💰'}
+                            {precio.tipo_precio.configuracion?.icono || '💰'}
                           </span>
                           {precio.tipo_precio.nombre}
                         </Badge>
@@ -392,10 +392,10 @@ export default function ReportePreciosIndex({
                       <TableCell className="text-center text-gray-600">
                         {precio.fecha_ultima_actualizacion
                           ? new Date(precio.fecha_ultima_actualizacion).toLocaleDateString('es-BO', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })
                           : 'N/A'
                         }
                       </TableCell>

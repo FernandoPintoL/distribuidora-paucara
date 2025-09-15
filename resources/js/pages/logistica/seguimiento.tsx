@@ -31,7 +31,7 @@ interface Props {
 }
 
 export default function SeguimientoEnvio({ envio }: Props) {
-    const [ubicacionActual, setUbicacionActual] = useState<{lat: number, lng: number} | null>(
+    const [ubicacionActual, setUbicacionActual] = useState<{ lat: number, lng: number } | null>(
         envio.ubicacion_actual ? {
             lat: envio.ubicacion_actual.latitud,
             lng: envio.ubicacion_actual.longitud
@@ -63,7 +63,7 @@ export default function SeguimientoEnvio({ envio }: Props) {
         );
     };
 
-    const actualizarUbicacionEnvio = async (ubicacion: {lat: number, lng: number}) => {
+    const actualizarUbicacionEnvio = async (ubicacion: { lat: number, lng: number }) => {
         try {
             const response = await fetch(`/api/dashboard/envios/${envio.id}/ubicacion`, {
                 method: 'POST',
@@ -124,7 +124,7 @@ export default function SeguimientoEnvio({ envio }: Props) {
     return (
         <>
             <Head title={`Seguimiento - ${envio.numero_seguimiento}`} />
-            
+
             <div className="min-h-screen bg-gray-50 p-4">
                 <div className="max-w-4xl mx-auto space-y-6">
                     {/* Header */}
@@ -182,7 +182,7 @@ export default function SeguimientoEnvio({ envio }: Props) {
                                 {ubicacionActual ? (
                                     <div>
                                         <p className="text-sm text-gray-600">
-                                            Lat: {ubicacionActual.lat.toFixed(6)}<br/>
+                                            Lat: {ubicacionActual.lat.toFixed(6)}<br />
                                             Lng: {ubicacionActual.lng.toFixed(6)}
                                         </p>
                                         {envio.ubicacion_actual?.direccion && (
@@ -192,8 +192,8 @@ export default function SeguimientoEnvio({ envio }: Props) {
                                 ) : (
                                     <p className="text-gray-500">Ubicación no disponible</p>
                                 )}
-                                
-                                <Button 
+
+                                <Button
                                     onClick={obtenerUbicacion}
                                     disabled={actualizandoUbicacion}
                                     className="w-full"
@@ -211,21 +211,21 @@ export default function SeguimientoEnvio({ envio }: Props) {
                         </CardHeader>
                         <CardContent>
                             <div className="flex flex-wrap gap-2">
-                                <Button 
+                                <Button
                                     onClick={() => actualizarEstado('EN_TRANSITO')}
                                     variant="outline"
                                     disabled={envio.estado === 'EN_TRANSITO'}
                                 >
                                     En Tránsito
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={() => actualizarEstado('ENTREGADO')}
                                     variant="default"
                                     disabled={envio.estado === 'ENTREGADO'}
                                 >
                                     Marcar como Entregado
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={() => actualizarEstado('INCIDENCIA')}
                                     variant="destructive"
                                     disabled={envio.estado === 'INCIDENCIA'}

@@ -31,20 +31,21 @@ interface PaginationLink {
     active: boolean
 }
 
-interface PaginationMeta {
-    current_page: number
-    from: number
-    last_page: number
-    per_page: number
-    to: number
-    total: number
-}
-
 interface PageProps {
     permissions?: {
+        current_page: number
         data: Permission[]
+        first_page_url: string | null
+        from: number
+        last_page: number
+        last_page_url: string | null
         links: PaginationLink[]
-        meta: PaginationMeta
+        next_page_url: string | null
+        path: string
+        per_page: number
+        prev_page_url: string | null
+        to: number
+        total: number
     }
     modules?: string[]
     filters?: {
@@ -67,7 +68,7 @@ export default function Index() {
     const [selectedModule, setSelectedModule] = useState(filters?.module || '')
 
     // Early return if permissions is undefined
-    if (!permissions || !permissions.meta) {
+    if (!permissions) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="Gestión de Permisos" />
@@ -176,7 +177,7 @@ export default function Index() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Gestión de Permisos" />
 
-            <div className="space-y-6">
+            <div className="space-y-6 p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -184,8 +185,8 @@ export default function Index() {
                             Gestión de Permisos
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400">
-                            {permissions?.meta?.total && permissions.meta.total > 0
-                                ? `${permissions.meta.from}-${permissions.meta.to} de ${permissions.meta.total} permisos`
+                            {permissions?.total && permissions.total > 0
+                                ? `${permissions.from}-${permissions.to} de ${permissions.total} permisos`
                                 : 'No se encontraron permisos'
                             }
                         </p>
@@ -353,7 +354,7 @@ export default function Index() {
                 </div>
 
                 {/* Paginación */}
-                {permissions?.meta && permissions.meta.last_page > 1 && (
+                {permissions?.last_page > 1 && (
                     <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-4 py-3 sm:px-6">
                         <div className="flex flex-1 justify-between sm:hidden">
                             <Button
@@ -374,9 +375,9 @@ export default function Index() {
                         <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                             <div>
                                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                                    Mostrando <span className="font-medium">{permissions.meta?.from}</span> a{' '}
-                                    <span className="font-medium">{permissions.meta?.to}</span> de{' '}
-                                    <span className="font-medium">{permissions.meta?.total}</span> resultados
+                                    Mostrando <span className="font-medium">{permissions?.from}</span> a{' '}
+                                    <span className="font-medium">{permissions?.to}</span> de{' '}
+                                    <span className="font-medium">{permissions?.total}</span> resultados
                                 </p>
                             </div>
                             <div>

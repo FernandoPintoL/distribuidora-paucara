@@ -60,7 +60,7 @@ export default function EnviosIndex({ envios }: Props) {
         <AppLayout>
             <Head title="Gestión de Envíos" />
 
-            <div className="space-y-6">
+            <div className="space-y-6 p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">Gestión de Envíos</h1>
                     <Link href="/envios/create">

@@ -19,7 +19,9 @@ import {
     Eye,
     Package2
 } from 'lucide-react';
-import type { DetalleCompra, Producto, Proveedor } from '@/domain/compras';
+import type { DetalleCompra } from '@/domain/compras';
+import type { Producto } from '@/domain/productos';
+import type { Proveedor } from '@/domain/proveedores';
 
 // Interfaces específicas para lotes
 interface LoteDetalle extends DetalleCompra {

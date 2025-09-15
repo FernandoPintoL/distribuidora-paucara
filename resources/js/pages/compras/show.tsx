@@ -1,12 +1,18 @@
+import React, { useRef } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { ArrowLeft, Edit, Download, Printer, Package, User, Calendar, FileText, Hash, CreditCard } from 'lucide-react';
+import { useExport } from '@/hooks/use-export';
+import { compraToExportData, getDefaultCompraExportOptions } from '@/lib/export-helpers';
+import { ExportButtons } from '@/components/Export/ExportButtons';
+import { PrintableContent } from '@/components/Export/PrintableContent';
+import { ArrowLeft, Edit, Printer, Package, User, Calendar, FileText, Hash, CreditCard, Loader2 } from 'lucide-react';
 
 // Importar tipos del domain
-import type { Compra, EstadoDocumento } from '@/domain/compras';
+import type { Compra } from '@/domain/compras';
+import type { EstadoDocumento } from '@/domain/estados-documento';
 
 interface PageProps extends InertiaPageProps {
     compra: Compra;
@@ -31,7 +37,39 @@ const getEstadoColor = (estado?: EstadoDocumento) => {
 export default function CompraShow() {
     const { props } = usePage<PageProps>();
     const { can } = useAuth();
+    const { isExporting, exportToPDF, exportToExcel, exportToCSV, print, error } = useExport();
     const compra = props.compra;
+    const printableRef = useRef<HTMLDivElement>(null);
+
+    // Preparar datos para exportación
+    const exportData = compraToExportData(compra);
+    const defaultExportOptions = getDefaultCompraExportOptions(compra);
+
+    const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
+        try {
+            switch (format) {
+                case 'pdf':
+                    await exportToPDF(exportData, defaultExportOptions);
+                    break;
+                case 'excel':
+                    await exportToExcel(exportData, defaultExportOptions);
+                    break;
+                case 'csv':
+                    await exportToCSV(exportData, defaultExportOptions);
+                    break;
+            }
+        } catch (err) {
+            console.error(`Error exportando a ${format}:`, err);
+        }
+    };
+
+    const handlePrint = async () => {
+        try {
+            await print('printable-content', defaultExportOptions);
+        } catch (err) {
+            console.error('Error imprimiendo:', err);
+        }
+    };
 
     return (
         <AppLayout breadcrumbs={[
@@ -41,7 +79,7 @@ export default function CompraShow() {
             <Head title={`Compra ${compra.numero}`} />
 
             {/* Header mejorado */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 p-4">
                 <div className="flex items-center space-x-4">
                     <Link
                         href="/compras"
@@ -71,14 +109,32 @@ export default function CompraShow() {
                 </div>
 
                 <div className="flex gap-3">
-                    <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-                        <Download className="h-4 w-4 mr-2 inline" />
-                        Exportar
+                    <button
+                        onClick={handlePrint}
+                        disabled={isExporting}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {isExporting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Printer className="h-4 w-4" />
+                        )}
+                        {isExporting ? 'Procesando...' : 'Imprimir'}
                     </button>
-                    <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-                        <Printer className="h-4 w-4 mr-2 inline" />
-                        Imprimir
-                    </button>
+
+                    <ExportButtons
+                        data={exportData}
+                        options={defaultExportOptions}
+                        disabled={isExporting}
+                        showPrint={false}
+                        showPDF={true}
+                        showExcel={true}
+                        showCSV={true}
+                        onExportStart={() => console.log('Iniciando exportación...')}
+                        onExportEnd={() => console.log('Exportación completada')}
+                        onExportError={(error) => console.error('Error en exportación:', error)}
+                    />
+
                     {can('compras.update') && (
                         <Link
                             href={`/compras/${compra.id}/edit`}
@@ -156,7 +212,7 @@ export default function CompraShow() {
                                         </dt>
                                         <dd className="mt-1 text-sm text-gray-900 dark:text-white">
                                             <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs font-medium">
-                                                {compra.moneda.codigo} - {compra.moneda.nombre}
+                                                {compra.moneda ? `${compra.moneda.codigo} - ${compra.moneda.nombre}` : 'Moneda no especificada'}
                                             </span>
                                         </dd>
                                     </div>
@@ -169,7 +225,7 @@ export default function CompraShow() {
                                             Registrado por
                                         </dt>
                                         <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                                            {compra.usuario.name}
+                                            {compra.usuario?.name || 'Usuario no especificado'}
                                         </dd>
                                     </div>
                                 </div>
@@ -198,7 +254,7 @@ export default function CompraShow() {
                         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
                                 <Package className="h-5 w-5 mr-2" />
-                                Productos ({compra.detalles.length})
+                                Productos ({compra.detalles?.length || 0})
                             </h3>
                         </div>
                         <div className="overflow-x-auto">
@@ -226,7 +282,7 @@ export default function CompraShow() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    {compra.detalles.map((detalle) => (
+                                    {(compra.detalles || []).map((detalle) => (
                                         <tr key={detalle.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td className="px-6 py-4 text-sm">
                                                 <div>
@@ -244,10 +300,10 @@ export default function CompraShow() {
                                                 {detalle.cantidad.toLocaleString()}
                                             </td>
                                             <td className="px-6 py-4 text-right text-sm text-gray-900 dark:text-white font-mono">
-                                                {formatCurrency(Number(detalle.precio_unitario), compra.moneda.simbolo)}
+                                                {formatCurrency(Number(detalle.precio_unitario), compra.moneda?.simbolo || '$')}
                                             </td>
                                             <td className="px-6 py-4 text-right text-sm text-gray-900 dark:text-white font-mono font-semibold">
-                                                {formatCurrency(Number(detalle.subtotal), compra.moneda.simbolo)}
+                                                {formatCurrency(Number(detalle.subtotal), compra.moneda?.simbolo || '$')}
                                             </td>
                                             <td className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                                                 {detalle.lote ? (
@@ -290,12 +346,12 @@ export default function CompraShow() {
                                     <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    {compra.proveedor.nombre}
+                                    {compra.proveedor?.nombre || 'Proveedor no especificado'}
                                 </h4>
                             </div>
 
                             <dl className="space-y-3">
-                                {compra.proveedor.razon_social && (
+                                {compra.proveedor?.razon_social && (
                                     <div>
                                         <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                             Razón Social
@@ -306,7 +362,7 @@ export default function CompraShow() {
                                     </div>
                                 )}
 
-                                {compra.proveedor.nit && (
+                                {compra.proveedor?.nit && (
                                     <div>
                                         <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                             NIT
@@ -317,7 +373,7 @@ export default function CompraShow() {
                                     </div>
                                 )}
 
-                                {compra.proveedor.telefono && (
+                                {compra.proveedor?.telefono && (
                                     <div>
                                         <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                             Teléfono
@@ -330,7 +386,7 @@ export default function CompraShow() {
                                     </div>
                                 )}
 
-                                {compra.proveedor.email && (
+                                {compra.proveedor?.email && (
                                     <div>
                                         <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                             Email
@@ -358,7 +414,7 @@ export default function CompraShow() {
                                 <div className="flex justify-between text-sm">
                                     <dt className="text-gray-600 dark:text-gray-400">Subtotal:</dt>
                                     <dd className="font-mono text-gray-900 dark:text-white">
-                                        {formatCurrency(Number(compra.subtotal), compra.moneda.simbolo)}
+                                        {formatCurrency(Number(compra.subtotal), compra.moneda?.simbolo || '$')}
                                     </dd>
                                 </div>
 
@@ -366,7 +422,7 @@ export default function CompraShow() {
                                     <div className="flex justify-between text-sm">
                                         <dt className="text-gray-600 dark:text-gray-400">Descuento:</dt>
                                         <dd className="font-mono text-red-600 dark:text-red-400">
-                                            -{formatCurrency(Number(compra.descuento), compra.moneda.simbolo)}
+                                            -{formatCurrency(Number(compra.descuento), compra.moneda?.simbolo || '$')}
                                         </dd>
                                     </div>
                                 )}
@@ -375,7 +431,7 @@ export default function CompraShow() {
                                     <div className="flex justify-between text-sm">
                                         <dt className="text-gray-600 dark:text-gray-400">Impuestos:</dt>
                                         <dd className="font-mono text-gray-900 dark:text-white">
-                                            {formatCurrency(Number(compra.impuesto), compra.moneda.simbolo)}
+                                            {formatCurrency(Number(compra.impuesto), compra.moneda?.simbolo || '$')}
                                         </dd>
                                     </div>
                                 )}
@@ -384,7 +440,7 @@ export default function CompraShow() {
                                     <div className="flex justify-between">
                                         <dt className="text-base font-semibold text-gray-900 dark:text-white">Total:</dt>
                                         <dd className="text-base font-bold font-mono text-gray-900 dark:text-white">
-                                            {formatCurrency(Number(compra.total), compra.moneda.simbolo)}
+                                            {formatCurrency(Number(compra.total), compra.moneda?.simbolo || '$')}
                                         </dd>
                                     </div>
                                 </div>
@@ -406,13 +462,13 @@ export default function CompraShow() {
                                         Creada
                                     </dt>
                                     <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                                        {new Date(compra.created_at).toLocaleString('es-ES', {
+                                        {compra.created_at ? new Date(compra.created_at).toLocaleString('es-ES', {
                                             year: 'numeric',
                                             month: 'short',
                                             day: 'numeric',
                                             hour: '2-digit',
                                             minute: '2-digit'
-                                        })}
+                                        }) : 'Fecha no disponible'}
                                     </dd>
                                 </div>
 
@@ -421,19 +477,28 @@ export default function CompraShow() {
                                         Última modificación
                                     </dt>
                                     <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                                        {new Date(compra.updated_at).toLocaleString('es-ES', {
+                                        {compra.updated_at ? new Date(compra.updated_at).toLocaleString('es-ES', {
                                             year: 'numeric',
                                             month: 'short',
                                             day: 'numeric',
                                             hour: '2-digit',
                                             minute: '2-digit'
-                                        })}
+                                        }) : 'Fecha no disponible'}
                                     </dd>
                                 </div>
                             </dl>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Contenido para impresión (oculto visualmente pero disponible en DOM) */}
+            <div className="absolute -left-full -top-full opacity-0 pointer-events-none print:block print:relative print:left-0 print:top-0 print:opacity-100 print:pointer-events-auto">
+                <PrintableContent
+                    ref={printableRef}
+                    compra={compra}
+                    title={`Compra ${compra.numero}`}
+                />
             </div>
         </AppLayout>
     );

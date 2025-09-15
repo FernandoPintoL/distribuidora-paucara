@@ -1,23 +1,23 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Models\Cliente;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ClienteController extends Controller
 {
-    public function index(Request $request): Response
+    use \App\Http\Controllers\Traits\ApiInertiaResponseTrait;
+
+    public function index(Request $request): Response | \Symfony\Component\HttpFoundation\Response
     {
         $q = (string) $request->string('q');
 
         $activoParam = $request->input('activo');
-        $activo = null;
+        $activo      = null;
         if ($activoParam !== null && $activoParam !== '' && $activoParam !== 'all') {
             if ($activoParam === '1' || $activoParam === 1 || $activoParam === true || $activoParam === 'true') {
                 $activo = true;
@@ -27,19 +27,19 @@ class ClienteController extends Controller
         }
 
         $allowedOrderBy = ['id', 'nombre', 'fecha_registro'];
-        $rawOrderBy = (string) $request->string('order_by');
-        $orderBy = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
+        $rawOrderBy     = (string) $request->string('order_by');
+        $orderBy        = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
 
         $rawOrderDir = strtolower((string) $request->string('order_dir'));
-        $orderDir = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
+        $orderDir    = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
 
         $items = Cliente::query()
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
-                    $sub->where('nombre', 'ilike', "%$q%")
-                        ->orWhere('razon_social', 'ilike', "%$q%")
-                        ->orWhere('nit', 'ilike', "%$q%")
-                        ->orWhere('telefono', 'ilike', "%$q%");
+                    $sub->where('nombre', 'like', "%$q%")
+                        ->orWhere('razon_social', 'like', "%$q%")
+                        ->orWhere('nit', 'like', "%$q%")
+                        ->orWhere('telefono', 'like', "%$q%");
                 });
             })
             ->when($activo !== null, function ($query) use ($activo) {
@@ -49,12 +49,16 @@ class ClienteController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        if ($this->isApiRequest($request)) {
+            return $this->apiResponse($items->toArray(), 'Clientes obtenidos exitosamente');
+        }
+
         return Inertia::render('clientes/index', [
             'clientes' => $items,
-            'filters' => [
-                'q' => $q,
-                'activo' => $activo !== null ? ($activo ? '1' : '0') : null,
-                'order_by' => $orderBy,
+            'filters'  => [
+                'q'         => $q,
+                'activo'    => $activo !== null ? ($activo ? '1' : '0') : null,
+                'order_by'  => $orderBy,
                 'order_dir' => $orderDir,
             ],
         ]);
@@ -67,34 +71,54 @@ class ClienteController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): \Symfony\Component\HttpFoundation\Response
     {
-        $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
+        $isModalRequest = $this->isModalRequest($request);
+
+        $validationRules = [
+            'nombre'       => ['required', 'string', 'max:255'],
             'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit' => ['nullable', 'string', 'max:255'],
-            'telefono' => ['nullable', 'string', 'max:100'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'activo' => ['boolean'],
-            'foto_perfil' => ['nullable', 'image', 'max:5120'],
-            'ci_anverso' => ['nullable', 'image', 'max:5120'],
-            'ci_reverso' => ['nullable', 'image', 'max:5120'],
-        ]);
+            'nit'          => ['required', 'string', 'max:255'],
+            'telefono'     => ['nullable', 'string', 'max:100'],
+            'email'        => ['nullable', 'email', 'max:255'],
+            'activo'       => ['boolean'],
+        ];
+
+        // Solo validar archivos si no es una petición de modal
+        if (! $isModalRequest) {
+            $validationRules = array_merge($validationRules, [
+                'foto_perfil' => ['nullable', 'image', 'max:5120'],
+                'ci_anverso'  => ['nullable', 'image', 'max:5120'],
+                'ci_reverso'  => ['nullable', 'image', 'max:5120'],
+            ]);
+        }
+
+        $data           = $request->validate($validationRules);
         $data['activo'] = $data['activo'] ?? true;
 
-        if ($request->hasFile('foto_perfil')) {
-            $data['foto_perfil'] = $request->file('foto_perfil')->store('clientes', 'public');
-        }
-        if ($request->hasFile('ci_anverso')) {
-            $data['ci_anverso'] = $request->file('ci_anverso')->store('clientes', 'public');
-        }
-        if ($request->hasFile('ci_reverso')) {
-            $data['ci_reverso'] = $request->file('ci_reverso')->store('clientes', 'public');
+        // Procesar archivos solo si no es una petición de modal
+        if (! $isModalRequest) {
+            if ($request->hasFile('foto_perfil')) {
+                $data['foto_perfil'] = $request->file('foto_perfil')->store('clientes', 'public');
+            }
+            if ($request->hasFile('ci_anverso')) {
+                $data['ci_anverso'] = $request->file('ci_anverso')->store('clientes', 'public');
+            }
+            if ($request->hasFile('ci_reverso')) {
+                $data['ci_reverso'] = $request->file('ci_reverso')->store('clientes', 'public');
+            }
         }
 
-        Cliente::create($data);
+        return $this->handleCrudOperation(
+            $request,
+            function () use ($data) {
+                $cliente = Cliente::create($data);
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente creado');
+                return ['cliente' => $cliente];
+            },
+            'Cliente creado exitosamente',
+            'clientes.index'
+        );
     }
 
     public function edit(Cliente $cliente): Response
@@ -104,41 +128,55 @@ class ClienteController extends Controller
         ]);
     }
 
-    public function update(Request $request, Cliente $cliente): RedirectResponse
+    public function update(Request $request, Cliente $cliente): \Symfony\Component\HttpFoundation\Response
     {
-        $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
-            'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit' => ['nullable', 'string', 'max:255'],
-            'telefono' => ['nullable', 'string', 'max:100'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'activo' => ['boolean'],
-            'foto_perfil' => ['nullable', 'image', 'max:5120'],
-            'ci_anverso' => ['nullable', 'image', 'max:5120'],
-            'ci_reverso' => ['nullable', 'image', 'max:5120'],
-        ]);
+        return $this->handleCrudOperation(
+            $request,
+            function () use ($request, $cliente) {
+                $data = $request->validate([
+                    'nombre'       => ['required', 'string', 'max:255'],
+                    'razon_social' => ['nullable', 'string', 'max:255'],
+                    'nit'          => ['nullable', 'string', 'max:255'],
+                    'telefono'     => ['nullable', 'string', 'max:100'],
+                    'email'        => ['nullable', 'email', 'max:255'],
+                    'activo'       => ['boolean'],
+                    'foto_perfil'  => ['nullable', 'image', 'max:5120'],
+                    'ci_anverso'   => ['nullable', 'image', 'max:5120'],
+                    'ci_reverso'   => ['nullable', 'image', 'max:5120'],
+                ]);
 
-        $updates = $data;
-        if ($request->hasFile('foto_perfil')) {
-            $updates['foto_perfil'] = $request->file('foto_perfil')->store('clientes', 'public');
-        }
-        if ($request->hasFile('ci_anverso')) {
-            $updates['ci_anverso'] = $request->file('ci_anverso')->store('clientes', 'public');
-        }
-        if ($request->hasFile('ci_reverso')) {
-            $updates['ci_reverso'] = $request->file('ci_reverso')->store('clientes', 'public');
-        }
+                $updates = $data;
+                if ($request->hasFile('foto_perfil')) {
+                    $updates['foto_perfil'] = $request->file('foto_perfil')->store('clientes', 'public');
+                }
+                if ($request->hasFile('ci_anverso')) {
+                    $updates['ci_anverso'] = $request->file('ci_anverso')->store('clientes', 'public');
+                }
+                if ($request->hasFile('ci_reverso')) {
+                    $updates['ci_reverso'] = $request->file('ci_reverso')->store('clientes', 'public');
+                }
 
-        $cliente->update($updates);
+                $cliente->update($updates);
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente actualizado');
+                return ['cliente' => $cliente->fresh()];
+            },
+            'Cliente actualizado exitosamente',
+            'clientes.index'
+        );
     }
 
-    public function destroy(Cliente $cliente): RedirectResponse
+    public function destroy(Request $request, Cliente $cliente): \Symfony\Component\HttpFoundation\Response
     {
-        $cliente->delete();
+        return $this->handleCrudOperation(
+            $request,
+            function () use ($cliente) {
+                $cliente->delete();
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente eliminado');
+                return null;
+            },
+            'Cliente eliminado exitosamente',
+            'clientes.index'
+        );
     }
 
     // ================================
@@ -151,17 +189,17 @@ class ClienteController extends Controller
     public function indexApi(Request $request): JsonResponse
     {
         $perPage = $request->integer('per_page', 20);
-        $q = $request->string('q');
-        $activo = $request->boolean('activo', true);
+        $q       = $request->string('q');
+        $activo  = $request->boolean('activo', true);
 
         $clientes = Cliente::query()
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
-                    $sub->where('nombre', 'ilike', "%$q%")
-                        ->orWhere('razon_social', 'ilike', "%$q%")
-                        ->orWhere('nit', 'ilike', "%$q%")
-                        ->orWhere('telefono', 'ilike', "%$q%")
-                        ->orWhere('email', 'ilike', "%$q%");
+                    $sub->where('nombre', 'like', "%$q%")
+                        ->orWhere('razon_social', 'like', "%$q%")
+                        ->orWhere('nit', 'like', "%$q%")
+                        ->orWhere('telefono', 'like', "%$q%")
+                        ->orWhere('email', 'like', "%$q%");
                 });
             })
             ->where('activo', $activo)
@@ -189,40 +227,40 @@ class ClienteController extends Controller
     public function storeApi(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
-            'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'telefono' => ['nullable', 'string', 'max:20'],
-            'whatsapp' => ['nullable', 'string', 'max:20'],
-            'fecha_nacimiento' => ['nullable', 'date'],
-            'genero' => ['nullable', 'in:M,F,O'],
-            'limite_credito' => ['nullable', 'numeric', 'min:0'],
-            'activo' => ['boolean'],
-            'observaciones' => ['nullable', 'string'],
+            'nombre'                      => ['required', 'string', 'max:255'],
+            'razon_social'                => ['nullable', 'string', 'max:255'],
+            'nit'                         => ['nullable', 'string', 'max:50'],
+            'email'                       => ['nullable', 'email', 'max:255'],
+            'telefono'                    => ['nullable', 'string', 'max:20'],
+            'whatsapp'                    => ['nullable', 'string', 'max:20'],
+            'fecha_nacimiento'            => ['nullable', 'date'],
+            'genero'                      => ['nullable', 'in:M,F,O'],
+            'limite_credito'              => ['nullable', 'numeric', 'min:0'],
+            'activo'                      => ['boolean'],
+            'observaciones'               => ['nullable', 'string'],
             // Direcciones opcionales
-            'direcciones' => ['nullable', 'array'],
-            'direcciones.*.direccion' => ['required_with:direcciones', 'string', 'max:500'],
-            'direcciones.*.ciudad' => ['nullable', 'string', 'max:100'],
-            'direcciones.*.departamento' => ['nullable', 'string', 'max:100'],
+            'direcciones'                 => ['nullable', 'array'],
+            'direcciones.*.direccion'     => ['required_with:direcciones', 'string', 'max:500'],
+            'direcciones.*.ciudad'        => ['nullable', 'string', 'max:100'],
+            'direcciones.*.departamento'  => ['nullable', 'string', 'max:100'],
             'direcciones.*.codigo_postal' => ['nullable', 'string', 'max:20'],
-            'direcciones.*.es_principal' => ['boolean'],
+            'direcciones.*.es_principal'  => ['boolean'],
         ]);
 
         try {
             $cliente = Cliente::create([
-                'nombre' => $data['nombre'],
-                'razon_social' => $data['razon_social'] ?? null,
-                'nit' => $data['nit'] ?? null,
-                'email' => $data['email'] ?? null,
-                'telefono' => $data['telefono'] ?? null,
-                'whatsapp' => $data['whatsapp'] ?? null,
+                'nombre'           => $data['nombre'],
+                'razon_social'     => $data['razon_social'] ?? null,
+                'nit'              => $data['nit'] ?? null,
+                'email'            => $data['email'] ?? null,
+                'telefono'         => $data['telefono'] ?? null,
+                'whatsapp'         => $data['whatsapp'] ?? null,
                 'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
-                'genero' => $data['genero'] ?? null,
-                'limite_credito' => $data['limite_credito'] ?? 0,
-                'activo' => $data['activo'] ?? true,
-                'observaciones' => $data['observaciones'] ?? null,
-                'fecha_registro' => now(),
+                'genero'           => $data['genero'] ?? null,
+                'limite_credito'   => $data['limite_credito'] ?? 0,
+                'activo'           => $data['activo'] ?? true,
+                'observaciones'    => $data['observaciones'] ?? null,
+                'fecha_registro'   => now(),
             ]);
 
             // Crear direcciones si se proporcionaron
@@ -239,7 +277,7 @@ class ClienteController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al crear cliente: '.$e->getMessage(), 500);
+            return ApiResponse::error('Error al crear cliente: ' . $e->getMessage(), 500);
         }
     }
 
@@ -249,17 +287,17 @@ class ClienteController extends Controller
     public function updateApi(Request $request, Cliente $cliente): JsonResponse
     {
         $data = $request->validate([
-            'nombre' => ['sometimes', 'required', 'string', 'max:255'],
-            'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'telefono' => ['nullable', 'string', 'max:20'],
-            'whatsapp' => ['nullable', 'string', 'max:20'],
+            'nombre'           => ['sometimes', 'required', 'string', 'max:255'],
+            'razon_social'     => ['nullable', 'string', 'max:255'],
+            'nit'              => ['nullable', 'string', 'max:50'],
+            'email'            => ['nullable', 'email', 'max:255'],
+            'telefono'         => ['nullable', 'string', 'max:20'],
+            'whatsapp'         => ['nullable', 'string', 'max:20'],
             'fecha_nacimiento' => ['nullable', 'date'],
-            'genero' => ['nullable', 'in:M,F,O'],
-            'limite_credito' => ['nullable', 'numeric', 'min:0'],
-            'activo' => ['boolean'],
-            'observaciones' => ['nullable', 'string'],
+            'genero'           => ['nullable', 'in:M,F,O'],
+            'limite_credito'   => ['nullable', 'numeric', 'min:0'],
+            'activo'           => ['boolean'],
+            'observaciones'    => ['nullable', 'string'],
         ]);
 
         try {
@@ -271,7 +309,7 @@ class ClienteController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al actualizar cliente: '.$e->getMessage(), 500);
+            return ApiResponse::error('Error al actualizar cliente: ' . $e->getMessage(), 500);
         }
     }
 
@@ -302,7 +340,7 @@ class ClienteController extends Controller
             return ApiResponse::success(null, 'Cliente eliminado exitosamente');
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al eliminar cliente: '.$e->getMessage(), 500);
+            return ApiResponse::error('Error al eliminar cliente: ' . $e->getMessage(), 500);
         }
     }
 
@@ -311,7 +349,7 @@ class ClienteController extends Controller
      */
     public function buscarApi(Request $request): JsonResponse
     {
-        $q = $request->string('q');
+        $q      = $request->string('q');
         $limite = $request->integer('limite', 10);
 
         if (! $q || strlen($q) < 2) {
@@ -321,10 +359,10 @@ class ClienteController extends Controller
         $clientes = Cliente::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
             ->where('activo', true)
             ->where(function ($query) use ($q) {
-                $query->where('nombre', 'ilike', "%$q%")
-                    ->orWhere('razon_social', 'ilike', "%$q%")
-                    ->orWhere('nit', 'ilike', "%$q%")
-                    ->orWhere('telefono', 'ilike', "%$q%");
+                $query->where('nombre', 'like', "%$q%")
+                    ->orWhere('razon_social', 'like', "%$q%")
+                    ->orWhere('nit', 'like', "%$q%")
+                    ->orWhere('telefono', 'like', "%$q%");
             })
             ->limit($limite)
             ->get();
@@ -342,18 +380,18 @@ class ClienteController extends Controller
             ->orderByDesc('fecha_vencimiento')
             ->get(['id', 'numero_documento', 'monto_total', 'saldo', 'fecha_vencimiento', 'dias_vencimiento']);
 
-        $saldoTotal = $cuentas->sum('saldo');
+        $saldoTotal      = $cuentas->sum('saldo');
         $cuentasVencidas = $cuentas->where('dias_vencimiento', '>', 0)->count();
 
         return ApiResponse::success([
-            'cliente' => [
-                'id' => $cliente->id,
-                'nombre' => $cliente->nombre,
+            'cliente'          => [
+                'id'             => $cliente->id,
+                'nombre'         => $cliente->nombre,
                 'limite_credito' => $cliente->limite_credito,
             ],
-            'saldo_total' => $saldoTotal,
+            'saldo_total'      => $saldoTotal,
             'cuentas_vencidas' => $cuentasVencidas,
-            'cuentas_detalle' => $cuentas,
+            'cuentas_detalle'  => $cuentas,
         ]);
     }
 
@@ -362,14 +400,14 @@ class ClienteController extends Controller
      */
     public function historialVentas(Cliente $cliente, Request $request): JsonResponse
     {
-        $perPage = $request->integer('per_page', 10);
+        $perPage     = $request->integer('per_page', 10);
         $fechaInicio = $request->date('fecha_inicio');
-        $fechaFin = $request->date('fecha_fin');
+        $fechaFin    = $request->date('fecha_fin');
 
         $ventas = $cliente->ventas()
             ->with(['estadoDocumento', 'moneda', 'detalles.producto:id,nombre'])
-            ->when($fechaInicio, fn ($q) => $q->whereDate('fecha', '>=', $fechaInicio))
-            ->when($fechaFin, fn ($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate($perPage);

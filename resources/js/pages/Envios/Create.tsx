@@ -74,7 +74,7 @@ export default function Create({ ventas, vehiculos, choferes }: Props) {
         <AppLayout>
             <Head title="Crear Envío" />
 
-            <div className="space-y-6">
+            <div className="space-y-6 p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-900">Crear Nuevo Envío</h1>
                     <Button

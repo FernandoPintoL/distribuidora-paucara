@@ -1,140 +1,164 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { useTipoMermas, TipoMermaApi } from '@/stores/useTipoMermas';
 import { TipoMermaService } from '@/services/tipoMermaService';
+import { Plus, Edit, Trash2, X, AlertCircle, Loader2 } from 'lucide-react';
+import { NotificationService } from '@/services/notification.service';
+import { TipoMermaFormModal } from './TipoMermaFormModal';
 
 export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     const { tipos, fetchTipos } = useTipoMermas();
-    const [editing, setEditing] = useState<TipoMermaApi | null>(null);
-    const [form, setForm] = useState<Partial<TipoMermaApi>>({});
     const [loading, setLoading] = useState(false);
+    const [formModalOpen, setFormModalOpen] = useState(false);
+    const [editingTipo, setEditingTipo] = useState<TipoMermaApi | null>(null);
 
     useEffect(() => {
-        if (open) fetchTipos();
+        if (open) {
+            fetchTipos();
+            setEditingTipo(null);
+            setFormModalOpen(false);
+        }
     }, [open, fetchTipos]);
 
     const handleEdit = (tipo: TipoMermaApi) => {
-        setEditing(tipo);
-        setForm(tipo);
+        setEditingTipo(tipo);
+        setFormModalOpen(true);
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('¿Eliminar tipo de merma?')) return;
+        if (!confirm('¿Estás seguro de que deseas eliminar este tipo de merma? Esta acción no se puede deshacer.')) return;
+
         setLoading(true);
-        await TipoMermaService.remove(id);
-        await fetchTipos();
-        setLoading(false);
+        try {
+            await TipoMermaService.remove(id);
+            NotificationService.success('Tipo de merma eliminado exitosamente');
+            await fetchTipos();
+        } catch {
+            NotificationService.error('Error al eliminar el tipo de merma');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        if (editing) {
-            await TipoMermaService.update(editing.id, form);
-        } else {
-            await TipoMermaService.create(form);
-        }
-        setEditing(null);
-        setForm({});
-        await fetchTipos();
-        setLoading(false);
+    const handleNewTipo = () => {
+        setEditingTipo(null);
+        setFormModalOpen(true);
+    };
+
+    const handleFormSuccess = () => {
+        fetchTipos();
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogPortal>
-                <DialogOverlay />
-                <DialogContent className="max-w-lg w-full p-6 rounded-lg bg-white dark:bg-gray-900">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold">Gestionar Tipos de Merma</h2>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cerrar</Button>
-                        </DialogClose>
-                    </div>
-                    <form onSubmit={handleSubmit} className="space-y-3 mb-6">
-                        <Input
-                            placeholder="Clave (ej: VENCIMIENTO)"
-                            value={form.clave || ''}
-                            onChange={e => setForm(f => ({ ...f, clave: e.target.value }))}
-                            required
-                            disabled={!!editing}
-                        />
-                        <Input
-                            placeholder="Nombre visible"
-                            value={form.label || ''}
-                            onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
-                            required
-                        />
-                        <Input
-                            placeholder="Descripción"
-                            value={form.descripcion || ''}
-                            onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-                        />
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="Color"
-                                value={form.color || ''}
-                                onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                            />
-                            <Input
-                                placeholder="BG Color"
-                                value={form.bg_color || ''}
-                                onChange={e => setForm(f => ({ ...f, bg_color: e.target.value }))}
-                            />
-                            <Input
-                                placeholder="Text Color"
-                                value={form.text_color || ''}
-                                onChange={e => setForm(f => ({ ...f, text_color: e.target.value }))}
-                            />
+                <DialogOverlay className="bg-black/50 backdrop-blur-sm" />
+                <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 border-0 shadow-2xl">
+                    <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                Gestionar Tipos de Merma
+                            </DialogTitle>
+                            <DialogClose asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </DialogClose>
                         </div>
-                        <label className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                checked={!!form.requiere_aprobacion}
-                                onChange={e => setForm(f => ({ ...f, requiere_aprobacion: e.target.checked }))}
-                            />
-                            Requiere aprobación
-                        </label>
-                        <Button type="submit" disabled={loading}>
-                            {editing ? 'Actualizar' : 'Crear'}
-                        </Button>
-                        {editing && (
-                            <Button type="button" variant="outline" onClick={() => { setEditing(null); setForm({}); }}>
-                                Cancelar edición
+                    </DialogHeader>
+
+                    <div className="flex flex-col h-[calc(90vh-80px)]">
+                        {/* Lista de Tipos - Más compacta */}
+                        <div className="flex-1 p-6 bg-gray-50/50 dark:bg-gray-800/50 overflow-y-auto">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                    Tipos Existentes ({tipos.length})
+                                </h3>
+                            </div>
+
+                            <div className="space-y-2 mb-6">
+                                {loading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                                        <span className="ml-2 text-gray-600 dark:text-gray-400">Cargando...</span>
+                                    </div>
+                                ) : tipos.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                        <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No hay tipos registrados</p>
+                                    </div>
+                                ) : (
+                                    tipos.map((tipo) => (
+                                        <Card key={tipo.id} className="hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                                            <CardContent className="p-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-xs font-medium shrink-0"
+                                                            >
+                                                                {tipo.clave}
+                                                            </Badge>
+                                                            {tipo.requiere_aprobacion && (
+                                                                <Badge variant="outline" className="text-xs shrink-0">
+                                                                    Req. aprobación
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
+                                                            {tipo.label}
+                                                        </h4>
+                                                    </div>
+                                                    <div className="flex gap-1 ml-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleEdit(tipo)}
+                                                            className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        >
+                                                            <Edit className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDelete(tipo.id)}
+                                                            className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Botón Nuevo Tipo - Siempre visible */}
+                        <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                            <Button
+                                onClick={handleNewTipo}
+                                size="sm"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Nuevo Tipo de Merma
                             </Button>
-                        )}
-                    </form>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr>
-                                    <th>Clave</th>
-                                    <th>Nombre</th>
-                                    <th>Descripción</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {tipos.map(tipo => (
-                                    <tr key={tipo.id} className="border-b">
-                                        <td>{tipo.clave}</td>
-                                        <td>{tipo.label}</td>
-                                        <td>{tipo.descripcion}</td>
-                                        <td className="flex gap-2">
-                                            <Button type="button" size="sm" variant="outline" onClick={() => handleEdit(tipo)}>
-                                                Editar
-                                            </Button>
-                                            <Button type="button" size="sm" variant="destructive" onClick={() => handleDelete(tipo.id)}>
-                                                Eliminar
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        </div>
                     </div>
+
+                    {/* Modal de Formulario */}
+                    <TipoMermaFormModal
+                        open={formModalOpen}
+                        onOpenChange={setFormModalOpen}
+                        editingTipo={editingTipo}
+                        onSuccess={handleFormSuccess}
+                    />
                 </DialogContent>
             </DialogPortal>
         </Dialog>

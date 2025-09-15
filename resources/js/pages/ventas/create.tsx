@@ -2,13 +2,21 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useState, useEffect, useMemo } from 'react';
-import toast from 'react-hot-toast';
 import VentaPreviewModal from '@/components/VentaPreviewModal';
 import StockManager from '@/components/ventas/stock-manager';
 
+// Importar componentes y hooks adicionales
+import InputSearch from '@/components/ui/input-search';
+import SearchSelect, { SelectOption } from '@/components/ui/search-select';
+import { useClienteSearch } from '@/hooks/use-api-search';
+import ModalCrearCliente from '@/components/ui/modal-crear-cliente';
+import ProductosTable from '@/components/ProductosTable';
+
+// Importar servicios adicionales
+import { NotificationService } from '@/services/notification.service';
+
 // Importar tipos del domain y servicio
 import type {
-    Cliente,
     Producto,
     Moneda,
     EstadoDocumento,
@@ -16,6 +24,9 @@ import type {
     DetalleVentaFormData,
     Venta
 } from '@/domain/ventas';
+import type { TipoPago } from '@/domain/tipos-pago';
+import type { TipoDocumento } from '@/domain/tipos-documento';
+import type { Cliente } from '@/domain/clientes';
 
 import ventasService from '@/services/ventas.service';
 import { formatCurrency } from '@/lib/utils';
@@ -30,6 +41,8 @@ interface PageProps extends InertiaPageProps {
     productos: Producto[];
     monedas: Moneda[];
     estados_documento: EstadoDocumento[];
+    tipos_pago: TipoPago[];
+    tipos_documento: TipoDocumento[];
     auth: {
         user: {
             id: number;
@@ -40,7 +53,7 @@ interface PageProps extends InertiaPageProps {
 }
 
 export default function VentaForm() {
-    const { clientes, productos, monedas, estados_documento, auth, venta } = usePage<PageProps>().props;
+    const { clientes, productos, monedas, estados_documento, tipos_pago, tipos_documento, auth, venta } = usePage<PageProps>().props;
     const isEditing = Boolean(venta);
 
     // Validaciones defensivas para evitar errores usando useMemo
@@ -48,15 +61,49 @@ export default function VentaForm() {
     const productosSeguro = useMemo(() => productos || [], [productos]);
     const monedasSeguro = useMemo(() => monedas || [], [monedas]);
     const estadosSeguro = useMemo(() => estados_documento || [], [estados_documento]);
+    const tiposPagoSeguro = useMemo(() => tipos_pago || [], [tipos_pago]);
+    const tiposDocumentoSeguro = useMemo(() => tipos_documento || [], [tipos_documento]);
 
-    const [productSearch, setProductSearch] = useState('');
-    const [availableProducts, setAvailableProducts] = useState(productosSeguro);
+    // Opciones para SearchSelect
+    const tiposPagoOptions: SelectOption[] = useMemo(() =>
+        tiposPagoSeguro.map(tipo => ({
+            value: tipo.id,
+            label: tipo.nombre,
+            description: tipo.codigo
+        })), [tiposPagoSeguro]
+    );
+
+    const tiposDocumentoOptions: SelectOption[] = useMemo(() =>
+        tiposDocumentoSeguro.map(tipo => ({
+            value: tipo.id,
+            label: tipo.nombre,
+            description: tipo.codigo
+        })), [tiposDocumentoSeguro]
+    );
+
+    const canalOrigenOptions: SelectOption[] = useMemo(() => [
+        { value: 'PRESENCIAL', label: 'Presencial', description: 'Venta en tienda física' },
+        { value: 'WEB', label: 'Web', description: 'Venta a través del sitio web' },
+        { value: 'APP_EXTERNA', label: 'App Externa', description: 'Venta desde aplicación externa' }
+    ], []);
+
     const [detallesWithProducts, setDetallesWithProducts] = useState<DetalleVentaConProducto[]>([]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [stockValido, setStockValido] = useState(true);
 
+    // Estado para InputSearch de cliente
+    const [clienteValue, setClienteValue] = useState<string | number | null>(null);
+    const [clienteDisplay, setClienteDisplay] = useState<string>('');
+
+    // Hook para búsqueda de clientes
+    const { search: searchClientes } = useClienteSearch();
+
+    // Estado para el modal de crear cliente
+    const [showCreateClienteModal, setShowCreateClienteModal] = useState(false);
+    const [clienteSearchQuery, setClienteSearchQuery] = useState('');
+
     const { data, setData, processing, errors } = useForm<VentaFormData>({
-        numero: venta?.numero || '',
+        numero: venta?.numero || '', // Solo para edición, se genera automáticamente para nuevas ventas
         fecha: venta?.fecha || new Date().toISOString().split('T')[0],
         subtotal: venta?.subtotal || 0,
         descuento: venta?.descuento || 0,
@@ -66,7 +113,13 @@ export default function VentaForm() {
         cliente_id: venta?.cliente_id || 0,
         usuario_id: auth?.user?.id || 0,
         estado_documento_id: venta?.estado_documento_id || (estadosSeguro[0]?.id || 0),
-        moneda_id: venta?.moneda_id || (monedasSeguro[0]?.id || 0),
+        moneda_id: venta?.moneda_id || 0, // Solo para edición, se establece automáticamente a BOB para nuevas ventas
+        proforma_id: venta?.proforma_id || undefined,
+        tipo_pago_id: venta?.tipo_pago_id || 1, // EFECTIVO por defecto
+        tipo_documento_id: venta?.tipo_documento_id || 3, // REC por defecto
+        requiere_envio: venta?.requiere_envio || false,
+        canal_origen: venta?.canal_origen || 'PRESENCIAL',
+        estado_logistico: venta?.estado_logistico || undefined,
         detalles: venta?.detalles?.map((d) => ({
             id: d.id,
             producto_id: d.producto_id,
@@ -92,37 +145,65 @@ export default function VentaForm() {
         }
     }, [venta]);
 
-    // Generar número automático para nuevas ventas
+    // Sincronizar el estado del InputSearch con los datos del formulario
     useEffect(() => {
-        if (!isEditing && !data.numero) {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-            const numeroGenerado = `V${year}${month}${random}`;
-            setData(prevData => ({ ...prevData, numero: numeroGenerado }));
+        if (data.cliente_id !== clienteValue) {
+            setClienteValue(data.cliente_id);
         }
-    }, [isEditing, data.numero, setData]);
+    }, [data.cliente_id, clienteValue]);
 
-    // Filtrar productos
+    // Inicializar el display del cliente cuando se carga la venta existente
     useEffect(() => {
-        if (productSearch.trim()) {
-            const filtered = productosSeguro.filter(p =>
-                p.nombre.toLowerCase().includes(productSearch.toLowerCase()) ||
-                p.codigo?.toLowerCase().includes(productSearch.toLowerCase())
-            );
-            setAvailableProducts(filtered);
-        } else {
-            setAvailableProducts(productosSeguro);
+        if (venta?.cliente && !clienteDisplay) {
+            setClienteDisplay(venta.cliente.nombre + (venta.cliente.nit ? ` (${venta.cliente.nit})` : ''));
+            setClienteValue(venta.cliente.id);
         }
-    }, [productSearch, productosSeguro]);
+    }, [venta?.cliente, clienteDisplay]);
+
+    // Función para manejar la creación de cliente
+    const handleCreateCliente = (searchQuery: string) => {
+        setClienteSearchQuery(searchQuery);
+        setShowCreateClienteModal(true);
+    };
+
+    // Función para manejar cuando se crea un cliente exitosamente
+    const handleClienteCreated = (cliente: Cliente) => {
+        // Actualizar el valor del cliente en el formulario
+        setData('cliente_id', cliente.id);
+
+        // Actualizar el estado del InputSearch
+        setClienteValue(cliente.id);
+        setClienteDisplay(cliente.nombre + (cliente.nit ? ` (${cliente.nit})` : ''));
+
+        // Crear una descripción completa del cliente para mostrar en la notificación
+        const descripcionCliente = [
+            cliente.nombre,
+            cliente.nit ? `NIT/CI: ${cliente.nit}` : '',
+            cliente.telefono ? `Tel: ${cliente.telefono}` : '',
+            cliente.email ? `Email: ${cliente.email}` : ''
+        ].filter(Boolean).join(' • ');
+
+        // Mostrar notificación detallada del cliente creado y seleccionado
+        try {
+            NotificationService.success(
+                `✅ Cliente creado y seleccionado: ${descripcionCliente}`
+            );
+        } catch (error) {
+            console.error('Error en NotificationService:', error);
+            // Fallback: mostrar mensaje básico
+            console.log(`✅ Cliente creado y seleccionado: ${descripcionCliente}`);
+        }
+
+        // Limpiar la query de búsqueda ya que ahora tenemos el cliente seleccionado
+        setClienteSearchQuery('');
+    };
 
     const addProductToDetail = (producto: Producto) => {
         // Verificar si el producto ya está en los detalles
         const existingDetail = detallesWithProducts.find(d => d.producto_id === producto.id);
 
         if (existingDetail) {
-            toast.error('El producto ya está agregado a la venta');
+            NotificationService.error('El producto ya está agregado a la venta');
             return;
         }
 
@@ -148,21 +229,21 @@ export default function VentaForm() {
             subtotal: d.subtotal
         })));
 
-        setProductSearch('');
         calculateTotals(newDetalles);
     };
 
-    const updateDetail = (index: number, field: keyof DetalleVentaFormData, value: number) => {
+    const updateDetail = (index: number, field: keyof DetalleVentaFormData, value: number | string) => {
         const updatedDetalles = [...detallesWithProducts];
-        updatedDetalles[index] = { ...updatedDetalles[index], [field]: value };
+        const numericValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
+        updatedDetalles[index] = { ...updatedDetalles[index], [field]: numericValue };
 
         // Recalcular subtotal del detalle
         if (field === 'cantidad' || field === 'precio_unitario' || field === 'descuento') {
-            const cantidad = field === 'cantidad' ? value : updatedDetalles[index].cantidad;
-            const precio = field === 'precio_unitario' ? value : updatedDetalles[index].precio_unitario;
-            const descuento = field === 'descuento' ? value : updatedDetalles[index].descuento;
+            const cantidad = field === 'cantidad' ? numericValue : updatedDetalles[index].cantidad;
+            const precio = field === 'precio_unitario' ? numericValue : updatedDetalles[index].precio_unitario;
+            const descuento = field === 'descuento' ? numericValue : updatedDetalles[index].descuento;
 
-            updatedDetalles[index].subtotal = (cantidad * precio) - descuento;
+            updatedDetalles[index].subtotal = (Number(cantidad) * Number(precio)) - Number(descuento);
         }
 
         setDetallesWithProducts(updatedDetalles);
@@ -215,14 +296,14 @@ export default function VentaForm() {
 
         // Validar stock antes de continuar
         if (!stockValido) {
-            toast.error('No se puede proceder con la venta debido a stock insuficiente');
+            NotificationService.error('No se puede proceder con la venta debido a stock insuficiente');
             return;
         }
 
         // Validar usando el servicio
         const validationErrors = await ventasService.validateData(data);
         if (validationErrors.length > 0) {
-            validationErrors.forEach(error => toast.error(error));
+            validationErrors.forEach(error => NotificationService.error(error));
             return;
         }
 
@@ -248,13 +329,13 @@ export default function VentaForm() {
         if (isEditing && venta) {
             ventasService.update(venta.id, submitData, {
                 onSuccess: () => {
-                    toast.success('Venta actualizada exitosamente');
+                    NotificationService.success('Venta actualizada exitosamente');
                 }
             });
         } else {
             ventasService.store(submitData, {
                 onSuccess: () => {
-                    toast.success('Venta creada exitosamente');
+                    NotificationService.success('Venta creada exitosamente');
                 }
             });
         }
@@ -262,6 +343,14 @@ export default function VentaForm() {
 
     // Obtener entidades relacionadas para el modal
     const selectedCliente = clientesSeguro.find(c => c.id === data.cliente_id);
+    const selectedClienteForModal = selectedCliente ? {
+        id: selectedCliente.id,
+        nombre: selectedCliente.nombre,
+        nit: selectedCliente.nit || undefined,
+        telefono: selectedCliente.telefono || undefined,
+        email: selectedCliente.email || undefined,
+        direccion: selectedCliente.direccion || undefined,
+    } : undefined;
     const selectedMoneda = monedasSeguro.find(m => m.id === data.moneda_id);
     const selectedEstado = estadosSeguro.find(e => e.id === data.estado_documento_id);
 
@@ -272,39 +361,20 @@ export default function VentaForm() {
         ]}>
             <Head title={isEditing ? 'Editar venta' : 'Nueva venta'} />
 
-            <div className="flex items-center justify-between mb-6 p-4">
-                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                    {isEditing ? 'Editar venta' : 'Nueva venta'}
-                </h1>
-                <Link
-                    href="/ventas"
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors"
-                >
-                    Volver a ventas
-                </Link>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6 p-4">
                 {/* Información básica */}
-                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
                     <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                         Información básica
                     </h2>
 
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Número de venta *
-                            </label>
-                            <input
-                                type="text"
-                                value={data.numero}
-                                onChange={(e) => setData('numero', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                placeholder="Ej: V20240001"
-                            />
-                            {errors.numero && <p className="mt-1 text-sm text-red-600">{errors.numero}</p>}
-                        </div>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {/* Campo número oculto - se genera automáticamente */}
+                        <input
+                            type="hidden"
+                            value={data.numero}
+                            onChange={(e) => setData('numero', e.target.value)}
+                        />
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -318,205 +388,145 @@ export default function VentaForm() {
                             />
                             {errors.fecha && <p className="mt-1 text-sm text-red-600">{errors.fecha}</p>}
                         </div>
-
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Cliente *
-                            </label>
-                            <select
-                                value={data.cliente_id}
-                                onChange={(e) => setData('cliente_id', Number(e.target.value))}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                            >
-                                <option value={0}>Seleccionar cliente</option>
-                                {clientesSeguro.map((cliente) => (
-                                    <option key={cliente.id} value={cliente.id}>
-                                        {cliente.nombre} {cliente.nit ? `(${cliente.nit})` : ''}
-                                    </option>
-                                ))}
-                            </select>
+                            </label> */}
+                            <InputSearch
+                                id="cliente_search"
+                                label="Cliente"
+                                value={clienteValue}
+                                displayValue={clienteDisplay}
+                                onSearch={searchClientes}
+                                onChange={(value, option) => {
+                                    setData('cliente_id', value || 0);
+                                    setClienteValue(value);
+                                    if (option) {
+                                        setClienteDisplay(option.label);
+                                    } else {
+                                        setClienteDisplay('');
+                                    }
+                                }}
+                                placeholder="Buscar cliente por nombre, NIT o teléfono..."
+                                emptyText="No se encontraron clientes"
+                                error={errors.cliente_id}
+                                required={true}
+                                allowScanner={false}
+                                showCreateButton={true}
+                                onCreateClick={handleCreateCliente}
+                                createButtonText="Crear Cliente"
+                                showCreateIconButton={true}
+                                createIconButtonTitle="Crear nuevo cliente"
+                                className="w-full"
+                            />
                             {errors.cliente_id && <p className="mt-1 text-sm text-red-600">{errors.cliente_id}</p>}
                         </div>
 
+                        {/* Campo moneda oculto - se establece automáticamente a BOB */}
+                        <input
+                            type="hidden"
+                            value={data.moneda_id}
+                            onChange={(e) => setData('moneda_id', Number(e.target.value))}
+                        />
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Moneda *
+                                Observaciones
                             </label>
-                            <select
-                                value={data.moneda_id}
-                                onChange={(e) => setData('moneda_id', Number(e.target.value))}
+                            <textarea
+                                value={data.observaciones}
+                                onChange={(e) => setData('observaciones', e.target.value)}
+                                rows={3}
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                            >
-                                {monedasSeguro.map((moneda) => (
-                                    <option key={moneda.id} value={moneda.id}>
-                                        {moneda.nombre} ({moneda.codigo})
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.moneda_id && <p className="mt-1 text-sm text-red-600">{errors.moneda_id}</p>}
+                                placeholder="Observaciones adicionales..."
+                            />
                         </div>
                     </div>
 
-                    <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Observaciones
-                        </label>
-                        <textarea
-                            value={data.observaciones}
-                            onChange={(e) => setData('observaciones', e.target.value)}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                            placeholder="Observaciones adicionales..."
-                        />
+                    {/* Campos adicionales */}
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                        <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                            Información adicional
+                        </h3>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div>
+                                <SearchSelect
+                                    label="Tipo de Pago"
+                                    placeholder="Seleccionar tipo de pago"
+                                    value={data.tipo_pago_id || ''}
+                                    options={tiposPagoOptions}
+                                    onChange={(value) => setData('tipo_pago_id', value ? Number(value) : undefined)}
+                                    required
+                                    error={errors.tipo_pago_id}
+                                    searchPlaceholder="Buscar tipo de pago..."
+                                    emptyText="No se encontraron tipos de pago"
+                                />
+                            </div>
+                            <div>
+                                <SearchSelect
+                                    label="Tipo de Documento"
+                                    placeholder="Seleccionar tipo de documento"
+                                    value={data.tipo_documento_id || ''}
+                                    options={tiposDocumentoOptions}
+                                    onChange={(value) => setData('tipo_documento_id', value ? Number(value) : undefined)}
+                                    required
+                                    error={errors.tipo_documento_id}
+                                    searchPlaceholder="Buscar tipo de documento..."
+                                    emptyText="No se encontraron tipos de documento"
+                                />
+                            </div>
+
+                            <div>
+                                <SearchSelect
+                                    label="Canal de Origen"
+                                    placeholder="Seleccionar canal de origen"
+                                    value={data.canal_origen || 'PRESENCIAL'}
+                                    options={canalOrigenOptions}
+                                    onChange={(value) => setData('canal_origen', value as any)}
+                                    required
+                                    error={errors.canal_origen}
+                                    searchPlaceholder="Buscar canal..."
+                                    emptyText="No se encontraron canales"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Requiere Envío
+                                </label>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.requiere_envio || false}
+                                        onChange={(e: any) => setData('requiere_envio', e.target.checked)}
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                                        Esta venta requiere envío
+                                    </span>
+                                </div>
+                                {errors.requiere_envio && <p className="mt-1 text-sm text-red-600">{errors.requiere_envio}</p>}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Productos */}
-                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
                     <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                         Productos
                     </h2>
 
-                    {/* Buscador de productos */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Buscar productos
-                        </label>
-                        <input
-                            type="text"
-                            value={productSearch}
-                            onChange={(e) => setProductSearch(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                            placeholder="Buscar por nombre o código..."
-                        />
-
-                        {productSearch && (
-                            <div className="mt-2 max-h-32 overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
-                                {availableProducts.slice(0, 10).map((producto) => (
-                                    <button
-                                        key={producto.id}
-                                        type="button"
-                                        onClick={() => addProductToDetail(producto)}
-                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
-                                    >
-                                        <div className="font-medium text-gray-900 dark:text-white">
-                                            {producto.nombre}
-                                        </div>
-                                        {producto.codigo && (
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                Código: {producto.codigo} | Precio: {formatCurrency(producto.precio_venta || 0)}
-                                            </div>
-                                        )}
-                                    </button>
-                                ))}
-                                {availableProducts.length === 0 && (
-                                    <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                                        No se encontraron productos
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Lista de productos agregados */}
-                    {detallesWithProducts.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700">
-                                <thead className="bg-gray-50 dark:bg-zinc-800">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Producto
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Cantidad
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Precio Unit.
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Descuento
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Subtotal
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Acciones
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-700">
-                                    {detallesWithProducts.map((detalle, index) => (
-                                        <tr key={detalle.producto_id} className="hover:bg-gray-50 dark:hover:bg-zinc-800">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {detalle.producto?.nombre}
-                                                </div>
-                                                {detalle.producto?.codigo && (
-                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {detalle.producto.codigo}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    step="1"
-                                                    value={detalle.cantidad}
-                                                    onChange={(e) => updateDetail(index, 'cantidad', Number(e.target.value))}
-                                                    className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                                />
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    value={detalle.precio_unitario}
-                                                    onChange={(e) => updateDetail(index, 'precio_unitario', Number(e.target.value))}
-                                                    className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                                />
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    value={detalle.descuento}
-                                                    onChange={(e) => updateDetail(index, 'descuento', Number(e.target.value))}
-                                                    className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                                />
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                                {formatCurrency(detalle.subtotal)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeDetail(index)}
-                                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                                >
-                                                    Eliminar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : (
-                        <div className="text-center py-8">
-                            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
-                            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                                No hay productos agregados
-                            </h3>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                Busca y agrega productos a la venta.
-                            </p>
-                        </div>
-                    )}
+                    <ProductosTable
+                        productos={productosSeguro}
+                        detalles={detallesWithProducts}
+                        onAddProduct={addProductToDetail}
+                        onUpdateDetail={updateDetail}
+                        onRemoveDetail={removeDetail}
+                        onTotalsChange={calculateTotals}
+                        tipo="venta"
+                        errors={errors}
+                        showLoteFields={false}
+                    />
                 </div>
 
                 {/* Gestión de Stock */}
@@ -624,8 +634,8 @@ export default function VentaForm() {
                         type="submit"
                         disabled={processing || detallesWithProducts.length === 0 || !stockValido}
                         className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${!stockValido
-                                ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                                : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                            : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
                             }`}
                     >
                         {processing
@@ -645,12 +655,20 @@ export default function VentaForm() {
                 onConfirm={handleConfirmSubmit}
                 data={data}
                 detallesWithProducts={detallesWithProducts}
-                cliente={selectedCliente}
+                cliente={selectedClienteForModal}
                 moneda={selectedMoneda}
                 estadoDocumento={selectedEstado}
                 processing={processing}
                 isEditing={isEditing}
             />
-        </AppLayout>
+
+            {/* Modal para crear cliente */}
+            <ModalCrearCliente
+                isOpen={showCreateClienteModal}
+                onClose={() => setShowCreateClienteModal(false)}
+                onClienteCreated={handleClienteCreated}
+                searchQuery={clienteSearchQuery}
+            />
+        </AppLayout >
     );
 }

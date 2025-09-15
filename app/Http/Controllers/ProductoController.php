@@ -905,17 +905,29 @@ class ProductoController extends Controller
             return ApiResponse::success([]);
         }
 
-        $productos = Producto::select(['id', 'nombre', 'codigo_barras'])
+        $productos = Producto::select(['id', 'nombre', 'codigo_barras', 'categoria_id', 'marca_id'])
             ->where('activo', true)
             ->where(function ($query) use ($q) {
-                $query->where('nombre', 'ilike', "%$q%")
-                    ->orWhere('codigo_barras', 'ilike', "%$q%")
+                $query->where('nombre', 'LIKE', "%$q%")
+                    ->orWhere('codigo_barras', 'LIKE', "%$q%")
                     ->orWhereHas('codigosBarra', function ($codigoQuery) use ($q) {
-                        $codigoQuery->where('codigo', 'ilike', "%$q%");
+                        $codigoQuery->where('codigo', 'LIKE', "%$q%");
                     });
             })
             ->with([
                 'codigosBarra:id,producto_id,codigo',
+                'categoria:id,nombre',
+                'marca:id,nombre',
+                'precios' => function ($query) {
+                    $query->select(['id', 'producto_id', 'precio', 'es_precio_base'])
+                        ->activos()
+                        ->precioBase()
+                        ->orderBy('es_precio_base', 'desc')
+                        ->limit(1);
+                },
+                'stock' => function ($query) {
+                    $query->select(['producto_id', 'cantidad_disponible']);
+                },
             ])
             ->limit($limite)
             ->get()
@@ -923,11 +935,21 @@ class ProductoController extends Controller
                 // Incluir códigos de barras en la respuesta
                 $codigosTexto = $producto->codigosBarra->pluck('codigo')->toArray();
 
+                // Calcular stock total
+                $stockTotal = $producto->stock->sum('cantidad_disponible');
+
+                // Obtener precio base
+                $precioBase = $producto->precios->first()?->precio ?? 0;
+
                 return [
                     'id' => $producto->id,
                     'nombre' => $producto->nombre,
                     'codigo_barras' => $producto->codigo_barras,
                     'codigos_barras' => $codigosTexto,
+                    'precio_base' => $precioBase,
+                    'stock_total' => $stockTotal,
+                    'categoria' => $producto->categoria?->nombre ?? '',
+                    'marca' => $producto->marca?->nombre ?? '',
                 ];
             });
 
