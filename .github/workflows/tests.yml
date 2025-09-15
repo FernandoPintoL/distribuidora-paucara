@@ -37,6 +37,9 @@ jobs:
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
+      - name: Generate Wayfinder Files
+        run: php artisan wayfinder:generate --with-form
+
       - name: Build Assets
         run: npm run build
 
