@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 
 // Helper para generar rutas
-const route = (name: string, params?: any) => {
+const route = (name: string, params?: Record<string, unknown> | number | string) => {
   const routes: Record<string, string> = {
     'dashboard': '/dashboard',
     'tipos-precio.index': '/tipos-precio',
@@ -23,12 +23,14 @@ const route = (name: string, params?: any) => {
 
   const baseRoute = routes[name] || '/';
 
-  if (params && name === 'tipos-precio.edit') {
-    return `${baseRoute}/${params}/edit`;
+  if (params) {
+    if ((name === 'tipos-precio.edit' || name === 'productos.edit') && typeof params === 'number') {
+      return `${baseRoute}/${params}/edit`;
+    }
+    // Para otros casos, podrías agregar lógica adicional aquí
   }
-  if (params && name === 'productos.edit') {
-    return `${baseRoute}/${params}/edit`;
-  }
+
+  return baseRoute;
 
   return baseRoute;
 };
@@ -47,7 +49,7 @@ interface TipoPrecio {
   configuracion: {
     icono?: string;
     tooltip?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

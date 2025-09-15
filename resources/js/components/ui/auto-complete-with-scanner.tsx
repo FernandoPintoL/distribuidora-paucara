@@ -1,12 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Search, Camera, X } from 'lucide-react';
 
-// Tipos para el scanner
-interface ScanResult {
-    text: string;
-    format?: string;
-}
-
+// Tipos para el componente
 interface AutoCompleteWithScannerProps {
     id?: string;
     label?: string;
@@ -17,8 +12,8 @@ interface AutoCompleteWithScannerProps {
         description?: string;
         codigos_barras?: string;
     }>;
-    onChange: (value: string | number | null, option?: any) => void;
-    onSearch?: (query: string) => Promise<any[]>;
+    onChange: (value: string | number | null, option?: { value: string | number; label: string; description?: string; codigos_barras?: string }) => void;
+    onSearch?: (query: string) => Promise<Array<{ value: string | number; label: string; description?: string; codigos_barras?: string }>>;
     placeholder?: string;
     emptyText?: string;
     searchPlaceholder?: string;
@@ -116,7 +111,7 @@ export default function AutoCompleteWithScanner({
         }
     }, [isOpen]);
 
-    const handleSelectOption = (option: any) => {
+    const handleSelectOption = (option: { value: string | number; label: string; description?: string; codigos_barras?: string }) => {
         onChange(option.value, option);
         setIsOpen(false);
         setSearchQuery('');
@@ -167,7 +162,7 @@ export default function AutoCompleteWithScanner({
         try {
             // Intentar usar BarcodeDetector si está disponible
             if ('BarcodeDetector' in window) {
-                const barcodeDetector = new (window as any).BarcodeDetector({
+                const barcodeDetector = new (window as unknown as { BarcodeDetector: new (options?: { formats: string[] }) => { detect: (image: HTMLVideoElement) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector({
                     formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e']
                 });
 
@@ -215,7 +210,7 @@ export default function AutoCompleteWithScanner({
                             handleBarcodeDetected(result.getText());
                             return;
                         }
-                    } catch (error) {
+                    } catch {
                         // Error silencioso, continuar intentando
                     }
 
@@ -247,7 +242,7 @@ export default function AutoCompleteWithScanner({
                 } else {
                     setScannerError(`No se encontró ningún producto con el código: ${barcode}`);
                 }
-            } catch (error) {
+            } catch {
                 setScannerError('Error al buscar el producto');
             } finally {
                 setLoading(false);

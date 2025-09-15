@@ -30,7 +30,7 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
     const validationErrors = service.validateData(data);
 
     if (validationErrors.length > 0) {
-      validationErrors.forEach(error => {
+      validationErrors.forEach((error: string) => {
         NotificationService.error(error);
       });
       return false;
@@ -101,7 +101,7 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
         error: 'Error al crear el registro'
       });
     }
-  }, [entity, validateForm, post, put, service, data]);
+  }, [entity, validateForm, post, put, service]);
 
   // Manejar cambios en los campos
   const handleFieldChange = useCallback((field: keyof F, value: unknown) => {

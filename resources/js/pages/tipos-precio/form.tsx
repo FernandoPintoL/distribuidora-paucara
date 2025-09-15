@@ -12,7 +12,7 @@ import NotificationService from '@/services/notification.service';
 import { TipoPrecio, TipoPrecioFormData } from '@/domain/tipos-precio';
 
 // Helper para generar rutas
-const route = (name: string, params?: any) => {
+const route = (name: string, params?: Record<string, unknown> | string | number) => {
   const routes: Record<string, string> = {
     'dashboard': '/dashboard',
     'tipos-precio.index': '/tipos-precio',
@@ -53,28 +53,28 @@ const iconosDisponibles = [
 export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede_eliminar }: PageProps) {
   const isEditing = !!tipo_precio?.id;
 
-  const { data, setData, post, put, processing, errors, wasSuccessful, recentlySuccessful } = useForm<TipoPrecioFormData>({
-      id: tipo_precio?.id || undefined,
-      es_sistema: tipo_precio?.es_sistema || false,
-      porcentaje_ganancia: tipo_precio?.porcentaje_ganancia || 0,
-      precios_count: tipo_precio?.precios_count ||  0,
-      codigo: tipo_precio?.codigo || '',
-      nombre: tipo_precio?.nombre || '',
-      descripcion: tipo_precio?.descripcion || '',
-      color: tipo_precio?.color || 'gray',
-      es_ganancia: tipo_precio?.es_ganancia ?? true,
-      es_precio_base: tipo_precio?.es_precio_base ?? false,
-      orden: tipo_precio?.orden || 0,
-      activo: tipo_precio?.activo ?? true,
-      configuracion: {
-          icono: tipo_precio?.configuracion?.icono || '💰',
-          tooltip: tipo_precio?.configuracion?.tooltip || '',
-          porcentaje_ganancia: (typeof tipo_precio?.configuracion?.porcentaje_ganancia === 'number')
-              ? tipo_precio.configuracion.porcentaje_ganancia
-              : (typeof (tipo_precio as any)?.porcentaje_ganancia === 'number'
-                  ? (tipo_precio as any).porcentaje_ganancia
-                  : undefined),
-      }
+  const { data, setData, post, put, processing, errors, recentlySuccessful } = useForm<TipoPrecioFormData>({
+    id: tipo_precio?.id || undefined,
+    es_sistema: tipo_precio?.es_sistema || false,
+    porcentaje_ganancia: tipo_precio?.porcentaje_ganancia || 0,
+    precios_count: tipo_precio?.precios_count || 0,
+    codigo: tipo_precio?.codigo || '',
+    nombre: tipo_precio?.nombre || '',
+    descripcion: tipo_precio?.descripcion || '',
+    color: tipo_precio?.color || 'gray',
+    es_ganancia: tipo_precio?.es_ganancia ?? true,
+    es_precio_base: tipo_precio?.es_precio_base ?? false,
+    orden: tipo_precio?.orden || 0,
+    activo: tipo_precio?.activo ?? true,
+    configuracion: {
+      icono: tipo_precio?.configuracion?.icono || '💰',
+      tooltip: tipo_precio?.configuracion?.tooltip || '',
+      porcentaje_ganancia: (typeof tipo_precio?.configuracion?.porcentaje_ganancia === 'number')
+        ? tipo_precio.configuracion.porcentaje_ganancia
+        : (typeof tipo_precio?.porcentaje_ganancia === 'number'
+          ? tipo_precio.porcentaje_ganancia
+          : undefined),
+    }
   });
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Input
                       id="codigo"
                       value={data.codigo}
-                      onChange={e => setData((prev: any) => ({ ...(prev as any), codigo: e.target.value.toUpperCase() } as any))}
+                      onChange={e => setData('codigo', e.target.value.toUpperCase())}
                       placeholder="EJEMPLO: ESPECIAL"
                       disabled={tipo_precio?.es_sistema}
                       className={errors.codigo ? 'border-red-500' : ''}
@@ -183,7 +183,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Input
                       id="nombre"
                       value={data.nombre}
-                      onChange={e => setData((prev: any) => ({ ...(prev as any), nombre: e.target.value } as any))}
+                      onChange={e => setData('nombre', e.target.value)}
                       placeholder="Ej: Precio Especial"
                       className={errors.nombre ? 'border-red-500' : ''}
                       maxLength={100}
@@ -198,7 +198,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Textarea
                       id="descripcion"
                       value={data.descripcion}
-                      onChange={e => setData((prev: any) => ({ ...(prev as any), descripcion: e.target.value } as any))}
+                      onChange={e => setData('descripcion', e.target.value)}
                       placeholder="Describe para qué se usa este tipo de precio..."
                       className={errors.descripcion ? 'border-red-500' : ''}
                       maxLength={255}
@@ -215,7 +215,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                       id="orden"
                       type="number"
                       value={data.orden}
-                      onChange={e => setData((prev: any) => ({ ...(prev as any), orden: parseInt(e.target.value) || 0 } as any))}
+                      onChange={e => setData('orden', parseInt(e.target.value) || 0)}
                       min="0"
                       className={errors.orden ? 'border-red-500' : ''}
                     />
@@ -233,7 +233,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Label htmlFor="color">Color</Label>
                     <Select
                       value={data.color}
-                      onValueChange={(value) => setData((prev: any) => ({ ...(prev as any), color: value } as any))}
+                      onValueChange={(value) => setData('color', value)}
                     >
                       <SelectTrigger>
                         <SelectValue>
@@ -263,12 +263,11 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                         <button
                           key={icono}
                           type="button"
-                          onClick={() => setData((prev: any) => ({ ...(prev as any), configuracion: { ...(((prev as any)?.configuracion) || {}), icono } } as any))}
-                          className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-lg hover:bg-gray-50 transition-colors ${
-                            data.configuracion.icono === icono
+                          onClick={() => setData('configuracion', { ...data.configuracion, icono })}
+                          className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-lg hover:bg-gray-50 transition-colors ${data.configuracion.icono === icono
                               ? 'border-blue-500 bg-blue-50'
                               : 'border-gray-200'
-                          }`}
+                            }`}
                         >
                           {icono}
                         </button>
@@ -277,7 +276,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Input
                       className="mt-2"
                       value={data.configuracion.icono}
-                      onChange={e => setData((prev: any) => ({ ...(prev as any), configuracion: { ...(((prev as any)?.configuracion) || {}), icono: e.target.value } } as any))}
+                      onChange={e => setData('configuracion', { ...data.configuracion, icono: e.target.value })}
                       placeholder="O escribe un emoji personalizado"
                       maxLength={4}
                     />
@@ -288,7 +287,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Input
                       id="tooltip"
                       value={data.configuracion.tooltip}
-                      onChange={e => setData((prev: any) => ({ ...(prev as any), configuracion: { ...(((prev as any)?.configuracion) || {}), tooltip: e.target.value } } as any))}
+                      onChange={e => setData('configuracion', { ...data.configuracion, tooltip: e.target.value })}
                       placeholder="Texto de ayuda al pasar el mouse"
                       maxLength={100}
                     />
@@ -303,7 +302,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                         min="0"
                         step="0.01"
                         value={data.porcentaje_ganancia || ''}
-                        onChange={e => setData((prev: any) => ({ ...(prev as any), porcentaje_ganancia: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 } as any))}
+                        onChange={e => setData('porcentaje_ganancia', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         placeholder="Ej: 25"
                       />
                       <p className="text-xs text-gray-500 mt-1">Si se especifica, se usará este porcentaje para calcular el precio cuando se cree un producto.</p>
@@ -319,7 +318,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Checkbox
                       id="es_ganancia"
                       checked={data.es_ganancia}
-                      onCheckedChange={(checked) => setData((prev: any) => ({ ...(prev as any), es_ganancia: !!checked } as any))}
+                      onCheckedChange={(checked) => setData('es_ganancia', !!checked)}
                       disabled={tipo_precio?.es_sistema}
                     />
                     <div>
@@ -336,7 +335,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Checkbox
                       id="es_precio_base"
                       checked={data.es_precio_base}
-                      onCheckedChange={(checked) => setData((prev: any) => ({ ...(prev as any), es_precio_base: !!checked } as any))}
+                      onCheckedChange={(checked) => setData('es_precio_base', !!checked)}
                       disabled={tipo_precio?.es_sistema}
                     />
                     <div>
@@ -353,7 +352,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     <Checkbox
                       id="activo"
                       checked={data.activo}
-                      onCheckedChange={(checked) => setData((prev: any) => ({ ...(prev as any), activo: !!checked } as any))}
+                      onCheckedChange={(checked) => setData('activo', !!checked)}
                     />
                     <div>
                       <Label htmlFor="activo" className="font-medium">

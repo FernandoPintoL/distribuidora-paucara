@@ -12,7 +12,7 @@ interface UseSearchSelectOptions<T> {
   minSearchLength?: number;
 }
 
-export function useSearchSelect<T extends Record<string, any>>({
+export function useSearchSelect<T extends Record<string, unknown>>({
   data,
   searchFields,
   valueField,

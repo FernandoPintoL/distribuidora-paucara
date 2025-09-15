@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from '@inertiajs/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ export default function ModalCrearProveedor({
     });
 
     // Estado local para manejar la carga durante el envío
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    // const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Pre-llenar campos basado en la búsqueda
     React.useEffect(() => {

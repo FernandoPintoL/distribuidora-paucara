@@ -58,8 +58,15 @@ interface Proforma {
 
 interface ProformasData {
     data: Proforma[]
-    links: any[]
-    meta: any
+    links: Array<{ url: string | null; label: string; active: boolean }>
+    meta: {
+        current_page: number
+        from: number
+        last_page: number
+        per_page: number
+        to: number
+        total: number
+    }
 }
 
 interface Props {
@@ -260,7 +267,7 @@ export default function ProformasIndex({ proformas }: Props) {
                                         key={index}
                                         variant={link.active ? "default" : "outline"}
                                         size="sm"
-                                        onClick={() => router.visit(link.url)}
+                                        onClick={() => link.url && router.visit(link.url)}
                                         disabled={!link.url}
                                         dangerouslySetInnerHTML={{ __html: link.label }}
                                     />

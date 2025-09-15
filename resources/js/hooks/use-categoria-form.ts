@@ -51,7 +51,7 @@ export function useCategoriaForm(categoria?: Categoria | null) {
         },
       });
     }
-  }, [data, categoria, validateForm, post, put]);
+  }, [categoria, validateForm, post, put]);
 
   // Manejar cambios en los campos
   const handleFieldChange = useCallback((field: keyof CategoriaFormData, value: string | boolean) => {

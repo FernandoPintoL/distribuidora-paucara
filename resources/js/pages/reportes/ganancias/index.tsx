@@ -3,7 +3,7 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 
 // Helper para generar rutas
-const route = (name: string, params?: any) => {
+const route = (name: string, params?: Record<string, unknown> | number | string) => {
   const routes: Record<string, string> = {
     'dashboard': '/dashboard',
     'reportes.ganancias.index': '/reportes/ganancias',
@@ -15,8 +15,11 @@ const route = (name: string, params?: any) => {
 
   const baseRoute = routes[name] || '/';
 
-  if (params && name === 'productos.edit') {
-    return `${baseRoute}/${params}/edit`;
+  if (params) {
+    if (name === 'productos.edit' && typeof params === 'number') {
+      return `${baseRoute}/${params}/edit`;
+    }
+    // Para otros casos, podrías agregar lógica adicional aquí
   }
 
   return baseRoute;
@@ -108,13 +111,13 @@ export default function ReporteGananciasIndex({
     const paramsRaw = { ...formData } as Record<string, string>;
     if (paramsRaw.tipo_precio_id === ALL_VALUE) delete paramsRaw.tipo_precio_id;
     if (paramsRaw.categoria_id === ALL_VALUE) delete paramsRaw.categoria_id;
-    const params = Object.fromEntries(Object.entries(paramsRaw).filter(([_, v]) => v !== ''));
+    const params = Object.fromEntries(Object.entries(paramsRaw).filter(([, v]) => v !== ''));
     router.get(route('reportes.ganancias.index'), params);
   };
 
   const exportar = () => {
     const params = Object.fromEntries(
-      Object.entries(formData).filter(([_, value]) => value !== '')
+      Object.entries(formData).filter(([, value]) => value !== '')
     );
     window.open(route('reportes.ganancias.export') + '?' + new URLSearchParams(params).toString());
   };

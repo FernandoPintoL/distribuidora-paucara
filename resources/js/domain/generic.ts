@@ -4,13 +4,13 @@ import type { Id, Pagination, Filters } from './shared';
 // Base entity interface that all entities must implement
 export interface BaseEntity {
   id: Id;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Generic form data interface
 export interface BaseFormData {
   id?: Id;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Generic configuration for each module
@@ -54,7 +54,7 @@ export interface TableColumn<T extends BaseEntity> {
   type: 'text' | 'number' | 'boolean' | 'date' | 'custom';
   sortable?: boolean;
   searchable?: boolean;
-  render?: (value: any, entity: T, ...extra: any[]) => React.ReactNode;
+  render?: (value: unknown, entity: T, ...extra: unknown[]) => React.ReactNode;
 }
 
 // Form field configuration
@@ -71,11 +71,11 @@ export interface FormField<F extends BaseFormData> {
     max?: number;
     pattern?: string;
   };
-  options?: { value: any; label: string }[];
+  options?: { value: unknown; label: string }[];
   // Permite un renderizado personalizado del campo
   render?: (props: {
-    value: any;
-    onChange: (value: any) => void;
+    value: unknown;
+    onChange: (value: unknown) => void;
     label: string;
     error?: string;
     disabled?: boolean;
@@ -90,7 +90,7 @@ export interface FilterField {
   type: 'text' | 'select' | 'boolean' | 'date' | 'number' | 'range' | 'multiselect';
   placeholder?: string;
   options?: { value: string | number; label: string }[];
-  defaultValue?: any;
+  defaultValue?: unknown;
   extraDataKey?: string; // For options coming from extraData (e.g., 'categorias', 'marcas')
   width?: 'sm' | 'md' | 'lg' | 'full'; // Column width in grid
 }

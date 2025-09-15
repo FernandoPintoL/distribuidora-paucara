@@ -1,5 +1,5 @@
 // Components: AsyncSearchSelect - SearchSelect con búsqueda en servidor
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import SearchSelect, { type SelectOption } from '@/components/ui/search-select';
 
 interface AsyncSearchSelectProps {
@@ -24,7 +24,6 @@ export default function AsyncSearchSelect({
   searchEndpoint,
   initialOptions = [],
   minSearchLength = 2,
-  debounceMs = 300,
   ...props
 }: AsyncSearchSelectProps) {
   const [options, setOptions] = useState<SelectOption[]>(initialOptions);
@@ -46,7 +45,7 @@ export default function AsyncSearchSelect({
       const data = await response.json();
 
       // Asumir que el servidor devuelve un array de objetos con estructura: { id, nombre, descripcion? }
-      const searchOptions: SelectOption[] = data.map((item: any) => ({
+      const searchOptions: SelectOption[] = data.map((item: { id: string | number; nombre: string; descripcion?: string }) => ({
         value: item.id,
         label: item.nombre,
         description: item.descripcion || undefined,

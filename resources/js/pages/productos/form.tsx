@@ -23,16 +23,8 @@ interface ProductoFormPageProps {
 }
 
 // Estado del formulario tipado para evitar 'any' implícitos
-// Usamos Omit para quitar propiedades heredadas que permiten null (perfil) y
-// redefinirlas con tipos más estrictos que cumplen la restricción de useForm.
-type ProductoFormState = Omit<ProductoFormData, 'perfil' | 'galeria' | 'precios' | 'codigos'> & {
-  perfil?: { file?: File | null; url?: string };
-  galeria: Imagen[];
-  precios: Precio[];
-  codigos: { codigo: string; es_principal?: boolean; tipo?: string }[];
-  stock_minimo?: number | null;
-  stock_maximo?: number | null;
-};
+// Usamos el tipo original de ProductoFormData
+type ProductoFormState = ProductoFormData;
 
 // Precios por defecto mejorados con tipos usando IDs
 // Porcentaje de interés global recibido por props (opcional) se mostrará en la UI y puede ayudar a calcular precios
@@ -74,7 +66,7 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
     descriptionField: 'codigo'
   });
 
-  const { data, setData, processing, errors, recentlySuccessful, clearErrors } = useForm<ProductoFormState>(
+  const { data, setData, processing, errors, recentlySuccessful, clearErrors } = useForm(
     producto ? {
       nombre: producto.nombre,
       descripcion: producto.descripcion ?? '',
@@ -140,7 +132,7 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
     } catch (err) {
       console.warn('No se pudo guardar el borrador', err);
     }
-  }, [data, step, isEditing]);
+  }, [data, step, isEditing, setData]);
 
   // Mostrar notificaciones de éxito
   useEffect(() => {
@@ -255,7 +247,7 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
     }
 
     let savingToast: string | undefined;
-    const options: any = {
+    const options = {
       forceFormData: true,
       onStart: () => {
         savingToast = NotificationService.loading('Guardando producto...');
@@ -297,14 +289,14 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
 
   // Precios y códigos: funciones reales usadas por Step2
   const setPrecios = (precios: Precio[]) => {
-    setData((prev: any) => ({ ...(prev as any), precios } as any));
+    setData('precios', precios);
   };
 
   const setPrecio = (i: number, key: string, value: string | number) => {
     const next = [...data.precios];
     // Mantener el valor tal cual (string o number) para no romper el input controlado
-    next[i] = { ...(next[i] as any), [key]: value } as Precio;
-    setData((prev: any) => ({ ...(prev as any), precios: next } as any));
+    next[i] = { ...next[i], [key]: value } as Precio;
+    setData('precios', next);
   };
 
   // Agregar/Quitar un tipo de precio por checkbox
@@ -312,26 +304,23 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
     const exists = (data.precios || []).some((p: Precio) => Number(p.tipo_precio_id) === Number(tipoId));
     if (checked && !exists) {
       const nuevo = { monto: 0, tipo_precio_id: tipoId } as Precio;
-      setData((prev: any) => ({ ...(prev as any), precios: ([...data.precios, nuevo] as unknown) as Precio[] } as any));
+      const nuevosPrecios = [...data.precios, nuevo];
+      setData('precios', nuevosPrecios);
     } else if (!checked && exists) {
-      setData((prev: any) => ({
-        ...(prev as any),
-        precios: (((prev as any)?.precios) || []).filter((p: any) => Number(p.tipo_precio_id) !== Number(tipoId))
-      } as any));
+      const preciosFiltrados = (data.precios || []).filter((p: Precio) => Number(p.tipo_precio_id) !== Number(tipoId));
+      setData('precios', preciosFiltrados);
     }
   };
 
   const setCodigo = (i: number, value: string) => {
     const next = [...(data.codigos || [])];
-    next[i] = { ...(next[i] || {}), codigo: value } as any;
-    setData((prev: any) => ({ ...(prev as any), codigos: next } as any));
+    next[i] = { ...(next[i] || {}), codigo: value };
+    setData('codigos', next);
   };
 
   const addCodigo = () => {
-    setData((prev: any) => ({
-      ...(prev as any),
-      codigos: ([...((prev as any)?.codigos || []), { codigo: '' }] as any)
-    } as any));
+    const nuevosCodigos = [...(data.codigos || []), { codigo: '' }];
+    setData('codigos', nuevosCodigos);
     NotificationService.info('Código agregado. Ingresa el código de barras.');
   };
 
@@ -351,16 +340,14 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
     );
 
     if (confirmed) {
-      setData((prev: any) => ({
-        ...(prev as any),
-        codigos: ((((prev as any)?.codigos) || []).filter((_: unknown, idx: number) => idx !== i) as any)
-      } as any));
+      const codigosFiltrados = (data.codigos || []).filter((_: unknown, idx: number) => idx !== i);
+      setData('codigos', codigosFiltrados);
       NotificationService.success('Código eliminado');
     }
   };
 
   const setPerfil = (file: File | undefined) => {
-    setData((prev: any) => ({ ...(prev as any), perfil: file ? { file } : undefined } as any));
+    setData('perfil', file ? { file } : null);
     if (file) {
       NotificationService.success('Imagen de perfil seleccionada');
     }
@@ -370,7 +357,8 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
     if (!files || files.length === 0) return;
 
     const imgs = Array.from(files).map(f => ({ file: f } as Imagen));
-    setData((prev: any) => ({ ...(prev as any), galeria: ([...(((prev as any)?.galeria) || []), ...imgs] as any) } as any));
+    const nuevaGaleria = [...(data.galeria || []), ...imgs];
+    setData('galeria', nuevaGaleria);
     NotificationService.success(`${files.length} imagen(es) agregada(s) a la galería`);
   };
 
@@ -384,10 +372,8 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
     );
 
     if (confirmed) {
-      setData((prev: any) => ({
-        ...(prev as any),
-        galeria: ((((prev as any)?.galeria) || []).filter((_: unknown, idx: number) => idx !== i) as any)
-      } as any));
+      const galeriaFiltrada = (data.galeria || []).filter((_: unknown, idx: number) => idx !== i);
+      setData('galeria', galeriaFiltrada);
       NotificationService.success('Imagen eliminada de la galería');
     }
   };
@@ -471,15 +457,13 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
               {/* STEP 1: Datos del producto */}
               {step === 1 && (
                 <Step1DatosProducto
-                  {...({
-                    data: data as any,
-                    errors: errors as any,
-                    categoriasOptions: categoriasSelect.filteredOptions,
-                    marcasOptions: marcasSelect.filteredOptions,
-                    unidadesOptions: unidadesSelect.filteredOptions,
-                    setData: setData as any,
-                    getInputClassName: getInputClassName as any,
-                  } as any)}
+                  data={data}
+                  errors={errors}
+                  categoriasOptions={categoriasSelect.filteredOptions}
+                  marcasOptions={marcasSelect.filteredOptions}
+                  unidadesOptions={unidadesSelect.filteredOptions}
+                  setData={setData}
+                  getInputClassName={getInputClassName}
                 />
               )}
 
@@ -509,7 +493,7 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
                 {/* STEP 3: Imágenes */}
                 {step === 3 && (
                   <Step4Imagenes
-                    data={{ perfil: data.perfil, galeria: data.galeria }}
+                    data={{ perfil: data.perfil || null, galeria: data.galeria || [] }}
                     setPerfil={setPerfil}
                     addGaleria={addGaleria}
                     removeGaleria={removeGaleria}
