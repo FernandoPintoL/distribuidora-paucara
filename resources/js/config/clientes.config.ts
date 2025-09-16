@@ -17,11 +17,13 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
     // Table configuration
     tableColumns: [
         { key: 'id', label: 'ID', type: 'number' },
+        { key: 'codigo_cliente', label: 'Código', type: 'text' },
         { key: 'nombre', label: 'Nombre', type: 'text' },
         { key: 'razon_social', label: 'Razon Social', type: 'text' },
         { key: 'nit', label: 'N° Documento', type: 'text' },
         { key: 'telefono', label: 'Teléfono', type: 'text' },
         { key: 'email', label: 'Email', type: 'text' },
+        { key: 'localidad.nombre', label: 'Localidad', type: 'text' },
         { key: 'activo', label: 'Estado', type: 'boolean' },
     ],
 
@@ -105,6 +107,27 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                 }),
         },
         {
+            key: 'localidad_id',
+            label: 'Localidad',
+            type: 'select',
+            required: true,
+            placeholder: 'Seleccione una localidad',
+            extraDataKey: 'localidades',
+            options: [], // Se cargarán dinámicamente
+        },
+        /* {
+            key: 'latitud',
+            label: 'Latitud',
+            type: 'number',
+            placeholder: '-17.7833',
+        },
+        {
+            key: 'longitud',
+            label: 'Longitud',
+            type: 'number',
+            placeholder: '-63.1833',
+        }, */
+        {
             key: 'activo',
             label: 'Cliente activo',
             type: 'boolean',
@@ -112,7 +135,7 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
     ],
 
     // Search configuration
-    searchableFields: ['nombre', 'razon_social', 'nit', 'email', 'telefono'],
+    searchableFields: ['codigo_cliente', 'nombre', 'razon_social', 'nit', 'email', 'telefono'],
     searchPlaceholder: 'Buscar clientes...',
 
     // Modern Index filters configuration
@@ -124,6 +147,14 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                 type: 'boolean',
                 placeholder: 'Todos los estados',
                 width: 'sm'
+            },
+            {
+                key: 'localidad_id',
+                label: 'Localidad del cliente',
+                type: 'select',
+                placeholder: 'Todas las localidades',
+                extraDataKey: 'localidades',
+                width: 'md'
             },
             {
                 key: 'tipo_documento',

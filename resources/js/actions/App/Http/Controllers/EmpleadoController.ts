@@ -793,6 +793,61 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
         })
     
     toggleAccesoSistema.form = toggleAccesoSistemaForm
-const EmpleadoController = { index, create, store, show, edit, update, destroy, toggleEstado, toggleAccesoSistema }
+/**
+* @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+export const crearEmpleadoRapido = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearEmpleadoRapido.url(options),
+    method: 'post',
+})
+
+crearEmpleadoRapido.definition = {
+    methods: ["post"],
+    url: '/empleados/crear-rapido',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+crearEmpleadoRapido.url = (options?: RouteQueryOptions) => {
+    return crearEmpleadoRapido.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+crearEmpleadoRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearEmpleadoRapido.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+    const crearEmpleadoRapidoForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearEmpleadoRapido.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+        crearEmpleadoRapidoForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearEmpleadoRapido.url(options),
+            method: 'post',
+        })
+    
+    crearEmpleadoRapido.form = crearEmpleadoRapidoForm
+const EmpleadoController = { index, create, store, show, edit, update, destroy, toggleEstado, toggleAccesoSistema, crearEmpleadoRapido }
 
 export default EmpleadoController

@@ -1,6 +1,8 @@
 // Presentation Layer: Generic form fields component
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useState, useEffect } from 'react';
+import SearchSelect from '@/components/ui/search-select';
 import type { BaseFormData, FormField } from '@/domain/generic';
 
 interface GenericFormFieldsProps<F extends BaseFormData> {
@@ -9,6 +11,8 @@ interface GenericFormFieldsProps<F extends BaseFormData> {
   fields: FormField<F>[];
   onChange: (field: keyof F, value: unknown) => void;
   disabled?: boolean;
+  loadOptions?: (fieldKey: string) => Promise<Array<{ value: string | number; label: string }>>;
+  extraData?: Record<string, unknown>;
 }
 
 export default function GenericFormFields<F extends BaseFormData>({
@@ -16,8 +20,37 @@ export default function GenericFormFields<F extends BaseFormData>({
   errors,
   fields,
   onChange,
-  disabled = false
+  disabled = false,
+  loadOptions,
+  extraData
 }: GenericFormFieldsProps<F>) {
+  const [dynamicOptions, setDynamicOptions] = useState<Record<string, Array<{ value: string | number; label: string }>>>({});
+
+  // Cargar opciones dinámicas cuando sea necesario
+  useEffect(() => {
+    const loadDynamicOptions = async () => {
+      if (!loadOptions) return;
+
+      const newOptions: Record<string, Array<{ value: string | number; label: string }>> = {};
+
+      for (const field of fields) {
+        if (field.type === 'select' && field.options && field.options.length === 0) {
+          try {
+            const options = await loadOptions(String(field.key));
+            newOptions[String(field.key)] = options;
+          } catch (error) {
+            console.error(`Error loading options for ${String(field.key)}:`, error);
+            newOptions[String(field.key)] = [];
+          }
+        }
+      }
+
+      setDynamicOptions(newOptions);
+    };
+
+    loadDynamicOptions();
+  }, [fields, loadOptions]);
+
   const renderField = (field: FormField<F>) => {
     const value = data[field.key];
     const error = errors[field.key];
@@ -80,23 +113,73 @@ export default function GenericFormFields<F extends BaseFormData>({
           </div>
         );
 
-      case 'select':
+      case 'select': {
+        const fieldKey = String(field.key);
+        const options = dynamicOptions[fieldKey] || field.options || [];
+
+        // Use SearchSelect if field has extraDataKey (for dynamic data like localidades)
+        if (field.extraDataKey && extraData?.[field.extraDataKey]) {
+          const extraOptions = extraData[field.extraDataKey] as Array<{ id: number; nombre: string; codigo?: string }>;
+          const searchSelectOptions = extraOptions.map(opt => ({
+            value: opt.id,
+            label: opt.codigo ? `${opt.nombre} (${opt.codigo})` : opt.nombre
+          }));
+
+          return (
+            <SearchSelect
+              id={fieldKey}
+              label={field.label}
+              placeholder={field.placeholder || 'Seleccionar...'}
+              value={value ? String(value) : ''}
+              options={searchSelectOptions}
+              onChange={(val) => onChange(field.key, val === '' ? null : Number(val))}
+              disabled={disabled}
+              required={field.required}
+              error={error}
+              allowClear={!field.required}
+            />
+          );
+        }
+
+        // Use SearchSelect for dynamic options loaded via loadOptions
+        if (field.extraDataKey && options.length > 0) {
+          return (
+            <SearchSelect
+              id={fieldKey}
+              label={field.label}
+              placeholder={field.placeholder || 'Seleccionar...'}
+              value={value ? String(value) : ''}
+              options={options.map(opt => ({
+                value: String(opt.value),
+                label: opt.label
+              }))}
+              onChange={(val) => onChange(field.key, val === '' ? null : val)}
+              disabled={disabled}
+              required={field.required}
+              error={error}
+              allowClear={!field.required}
+            />
+          );
+        }
+
+        // Use regular select for static options
         return (
           <select
-            id={String(field.key)}
+            id={fieldKey}
             value={String(value || '')}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(field.key, e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(field.key, e.target.value === '' ? null : e.target.value)}
             disabled={disabled}
             className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${error ? 'border-red-500' : ''}`}
           >
             <option value="">Seleccionar...</option>
-            {field.options?.map((option) => (
-              <option key={option.value} value={option.value}>
+            {options.map((option) => (
+              <option key={String(option.value)} value={String(option.value)}>
                 {option.label}
               </option>
             ))}
           </select>
         );
+      }
 
       case 'file':
         {

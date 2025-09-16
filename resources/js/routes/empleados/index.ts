@@ -793,6 +793,61 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
         })
     
     toggleAccesoSistema.form = toggleAccesoSistemaForm
+/**
+* @see \App\Http\Controllers\EmpleadoController::crearRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+export const crearRapido = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearRapido.url(options),
+    method: 'post',
+})
+
+crearRapido.definition = {
+    methods: ["post"],
+    url: '/empleados/crear-rapido',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EmpleadoController::crearRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+crearRapido.url = (options?: RouteQueryOptions) => {
+    return crearRapido.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EmpleadoController::crearRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+crearRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearRapido.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EmpleadoController::crearRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+    const crearRapidoForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearRapido.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EmpleadoController::crearRapido
+ * @see app/Http/Controllers/EmpleadoController.php:395
+ * @route '/empleados/crear-rapido'
+ */
+        crearRapidoForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearRapido.url(options),
+            method: 'post',
+        })
+    
+    crearRapido.form = crearRapidoForm
 const empleados = {
     index,
 create,
@@ -803,6 +858,7 @@ update,
 destroy,
 toggleEstado,
 toggleAccesoSistema,
+crearRapido,
 }
 
 export default empleados

@@ -72,6 +72,7 @@ export interface FormField<F extends BaseFormData> {
     pattern?: string;
   };
   options?: { value: unknown; label: string }[];
+  extraDataKey?: string; // For options coming from extraData (e.g., 'localidades', 'categorias')
   // Permite un renderizado personalizado del campo
   render?: (props: {
     value: unknown;

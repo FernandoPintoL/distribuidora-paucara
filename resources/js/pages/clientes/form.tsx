@@ -7,6 +7,7 @@ import type { Cliente, ClienteFormData } from '@/domain/clientes';
 
 interface ClientesFormProps {
   cliente?: Cliente | null;
+  localidades?: Array<{ id: number; nombre: string; codigo: string }>;
 }
 
 const initialClienteData: ClienteFormData = {
@@ -18,10 +19,13 @@ const initialClienteData: ClienteFormData = {
   foto_perfil: null,
   ci_anverso: null,
   ci_reverso: null,
+  localidad_id: null,
+  latitud: null,
+  longitud: null,
   activo: true,
 };
 
-export default function ClientesForm({ cliente }: ClientesFormProps) {
+export default function ClientesForm({ cliente, localidades }: ClientesFormProps) {
   const isEditing = !!cliente;
 
   return (
@@ -35,6 +39,13 @@ export default function ClientesForm({ cliente }: ClientesFormProps) {
         config={clientesConfig}
         service={clientesService}
         initialData={initialClienteData}
+        extraData={{ localidades }}
+        loadOptions={async (fieldKey: string) => {
+          if (fieldKey === 'localidad_id') {
+            return await clientesService.loadLocalidadOptions();
+          }
+          return [];
+        }}
       />
     </AppLayout>
   );

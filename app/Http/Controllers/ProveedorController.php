@@ -110,7 +110,7 @@ class ProveedorController extends Controller
         $isModalRequest = $this->isModalRequest($request);
 
         $validationRules = [
-            'nombre'       => ['required', 'string', 'max:255'],
+            'nombre'       => ['required', 'string', 'max:255', 'unique:proveedores,nombre'],
             'razon_social' => ['nullable', 'string', 'max:255'],
             'nit'          => ['nullable', 'string', 'max:255'],
             'telefono'     => ['nullable', 'string', 'max:100'],
@@ -164,7 +164,7 @@ class ProveedorController extends Controller
     public function storeApi(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
+            'nombre' => ['required', 'string', 'max:255', 'unique:proveedores,nombre'],
         ]);
 
         $data['activo'] = true; // Por defecto activo
@@ -195,7 +195,7 @@ class ProveedorController extends Controller
     public function update(Request $request, Proveedor $proveedore): RedirectResponse | JsonResponse | Response
     {
         $data = $request->validate([
-            'nombre'       => ['required', 'string', 'max:255'],
+            'nombre'       => ['required', 'string', 'max:255', 'unique:proveedores,nombre,' . $proveedore->id],
             'razon_social' => ['nullable', 'string', 'max:255'],
             'nit'          => ['nullable', 'string', 'max:255'],
             'telefono'     => ['nullable', 'string', 'max:100'],

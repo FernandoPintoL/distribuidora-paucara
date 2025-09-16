@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::index
- * @see app/Http/Controllers/DireccionClienteApiController.php:23
+ * @see app/Http/Controllers/DireccionClienteApiController.php:25
  * @route '/api/clientes/{cliente}/direcciones'
  */
 export const index = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::index
- * @see app/Http/Controllers/DireccionClienteApiController.php:23
+ * @see app/Http/Controllers/DireccionClienteApiController.php:25
  * @route '/api/clientes/{cliente}/direcciones'
  */
 index.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ index.url = (args: { cliente: number | { id: number } } | [cliente: number | { i
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::index
- * @see app/Http/Controllers/DireccionClienteApiController.php:23
+ * @see app/Http/Controllers/DireccionClienteApiController.php:25
  * @route '/api/clientes/{cliente}/direcciones'
  */
 index.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -58,7 +58,7 @@ index.get = (args: { cliente: number | { id: number } } | [cliente: number | { i
 })
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::index
- * @see app/Http/Controllers/DireccionClienteApiController.php:23
+ * @see app/Http/Controllers/DireccionClienteApiController.php:25
  * @route '/api/clientes/{cliente}/direcciones'
  */
 index.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -68,7 +68,7 @@ index.head = (args: { cliente: number | { id: number } } | [cliente: number | { 
 
     /**
 * @see \App\Http\Controllers\DireccionClienteApiController::index
- * @see app/Http/Controllers/DireccionClienteApiController.php:23
+ * @see app/Http/Controllers/DireccionClienteApiController.php:25
  * @route '/api/clientes/{cliente}/direcciones'
  */
     const indexForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -78,7 +78,7 @@ index.head = (args: { cliente: number | { id: number } } | [cliente: number | { 
 
             /**
 * @see \App\Http\Controllers\DireccionClienteApiController::index
- * @see app/Http/Controllers/DireccionClienteApiController.php:23
+ * @see app/Http/Controllers/DireccionClienteApiController.php:25
  * @route '/api/clientes/{cliente}/direcciones'
  */
         indexForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -87,7 +87,7 @@ index.head = (args: { cliente: number | { id: number } } | [cliente: number | { 
         })
             /**
 * @see \App\Http\Controllers\DireccionClienteApiController::index
- * @see app/Http/Controllers/DireccionClienteApiController.php:23
+ * @see app/Http/Controllers/DireccionClienteApiController.php:25
  * @route '/api/clientes/{cliente}/direcciones'
  */
         indexForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -103,7 +103,7 @@ index.head = (args: { cliente: number | { id: number } } | [cliente: number | { 
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::store
- * @see app/Http/Controllers/DireccionClienteApiController.php:36
+ * @see app/Http/Controllers/DireccionClienteApiController.php:38
  * @route '/api/clientes/{cliente}/direcciones'
  */
 export const store = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -118,7 +118,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::store
- * @see app/Http/Controllers/DireccionClienteApiController.php:36
+ * @see app/Http/Controllers/DireccionClienteApiController.php:38
  * @route '/api/clientes/{cliente}/direcciones'
  */
 store.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -151,7 +151,7 @@ store.url = (args: { cliente: number | { id: number } } | [cliente: number | { i
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::store
- * @see app/Http/Controllers/DireccionClienteApiController.php:36
+ * @see app/Http/Controllers/DireccionClienteApiController.php:38
  * @route '/api/clientes/{cliente}/direcciones'
  */
 store.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -161,7 +161,7 @@ store.post = (args: { cliente: number | { id: number } } | [cliente: number | { 
 
     /**
 * @see \App\Http\Controllers\DireccionClienteApiController::store
- * @see app/Http/Controllers/DireccionClienteApiController.php:36
+ * @see app/Http/Controllers/DireccionClienteApiController.php:38
  * @route '/api/clientes/{cliente}/direcciones'
  */
     const storeForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -171,7 +171,7 @@ store.post = (args: { cliente: number | { id: number } } | [cliente: number | { 
 
             /**
 * @see \App\Http\Controllers\DireccionClienteApiController::store
- * @see app/Http/Controllers/DireccionClienteApiController.php:36
+ * @see app/Http/Controllers/DireccionClienteApiController.php:38
  * @route '/api/clientes/{cliente}/direcciones'
  */
         storeForm.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -182,7 +182,7 @@ store.post = (args: { cliente: number | { id: number } } | [cliente: number | { 
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::update
- * @see app/Http/Controllers/DireccionClienteApiController.php:76
+ * @see app/Http/Controllers/DireccionClienteApiController.php:78
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
 export const update = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -197,7 +197,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::update
- * @see app/Http/Controllers/DireccionClienteApiController.php:76
+ * @see app/Http/Controllers/DireccionClienteApiController.php:78
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
 update.url = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -227,7 +227,7 @@ update.url = (args: { cliente: number | { id: number }, direccion: number | { id
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::update
- * @see app/Http/Controllers/DireccionClienteApiController.php:76
+ * @see app/Http/Controllers/DireccionClienteApiController.php:78
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
 update.put = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -237,7 +237,7 @@ update.put = (args: { cliente: number | { id: number }, direccion: number | { id
 
     /**
 * @see \App\Http\Controllers\DireccionClienteApiController::update
- * @see app/Http/Controllers/DireccionClienteApiController.php:76
+ * @see app/Http/Controllers/DireccionClienteApiController.php:78
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
     const updateForm = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -252,7 +252,7 @@ update.put = (args: { cliente: number | { id: number }, direccion: number | { id
 
             /**
 * @see \App\Http\Controllers\DireccionClienteApiController::update
- * @see app/Http/Controllers/DireccionClienteApiController.php:76
+ * @see app/Http/Controllers/DireccionClienteApiController.php:78
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
         updateForm.put = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -268,7 +268,7 @@ update.put = (args: { cliente: number | { id: number }, direccion: number | { id
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::destroy
- * @see app/Http/Controllers/DireccionClienteApiController.php:113
+ * @see app/Http/Controllers/DireccionClienteApiController.php:115
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
 export const destroy = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -283,7 +283,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::destroy
- * @see app/Http/Controllers/DireccionClienteApiController.php:113
+ * @see app/Http/Controllers/DireccionClienteApiController.php:115
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
 destroy.url = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -313,7 +313,7 @@ destroy.url = (args: { cliente: number | { id: number }, direccion: number | { i
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::destroy
- * @see app/Http/Controllers/DireccionClienteApiController.php:113
+ * @see app/Http/Controllers/DireccionClienteApiController.php:115
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
 destroy.delete = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -323,7 +323,7 @@ destroy.delete = (args: { cliente: number | { id: number }, direccion: number | 
 
     /**
 * @see \App\Http\Controllers\DireccionClienteApiController::destroy
- * @see app/Http/Controllers/DireccionClienteApiController.php:113
+ * @see app/Http/Controllers/DireccionClienteApiController.php:115
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
     const destroyForm = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -338,7 +338,7 @@ destroy.delete = (args: { cliente: number | { id: number }, direccion: number | 
 
             /**
 * @see \App\Http\Controllers\DireccionClienteApiController::destroy
- * @see app/Http/Controllers/DireccionClienteApiController.php:113
+ * @see app/Http/Controllers/DireccionClienteApiController.php:115
  * @route '/api/clientes/{cliente}/direcciones/{direccion}'
  */
         destroyForm.delete = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -354,7 +354,7 @@ destroy.delete = (args: { cliente: number | { id: number }, direccion: number | 
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::establecerPrincipal
- * @see app/Http/Controllers/DireccionClienteApiController.php:133
+ * @see app/Http/Controllers/DireccionClienteApiController.php:135
  * @route '/api/clientes/{cliente}/direcciones/{direccion}/principal'
  */
 export const establecerPrincipal = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -369,7 +369,7 @@ establecerPrincipal.definition = {
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::establecerPrincipal
- * @see app/Http/Controllers/DireccionClienteApiController.php:133
+ * @see app/Http/Controllers/DireccionClienteApiController.php:135
  * @route '/api/clientes/{cliente}/direcciones/{direccion}/principal'
  */
 establecerPrincipal.url = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -399,7 +399,7 @@ establecerPrincipal.url = (args: { cliente: number | { id: number }, direccion: 
 
 /**
 * @see \App\Http\Controllers\DireccionClienteApiController::establecerPrincipal
- * @see app/Http/Controllers/DireccionClienteApiController.php:133
+ * @see app/Http/Controllers/DireccionClienteApiController.php:135
  * @route '/api/clientes/{cliente}/direcciones/{direccion}/principal'
  */
 establecerPrincipal.patch = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -409,7 +409,7 @@ establecerPrincipal.patch = (args: { cliente: number | { id: number }, direccion
 
     /**
 * @see \App\Http\Controllers\DireccionClienteApiController::establecerPrincipal
- * @see app/Http/Controllers/DireccionClienteApiController.php:133
+ * @see app/Http/Controllers/DireccionClienteApiController.php:135
  * @route '/api/clientes/{cliente}/direcciones/{direccion}/principal'
  */
     const establecerPrincipalForm = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -424,7 +424,7 @@ establecerPrincipal.patch = (args: { cliente: number | { id: number }, direccion
 
             /**
 * @see \App\Http\Controllers\DireccionClienteApiController::establecerPrincipal
- * @see app/Http/Controllers/DireccionClienteApiController.php:133
+ * @see app/Http/Controllers/DireccionClienteApiController.php:135
  * @route '/api/clientes/{cliente}/direcciones/{direccion}/principal'
  */
         establecerPrincipalForm.patch = (args: { cliente: number | { id: number }, direccion: number | { id: number } } | [cliente: number | { id: number }, direccion: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

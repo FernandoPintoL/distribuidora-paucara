@@ -1,7 +1,6 @@
 <?php
 use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\EstadoMermaController;
-use App\Http\Controllers\Api\TipoAjustInventarioController;
 use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\ClienteController;
@@ -9,22 +8,28 @@ use App\Http\Controllers\CompraController;
 use App\Http\Controllers\DireccionClienteApiController;
 use App\Http\Controllers\EnvioController;
 use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\LocalidadController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ReporteInventarioApiController;
 use App\Http\Controllers\VentaController;
 use Illuminate\Support\Facades\Route;
 
-// Catálogo de tipos de ajuste de inventario
-Route::apiResource('tipos-ajuste-inventario', TipoAjustInventarioController::class);
-// Catálogos de mermas
-Route::apiResource('tipo-mermas', TipoMermaController::class);
-Route::apiResource('estado-mermas', EstadoMermaController::class);
+// ==========================================
+// 🔓 RUTAS API PÚBLICAS (sin autenticación)
+// ==========================================
+
+// Rutas API para módulos del sidebar (accesible sin login)
+Route::get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');
 
 // ==========================================
 // 📱 RUTAS PARA APP EXTERNA (Flutter)
 // ==========================================
 Route::middleware(['auth:sanctum'])->group(function () {
+    // Catálogos de mermas
+    Route::apiResource('tipo-mermas', TipoMermaController::class);
+    Route::apiResource('estado-mermas', EstadoMermaController::class);
+
     // Productos para la app
     Route::get('/app/productos', [ProductoController::class, 'indexApi']);
     Route::get('/app/productos/{producto}', [ProductoController::class, 'showApi']);
@@ -148,6 +153,17 @@ Route::group(['prefix' => 'clientes'], function () {
     Route::put('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'update']);
     Route::delete('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'destroy']);
     Route::patch('{cliente}/direcciones/{direccion}/principal', [DireccionClienteApiController::class, 'establecerPrincipal']);
+});
+
+// Rutas API para localidades
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::group(['prefix' => 'localidades'], function () {
+        Route::get('/', [LocalidadController::class, 'indexApi']);
+        Route::post('/', [LocalidadController::class, 'storeApi']);
+        Route::get('{localidad}', [LocalidadController::class, 'showApi']);
+        Route::put('{localidad}', [LocalidadController::class, 'updateApi']);
+        Route::delete('{localidad}', [LocalidadController::class, 'destroyApi']);
+    });
 });
 
 // Rutas API para proveedores

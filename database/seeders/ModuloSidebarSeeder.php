@@ -351,11 +351,19 @@ class ModuloSidebarSeeder extends Seeder
                 'categoria'   => 'Comercial',
             ],
             [
+                'titulo'      => 'Localidades',
+                'ruta'        => '/localidades',
+                'icono'       => 'MapPin',
+                'descripcion' => 'Gestión de localidades',
+                'orden'       => 14,
+                'categoria'   => 'Configuración',
+            ],
+            [
                 'titulo'      => 'Monedas',
                 'ruta'        => '/monedas',
                 'icono'       => 'DollarSign',
                 'descripcion' => 'Gestión de monedas',
-                'orden'       => 14,
+                'orden'       => 15,
                 'categoria'   => 'Configuración',
             ],
             [
@@ -363,7 +371,7 @@ class ModuloSidebarSeeder extends Seeder
                 'ruta'        => '/tipos-pago',
                 'icono'       => 'CreditCard',
                 'descripcion' => 'Gestión de tipos de pago',
-                'orden'       => 15,
+                'orden'       => 16,
                 'categoria'   => 'Configuración',
             ],
         ];
@@ -387,7 +395,7 @@ class ModuloSidebarSeeder extends Seeder
             [
                 'icono'       => 'Settings',
                 'descripcion' => 'Configuración del sistema',
-                'orden'       => 16,
+                'orden'       => 17,
                 'categoria'   => 'Administración',
                 'activo'      => true,
             ]

@@ -41,10 +41,10 @@ it('puede listar clientes via API', function () {
 
 it('puede crear un cliente via API', function () {
     $clienteData = [
-        'nombre' => 'Juan Pérez',
-        'email' => 'juan@example.com',
-        'telefono' => '70123456',
-        'nit' => '1234567',
+        'nombre'         => 'Juan Pérez',
+        'email'          => 'juan@example.com',
+        'telefono'       => '70123456',
+        'nit'            => '1234567',
         'limite_credito' => 1000,
     ];
 
@@ -57,27 +57,27 @@ it('puede crear un cliente via API', function () {
         ]);
 
     $this->assertDatabaseHas('clientes', [
-        'nombre' => 'Juan Pérez',
-        'email' => 'juan@example.com',
+        'nombre'   => 'Juan Pérez',
+        'email'    => 'juan@example.com',
         'telefono' => '70123456',
-        'nit' => '1234567',
+        'nit'      => '1234567',
     ]);
 });
 
 it('puede crear cliente con direcciones via API', function () {
     $clienteData = [
-        'nombre' => 'María González',
-        'email' => 'maria@example.com',
+        'nombre'      => 'María González',
+        'email'       => 'maria@example.com',
         'direcciones' => [
             [
-                'direccion' => 'Av. 6 de Agosto #123',
-                'ciudad' => 'La Paz',
+                'direccion'    => 'Av. 6 de Agosto #123',
+                'ciudad'       => 'La Paz',
                 'departamento' => 'La Paz',
                 'es_principal' => true,
             ],
             [
-                'direccion' => 'Calle Comercio #456',
-                'ciudad' => 'El Alto',
+                'direccion'    => 'Calle Comercio #456',
+                'ciudad'       => 'El Alto',
                 'departamento' => 'La Paz',
                 'es_principal' => false,
             ],
@@ -100,7 +100,7 @@ it('puede actualizar un cliente via API', function () {
     $cliente = Cliente::factory()->create();
 
     $updateData = [
-        'nombre' => 'Nombre Actualizado',
+        'nombre'   => 'Nombre Actualizado',
         'telefono' => '77888999',
     ];
 
@@ -122,7 +122,7 @@ it('puede buscar clientes via API', function () {
     Cliente::factory()->create(['nombre' => 'María Gonzales']);
     Cliente::factory()->create(['nombre' => 'Pedro Rodríguez']);
 
-    $response = $this->getJson('/api/clientes/buscar?q=juan');
+    $response = $this->getJson('/api/clientes/buscar?q=Pérez');
 
     $response->assertSuccessful()
         ->assertJsonStructure([
@@ -191,8 +191,8 @@ it('puede gestionar direcciones de cliente', function () {
 
     // Crear dirección
     $direccionData = [
-        'direccion' => 'Av. Ballivián #789',
-        'ciudad' => 'La Paz',
+        'direccion'    => 'Av. Ballivián #789',
+        'ciudad'       => 'La Paz',
         'departamento' => 'La Paz',
         'es_principal' => true,
     ];
@@ -212,7 +212,7 @@ it('puede gestionar direcciones de cliente', function () {
     expect($response->json('data'))->toHaveCount(1);
 
     // Actualizar dirección
-    $direccion = $cliente->direcciones()->first();
+    $direccion  = $cliente->direcciones()->first();
     $updateData = ['ciudad' => 'El Alto'];
 
     $response = $this->putJson("/api/clientes/{$cliente->id}/direcciones/{$direccion->id}", $updateData);

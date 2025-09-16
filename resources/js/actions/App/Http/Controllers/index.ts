@@ -1,3 +1,4 @@
+import ModuloSidebarController from './ModuloSidebarController'
 import Api from './Api'
 import ProductoController from './ProductoController'
 import VentaController from './VentaController'
@@ -8,17 +9,17 @@ import InventarioController from './InventarioController'
 import ReporteInventarioApiController from './ReporteInventarioApiController'
 import ClienteController from './ClienteController'
 import DireccionClienteApiController from './DireccionClienteApiController'
+import LocalidadController from './LocalidadController'
+import ProveedorController from './ProveedorController'
 import DashboardController from './DashboardController'
 import CategoriaController from './CategoriaController'
 import MarcaController from './MarcaController'
 import AlmacenController from './AlmacenController'
 import ConfiguracionGlobalController from './ConfiguracionGlobalController'
-import ProveedorController from './ProveedorController'
 import UnidadMedidaController from './UnidadMedidaController'
 import TipoPrecioController from './TipoPrecioController'
 import MonedaController from './MonedaController'
 import TipoPagoController from './TipoPagoController'
-import ModuloSidebarController from './ModuloSidebarController'
 import UserController from './UserController'
 import RoleController from './RoleController'
 import PermissionController from './PermissionController'
@@ -37,7 +38,8 @@ import ReporteInventarioController from './ReporteInventarioController'
 import Settings from './Settings'
 import Auth from './Auth'
 const Controllers = {
-    Api,
+    ModuloSidebarController,
+Api,
 ProductoController,
 VentaController,
 EnvioController,
@@ -47,17 +49,17 @@ InventarioController,
 ReporteInventarioApiController,
 ClienteController,
 DireccionClienteApiController,
+LocalidadController,
+ProveedorController,
 DashboardController,
 CategoriaController,
 MarcaController,
 AlmacenController,
 ConfiguracionGlobalController,
-ProveedorController,
 UnidadMedidaController,
 TipoPrecioController,
 MonedaController,
 TipoPagoController,
-ModuloSidebarController,
 UserController,
 RoleController,
 PermissionController,

@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
         $this->call(TiposPrecioSeeder::class);
         // $this->call(VehiculoSeeder::class);
         // $this->call(ProductosEjemploSeeder::class);
+        $this->call(LocalidadSeeder::class);
         // Seed core catalogs
         // Seed roles and permissions and assign to admin
         $this->call(RolesAndPermissionsSeeder::class);

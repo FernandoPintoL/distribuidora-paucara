@@ -931,6 +931,95 @@ removePermission.delete = (args: { user: number | { id: number } } | [user: numb
         })
     
     removePermission.form = removePermissionForm
-const UserController = { index, create, store, show, edit, update, destroy, assignRole, removeRole, assignPermission, removePermission }
+/**
+* @see \App\Http\Controllers\UserController::toggleStatus
+ * @see app/Http/Controllers/UserController.php:192
+ * @route '/usuarios/{user}/toggle-status'
+ */
+export const toggleStatus = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: toggleStatus.url(args, options),
+    method: 'patch',
+})
+
+toggleStatus.definition = {
+    methods: ["patch"],
+    url: '/usuarios/{user}/toggle-status',
+} satisfies RouteDefinition<["patch"]>
+
+/**
+* @see \App\Http\Controllers\UserController::toggleStatus
+ * @see app/Http/Controllers/UserController.php:192
+ * @route '/usuarios/{user}/toggle-status'
+ */
+toggleStatus.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return toggleStatus.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\UserController::toggleStatus
+ * @see app/Http/Controllers/UserController.php:192
+ * @route '/usuarios/{user}/toggle-status'
+ */
+toggleStatus.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: toggleStatus.url(args, options),
+    method: 'patch',
+})
+
+    /**
+* @see \App\Http\Controllers\UserController::toggleStatus
+ * @see app/Http/Controllers/UserController.php:192
+ * @route '/usuarios/{user}/toggle-status'
+ */
+    const toggleStatusForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: toggleStatus.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\UserController::toggleStatus
+ * @see app/Http/Controllers/UserController.php:192
+ * @route '/usuarios/{user}/toggle-status'
+ */
+        toggleStatusForm.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: toggleStatus.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    toggleStatus.form = toggleStatusForm
+const UserController = { index, create, store, show, edit, update, destroy, assignRole, removeRole, assignPermission, removePermission, toggleStatus }
 
 export default UserController

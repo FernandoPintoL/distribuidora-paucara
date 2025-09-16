@@ -1,7 +1,85 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @route '/api/modulos-sidebar'
+ */
+export const obtenerParaSidebar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerParaSidebar.url(options),
+    method: 'get',
+})
+
+obtenerParaSidebar.definition = {
+    methods: ["get","head"],
+    url: '/api/modulos-sidebar',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @route '/api/modulos-sidebar'
+ */
+obtenerParaSidebar.url = (options?: RouteQueryOptions) => {
+    return obtenerParaSidebar.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @route '/api/modulos-sidebar'
+ */
+obtenerParaSidebar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerParaSidebar.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @route '/api/modulos-sidebar'
+ */
+obtenerParaSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerParaSidebar.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @route '/api/modulos-sidebar'
+ */
+    const obtenerParaSidebarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerParaSidebar.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @route '/api/modulos-sidebar'
+ */
+        obtenerParaSidebarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerParaSidebar.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @route '/api/modulos-sidebar'
+ */
+        obtenerParaSidebarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerParaSidebar.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerParaSidebar.form = obtenerParaSidebarForm
+/**
 * @see \App\Http\Controllers\ModuloSidebarController::index
- * @see app/Http/Controllers/ModuloSidebarController.php:15
+ * @see app/Http/Controllers/ModuloSidebarController.php:14
  * @route '/modulos-sidebar'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +94,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::index
- * @see app/Http/Controllers/ModuloSidebarController.php:15
+ * @see app/Http/Controllers/ModuloSidebarController.php:14
  * @route '/modulos-sidebar'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +103,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::index
- * @see app/Http/Controllers/ModuloSidebarController.php:15
+ * @see app/Http/Controllers/ModuloSidebarController.php:14
  * @route '/modulos-sidebar'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +112,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::index
- * @see app/Http/Controllers/ModuloSidebarController.php:15
+ * @see app/Http/Controllers/ModuloSidebarController.php:14
  * @route '/modulos-sidebar'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +122,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::index
- * @see app/Http/Controllers/ModuloSidebarController.php:15
+ * @see app/Http/Controllers/ModuloSidebarController.php:14
  * @route '/modulos-sidebar'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +132,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::index
- * @see app/Http/Controllers/ModuloSidebarController.php:15
+ * @see app/Http/Controllers/ModuloSidebarController.php:14
  * @route '/modulos-sidebar'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +141,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::index
- * @see app/Http/Controllers/ModuloSidebarController.php:15
+ * @see app/Http/Controllers/ModuloSidebarController.php:14
  * @route '/modulos-sidebar'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +157,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::create
- * @see app/Http/Controllers/ModuloSidebarController.php:54
+ * @see app/Http/Controllers/ModuloSidebarController.php:53
  * @route '/modulos-sidebar/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +172,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::create
- * @see app/Http/Controllers/ModuloSidebarController.php:54
+ * @see app/Http/Controllers/ModuloSidebarController.php:53
  * @route '/modulos-sidebar/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +181,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::create
- * @see app/Http/Controllers/ModuloSidebarController.php:54
+ * @see app/Http/Controllers/ModuloSidebarController.php:53
  * @route '/modulos-sidebar/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +190,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::create
- * @see app/Http/Controllers/ModuloSidebarController.php:54
+ * @see app/Http/Controllers/ModuloSidebarController.php:53
  * @route '/modulos-sidebar/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +200,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::create
- * @see app/Http/Controllers/ModuloSidebarController.php:54
+ * @see app/Http/Controllers/ModuloSidebarController.php:53
  * @route '/modulos-sidebar/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +210,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::create
- * @see app/Http/Controllers/ModuloSidebarController.php:54
+ * @see app/Http/Controllers/ModuloSidebarController.php:53
  * @route '/modulos-sidebar/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +219,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::create
- * @see app/Http/Controllers/ModuloSidebarController.php:54
+ * @see app/Http/Controllers/ModuloSidebarController.php:53
  * @route '/modulos-sidebar/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +235,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::store
- * @see app/Http/Controllers/ModuloSidebarController.php:69
+ * @see app/Http/Controllers/ModuloSidebarController.php:68
  * @route '/modulos-sidebar'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +250,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::store
- * @see app/Http/Controllers/ModuloSidebarController.php:69
+ * @see app/Http/Controllers/ModuloSidebarController.php:68
  * @route '/modulos-sidebar'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +259,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::store
- * @see app/Http/Controllers/ModuloSidebarController.php:69
+ * @see app/Http/Controllers/ModuloSidebarController.php:68
  * @route '/modulos-sidebar'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +269,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::store
- * @see app/Http/Controllers/ModuloSidebarController.php:69
+ * @see app/Http/Controllers/ModuloSidebarController.php:68
  * @route '/modulos-sidebar'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +279,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::store
- * @see app/Http/Controllers/ModuloSidebarController.php:69
+ * @see app/Http/Controllers/ModuloSidebarController.php:68
  * @route '/modulos-sidebar'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +290,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::show
- * @see app/Http/Controllers/ModuloSidebarController.php:96
+ * @see app/Http/Controllers/ModuloSidebarController.php:95
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 export const show = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +305,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::show
- * @see app/Http/Controllers/ModuloSidebarController.php:96
+ * @see app/Http/Controllers/ModuloSidebarController.php:95
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 show.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -260,7 +338,7 @@ show.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: n
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::show
- * @see app/Http/Controllers/ModuloSidebarController.php:96
+ * @see app/Http/Controllers/ModuloSidebarController.php:95
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 show.get = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -269,7 +347,7 @@ show.get = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: n
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::show
- * @see app/Http/Controllers/ModuloSidebarController.php:96
+ * @see app/Http/Controllers/ModuloSidebarController.php:95
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 show.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -279,7 +357,7 @@ show.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::show
- * @see app/Http/Controllers/ModuloSidebarController.php:96
+ * @see app/Http/Controllers/ModuloSidebarController.php:95
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
     const showForm = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -289,7 +367,7 @@ show.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::show
- * @see app/Http/Controllers/ModuloSidebarController.php:96
+ * @see app/Http/Controllers/ModuloSidebarController.php:95
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
         showForm.get = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -298,7 +376,7 @@ show.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::show
- * @see app/Http/Controllers/ModuloSidebarController.php:96
+ * @see app/Http/Controllers/ModuloSidebarController.php:95
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
         showForm.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -314,7 +392,7 @@ show.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
     show.form = showForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::edit
- * @see app/Http/Controllers/ModuloSidebarController.php:108
+ * @see app/Http/Controllers/ModuloSidebarController.php:107
  * @route '/modulos-sidebar/{moduloSidebar}/edit'
  */
 export const edit = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -329,7 +407,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::edit
- * @see app/Http/Controllers/ModuloSidebarController.php:108
+ * @see app/Http/Controllers/ModuloSidebarController.php:107
  * @route '/modulos-sidebar/{moduloSidebar}/edit'
  */
 edit.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -362,7 +440,7 @@ edit.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: n
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::edit
- * @see app/Http/Controllers/ModuloSidebarController.php:108
+ * @see app/Http/Controllers/ModuloSidebarController.php:107
  * @route '/modulos-sidebar/{moduloSidebar}/edit'
  */
 edit.get = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -371,7 +449,7 @@ edit.get = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: n
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::edit
- * @see app/Http/Controllers/ModuloSidebarController.php:108
+ * @see app/Http/Controllers/ModuloSidebarController.php:107
  * @route '/modulos-sidebar/{moduloSidebar}/edit'
  */
 edit.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -381,7 +459,7 @@ edit.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::edit
- * @see app/Http/Controllers/ModuloSidebarController.php:108
+ * @see app/Http/Controllers/ModuloSidebarController.php:107
  * @route '/modulos-sidebar/{moduloSidebar}/edit'
  */
     const editForm = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -391,7 +469,7 @@ edit.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::edit
- * @see app/Http/Controllers/ModuloSidebarController.php:108
+ * @see app/Http/Controllers/ModuloSidebarController.php:107
  * @route '/modulos-sidebar/{moduloSidebar}/edit'
  */
         editForm.get = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -400,7 +478,7 @@ edit.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::edit
- * @see app/Http/Controllers/ModuloSidebarController.php:108
+ * @see app/Http/Controllers/ModuloSidebarController.php:107
  * @route '/modulos-sidebar/{moduloSidebar}/edit'
  */
         editForm.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -416,7 +494,7 @@ edit.head = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: 
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::update
- * @see app/Http/Controllers/ModuloSidebarController.php:125
+ * @see app/Http/Controllers/ModuloSidebarController.php:124
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 export const update = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -431,7 +509,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::update
- * @see app/Http/Controllers/ModuloSidebarController.php:125
+ * @see app/Http/Controllers/ModuloSidebarController.php:124
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 update.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -464,7 +542,7 @@ update.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar:
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::update
- * @see app/Http/Controllers/ModuloSidebarController.php:125
+ * @see app/Http/Controllers/ModuloSidebarController.php:124
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 update.put = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -473,7 +551,7 @@ update.put = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar:
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::update
- * @see app/Http/Controllers/ModuloSidebarController.php:125
+ * @see app/Http/Controllers/ModuloSidebarController.php:124
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 update.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -483,7 +561,7 @@ update.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSideba
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::update
- * @see app/Http/Controllers/ModuloSidebarController.php:125
+ * @see app/Http/Controllers/ModuloSidebarController.php:124
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
     const updateForm = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -498,7 +576,7 @@ update.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSideba
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::update
- * @see app/Http/Controllers/ModuloSidebarController.php:125
+ * @see app/Http/Controllers/ModuloSidebarController.php:124
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
         updateForm.put = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -512,7 +590,7 @@ update.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSideba
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::update
- * @see app/Http/Controllers/ModuloSidebarController.php:125
+ * @see app/Http/Controllers/ModuloSidebarController.php:124
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
         updateForm.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -528,7 +606,7 @@ update.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSideba
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::destroy
- * @see app/Http/Controllers/ModuloSidebarController.php:157
+ * @see app/Http/Controllers/ModuloSidebarController.php:156
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 export const destroy = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -543,7 +621,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::destroy
- * @see app/Http/Controllers/ModuloSidebarController.php:157
+ * @see app/Http/Controllers/ModuloSidebarController.php:156
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 destroy.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -576,7 +654,7 @@ destroy.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::destroy
- * @see app/Http/Controllers/ModuloSidebarController.php:157
+ * @see app/Http/Controllers/ModuloSidebarController.php:156
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
 destroy.delete = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -586,7 +664,7 @@ destroy.delete = (args: { moduloSidebar: number | { id: number } } | [moduloSide
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::destroy
- * @see app/Http/Controllers/ModuloSidebarController.php:157
+ * @see app/Http/Controllers/ModuloSidebarController.php:156
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
     const destroyForm = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -601,7 +679,7 @@ destroy.delete = (args: { moduloSidebar: number | { id: number } } | [moduloSide
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::destroy
- * @see app/Http/Controllers/ModuloSidebarController.php:157
+ * @see app/Http/Controllers/ModuloSidebarController.php:156
  * @route '/modulos-sidebar/{moduloSidebar}'
  */
         destroyForm.delete = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -616,86 +694,8 @@ destroy.delete = (args: { moduloSidebar: number | { id: number } } | [moduloSide
     
     destroy.form = destroyForm
 /**
-* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:173
- * @route '/api/modulos-sidebar'
- */
-export const obtenerParaSidebar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: obtenerParaSidebar.url(options),
-    method: 'get',
-})
-
-obtenerParaSidebar.definition = {
-    methods: ["get","head"],
-    url: '/api/modulos-sidebar',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:173
- * @route '/api/modulos-sidebar'
- */
-obtenerParaSidebar.url = (options?: RouteQueryOptions) => {
-    return obtenerParaSidebar.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:173
- * @route '/api/modulos-sidebar'
- */
-obtenerParaSidebar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: obtenerParaSidebar.url(options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:173
- * @route '/api/modulos-sidebar'
- */
-obtenerParaSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: obtenerParaSidebar.url(options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:173
- * @route '/api/modulos-sidebar'
- */
-    const obtenerParaSidebarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: obtenerParaSidebar.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:173
- * @route '/api/modulos-sidebar'
- */
-        obtenerParaSidebarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: obtenerParaSidebar.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ModuloSidebarController::obtenerParaSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:173
- * @route '/api/modulos-sidebar'
- */
-        obtenerParaSidebarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: obtenerParaSidebar.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    obtenerParaSidebar.form = obtenerParaSidebarForm
-/**
 * @see \App\Http\Controllers\ModuloSidebarController::actualizarOrden
- * @see app/Http/Controllers/ModuloSidebarController.php:190
+ * @see app/Http/Controllers/ModuloSidebarController.php:189
  * @route '/modulos-sidebar/actualizar-orden'
  */
 export const actualizarOrden = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -710,7 +710,7 @@ actualizarOrden.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::actualizarOrden
- * @see app/Http/Controllers/ModuloSidebarController.php:190
+ * @see app/Http/Controllers/ModuloSidebarController.php:189
  * @route '/modulos-sidebar/actualizar-orden'
  */
 actualizarOrden.url = (options?: RouteQueryOptions) => {
@@ -719,7 +719,7 @@ actualizarOrden.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::actualizarOrden
- * @see app/Http/Controllers/ModuloSidebarController.php:190
+ * @see app/Http/Controllers/ModuloSidebarController.php:189
  * @route '/modulos-sidebar/actualizar-orden'
  */
 actualizarOrden.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -729,7 +729,7 @@ actualizarOrden.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::actualizarOrden
- * @see app/Http/Controllers/ModuloSidebarController.php:190
+ * @see app/Http/Controllers/ModuloSidebarController.php:189
  * @route '/modulos-sidebar/actualizar-orden'
  */
     const actualizarOrdenForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -739,7 +739,7 @@ actualizarOrden.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::actualizarOrden
- * @see app/Http/Controllers/ModuloSidebarController.php:190
+ * @see app/Http/Controllers/ModuloSidebarController.php:189
  * @route '/modulos-sidebar/actualizar-orden'
  */
         actualizarOrdenForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -750,7 +750,7 @@ actualizarOrden.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
     actualizarOrden.form = actualizarOrdenForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::toggleActivo
- * @see app/Http/Controllers/ModuloSidebarController.php:209
+ * @see app/Http/Controllers/ModuloSidebarController.php:208
  * @route '/modulos-sidebar/{moduloSidebar}/toggle-activo'
  */
 export const toggleActivo = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -765,7 +765,7 @@ toggleActivo.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::toggleActivo
- * @see app/Http/Controllers/ModuloSidebarController.php:209
+ * @see app/Http/Controllers/ModuloSidebarController.php:208
  * @route '/modulos-sidebar/{moduloSidebar}/toggle-activo'
  */
 toggleActivo.url = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -798,7 +798,7 @@ toggleActivo.url = (args: { moduloSidebar: number | { id: number } } | [moduloSi
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::toggleActivo
- * @see app/Http/Controllers/ModuloSidebarController.php:209
+ * @see app/Http/Controllers/ModuloSidebarController.php:208
  * @route '/modulos-sidebar/{moduloSidebar}/toggle-activo'
  */
 toggleActivo.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -808,7 +808,7 @@ toggleActivo.patch = (args: { moduloSidebar: number | { id: number } } | [modulo
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::toggleActivo
- * @see app/Http/Controllers/ModuloSidebarController.php:209
+ * @see app/Http/Controllers/ModuloSidebarController.php:208
  * @route '/modulos-sidebar/{moduloSidebar}/toggle-activo'
  */
     const toggleActivoForm = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -823,7 +823,7 @@ toggleActivo.patch = (args: { moduloSidebar: number | { id: number } } | [modulo
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::toggleActivo
- * @see app/Http/Controllers/ModuloSidebarController.php:209
+ * @see app/Http/Controllers/ModuloSidebarController.php:208
  * @route '/modulos-sidebar/{moduloSidebar}/toggle-activo'
  */
         toggleActivoForm.patch = (args: { moduloSidebar: number | { id: number } } | [moduloSidebar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -837,6 +837,6 @@ toggleActivo.patch = (args: { moduloSidebar: number | { id: number } } | [modulo
         })
     
     toggleActivo.form = toggleActivoForm
-const ModuloSidebarController = { index, create, store, show, edit, update, destroy, obtenerParaSidebar, actualizarOrden, toggleActivo }
+const ModuloSidebarController = { obtenerParaSidebar, index, create, store, show, edit, update, destroy, actualizarOrden, toggleActivo }
 
 export default ModuloSidebarController

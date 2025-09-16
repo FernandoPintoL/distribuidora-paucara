@@ -33,6 +33,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('categorias', CategoriaController::class)->middleware('permission:categorias.manage');
     Route::resource('marcas', \App\Http\Controllers\MarcaController::class)->middleware('permission:marcas.manage');
     Route::resource('almacenes', \App\Http\Controllers\AlmacenController::class)->middleware('permission:almacenes.manage');
+    Route::resource('localidades', \App\Http\Controllers\LocalidadController::class)->middleware('permission:localidades.manage');
+    Route::get('localidades/api/active', [\App\Http\Controllers\LocalidadController::class, 'getActiveLocalidades'])->name('localidades.api.active');
 
     // Incluir rutas de configuración global
     require __DIR__ . '/configuracion.php';

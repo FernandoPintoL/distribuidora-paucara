@@ -2,6 +2,8 @@
 import { GenericService } from '@/services/generic.service';
 import type { Filters, Id } from '@/domain/shared';
 import type { Cliente, ClienteFormData } from '@/domain/clientes';
+import localidadesService from '@/services/localidades.service';
+import type { Localidad } from '@/services/localidades.service';
 
 function buildQuery(params?: { query?: Filters }) {
   const qs = new URLSearchParams();
@@ -42,6 +44,20 @@ export class ClientesService extends GenericService<Cliente, ClienteFormData> {
 
   destroyUrl(id: Id) {
     return `/clientes/${id}`;
+  }
+
+  // Método para cargar opciones de localidades
+  async loadLocalidadOptions() {
+    try {
+      const localidades = await localidadesService.getActiveLocalidades();
+      return localidades.map((localidad: Localidad) => ({
+        value: localidad.id,
+        label: `${localidad.nombre} (${localidad.codigo})`,
+      }));
+    } catch (error) {
+      console.error('Error loading localidad options:', error);
+      return [];
+    }
   }
 
   validateData(data: ClienteFormData): string[] {

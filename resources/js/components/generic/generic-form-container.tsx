@@ -11,13 +11,17 @@ interface GenericFormContainerProps<T extends BaseEntity, F extends BaseFormData
   config: ModuleConfig<T, F>;
   service: BaseService<T, F>;
   initialData: F;
+  loadOptions?: (fieldKey: string) => Promise<Array<{ value: string | number; label: string }>>;
+  extraData?: Record<string, unknown>;
 }
 
 export default function GenericFormContainer<T extends BaseEntity, F extends BaseFormData>({
   entity,
   config,
   service,
-  initialData
+  initialData,
+  loadOptions,
+  extraData
 }: GenericFormContainerProps<T, F>) {
   const {
     data,
@@ -52,7 +56,7 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
             </div>
             {isEditing && entity && (
               <p className="text-sm text-muted-foreground mt-1">
-                Editando: <strong>{('nombre' in entity && entity.nombre) ? entity.nombre : entity.id}</strong>
+                Editando: <strong>{('nombre' in entity && typeof entity.nombre === 'string') ? entity.nombre : String(entity.id)}</strong>
               </p>
             )}
           </CardHeader>
@@ -66,6 +70,8 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
                 fields={config.formFields}
                 onChange={handleFieldChange}
                 disabled={processing}
+                loadOptions={loadOptions}
+                extraData={extraData}
               />
 
               <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100 dark:border-neutral-800">

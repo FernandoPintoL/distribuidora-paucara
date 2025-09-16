@@ -12,7 +12,16 @@ export interface Cliente extends BaseEntity {
     foto_perfil?: string | null;
     ci_anverso?: string | null;
     ci_reverso?: string | null;
+    localidad_id?: Id | null;
+    latitud?: number | null;
+    longitud?: number | null;
+    codigo_cliente?: string | null;
     activo: boolean;
+    localidad?: {
+        id: Id;
+        nombre: string;
+        codigo: string;
+    } | null;
 }
 
 export interface ClienteFormData extends BaseFormData {
@@ -25,5 +34,8 @@ export interface ClienteFormData extends BaseFormData {
     foto_perfil?: File | string | null;
     ci_anverso?: File | string | null;
     ci_reverso?: File | string | null;
+    localidad_id?: Id | null;
+    latitud?: number | null;
+    longitud?: number | null;
     activo?: boolean;
 }

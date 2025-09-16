@@ -2,7 +2,8 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
-use App\Models\Cliente;
+use App\Models\Cliente as ClienteModel;
+use App\Models\Localidad;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,6 +17,8 @@ class ClienteController extends Controller
     {
         $q = (string) $request->string('q');
 
+        $localidadId = $request->input('localidad_id');
+
         $activoParam = $request->input('activo');
         $activo      = null;
         if ($activoParam !== null && $activoParam !== '' && $activoParam !== 'all') {
@@ -25,7 +28,6 @@ class ClienteController extends Controller
                 $activo = false;
             }
         }
-
         $allowedOrderBy = ['id', 'nombre', 'fecha_registro'];
         $rawOrderBy     = (string) $request->string('order_by');
         $orderBy        = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
@@ -33,7 +35,7 @@ class ClienteController extends Controller
         $rawOrderDir = strtolower((string) $request->string('order_dir'));
         $orderDir    = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
 
-        $items = Cliente::query()
+        $items = ClienteModel::query()
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('nombre', 'like', "%$q%")
@@ -45,6 +47,9 @@ class ClienteController extends Controller
             ->when($activo !== null, function ($query) use ($activo) {
                 $query->where('activo', $activo);
             })
+            ->when($localidadId && is_numeric($localidadId), function ($query) use ($localidadId) {
+                $query->where('localidad_id', $localidadId);
+            })
             ->orderBy($orderBy, $orderDir)
             ->paginate(10)
             ->withQueryString();
@@ -54,20 +59,41 @@ class ClienteController extends Controller
         }
 
         return Inertia::render('clientes/index', [
-            'clientes' => $items,
-            'filters'  => [
-                'q'         => $q,
-                'activo'    => $activo !== null ? ($activo ? '1' : '0') : null,
-                'order_by'  => $orderBy,
-                'order_dir' => $orderDir,
+            'clientes'    => $items,
+            'filters'     => [
+                'q'            => $q,
+                'activo'       => $activo !== null ? ($activo ? '1' : '0') : null,
+                'localidad_id' => $localidadId,
+                'order_by'     => $orderBy,
+                'order_dir'    => $orderDir,
             ],
+            'localidades' => Localidad::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'codigo'])
+                ->map(function ($localidad) {
+                    return [
+                        'id'     => $localidad->id,
+                        'nombre' => $localidad->nombre,
+                        'codigo' => $localidad->codigo,
+                    ];
+                }),
         ]);
     }
 
     public function create(): Response
     {
         return Inertia::render('clientes/form', [
-            'cliente' => null,
+            'cliente'     => null,
+            'localidades' => Localidad::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'codigo'])
+                ->map(function ($localidad) {
+                    return [
+                        'id'     => $localidad->id,
+                        'nombre' => $localidad->nombre,
+                        'codigo' => $localidad->codigo,
+                    ];
+                }),
         ]);
     }
 
@@ -81,6 +107,9 @@ class ClienteController extends Controller
             'nit'          => ['required', 'string', 'max:255'],
             'telefono'     => ['nullable', 'string', 'max:100'],
             'email'        => ['nullable', 'email', 'max:255'],
+            'localidad_id' => ['nullable', 'exists:localidades,id'],
+            'latitud'      => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'     => ['nullable', 'numeric', 'between:-180,180'],
             'activo'       => ['boolean'],
         ];
 
@@ -112,7 +141,7 @@ class ClienteController extends Controller
         return $this->handleCrudOperation(
             $request,
             function () use ($data) {
-                $cliente = Cliente::create($data);
+                $cliente = ClienteModel::create($data);
 
                 return ['cliente' => $cliente];
             },
@@ -121,14 +150,24 @@ class ClienteController extends Controller
         );
     }
 
-    public function edit(Cliente $cliente): Response
+    public function edit(ClienteModel $cliente): Response
     {
         return Inertia::render('clientes/form', [
-            'cliente' => $cliente,
+            'cliente'     => $cliente,
+            'localidades' => Localidad::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'codigo'])
+                ->map(function ($localidad) {
+                    return [
+                        'id'     => $localidad->id,
+                        'nombre' => $localidad->nombre,
+                        'codigo' => $localidad->codigo,
+                    ];
+                }),
         ]);
     }
 
-    public function update(Request $request, Cliente $cliente): \Symfony\Component\HttpFoundation\Response
+    public function update(Request $request, ClienteModel $cliente): \Symfony\Component\HttpFoundation\Response
     {
         return $this->handleCrudOperation(
             $request,
@@ -139,6 +178,9 @@ class ClienteController extends Controller
                     'nit'          => ['nullable', 'string', 'max:255'],
                     'telefono'     => ['nullable', 'string', 'max:100'],
                     'email'        => ['nullable', 'email', 'max:255'],
+                    'localidad_id' => ['nullable', 'exists:localidades,id'],
+                    'latitud'      => ['nullable', 'numeric', 'between:-90,90'],
+                    'longitud'     => ['nullable', 'numeric', 'between:-180,180'],
                     'activo'       => ['boolean'],
                     'foto_perfil'  => ['nullable', 'image', 'max:5120'],
                     'ci_anverso'   => ['nullable', 'image', 'max:5120'],
@@ -165,7 +207,7 @@ class ClienteController extends Controller
         );
     }
 
-    public function destroy(Request $request, Cliente $cliente): \Symfony\Component\HttpFoundation\Response
+    public function destroy(Request $request, ClienteModel $cliente): \Symfony\Component\HttpFoundation\Response
     {
         return $this->handleCrudOperation(
             $request,
@@ -192,7 +234,7 @@ class ClienteController extends Controller
         $q       = $request->string('q');
         $activo  = $request->boolean('activo', true);
 
-        $clientes = Cliente::query()
+        $clientes = ClienteModel::query()
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('nombre', 'like', "%$q%")
@@ -212,10 +254,10 @@ class ClienteController extends Controller
     /**
      * API: Mostrar cliente específico
      */
-    public function showApi(Cliente $cliente): JsonResponse
+    public function showApi(ClienteModel $cliente): JsonResponse
     {
         $cliente->load(['direcciones', 'cuentasPorCobrar' => function ($query) {
-            $query->where('saldo', '>', 0)->orderByDesc('fecha_vencimiento');
+            $query->where('saldo_pendiente', '>', 0)->orderByDesc('fecha_vencimiento');
         }]);
 
         return ApiResponse::success($cliente);
@@ -236,6 +278,9 @@ class ClienteController extends Controller
             'fecha_nacimiento'            => ['nullable', 'date'],
             'genero'                      => ['nullable', 'in:M,F,O'],
             'limite_credito'              => ['nullable', 'numeric', 'min:0'],
+            'localidad_id'                => ['nullable', 'exists:localidades,id'],
+            'latitud'                     => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'                    => ['nullable', 'numeric', 'between:-180,180'],
             'activo'                      => ['boolean'],
             'observaciones'               => ['nullable', 'string'],
             // Direcciones opcionales
@@ -248,7 +293,7 @@ class ClienteController extends Controller
         ]);
 
         try {
-            $cliente = Cliente::create([
+            $cliente = ClienteModel::create([
                 'nombre'           => $data['nombre'],
                 'razon_social'     => $data['razon_social'] ?? null,
                 'nit'              => $data['nit'] ?? null,
@@ -258,6 +303,9 @@ class ClienteController extends Controller
                 'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
                 'genero'           => $data['genero'] ?? null,
                 'limite_credito'   => $data['limite_credito'] ?? 0,
+                'localidad_id'     => $data['localidad_id'] ?? null,
+                'latitud'          => $data['latitud'] ?? null,
+                'longitud'         => $data['longitud'] ?? null,
                 'activo'           => $data['activo'] ?? true,
                 'observaciones'    => $data['observaciones'] ?? null,
                 'fecha_registro'   => now(),
@@ -284,7 +332,7 @@ class ClienteController extends Controller
     /**
      * API: Actualizar cliente
      */
-    public function updateApi(Request $request, Cliente $cliente): JsonResponse
+    public function updateApi(Request $request, ClienteModel $cliente): JsonResponse
     {
         $data = $request->validate([
             'nombre'           => ['sometimes', 'required', 'string', 'max:255'],
@@ -296,6 +344,9 @@ class ClienteController extends Controller
             'fecha_nacimiento' => ['nullable', 'date'],
             'genero'           => ['nullable', 'in:M,F,O'],
             'limite_credito'   => ['nullable', 'numeric', 'min:0'],
+            'localidad_id'     => ['nullable', 'exists:localidades,id'],
+            'latitud'          => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'         => ['nullable', 'numeric', 'between:-180,180'],
             'activo'           => ['boolean'],
             'observaciones'    => ['nullable', 'string'],
         ]);
@@ -316,11 +367,11 @@ class ClienteController extends Controller
     /**
      * API: Eliminar cliente
      */
-    public function destroyApi(Cliente $cliente): JsonResponse
+    public function destroyApi(ClienteModel $cliente): JsonResponse
     {
         try {
             // Verificar si tiene cuentas por cobrar pendientes
-            $tieneCuentasPendientes = $cliente->cuentasPorCobrar()->where('saldo', '>', 0)->exists();
+            $tieneCuentasPendientes = $cliente->cuentasPorCobrar()->where('saldo_pendiente', '>', 0)->exists();
             if ($tieneCuentasPendientes) {
                 return ApiResponse::error('No se puede eliminar un cliente con cuentas por cobrar pendientes', 400);
             }
@@ -356,7 +407,7 @@ class ClienteController extends Controller
             return ApiResponse::success([]);
         }
 
-        $clientes = Cliente::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
+        $clientes = ClienteModel::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
             ->where('activo', true)
             ->where(function ($query) use ($q) {
                 $query->where('nombre', 'like', "%$q%")
@@ -373,15 +424,15 @@ class ClienteController extends Controller
     /**
      * API: Obtener saldo de cuentas por cobrar de un cliente
      */
-    public function saldoCuentasPorCobrar(Cliente $cliente): JsonResponse
+    public function saldoCuentasPorCobrar(ClienteModel $cliente): JsonResponse
     {
         $cuentas = $cliente->cuentasPorCobrar()
-            ->where('saldo', '>', 0)
+            ->where('saldo_pendiente', '>', 0)
             ->orderByDesc('fecha_vencimiento')
-            ->get(['id', 'numero_documento', 'monto_total', 'saldo', 'fecha_vencimiento', 'dias_vencimiento']);
+            ->get(['id', 'venta_id', 'monto_original', 'saldo_pendiente', 'fecha_vencimiento', 'dias_vencido']);
 
-        $saldoTotal      = $cuentas->sum('saldo');
-        $cuentasVencidas = $cuentas->where('dias_vencimiento', '>', 0)->count();
+        $saldoTotal      = $cuentas->sum('saldo_pendiente');
+        $cuentasVencidas = $cuentas->where('dias_vencido', '>', 0)->count();
 
         return ApiResponse::success([
             'cliente'          => [
@@ -398,7 +449,7 @@ class ClienteController extends Controller
     /**
      * API: Historial de compras del cliente
      */
-    public function historialVentas(Cliente $cliente, Request $request): JsonResponse
+    public function historialVentas(ClienteModel $cliente, Request $request): JsonResponse
     {
         $perPage     = $request->integer('per_page', 10);
         $fechaInicio = $request->date('fecha_inicio');

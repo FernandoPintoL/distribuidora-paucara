@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import SearchSelect from '@/components/ui/search-select';
 import InputSearch from '@/components/ui/input-search';
 import { Checkbox } from '@/components/ui/checkbox';
+import NotificationService from '@/services/notification.service';
 
 interface Option { value: number | string; label: string; description?: string }
 
@@ -24,19 +25,28 @@ export interface Step1Props {
   marcasOptions: Option[];
   proveedoresOptions: Option[];
   unidadesOptions: Option[];
-  setData: (key: string, value: any) => void; // follows useForm API used in parent
+  setData: (key: string, value: unknown) => void; // follows useForm API used in parent
   getInputClassName: (fieldName: keyof Record<string, string>) => string;
 }
 
 export default function Step1DatosProducto({ data, errors, categoriasOptions, marcasOptions, proveedoresOptions, unidadesOptions, setData, getInputClassName }: Step1Props) {
   // Función de búsqueda para proveedores
   const searchProveedores = async (query: string) => {
-    if (!query || query.length < 2) return [];
+    console.log('🔍 Buscando proveedores con query:', query);
+    console.log('📋 Proveedores disponibles:', proveedoresOptions.length);
+
+    if (!query || query.length < 2) {
+      console.log('❌ Query muy corto, retornando vacío');
+      return [];
+    }
 
     const filtered = proveedoresOptions.filter(option =>
       option.label.toLowerCase().includes(query.toLowerCase()) ||
       (option.description && option.description.toLowerCase().includes(query.toLowerCase()))
     );
+
+    console.log('✅ Proveedores filtrados:', filtered.length);
+    console.log('📝 Resultados:', filtered);
 
     return filtered.map(option => ({
       value: option.value,
@@ -73,14 +83,19 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
             onChange={(value) => setData('proveedor_id', value ? Number(value) : '')}
             onSearch={searchProveedores}
             placeholder="Buscar proveedor..."
-            emptyText="No se encontraron proveedores"
+            emptyText="No se encontró ningún proveedor con ese nombre"
             error={errors.proveedor_id}
-            showCreateButton={true}
+            showCreateIconButton={true}
+            createIconButtonTitle="Crear nuevo proveedor"
             onCreateClick={(searchQuery) => {
+              console.log('🚀 onCreateClick ejecutado con query:', searchQuery);
+              console.log('📋 Estado actual - proveedoresOptions:', proveedoresOptions.length);
               // Crear nuevo proveedor automáticamente con solo el nombre
               const createProveedor = async (nombre: string) => {
+                console.log('🔧 Creando proveedor:', nombre);
                 try {
                   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                  console.log('🔑 CSRF Token encontrado:', !!csrfToken);
                   const response = await fetch('/api/proveedores', {
                     method: 'POST',
                     headers: {
@@ -90,26 +105,50 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
                     body: JSON.stringify({ nombre }),
                   });
 
+                  console.log('📡 Respuesta del servidor:', response.status);
+
                   if (response.ok) {
-                    const newProveedor = await response.json();
-                    setData('proveedor_id', newProveedor.id);
-                    // Opcional: podrías agregar el nuevo proveedor a las opciones locales si es necesario
-                    console.log('Proveedor creado:', newProveedor);
+                    const result = await response.json();
+                    console.log('✅ Respuesta completa:', result);
+                    if (result.success) {
+                      setData('proveedor_id', result.data.id);
+                      console.log('💾 Proveedor ID actualizado:', result.data.id);
+                      // Mostrar notificación de éxito
+                      NotificationService.success(result.message || 'Proveedor creado exitosamente');
+                    } else {
+                      console.error('❌ Error del servidor:', result.message);
+
+                      // Manejar errores de validación específicos
+                      if (result.errors?.nombre) {
+                        NotificationService.error('Ya existe un proveedor con ese nombre. Por favor, elige un nombre diferente.');
+                      } else {
+                        NotificationService.error(result.message || 'Error al crear el proveedor');
+                      }
+                    }
                   } else {
-                    console.error('Error al crear proveedor:', response.statusText);
-                    // Aquí podrías mostrar un mensaje de error al usuario
+                    const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+                    console.error('❌ Error HTTP:', response.status, errorData.message);
+
+                    // Manejar errores de validación específicos
+                    if (response.status === 422 && errorData.errors?.nombre) {
+                      NotificationService.error('Ya existe un proveedor con ese nombre. Por favor, elige un nombre diferente.');
+                    } else {
+                      NotificationService.error(errorData.message || 'Error al crear el proveedor');
+                    }
                   }
                 } catch (error) {
-                  console.error('Error al crear proveedor:', error);
-                  // Aquí podrías mostrar un mensaje de error al usuario
+                  console.error('❌ Error de red:', error);
+                  NotificationService.error('Error de conexión al crear el proveedor');
                 }
               };
 
               createProveedor(searchQuery);
             }}
-            createButtonText="Crear nuevo proveedor"
             displayValue={proveedoresOptions.find(opt => opt.value === data.proveedor_id)?.label}
           />
+          <div className="text-xs text-muted-foreground mt-1 px-1">
+            💡 Si no encuentras el proveedor, puedes crearlo haciendo clic en el botón ➕. El sistema evitará crear proveedores con nombres duplicados.
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">

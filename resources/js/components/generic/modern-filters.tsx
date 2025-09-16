@@ -45,8 +45,13 @@ export default function ModernFilters({
         return (extraData?.marcas as { id: number; nombre: string }[]) || [];
     }, [extraData?.marcas]);
 
+    const localidadesData = React.useMemo(() => {
+        return (extraData?.localidades as { id: number; nombre: string; codigo: string }[]) || [];
+    }, [extraData?.localidades]);
+
     const categoriasSelect = useEntitySelect(categoriasData);
     const marcasSelect = useEntitySelect(marcasData);
+    const localidadesSelect = useEntitySelect(localidadesData);
 
     // Sync local state with external filters
     React.useEffect(() => {
@@ -101,9 +106,9 @@ export default function ModernFilters({
                     ? (extraData?.[field.extraDataKey] as { id: number; nombre: string }[]) || []
                     : field.options || [];
 
-                // Use SearchSelect for categoria_id and marca_id in productos module
+                // Use SearchSelect for categoria_id, marca_id, and localidad_id
                 const shouldUseSearchSelect = field.extraDataKey &&
-                    (field.key === 'categoria_id' || field.key === 'marca_id') &&
+                    (field.key === 'categoria_id' || field.key === 'marca_id' || field.key === 'localidad_id') &&
                     Array.isArray(options) && options.length > 0;
 
                 if (shouldUseSearchSelect) {
@@ -113,6 +118,8 @@ export default function ModernFilters({
                         searchSelectOptions = categoriasSelect.filteredOptions;
                     } else if (field.key === 'marca_id') {
                         searchSelectOptions = marcasSelect.filteredOptions;
+                    } else if (field.key === 'localidad_id') {
+                        searchSelectOptions = localidadesSelect.filteredOptions;
                     } else {
                         searchSelectOptions = [];
                     }

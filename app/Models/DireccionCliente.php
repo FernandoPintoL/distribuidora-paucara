@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,14 +11,14 @@ class DireccionCliente extends Model
     protected $table = 'direcciones_cliente';
 
     protected $fillable = [
-        'cliente_id', 'direccion', 'latitud', 'longitud', 'es_principal', 'activa',
+        'cliente_id', 'direccion', 'ciudad', 'departamento', 'codigo_postal', 'latitud', 'longitud', 'es_principal', 'activa', 'observaciones',
     ];
 
     protected $casts = [
-        'latitud' => 'float',
-        'longitud' => 'float',
+        'latitud'      => 'float',
+        'longitud'     => 'float',
         'es_principal' => 'boolean',
-        'activa' => 'boolean',
+        'activa'       => 'boolean',
     ];
 
     public function cliente()

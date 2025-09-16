@@ -85,7 +85,7 @@ export default function InputSearch({
             try {
                 const results = await onSearch(query);
                 setOptions(results);
-                setIsOpen(results.length > 0);
+                setIsOpen(results.length > 0 || (query.length >= 2 && showCreateButton && !!onCreateClick));
                 setSelectedIndex(-1); // Reset selection when new results arrive
             } catch (error) {
                 console.error('Error en búsqueda:', error);
@@ -273,7 +273,7 @@ export default function InputSearch({
                         value={query}
                         onChange={handleInputChange}
                         onKeyDown={handleKeyDown}
-                        onFocus={() => query.length >= 2 && options.length > 0 && setIsOpen(true)}
+                        onFocus={() => query.length >= 2 && (options.length > 0 || (showCreateButton && !!onCreateClick)) && setIsOpen(true)}
                         placeholder={placeholder}
                         disabled={disabled}
                         className={`
@@ -371,7 +371,10 @@ export default function InputSearch({
                                         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                                             <button
                                                 type="button"
-                                                onClick={() => onCreateClick(query)}
+                                                onClick={() => {
+                                                    console.log('🖱️ Botón crear clickeado con query:', query);
+                                                    onCreateClick(query);
+                                                }}
                                                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors duration-150"
                                             >
                                                 <span className="mr-2">➕</span>
