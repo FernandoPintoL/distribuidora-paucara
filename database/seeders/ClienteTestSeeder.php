@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\Cliente;
@@ -10,7 +9,7 @@ class ClienteTestSeeder extends Seeder
     public function run(): void
     {
         $clientes = [
-            [
+            /* [
                 'nombre' => 'Juan Pérez Martínez',
                 'razon_social' => 'Juan Pérez Martínez',
                 'nit' => '12345678',
@@ -49,7 +48,7 @@ class ClienteTestSeeder extends Seeder
                 'activo' => true,
                 'fecha_registro' => now(),
                 'limite_credito' => 1200.00,
-            ],
+            ], */
         ];
 
         foreach ($clientes as $clienteData) {

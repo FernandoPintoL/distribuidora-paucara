@@ -13,9 +13,11 @@ class LocalidadSeeder extends Seeder
         $localidades = [
             ['nombre' => 'Puerto Suarez', 'codigo' => 'PS', 'activo' => true],
             ['nombre' => 'Puerto Quijarro', 'codigo' => 'PQ', 'activo' => true],
-            ['nombre' => 'Santa Cruz', 'codigo' => 'SC', 'activo' => true],
-            ['nombre' => 'La Paz', 'codigo' => 'LP', 'activo' => true],
-            ['nombre' => 'Cochabamba', 'codigo' => 'CB', 'activo' => true],
+            ['nombre' => 'Arroyo Concepción', 'codigo' => 'AC', 'activo' => true],
+            ['nombre' => 'Paradero', 'codigo' => 'PRD', 'activo' => true],
+            ['nombre' => 'Yacuces', 'codigo' => 'YC', 'activo' => true],
+            ['nombre' => 'Santa Ana', 'codigo' => 'SA', 'activo' => true],
+            ['nombre' => 'Carmen Rivero Tórrez', 'codigo' => 'CRT', 'activo' => true],
         ];
 
         foreach ($localidades as $localidad) {

@@ -19,7 +19,7 @@ class AlmacenesUbicacionSeeder extends Seeder
                 'requiere_transporte_externo' => false,
                 'descripcion'                 => 'Almacén principal en sede central',
             ],
-            [
+            /* [
                 'nombre'                      => 'Almacén Secundario',
                 'ubicacion_fisica'            => 'SEDE_PRINCIPAL',
                 'requiere_transporte_externo' => false,
@@ -48,7 +48,7 @@ class AlmacenesUbicacionSeeder extends Seeder
                 'ubicacion_fisica'            => 'BODEGA_REMOTA',
                 'requiere_transporte_externo' => true,
                 'descripcion'                 => 'Bodega en ubicación externa',
-            ],
+            ], */
         ];
 
         foreach ($configuraciones as $config) {

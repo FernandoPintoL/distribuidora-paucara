@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\Moneda;
@@ -14,15 +13,15 @@ class MonedaSeeder extends Seeder
     {
         $monedas = [
             [
-                'codigo' => 'BOB',
-                'nombre' => 'Boliviano',
-                'simbolo' => 'Bs',
-                'decimales' => 2,
-                'tasa_cambio' => 1.00,
+                'codigo'         => 'BOB',
+                'nombre'         => 'Boliviano',
+                'simbolo'        => 'Bs',
+                'decimales'      => 2,
+                'tasa_cambio'    => 1.00,
                 'es_moneda_base' => true,
-                'activo' => true,
+                'activo'         => true,
             ],
-            [
+            /* [
                 'codigo' => 'USD',
                 'nombre' => 'Dólar Estadounidense',
                 'simbolo' => '$',
@@ -39,7 +38,7 @@ class MonedaSeeder extends Seeder
                 'tasa_cambio' => 7.50,
                 'es_moneda_base' => false,
                 'activo' => true,
-            ],
+            ], */
         ];
 
         foreach ($monedas as $moneda) {

@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\Caja;
@@ -14,12 +13,12 @@ class CajaSeeder extends Seeder
     {
         $cajas = [
             [
-                'nombre' => 'Caja Principal',
-                'ubicacion' => 'Mostrador Principal',
+                'nombre'            => 'Caja Principal',
+                'ubicacion'         => 'Mostrador Principal',
                 'monto_inicial_dia' => 1000.00,
-                'activa' => true,
+                'activa'            => true,
             ],
-            [
+            /* [
                 'nombre' => 'Caja Secundaria',
                 'ubicacion' => 'Mostrador 2',
                 'monto_inicial_dia' => 500.00,
@@ -30,7 +29,7 @@ class CajaSeeder extends Seeder
                 'ubicacion' => 'Área de Almacén',
                 'monto_inicial_dia' => 200.00,
                 'activa' => true,
-            ],
+            ], */
         ];
 
         foreach ($cajas as $caja) {

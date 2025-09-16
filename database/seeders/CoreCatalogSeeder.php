@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -81,7 +80,7 @@ class CoreCatalogSeeder extends Seeder
         $categorias = [
             ['nombre' => 'Cervezas', 'activo' => true],
             ['nombre' => 'Gaseosa', 'activo' => true],
-            ['nombre' => 'AGUAS', 'activo' => true],
+            ['nombre' => 'Aguas', 'activo' => true],
         ];
         DB::table('categorias')->upsert($categorias, ['nombre'], ['activo']);
         // Monedas básicas

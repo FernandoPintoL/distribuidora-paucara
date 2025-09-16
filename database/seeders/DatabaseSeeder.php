@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(CoreCatalogSeeder::class);
+        $this->call(AlmacenesUbicacionSeeder::class);
         // $this->call(CajaSeeder::class);
         // $this->call(ClienteTestSeeder::class);
         // $this->call(CuentaContableSeeder::class);
