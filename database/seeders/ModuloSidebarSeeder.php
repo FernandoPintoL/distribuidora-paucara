@@ -25,11 +25,12 @@ class ModuloSidebarSeeder extends Seeder
 
         // Submódulos de Productos
         $submenuProductos = [
-            ['titulo' => 'Listado de Productos', 'ruta' => '/productos', 'icono' => 'Package', 'orden' => 1],
-            ['titulo' => 'Categorías', 'ruta' => '/categorias', 'icono' => 'FolderTree', 'orden' => 2],
-            ['titulo' => 'Marcas', 'ruta' => '/marcas', 'icono' => 'Tags', 'orden' => 3],
-            ['titulo' => 'Unidades', 'ruta' => '/unidades', 'icono' => 'Ruler', 'orden' => 4],
-            ['titulo' => 'Tipo Precios', 'ruta' => '/tipos-precio', 'icono' => 'DollarSign', 'orden' => 5],
+            ['titulo' => 'Productos', 'ruta' => '/productos', 'icono' => 'Package', 'orden' => 1],
+            ['titulo' => 'Crear Producto', 'ruta' => '/productos/crear', 'icono' => 'Plus', 'orden' => 2],
+            ['titulo' => 'Categorías', 'ruta' => '/categorias', 'icono' => 'FolderTree', 'orden' => 3],
+            ['titulo' => 'Marcas', 'ruta' => '/marcas', 'icono' => 'Tags', 'orden' => 4],
+            ['titulo' => 'Unidades', 'ruta' => '/unidades', 'icono' => 'Ruler', 'orden' => 5],
+            ['titulo' => 'Tipo Precios', 'ruta' => '/tipos-precio', 'icono' => 'DollarSign', 'orden' => 6],
         ];
 
         foreach ($submenuProductos as $submenu) {

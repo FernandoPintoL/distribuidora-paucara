@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Proveedor;
@@ -20,7 +19,7 @@ class ProveedorController extends Controller
 
         // Leer filtros adicionales
         $activoParam = $request->input('activo');
-        $activo = null;
+        $activo      = null;
         if ($activoParam !== null && $activoParam !== '' && $activoParam !== 'all') {
             if ($activoParam === '1' || $activoParam === 1 || $activoParam === true || $activoParam === 'true') {
                 $activo = true;
@@ -30,11 +29,11 @@ class ProveedorController extends Controller
         }
 
         $allowedOrderBy = ['id', 'nombre', 'created_at'];
-        $rawOrderBy = (string) $request->string('order_by');
-        $orderBy = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
+        $rawOrderBy     = (string) $request->string('order_by');
+        $orderBy        = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
 
         $rawOrderDir = strtolower((string) $request->string('order_dir'));
-        $orderDir = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
+        $orderDir    = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
 
         $items = Proveedor::query()
             ->when($q, function ($query) use ($q) {
@@ -56,10 +55,10 @@ class ProveedorController extends Controller
 
         return Inertia::render('proveedores/index', [
             'proveedores' => $items,
-            'filters' => [
-                'q' => $q,
-                'activo' => $activo,
-                'order_by' => $orderBy,
+            'filters'     => [
+                'q'         => $q,
+                'activo'    => $activo,
+                'order_by'  => $orderBy,
                 'order_dir' => $orderDir,
             ],
         ]);
@@ -70,13 +69,13 @@ class ProveedorController extends Controller
      */
     public function buscarApi(Request $request): JsonResponse
     {
-        $q = $request->string('q');
+        $q      = $request->string('q');
         $limite = $request->integer('limite', 10);
 
         if (! $q || strlen($q) < 2) {
             return response()->json([
                 'success' => true,
-                'data' => [],
+                'data'    => [],
             ]);
         }
 
@@ -95,7 +94,7 @@ class ProveedorController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $proveedores,
+            'data'    => $proveedores,
         ]);
     }
 
@@ -106,27 +105,27 @@ class ProveedorController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse|JsonResponse|Response
+    public function store(Request $request): RedirectResponse | JsonResponse | Response
     {
         $isModalRequest = $this->isModalRequest($request);
 
         $validationRules = [
-            'nombre' => ['required', 'string', 'max:255'],
+            'nombre'       => ['required', 'string', 'max:255'],
             'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit' => ['nullable', 'string', 'max:255'],
-            'telefono' => ['nullable', 'string', 'max:100'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'direccion' => ['nullable', 'string', 'max:255'],
-            'contacto' => ['nullable', 'string', 'max:255'],
-            'activo' => ['boolean'],
+            'nit'          => ['nullable', 'string', 'max:255'],
+            'telefono'     => ['nullable', 'string', 'max:100'],
+            'email'        => ['nullable', 'email', 'max:255'],
+            'direccion'    => ['nullable', 'string', 'max:255'],
+            'contacto'     => ['nullable', 'string', 'max:255'],
+            'activo'       => ['boolean'],
         ];
 
         // Solo validar archivos si no es una petición de modal
         if (! $isModalRequest) {
             $validationRules = array_merge($validationRules, [
                 'foto_perfil' => ['nullable', 'image', 'max:5120'],
-                'ci_anverso' => ['nullable', 'image', 'max:5120'],
-                'ci_reverso' => ['nullable', 'image', 'max:5120'],
+                'ci_anverso'  => ['nullable', 'image', 'max:5120'],
+                'ci_reverso'  => ['nullable', 'image', 'max:5120'],
             ]);
         }
 
@@ -159,6 +158,33 @@ class ProveedorController extends Controller
         );
     }
 
+    /**
+     * API: Crear un nuevo proveedor (solo nombre requerido)
+     */
+    public function storeApi(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'nombre' => ['required', 'string', 'max:255'],
+        ]);
+
+        $data['activo'] = true; // Por defecto activo
+
+        try {
+            $proveedor = Proveedor::create($data);
+
+            return response()->json([
+                'success' => true,
+                'data'    => $proveedor,
+                'message' => 'Proveedor creado exitosamente',
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el proveedor: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function edit(Proveedor $proveedore): InertiaResponse
     {
         return Inertia::render('proveedores/form', [
@@ -166,20 +192,20 @@ class ProveedorController extends Controller
         ]);
     }
 
-    public function update(Request $request, Proveedor $proveedore): RedirectResponse|JsonResponse|Response
+    public function update(Request $request, Proveedor $proveedore): RedirectResponse | JsonResponse | Response
     {
         $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
+            'nombre'       => ['required', 'string', 'max:255'],
             'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit' => ['nullable', 'string', 'max:255'],
-            'telefono' => ['nullable', 'string', 'max:100'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'direccion' => ['nullable', 'string', 'max:255'],
-            'contacto' => ['nullable', 'string', 'max:255'],
-            'activo' => ['boolean'],
-            'foto_perfil' => ['nullable', 'image', 'max:5120'],
-            'ci_anverso' => ['nullable', 'image', 'max:5120'],
-            'ci_reverso' => ['nullable', 'image', 'max:5120'],
+            'nit'          => ['nullable', 'string', 'max:255'],
+            'telefono'     => ['nullable', 'string', 'max:100'],
+            'email'        => ['nullable', 'email', 'max:255'],
+            'direccion'    => ['nullable', 'string', 'max:255'],
+            'contacto'     => ['nullable', 'string', 'max:255'],
+            'activo'       => ['boolean'],
+            'foto_perfil'  => ['nullable', 'image', 'max:5120'],
+            'ci_anverso'   => ['nullable', 'image', 'max:5120'],
+            'ci_reverso'   => ['nullable', 'image', 'max:5120'],
         ]);
 
         return $this->handleCrudOperation(
@@ -207,7 +233,7 @@ class ProveedorController extends Controller
         );
     }
 
-    public function destroy(Request $request, Proveedor $proveedore): RedirectResponse|JsonResponse|Response
+    public function destroy(Request $request, Proveedor $proveedore): RedirectResponse | JsonResponse | Response
     {
         return $this->handleCrudOperation(
             $request,

@@ -10,6 +10,7 @@ use App\Http\Controllers\DireccionClienteApiController;
 use App\Http\Controllers\EnvioController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ReporteInventarioApiController;
 use App\Http\Controllers\VentaController;
 use Illuminate\Support\Facades\Route;
@@ -147,4 +148,10 @@ Route::group(['prefix' => 'clientes'], function () {
     Route::put('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'update']);
     Route::delete('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'destroy']);
     Route::patch('{cliente}/direcciones/{direccion}/principal', [DireccionClienteApiController::class, 'establecerPrincipal']);
+});
+
+// Rutas API para proveedores
+Route::group(['prefix' => 'proveedores'], function () {
+    Route::post('/', [ProveedorController::class, 'storeApi']);
+    Route::get('buscar', [ProveedorController::class, 'buscarApi']);
 });

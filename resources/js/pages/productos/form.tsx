@@ -25,7 +25,6 @@ interface ProductoFormPageProps {
 
 // Estado del formulario tipado para evitar 'any' implícitos
 // Usamos el tipo original de ProductoFormData
-type ProductoFormState = ProductoFormData;
 
 // Precios por defecto mejorados con tipos usando IDs
 // Porcentaje de interés global recibido por props (opcional) se mostrará en la UI y puede ayudar a calcular precios
@@ -38,6 +37,7 @@ const initialProductoData: ProductoFormData = {
   fecha_vencimiento: null,
   categoria_id: '',
   marca_id: '',
+  proveedor_id: '',
   activo: true,
   stock_minimo: 0,
   stock_maximo: 50,
@@ -71,7 +71,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     descriptionField: 'codigo'
   });
 
-  const { data, setData, processing, errors, recentlySuccessful, clearErrors } = useForm(
+  const { data, setData, processing, errors, recentlySuccessful, clearErrors } = useForm<ProductoFormData>(
     producto ? {
       nombre: producto.nombre,
       descripcion: producto.descripcion ?? '',
@@ -85,11 +85,11 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
       activo: producto.activo ?? true,
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
-      perfil: producto.perfil ?? undefined,
+      perfil: producto.perfil ?? null,
       galeria: producto.galeria ?? [],
       precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
       codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
-    } : (initialProductoData as unknown as ProductoFormState)
+    } : initialProductoData
   );
 
   // Autosave: restaurar borrador en carga inicial (solo creación)
@@ -121,7 +121,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     } catch (e) {
       console.warn('Borrador inválido, se ignora.', e);
     }
-  }, []);
+  }, [isEditing, setData]);
 
   // Autosave: guardar borrador al cambiar datos o paso (solo creación)
   useEffect(() => {
@@ -214,20 +214,23 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
       fecha_vencimiento: data.fecha_vencimiento ?? '',
       categoria_id: data.categoria_id || '',
       marca_id: data.marca_id || '',
+      proveedor_id: data.proveedor_id || '',
       activo: data.activo ? 1 : 0,
       stock_minimo: data.stock_minimo ?? '',
       stock_maximo: data.stock_maximo ?? '',
     }).forEach(([k, v]) => formData.append(k, String(v ?? '')));
 
     // Imágenes
-    if (data.perfil?.file) {
+    if (data.perfil && data.perfil.file) {
       formData.append('perfil', data.perfil.file);
     }
-    data.galeria?.forEach((img: Imagen, i: number) => {
-      if (img.file) {
-        formData.append(`galeria[${i}]`, img.file);
-      }
-    });
+    if (data.galeria) {
+      data.galeria.forEach((img: Imagen, i: number) => {
+        if (img.file) {
+          formData.append(`galeria[${i}]`, img.file);
+        }
+      });
+    }
 
     // Precios (solo los válidos)
     preciosValidos.forEach((p: Precio, i: number) => {
@@ -353,7 +356,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
   };
 
   const setPerfil = (file: File | undefined) => {
-    setData('perfil', file ? { file } : null);
+    setData('perfil', file ? { file } : undefined);
     if (file) {
       NotificationService.success('Imagen de perfil seleccionada');
     }
@@ -363,7 +366,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     if (!files || files.length === 0) return;
 
     const imgs = Array.from(files).map(f => ({ file: f } as Imagen));
-    const nuevaGaleria = [...(data.galeria || []), ...imgs];
+    const nuevaGaleria = [...(data.galeria ?? []), ...imgs];
     setData('galeria', nuevaGaleria);
     NotificationService.success(`${files.length} imagen(es) agregada(s) a la galería`);
   };
@@ -378,7 +381,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     );
 
     if (confirmed) {
-      const galeriaFiltrada = (data.galeria || []).filter((_: unknown, idx: number) => idx !== i);
+      const galeriaFiltrada = (data.galeria ?? []).filter((_: unknown, idx: number) => idx !== i);
       setData('galeria', galeriaFiltrada);
       NotificationService.success('Imagen eliminada de la galería');
     }
@@ -467,6 +470,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
                   errors={errors}
                   categoriasOptions={categoriasSelect.filteredOptions}
                   marcasOptions={marcasSelect.filteredOptions}
+                  proveedoresOptions={proveedoresSelect.filteredOptions}
                   unidadesOptions={unidadesSelect.filteredOptions}
                   setData={setData}
                   getInputClassName={getInputClassName}
@@ -499,7 +503,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
                 {/* STEP 3: Imágenes */}
                 {step === 3 && (
                   <Step4Imagenes
-                    data={{ perfil: data.perfil || null, galeria: data.galeria || [] }}
+                    data={{ perfil: data.perfil ?? undefined, galeria: data.galeria ?? [] }}
                     setPerfil={setPerfil}
                     addGaleria={addGaleria}
                     removeGaleria={removeGaleria}

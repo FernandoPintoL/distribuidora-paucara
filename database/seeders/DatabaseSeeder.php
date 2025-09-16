@@ -10,23 +10,23 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(CoreCatalogSeeder::class);
-        $this->call(CajaSeeder::class);
-        $this->call(ClienteTestSeeder::class);
-        $this->call(CuentaContableSeeder::class);
-        $this->call(EmpleadoRolesSeeder::class);
+        // $this->call(CajaSeeder::class);
+        // $this->call(ClienteTestSeeder::class);
+        // $this->call(CuentaContableSeeder::class);
+        // $this->call(EmpleadoRolesSeeder::class);
         $this->call(EstadoDocumentoSeeder::class);
         $this->call(EstadoMermaSeeder::class);
         $this->call(ImpuestoSeeder::class);
         $this->call(ModuloSidebarSeeder::class);
         $this->call(MonedaSeeder::class);
-        $this->call(ProformaAppExternaSeeder::class);
+        // $this->call(ProformaAppExternaSeeder::class);
         $this->call(TipoAjustInventarioSeeder::class);
         $this->call(TipoDocumentoSeeder::class);
         $this->call(TipoMermaSeeder::class);
         $this->call(TipoOperacionCajaSeeder::class);
         $this->call(TiposPrecioSeeder::class);
-        $this->call(VehiculoSeeder::class);
-        $this->call(ProductosEjemploSeeder::class);
+        // $this->call(VehiculoSeeder::class);
+        // $this->call(ProductosEjemploSeeder::class);
         // Seed core catalogs
         // Seed roles and permissions and assign to admin
         $this->call(RolesAndPermissionsSeeder::class);

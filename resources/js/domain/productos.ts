@@ -79,8 +79,8 @@ export interface ProductoFormData extends BaseFormData {
   stock_minimo?: number | null;
   stock_maximo?: number | null;
   activo?: boolean;
-  perfil?: Imagen | null;
-  galeria?: Imagen[];
+  perfil?: Imagen | undefined;
+  galeria?: Imagen[] | undefined;
   precios: Precio[];
   codigos: CodigoBarra[];
   almacenes?: StockAlmacen[];
