@@ -1,38 +1,22 @@
-import { Link, router, usePage, Head } from '@inertiajs/react'
-import React, { useState } from 'react'
+import { Link, router, Head } from '@inertiajs/react'
+import React, { useState, useEffect } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import SearchSelect from '@/components/ui/search-select'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Save } from 'lucide-react'
 import { type BreadcrumbItem } from '@/types'
 
-interface Supervisor {
-    id: number
-    nombre: string
-    cargo: string
-}
-
-interface Role {
-    id: number
-    name: string
-}
-
-interface PageProps {
-    supervisores: Supervisor[]
-    roles: Role[]
-    [key: string]: unknown
-}
-
 interface EmpleadoFormData {
+    crear_usuario: boolean
     nombre: string
+    usernick: string
     email: string
-    codigo_empleado: string
     ci: string
     fecha_nacimiento: string
     telefono: string
@@ -53,12 +37,19 @@ interface EmpleadoFormData {
 }
 
 export default function EmpleadosCreate() {
-    const { supervisores, roles } = usePage<PageProps>().props
+    // const { } = usePage<PageProps>().props
     const [loading, setLoading] = useState(false)
+    const [departamentos, setDepartamentos] = useState([])
+    const [tiposContrato, setTiposContrato] = useState([])
+    const [estados, setEstados] = useState([])
+    const [supervisoresOptions, setSupervisoresOptions] = useState([])
+    const [rolesOptions, setRolesOptions] = useState([])
+    const [loadingSelects, setLoadingSelects] = useState(true)
     const [formData, setFormData] = useState<EmpleadoFormData>({
+        crear_usuario: true,
         nombre: '',
+        usernick: '',
         email: '',
-        codigo_empleado: '',
         ci: '',
         fecha_nacimiento: '',
         telefono: '',
@@ -92,6 +83,53 @@ export default function EmpleadosCreate() {
             [field]: value
         }))
     }
+
+    const handleSelectChange = (field: keyof EmpleadoFormData) => (
+        value: string | number
+    ) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value.toString()
+        }))
+    }
+
+    // Cargar datos de los selects desde la API
+    useEffect(() => {
+        const loadSelectData = async () => {
+            try {
+                setLoadingSelects(true)
+
+                const [departamentosRes, tiposContratoRes, estadosRes, supervisoresRes, rolesRes] = await Promise.all([
+                    fetch('/empleados-data/departamentos'),
+                    fetch('/empleados-data/tipos-contrato'),
+                    fetch('/empleados-data/estados'),
+                    fetch('/empleados-data/supervisores'),
+                    fetch('/empleados-data/roles')
+                ])
+
+                const [departamentosData, tiposContratoData, estadosData, supervisoresData, rolesData] = await Promise.all([
+                    departamentosRes.json(),
+                    tiposContratoRes.json(),
+                    estadosRes.json(),
+                    supervisoresRes.json(),
+                    rolesRes.json()
+                ])
+
+                setDepartamentos(departamentosData)
+                setTiposContrato(tiposContratoData)
+                setEstados(estadosData)
+                setSupervisoresOptions(supervisoresData)
+                setRolesOptions(rolesData)
+            } catch (error) {
+                console.error('Error cargando datos de selects:', error)
+                toast.error('Error al cargar los datos del formulario')
+            } finally {
+                setLoadingSelects(false)
+            }
+        }
+
+        loadSelectData()
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -143,6 +181,18 @@ export default function EmpleadosCreate() {
                             <CardDescription>Datos básicos del empleado</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Checkbox para crear usuario */}
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="crear_usuario"
+                                    checked={formData.crear_usuario}
+                                    onCheckedChange={(checked) => handleInputChange('crear_usuario')(!!checked)}
+                                />
+                                <Label htmlFor="crear_usuario" className="text-sm font-medium">
+                                    Crear usuario para acceso al sistema
+                                </Label>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="nombre">Nombre Completo *</Label>
@@ -154,17 +204,33 @@ export default function EmpleadosCreate() {
                                         required
                                     />
                                 </div>
-                                <div>
-                                    <Label htmlFor="email">Email *</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={(e) => handleInputChange('email')(e.target.value)}
-                                        placeholder="correo@ejemplo.com"
-                                        required
-                                    />
-                                </div>
+                                {formData.crear_usuario && (
+                                    <div>
+                                        <Label htmlFor="usernick">Usernick</Label>
+                                        <Input
+                                            id="usernick"
+                                            value={formData.usernick}
+                                            onChange={(e) => handleInputChange('usernick')(e.target.value)}
+                                            placeholder="Nombre de usuario (opcional)"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Si no se especifica, se generará automáticamente
+                                        </p>
+                                    </div>
+                                )}
+                                {formData.crear_usuario && (
+                                    <div>
+                                        <Label htmlFor="email">Email *</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={formData.email}
+                                            onChange={(e) => handleInputChange('email')(e.target.value)}
+                                            placeholder="correo@ejemplo.com"
+                                            required
+                                        />
+                                    </div>
+                                )}
                                 <div>
                                     <Label htmlFor="ci">Cédula de Identidad *</Label>
                                     <Input
@@ -217,16 +283,6 @@ export default function EmpleadosCreate() {
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <Label htmlFor="codigo_empleado">Código de Empleado *</Label>
-                                    <Input
-                                        id="codigo_empleado"
-                                        value={formData.codigo_empleado}
-                                        onChange={(e) => handleInputChange('codigo_empleado')(e.target.value)}
-                                        placeholder="EMP001"
-                                        required
-                                    />
-                                </div>
-                                <div>
                                     <Label htmlFor="cargo">Cargo *</Label>
                                     <Input
                                         id="cargo"
@@ -247,36 +303,26 @@ export default function EmpleadosCreate() {
                                 </div>
                                 <div>
                                     <Label htmlFor="departamento">Departamento *</Label>
-                                    <Select value={formData.departamento} onValueChange={handleInputChange('departamento')}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecciona un departamento" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Ventas">Ventas</SelectItem>
-                                            <SelectItem value="Administración">Administración</SelectItem>
-                                            <SelectItem value="Logística">Logística</SelectItem>
-                                            <SelectItem value="Contabilidad">Contabilidad</SelectItem>
-                                            <SelectItem value="RRHH">Recursos Humanos</SelectItem>
-                                            <SelectItem value="Sistemas">Sistemas</SelectItem>
-                                            <SelectItem value="Compras">Compras</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchSelect
+                                        id="departamento"
+                                        placeholder="Selecciona un departamento"
+                                        value={formData.departamento}
+                                        options={departamentos}
+                                        onChange={(value) => handleSelectChange('departamento')(value)}
+                                        loading={loadingSelects}
+                                        required
+                                    />
                                 </div>
                                 <div>
                                     <Label htmlFor="supervisor_id">Supervisor</Label>
-                                    <Select value={formData.supervisor_id || 'sin-supervisor'} onValueChange={handleInputChange('supervisor_id')}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Sin supervisor" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="sin-supervisor">Sin supervisor</SelectItem>
-                                            {supervisores.map((supervisor) => (
-                                                <SelectItem key={supervisor.id} value={supervisor.id.toString()}>
-                                                    {supervisor.nombre} - {supervisor.cargo}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchSelect
+                                        id="supervisor_id"
+                                        placeholder="Sin supervisor"
+                                        value={formData.supervisor_id}
+                                        options={supervisoresOptions}
+                                        onChange={(value) => handleSelectChange('supervisor_id')(value)}
+                                        loading={loadingSelects}
+                                    />
                                 </div>
                                 <div>
                                     <Label htmlFor="fecha_ingreso">Fecha de Ingreso *</Label>
@@ -290,30 +336,27 @@ export default function EmpleadosCreate() {
                                 </div>
                                 <div>
                                     <Label htmlFor="tipo_contrato">Tipo de Contrato *</Label>
-                                    <Select value={formData.tipo_contrato} onValueChange={handleInputChange('tipo_contrato')}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="indefinido">Indefinido</SelectItem>
-                                            <SelectItem value="temporal">Temporal</SelectItem>
-                                            <SelectItem value="practicante">Practicante</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchSelect
+                                        id="tipo_contrato"
+                                        placeholder="Selecciona un tipo de contrato"
+                                        value={formData.tipo_contrato}
+                                        options={tiposContrato}
+                                        onChange={(value) => handleSelectChange('tipo_contrato')(value)}
+                                        loading={loadingSelects}
+                                        required
+                                    />
                                 </div>
                                 <div>
                                     <Label htmlFor="estado">Estado *</Label>
-                                    <Select value={formData.estado} onValueChange={handleInputChange('estado')}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="activo">Activo</SelectItem>
-                                            <SelectItem value="inactivo">Inactivo</SelectItem>
-                                            <SelectItem value="vacaciones">Vacaciones</SelectItem>
-                                            <SelectItem value="licencia">Licencia</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchSelect
+                                        id="estado"
+                                        placeholder="Selecciona un estado"
+                                        value={formData.estado}
+                                        options={estados}
+                                        onChange={(value) => handleSelectChange('estado')(value)}
+                                        loading={loadingSelects}
+                                        required
+                                    />
                                 </div>
                             </div>
                         </CardContent>
@@ -357,41 +400,40 @@ export default function EmpleadosCreate() {
                     </Card>
 
                     {/* Configuración del Sistema */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Configuración del Sistema</CardTitle>
-                            <CardDescription>Permisos y roles del empleado</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="rol">Rol en el Sistema</Label>
-                                    <Select value={formData.rol} onValueChange={handleInputChange('rol')}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map((role) => (
-                                                <SelectItem key={role.id} value={role.name}>
-                                                    {role.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                    {formData.crear_usuario && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Configuración del Sistema</CardTitle>
+                                <CardDescription>Permisos y roles del empleado en el sistema</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <SearchSelect
+                                            id="rol"
+                                            label="Rol en el Sistema"
+                                            placeholder="Seleccione un rol"
+                                            value={formData.rol}
+                                            options={rolesOptions}
+                                            onChange={handleSelectChange('rol')}
+                                            loading={loadingSelects}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="puede_acceder_sistema"
+                                            checked={formData.puede_acceder_sistema}
+                                            onCheckedChange={(checked) => handleInputChange('puede_acceder_sistema')(!!checked)}
+                                        />
+                                        <Label htmlFor="puede_acceder_sistema">
+                                            Puede acceder al sistema
+                                        </Label>
+                                    </div>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                        id="puede_acceder_sistema"
-                                        checked={formData.puede_acceder_sistema}
-                                        onCheckedChange={(checked) => handleInputChange('puede_acceder_sistema')(!!checked)}
-                                    />
-                                    <Label htmlFor="puede_acceder_sistema">
-                                        Puede acceder al sistema
-                                    </Label>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Contacto de Emergencia */}
                     <Card>

@@ -1,8 +1,10 @@
+import AuthController from './AuthController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
 const Api = {
-    TipoMermaController,
+    AuthController,
+TipoMermaController,
 EstadoMermaController,
 ApiProformaController,
 }

@@ -144,6 +144,7 @@ return new class extends Migration
             $table->string('ci_anverso')->nullable();
             $table->string('ci_reverso')->nullable();
             $table->decimal('limite_credito', 18, 2)->default(0);
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
         });
 
         Schema::create('direcciones_cliente', function (Blueprint $table) {
@@ -338,7 +339,7 @@ return new class extends Migration
             $table->string('motivo_anulacion')->nullable();
             $table->foreignId('user_anulacion_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('fecha_anulacion')->nullable();
-                                                           // referencias externas
+            // referencias externas
             $table->string('referencia_tipo')->nullable(); // Ej: PEDIDO, FACTURA, AJUSTE
             $table->unsignedBigInteger('referencia_id')->nullable();
             $table->index(['referencia_tipo', 'referencia_id']);
@@ -352,7 +353,7 @@ return new class extends Migration
 
     public function down(): void
     {
-                                                         // Eliminar tablas en orden inverso, respetando dependencias de clave foránea
+        // Eliminar tablas en orden inverso, respetando dependencias de clave foránea
         Schema::dropIfExists('movimientos_inventario');  // Eliminar primero (tiene FKs)
         Schema::dropIfExists('tipos_ajuste_inventario'); // Luego eliminar padre
         Schema::dropIfExists('estado_mermas');

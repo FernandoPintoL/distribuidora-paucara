@@ -17,10 +17,10 @@ export default defineConfig({
             formVariants: true,
         }),
     ],
-    /*server: {
-        host: '192.168.100.21',
+    server: {
+        host: '192.168.5.44',
         port: 5173,
-    },*/
+    },
     esbuild: {
         jsx: 'automatic',
     },

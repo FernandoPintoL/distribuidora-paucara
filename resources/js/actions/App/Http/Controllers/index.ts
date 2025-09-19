@@ -1,5 +1,5 @@
-import ModuloSidebarController from './ModuloSidebarController'
 import Api from './Api'
+import ModuloSidebarController from './ModuloSidebarController'
 import ProductoController from './ProductoController'
 import VentaController from './VentaController'
 import EnvioController from './EnvioController'
@@ -38,8 +38,8 @@ import ReporteInventarioController from './ReporteInventarioController'
 import Settings from './Settings'
 import Auth from './Auth'
 const Controllers = {
-    ModuloSidebarController,
-Api,
+    Api,
+ModuloSidebarController,
 ProductoController,
 VentaController,
 EnvioController,

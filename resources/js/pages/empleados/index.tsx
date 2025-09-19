@@ -26,10 +26,11 @@ interface Empleado {
     puede_acceder_sistema: boolean
     supervisor_id?: number
     created_at: string
-    user: {
+    user?: {
         id: number
         name: string
         email: string
+        usernick?: string
     }
     supervisor?: {
         id: number
@@ -94,7 +95,7 @@ export default function EmpleadosIndex() {
     }
 
     const handleDelete = (empleado: Empleado) => {
-        if (confirm(`¿Estás seguro de que quieres eliminar al empleado ${empleado.user.name}?`)) {
+        if (confirm(`¿Estás seguro de que quieres eliminar al empleado ${empleado.user?.name || empleado.codigo_empleado}?`)) {
             router.delete(`/empleados/${empleado.id}`, {
                 onSuccess: () => {
                     toast.success('Empleado eliminado exitosamente.')
@@ -108,7 +109,7 @@ export default function EmpleadosIndex() {
 
     const toggleAccesoSistema = (empleado: Empleado) => {
         const accion = empleado.puede_acceder_sistema ? 'revocar' : 'otorgar'
-        if (confirm(`¿Estás seguro de que quieres ${accion} el acceso al sistema para ${empleado.user.name}?`)) {
+        if (confirm(`¿Estás seguro de que quieres ${accion} el acceso al sistema para ${empleado.user?.name || empleado.codigo_empleado}?`)) {
             router.patch(`/empleados/${empleado.id}/toggle-acceso-sistema`, {}, {
                 onSuccess: () => {
                     toast.success(`Acceso al sistema ${empleado.puede_acceder_sistema ? 'revocado' : 'otorgado'} exitosamente.`)
@@ -261,6 +262,8 @@ export default function EmpleadosIndex() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos</SelectItem>
+                                            <SelectItem value="con_usuario">Con usuario</SelectItem>
+                                            <SelectItem value="sin_usuario">Sin usuario</SelectItem>
                                             <SelectItem value="1">Con acceso</SelectItem>
                                             <SelectItem value="0">Sin acceso</SelectItem>
                                         </SelectContent>
@@ -310,6 +313,7 @@ export default function EmpleadosIndex() {
                                         <th className="text-left py-3 px-4 font-medium text-gray-700">Estado</th>
                                         <th className="text-left py-3 px-4 font-medium text-gray-700">Contrato</th>
                                         <th className="text-left py-3 px-4 font-medium text-gray-700">Antigüedad</th>
+                                        <th className="text-left py-3 px-4 font-medium text-gray-700">Usuario Sistema</th>
                                         <th className="text-left py-3 px-4 font-medium text-gray-700">Acceso Sistema</th>
                                         <th className="text-left py-3 px-4 font-medium text-gray-700">Supervisor</th>
                                         <th className="text-right py-3 px-4 font-medium text-gray-700">Acciones</th>
@@ -320,8 +324,12 @@ export default function EmpleadosIndex() {
                                         <tr key={empleado.id} className="border-b border-gray-100 hover:bg-gray-50">
                                             <td className="py-3 px-4">
                                                 <div>
-                                                    <div className="font-medium text-gray-900">{empleado.user.name}</div>
-                                                    <div className="text-sm text-gray-500">{empleado.user.email}</div>
+                                                    <div className="font-medium text-gray-900">
+                                                        {empleado.user?.name || empleado.codigo_empleado}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {empleado.user?.email || 'Sin usuario del sistema'}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="py-3 px-4">
@@ -346,30 +354,55 @@ export default function EmpleadosIndex() {
                                                 </div>
                                             </td>
                                             <td className="py-3 px-4">
+                                                <div className="flex items-center text-sm">
+                                                    {empleado.user ? (
+                                                        <>
+                                                            <User className="h-4 w-4 mr-1 text-green-500" />
+                                                            <span className="text-green-700">Sí</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ShieldOff className="h-4 w-4 mr-1 text-gray-400" />
+                                                            <span className="text-gray-500">No</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4">
                                                 <Can permission="empleados.gestionar_acceso_sistema">
-                                                    <Button
-                                                        size="sm"
-                                                        variant={empleado.puede_acceder_sistema ? "default" : "outline"}
-                                                        onClick={() => toggleAccesoSistema(empleado)}
-                                                        className="h-7"
-                                                    >
-                                                        {empleado.puede_acceder_sistema ? (
-                                                            <>
-                                                                <Shield className="h-3 w-3 mr-1" />
-                                                                Sí
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <ShieldOff className="h-3 w-3 mr-1" />
-                                                                No
-                                                            </>
-                                                        )}
-                                                    </Button>
+                                                    {empleado.user ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant={empleado.puede_acceder_sistema ? "default" : "outline"}
+                                                            onClick={() => toggleAccesoSistema(empleado)}
+                                                            className="h-7"
+                                                        >
+                                                            {empleado.puede_acceder_sistema ? (
+                                                                <>
+                                                                    <Shield className="h-3 w-3 mr-1" />
+                                                                    Sí
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ShieldOff className="h-3 w-3 mr-1" />
+                                                                    No
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    ) : (
+                                                        <span className="text-sm text-gray-400">N/A</span>
+                                                    )}
                                                 </Can>
                                                 {!Can({ permission: "empleados.gestionar_acceso_sistema" }) && (
-                                                    <Badge variant={empleado.puede_acceder_sistema ? "default" : "secondary"}>
-                                                        {empleado.puede_acceder_sistema ? "Sí" : "No"}
-                                                    </Badge>
+                                                    empleado.user ? (
+                                                        <Badge variant={empleado.puede_acceder_sistema ? "default" : "secondary"}>
+                                                            {empleado.puede_acceder_sistema ? "Sí" : "No"}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline">
+                                                            N/A
+                                                        </Badge>
+                                                    )
                                                 )}
                                             </td>
                                             <td className="py-3 px-4">

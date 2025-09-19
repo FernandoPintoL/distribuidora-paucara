@@ -108,7 +108,18 @@ class ModuloSidebar extends Model
             ->with(['submodulos' => function ($query) {
                 $query->activos()->ordenados();
             }])
-            ->get();
+            ->get()
+            ->filter(function ($modulo) {
+                return $modulo->usuarioTienePermiso();
+            })
+            ->map(function ($modulo) {
+                // Filtrar submódulos que el usuario puede ver
+                $modulo->submodulos = $modulo->submodulos->filter(function ($submodulo) {
+                    return $submodulo->usuarioTienePermiso();
+                });
+
+                return $modulo;
+            });
     }
 
     /**

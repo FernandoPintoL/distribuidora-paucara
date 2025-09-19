@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -87,21 +88,22 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Create roles
-        $admin        = Role::findOrCreate('Admin');
-        $vendedor     = Role::findOrCreate('Vendedor');
-        $compras      = Role::findOrCreate('Compras');
-        $inventario   = Role::findOrCreate('Inventario');
-        $reportes     = Role::findOrCreate('Reportes');
-        $logistica    = Role::findOrCreate('Logística');
+        $admin = Role::findOrCreate('Admin');
+        $vendedor = Role::findOrCreate('Vendedor');
+        $compras = Role::findOrCreate('Compras');
+        $inventario = Role::findOrCreate('Inventario');
+        $reportes = Role::findOrCreate('Reportes');
+        $logistica = Role::findOrCreate('Logística');
         $contabilidad = Role::findOrCreate('Contabilidad');
-        $gerente      = Role::findOrCreate('Gerente');
-        $cajero       = Role::findOrCreate('Cajero');
+        $gerente = Role::findOrCreate('Gerente');
+        $cajero = Role::findOrCreate('Cajero');
+        $cliente = Role::findOrCreate('Cliente');
 
         // Nuevos roles para tipos de empleados específicos
-        $chofer        = Role::findOrCreate('Chofer');
+        $chofer = Role::findOrCreate('Chofer');
         $gestorAlmacen = Role::findOrCreate('Gestor de Almacén');
-        $comprador     = Role::findOrCreate('Comprador');
-        $manager       = Role::findOrCreate('Manager');
+        $comprador = Role::findOrCreate('Comprador');
+        $manager = Role::findOrCreate('Manager');
 
         // Assign permissions to roles
         $admin->givePermissionTo(Permission::all());
@@ -182,9 +184,16 @@ class RolesAndPermissionsSeeder extends Seeder
         $choferPerms = [
             'envios.index', 'envios.show',
             'logistica.dashboard', 'logistica.envios.seguimiento',
-            'empleados.show', // Para ver su propio perfil
+            'empleados.show',  // Para ver su propio perfil
+            'clientes.manage', // Para registrar clientes durante entregas
         ];
         $chofer->syncPermissions($choferPerms);
+
+        $clientePerms = [
+            // Permisos limitados para clientes
+            'clientes.manage', // Gestionar su propio perfil
+        ];
+        $cliente->syncPermissions($clientePerms);
 
         $gestorAlmacenPerms = [
             'inventario.dashboard', 'inventario.stock-bajo', 'inventario.proximos-vencer', 'inventario.vencidos', 'inventario.movimientos',

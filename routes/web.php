@@ -37,7 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('localidades/api/active', [\App\Http\Controllers\LocalidadController::class, 'getActiveLocalidades'])->name('localidades.api.active');
 
     // Incluir rutas de configuración global
-    require __DIR__ . '/configuracion.php';
+    require __DIR__.'/configuracion.php';
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
     Route::resource('clientes', \App\Http\Controllers\ClienteController::class)->middleware('permission:clientes.manage');
@@ -91,6 +91,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('empleados/{empleado}/toggle-estado', [\App\Http\Controllers\EmpleadoController::class, 'toggleEstado'])->name('empleados.toggle-estado');
     Route::patch('empleados/{empleado}/toggle-acceso-sistema', [\App\Http\Controllers\EmpleadoController::class, 'toggleAccesoSistema'])->name('empleados.toggle-acceso-sistema');
     Route::post('empleados/crear-rapido', [\App\Http\Controllers\EmpleadoController::class, 'crearEmpleadoRapido'])->name('empleados.crear-rapido');
+
+    // Rutas para datos de selects en formularios de empleados
+    Route::get('empleados-data/departamentos', [\App\Http\Controllers\EmpleadoController::class, 'getDepartamentos'])->name('empleados.data.departamentos');
+    Route::get('empleados-data/tipos-contrato', [\App\Http\Controllers\EmpleadoController::class, 'getTiposContrato'])->name('empleados.data.tipos-contrato');
+    Route::get('empleados-data/estados', [\App\Http\Controllers\EmpleadoController::class, 'getEstados'])->name('empleados.data.estados');
+    Route::get('empleados-data/supervisores', [\App\Http\Controllers\EmpleadoController::class, 'getSupervisores'])->name('empleados.data.supervisores');
+    Route::get('empleados-data/roles', [\App\Http\Controllers\EmpleadoController::class, 'getRoles'])->name('empleados.data.roles');
 
     // Rutas adicionales para módulo de compras (ANTES de resource para evitar conflictos)
     Route::prefix('compras')->name('compras.')->group(function () {
@@ -258,6 +265,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
-require __DIR__ . '/test.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';
+require __DIR__.'/test.php';

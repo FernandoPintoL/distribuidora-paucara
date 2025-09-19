@@ -45,9 +45,20 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'roles' => $request->user() ? $request->user()->getRoleNames() : [],
-                'permissions' => $request->user() ? $request->user()->getAllPermissions()->pluck('name') : [],
+                // Optimización: Solo cargar permisos cuando sea necesario
+                'permissions' => $request->user() ? $this->getEssentialPermissions($request->user()) : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * Obtener todos los permisos del usuario para compartir con el frontend
+     */
+    private function getEssentialPermissions($user): array
+    {
+        // Obtener todos los permisos del usuario directamente desde la BD
+        // Esto es más escalable y no requiere mantenimiento manual
+        return $user->getAllPermissions()->pluck('name')->toArray();
     }
 }

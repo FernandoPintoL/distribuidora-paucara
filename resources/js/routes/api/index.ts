@@ -6,7 +6,7 @@ import proveedores from './proveedores'
 import dashboard from './dashboard'
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @see app/Http/Controllers/ModuloSidebarController.php:173
  * @route '/api/modulos-sidebar'
  */
 export const modulosSidebar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -21,7 +21,7 @@ modulosSidebar.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @see app/Http/Controllers/ModuloSidebarController.php:173
  * @route '/api/modulos-sidebar'
  */
 modulosSidebar.url = (options?: RouteQueryOptions) => {
@@ -30,7 +30,7 @@ modulosSidebar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @see app/Http/Controllers/ModuloSidebarController.php:173
  * @route '/api/modulos-sidebar'
  */
 modulosSidebar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -39,7 +39,7 @@ modulosSidebar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @see app/Http/Controllers/ModuloSidebarController.php:173
  * @route '/api/modulos-sidebar'
  */
 modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -49,7 +49,7 @@ modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @see app/Http/Controllers/ModuloSidebarController.php:173
  * @route '/api/modulos-sidebar'
  */
     const modulosSidebarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -59,7 +59,7 @@ modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @see app/Http/Controllers/ModuloSidebarController.php:173
  * @route '/api/modulos-sidebar'
  */
         modulosSidebarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -68,7 +68,7 @@ modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
- * @see app/Http/Controllers/ModuloSidebarController.php:172
+ * @see app/Http/Controllers/ModuloSidebarController.php:173
  * @route '/api/modulos-sidebar'
  */
         modulosSidebarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

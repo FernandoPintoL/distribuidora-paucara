@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ModuloSidebar;
@@ -18,28 +19,28 @@ class ModuloSidebarController extends Controller
             ->get()
             ->map(function ($modulo) {
                 return [
-                    'id'                => $modulo->id,
-                    'titulo'            => $modulo->titulo,
-                    'ruta'              => $modulo->ruta,
-                    'icono'             => $modulo->icono,
-                    'descripcion'       => $modulo->descripcion,
-                    'orden'             => $modulo->orden,
-                    'activo'            => $modulo->activo,
-                    'es_submenu'        => $modulo->es_submenu,
-                    'categoria'         => $modulo->categoria,
-                    'color'             => $modulo->color,
+                    'id' => $modulo->id,
+                    'titulo' => $modulo->titulo,
+                    'ruta' => $modulo->ruta,
+                    'icono' => $modulo->icono,
+                    'descripcion' => $modulo->descripcion,
+                    'orden' => $modulo->orden,
+                    'activo' => $modulo->activo,
+                    'es_submenu' => $modulo->es_submenu,
+                    'categoria' => $modulo->categoria,
+                    'color' => $modulo->color,
                     'visible_dashboard' => $modulo->visible_dashboard,
-                    'padre'             => $modulo->padre ? [
-                        'id'     => $modulo->padre->id,
+                    'padre' => $modulo->padre ? [
+                        'id' => $modulo->padre->id,
                         'titulo' => $modulo->padre->titulo,
                     ] : null,
-                    'submodulos_count'  => $modulo->submodulos->count(),
-                    'permisos'          => $modulo->permisos,
+                    'submodulos_count' => $modulo->submodulos->count(),
+                    'permisos' => $modulo->permisos,
                 ];
             });
 
         return Inertia::render('ModulosSidebar/Index', [
-            'modulos'    => $modulos,
+            'modulos' => $modulos,
             'categorias' => ModuloSidebar::select('categoria')
                 ->distinct()
                 ->whereNotNull('categoria')
@@ -68,18 +69,18 @@ class ModuloSidebarController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'titulo'            => 'required|string|max:255',
-            'ruta'              => 'required|string|max:500',
-            'icono'             => 'nullable|string|max:255',
-            'descripcion'       => 'nullable|string|max:500',
-            'orden'             => 'integer|min:0',
-            'activo'            => 'boolean',
-            'es_submenu'        => 'boolean',
-            'modulo_padre_id'   => 'nullable|exists:modulos_sidebar,id',
-            'permisos'          => 'nullable|array',
-            'permisos.*'        => 'string',
-            'color'             => 'nullable|string|max:50',
-            'categoria'         => 'nullable|string|max:100',
+            'titulo' => 'required|string|max:255',
+            'ruta' => 'required|string|max:500',
+            'icono' => 'nullable|string|max:255',
+            'descripcion' => 'nullable|string|max:500',
+            'orden' => 'integer|min:0',
+            'activo' => 'boolean',
+            'es_submenu' => 'boolean',
+            'modulo_padre_id' => 'nullable|exists:modulos_sidebar,id',
+            'permisos' => 'nullable|array',
+            'permisos.*' => 'string',
+            'color' => 'nullable|string|max:50',
+            'categoria' => 'nullable|string|max:100',
             'visible_dashboard' => 'boolean',
         ]);
 
@@ -113,7 +114,7 @@ class ModuloSidebarController extends Controller
             ->get(['id', 'titulo']);
 
         return Inertia::render('ModulosSidebar/Form', [
-            'modulo'       => $moduloSidebar,
+            'modulo' => $moduloSidebar,
             'modulosPadre' => $modulosPadre,
         ]);
     }
@@ -124,18 +125,18 @@ class ModuloSidebarController extends Controller
     public function update(Request $request, ModuloSidebar $moduloSidebar)
     {
         $validated = $request->validate([
-            'titulo'            => 'required|string|max:255',
-            'ruta'              => 'required|string|max:500',
-            'icono'             => 'nullable|string|max:255',
-            'descripcion'       => 'nullable|string|max:500',
-            'orden'             => 'integer|min:0',
-            'activo'            => 'boolean',
-            'es_submenu'        => 'boolean',
-            'modulo_padre_id'   => 'nullable|exists:modulos_sidebar,id',
-            'permisos'          => 'nullable|array',
-            'permisos.*'        => 'string',
-            'color'             => 'nullable|string|max:50',
-            'categoria'         => 'nullable|string|max:100',
+            'titulo' => 'required|string|max:255',
+            'ruta' => 'required|string|max:500',
+            'icono' => 'nullable|string|max:255',
+            'descripcion' => 'nullable|string|max:500',
+            'orden' => 'integer|min:0',
+            'activo' => 'boolean',
+            'es_submenu' => 'boolean',
+            'modulo_padre_id' => 'nullable|exists:modulos_sidebar,id',
+            'permisos' => 'nullable|array',
+            'permisos.*' => 'string',
+            'color' => 'nullable|string|max:50',
+            'categoria' => 'nullable|string|max:100',
             'visible_dashboard' => 'boolean',
         ]);
 
@@ -189,8 +190,8 @@ class ModuloSidebarController extends Controller
     public function actualizarOrden(Request $request)
     {
         $validated = $request->validate([
-            'modulos'         => 'required|array',
-            'modulos.*.id'    => 'required|exists:modulos_sidebar,id',
+            'modulos' => 'required|array',
+            'modulos.*.id' => 'required|exists:modulos_sidebar,id',
             'modulos.*.orden' => 'required|integer|min:0',
         ]);
 
@@ -227,20 +228,28 @@ class ModuloSidebarController extends Controller
             ->whereNull('padre_id') // Solo módulos padre
             ->orderBy('orden')
             ->get()
+            ->filter(function ($modulo) {
+                // Filtrar módulos padre por permisos
+                return $modulo->usuarioTienePermiso();
+            })
             ->map(function ($modulo) {
-                return [
-                    'title'    => $modulo->titulo,
-                    'href'     => $modulo->ruta,
-                    'icon'     => $modulo->icono,
-                    'children' => $modulo->submodulos->map(function ($submodulo) {
-                        return [
-                            'title' => $submodulo->titulo,
-                            'href'  => $submodulo->ruta,
-                            'icon'  => $submodulo->icono,
-                        ];
-                    })->toArray(),
-                ];
-            });
+                $navItem = $modulo->toNavItem();
+
+                // Filtrar submódulos por permisos
+                if (isset($navItem['children'])) {
+                    $navItem['children'] = collect($navItem['children'])
+                        ->filter(function ($child) {
+                            // Los children ya están filtrados en toNavItem()
+                            return true;
+                        })
+                        ->values()
+                        ->toArray();
+                }
+
+                return $navItem;
+            })
+            ->values()
+            ->toArray();
 
         return response()->json($modulos);
     }

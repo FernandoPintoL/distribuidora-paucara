@@ -36,10 +36,11 @@ interface Empleado {
     contacto_emergencia_telefono: string
     created_at: string
     updated_at: string
-    user: {
+    user?: {
         id: number
         name: string
         email: string
+        usernick?: string
         roles: Array<{
             id: number
             name: string
@@ -119,7 +120,7 @@ export default function EmpleadosShow() {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Empleados', href: '/empleados' },
-        { title: empleado.user.name, href: `/empleados/${empleado.id}` }
+        { title: empleado.user?.name || empleado.codigo_empleado, href: `/empleados/${empleado.id}` }
     ]
 
     const age = calculateAge(empleado.fecha_nacimiento)
@@ -128,7 +129,7 @@ export default function EmpleadosShow() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Empleado - ${empleado.user.name}`} />
+            <Head title={`Empleado - ${empleado.user?.name || empleado.codigo_empleado}`} />
 
             <div className="space-y-6 p-4">
                 {/* Header */}
@@ -141,7 +142,7 @@ export default function EmpleadosShow() {
                             </Link>
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">{empleado.user.name}</h1>
+                            <h1 className="text-3xl font-bold tracking-tight">{empleado.user?.name || empleado.codigo_empleado}</h1>
                             <p className="text-gray-600">{empleado.cargo} - {empleado.departamento}</p>
                         </div>
                     </div>
@@ -171,7 +172,7 @@ export default function EmpleadosShow() {
                             Sin Acceso al Sistema
                         </Badge>
                     )}
-                    {empleado.user.roles.map((role) => (
+                    {empleado.user?.roles?.map((role) => (
                         <Badge key={role.id} variant="outline">
                             {role.name}
                         </Badge>
@@ -192,7 +193,7 @@ export default function EmpleadosShow() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <div className="text-sm text-gray-500">Nombre Completo</div>
-                                        <div className="font-medium">{empleado.user.name}</div>
+                                        <div className="font-medium">{empleado.user?.name || empleado.codigo_empleado}</div>
                                     </div>
                                     <div>
                                         <div className="text-sm text-gray-500">Código de Empleado</div>
@@ -217,7 +218,7 @@ export default function EmpleadosShow() {
 
                                 <div className="flex items-center gap-2">
                                     <Mail className="h-4 w-4 text-gray-500" />
-                                    <span>{empleado.user.email}</span>
+                                    <span>{empleado.user?.email || 'Sin email registrado'}</span>
                                 </div>
 
                                 {empleado.direccion && (
@@ -354,6 +355,60 @@ export default function EmpleadosShow() {
                             </Card>
                         )}
 
+                        {/* Información del Usuario del Sistema */}
+                        {empleado.user && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Shield className="h-5 w-5" />
+                                        Usuario del Sistema
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="text-sm text-gray-500">Nombre de Usuario</div>
+                                            <div className="font-medium">{empleado.user?.name}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Usernick</div>
+                                            <div className="font-medium">{empleado.user.usernick || 'No definido'}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Email</div>
+                                            <div className="font-medium">{empleado.user?.email}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Estado de Acceso</div>
+                                            <div className="font-medium">
+                                                {empleado.puede_acceder_sistema ? (
+                                                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                                                        <Shield className="h-3 w-3 mr-1" />
+                                                        Habilitado
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge className="bg-red-100 text-red-800 border-red-200">
+                                                        <AlertTriangle className="h-3 w-3 mr-1" />
+                                                        Deshabilitado
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm text-gray-500 mb-2">Roles Asignados</div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {empleado.user.roles?.map((role) => (
+                                                <Badge key={role.id} variant="outline">
+                                                    {role.name}
+                                                </Badge>
+                                            )) || <span className="text-gray-500">Sin roles asignados</span>}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Información del Sistema */}
                         <Card>
                             <CardHeader>
@@ -361,21 +416,41 @@ export default function EmpleadosShow() {
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 <div>
-                                    <div className="text-sm text-gray-500">Acceso al Sistema</div>
+                                    <div className="text-sm text-gray-500">Usuario del Sistema</div>
                                     <div className="font-medium">
-                                        {empleado.puede_acceder_sistema ? 'Habilitado' : 'Deshabilitado'}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-sm text-gray-500">Roles</div>
-                                    <div className="space-y-1">
-                                        {empleado.user.roles.map((role) => (
-                                            <Badge key={role.id} variant="outline" className="mr-1">
-                                                {role.name}
+                                        {empleado.user ? (
+                                            <Badge className="bg-green-100 text-green-800 border-green-200">
+                                                <User className="h-3 w-3 mr-1" />
+                                                Tiene usuario
                                             </Badge>
-                                        ))}
+                                        ) : (
+                                            <Badge className="bg-gray-100 text-gray-800 border-gray-200">
+                                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                                Sin usuario
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
+                                {empleado.user && (
+                                    <>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Acceso al Sistema</div>
+                                            <div className="font-medium">
+                                                {empleado.puede_acceder_sistema ? 'Habilitado' : 'Deshabilitado'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Roles</div>
+                                            <div className="space-y-1">
+                                                {empleado.user.roles?.map((role) => (
+                                                    <Badge key={role.id} variant="outline" className="mr-1">
+                                                        {role.name}
+                                                    </Badge>
+                                                )) || <span className="text-gray-500">Sin roles asignados</span>}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                                 <div>
                                     <div className="text-sm text-gray-500">Creado</div>
                                     <div className="font-medium text-sm">{formatDate(empleado.created_at)}</div>

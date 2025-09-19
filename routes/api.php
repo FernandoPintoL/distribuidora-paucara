@@ -1,5 +1,7 @@
 <?php
+
 use App\Http\Controllers\Api\ApiProformaController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
@@ -19,13 +21,22 @@ use Illuminate\Support\Facades\Route;
 // 🔓 RUTAS API PÚBLICAS (sin autenticación)
 // ==========================================
 
-// Rutas API para módulos del sidebar (accesible sin login)
-Route::get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');
+// Rutas de autenticación API
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+
+// Rutas API para módulos del sidebar (requiere autenticación)
+Route::middleware(['auth'])->get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');
 
 // ==========================================
 // 📱 RUTAS PARA APP EXTERNA (Flutter)
 // ==========================================
 Route::middleware(['auth:sanctum'])->group(function () {
+    // Rutas de autenticación protegidas
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+
     // Catálogos de mermas
     Route::apiResource('tipo-mermas', TipoMermaController::class);
     Route::apiResource('estado-mermas', EstadoMermaController::class);
@@ -125,38 +136,41 @@ Route::group(['prefix' => 'inventario'], function () {
     });
 });
 
-// Rutas API para productos
-Route::group(['prefix' => 'productos'], function () {
-    Route::get('/', [ProductoController::class, 'indexApi']);
-    Route::post('/', [ProductoController::class, 'storeApi']);
-    Route::get('buscar', [ProductoController::class, 'buscarApi']);
-    Route::get('{producto}', [ProductoController::class, 'showApi']);
-    Route::put('{producto}', [ProductoController::class, 'updateApi']);
-    Route::delete('{producto}', [ProductoController::class, 'destroyApi']);
-    Route::get('{producto}/historial-precios', [ProductoController::class, 'historialPrecios']);
-});
-
-// Rutas API para clientes
-Route::group(['prefix' => 'clientes'], function () {
-    Route::get('/', [ClienteController::class, 'indexApi']);
-    Route::post('/', [ClienteController::class, 'storeApi']);
-    Route::get('buscar', [ClienteController::class, 'buscarApi']);
-    Route::get('{cliente}', [ClienteController::class, 'showApi']);
-    Route::put('{cliente}', [ClienteController::class, 'updateApi']);
-    Route::delete('{cliente}', [ClienteController::class, 'destroyApi']);
-    Route::get('{cliente}/saldo-cuentas', [ClienteController::class, 'saldoCuentasPorCobrar']);
-    Route::get('{cliente}/historial-ventas', [ClienteController::class, 'historialVentas']);
-
-    // Gestión de direcciones
-    Route::get('{cliente}/direcciones', [DireccionClienteApiController::class, 'index']);
-    Route::post('{cliente}/direcciones', [DireccionClienteApiController::class, 'store']);
-    Route::put('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'update']);
-    Route::delete('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'destroy']);
-    Route::patch('{cliente}/direcciones/{direccion}/principal', [DireccionClienteApiController::class, 'establecerPrincipal']);
-});
-
 // Rutas API para localidades
 Route::middleware(['auth:sanctum'])->group(function () {
+    // Rutas API para productos
+    Route::group(['prefix' => 'productos'], function () {
+        Route::get('/', [ProductoController::class, 'indexApi']);
+        Route::post('/', [ProductoController::class, 'storeApi']);
+        Route::get('buscar', [ProductoController::class, 'buscarApi']);
+        Route::get('{producto}', [ProductoController::class, 'showApi']);
+        Route::put('{producto}', [ProductoController::class, 'updateApi']);
+        Route::delete('{producto}', [ProductoController::class, 'destroyApi']);
+        Route::get('{producto}/historial-precios', [ProductoController::class, 'historialPrecios']);
+    });
+
+    // Rutas API para clientes
+    Route::group(['prefix' => 'clientes'], function () {
+        Route::get('/', [ClienteController::class, 'indexApi']);
+        Route::post('/', [ClienteController::class, 'storeApi']);
+        Route::get('buscar', [ClienteController::class, 'buscarApi']);
+        Route::get('{cliente}', [ClienteController::class, 'showApi']);
+        Route::put('{cliente}', [ClienteController::class, 'updateApi']);
+        Route::delete('{cliente}', [ClienteController::class, 'destroyApi']);
+        Route::get('{cliente}/saldo-cuentas', [ClienteController::class, 'saldoCuentasPorCobrar']);
+        Route::get('{cliente}/historial-ventas', [ClienteController::class, 'historialVentas']);
+
+        // Cambio de credenciales para clientes autenticados
+        Route::post('cambiar-credenciales', [ClienteController::class, 'cambiarCredenciales']);
+
+        // Gestión de direcciones
+        Route::get('{cliente}/direcciones', [DireccionClienteApiController::class, 'index']);
+        Route::post('{cliente}/direcciones', [DireccionClienteApiController::class, 'store']);
+        Route::put('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'update']);
+        Route::delete('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'destroy']);
+        Route::patch('{cliente}/direcciones/{direccion}/principal', [DireccionClienteApiController::class, 'establecerPrincipal']);
+    });
+
     Route::group(['prefix' => 'localidades'], function () {
         Route::get('/', [LocalidadController::class, 'indexApi']);
         Route::post('/', [LocalidadController::class, 'storeApi']);
