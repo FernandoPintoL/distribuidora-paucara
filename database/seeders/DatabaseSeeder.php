@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -18,9 +17,9 @@ class DatabaseSeeder extends Seeder
         // $this->call(ClienteTestSeeder::class);
         // $this->call(CuentaContableSeeder::class);
         // $this->call(EmpleadoRolesSeeder::class);
-        $this->call(EmpleadosTestSeeder::class);
-        $this->call(EmpleadosSinUsuarioSeeder::class);
-        $this->call(SupervisoresSeeder::class);
+        // $this->call(EmpleadosTestSeeder::class);
+        // $this->call(EmpleadosSinUsuarioSeeder::class);
+        // $this->call(SupervisoresSeeder::class);
         $this->call(EstadoDocumentoSeeder::class);
         $this->call(EstadoMermaSeeder::class);
         $this->call(ImpuestoSeeder::class);
@@ -39,9 +38,9 @@ class DatabaseSeeder extends Seeder
         $admin = User::query()->where('email', 'admin@paucara.test')->first();
         if (! $admin) {
             $admin = User::factory()->create([
-                'name' => 'Administrador',
+                'name'     => 'Administrador',
                 'usernick' => 'admin',
-                'email' => 'admin@paucara.test',
+                'email'    => 'admin@paucara.test',
                 'password' => Hash::make('password'),
             ]);
         } else {
