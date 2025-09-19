@@ -64,25 +64,29 @@ class ClienteController extends Controller
 
         // Construir query
         $query = ClienteModel::query()
+            ->leftJoin('localidades', 'clientes.localidad_id', '=', 'localidades.id')
             ->when($q, function ($query) use ($q, $options) {
                 $query->where(function ($sub) use ($q, $options) {
-                    $sub->where('nombre', 'like', "%$q%")
-                        ->orWhere('razon_social', 'like', "%$q%")
-                        ->orWhere('nit', 'like', "%$q%")
-                        ->orWhere('telefono', 'like', "%$q%");
+                    $sub->where('clientes.nombre', 'like', "%$q%")
+                        ->orWhere('clientes.razon_social', 'like', "%$q%")
+                        ->orWhere('clientes.nit', 'like', "%$q%")
+                        ->orWhere('clientes.telefono', 'like', "%$q%")
+                        ->orWhere('clientes.codigo_cliente', 'like', "%$q%")
+                        ->orWhere('localidades.nombre', 'like', "%$q%");
 
                     if ($options['include_email']) {
-                        $sub->orWhere('email', 'like', "%$q%");
+                        $sub->orWhere('clientes.email', 'like', "%$q%");
                     }
                 });
             })
             ->when($activo !== null, function ($query) use ($activo) {
-                $query->where('activo', $activo);
+                $query->where('clientes.activo', $activo);
             })
             ->when($localidadId && is_numeric($localidadId), function ($query) use ($localidadId) {
-                $query->where('localidad_id', $localidadId);
+                $query->where('clientes.localidad_id', $localidadId);
             })
-            ->orderBy($orderBy, $orderDir);
+            ->select('clientes.*')
+            ->orderBy('clientes.' . $orderBy, $orderDir);
 
         return $query->paginate($request->integer('per_page', $options['per_page']))->withQueryString();
     }
@@ -122,6 +126,9 @@ class ClienteController extends Controller
         ]);
 
         if ($this->isApiRequest($request)) {
+            // Cargar la relación localidad para la respuesta API
+            $items->getCollection()->load('localidad');
+
             return $this->apiResponse([
                 'data'         => $items->items(),
                 'current_page' => $items->currentPage(),
@@ -380,6 +387,9 @@ class ClienteController extends Controller
             'default_activo'           => true,
         ]);
 
+        // Cargar la relación localidad para incluirla en la respuesta
+        $clientes->getCollection()->load('localidad');
+
         return ApiResponse::success($clientes);
     }
 
@@ -388,7 +398,7 @@ class ClienteController extends Controller
      */
     public function showApi(ClienteModel $cliente): JsonResponse
     {
-        $cliente->load(['direcciones', 'cuentasPorCobrar' => function ($query) {
+        $cliente->load(['direcciones', 'localidad', 'cuentasPorCobrar' => function ($query) {
             $query->where('saldo_pendiente', '>', 0)->orderByDesc('fecha_vencimiento');
         }]);
 
