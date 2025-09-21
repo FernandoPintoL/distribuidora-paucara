@@ -32,6 +32,7 @@ import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import ProformaController from './ProformaController'
 import CajaController from './CajaController'
+import VehiculoController from './VehiculoController'
 import Web from './Web'
 import ReportePreciosController from './ReportePreciosController'
 import ReporteInventarioController from './ReporteInventarioController'
@@ -72,6 +73,7 @@ DetalleCompraController,
 DetalleVentaController,
 ProformaController,
 CajaController,
+VehiculoController,
 Web,
 ReportePreciosController,
 ReporteInventarioController,

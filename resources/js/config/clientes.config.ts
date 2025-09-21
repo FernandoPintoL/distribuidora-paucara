@@ -2,7 +2,7 @@
 import type { ModuleConfig } from '@/domain/generic';
 import type { Cliente, ClienteFormData } from '@/domain/clientes';
 import FileUploadPreview from '@/components/generic/FileUploadPreview';
-import { createElement } from 'react';
+import React, { createElement } from 'react';
 
 export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
     // Module identification
@@ -131,6 +131,83 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             key: 'activo',
             label: 'Cliente activo',
             type: 'boolean',
+        },
+        // Campo personalizado para manejar una única dirección simplificada
+        {
+            key: 'direcciones',
+            label: 'Dirección de entrega / domicilio',
+            type: 'custom',
+            render: ({ value, onChange, label, disabled }) => {
+                const items = Array.isArray(value) ? value : [];
+                const addr = items[0] || null;
+
+                const setSingle = (newAddr: { [k: string]: unknown } | null) => {
+                    if (newAddr === null) {
+                        onChange([]);
+                    } else {
+                        // always ensure the single address is principal and active
+                        onChange([{ ...newAddr, es_principal: true, activa: true }]);
+                    }
+                };
+
+                const handleField = (field: string, v: string | boolean) => {
+                    const newAddr = {
+                        direccion: addr?.direccion || '',
+                        observaciones: addr?.observaciones || '',
+                        ...addr,
+                        [field]: v,
+                    };
+                    setSingle(newAddr);
+                };
+
+                // If there's no address, show compact empty state with add button
+                if (!addr) {
+                    return createElement('div', { className: 'space-y-2' },
+                        createElement('label', { className: 'text-sm font-medium block' }, label),
+                        createElement('div', { className: 'p-4 border rounded-md bg-white flex items-center justify-between' },
+                            createElement('span', { className: 'text-sm text-muted-foreground' }, 'No hay dirección. Puedes agregar una dirección para el cliente.'),
+                            createElement('button', {
+                                type: 'button',
+                                onClick: () => setSingle({ direccion: '', observaciones: '' }),
+                                className: 'text-blue-600'
+                            }, 'Agregar dirección')
+                        )
+                    );
+                }
+
+                // Render simplified card for the single address (only direccion & observaciones)
+                return createElement('div', { className: 'space-y-3' },
+                    createElement('label', { className: 'text-sm font-medium block' }, label),
+                    createElement('div', { className: 'p-4 border rounded-lg bg-white shadow-sm' },
+                        createElement('div', { className: 'mb-3' },
+                            createElement('input', {
+                                className: 'w-full p-3 border rounded-md text-sm',
+                                placeholder: 'Dirección (calle, número, referencia)',
+                                value: addr.direccion || '',
+                                onChange: (e: React.ChangeEvent<HTMLInputElement>) => handleField('direccion', e.target.value),
+                                disabled: Boolean(disabled)
+                            })
+                        ),
+                        createElement('div', { className: 'mb-3' },
+                            createElement('textarea', {
+                                className: 'w-full p-3 border rounded-md text-sm',
+                                placeholder: 'Observaciones (p. ej. referencia de entrega)',
+                                value: addr.observaciones || '',
+                                onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => handleField('observaciones', e.target.value),
+                                rows: 3,
+                                disabled: Boolean(disabled)
+                            })
+                        ),
+                        createElement('div', { className: 'flex items-center justify-end' },
+                            createElement('button', {
+                                type: 'button',
+                                onClick: () => setSingle(null),
+                                className: 'text-red-600 text-sm'
+                            }, 'Quitar dirección')
+                        )
+                    )
+                );
+            }
         },
     ],
 

@@ -76,6 +76,18 @@ interface EmpleadoFormData {
 
 export default function EmpleadosEdit() {
     const { empleado } = usePage<PageProps>().props
+    const toDateInputValue = (iso?: string) => {
+        if (!iso) return ''
+        try {
+            const d = new Date(iso)
+            const year = d.getFullYear()
+            const month = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            return `${year}-${month}-${day}`
+        } catch {
+            return ''
+        }
+    }
     const [loading, setLoading] = useState(false)
     const [departamentos, setDepartamentos] = useState([])
     const [tiposContrato, setTiposContrato] = useState([])
@@ -90,14 +102,14 @@ export default function EmpleadosEdit() {
         email: empleado.user?.email || '',
         codigo_empleado: empleado.codigo_empleado,
         ci: empleado.ci,
-        fecha_nacimiento: empleado.fecha_nacimiento,
+        fecha_nacimiento: toDateInputValue(empleado.fecha_nacimiento),
         telefono: empleado.telefono || '',
         direccion: empleado.direccion || '',
         cargo: empleado.cargo,
         puesto: empleado.puesto || '',
         departamento: empleado.departamento,
         supervisor_id: empleado.supervisor_id?.toString() || '',
-        fecha_ingreso: empleado.fecha_ingreso,
+        fecha_ingreso: toDateInputValue(empleado.fecha_ingreso),
         tipo_contrato: empleado.tipo_contrato,
         salario_base: empleado.salario_base.toString(),
         bonos: empleado.bonos.toString(),
@@ -351,7 +363,7 @@ export default function EmpleadosEdit() {
                                         required
                                     />
                                 </div>
-                                <div>
+                                {/* <div>
                                     <Label htmlFor="puesto">Puesto</Label>
                                     <Input
                                         id="puesto"
@@ -359,7 +371,7 @@ export default function EmpleadosEdit() {
                                         onChange={(e) => handleInputChange('puesto')(e.target.value)}
                                         placeholder="Puesto específico"
                                     />
-                                </div>
+                                </div> */}
                                 <div>
                                     <Label htmlFor="departamento">Departamento *</Label>
                                     <SearchSelect

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Empleado;
@@ -67,13 +66,13 @@ class EmpleadoController extends Controller
 
         // Obtener datos para filtros
         $departamentos = Empleado::distinct('departamento')->pluck('departamento')->filter();
-        $supervisores = Empleado::with('user')->whereHas('supervisados')->get();
+        $supervisores  = Empleado::with('user')->whereHas('supervisados')->get();
 
         return Inertia::render('empleados/index', [
-            'empleados' => $empleados,
+            'empleados'     => $empleados,
             'departamentos' => $departamentos,
-            'supervisores' => $supervisores,
-            'filters' => $request->only(['search', 'departamento', 'estado', 'acceso_sistema']),
+            'supervisores'  => $supervisores,
+            'filters'       => $request->only(['search', 'departamento', 'estado', 'acceso_sistema']),
         ]);
     }
 
@@ -87,9 +86,9 @@ class EmpleadoController extends Controller
             ->get()
             ->map(function ($empleado) {
                 return [
-                    'id' => $empleado->id,
+                    'id'     => $empleado->id,
                     'nombre' => $empleado->user ? $empleado->user->name : $empleado->codigo_empleado,
-                    'cargo' => $empleado->cargo,
+                    'cargo'  => $empleado->cargo,
                 ];
             });
 
@@ -101,23 +100,23 @@ class EmpleadoController extends Controller
 
         // Definir mapeo de cargos a roles sugeridos
         $cargoRoleMapping = [
-            'Chofer' => 'Chofer',
-            'Cajero' => 'Cajero',
-            'Vendedor' => 'Vendedor',
-            'Comprador' => 'Comprador',
-            'Gestor de Almacén' => 'Gestor de Almacén',
-            'Manager' => 'Manager',
-            'Gerente' => 'Gerente',
-            'Supervisor de Ventas' => 'Vendedor',
-            'Supervisor de Compras' => 'Compras',
+            'Chofer'                   => 'Chofer',
+            'Cajero'                   => 'Cajero',
+            'Vendedor'                 => 'Vendedor',
+            'Comprador'                => 'Comprador',
+            'Gestor de Almacén'        => 'Gestor de Almacén',
+            'Manager'                  => 'Manager',
+            'Gerente'                  => 'Gerente',
+            'Supervisor de Ventas'     => 'Vendedor',
+            'Supervisor de Compras'    => 'Compras',
             'Supervisor de Inventario' => 'Inventario',
-            'Contador' => 'Contabilidad',
-            'Logístico' => 'Logística',
+            'Contador'                 => 'Contabilidad',
+            'Logístico'                => 'Logística',
         ];
 
         return Inertia::render('empleados/create', [
-            'supervisores' => $supervisores,
-            'roles' => $roles,
+            'supervisores'     => $supervisores,
+            'roles'            => $roles,
             'cargoRoleMapping' => $cargoRoleMapping,
         ]);
     }
@@ -128,33 +127,33 @@ class EmpleadoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'crear_usuario' => 'nullable|boolean',
-            'nombre' => 'required|string|max:255',
-            'email' => 'nullable|string|email|max:255|unique:users',
-            'ci' => 'required|string|max:20|unique:empleados',
-            'fecha_nacimiento' => 'required|date',
-            'telefono' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string|max:500',
-            'cargo' => 'required|string|max:100',
-            'puesto' => 'nullable|string|max:100',
-            'departamento' => 'required|string|max:100',
-            'supervisor_id' => 'nullable|exists:empleados,id',
-            'fecha_ingreso' => 'required|date',
-            'tipo_contrato' => 'required|in:indefinido,temporal,practicante',
-            'salario_base' => 'required|numeric|min:0',
-            'bonos' => 'nullable|numeric|min:0',
-            'estado' => 'required|in:activo,inactivo,vacaciones,licencia',
-            'puede_acceder_sistema' => 'nullable|boolean',
-            'contacto_emergencia_nombre' => 'nullable|string|max:255',
+            'crear_usuario'                => 'nullable|boolean',
+            'nombre'                       => 'required|string|max:255',
+            'email'                        => 'nullable|string|email|max:255|unique:users',
+            'ci'                           => 'required|string|max:20|unique:empleados',
+            'fecha_nacimiento'             => 'required|date',
+            'telefono'                     => 'nullable|string|max:20',
+            'direccion'                    => 'nullable|string|max:500',
+            'cargo'                        => 'required|string|max:100',
+            'puesto'                       => 'nullable|string|max:100',
+            'departamento'                 => 'required|string|max:100',
+            'supervisor_id'                => 'nullable|exists:empleados,id',
+            'fecha_ingreso'                => 'required|date',
+            'tipo_contrato'                => 'required|in:indefinido,temporal,practicante',
+            'salario_base'                 => 'required|numeric|min:0',
+            'bonos'                        => 'nullable|numeric|min:0',
+            'estado'                       => 'required|in:activo,inactivo,vacaciones,licencia',
+            'puede_acceder_sistema'        => 'nullable|boolean',
+            'contacto_emergencia_nombre'   => 'nullable|string|max:255',
             'contacto_emergencia_telefono' => 'nullable|string|max:20',
-            'rol' => 'nullable|exists:roles,name',
-            'asignar_rol_automatico' => 'nullable|boolean',
+            'rol'                          => 'nullable|exists:roles,name',
+            'asignar_rol_automatico'       => 'nullable|boolean',
         ]);
 
         // Validaciones condicionales si se crea usuario
         if ($request->crear_usuario) {
             $request->validate([
-                'email' => 'required|string|email|max:255|unique:users',
+                'email'    => 'required|string|email|max:255|unique:users',
                 'usernick' => 'nullable|string|max:255|unique:users',
             ]);
         }
@@ -168,12 +167,12 @@ class EmpleadoController extends Controller
                 $usernick = $request->usernick ?: $this->generarUsernickUnico($request->nombre);
 
                 $user = User::create([
-                    'name' => $request->nombre,
-                    'usernick' => $usernick,
-                    'email' => $request->email,
-                    'password' => Hash::make('password123'), // Password temporal
+                    'name'              => $request->nombre,
+                    'usernick'          => $usernick,
+                    'email'             => $request->email,
+                    'password'          => Hash::make('password123'), // Password temporal
                     'email_verified_at' => now(),
-                    'activo' => $request->puede_acceder_sistema ?? false,
+                    'activo'            => $request->puede_acceder_sistema ?? false,
                 ]);
 
                 // Lógica de asignación de roles
@@ -192,22 +191,22 @@ class EmpleadoController extends Controller
 
             // Crear empleado sin código inicialmente
             $empleado = Empleado::create([
-                'user_id' => $user ? $user->id : null,
-                'ci' => $request->ci,
-                'fecha_nacimiento' => $request->fecha_nacimiento,
-                'telefono' => $request->telefono,
-                'direccion' => $request->direccion,
-                'cargo' => $request->cargo,
-                'puesto' => $request->puesto,
-                'departamento' => $request->departamento,
-                'supervisor_id' => $request->supervisor_id,
-                'fecha_ingreso' => $request->fecha_ingreso,
-                'tipo_contrato' => $request->tipo_contrato,
-                'salario_base' => $request->salario_base,
-                'bonos' => $request->bonos ?? 0,
-                'estado' => $request->estado,
-                'puede_acceder_sistema' => $request->puede_acceder_sistema ?? false,
-                'contacto_emergencia_nombre' => $request->contacto_emergencia_nombre,
+                'user_id'                      => $user ? $user->id : null,
+                'ci'                           => $request->ci,
+                'fecha_nacimiento'             => $request->fecha_nacimiento,
+                'telefono'                     => $request->telefono,
+                'direccion'                    => $request->direccion,
+                'cargo'                        => $request->cargo,
+                'puesto'                       => $request->puesto,
+                'departamento'                 => $request->departamento,
+                'supervisor_id'                => $request->supervisor_id,
+                'fecha_ingreso'                => $request->fecha_ingreso,
+                'tipo_contrato'                => $request->tipo_contrato,
+                'salario_base'                 => $request->salario_base,
+                'bonos'                        => $request->bonos ?? 0,
+                'estado'                       => $request->estado,
+                'puede_acceder_sistema'        => $request->puede_acceder_sistema ?? false,
+                'contacto_emergencia_nombre'   => $request->contacto_emergencia_nombre,
                 'contacto_emergencia_telefono' => $request->contacto_emergencia_telefono,
             ]);
 
@@ -248,18 +247,18 @@ class EmpleadoController extends Controller
             ->get()
             ->map(function ($emp) {
                 return [
-                    'id' => $emp->id,
+                    'id'     => $emp->id,
                     'nombre' => $emp->user ? $emp->user->name : $emp->codigo_empleado,
-                    'cargo' => $emp->cargo,
+                    'cargo'  => $emp->cargo,
                 ];
             });
 
         $roles = Role::whereIn('name', ['Gerente RRHH', 'Supervisor', 'Empleado', 'Gerente Administrativo'])->get();
 
         return Inertia::render('empleados/edit', [
-            'empleado' => $empleado,
+            'empleado'     => $empleado,
             'supervisores' => $supervisores,
-            'roles' => $roles,
+            'roles'        => $roles,
         ]);
     }
 
@@ -269,37 +268,37 @@ class EmpleadoController extends Controller
     public function update(Request $request, Empleado $empleado)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
-            'email' => [
+            'nombre'                       => 'required|string|max:255',
+            'email'                        => [
                 'nullable',
                 'string',
                 'email',
                 'max:255',
                 $empleado->user_id ? Rule::unique('users')->ignore($empleado->user_id) : 'unique:users',
             ],
-            'ci' => [
+            'ci'                           => [
                 'required',
                 'string',
                 'max:20',
                 Rule::unique('empleados')->ignore($empleado->id),
             ],
-            'fecha_nacimiento' => 'required|date',
-            'telefono' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string|max:500',
-            'cargo' => 'required|string|max:100',
-            'puesto' => 'nullable|string|max:100',
-            'departamento' => 'required|string|max:100',
-            'supervisor_id' => 'nullable|exists:empleados,id',
-            'fecha_ingreso' => 'required|date',
-            'tipo_contrato' => 'required|in:indefinido,temporal,practicante',
-            'salario_base' => 'required|numeric|min:0',
-            'bonos' => 'nullable|numeric|min:0',
-            'estado' => 'required|in:activo,inactivo,vacaciones,licencia',
-            'puede_acceder_sistema' => 'required|boolean',
-            'contacto_emergencia_nombre' => 'nullable|string|max:255',
+            'fecha_nacimiento'             => 'required|date',
+            'telefono'                     => 'nullable|string|max:20',
+            'direccion'                    => 'nullable|string|max:500',
+            'cargo'                        => 'required|string|max:100',
+            'puesto'                       => 'nullable|string|max:100',
+            'departamento'                 => 'required|string|max:100',
+            'supervisor_id'                => 'nullable|exists:empleados,id',
+            'fecha_ingreso'                => 'required|date',
+            'tipo_contrato'                => 'required|in:indefinido,temporal,practicante',
+            'salario_base'                 => 'required|numeric|min:0',
+            'bonos'                        => 'nullable|numeric|min:0',
+            'estado'                       => 'required|in:activo,inactivo,vacaciones,licencia',
+            'puede_acceder_sistema'        => 'required|boolean',
+            'contacto_emergencia_nombre'   => 'nullable|string|max:255',
             'contacto_emergencia_telefono' => 'nullable|string|max:20',
-            'rol' => 'nullable|exists:roles,name',
-            'usernick' => [
+            'rol'                          => 'nullable|exists:roles,name',
+            'usernick'                     => [
                 'nullable',
                 'string',
                 'max:255',
@@ -311,9 +310,9 @@ class EmpleadoController extends Controller
             // Actualizar usuario solo si existe
             if ($empleado->user) {
                 $empleado->user->update([
-                    'name' => $request->nombre,
+                    'name'     => $request->nombre,
                     'usernick' => $request->usernick ?: $empleado->user->usernick,
-                    'email' => $request->email,
+                    'email'    => $request->email,
                 ]);
 
                 // Actualizar rol si se especifica
@@ -324,21 +323,21 @@ class EmpleadoController extends Controller
 
             // Actualizar empleado
             $empleado->update([
-                'ci' => $request->ci,
-                'fecha_nacimiento' => $request->fecha_nacimiento,
-                'telefono' => $request->telefono,
-                'direccion' => $request->direccion,
-                'cargo' => $request->cargo,
-                'puesto' => $request->puesto,
-                'departamento' => $request->departamento,
-                'supervisor_id' => $request->supervisor_id,
-                'fecha_ingreso' => $request->fecha_ingreso,
-                'tipo_contrato' => $request->tipo_contrato,
-                'salario_base' => $request->salario_base,
-                'bonos' => $request->bonos ?? 0,
-                'estado' => $request->estado,
-                'puede_acceder_sistema' => $request->puede_acceder_sistema,
-                'contacto_emergencia_nombre' => $request->contacto_emergencia_nombre,
+                'ci'                           => $request->ci,
+                'fecha_nacimiento'             => $request->fecha_nacimiento,
+                'telefono'                     => $request->telefono,
+                'direccion'                    => $request->direccion,
+                'cargo'                        => $request->cargo,
+                'puesto'                       => $request->puesto,
+                'departamento'                 => $request->departamento,
+                'supervisor_id'                => $request->supervisor_id,
+                'fecha_ingreso'                => $request->fecha_ingreso,
+                'tipo_contrato'                => $request->tipo_contrato,
+                'salario_base'                 => $request->salario_base,
+                'bonos'                        => $request->bonos ?? 0,
+                'estado'                       => $request->estado,
+                'puede_acceder_sistema'        => $request->puede_acceder_sistema,
+                'contacto_emergencia_nombre'   => $request->contacto_emergencia_nombre,
                 'contacto_emergencia_telefono' => $request->contacto_emergencia_telefono,
             ]);
         });
@@ -371,45 +370,45 @@ class EmpleadoController extends Controller
     {
         $mapeoCargosRoles = [
             // Choferes
-            'Chofer' => 'Chofer',
-            'Conductor' => 'Chofer',
-            'Repartidor' => 'Chofer',
-            'Mensajero' => 'Chofer',
+            'Chofer'                   => 'Chofer',
+            'Conductor'                => 'Chofer',
+            'Repartidor'               => 'Chofer',
+            'Mensajero'                => 'Chofer',
 
             // Cajeros
-            'Cajero' => 'Cajero',
-            'Cajera' => 'Cajero',
-            'Encargado de Caja' => 'Cajero',
+            'Cajero'                   => 'Cajero',
+            'Cajera'                   => 'Cajero',
+            'Encargado de Caja'        => 'Cajero',
 
             // Gestores de Almacén
-            'Gestor de Almacén' => 'Gestor de Almacén',
-            'Encargado de Almacén' => 'Gestor de Almacén',
-            'Almacenista' => 'Gestor de Almacén',
+            'Gestor de Almacén'        => 'Gestor de Almacén',
+            'Encargado de Almacén'     => 'Gestor de Almacén',
+            'Almacenista'              => 'Gestor de Almacén',
             'Supervisor de Inventario' => 'Gestor de Almacén',
 
             // Compradores
-            'Comprador' => 'Comprador',
-            'Compradora' => 'Comprador',
-            'Encargado de Compras' => 'Comprador',
-            'Supervisor de Compras' => 'Compras',
+            'Comprador'                => 'Comprador',
+            'Compradora'               => 'Comprador',
+            'Encargado de Compras'     => 'Comprador',
+            'Supervisor de Compras'    => 'Compras',
 
             // Managers/Gerentes
-            'Manager' => 'Manager',
-            'Gerente' => 'Gerente',
-            'Gerente General' => 'Gerente',
-            'Gerente de Ventas' => 'Gerente',
-            'Gerente de Operaciones' => 'Manager',
+            'Manager'                  => 'Manager',
+            'Gerente'                  => 'Gerente',
+            'Gerente General'          => 'Gerente',
+            'Gerente de Ventas'        => 'Gerente',
+            'Gerente de Operaciones'   => 'Manager',
 
             // Vendedores
-            'Vendedor' => 'Vendedor',
-            'Vendedora' => 'Vendedor',
-            'Asesor de Ventas' => 'Vendedor',
+            'Vendedor'                 => 'Vendedor',
+            'Vendedora'                => 'Vendedor',
+            'Asesor de Ventas'         => 'Vendedor',
 
             // Otros roles específicos
-            'Contador' => 'Contabilidad',
-            'Contadora' => 'Contabilidad',
-            'Logístico' => 'Logística',
-            'Encargado de Logística' => 'Logística',
+            'Contador'                 => 'Contabilidad',
+            'Contadora'                => 'Contabilidad',
+            'Logístico'                => 'Logística',
+            'Encargado de Logística'   => 'Logística',
         ];
 
         return $mapeoCargosRoles[$cargo] ?? null;
@@ -421,14 +420,14 @@ class EmpleadoController extends Controller
     public function crearEmpleadoRapido(Request $request)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'usernick' => 'nullable|string|max:255|unique:users',
-            'ci' => 'required|string|max:20|unique:empleados',
-            'cargo' => 'required|string|max:100',
-            'departamento' => 'required|string|max:100',
+            'nombre'        => 'required|string|max:255',
+            'email'         => 'required|string|email|max:255|unique:users',
+            'usernick'      => 'nullable|string|max:255|unique:users',
+            'ci'            => 'required|string|max:20|unique:empleados',
+            'cargo'         => 'required|string|max:100',
+            'departamento'  => 'required|string|max:100',
             'fecha_ingreso' => 'required|date',
-            'salario_base' => 'required|numeric|min:0',
+            'salario_base'  => 'required|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -437,12 +436,12 @@ class EmpleadoController extends Controller
 
             // Crear usuario
             $user = User::create([
-                'name' => $request->nombre,
-                'usernick' => $usernick,
-                'email' => $request->email,
-                'password' => Hash::make('password123'),
+                'name'              => $request->nombre,
+                'usernick'          => $usernick,
+                'email'             => $request->email,
+                'password'          => Hash::make('password123'),
                 'email_verified_at' => now(),
-                'activo' => true,
+                'activo'            => true,
             ]);
 
             // Determinar y asignar rol automáticamente
@@ -453,14 +452,14 @@ class EmpleadoController extends Controller
 
             // Crear empleado sin código inicialmente
             $empleado = Empleado::create([
-                'user_id' => $user->id,
-                'ci' => $request->ci,
-                'cargo' => $request->cargo,
-                'departamento' => $request->departamento,
-                'fecha_ingreso' => $request->fecha_ingreso,
-                'tipo_contrato' => 'indefinido',
-                'salario_base' => $request->salario_base,
-                'estado' => 'activo',
+                'user_id'               => $user->id,
+                'ci'                    => $request->ci,
+                'cargo'                 => $request->cargo,
+                'departamento'          => $request->departamento,
+                'fecha_ingreso'         => $request->fecha_ingreso,
+                'tipo_contrato'         => 'indefinido',
+                'salario_base'          => $request->salario_base,
+                'estado'                => 'activo',
                 'puede_acceder_sistema' => true,
             ]);
 
@@ -473,8 +472,8 @@ class EmpleadoController extends Controller
         });
 
         return response()->json([
-            'success' => true,
-            'message' => 'Empleado creado exitosamente con rol asignado automáticamente.',
+            'success'      => true,
+            'message'      => 'Empleado creado exitosamente con rol asignado automáticamente.',
             'rol_asignado' => $this->determinarRolPorCargo($request->cargo),
         ]);
     }
@@ -515,12 +514,12 @@ class EmpleadoController extends Controller
     private function generarUsernickUnico(string $codigoEmpleado): string
     {
         $baseUsernick = strtolower($codigoEmpleado);
-        $usernick = $baseUsernick;
-        $counter = 1;
+        $usernick     = $baseUsernick;
+        $counter      = 1;
 
         // Verificar si el usernick ya existe y agregar número si es necesario
         while (\App\Models\User::where('usernick', $usernick)->exists()) {
-            $usernick = $baseUsernick.$counter;
+            $usernick = $baseUsernick . $counter;
             $counter++;
         }
 
@@ -534,7 +533,7 @@ class EmpleadoController extends Controller
      */
     private function generarCodigoEmpleado(int $id): string
     {
-        return 'EMP'.str_pad($id, 4, '0', STR_PAD_LEFT);
+        return 'EMP' . str_pad($id, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -602,9 +601,9 @@ class EmpleadoController extends Controller
                     }
 
                     return [
-                        'value' => $empleado->id,
-                        'label' => $empleado->user->name,
-                        'description' => ($empleado->cargo ?? 'Sin cargo').' - '.($empleado->departamento ?? 'Sin departamento'),
+                        'value'       => $empleado->id,
+                        'label'       => $empleado->user->name,
+                        'description' => ($empleado->cargo ?? 'Sin cargo') . ' - ' . ($empleado->departamento ?? 'Sin departamento'),
                     ];
                 })
                 ->filter()   // Remover valores null
@@ -613,19 +612,19 @@ class EmpleadoController extends Controller
 
             // Agregar opción "Sin supervisor"
             array_unshift($supervisores, [
-                'value' => 'sin-supervisor',
-                'label' => 'Sin supervisor',
+                'value'       => 'sin-supervisor',
+                'label'       => 'Sin supervisor',
                 'description' => 'Empleado sin supervisor asignado',
             ]);
 
             return response()->json($supervisores);
         } catch (\Exception $e) {
             // Log del error para debugging
-            Log::error('Error en getSupervisores: '.$e->getMessage());
+            Log::error('Error en getSupervisores: ' . $e->getMessage());
 
             // Devolver respuesta de error controlada
             return response()->json([
-                'error' => 'Error interno del servidor',
+                'error'   => 'Error interno del servidor',
                 'message' => 'No se pudieron cargar los supervisores',
             ], 500);
         }
@@ -641,9 +640,9 @@ class EmpleadoController extends Controller
                 ->get()
                 ->map(function ($role) {
                     return [
-                        'value' => $role->name,
-                        'label' => $role->name,
-                        'description' => 'Rol del sistema: '.$role->name,
+                        'value'       => $role->name,
+                        'label'       => $role->name,
+                        'description' => 'Rol del sistema: ' . $role->name,
                     ];
                 })
                 ->toArray();
@@ -651,11 +650,11 @@ class EmpleadoController extends Controller
             return response()->json($roles);
         } catch (\Exception $e) {
             // Log del error para debugging
-            Log::error('Error en getRoles: '.$e->getMessage());
+            Log::error('Error en getRoles: ' . $e->getMessage());
 
             // Devolver respuesta de error controlada
             return response()->json([
-                'error' => 'Error interno del servidor',
+                'error'   => 'Error interno del servidor',
                 'message' => 'No se pudieron cargar los roles',
             ], 500);
         }

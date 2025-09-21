@@ -61,7 +61,7 @@ export interface TableColumn<T extends BaseEntity> {
 export interface FormField<F extends BaseFormData> {
   key: keyof F;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'date' | 'file';
+  type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'date' | 'file' | 'custom';
   required?: boolean;
   placeholder?: string;
   validation?: {

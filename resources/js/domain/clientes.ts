@@ -38,4 +38,14 @@ export interface ClienteFormData extends BaseFormData {
     latitud?: number | null;
     longitud?: number | null;
     activo?: boolean;
+    // Direcciones anidadas del cliente
+    direcciones?: Array<{
+        id?: Id;
+        direccion: string;
+        ciudad?: string | null;
+        departamento?: string | null;
+        codigo_postal?: string | null;
+        es_principal?: boolean;
+        activa?: boolean;
+    }>;
 }

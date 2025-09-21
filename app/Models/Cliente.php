@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,11 +32,11 @@ class Cliente extends Model
     ];
 
     protected $casts = [
-        'activo' => 'boolean',
+        'activo'         => 'boolean',
         'fecha_registro' => 'datetime',
         'limite_credito' => 'decimal:2',
-        'latitud' => 'decimal:8',
-        'longitud' => 'decimal:8',
+        'latitud'        => 'decimal:8',
+        'longitud'       => 'decimal:8',
     ];
 
     public function localidad()
@@ -55,10 +54,10 @@ class Cliente extends Model
         return $this->hasMany(DireccionCliente::class, 'cliente_id');
     }
 
-    public function fotosLugar()
+    /* public function fotosLugar()
     {
         return $this->hasMany(FotoLugarCliente::class, 'cliente_id');
-    }
+    } */
 
     public function ventas()
     {
@@ -115,9 +114,9 @@ class Cliente extends Model
 
         // Formatear con 3 ceros hasta 999, luego sin ceros
         if ($numero < 1000) {
-            return $codigoLocalidad.str_pad($numero, 3, '0', STR_PAD_LEFT);
+            return $codigoLocalidad . str_pad($numero, 3, '0', STR_PAD_LEFT);
         } else {
-            return $codigoLocalidad.$numero;
+            return $codigoLocalidad . $numero;
         }
     }
 }

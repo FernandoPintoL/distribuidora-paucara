@@ -292,7 +292,7 @@ export default function EmpleadosCreate() {
                                         required
                                     />
                                 </div>
-                                <div>
+                                {/* <div>
                                     <Label htmlFor="puesto">Puesto</Label>
                                     <Input
                                         id="puesto"
@@ -300,7 +300,7 @@ export default function EmpleadosCreate() {
                                         onChange={(e) => handleInputChange('puesto')(e.target.value)}
                                         placeholder="Puesto específico"
                                     />
-                                </div>
+                                </div> */}
                                 <div>
                                     <Label htmlFor="departamento">Departamento *</Label>
                                     <SearchSelect

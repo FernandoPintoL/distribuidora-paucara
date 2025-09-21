@@ -73,7 +73,7 @@ const useSidebarModules = () => {
     useEffect(() => {
         const fetchModules = async () => {
             try {
-                const response = await fetch('/api/modulos-sidebar');
+                const response = await fetch('/api/modulos-sidebar', { credentials: 'include' });
                 if (!response.ok) {
                     throw new Error('Error al cargar módulos del sidebar');
                 }

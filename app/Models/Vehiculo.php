@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +14,7 @@ class Vehiculo extends Model
         'placa',
         'marca',
         'modelo',
-        'año',
+        'anho',
         'capacidad_kg',
         'capacidad_volumen',
         'estado',
@@ -25,10 +24,10 @@ class Vehiculo extends Model
     ];
 
     protected $casts = [
-        'año' => 'integer',
-        'capacidad_kg' => 'decimal:2',
+        'anho'              => 'integer',
+        'capacidad_kg'      => 'decimal:2',
         'capacidad_volumen' => 'decimal:2',
-        'activo' => 'boolean',
+        'activo'            => 'boolean',
     ];
 
     // Estados del vehículo

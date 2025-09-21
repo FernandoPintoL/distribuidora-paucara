@@ -7,6 +7,7 @@ use App\Models\Localidad;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -239,7 +240,8 @@ class ClienteController extends Controller
     public function edit(ClienteModel $cliente): Response
     {
         return Inertia::render('clientes/form', [
-            'cliente'     => $cliente,
+            // Cargar relaciones necesarias para el formulario de edición
+            'cliente'     => $cliente->load(['direcciones']),
             'localidades' => Localidad::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo'])
@@ -479,7 +481,8 @@ class ClienteController extends Controller
             $cliente = $this->handleClientCreation($request, $data, false, true, true);
 
             $responseData = [
-                'cliente' => $cliente->load('direcciones'),
+                // Devolver el cliente con relaciones necesarias para que el frontend pueda usarlo de inmediato
+                'cliente' => $cliente->load(['direcciones', 'localidad', 'user', 'fotosLugar']),
             ];
 
             if ($cliente->user) {
@@ -709,7 +712,8 @@ class ClienteController extends Controller
             }
 
             $responseData = [
-                'cliente' => $cliente->fresh('direcciones'),
+                // Incluir relaciones habituales (direcciones y catálogo relacionado) en la respuesta
+                'cliente' => $cliente->fresh(['direcciones', 'localidad', 'user', 'fotosLugar']),
             ];
 
             if ($user) {
@@ -852,7 +856,7 @@ class ClienteController extends Controller
      */
     public function cambiarCredenciales(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         $request->validate([
             'usernick'        => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],

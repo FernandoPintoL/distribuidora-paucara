@@ -191,7 +191,7 @@ export default function EmpleadosIndex() {
                         <h1 className="text-3xl font-bold tracking-tight">Empleados</h1>
                         <p className="text-gray-600">Gestiona la información de los empleados</p>
                     </div>
-                    <Can permission="empleados.crear">
+                    <Can permission="empleados.create">
                         <Button asChild>
                             <Link href="/empleados/create">
                                 <Plus className="h-4 w-4 mr-2" />
@@ -369,7 +369,7 @@ export default function EmpleadosIndex() {
                                                 </div>
                                             </td>
                                             <td className="py-3 px-4">
-                                                <Can permission="empleados.gestionar_acceso_sistema">
+                                                <Can permission="empleados.toggle-acceso-sistema">
                                                     {empleado.user ? (
                                                         <Button
                                                             size="sm"
@@ -393,7 +393,7 @@ export default function EmpleadosIndex() {
                                                         <span className="text-sm text-gray-400">N/A</span>
                                                     )}
                                                 </Can>
-                                                {!Can({ permission: "empleados.gestionar_acceso_sistema" }) && (
+                                                {!Can({ permission: "empleados.toggle-acceso-sistema" }) && (
                                                     empleado.user ? (
                                                         <Badge variant={empleado.puede_acceder_sistema ? "default" : "secondary"}>
                                                             {empleado.puede_acceder_sistema ? "Sí" : "No"}
@@ -414,21 +414,21 @@ export default function EmpleadosIndex() {
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <Can permission="empleados.ver">
+                                                    <Can permission="empleados.show">
                                                         <Button variant="outline" size="sm" asChild>
                                                             <Link href={`/empleados/${empleado.id}`}>
                                                                 <Eye className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
                                                     </Can>
-                                                    <Can permission="empleados.editar">
+                                                    <Can permission="empleados.edit">
                                                         <Button variant="outline" size="sm" asChild>
                                                             <Link href={`/empleados/${empleado.id}/edit`}>
                                                                 <Pencil className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
                                                     </Can>
-                                                    <Can permission="empleados.eliminar">
+                                                    <Can permission="empleados.destroy">
                                                         <Button
                                                             variant="outline"
                                                             size="sm"

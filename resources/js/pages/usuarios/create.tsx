@@ -17,6 +17,7 @@ interface Role {
 
 interface PageProps {
     roles: Role[]
+    permissions: Record<string, { id: number; name: string; description?: string }[]>
     [key: string]: unknown
 }
 
@@ -31,7 +32,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ]
 
-export default function Create({ roles }: PageProps) {
+export default function Create({ roles, permissions }: PageProps) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         usernick: '',
@@ -39,6 +40,7 @@ export default function Create({ roles }: PageProps) {
         password: '',
         password_confirmation: '',
         roles: [] as number[],
+        permissions: [] as number[],
     })
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -60,6 +62,14 @@ export default function Create({ roles }: PageProps) {
         setData('roles', data.roles.includes(id)
             ? data.roles.filter(r => r !== id)
             : [...data.roles, id]
+        )
+    }
+
+    const handlePermissionChange = (permissionId: string) => {
+        const id = parseInt(permissionId)
+        setData('permissions', data.permissions.includes(id)
+            ? data.permissions.filter(p => p !== id)
+            : [...data.permissions, id]
         )
     }
 
@@ -184,6 +194,34 @@ export default function Create({ roles }: PageProps) {
                                         ))}
                                     </div>
                                     <InputError message={errors.roles} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Permisos (opcionales)</Label>
+                                    <div className="space-y-4">
+                                        {Object.entries(permissions).map(([group, perms]) => (
+                                            <div key={group}>
+                                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">{group}</h4>
+                                                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                                                    {perms.map((perm) => (
+                                                        <div key={perm.id} className="flex items-center space-x-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                id={`perm-${perm.id}`}
+                                                                checked={data.permissions.includes(perm.id)}
+                                                                onChange={() => handlePermissionChange(perm.id.toString())}
+                                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <label htmlFor={`perm-${perm.id}`} className="text-sm text-gray-700 dark:text-gray-300">
+                                                                {perm.name}
+                                                            </label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <InputError message={errors.permissions} />
                                 </div>
 
                                 <div className="flex justify-end space-x-4">

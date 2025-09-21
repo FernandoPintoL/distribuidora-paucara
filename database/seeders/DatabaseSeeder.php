@@ -4,6 +4,8 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,10 +15,10 @@ class DatabaseSeeder extends Seeder
         $this->call(AlmacenesUbicacionSeeder::class);
         // Seed roles and permissions FIRST
         $this->call(RolesAndPermissionsSeeder::class);
-        // $this->call(CajaSeeder::class);
+        $this->call(CajaSeeder::class);
         // $this->call(ClienteTestSeeder::class);
-        // $this->call(CuentaContableSeeder::class);
-        // $this->call(EmpleadoRolesSeeder::class);
+        $this->call(CuentaContableSeeder::class);
+        $this->call(EmpleadoRolesSeeder::class);
         // $this->call(EmpleadosTestSeeder::class);
         // $this->call(EmpleadosSinUsuarioSeeder::class);
         // $this->call(SupervisoresSeeder::class);
@@ -31,7 +33,7 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoMermaSeeder::class);
         $this->call(TipoOperacionCajaSeeder::class);
         $this->call(TiposPrecioSeeder::class);
-        // $this->call(VehiculoSeeder::class);
+        // $this->call(\Database\Seeders\VehiculoSeeder::class);
         // $this->call(ProductosEjemploSeeder::class);
         $this->call(LocalidadSeeder::class);
         // Create a default admin user if not exists
@@ -51,6 +53,13 @@ class DatabaseSeeder extends Seeder
         }
         // darle el rol de admin a $admin
         $admin->assignRole('Admin');
+
+        // Asegurar que el rol Admin tenga todos los permisos creados por el seeder
+        $adminRole = Role::where('name', 'Admin')->first();
+        if ($adminRole) {
+            // Sincronizar todos los permisos disponibles al rol Admin
+            $adminRole->syncPermissions(Permission::all());
+        }
 
     }
 }

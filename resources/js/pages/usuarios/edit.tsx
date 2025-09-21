@@ -18,6 +18,10 @@ interface User {
     roles: Array<{
         id: number
         name: string
+        permissions?: Array<{
+            id: number
+            name: string
+        }>
     }>
 }
 
@@ -30,6 +34,8 @@ interface PageProps {
     user: User
     roles: Role[]
     userRoles: number[]
+    permissions: Record<string, { id: number; name: string; description?: string }[]>
+    userPermissions: number[]
     [key: string]: unknown
 }
 
@@ -44,7 +50,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ]
 
-export default function Edit({ user, roles, userRoles }: PageProps) {
+export default function Edit({ user, roles, userRoles, permissions, userPermissions }: PageProps) {
     const { data, setData, put, processing, errors } = useForm({
         name: user.name || '',
         usernick: user.usernick || '',
@@ -52,6 +58,7 @@ export default function Edit({ user, roles, userRoles }: PageProps) {
         password: '',
         password_confirmation: '',
         roles: userRoles || [],
+        permissions: userPermissions || [],
     })
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -74,6 +81,23 @@ export default function Edit({ user, roles, userRoles }: PageProps) {
             : [...data.roles, id]
         )
     }
+
+    const handlePermissionChange = (permissionId: string) => {
+        const id = parseInt(permissionId)
+        setData('permissions', data.permissions.includes(id)
+            ? data.permissions.filter(p => p !== id)
+            : [...data.permissions, id]
+        )
+    }
+
+    // permisos heredados por roles: usamos user.roles[].permissions (cargado desde el controller)
+    const inheritedPermissionIds = React.useMemo(() => {
+        const ids: number[] = [];
+        (user.roles || []).forEach((r) => {
+            (r.permissions || []).forEach((p: { id: number }) => ids.push(p.id));
+        });
+        return new Set<number>(ids);
+    }, [user.roles]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -194,6 +218,43 @@ export default function Edit({ user, roles, userRoles }: PageProps) {
                                         ))}
                                     </div>
                                     <InputError message={errors.roles} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Permisos directos</Label>
+                                    <div className="space-y-4">
+                                        {Object.entries(permissions).map(([group, perms]) => {
+                                            const permsList = perms as { id: number; name: string }[];
+                                            return (
+                                                <div key={group}>
+                                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">{group}</h4>
+                                                    <div className="mt-2 grid gap-2 md:grid-cols-3">
+                                                        {permsList.map((perm: { id: number; name: string }) => {
+                                                            const isInherited = inheritedPermissionIds.has(perm.id);
+                                                            const isChecked = isInherited || data.permissions.includes(perm.id);
+                                                            return (
+                                                                <div key={perm.id} className="flex items-center space-x-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        id={`perm-${perm.id}`}
+                                                                        checked={isChecked}
+                                                                        onChange={() => handlePermissionChange(perm.id.toString())}
+                                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                                        disabled={isInherited}
+                                                                    />
+                                                                    <label htmlFor={`perm-${perm.id}`} className={`text-sm ${isInherited ? 'text-gray-400' : 'text-gray-700'} dark:${isInherited ? 'text-gray-500' : 'text-gray-300'}`}>
+                                                                        {perm.name}
+                                                                        {isInherited && <span className="ml-2 text-xs text-gray-400">(heredado)</span>}
+                                                                    </label>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <InputError message={errors.permissions} />
                                 </div>
 
                                 <div className="flex justify-end space-x-4">

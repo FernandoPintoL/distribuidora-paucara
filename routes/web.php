@@ -37,7 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('localidades/api/active', [\App\Http\Controllers\LocalidadController::class, 'getActiveLocalidades'])->name('localidades.api.active');
 
     // Incluir rutas de configuración global
-    require __DIR__.'/configuracion.php';
+    require __DIR__ . '/configuracion.php';
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
     Route::resource('clientes', \App\Http\Controllers\ClienteController::class)->middleware('permission:clientes.manage');
@@ -74,11 +74,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Rutas para gestión de usuarios, roles y permisos
     Route::resource('usuarios', \App\Http\Controllers\UserController::class);
-    Route::post('usuarios/{user}/assign-role', [\App\Http\Controllers\UserController::class, 'assignRole'])->name('usuarios.assign-role');
-    Route::delete('usuarios/{user}/remove-role', [\App\Http\Controllers\UserController::class, 'removeRole'])->name('usuarios.remove-role');
-    Route::post('usuarios/{user}/assign-permission', [\App\Http\Controllers\UserController::class, 'assignPermission'])->name('usuarios.assign-permission');
-    Route::delete('usuarios/{user}/remove-permission', [\App\Http\Controllers\UserController::class, 'removePermission'])->name('usuarios.remove-permission');
-    Route::patch('usuarios/{user}/toggle-status', [\App\Http\Controllers\UserController::class, 'toggleStatus'])->name('usuarios.toggle-status');
+    Route::post('usuarios/{usuario}/assign-role', [\App\Http\Controllers\UserController::class, 'assignRole'])->name('usuarios.assign-role');
+    Route::delete('usuarios/{usuario}/remove-role', [\App\Http\Controllers\UserController::class, 'removeRole'])->name('usuarios.remove-role');
+    Route::post('usuarios/{usuario}/assign-permission', [\App\Http\Controllers\UserController::class, 'assignPermission'])->name('usuarios.assign-permission');
+    Route::delete('usuarios/{usuario}/remove-permission', [\App\Http\Controllers\UserController::class, 'removePermission'])->name('usuarios.remove-permission');
+    Route::patch('usuarios/{usuario}/toggle-status', [\App\Http\Controllers\UserController::class, 'toggleStatus'])->name('usuarios.toggle-status');
 
     Route::resource('roles', \App\Http\Controllers\RoleController::class);
     Route::post('roles/{role}/assign-permission', [\App\Http\Controllers\RoleController::class, 'assignPermission'])->name('roles.assign-permission');
@@ -187,6 +187,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('ajuste', [\App\Http\Controllers\InventarioController::class, 'procesarAjuste'])->middleware('permission:inventario.ajuste.procesar')->name('ajuste.procesar');
         Route::get('reportes', [\App\Http\Controllers\InventarioController::class, 'reportes'])->middleware('permission:inventario.reportes')->name('reportes');
 
+        // Rutas para gestión de vehículos desde inventario
+        Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\VehiculoController::class, 'index'])->middleware('permission:inventario.vehiculos.manage')->name('index');
+            Route::get('create', [\App\Http\Controllers\VehiculoController::class, 'create'])->middleware('permission:inventario.vehiculos.manage')->name('create');
+            Route::post('/', [\App\Http\Controllers\VehiculoController::class, 'store'])->middleware('permission:inventario.vehiculos.manage')->name('store');
+            Route::get('{vehiculo}/edit', [\App\Http\Controllers\VehiculoController::class, 'edit'])->middleware('permission:inventario.vehiculos.manage')->name('edit');
+            Route::put('{vehiculo}', [\App\Http\Controllers\VehiculoController::class, 'update'])->middleware('permission:inventario.vehiculos.manage')->name('update');
+            Route::delete('{vehiculo}', [\App\Http\Controllers\VehiculoController::class, 'destroy'])->middleware('permission:inventario.vehiculos.manage')->name('destroy');
+        });
+
         // Rutas para transferencias de inventario
         Route::prefix('transferencias')->name('transferencias.')->group(function () {
             Route::get('/', [\App\Http\Controllers\InventarioController::class, 'transferencias'])->middleware('permission:inventario.transferencias.index')->name('index');
@@ -265,6 +275,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
-require __DIR__.'/test.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
+require __DIR__ . '/test.php';

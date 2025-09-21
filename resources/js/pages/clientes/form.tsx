@@ -23,6 +23,8 @@ const initialClienteData: ClienteFormData = {
   latitud: null,
   longitud: null,
   activo: true,
+  // Inicializar direcciones como array vacío para que GenericForm contenga la propiedad
+  direcciones: [],
 };
 
 export default function ClientesForm({ cliente, localidades }: ClientesFormProps) {

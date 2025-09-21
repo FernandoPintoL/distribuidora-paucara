@@ -72,7 +72,7 @@ export default function GenericFormFields<F extends BaseFormData>({
         return (
           <textarea
             id={String(field.key)}
-            value={String(value || '')}
+            value={value ? String(value) : ''}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(field.key, e.target.value)}
             placeholder={field.placeholder}
             disabled={disabled}
@@ -86,8 +86,8 @@ export default function GenericFormFields<F extends BaseFormData>({
           <Input
             id={String(field.key)}
             type="number"
-            value={value || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, parseFloat(e.target.value) || 0)}
+            value={value ? String(value) : ''}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.value === '' ? null : parseFloat(e.target.value))}
             placeholder={field.placeholder}
             disabled={disabled}
             className={error ? 'border-red-500' : ''}
@@ -128,7 +128,6 @@ export default function GenericFormFields<F extends BaseFormData>({
           return (
             <SearchSelect
               id={fieldKey}
-              label={field.label}
               placeholder={field.placeholder || 'Seleccionar...'}
               value={value ? String(value) : ''}
               options={searchSelectOptions}
@@ -146,7 +145,6 @@ export default function GenericFormFields<F extends BaseFormData>({
           return (
             <SearchSelect
               id={fieldKey}
-              label={field.label}
               placeholder={field.placeholder || 'Seleccionar...'}
               value={value ? String(value) : ''}
               options={options.map(opt => ({
@@ -166,7 +164,7 @@ export default function GenericFormFields<F extends BaseFormData>({
         return (
           <select
             id={fieldKey}
-            value={String(value || '')}
+            value={value ? String(value) : ''}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(field.key, e.target.value === '' ? null : e.target.value)}
             disabled={disabled}
             className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${error ? 'border-red-500' : ''}`}
@@ -239,7 +237,7 @@ export default function GenericFormFields<F extends BaseFormData>({
         return (
           <Input
             id={String(field.key)}
-            value={String(value || '')}
+            value={value ? String(value) : ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.value)}
             placeholder={field.placeholder}
             disabled={disabled}

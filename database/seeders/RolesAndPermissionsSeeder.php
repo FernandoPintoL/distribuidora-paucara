@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -54,6 +53,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver', 'inventario.transferencias.edit',
             'inventario.transferencias.enviar', 'inventario.transferencias.recibir', 'inventario.transferencias.cancelar',
 
+            // Vehículos (logística/inventario)
+            'inventario.vehiculos.manage', 'inventario.vehiculos.index', 'inventario.vehiculos.create', 'inventario.vehiculos.store', 'inventario.vehiculos.ver', 'inventario.vehiculos.edit', 'inventario.vehiculos.update', 'inventario.vehiculos.destroy',
+
             // Reportes
             'reportes.precios.index', 'reportes.precios.export', 'reportes.ganancias.index', 'reportes.ganancias.export',
             'reportes.inventario.stock-actual', 'reportes.inventario.vencimientos', 'reportes.inventario.rotacion',
@@ -88,22 +90,22 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Create roles
-        $admin = Role::findOrCreate('Admin');
-        $vendedor = Role::findOrCreate('Vendedor');
-        $compras = Role::findOrCreate('Compras');
-        $inventario = Role::findOrCreate('Inventario');
-        $reportes = Role::findOrCreate('Reportes');
-        $logistica = Role::findOrCreate('Logística');
+        $admin        = Role::findOrCreate('Admin');
+        $vendedor     = Role::findOrCreate('Vendedor');
+        $compras      = Role::findOrCreate('Compras');
+        $inventario   = Role::findOrCreate('Inventario');
+        $reportes     = Role::findOrCreate('Reportes');
+        $logistica    = Role::findOrCreate('Logística');
         $contabilidad = Role::findOrCreate('Contabilidad');
-        $gerente = Role::findOrCreate('Gerente');
-        $cajero = Role::findOrCreate('Cajero');
-        $cliente = Role::findOrCreate('Cliente');
+        $gerente      = Role::findOrCreate('Gerente');
+        $cajero       = Role::findOrCreate('Cajero');
+        $cliente      = Role::findOrCreate('Cliente');
 
         // Nuevos roles para tipos de empleados específicos
-        $chofer = Role::findOrCreate('Chofer');
+        $chofer        = Role::findOrCreate('Chofer');
         $gestorAlmacen = Role::findOrCreate('Gestor de Almacén');
-        $comprador = Role::findOrCreate('Comprador');
-        $manager = Role::findOrCreate('Manager');
+        $comprador     = Role::findOrCreate('Comprador');
+        $manager       = Role::findOrCreate('Manager');
 
         // Assign permissions to roles
         $admin->givePermissionTo(Permission::all());
@@ -190,7 +192,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $chofer->syncPermissions($choferPerms);
 
         $clientePerms = [
-            // Permisos limitados para clientes
+                               // Permisos limitados para clientes
             'clientes.manage', // Gestionar su propio perfil
         ];
         $cliente->syncPermissions($clientePerms);

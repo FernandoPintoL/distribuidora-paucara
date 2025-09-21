@@ -105,41 +105,43 @@ class UserController extends Controller
             ->with('success', 'Usuario creado exitosamente.');
     }
 
-    public function show(User $user)
+    public function show(User $usuario)
     {
-        $user->load(['roles', 'permissions']);
+        // Cargar permisos directos y permisos asignados a cada rol para que la vista pueda mostrarlos
+        $usuario->load(['roles.permissions', 'permissions']);
 
         return Inertia::render('usuarios/show', [
-            'user'            => $user,
-            'userRoles'       => $user->roles,
-            'userPermissions' => $user->permissions,
-            'allPermissions'  => $user->getAllPermissions(),
+            'user'            => $usuario,
+            'userRoles'       => $usuario->roles->pluck('id')->toArray(),
+            'userPermissions' => $usuario->permissions->pluck('id')->toArray(),
+            'allPermissions'  => $usuario->getAllPermissions(),
         ]);
     }
 
-    public function edit(User $user)
+    public function edit(User $usuario)
     {
-        $user->load(['roles', 'permissions']);
+        // Cargar permisos directos y permisos de los roles para que la vista pueda identificar permisos heredados
+        $usuario->load(['roles.permissions', 'permissions']);
         $roles       = Role::all();
         $permissions = Permission::all()->groupBy(function ($permission) {
             return explode('.', $permission->name)[0];
         });
 
         return Inertia::render('usuarios/edit', [
-            'user'            => $user,
+            'user'            => $usuario,
             'roles'           => $roles,
             'permissions'     => $permissions,
-            'userRoles'       => $user->roles->pluck('id'),
-            'userPermissions' => $user->permissions->pluck('id'),
+            'userRoles'       => $usuario->roles->pluck('id')->toArray(),
+            'userPermissions' => $usuario->permissions->pluck('id')->toArray(),
         ]);
     }
 
-    public function update(Request $request, User $user)
+    public function update(Request $request, User $usuario)
     {
         $validated = $request->validate([
             'name'          => ['required', 'string', 'max:255'],
-            'usernick'      => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'email'         => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'usernick'      => ['required', 'string', 'max:255', Rule::unique('users')->ignore($usuario->id)],
+            'email'         => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($usuario->id)],
             'password'      => ['nullable', 'string', 'min:8', 'confirmed'],
             'roles'         => ['array'],
             'roles.*'       => ['exists:roles,id'],
@@ -147,7 +149,7 @@ class UserController extends Controller
             'permissions.*' => ['exists:permissions,id'],
         ]);
 
-        $user->update([
+        $usuario->update([
             'name'     => $validated['name'],
             'usernick' => $validated['usernick'],
             'email'    => $validated['email'],
@@ -155,94 +157,94 @@ class UserController extends Controller
 
         // Actualizar contraseña solo si se proporciona
         if (! empty($validated['password'])) {
-            $user->update(['password' => Hash::make($validated['password'])]);
+            $usuario->update(['password' => Hash::make($validated['password'])]);
         }
 
         // Sincronizar roles
         if (isset($validated['roles'])) {
-            $user->syncRoles(Role::whereIn('id', $validated['roles'])->pluck('name'));
+            $usuario->syncRoles(Role::whereIn('id', $validated['roles'])->pluck('name'));
         } else {
-            $user->syncRoles([]);
+            $usuario->syncRoles([]);
         }
 
         // Sincronizar permisos directos
         if (isset($validated['permissions'])) {
-            $user->syncPermissions(Permission::whereIn('id', $validated['permissions'])->pluck('name'));
+            $usuario->syncPermissions(Permission::whereIn('id', $validated['permissions'])->pluck('name'));
         } else {
-            $user->syncPermissions([]);
+            $usuario->syncPermissions([]);
         }
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuario actualizado exitosamente.');
     }
 
-    public function destroy(User $user)
+    public function destroy(User $usuario)
     {
         // Evitar que el usuario se elimine a sí mismo
-        if ($user->id === Auth::id()) {
+        if ($usuario->id === Auth::id()) {
             return back()->with('error', 'No puedes eliminar tu propia cuenta.');
         }
 
-        $user->delete();
+        $usuario->delete();
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuario eliminado exitosamente.');
     }
 
-    public function toggleStatus(User $user)
+    public function toggleStatus(User $usuario)
     {
         // Evitar que el usuario se desactive a sí mismo
-        if ($user->id === Auth::id()) {
+        if ($usuario->id === Auth::id()) {
             return back()->with('error', 'No puedes desactivar tu propia cuenta.');
         }
 
-        $user->update(['activo' => ! $user->activo]);
+        $usuario->update(['activo' => ! $usuario->activo]);
 
-        $status = $user->activo ? 'activado' : 'desactivado';
+        $status = $usuario->activo ? 'activado' : 'desactivado';
 
         return back()->with('success', "Usuario {$status} exitosamente.");
     }
 
-    public function assignRole(Request $request, User $user)
+    public function assignRole(Request $request, User $usuario)
     {
         $request->validate([
             'role' => ['required', 'exists:roles,name'],
         ]);
 
-        $user->assignRole($request->role);
+        $usuario->assignRole($request->role);
 
         return back()->with('success', 'Rol asignado exitosamente.');
     }
 
-    public function removeRole(Request $request, User $user)
+    public function removeRole(Request $request, User $usuario)
     {
         $request->validate([
             'role' => ['required', 'exists:roles,name'],
         ]);
 
-        $user->removeRole($request->role);
+        $usuario->removeRole($request->role);
 
         return back()->with('success', 'Rol removido exitosamente.');
     }
 
-    public function assignPermission(Request $request, User $user)
+    public function assignPermission(Request $request, User $usuario)
     {
         $request->validate([
             'permission' => ['required', 'exists:permissions,name'],
         ]);
 
-        $user->givePermissionTo($request->permission);
+        $usuario->givePermissionTo($request->permission);
 
         return back()->with('success', 'Permiso asignado exitosamente.');
     }
 
-    public function removePermission(Request $request, User $user)
+    public function removePermission(Request $request, User $usuario)
     {
         $request->validate([
             'permission' => ['required', 'exists:permissions,name'],
         ]);
 
-        $user->revokePermissionTo($request->permission);
+        $usuario->revokePermissionTo($request->permission);
 
         return back()->with('success', 'Permiso removido exitosamente.');
     }

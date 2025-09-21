@@ -1,5 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 import ajuste from './ajuste'
+import vehiculos from './vehiculos'
 import transferencias from './transferencias'
 import mermas from './mermas'
 /**
@@ -557,6 +558,7 @@ vencidos,
 movimientos,
 ajuste,
 reportes,
+vehiculos,
 transferencias,
 mermas,
 }
