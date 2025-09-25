@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -35,14 +36,15 @@ class DatabaseSeeder extends Seeder
         $this->call(TiposPrecioSeeder::class);
         // $this->call(\Database\Seeders\VehiculoSeeder::class);
         // $this->call(ProductosEjemploSeeder::class);
+        $this->call(CategoriaClienteSeeder::class);
         $this->call(LocalidadSeeder::class);
         // Create a default admin user if not exists
         $admin = User::query()->where('email', 'admin@paucara.test')->first();
         if (! $admin) {
             $admin = User::factory()->create([
-                'name'     => 'Administrador',
+                'name' => 'Administrador',
                 'usernick' => 'admin',
-                'email'    => 'admin@paucara.test',
+                'email' => 'admin@paucara.test',
                 'password' => Hash::make('password'),
             ]);
         } else {

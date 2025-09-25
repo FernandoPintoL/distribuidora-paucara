@@ -1,0 +1,57 @@
+@startuml
+!theme plain
+
+entity vehiculos {
+  *id : bigserial NOT NULL,
+  --
+  marca : character varying(255) COLLATE pg
+  modelo : character varying(255) COLLATE pg
+  anho : character varying(255) COLLATE pg
+  capacidad_kg : numeric(8, 2),
+  estado : character varying(255) COLLATE pg
+  chofer_asignado_id : bigint,
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity chofers {
+  *id : bigserial NOT NULL,
+  --
+  licencia : character varying(255) COLLATE pg
+  telefono : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity envios {
+  *id : bigserial NOT NULL,
+  --
+  venta_id : bigint NOT NULL,
+  chofer_id : bigint NOT NULL,
+  fecha_salida : timestamp(0) without time zone,
+  estado : character varying(255) COLLATE pg
+  direccion_entrega : text COLLATE pg
+  coordenadas_lat : numeric(10, 8),
+  observaciones : text COLLATE pg
+  foto_entrega : character varying(255) COLLATE pg
+  firma_cliente : text COLLATE pg
+  receptor_nombre : character varying(255) COLLATE pg
+  receptor_documento : character varying(255) COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity seguimiento_envios {
+  *id : bigserial NOT NULL,
+  --
+  estado : character varying(255) COLLATE pg
+  coordenadas_lat : numeric(10, 8),
+  fecha_hora : timestamp(0) without time zone NOT NULL,
+  foto : character varying(255) COLLATE pg
+  user_id : bigint,
+  updated_at : timestamp(0) without time zone,
+}
+
+envios }o--|| vehiculos : vehiculo_id -> id
+seguimiento_envios }o--|| envios : envio_id -> id
+@enduml

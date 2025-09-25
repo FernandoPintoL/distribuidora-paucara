@@ -1,0 +1,81 @@
+@startuml
+!theme plain
+
+entity configuracion_global {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+  descripcion : text COLLATE pg
+  tipo_valor : character varying(255) COLLATE pg
+  valor : text COLLATE pg
+  valor_numerico : numeric(8, 2),
+  activo : boolean NOT NULL DEFAULT true,
+  metadatos : json,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity modulos_sidebar {
+  *id : bigserial NOT NULL,
+  --
+  ruta : character varying(255) COLLATE pg
+  icono : character varying(255) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  orden : integer NOT NULL DEFAULT 0,
+  es_submenu : boolean NOT NULL DEFAULT false,
+  permisos : json,
+  categoria : character varying(255) COLLATE pg
+  visible_dashboard : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity migrations {
+  *id : serial NOT NULL,
+  --
+  batch : integer NOT NULL,
+}
+
+entity jobs {
+  *id : bigserial NOT NULL,
+  --
+  payload : text COLLATE pg
+  attempts : smallint NOT NULL,
+  available_at : integer NOT NULL,
+}
+
+entity failed_jobs {
+  *id : bigserial NOT NULL,
+  --
+  connection : text COLLATE pg
+  queue : text COLLATE pg
+  payload : text COLLATE pg
+  exception : text COLLATE pg
+  failed_at : timestamp(0) without time zone NOT NULL DEFAULT CURRENT
+}
+
+entity job_batches {
+  *id : character varying(255) COLLATE pg
+  --
+  name : character varying(255) COLLATE pg
+  total_jobs : integer NOT NULL,
+  failed_jobs : integer NOT NULL,
+  options : text COLLATE pg
+  cancelled_at : integer,
+  finished_at : integer,
+}
+
+entity cache {
+  *key : character varying(255) COLLATE pg
+  --
+  value : text COLLATE pg
+  expiration : integer NOT NULL,
+}
+
+entity cache_locks {
+  *key : character varying(255) COLLATE pg
+  --
+  owner : character varying(255) COLLATE pg
+  expiration : integer NOT NULL,
+}
+
+modulos_sidebar }o--|| modulos_sidebar : modulo_padre_id -> id
+@enduml

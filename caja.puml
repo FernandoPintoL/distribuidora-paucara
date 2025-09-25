@@ -1,0 +1,108 @@
+@startuml
+!theme plain
+
+entity cajas {
+  *id : bigserial NOT NULL,
+  --
+  ubicacion : character varying(255) COLLATE pg
+  monto_inicial_dia : numeric(18, 2) NOT NULL DEFAULT
+  activa : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity aperturas_caja {
+  *id : bigserial NOT NULL,
+  --
+  user_id : bigint NOT NULL,
+  monto_apertura : numeric(15, 2) NOT NULL,
+  created_at : timestamp(0) without time zone,
+}
+
+entity cierres_caja {
+  *id : bigserial NOT NULL,
+  --
+  user_id : bigint NOT NULL,
+  fecha : timestamp(0) without time zone NOT NULL,
+  NOT : NULL,
+  NOT : NULL,
+  NOT : NULL,
+  created_at : timestamp(0) without time zone,
+}
+
+entity movimientos_caja {
+  *id : bigserial NOT NULL,
+  --
+  user_id : bigint NOT NULL,
+  monto : numeric(18, 2) NOT NULL,
+  numero_documento : character varying(255) COLLATE pg
+  tipo_operacion_id : bigint NOT NULL,
+}
+
+entity tipo_operacion_caja {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+}
+
+entity pagos {
+  *id : bigserial NOT NULL,
+  --
+  tipo_pago_id : bigint NOT NULL,
+  monto : numeric(15, 2) NOT NULL,
+  numero_transaccion : character varying(255) COLLATE pg
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+  cuenta_por_pagar_id : bigint,
+  numero_recibo : character varying(255) COLLATE pg
+  numero_transferencia : character varying(255) COLLATE pg
+  numero_cheque : character varying(255) COLLATE pg
+  usuario_id : bigint,
+}
+
+entity asiento_contables {
+  *id : bigserial NOT NULL,
+  --
+  fecha : date NOT NULL,
+  numero_documento : character varying(255) COLLATE pg
+  concepto : text COLLATE pg
+  total_debe : numeric(15, 2) NOT NULL DEFAULT
+  total_haber : numeric(15, 2) NOT NULL DEFAULT
+  estado : character varying(255) COLLATE pg
+  observaciones : text COLLATE pg
+  asientable_type : character varying(255) COLLATE pg
+  asientable_id : bigint NOT NULL,
+  created_at : timestamp(0) without time zone,
+}
+
+entity detalle_asiento_contables {
+  *id : bigserial NOT NULL,
+  --
+  codigo_cuenta : character varying(255) COLLATE pg
+  nombre_cuenta : character varying(255) COLLATE pg
+  descripcion : text COLLATE pg
+  debe : numeric(15, 2) NOT NULL DEFAULT
+  haber : numeric(15, 2) NOT NULL DEFAULT
+  orden : integer NOT NULL DEFAULT 1,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity cuenta_contables {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+  descripcion : text COLLATE pg
+  tipo : character varying(255) COLLATE pg
+  naturaleza : character varying(255) COLLATE pg
+  codigo_padre : character varying(255) COLLATE pg
+  nivel : integer NOT NULL DEFAULT 1,
+  activa : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+aperturas_caja }o--|| cajas : caja_id -> id
+cierres_caja }o--|| aperturas_caja : apertura_caja_id -> id
+cierres_caja }o--|| cajas : caja_id -> id
+detalle_asiento_contables }o--|| asiento_contables : asiento_contable_id -> id
+movimientos_caja }o--|| cajas : caja_id -> id
+movimientos_caja }o--|| tipo_operacion_caja : tipo_operacion_id -> id
+@enduml

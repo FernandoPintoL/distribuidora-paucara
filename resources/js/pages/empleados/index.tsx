@@ -221,7 +221,7 @@ export default function EmpleadosIndex() {
                                     />
                                 </div>
 
-                                <div>
+                                {/*<div>
                                     <Label htmlFor="departamento">Departamento</Label>
                                     <Select value={selectedDepartamento} onValueChange={setSelectedDepartamento}>
                                         <SelectTrigger>
@@ -236,7 +236,7 @@ export default function EmpleadosIndex() {
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
+                                </div>*/}
 
                                 <div>
                                     <Label htmlFor="estado">Estado</Label>

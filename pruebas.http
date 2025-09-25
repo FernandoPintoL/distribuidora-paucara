@@ -1,0 +1,13 @@
+### GET request to example server
+GET http://192.168.100.21:8000/api/clientes
+Authorization: Bearer wydMtd5kLDM4v8HEO4ofTRDmhixhGqR8okqq0ze15a380811
+
+###
+#POST http://192.168.100.21:8000/api/login
+##Authorization: Bearer ixhJUZvZcfjCKtIsMb5WzBTYJDJpOspp6maF7tG83bce062f
+#Content-Type: application/json
+#
+#{
+#    "login": "admin",
+#    "password": "password"
+#}

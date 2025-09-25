@@ -10,6 +10,7 @@ import ReporteInventarioApiController from './ReporteInventarioApiController'
 import ClienteController from './ClienteController'
 import DireccionClienteApiController from './DireccionClienteApiController'
 import LocalidadController from './LocalidadController'
+import CategoriaClienteController from './CategoriaClienteController'
 import ProveedorController from './ProveedorController'
 import DashboardController from './DashboardController'
 import CategoriaController from './CategoriaController'
@@ -51,6 +52,7 @@ ReporteInventarioApiController,
 ClienteController,
 DireccionClienteApiController,
 LocalidadController,
+CategoriaClienteController,
 ProveedorController,
 DashboardController,
 CategoriaController,

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
+use App\Http\Controllers\CategoriaClienteController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\DireccionClienteApiController;
@@ -177,6 +178,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('{localidad}', [LocalidadController::class, 'showApi']);
         Route::put('{localidad}', [LocalidadController::class, 'updateApi']);
         Route::delete('{localidad}', [LocalidadController::class, 'destroyApi']);
+    });
+
+    Route::group(['prefix' => 'categorias-cliente'], function () {
+        Route::get('/', [CategoriaClienteController::class, 'indexApi']);
+        Route::post('/', [CategoriaClienteController::class, 'storeApi']);
+        Route::get('{categoria}', [CategoriaClienteController::class, 'showApi']);
+        Route::put('{categoria}', [CategoriaClienteController::class, 'updateApi']);
+        Route::delete('{categoria}', [CategoriaClienteController::class, 'destroyApi']);
     });
 });
 

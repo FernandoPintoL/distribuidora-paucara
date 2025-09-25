@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,11 +33,11 @@ class Cliente extends Model
     ];
 
     protected $casts = [
-        'activo'         => 'boolean',
+        'activo' => 'boolean',
         'fecha_registro' => 'datetime',
         'limite_credito' => 'decimal:2',
-        'latitud'        => 'decimal:8',
-        'longitud'       => 'decimal:8',
+        'latitud' => 'decimal:8',
+        'longitud' => 'decimal:8',
     ];
 
     public function localidad()
@@ -54,6 +55,11 @@ class Cliente extends Model
         return $this->hasMany(DireccionCliente::class, 'cliente_id');
     }
 
+    public function ventanasEntrega()
+    {
+        return $this->hasMany(VentanaEntregaCliente::class, 'cliente_id');
+    }
+
     /* public function fotosLugar()
     {
         return $this->hasMany(FotoLugarCliente::class, 'cliente_id');
@@ -69,6 +75,11 @@ class Cliente extends Model
         return $this->hasMany(Proforma::class);
     }
 
+    public function categorias()
+    {
+        return $this->belongsToMany(CategoriaCliente::class, 'categoria_cliente', 'cliente_id', 'categoria_cliente_id')->withTimestamps();
+    }
+
     public function cuentasPorCobrar()
     {
         return $this->hasMany(CuentaPorCobrar::class);
@@ -78,9 +89,12 @@ class Cliente extends Model
     {
         parent::boot();
 
-        static::creating(function ($cliente) {
+        // Generar el código de cliente DESPUÉS de crear, para poder usar el ID del cliente
+        static::created(function ($cliente) {
             if (! $cliente->codigo_cliente && $cliente->localidad_id) {
                 $cliente->codigo_cliente = $cliente->generateCodigoCliente();
+                // Guardar en silencio para evitar eventos recursivos
+                $cliente->saveQuietly();
             }
         });
     }
@@ -98,25 +112,14 @@ class Cliente extends Model
 
         $codigoLocalidad = $localidad->codigo;
 
-        // Obtener el último ID de cliente para esta localidad
-        $ultimoCliente = self::where('localidad_id', $this->localidad_id)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $numero = 1;
-        if ($ultimoCliente && $ultimoCliente->codigo_cliente) {
-            // Extraer el número del código existente
-            $partes = explode($codigoLocalidad, $ultimoCliente->codigo_cliente);
-            if (count($partes) > 1) {
-                $numero = (int) $partes[1] + 1;
-            }
-        }
-
-        // Formatear con 3 ceros hasta 999, luego sin ceros
+        // Regla: CODLOCALIDAD + 000 + IDCLIENTE (con padding a 4 dígitos hasta 999)
+        $numero = (int) $this->id;
         if ($numero < 1000) {
-            return $codigoLocalidad . str_pad($numero, 3, '0', STR_PAD_LEFT);
-        } else {
-            return $codigoLocalidad . $numero;
+            // 1 => 0001, 12 => 0012, 999 => 0999
+            return $codigoLocalidad.str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
         }
+
+        // A partir de 1000, se usa el número tal cual (PS1000, PS1001, ...)
+        return $codigoLocalidad.$numero;
     }
 }

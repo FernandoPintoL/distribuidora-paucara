@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
@@ -9,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,24 +25,24 @@ class ClienteController extends Controller
     private function buildClientesQuery(Request $request, array $options = []): \Illuminate\Pagination\LengthAwarePaginator
     {
         $defaults = [
-            'per_page'                 => 10,
-            'include_email'            => false,
+            'per_page' => 10,
+            'include_email' => false,
             'include_localidad_filter' => true,
-            'include_order_options'    => true,
-            'default_order_by'         => 'id',
-            'default_order_dir'        => 'desc',
-            'default_activo'           => null,
+            'include_order_options' => true,
+            'default_order_by' => 'id',
+            'default_order_dir' => 'desc',
+            'default_activo' => null,
         ];
 
         $options = array_merge($defaults, $options);
 
         // Procesar parámetros de búsqueda
-        $q           = (string) $request->string('q');
+        $q = (string) $request->string('q');
         $localidadId = $options['include_localidad_filter'] ? $request->input('localidad_id') : null;
 
         // Procesar parámetro activo
         $activoParam = $request->input('activo');
-        $activo      = $options['default_activo'];
+        $activo = $options['default_activo'];
 
         if ($activoParam !== null && $activoParam !== '' && $activoParam !== 'all') {
             if ($activoParam === '1' || $activoParam === 1 || $activoParam === true || $activoParam === 'true') {
@@ -51,16 +53,16 @@ class ClienteController extends Controller
         }
 
         // Procesar ordenamiento
-        $orderBy  = $options['default_order_by'];
+        $orderBy = $options['default_order_by'];
         $orderDir = $options['default_order_dir'];
 
         if ($options['include_order_options']) {
             $allowedOrderBy = ['id', 'nombre', 'fecha_registro'];
-            $rawOrderBy     = (string) $request->string('order_by');
-            $orderBy        = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : $options['default_order_by'];
+            $rawOrderBy = (string) $request->string('order_by');
+            $orderBy = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : $options['default_order_by'];
 
             $rawOrderDir = strtolower((string) $request->string('order_dir'));
-            $orderDir    = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : $options['default_order_dir'];
+            $orderDir = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : $options['default_order_dir'];
         }
 
         // Construir query
@@ -87,19 +89,19 @@ class ClienteController extends Controller
                 $query->where('clientes.localidad_id', $localidadId);
             })
             ->select('clientes.*')
-            ->orderBy('clientes.' . $orderBy, $orderDir);
+            ->orderBy('clientes.'.$orderBy, $orderDir);
 
         return $query->paginate($request->integer('per_page', $options['per_page']))->withQueryString();
     }
 
-    public function index(Request $request): Response | \Symfony\Component\HttpFoundation\Response
+    public function index(Request $request): Response|\Symfony\Component\HttpFoundation\Response
     {
-        $q           = (string) $request->string('q');
+        $q = (string) $request->string('q');
         $localidadId = $request->input('localidad_id');
 
         // Procesar parámetro activo para filtros
         $activoParam = $request->input('activo');
-        $activo      = null;
+        $activo = null;
         if ($activoParam !== null && $activoParam !== '' && $activoParam !== 'all') {
             if ($activoParam === '1' || $activoParam === 1 || $activoParam === true || $activoParam === 'true') {
                 $activo = true;
@@ -110,50 +112,50 @@ class ClienteController extends Controller
 
         // Procesar ordenamiento para filtros
         $allowedOrderBy = ['id', 'nombre', 'fecha_registro'];
-        $rawOrderBy     = (string) $request->string('order_by');
-        $orderBy        = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
+        $rawOrderBy = (string) $request->string('order_by');
+        $orderBy = in_array($rawOrderBy, $allowedOrderBy, true) ? $rawOrderBy : 'id';
 
         $rawOrderDir = strtolower((string) $request->string('order_dir'));
-        $orderDir    = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
+        $orderDir = in_array($rawOrderDir, ['asc', 'desc'], true) ? $rawOrderDir : 'desc';
 
         $items = $this->buildClientesQuery($request, [
-            'per_page'                 => 10,
-            'include_email'            => false,
+            'per_page' => 10,
+            'include_email' => false,
             'include_localidad_filter' => true,
-            'include_order_options'    => true,
-            'default_order_by'         => 'id',
-            'default_order_dir'        => 'desc',
-            'default_activo'           => null,
+            'include_order_options' => true,
+            'default_order_by' => 'id',
+            'default_order_dir' => 'desc',
+            'default_activo' => null,
         ]);
 
         if ($this->isApiRequest($request)) {
             // Cargar la relación localidad para la respuesta API
-            $items->getCollection()->load('localidad');
+            $items->getCollection()->load('localidad', 'categorias');
 
             return $this->apiResponse([
-                'data'         => $items->items(),
+                'data' => $items->items(),
                 'current_page' => $items->currentPage(),
-                'last_page'    => $items->lastPage(),
-                'per_page'     => $items->perPage(),
-                'total'        => $items->total(),
+                'last_page' => $items->lastPage(),
+                'per_page' => $items->perPage(),
+                'total' => $items->total(),
             ], 'Clientes obtenidos exitosamente');
         }
 
         return Inertia::render('clientes/index', [
-            'clientes'    => $items,
-            'filters'     => [
-                'q'            => $q,
-                'activo'       => $activo !== null ? ($activo ? '1' : '0') : null,
+            'clientes' => $items,
+            'filters' => [
+                'q' => $q,
+                'activo' => $activo !== null ? ($activo ? '1' : '0') : null,
                 'localidad_id' => $localidadId,
-                'order_by'     => $orderBy,
-                'order_dir'    => $orderDir,
+                'order_by' => $orderBy,
+                'order_dir' => $orderDir,
             ],
             'localidades' => Localidad::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo'])
                 ->map(function ($localidad) {
                     return [
-                        'id'     => $localidad->id,
+                        'id' => $localidad->id,
                         'nombre' => $localidad->nombre,
                         'codigo' => $localidad->codigo,
                     ];
@@ -164,13 +166,13 @@ class ClienteController extends Controller
     public function create(): Response
     {
         return Inertia::render('clientes/form', [
-            'cliente'     => null,
+            'cliente' => null,
             'localidades' => Localidad::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo'])
                 ->map(function ($localidad) {
                     return [
-                        'id'     => $localidad->id,
+                        'id' => $localidad->id,
                         'nombre' => $localidad->nombre,
                         'codigo' => $localidad->codigo,
                     ];
@@ -184,15 +186,15 @@ class ClienteController extends Controller
 
         $validationRules = [
             'crear_usuario' => ['nullable', 'boolean'],
-            'nombre'        => ['required', 'string', 'max:255'],
-            'razon_social'  => ['nullable', 'string', 'max:255'],
-            'nit'           => ['required', 'string', 'max:255'],
-            'telefono'      => ['required', 'string', 'max:100', 'unique:clientes,telefono'],
-            'email'         => ['nullable', 'email', 'max:255'],
-            'localidad_id'  => ['nullable', 'exists:localidades,id'],
-            'latitud'       => ['nullable', 'numeric', 'between:-90,90'],
-            'longitud'      => ['nullable', 'numeric', 'between:-180,180'],
-            'activo'        => ['boolean'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
+            'nit' => ['required', 'string', 'max:255'],
+            'telefono' => ['required', 'string', 'max:100', 'unique:clientes,telefono'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'localidad_id' => ['nullable', 'exists:localidades,id'],
+            'latitud' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud' => ['nullable', 'numeric', 'between:-180,180'],
+            'activo' => ['boolean'],
         ];
 
         // Validaciones adicionales si se va a crear usuario
@@ -206,12 +208,12 @@ class ClienteController extends Controller
         if (! $isModalRequest) {
             $validationRules = array_merge($validationRules, [
                 'foto_perfil' => ['nullable', 'image', 'max:5120'],
-                'ci_anverso'  => ['nullable', 'image', 'max:5120'],
-                'ci_reverso'  => ['nullable', 'image', 'max:5120'],
+                'ci_anverso' => ['nullable', 'image', 'max:5120'],
+                'ci_reverso' => ['nullable', 'image', 'max:5120'],
             ]);
         }
 
-        $data           = $request->validate($validationRules);
+        $data = $request->validate($validationRules);
         $data['activo'] = $data['activo'] ?? true;
 
         // No procesar archivos aquí - handleClientCreation los maneja con rutas dinámicas
@@ -221,6 +223,14 @@ class ClienteController extends Controller
             function () use ($data, $request, $isModalRequest) {
                 // Usar el método compartido para crear el cliente
                 $cliente = $this->handleClientCreation($request, $data, true, false, ! $isModalRequest);
+
+                // Mantener paridad con API: si llegan ventanas/categorías, sincronizarlas
+                if ($request->has('ventanas_entrega')) {
+                    $this->syncVentanasEntrega($cliente, (array) $request->input('ventanas_entrega', []));
+                }
+                if ($request->has('categorias_ids')) {
+                    $this->syncCategorias($cliente, (array) $request->input('categorias_ids'));
+                }
 
                 // Si es modal request, devolver solo el cliente básico
                 if ($isModalRequest) {
@@ -241,13 +251,13 @@ class ClienteController extends Controller
     {
         return Inertia::render('clientes/form', [
             // Cargar relaciones necesarias para el formulario de edición
-            'cliente'     => $cliente->load(['direcciones']),
+            'cliente' => $cliente->load(['direcciones']),
             'localidades' => Localidad::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo'])
                 ->map(function ($localidad) {
                     return [
-                        'id'     => $localidad->id,
+                        'id' => $localidad->id,
                         'nombre' => $localidad->nombre,
                         'codigo' => $localidad->codigo,
                     ];
@@ -262,23 +272,23 @@ class ClienteController extends Controller
             function () use ($request, $cliente) {
                 $validationRules = [
                     'crear_usuario' => ['nullable', 'boolean'],
-                    'nombre'        => ['required', 'string', 'max:255'],
-                    'razon_social'  => ['nullable', 'string', 'max:255'],
-                    'nit'           => ['nullable', 'string', 'max:255'],
-                    'telefono'      => [
+                    'nombre' => ['required', 'string', 'max:255'],
+                    'razon_social' => ['nullable', 'string', 'max:255'],
+                    'nit' => ['nullable', 'string', 'max:255'],
+                    'telefono' => [
                         'required',
                         'string',
                         'max:100',
                         Rule::unique('clientes')->ignore($cliente->id),
                     ],
-                    'email'         => ['nullable', 'email', 'max:255'],
-                    'localidad_id'  => ['nullable', 'exists:localidades,id'],
-                    'latitud'       => ['nullable', 'numeric', 'between:-90,90'],
-                    'longitud'      => ['nullable', 'numeric', 'between:-180,180'],
-                    'activo'        => ['boolean'],
-                    'foto_perfil'   => ['nullable', 'image', 'max:5120'],
-                    'ci_anverso'    => ['nullable', 'image', 'max:5120'],
-                    'ci_reverso'    => ['nullable', 'image', 'max:5120'],
+                    'email' => ['nullable', 'email', 'max:255'],
+                    'localidad_id' => ['nullable', 'exists:localidades,id'],
+                    'latitud' => ['nullable', 'numeric', 'between:-90,90'],
+                    'longitud' => ['nullable', 'numeric', 'between:-180,180'],
+                    'activo' => ['boolean'],
+                    'foto_perfil' => ['nullable', 'image', 'max:5120'],
+                    'ci_anverso' => ['nullable', 'image', 'max:5120'],
+                    'ci_reverso' => ['nullable', 'image', 'max:5120'],
                 ];
 
                 // Validaciones adicionales si se va a crear o actualizar usuario
@@ -299,15 +309,15 @@ class ClienteController extends Controller
 
                 // Procesar archivos con ruta dinámica
                 if ($request->hasFile('foto_perfil')) {
-                    $folderName             = $this->generateClientFolderName($cliente);
+                    $folderName = $this->generateClientFolderName($cliente);
                     $updates['foto_perfil'] = $request->file('foto_perfil')->store($folderName, 'public');
                 }
                 if ($request->hasFile('ci_anverso')) {
-                    $folderName            = $this->generateClientFolderName($cliente);
+                    $folderName = $this->generateClientFolderName($cliente);
                     $updates['ci_anverso'] = $request->file('ci_anverso')->store($folderName, 'public');
                 }
                 if ($request->hasFile('ci_reverso')) {
-                    $folderName            = $this->generateClientFolderName($cliente);
+                    $folderName = $this->generateClientFolderName($cliente);
                     $updates['ci_reverso'] = $request->file('ci_reverso')->store($folderName, 'public');
                 }
 
@@ -317,7 +327,7 @@ class ClienteController extends Controller
                         // Actualizar usuario existente - mantener usernick y password actuales
                         // El cliente podrá cambiarlos desde su perfil posteriormente
                         $userUpdates = [
-                            'name'  => $request->nombre,
+                            'name' => $request->nombre,
                             'email' => $request->email,
                         ];
 
@@ -328,15 +338,15 @@ class ClienteController extends Controller
                         $usernick = $this->generarUsernickUnico($telefono);
 
                         $userData = [
-                            'name'     => $request->nombre,
+                            'name' => $request->nombre,
                             'usernick' => $usernick,
                             'password' => Hash::make($telefono), // Usar teléfono como password
-                            'activo'   => true,
+                            'activo' => true,
                         ];
 
                         // Agregar email solo si se proporciona
                         if ($request->filled('email')) {
-                            $userData['email']             = $request->email;
+                            $userData['email'] = $request->email;
                             $userData['email_verified_at'] = now();
                         }
 
@@ -348,6 +358,14 @@ class ClienteController extends Controller
                 }
 
                 $cliente->update($updates);
+
+                // Sincronizar ventanas de entrega y categorías si llegaron en la solicitud (para mantener paridad con API)
+                if ($request->has('ventanas_entrega')) {
+                    $this->syncVentanasEntrega($cliente, (array) $request->input('ventanas_entrega', []));
+                }
+                if ($request->has('categorias_ids')) {
+                    $this->syncCategorias($cliente, (array) $request->input('categorias_ids'));
+                }
 
                 return ['cliente' => $cliente->fresh(['user'])];
             },
@@ -380,17 +398,17 @@ class ClienteController extends Controller
     public function indexApi(Request $request): JsonResponse
     {
         $clientes = $this->buildClientesQuery($request, [
-            'per_page'                 => 20,
-            'include_email'            => true,
+            'per_page' => 20,
+            'include_email' => true,
             'include_localidad_filter' => false,
-            'include_order_options'    => false,
-            'default_order_by'         => 'nombre',
-            'default_order_dir'        => 'asc',
-            'default_activo'           => true,
+            'include_order_options' => false,
+            'default_order_by' => 'nombre',
+            'default_order_dir' => 'asc',
+            'default_activo' => true,
         ]);
 
         // Cargar la relación localidad para incluirla en la respuesta
-        $clientes->getCollection()->load('localidad');
+        $clientes->getCollection()->load('localidad', 'categorias','direcciones','user');
 
         return ApiResponse::success($clientes);
     }
@@ -400,9 +418,16 @@ class ClienteController extends Controller
      */
     public function showApi(ClienteModel $cliente): JsonResponse
     {
-        $cliente->load(['direcciones', 'localidad', 'cuentasPorCobrar' => function ($query) {
-            $query->where('saldo_pendiente', '>', 0)->orderByDesc('fecha_vencimiento');
-        }]);
+        $cliente->load([
+            'user',
+            'direcciones',
+            'localidad',
+            'categorias',
+            'ventanasEntrega',
+            'cuentasPorCobrar' => function ($query) {
+                $query->where('saldo_pendiente', '>', 0)->orderByDesc('fecha_vencimiento');
+            },
+        ]);
 
         return ApiResponse::success($cliente);
     }
@@ -434,41 +459,46 @@ class ClienteController extends Controller
 
         $request->merge($data);
 
-        $validated = $request->validate([
-            'crear_usuario'               => ['nullable', 'boolean'],
-            'nombre'                      => ['required', 'string', 'max:255'],
-            'razon_social'                => ['nullable', 'string', 'max:255'],
-            'nit'                         => ['nullable', 'string', 'max:50'],
-            'email'                       => ['nullable', 'email', 'max:255'],
-            'telefono'                    => ['nullable', 'string', 'max:20'],
-            'whatsapp'                    => ['nullable', 'string', 'max:20'],
-            'fecha_nacimiento'            => ['nullable', 'date'],
-            'genero'                      => ['nullable', 'in:M,F,O'],
-            'limite_credito'              => ['nullable', 'numeric', 'min:0'],
-            'localidad_id'                => ['nullable', 'exists:localidades,id'],
-            'latitud'                     => ['nullable', 'numeric', 'between:-90,90'],
-            'longitud'                    => ['nullable', 'numeric', 'between:-180,180'],
-            'activo'                      => ['boolean'],
-            'observaciones'               => ['nullable', 'string'],
+        /*$validated = $request->validate([
+            'crear_usuario' => ['nullable', 'boolean'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
+            'nit' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'limite_credito' => ['nullable', 'numeric', 'min:0'],
+            'localidad_id' => ['nullable', 'exists:localidades,id'],
+            'latitud' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud' => ['nullable', 'numeric', 'between:-180,180'],
+            'activo' => ['boolean'],
             // Archivos de imagen
-            'foto_perfil'                 => ['nullable', 'image', 'max:5120'],
-            'ci_anverso'                  => ['nullable', 'image', 'max:5120'],
-            'ci_reverso'                  => ['nullable', 'image', 'max:5120'],
+            'foto_perfil' => ['nullable', 'image', 'max:5120'],
+            'ci_anverso' => ['nullable', 'image', 'max:5120'],
+            'ci_reverso' => ['nullable', 'image', 'max:5120'],
             // Direcciones opcionales
-            'direcciones'                 => ['nullable', 'array'],
-            'direcciones.*.direccion'     => ['required_with:direcciones', 'string', 'max:500'],
-            'direcciones.*.ciudad'        => ['nullable', 'string', 'max:100'],
-            'direcciones.*.departamento'  => ['nullable', 'string', 'max:100'],
+            'direcciones' => ['nullable', 'array'],
+            'direcciones.*.direccion' => ['required_with:direcciones', 'string', 'max:500'],
+            'direcciones.*.ciudad' => ['nullable', 'string', 'max:100'],
+            'direcciones.*.departamento' => ['nullable', 'string', 'max:100'],
             'direcciones.*.codigo_postal' => ['nullable', 'string', 'max:20'],
-            'direcciones.*.es_principal'  => ['boolean'],
-            'direcciones.*.activa'        => ['nullable', 'boolean'],
-        ]);
+            'direcciones.*.es_principal' => ['boolean'],
+            'direcciones.*.activa' => ['nullable', 'boolean'],
+            // Ventanas de entrega preferidas (opcional)
+            'ventanas_entrega' => ['nullable', 'array'],
+            'ventanas_entrega.*.dia_semana' => ['required_with:ventanas_entrega', 'integer', 'between:0,6'],
+            'ventanas_entrega.*.hora_inicio' => ['required_with:ventanas_entrega', 'date_format:H:i'],
+            'ventanas_entrega.*.hora_fin' => ['required_with:ventanas_entrega', 'date_format:H:i'],
+            'ventanas_entrega.*.activo' => ['nullable', 'boolean'],
+            // Categorías del cliente (opcional)
+            'categorias_ids' => ['nullable', 'array'],
+            'categorias_ids.*' => ['integer', 'exists:categorias_cliente,id'],
+        ]);*/
 
         // Validaciones adicionales si se va a crear usuario
         if ($request->crear_usuario) {
             $request->validate([
                 'telefono' => ['required', 'string', 'max:20', 'unique:clientes,telefono'],
-                'email'    => ['nullable', 'email', 'max:255', 'unique:users,email'],
+                'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             ]);
         } else {
             $request->validate([
@@ -480,9 +510,13 @@ class ClienteController extends Controller
             // Usar el método compartido para crear el cliente
             $cliente = $this->handleClientCreation($request, $data, false, true, true);
 
+            // Guardar ventanas de entrega y categorías mediante helpers para evitar duplicación
+            $this->syncVentanasEntrega($cliente, isset($data['ventanas_entrega']) ? (array) $data['ventanas_entrega'] : null);
+            $this->syncCategorias($cliente, isset($data['categorias_ids']) ? (array) $data['categorias_ids'] : null);
+
             $responseData = [
                 // Devolver el cliente con relaciones necesarias para que el frontend pueda usarlo de inmediato
-                'cliente' => $cliente->load(['direcciones', 'localidad', 'user', 'fotosLugar']),
+                'cliente' => $cliente->load(['direcciones', 'localidad', 'user', 'ventanasEntrega', 'categorias']),
             ];
 
             if ($cliente->user) {
@@ -496,7 +530,7 @@ class ClienteController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al crear cliente: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al crear cliente: '.$e->getMessage(), 500);
         }
     }
 
@@ -509,7 +543,7 @@ class ClienteController extends Controller
         if ($request->crear_usuario) {
             $request->validate([
                 'telefono' => ['required', 'string', 'max:20', 'unique:clientes,telefono'],
-                'email'    => ['nullable', 'email', 'max:255', 'unique:users,email'],
+                'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             ]);
         } elseif ($requireNitTelefono) {
             $request->validate([
@@ -526,15 +560,15 @@ class ClienteController extends Controller
             $usernick = $this->generarUsernickUnico($telefono);
 
             $userData = [
-                'name'     => $request->nombre,
+                'name' => $request->nombre,
                 'usernick' => $usernick,
                 'password' => Hash::make($telefono), // Usar teléfono como password
-                'activo'   => true,
+                'activo' => true,
             ];
 
             // Agregar email solo si se proporciona
             if ($request->filled('email')) {
-                $userData['email']             = $request->email;
+                $userData['email'] = $request->email;
                 $userData['email_verified_at'] = now();
             }
 
@@ -545,22 +579,19 @@ class ClienteController extends Controller
         }
 
         $cliente = ClienteModel::create([
-            'user_id'          => $user ? $user->id : null,
-            'nombre'           => $data['nombre'],
-            'razon_social'     => $data['razon_social'] ?? null,
-            'nit'              => $data['nit'] ?? null,
-            'email'            => $data['email'] ?? null,
-            'telefono'         => $data['telefono'] ?? null,
-            'whatsapp'         => $data['whatsapp'] ?? null,
-            'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
-            'genero'           => $data['genero'] ?? null,
-            'limite_credito'   => $data['limite_credito'] ?? 0,
-            'localidad_id'     => $data['localidad_id'] ?? null,
-            'latitud'          => $data['latitud'] ?? null,
-            'longitud'         => $data['longitud'] ?? null,
-            'activo'           => $data['activo'] ?? true,
-            'observaciones'    => $data['observaciones'] ?? null,
-            'fecha_registro'   => now(),
+            'user_id' => $user ? $user->id : null,
+            'nombre' => $data['nombre'],
+            'razon_social' => $data['razon_social'] ?? null,
+            'nit' => $data['nit'] ?? null,
+            'email' => $data['email'] ?? null,
+            'telefono' => $data['telefono'] ?? null,
+            'genero' => $data['genero'] ?? null,
+            'limite_credito' => $data['limite_credito'] ?? 0,
+            'localidad_id' => $data['localidad_id'] ?? null,
+            'latitud' => $data['latitud'] ?? null,
+            'longitud' => $data['longitud'] ?? null,
+            'activo' => $data['activo'] ?? true,
+            'fecha_registro' => now(),
         ]);
 
         // Crear direcciones si se proporcionaron y se deben manejar
@@ -577,15 +608,15 @@ class ClienteController extends Controller
         if ($processFiles) {
             $updates = [];
             if ($request->hasFile('foto_perfil')) {
-                $folderName             = $this->generateClientFolderName($cliente);
+                $folderName = $this->generateClientFolderName($cliente);
                 $updates['foto_perfil'] = $request->file('foto_perfil')->store($folderName, 'public');
             }
             if ($request->hasFile('ci_anverso')) {
-                $folderName            = $this->generateClientFolderName($cliente);
+                $folderName = $this->generateClientFolderName($cliente);
                 $updates['ci_anverso'] = $request->file('ci_anverso')->store($folderName, 'public');
             }
             if ($request->hasFile('ci_reverso')) {
-                $folderName            = $this->generateClientFolderName($cliente);
+                $folderName = $this->generateClientFolderName($cliente);
                 $updates['ci_reverso'] = $request->file('ci_reverso')->store($folderName, 'public');
             }
 
@@ -604,33 +635,48 @@ class ClienteController extends Controller
      */
     public function updateApi(Request $request, ClienteModel $cliente): JsonResponse
     {
+
         $data = $request->validate([
-            'crear_usuario'    => ['nullable', 'boolean'],
-            'nombre'           => ['sometimes', 'required', 'string', 'max:255'],
-            'razon_social'     => ['nullable', 'string', 'max:255'],
-            'nit'              => ['nullable', 'string', 'max:50'],
-            'email'            => ['nullable', 'email', 'max:255'],
-            'telefono'         => ['nullable', 'string', 'max:20'],
-            'whatsapp'         => ['nullable', 'string', 'max:20'],
-            'fecha_nacimiento' => ['nullable', 'date'],
-            'genero'           => ['nullable', 'in:M,F,O'],
-            'limite_credito'   => ['nullable', 'numeric', 'min:0'],
-            'localidad_id'     => ['nullable', 'exists:localidades,id'],
-            'latitud'          => ['nullable', 'numeric', 'between:-90,90'],
-            'longitud'         => ['nullable', 'numeric', 'between:-180,180'],
-            'activo'           => ['boolean'],
-            'observaciones'    => ['nullable', 'string'],
+            'crear_usuario' => ['nullable', 'boolean'],
+            'nombre' => ['sometimes', 'required', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
+            'nit' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'limite_credito' => ['nullable', 'numeric', 'min:0'],
+            'localidad_id' => ['nullable', 'exists:localidades,id'],
+            'latitud' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud' => ['nullable', 'numeric', 'between:-180,180'],
+            'activo' => ['boolean'],
+            'observaciones' => ['nullable', 'string'],
             // Archivos de imagen
-            'foto_perfil'      => ['nullable', 'image', 'max:5120'],
-            'ci_anverso'       => ['nullable', 'image', 'max:5120'],
-            'ci_reverso'       => ['nullable', 'image', 'max:5120'],
+            'foto_perfil' => ['nullable', 'image', 'max:5120'],
+            'ci_anverso' => ['nullable', 'image', 'max:5120'],
+            'ci_reverso' => ['nullable', 'image', 'max:5120'],
+            // Direcciones opcionales
+            'direcciones' => ['nullable', 'array'],
+            'direcciones.*.direccion' => ['required_with:direcciones', 'string', 'max:500'],
+            'direcciones.*.ciudad' => ['nullable', 'string', 'max:100'],
+            'direcciones.*.departamento' => ['nullable', 'string', 'max:100'],
+            'direcciones.*.codigo_postal' => ['nullable', 'string', 'max:20'],
+            'direcciones.*.es_principal' => ['boolean'],
+            'direcciones.*.activa' => ['nullable', 'boolean'],
+            // Ventanas de entrega preferidas (opcional)
+            'ventanas_entrega' => ['nullable', 'array'],
+            'ventanas_entrega.*.dia_semana' => ['required_with:ventanas_entrega', 'integer', 'between:0,6'],
+            'ventanas_entrega.*.hora_inicio' => ['required_with:ventanas_entrega', 'date_format:H:i'],
+            'ventanas_entrega.*.hora_fin' => ['required_with:ventanas_entrega', 'date_format:H:i'],
+            'ventanas_entrega.*.activo' => ['nullable', 'boolean'],
+            // Categorías del cliente (opcional)
+            'categorias_ids' => ['nullable', 'array'],
+            'categorias_ids.*' => ['integer', 'exists:categorias_cliente,id'],
         ]);
 
         // Validaciones adicionales si se va a crear usuario
         if ($request->crear_usuario) {
             $request->validate([
                 'telefono' => ['required', 'string', 'max:20', Rule::unique('clientes')->ignore($cliente->id)],
-                'email'    => [
+                'email' => [
                     'nullable',
                     'email',
                     'max:255',
@@ -652,7 +698,7 @@ class ClienteController extends Controller
                     // Actualizar usuario existente - mantener usernick y password actuales
                     // El cliente podrá cambiarlos desde su perfil posteriormente
                     $userUpdates = [
-                        'name'  => $request->nombre,
+                        'name' => $request->nombre,
                         'email' => $request->email,
                     ];
 
@@ -665,15 +711,15 @@ class ClienteController extends Controller
                         $usernick = $this->generarUsernickUnico($telefono);
 
                         $userData = [
-                            'name'     => $request->nombre,
+                            'name' => $request->nombre,
                             'usernick' => $usernick,
                             'password' => Hash::make($telefono), // Usar teléfono como password
-                            'activo'   => true,
+                            'activo' => true,
                         ];
 
                         // Agregar email solo si se proporciona
                         if ($request->filled('email')) {
-                            $userData['email']             = $request->email;
+                            $userData['email'] = $request->email;
                             $userData['email_verified_at'] = now();
                         }
 
@@ -688,32 +734,55 @@ class ClienteController extends Controller
                 }
             }
 
-            $cliente->update($data);
+
+
 
             // Procesar archivos de imagen con ruta dinámica
+            // Procesar archivos de imagen con ruta dinámica si se solicita
             $updates = [];
+
             if ($request->hasFile('foto_perfil')) {
-                $folderName             = $this->generateClientFolderName($cliente);
+                if ($cliente->foto_perfil) {
+                    Storage::disk('public')->delete($cliente->foto_perfil);
+                }
+                $folderName = $this->generateClientFolderName($cliente);
                 $updates['foto_perfil'] = $request->file('foto_perfil')->store($folderName, 'public');
-            }
-            if ($request->hasFile('ci_anverso')) {
-                $folderName            = $this->generateClientFolderName($cliente);
-                $updates['ci_anverso'] = $request->file('ci_anverso')->store($folderName, 'public');
-            }
-            if ($request->hasFile('ci_reverso')) {
-                $folderName            = $this->generateClientFolderName($cliente);
-                $updates['ci_reverso'] = $request->file('ci_reverso')->store($folderName, 'public');
+                $data['foto_perfil'] = $request->file('foto_perfil')->store($folderName, 'public');
             }
 
-            // Actualizar cliente con las rutas de las imágenes si se subieron
+            if ($request->hasFile('ci_anverso')) {
+                if ($cliente->ci_anverso) {
+                    Storage::disk('public')->delete($cliente->ci_anverso);
+                }
+                $folderName = $this->generateClientFolderName($cliente);
+                $updates['ci_anverso'] = $request->file('ci_anverso')->store($folderName, 'public');
+                $data['ci_anverso'] = $request->file('ci_anverso')->store($folderName, 'public');
+            }
+
+            if ($request->hasFile('ci_reverso')) {
+                if ($cliente->ci_reverso) {
+                    Storage::disk('public')->delete($cliente->ci_reverso);
+                }
+                $folderName = $this->generateClientFolderName($cliente);
+                $updates['ci_reverso'] = $request->file('ci_reverso')->store($folderName, 'public');
+                $data['ci_reverso'] = $request->file('ci_reverso')->store($folderName, 'public');
+            }
+
+            $cliente->update($data);
+
             if (! empty($updates)) {
                 $cliente->update($updates);
-                $cliente->refresh(); // Recargar el modelo con los nuevos datos
+                $cliente->refresh();
             }
 
+            // Sincronizar ventanas de entrega y categorías usando helpers compartidos
+            $this->syncVentanasEntrega($cliente, $request->has('ventanas_entrega') ? (array) $request->input('ventanas_entrega', []) : null);
+            $this->syncCategorias($cliente, $request->has('categorias_ids') ? (array) $request->input('categorias_ids') : null);
+
             $responseData = [
+                'udpate' => $updates,
                 // Incluir relaciones habituales (direcciones y catálogo relacionado) en la respuesta
-                'cliente' => $cliente->fresh(['direcciones', 'localidad', 'user', 'fotosLugar']),
+                'cliente' => $cliente->fresh(['direcciones', 'localidad', 'user', 'ventanasEntrega', 'categorias']),
             ];
 
             if ($user) {
@@ -726,7 +795,7 @@ class ClienteController extends Controller
             );
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al actualizar cliente: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al actualizar cliente: '.$e->getMessage(), 500);
         }
     }
 
@@ -757,7 +826,7 @@ class ClienteController extends Controller
             return ApiResponse::success(null, 'Cliente eliminado exitosamente');
 
         } catch (\Exception $e) {
-            return ApiResponse::error('Error al eliminar cliente: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Error al eliminar cliente: '.$e->getMessage(), 500);
         }
     }
 
@@ -766,7 +835,7 @@ class ClienteController extends Controller
      */
     public function buscarApi(Request $request): JsonResponse
     {
-        $q      = $request->string('q');
+        $q = $request->string('q');
         $limite = $request->integer('limite', 10);
 
         if (! $q || strlen($q) < 2) {
@@ -797,18 +866,18 @@ class ClienteController extends Controller
             ->orderByDesc('fecha_vencimiento')
             ->get(['id', 'venta_id', 'monto_original', 'saldo_pendiente', 'fecha_vencimiento', 'dias_vencido']);
 
-        $saldoTotal      = $cuentas->sum('saldo_pendiente');
+        $saldoTotal = $cuentas->sum('saldo_pendiente');
         $cuentasVencidas = $cuentas->where('dias_vencido', '>', 0)->count();
 
         return ApiResponse::success([
-            'cliente'          => [
-                'id'             => $cliente->id,
-                'nombre'         => $cliente->nombre,
+            'cliente' => [
+                'id' => $cliente->id,
+                'nombre' => $cliente->nombre,
                 'limite_credito' => $cliente->limite_credito,
             ],
-            'saldo_total'      => $saldoTotal,
+            'saldo_total' => $saldoTotal,
             'cuentas_vencidas' => $cuentasVencidas,
-            'cuentas_detalle'  => $cuentas,
+            'cuentas_detalle' => $cuentas,
         ]);
     }
 
@@ -817,14 +886,14 @@ class ClienteController extends Controller
      */
     public function historialVentas(ClienteModel $cliente, Request $request): JsonResponse
     {
-        $perPage     = $request->integer('per_page', 10);
+        $perPage = $request->integer('per_page', 10);
         $fechaInicio = $request->date('fecha_inicio');
-        $fechaFin    = $request->date('fecha_fin');
+        $fechaFin = $request->date('fecha_fin');
 
         $ventas = $cliente->ventas()
             ->with(['estadoDocumento', 'moneda', 'detalles.producto:id,nombre'])
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->when($fechaInicio, fn ($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn ($q) => $q->whereDate('fecha', '<=', $fechaFin))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate($perPage);
@@ -839,13 +908,11 @@ class ClienteController extends Controller
     private function generarUsernickUnico(string $telefono): string
     {
         $baseUsernick = $telefono; // Usar teléfono directamente como base
-        $usernick     = $baseUsernick;
-        $counter      = 1;
+        $usernick = $baseUsernick;
 
         // Verificar si el usernick ya existe y agregar número si es necesario
         while (User::where('usernick', $usernick)->exists()) {
-            $usernick = $baseUsernick . '_' . $counter;
-            $counter++;
+            $usernick = $baseUsernick;
         }
 
         return $usernick;
@@ -859,10 +926,10 @@ class ClienteController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'usernick'        => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'usernick' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password_actual' => ['required', 'string'],
-            'password_nueva'  => ['required', 'string', 'min:8'],
-            'email'           => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'password_nueva' => ['required', 'string', 'min:8'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
         ]);
 
         // Verificar que el usuario sea un cliente
@@ -883,11 +950,11 @@ class ClienteController extends Controller
 
         // Agregar email solo si se proporciona
         if ($request->filled('email')) {
-            $userUpdates['email']             = $request->email;
+            $userUpdates['email'] = $request->email;
             $userUpdates['email_verified_at'] = now();
         } elseif ($request->has('email') && $request->email === null) {
             // Si se envía email como null, quitar el email
-            $userUpdates['email']             = null;
+            $userUpdates['email'] = null;
             $userUpdates['email_verified_at'] = null;
         }
 
@@ -928,5 +995,49 @@ class ClienteController extends Controller
         $fechaRegistro = $cliente->fecha_registro->format('Y-m-d');
 
         return "clientes/{$cliente->id}_{$fechaRegistro}";
+    }
+
+    /**
+     * Sincroniza las ventanas de entrega del cliente.
+     * Si se envía el arreglo, reemplaza las existentes por simplicidad.
+     */
+    private function syncVentanasEntrega(ClienteModel $cliente, ?array $ventanas): void
+    {
+        if ($ventanas === null) {
+            return;
+        }
+
+        // Reemplazar existentes
+        $cliente->ventanasEntrega()->delete();
+
+        foreach ($ventanas as $ventana) {
+            if (isset($ventana['hora_inicio'], $ventana['hora_fin']) && $ventana['hora_inicio'] >= $ventana['hora_fin']) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'ventanas_entrega' => ['La hora de inicio debe ser menor a la hora de fin.'],
+                ]);
+            }
+            if (! isset($ventana['dia_semana'])) {
+                continue;
+            }
+
+            $cliente->ventanasEntrega()->create([
+                'dia_semana' => (int) $ventana['dia_semana'],
+                'hora_inicio' => $ventana['hora_inicio'],
+                'hora_fin' => $ventana['hora_fin'],
+                'activo' => isset($ventana['activo']) ? (bool) $ventana['activo'] : true,
+            ]);
+        }
+    }
+
+    /**
+     * Sincroniza las categorías del cliente si se envían.
+     */
+    private function syncCategorias(ClienteModel $cliente, ?array $categoriasIds): void
+    {
+        if ($categoriasIds === null) {
+            return;
+        }
+
+        $cliente->categorias()->sync($categoriasIds);
     }
 }

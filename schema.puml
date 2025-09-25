@@ -1,0 +1,949 @@
+@startuml
+!theme plain
+
+entity almacenes {
+  *id : bigserial NOT NULL,
+  --
+  direccion : character varying(255) COLLATE pg
+  responsable : character varying(255) COLLATE pg
+  telefono : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+  requiere_transporte_externo : boolean NOT NULL DEFAULT false,
+}
+
+entity aperturas_caja {
+  *id : bigserial NOT NULL,
+  --
+  user_id : bigint NOT NULL,
+  monto_apertura : numeric(15, 2) NOT NULL,
+  created_at : timestamp(0) without time zone,
+}
+
+entity asiento_contables {
+  *id : bigserial NOT NULL,
+  --
+  fecha : date NOT NULL,
+  numero_documento : character varying(255) COLLATE pg
+  concepto : text COLLATE pg
+  total_debe : numeric(15, 2) NOT NULL DEFAULT
+  total_haber : numeric(15, 2) NOT NULL DEFAULT
+  estado : character varying(255) COLLATE pg
+  observaciones : text COLLATE pg
+  asientable_type : character varying(255) COLLATE pg
+  asientable_id : bigint NOT NULL,
+  created_at : timestamp(0) without time zone,
+}
+
+entity cache {
+  *key : character varying(255) COLLATE pg
+  --
+  value : text COLLATE pg
+  expiration : integer NOT NULL,
+}
+
+entity cache_locks {
+  *key : character varying(255) COLLATE pg
+  --
+  owner : character varying(255) COLLATE pg
+  expiration : integer NOT NULL,
+}
+
+entity cajas {
+  *id : bigserial NOT NULL,
+  --
+  ubicacion : character varying(255) COLLATE pg
+  monto_inicial_dia : numeric(18, 2) NOT NULL DEFAULT
+  activa : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity categorias {
+  *id : bigserial NOT NULL,
+  --
+  descripcion : text COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+}
+
+entity chofers {
+  *id : bigserial NOT NULL,
+  --
+  licencia : character varying(255) COLLATE pg
+  telefono : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity cierres_caja {
+  *id : bigserial NOT NULL,
+  --
+  user_id : bigint NOT NULL,
+  fecha : timestamp(0) without time zone NOT NULL,
+  NOT : NULL,
+  NOT : NULL,
+  NOT : NULL,
+  created_at : timestamp(0) without time zone,
+}
+
+entity clientes {
+  *id : bigserial NOT NULL,
+  --
+  razon_social : character varying(255) COLLATE pg
+  nit : character varying(255) COLLATE pg
+  telefono : character varying(255) COLLATE pg
+  email : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  foto_perfil : character varying(255) COLLATE pg
+  ci_anverso : character varying(255) COLLATE pg
+  ci_reverso : character varying(255) COLLATE pg
+  limite_credito : numeric(18, 2) NOT NULL DEFAULT
+  user_id : bigint,
+  longitud : numeric(11, 8),
+  codigo_cliente : character varying(20) COLLATE pg
+}
+
+entity codigos_barra {
+  *id : bigserial NOT NULL,
+  --
+  codigo : character varying(255) COLLATE pg
+  tipo : character varying(255) COLLATE pg
+  es_principal : boolean NOT NULL DEFAULT false,
+  created_at : timestamp(0) without time zone,
+}
+
+entity compras {
+  *id : bigserial NOT NULL,
+  --
+  fecha : date NOT NULL,
+  subtotal : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  impuesto : numeric(15, 2) NOT NULL DEFAULT
+  total : numeric(15, 2) NOT NULL,
+  proveedor_id : bigint NOT NULL,
+  estado_documento_id : bigint NOT NULL,
+  tipo_pago_id : bigint,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity configuracion_ganancias {
+  *id : bigserial NOT NULL,
+  --
+  tipo_precio_id : bigint NOT NULL,
+  margen_minimo : numeric(8, 2) NOT NULL DEFAULT
+  margen_maximo : numeric(8, 2),
+  NOT : NULL DEFAULT
+  precio_base_referencia : numeric(10, 2),
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity configuracion_global {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+  descripcion : text COLLATE pg
+  tipo_valor : character varying(255) COLLATE pg
+  valor : text COLLATE pg
+  valor_numerico : numeric(8, 2),
+  activo : boolean NOT NULL DEFAULT true,
+  metadatos : json,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity cuenta_contables {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+  descripcion : text COLLATE pg
+  tipo : character varying(255) COLLATE pg
+  naturaleza : character varying(255) COLLATE pg
+  codigo_padre : character varying(255) COLLATE pg
+  nivel : integer NOT NULL DEFAULT 1,
+  activa : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity cuentas_por_cobrar {
+  *id : bigserial NOT NULL,
+  --
+  cliente_id : bigint NOT NULL,
+  NOT : NULL,
+  NOT : NULL,
+  dias_vencido : integer NOT NULL DEFAULT 0,
+  created_at : timestamp(0) without time zone,
+}
+
+entity cuentas_por_pagar {
+  *id : bigserial NOT NULL,
+  --
+  monto_original : numeric(15, 2) NOT NULL,
+  NOT : NULL,
+  dias_vencido : integer NOT NULL DEFAULT 0,
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity dashboard_metrics {
+  *id : bigserial NOT NULL,
+  --
+  updated_at : timestamp(0) without time zone,
+}
+
+entity detalle_asiento_contables {
+  *id : bigserial NOT NULL,
+  --
+  codigo_cuenta : character varying(255) COLLATE pg
+  nombre_cuenta : character varying(255) COLLATE pg
+  descripcion : text COLLATE pg
+  debe : numeric(15, 2) NOT NULL DEFAULT
+  haber : numeric(15, 2) NOT NULL DEFAULT
+  orden : integer NOT NULL DEFAULT 1,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity detalle_compras {
+  *id : bigserial NOT NULL,
+  --
+  producto_id : bigint NOT NULL,
+  precio_unitario : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  subtotal : numeric(15, 2) NOT NULL,
+  fecha_vencimiento : date,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity detalle_proformas {
+  *id : bigserial NOT NULL,
+  --
+  producto_id : bigint NOT NULL,
+  precio_unitario : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  subtotal : numeric(15, 2) NOT NULL,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity detalle_transferencia_inventarios {
+  *id : bigserial NOT NULL,
+  --
+  producto_id : bigint NOT NULL,
+  lote : character varying(255) COLLATE pg
+  fecha_vencimiento : date,
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity detalle_ventas {
+  *id : bigserial NOT NULL,
+  --
+  producto_id : bigint NOT NULL,
+  precio_unitario : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  subtotal : numeric(15, 2) NOT NULL,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity detalles_pedido {
+  *id : bigserial NOT NULL,
+  --
+  producto_id : bigint NOT NULL,
+  precio_unitario : numeric(18, 2) NOT NULL,
+  NOT : NULL,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity direcciones_cliente {
+  *id : bigserial NOT NULL,
+  --
+  direccion : character varying(255) COLLATE pg
+  latitud : double precision,
+  es_principal : boolean NOT NULL DEFAULT false,
+  created_at : timestamp(0) without time zone,
+  ciudad : character varying(255) COLLATE pg
+  departamento : character varying(255) COLLATE pg
+  codigo_postal : character varying(20) COLLATE pg
+  observaciones : text COLLATE pg
+}
+
+entity empleados {
+  *id : bigserial NOT NULL,
+  --
+  codigo_empleado : character varying(255) COLLATE pg
+  ci : character varying(20) COLLATE pg
+  telefono : character varying(20) COLLATE pg
+  direccion : character varying(255) COLLATE pg
+  fecha_nacimiento : date,
+  estado_civil : character varying(255) COLLATE pg
+  cargo : character varying(255) COLLATE pg
+  departamento : character varying(255) COLLATE pg
+  supervisor_id : bigint,
+  fecha_salida : date,
+  estado : character varying(255) COLLATE pg
+  salario_base : numeric(10, 2),
+  NOT : NULL DEFAULT
+  cuenta_bancaria : character varying(255) COLLATE pg
+  banco : character varying(255) COLLATE pg
+  contacto_emergencia_nombre : character varying(255) COLLATE pg
+  contacto_emergencia_telefono : character varying(255) COLLATE pg
+  contacto_emergencia_relacion : character varying(255) COLLATE pg
+  puede_acceder_sistema : boolean NOT NULL DEFAULT false,
+  foto_perfil : character varying(255) COLLATE pg
+  cv_documento : character varying(255) COLLATE pg
+  contrato_documento : character varying(255) COLLATE pg
+  certificaciones : json,
+  observaciones : text COLLATE pg
+  notas_rrhh : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity envios {
+  *id : bigserial NOT NULL,
+  --
+  venta_id : bigint NOT NULL,
+  chofer_id : bigint NOT NULL,
+  fecha_salida : timestamp(0) without time zone,
+  estado : character varying(255) COLLATE pg
+  direccion_entrega : text COLLATE pg
+  coordenadas_lat : numeric(10, 8),
+  observaciones : text COLLATE pg
+  foto_entrega : character varying(255) COLLATE pg
+  firma_cliente : text COLLATE pg
+  receptor_nombre : character varying(255) COLLATE pg
+  receptor_documento : character varying(255) COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity estado_mermas {
+  *id : bigserial NOT NULL,
+  --
+  label : character varying(255) COLLATE pg
+  color : character varying(255) COLLATE pg
+  bg_color : character varying(255) COLLATE pg
+  text_color : character varying(255) COLLATE pg
+  actions : json,
+  created_at : timestamp(0) without time zone,
+}
+
+entity estados_documento {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(100) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  color : character varying(7) COLLATE pg
+  permite_edicion : boolean NOT NULL DEFAULT true,
+  es_estado_final : boolean NOT NULL DEFAULT false,
+  created_at : timestamp(0) without time zone,
+}
+
+entity estados_pedido {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+}
+
+entity facturas_electronicas {
+  *id : bigserial NOT NULL,
+  --
+  numero_factura : character varying(255) COLLATE pg
+  nit_emisor : character varying(255) COLLATE pg
+  fecha_emision : date NOT NULL,
+  monto_total : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  monto_total_moneda_extranjera : numeric(15, 2) NOT NULL DEFAULT
+  tipo_cambio : numeric(10, 4) NOT NULL DEFAULT
+  codigo_moneda : integer NOT NULL DEFAULT 1,
+  modalidad : character varying(255) COLLATE pg
+  tipo_emision : character varying(255) COLLATE pg
+  tipo_factura_documento : character varying(255) COLLATE pg
+  estado : character varying(255) COLLATE pg
+  codigo_recepcion : character varying(255) COLLATE pg
+  xml_firmado : text COLLATE pg
+  respuesta_sin : text COLLATE pg
+  fecha_envio_sin : timestamp(0) without time zone,
+  observaciones_sin : text COLLATE pg
+  venta_id : bigint NOT NULL,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity failed_jobs {
+  *id : bigserial NOT NULL,
+  --
+  connection : text COLLATE pg
+  queue : text COLLATE pg
+  payload : text COLLATE pg
+  exception : text COLLATE pg
+  failed_at : timestamp(0) without time zone NOT NULL DEFAULT CURRENT
+}
+
+entity fotos_lugar_cliente {
+  *id : bigserial NOT NULL,
+  --
+  direccion_cliente_id : bigint,
+  descripcion : character varying(255) COLLATE pg
+  fecha_captura : timestamp(0) without time zone NOT NULL DEFAULT CURRENT
+}
+
+entity historial_precios {
+  *id : bigserial NOT NULL,
+  --
+  valor_anterior : numeric(10, 2) NOT NULL,
+  NOT : NULL,
+  motivo : character varying(500) COLLATE pg
+  usuario : character varying(100) COLLATE pg
+  tipo_precio : character varying(20) COLLATE pg
+  porcentaje_cambio : numeric(5, 2),
+  updated_at : timestamp(0) without time zone,
+}
+
+entity imagenes_producto {
+  *id : bigserial NOT NULL,
+  --
+  url : character varying(255) COLLATE pg
+  es_principal : boolean NOT NULL DEFAULT false,
+  created_at : timestamp(0) without time zone,
+}
+
+entity impuestos {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(100) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  porcentaje : numeric(5, 2) NOT NULL,
+  monto_fijo : numeric(15, 2),
+  aplica_ventas : boolean NOT NULL DEFAULT true,
+  cuenta_contable : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity job_batches {
+  *id : character varying(255) COLLATE pg
+  --
+  name : character varying(255) COLLATE pg
+  total_jobs : integer NOT NULL,
+  failed_jobs : integer NOT NULL,
+  options : text COLLATE pg
+  cancelled_at : integer,
+  finished_at : integer,
+}
+
+entity jobs {
+  *id : bigserial NOT NULL,
+  --
+  payload : text COLLATE pg
+  attempts : smallint NOT NULL,
+  available_at : integer NOT NULL,
+}
+
+entity libro_ventas_iva {
+  *id : bigserial NOT NULL,
+  --
+  numero_factura : character varying(255) COLLATE pg
+  numero_autorizacion : character varying(255) COLLATE pg
+  nit_ci_cliente : character varying(255) COLLATE pg
+  razon_social_cliente : character varying(255) COLLATE pg
+  importe_total : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  importe_iehd : numeric(15, 2) NOT NULL DEFAULT
+  importe_ipj : numeric(15, 2) NOT NULL DEFAULT
+  tasas : numeric(15, 2) NOT NULL DEFAULT
+  importe_gift_card : numeric(15, 2) NOT NULL DEFAULT
+  descuentos : numeric(15, 2) NOT NULL DEFAULT
+  importe_base_cf : numeric(15, 2) NOT NULL DEFAULT
+  credito_fiscal : numeric(15, 2) NOT NULL DEFAULT
+  estado_factura : character varying(255) COLLATE pg
+  codigo_control : character varying(255) COLLATE pg
+  venta_id : bigint NOT NULL,
+  created_at : timestamp(0) without time zone,
+}
+
+entity localidades {
+  *id : bigserial NOT NULL,
+  --
+  codigo : character varying(10) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity lotes_vencimientos {
+  *id : bigserial NOT NULL,
+  --
+  numero_lote : character varying(255) COLLATE pg
+  fecha_vencimiento : date NOT NULL,
+  cantidad_actual : integer NOT NULL,
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity marcas {
+  *id : bigserial NOT NULL,
+  --
+  descripcion : text COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+}
+
+entity migrations {
+  *id : serial NOT NULL,
+  --
+  batch : integer NOT NULL,
+}
+
+entity model_has_permissions {
+  *permission_id : bigint NOT NULL,
+  --
+  model_id : bigint NOT NULL,
+}
+
+entity model_has_roles {
+  *role_id : bigint NOT NULL,
+  --
+  model_id : bigint NOT NULL,
+}
+
+entity modulos_sidebar {
+  *id : bigserial NOT NULL,
+  --
+  ruta : character varying(255) COLLATE pg
+  icono : character varying(255) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  orden : integer NOT NULL DEFAULT 0,
+  es_submenu : boolean NOT NULL DEFAULT false,
+  permisos : json,
+  categoria : character varying(255) COLLATE pg
+  visible_dashboard : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity monedas {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(50) COLLATE pg
+  simbolo : character varying(5) COLLATE pg
+  tasa_cambio : numeric(15, 6) NOT NULL DEFAULT
+  decimales : integer NOT NULL DEFAULT 2,
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity movimientos_caja {
+  *id : bigserial NOT NULL,
+  --
+  user_id : bigint NOT NULL,
+  monto : numeric(18, 2) NOT NULL,
+  numero_documento : character varying(255) COLLATE pg
+  tipo_operacion_id : bigint NOT NULL,
+}
+
+entity movimientos_inventario {
+  *id : bigserial NOT NULL,
+  --
+  cantidad_anterior : integer,
+  cantidad_posterior : integer,
+  observacion : character varying(255) COLLATE pg
+  numero_documento : character varying(255) COLLATE pg
+  tipo : character varying(255) COLLATE pg
+  user_id : bigint NOT NULL,
+  tipo_merma_id : bigint,
+  anulado : boolean NOT NULL DEFAULT false,
+  user_anulacion_id : bigint,
+  referencia_tipo : character varying(255) COLLATE pg
+  referencia_id : bigint,
+  deleted_at : timestamp(0) without time zone,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity pagos {
+  *id : bigserial NOT NULL,
+  --
+  tipo_pago_id : bigint NOT NULL,
+  monto : numeric(15, 2) NOT NULL,
+  numero_transaccion : character varying(255) COLLATE pg
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+  cuenta_por_pagar_id : bigint,
+  numero_recibo : character varying(255) COLLATE pg
+  numero_transferencia : character varying(255) COLLATE pg
+  numero_cheque : character varying(255) COLLATE pg
+  usuario_id : bigint,
+}
+
+entity password_reset_tokens {
+  *email : character varying(255) COLLATE pg
+  --
+  token : character varying(255) COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity pedidos {
+  *id : bigserial NOT NULL,
+  --
+  cliente_id : bigint NOT NULL,
+  fecha_entrega_requerida : date,
+  subtotal : numeric(18, 2) NOT NULL DEFAULT
+  total : numeric(18, 2) NOT NULL DEFAULT
+  observaciones : character varying(255) COLLATE pg
+  direccion_entrega : character varying(255) COLLATE pg
+  latitud_entrega : double precision,
+  estado_id : bigint,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity permissions {
+  *id : bigserial NOT NULL,
+  --
+  guard_name : character varying(255) COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity personal_access_tokens {
+  *id : bigserial NOT NULL,
+  --
+  tokenable_id : bigint NOT NULL,
+  token : character varying(64) COLLATE pg
+  abilities : text COLLATE pg
+  last_used_at : timestamp(0) without time zone,
+  created_at : timestamp(0) without time zone,
+}
+
+entity precios_producto {
+  *id : bigserial NOT NULL,
+  --
+  tipo_precio_id : bigint NOT NULL,
+  precio : numeric(18, 2) NOT NULL,
+  porcentaje_ganancia : numeric(5, 2),
+  fecha_inicio : date,
+  activo : boolean NOT NULL DEFAULT true,
+  tipo_cliente : character varying(255) COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity productos {
+  *id : bigserial NOT NULL,
+  --
+  descripcion : text COLLATE pg
+  peso : double precision NOT NULL DEFAULT
+  codigo_barras : character varying(255) COLLATE pg
+  codigo_qr : character varying(255) COLLATE pg
+  stock_minimo : integer NOT NULL DEFAULT 0,
+  activo : boolean NOT NULL DEFAULT true,
+  es_alquilable : boolean NOT NULL DEFAULT false,
+  marca_id : bigint,
+  controlar_stock : boolean NOT NULL DEFAULT true,
+  proveedor_id : bigint,
+}
+
+entity proformas {
+  *id : bigserial NOT NULL,
+  --
+  fecha : date NOT NULL,
+  subtotal : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  impuesto : numeric(15, 2) NOT NULL DEFAULT
+  total : numeric(15, 2) NOT NULL,
+  observaciones_rechazo : text COLLATE pg
+  estado : character varying(255) COLLATE pg
+  canal_origen : character varying(255) COLLATE pg
+  usuario_creador_id : bigint,
+  fecha_aprobacion : timestamp(0) without time zone,
+  moneda_id : bigint NOT NULL,
+  ubicacion_entrega : json,
+  fecha_respuesta : timestamp(0) without time zone,
+  comentario_rechazo : text COLLATE pg
+  aprobado_por : bigint,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity proveedores {
+  *id : bigserial NOT NULL,
+  --
+  razon_social : character varying(255) COLLATE pg
+  nit : character varying(255) COLLATE pg
+  telefono : character varying(255) COLLATE pg
+  email : character varying(255) COLLATE pg
+  direccion : character varying(255) COLLATE pg
+  contacto : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  ci_anverso : character varying(255) COLLATE pg
+  ci_reverso : character varying(255) COLLATE pg
+  fecha_registro : timestamp(0) without time zone NOT NULL DEFAULT CURRENT
+}
+
+entity reservas_proforma {
+  *id : bigserial NOT NULL,
+  --
+  stock_producto_id : bigint NOT NULL,
+  fecha_reserva : timestamp(0) without time zone NOT NULL DEFAULT CURRENT
+  fecha_expiracion : timestamp(0) without time zone,
+  created_at : timestamp(0) without time zone,
+}
+
+entity role_has_permissions {
+  *permission_id : bigint NOT NULL,
+  --
+}
+
+entity roles {
+  *id : bigserial NOT NULL,
+  --
+  guard_name : character varying(255) COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity seguimiento_envios {
+  *id : bigserial NOT NULL,
+  --
+  estado : character varying(255) COLLATE pg
+  coordenadas_lat : numeric(10, 8),
+  fecha_hora : timestamp(0) without time zone NOT NULL,
+  foto : character varying(255) COLLATE pg
+  user_id : bigint,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity sessions {
+  *id : character varying(255) COLLATE pg
+  --
+  user_id : bigint,
+  user_agent : text COLLATE pg
+  payload : text COLLATE pg
+  last_activity : integer NOT NULL,
+}
+
+entity stock_productos {
+  *id : bigserial NOT NULL,
+  --
+  almacen_id : bigint NOT NULL,
+  fecha_actualizacion : timestamp(0) without time zone NOT NULL DEFAULT CURRENT
+  lote : character varying(255) COLLATE pg
+  fecha_vencimiento : date,
+  cantidad_disponible : integer NOT NULL DEFAULT 0,
+}
+
+entity tipo_mermas {
+  *id : bigserial NOT NULL,
+  --
+  label : character varying(255) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  color : character varying(255) COLLATE pg
+  bg_color : character varying(255) COLLATE pg
+  text_color : character varying(255) COLLATE pg
+  requiere_aprobacion : boolean NOT NULL DEFAULT true,
+  created_at : timestamp(0) without time zone,
+}
+
+entity tipo_operacion_caja {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+}
+
+entity tipos_ajuste_inventario {
+  *id : bigserial NOT NULL,
+  --
+  label : character varying(255) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  color : character varying(255) COLLATE pg
+  bg_color : character varying(255) COLLATE pg
+  text_color : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity tipos_documento {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(100) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  genera_inventario : boolean NOT NULL DEFAULT true,
+  formato_numeracion : character varying(255) COLLATE pg
+  siguiente_numero : integer NOT NULL DEFAULT 1,
+  created_at : timestamp(0) without time zone,
+}
+
+entity tipos_pago {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+}
+
+entity tipos_precio {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(100) COLLATE pg
+  descripcion : character varying(255) COLLATE pg
+  porcentaje_ganancia : numeric(8, 2),
+  es_ganancia : boolean NOT NULL DEFAULT true,
+  orden : integer NOT NULL DEFAULT 0,
+  es_sistema : boolean NOT NULL DEFAULT false,
+  created_at : timestamp(0) without time zone,
+}
+
+entity transferencia_inventarios {
+  *id : bigserial NOT NULL,
+  --
+  fecha : timestamp(0) without time zone NOT NULL,
+  almacen_destino_id : bigint NOT NULL,
+  estado : character varying(255) COLLATE pg
+  observaciones : text COLLATE pg
+  fecha_envio : timestamp(0) without time zone,
+  vehiculo_id : bigint,
+  total_productos : integer NOT NULL DEFAULT 0,
+  created_at : timestamp(0) without time zone,
+}
+
+entity unidades_medida {
+  *id : bigserial NOT NULL,
+  --
+  nombre : character varying(255) COLLATE pg
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity users {
+  *id : bigserial NOT NULL,
+  --
+  usernick : character varying(255) COLLATE pg
+  email : character varying(255) COLLATE pg
+  email_verified_at : timestamp(0) without time zone,
+  remember_token : character varying(100) COLLATE pg
+  created_at : timestamp(0) without time zone,
+  activo : boolean NOT NULL DEFAULT true,
+}
+
+entity vehiculos {
+  *id : bigserial NOT NULL,
+  --
+  marca : character varying(255) COLLATE pg
+  modelo : character varying(255) COLLATE pg
+  anho : character varying(255) COLLATE pg
+  capacidad_kg : numeric(8, 2),
+  estado : character varying(255) COLLATE pg
+  chofer_asignado_id : bigint,
+  activo : boolean NOT NULL DEFAULT true,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity venta_impuestos {
+  *id : bigserial NOT NULL,
+  --
+  impuesto_id : bigint NOT NULL,
+  NOT : NULL,
+  NOT : NULL,
+  NOT : NULL,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity ventas {
+  *id : bigserial NOT NULL,
+  --
+  fecha : date NOT NULL,
+  NOT : NULL,
+  NOT : NULL DEFAULT
+  impuesto : numeric(15, 2) NOT NULL DEFAULT
+  total : numeric(15, 2) NOT NULL,
+  cliente_id : bigint NOT NULL,
+  estado_documento_id : bigint NOT NULL,
+  tipo_pago_id : bigint,
+  requiere_envio : boolean NOT NULL DEFAULT false,
+  estado_logistico : character varying(255) COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+aperturas_caja }o--|| cajas : caja_id -> id
+aperturas_caja }o--|| users : user_id -> id
+asiento_contables }o--|| users : usuario_id -> id
+chofers }o--|| users : user_id -> id
+cierres_caja }o--|| aperturas_caja : apertura_caja_id -> id
+cierres_caja }o--|| cajas : caja_id -> id
+cierres_caja }o--|| users : user_id -> id
+clientes }o--|| localidades : localidad_id -> id
+clientes }o--|| users : user_id -> id
+codigos_barra }o--|| productos : producto_id -> id
+compras }o--|| estados_documento : estado_documento_id -> id
+compras }o--|| monedas : moneda_id -> id
+compras }o--|| proveedores : proveedor_id -> id
+compras }o--|| tipos_pago : tipo_pago_id -> id
+compras }o--|| users : usuario_id -> id
+configuracion_ganancias }o--|| productos : producto_id -> id
+configuracion_ganancias }o--|| tipos_precio : tipo_precio_id -> id
+cuentas_por_cobrar }o--|| clientes : cliente_id -> id
+cuentas_por_cobrar }o--|| ventas : venta_id -> id
+cuentas_por_pagar }o--|| compras : compra_id -> id
+detalle_asiento_contables }o--|| asiento_contables : asiento_contable_id -> id
+detalle_compras }o--|| compras : compra_id -> id
+detalle_compras }o--|| productos : producto_id -> id
+detalle_proformas }o--|| productos : producto_id -> id
+detalle_proformas }o--|| proformas : proforma_id -> id
+detalle_transferencia_inventarios }o--|| productos : producto_id -> id
+detalle_transferencia_inventarios }o--|| transferencia_inventarios : transferencia_id -> id
+detalle_ventas }o--|| productos : producto_id -> id
+detalle_ventas }o--|| ventas : venta_id -> id
+detalles_pedido }o--|| pedidos : pedido_id -> id
+detalles_pedido }o--|| productos : producto_id -> id
+direcciones_cliente }o--|| clientes : cliente_id -> id
+empleados }o--|| empleados : supervisor_id -> id
+empleados }o--|| users : user_id -> id
+envios }o--|| users : chofer_id -> id
+envios }o--|| vehiculos : vehiculo_id -> id
+envios }o--|| ventas : venta_id -> id
+facturas_electronicas }o--|| ventas : venta_id -> id
+fotos_lugar_cliente }o--|| clientes : cliente_id -> id
+fotos_lugar_cliente }o--|| direcciones_cliente : direccion_cliente_id -> id
+historial_precios }o--|| precios_producto : precio_producto_id -> id
+imagenes_producto }o--|| productos : producto_id -> id
+libro_ventas_iva }o--|| tipos_documento : tipo_documento_id -> id
+libro_ventas_iva }o--|| ventas : venta_id -> id
+lotes_vencimientos }o--|| detalle_compras : detalle_compra_id -> id
+model_has_permissions }o--|| permissions : permission_id -> id
+model_has_roles }o--|| roles : role_id -> id
+modulos_sidebar }o--|| modulos_sidebar : modulo_padre_id -> id
+movimientos_caja }o--|| cajas : caja_id -> id
+movimientos_caja }o--|| tipo_operacion_caja : tipo_operacion_id -> id
+movimientos_caja }o--|| users : user_id -> id
+movimientos_inventario }o--|| estado_mermas : estado_merma_id -> id
+movimientos_inventario }o--|| stock_productos : stock_producto_id -> id
+movimientos_inventario }o--|| tipos_ajuste_inventario : tipo_ajuste_inventario_id -> id
+movimientos_inventario }o--|| tipo_mermas : tipo_merma_id -> id
+movimientos_inventario }o--|| users : user_anulacion_id -> id
+movimientos_inventario }o--|| users : user_id -> id
+pagos }o--|| cuentas_por_pagar : cuenta_por_pagar_id -> id
+pagos }o--|| monedas : moneda_id -> id
+pagos }o--|| tipos_pago : tipo_pago_id -> id
+pagos }o--|| users : usuario_id -> id
+pagos }o--|| ventas : venta_id -> id
+pedidos }o--|| clientes : cliente_id -> id
+pedidos }o--|| estados_pedido : estado_id -> id
+precios_producto }o--|| productos : producto_id -> id
+precios_producto }o--|| tipos_precio : tipo_precio_id -> id
+productos }o--|| categorias : categoria_id -> id
+productos }o--|| marcas : marca_id -> id
+productos }o--|| proveedores : proveedor_id -> id
+productos }o--|| unidades_medida : unidad_medida_id -> id
+proformas }o--|| clientes : cliente_id -> id
+proformas }o--|| monedas : moneda_id -> id
+proformas }o--|| users : usuario_aprobador_id -> id
+proformas }o--|| users : usuario_creador_id -> id
+reservas_proforma }o--|| proformas : proforma_id -> id
+reservas_proforma }o--|| stock_productos : stock_producto_id -> id
+role_has_permissions }o--|| permissions : permission_id -> id
+role_has_permissions }o--|| roles : role_id -> id
+seguimiento_envios }o--|| envios : envio_id -> id
+seguimiento_envios }o--|| users : user_id -> id
+stock_productos }o--|| almacenes : almacen_id -> id
+stock_productos }o--|| productos : producto_id -> id
+transferencia_inventarios }o--|| almacenes : almacen_destino_id -> id
+transferencia_inventarios }o--|| almacenes : almacen_origen_id -> id
+transferencia_inventarios }o--|| chofers : chofer_id -> id
+transferencia_inventarios }o--|| users : usuario_id -> id
+transferencia_inventarios }o--|| vehiculos : vehiculo_id -> id
+vehiculos }o--|| users : chofer_asignado_id -> id
+venta_impuestos }o--|| impuestos : impuesto_id -> id
+venta_impuestos }o--|| ventas : venta_id -> id
+ventas }o--|| clientes : cliente_id -> id
+ventas }o--|| estados_documento : estado_documento_id -> id
+ventas }o--|| monedas : moneda_id -> id
+ventas }o--|| proformas : proforma_id -> id
+ventas }o--|| tipos_pago : tipo_pago_id -> id
+ventas }o--|| users : usuario_id -> id
+@enduml

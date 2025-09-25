@@ -17,10 +17,11 @@ export default defineConfig({
             formVariants: true,
         }),
     ],
-    server: {
-        host: '192.168.100.21',
-        port: 5173,
-    },
+    /*server: {
+        // Listen on all network interfaces so you can access from other devices and any Wi‑Fi network
+        host: true,
+        port: 5437,
+    },*/
     esbuild: {
         jsx: 'automatic',
     },

@@ -1,0 +1,52 @@
+@startuml
+!theme plain
+
+entity compras {
+  *id : bigserial NOT NULL,
+  --
+  fecha : date NOT NULL,
+  subtotal : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  impuesto : numeric(15, 2) NOT NULL DEFAULT
+  total : numeric(15, 2) NOT NULL,
+  proveedor_id : bigint NOT NULL,
+  estado_documento_id : bigint NOT NULL,
+  tipo_pago_id : bigint,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity detalle_compras {
+  *id : bigserial NOT NULL,
+  --
+  producto_id : bigint NOT NULL,
+  precio_unitario : numeric(15, 2) NOT NULL,
+  NOT : NULL DEFAULT
+  subtotal : numeric(15, 2) NOT NULL,
+  fecha_vencimiento : date,
+  updated_at : timestamp(0) without time zone,
+}
+
+entity lotes_vencimientos {
+  *id : bigserial NOT NULL,
+  --
+  numero_lote : character varying(255) COLLATE pg
+  fecha_vencimiento : date NOT NULL,
+  cantidad_actual : integer NOT NULL,
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+entity cuentas_por_pagar {
+  *id : bigserial NOT NULL,
+  --
+  monto_original : numeric(15, 2) NOT NULL,
+  NOT : NULL,
+  dias_vencido : integer NOT NULL DEFAULT 0,
+  observaciones : text COLLATE pg
+  created_at : timestamp(0) without time zone,
+}
+
+cuentas_por_pagar }o--|| compras : compra_id -> id
+detalle_compras }o--|| compras : compra_id -> id
+lotes_vencimientos }o--|| detalle_compras : detalle_compra_id -> id
+@enduml
