@@ -1,6 +1,6 @@
 // Configuration: Tipos de precio module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { TipoPrecio, TipoPrecioFormData } from '@/domain/tipos-precio';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { TipoPrecio, TipoPrecioFormData } from '@/domain/entities/tipos-precio';
 import React from 'react';
 
 export const tiposPrecioConfig: ModuleConfig<TipoPrecio, TipoPrecioFormData> = {

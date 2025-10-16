@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 /**
- * @see routes/web.php:17
+ * @see [serialized-closure]:2
  * @route '/test-csrf'
  */
 export const csrf = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -14,7 +14,7 @@ csrf.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
- * @see routes/web.php:17
+ * @see [serialized-closure]:2
  * @route '/test-csrf'
  */
 csrf.url = (options?: RouteQueryOptions) => {
@@ -22,7 +22,7 @@ csrf.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:17
+ * @see [serialized-closure]:2
  * @route '/test-csrf'
  */
 csrf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -31,7 +31,7 @@ csrf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 })
 
     /**
- * @see routes/web.php:17
+ * @see [serialized-closure]:2
  * @route '/test-csrf'
  */
     const csrfForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -40,7 +40,7 @@ csrf.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     })
 
             /**
- * @see routes/web.php:17
+ * @see [serialized-closure]:2
  * @route '/test-csrf'
  */
         csrfForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

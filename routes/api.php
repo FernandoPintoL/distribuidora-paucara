@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
@@ -25,6 +26,9 @@ use Illuminate\Support\Facades\Route;
 // Rutas de autenticación API
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+
+// Rutas para empleados
+Route::get('/empleados/determinar-rol', [EmpleadoApiController::class, 'determinarRol']);
 
 // Rutas API para módulos del sidebar (requiere autenticación)
 Route::middleware(['auth'])->get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');
@@ -168,6 +172,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('{cliente}/direcciones', [DireccionClienteApiController::class, 'index']);
         Route::post('{cliente}/direcciones', [DireccionClienteApiController::class, 'store']);
         Route::put('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'update']);
+
+        // Gestión de fotos de lugar
+        Route::get('{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'index']);
+        Route::post('{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'store']);
+        Route::post('{cliente}/fotos/multiple', [\App\Http\Controllers\FotoLugarClienteController::class, 'uploadMultiple']);
+        Route::get('{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'show']);
+        Route::put('{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'update']);
+        Route::delete('{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'destroy']);
         Route::delete('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'destroy']);
         Route::patch('{cliente}/direcciones/{direccion}/principal', [DireccionClienteApiController::class, 'establecerPrincipal']);
     });

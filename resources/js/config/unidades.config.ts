@@ -1,6 +1,6 @@
 // Configuration: Unidades module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { UnidadMedida, UnidadMedidaFormData } from '@/domain/unidades';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { UnidadMedida, UnidadMedidaFormData } from '@/domain/entities/unidades';
 
 export const unidadesConfig: ModuleConfig<UnidadMedida, UnidadMedidaFormData> = {
   // Module identification

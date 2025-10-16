@@ -1,6 +1,6 @@
 // Configuration: Productos module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Producto, ProductoFormData } from '@/domain/productos';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Producto, ProductoFormData } from '@/domain/entities/productos';
 
 const currency = (n?: number | null) => {
   if (n === undefined || n === null) return '-';

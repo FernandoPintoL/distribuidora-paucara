@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { TipoAjustInventarioService, TipoAjustInventarioApi } from '../services/tipoAjustInventarioService';
+import { TipoAjustInventarioService, TipoAjustInventarioApi } from '@/infrastructure/services/tipoAjustInventarioService';
 
 export function useTipoAjustInventario() {
     const [tipos, setTipos] = useState<TipoAjustInventarioApi[]>([]);

@@ -54,4 +54,17 @@ return [
         'modalidad' => env('SIN_MODALIDAD', 1),       // 1=Electronico, 2=Computarizada
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google Maps API
+    |--------------------------------------------------------------------------
+    |
+    | Configuración para Google Maps API utilizada para geocodificación,
+    | visualización de mapas, cálculo de rutas y logística.
+    |
+    */
+    'google_maps' => [
+        'api_key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
 ];

@@ -1,6 +1,6 @@
 // Configuration: Categorias module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Categoria, CategoriaFormData } from '@/domain/categorias';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Categoria, CategoriaFormData } from '@/domain/entities/categorias';
 
 export const categoriasConfig: ModuleConfig<Categoria, CategoriaFormData> = {
   // Module identification

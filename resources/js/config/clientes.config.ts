@@ -1,7 +1,8 @@
 // Configuration: Clientes module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Cliente, ClienteFormData } from '@/domain/clientes';
-import FileUploadPreview from '@/components/generic/FileUploadPreview';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Cliente, ClienteFormData } from '@/domain/entities/clientes';
+import FileUploadPreview from '@/presentation/components/generic/FileUploadPreview';
+import MapPicker from '@/presentation/components/maps/MapPicker';
 import React, { createElement } from 'react';
 
 export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
@@ -68,43 +69,55 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             key: 'foto_perfil',
             label: 'Foto de perfil (opcional)',
             type: 'file',
-            render: ({ value, onChange, label, disabled }) =>
-                createElement(FileUploadPreview, {
+            render: ({ value, onChange, label, disabled, formData }) => {
+                // Buscar el campo _preview si existe (para modo edición)
+                const previewUrl = (formData as any)?.foto_perfil_preview || null;
+                return createElement(FileUploadPreview, {
                     label,
                     name: 'foto_perfil',
-                    value,
-                    onChange,
+                    value: value as File | string | null,
+                    previewUrl: previewUrl as string | null,
+                    onChange: onChange as (file: File | null) => void,
                     previewType: 'circle',
                     disabled,
-                }),
+                });
+            },
         },
         {
             key: 'ci_anverso',
             label: 'CI - Anverso (opcional)',
             type: 'file',
-            render: ({ value, onChange, label, disabled }) =>
-                createElement(FileUploadPreview, {
+            render: ({ value, onChange, label, disabled, formData }) => {
+                // Buscar el campo _preview si existe (para modo edición)
+                const previewUrl = (formData as any)?.ci_anverso_preview || null;
+                return createElement(FileUploadPreview, {
                     label,
                     name: 'ci_anverso',
-                    value,
-                    onChange,
+                    value: value as File | string | null,
+                    previewUrl: previewUrl as string | null,
+                    onChange: onChange as (file: File | null) => void,
                     previewType: 'rect',
                     disabled,
-                }),
+                });
+            },
         },
         {
             key: 'ci_reverso',
             label: 'CI - Reverso (opcional)',
             type: 'file',
-            render: ({ value, onChange, label, disabled }) =>
-                createElement(FileUploadPreview, {
+            render: ({ value, onChange, label, disabled, formData }) => {
+                // Buscar el campo _preview si existe (para modo edición)
+                const previewUrl = (formData as any)?.ci_reverso_preview || null;
+                return createElement(FileUploadPreview, {
                     label,
                     name: 'ci_reverso',
-                    value,
-                    onChange,
+                    value: value as File | string | null,
+                    previewUrl: previewUrl as string | null,
+                    onChange: onChange as (file: File | null) => void,
                     previewType: 'rect',
                     disabled,
-                }),
+                });
+            },
         },
         {
             key: 'localidad_id',
@@ -115,18 +128,30 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             extraDataKey: 'localidades',
             options: [], // Se cargarán dinámicamente
         },
-        /* {
-            key: 'latitud',
-            label: 'Latitud',
-            type: 'number',
-            placeholder: '-17.7833',
-        },
+        // Campo personalizado para ubicación en mapa
         {
-            key: 'longitud',
-            label: 'Longitud',
-            type: 'number',
-            placeholder: '-63.1833',
-        }, */
+            key: 'coordenadas',
+            label: 'Ubicación en el mapa',
+            type: 'custom',
+            render: ({ value, onChange, disabled, formData }) => {
+                // formData contiene latitud y longitud separados
+                const latitud = (formData as any)?.latitud;
+                const longitud = (formData as any)?.longitud;
+
+                return createElement(MapPicker, {
+                    latitude: latitud,
+                    longitude: longitud,
+                    onLocationSelect: (lat: number, lng: number, address?: string) => {
+                        // Actualizar los campos latitud y longitud
+                        onChange({ latitud: lat, longitud: lng, address });
+                    },
+                    label: 'Ubicación del cliente',
+                    description: 'Selecciona la ubicación exacta del cliente en el mapa',
+                    disabled: Boolean(disabled),
+                    height: '350px'
+                });
+            }
+        },
         {
             key: 'activo',
             label: 'Cliente activo',

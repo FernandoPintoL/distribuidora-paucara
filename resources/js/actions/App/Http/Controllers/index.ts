@@ -9,10 +9,13 @@ import InventarioController from './InventarioController'
 import ReporteInventarioApiController from './ReporteInventarioApiController'
 import ClienteController from './ClienteController'
 import DireccionClienteApiController from './DireccionClienteApiController'
+import FotoLugarClienteController from './FotoLugarClienteController'
 import LocalidadController from './LocalidadController'
 import CategoriaClienteController from './CategoriaClienteController'
 import ProveedorController from './ProveedorController'
 import DashboardController from './DashboardController'
+import RoleController from './RoleController'
+import RolController from './RolController'
 import CategoriaController from './CategoriaController'
 import MarcaController from './MarcaController'
 import AlmacenController from './AlmacenController'
@@ -22,7 +25,6 @@ import TipoPrecioController from './TipoPrecioController'
 import MonedaController from './MonedaController'
 import TipoPagoController from './TipoPagoController'
 import UserController from './UserController'
-import RoleController from './RoleController'
 import PermissionController from './PermissionController'
 import EmpleadoController from './EmpleadoController'
 import CuentaPorPagarController from './CuentaPorPagarController'
@@ -37,6 +39,9 @@ import VehiculoController from './VehiculoController'
 import Web from './Web'
 import ReportePreciosController from './ReportePreciosController'
 import ReporteInventarioController from './ReporteInventarioController'
+import ReservaStockController from './ReservaStockController'
+import ConteoFisicoController from './ConteoFisicoController'
+import AnalisisAbcController from './AnalisisAbcController'
 import Settings from './Settings'
 import Auth from './Auth'
 const Controllers = {
@@ -51,10 +56,13 @@ InventarioController,
 ReporteInventarioApiController,
 ClienteController,
 DireccionClienteApiController,
+FotoLugarClienteController,
 LocalidadController,
 CategoriaClienteController,
 ProveedorController,
 DashboardController,
+RoleController,
+RolController,
 CategoriaController,
 MarcaController,
 AlmacenController,
@@ -64,7 +72,6 @@ TipoPrecioController,
 MonedaController,
 TipoPagoController,
 UserController,
-RoleController,
 PermissionController,
 EmpleadoController,
 CuentaPorPagarController,
@@ -79,6 +86,9 @@ VehiculoController,
 Web,
 ReportePreciosController,
 ReporteInventarioController,
+ReservaStockController,
+ConteoFisicoController,
+AnalisisAbcController,
 Settings,
 Auth,
 }

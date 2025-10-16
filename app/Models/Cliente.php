@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,14 +29,15 @@ class Cliente extends Model
         'localidad_id',
         'codigo_cliente',
         'user_id',
+        'usuario_creacion_id',
     ];
 
     protected $casts = [
-        'activo' => 'boolean',
+        'activo'         => 'boolean',
         'fecha_registro' => 'datetime',
         'limite_credito' => 'decimal:2',
-        'latitud' => 'decimal:8',
-        'longitud' => 'decimal:8',
+        'latitud'        => 'decimal:8',
+        'longitud'       => 'decimal:8',
     ];
 
     public function localidad()
@@ -60,10 +60,10 @@ class Cliente extends Model
         return $this->hasMany(VentanaEntregaCliente::class, 'cliente_id');
     }
 
-    /* public function fotosLugar()
+    public function fotosLugar()
     {
         return $this->hasMany(FotoLugarCliente::class, 'cliente_id');
-    } */
+    }
 
     public function ventas()
     {
@@ -83,6 +83,11 @@ class Cliente extends Model
     public function cuentasPorCobrar()
     {
         return $this->hasMany(CuentaPorCobrar::class);
+    }
+
+    public function usuarioCreacion()
+    {
+        return $this->belongsTo(User::class, 'usuario_creacion_id');
     }
 
     protected static function boot()
@@ -116,10 +121,10 @@ class Cliente extends Model
         $numero = (int) $this->id;
         if ($numero < 1000) {
             // 1 => 0001, 12 => 0012, 999 => 0999
-            return $codigoLocalidad.str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
+            return $codigoLocalidad . str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
         }
 
         // A partir de 1000, se usa el número tal cual (PS1000, PS1001, ...)
-        return $codigoLocalidad.$numero;
+        return $codigoLocalidad . $numero;
     }
 }

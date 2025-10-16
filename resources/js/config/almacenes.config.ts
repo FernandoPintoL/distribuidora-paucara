@@ -1,6 +1,6 @@
 // Configuration: Almacenes module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Almacen, AlmacenFormData } from '@/domain/almacenes';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Almacen, AlmacenFormData } from '@/domain/entities/almacenes';
 
 export const almacenesConfig: ModuleConfig<Almacen, AlmacenFormData> = {
   // Module identification

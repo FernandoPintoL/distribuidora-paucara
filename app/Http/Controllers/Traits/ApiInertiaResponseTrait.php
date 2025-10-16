@@ -14,6 +14,11 @@ trait ApiInertiaResponseTrait
      */
     protected function isApiRequest(Request $request): bool
     {
+        // Si es una petición de Inertia, NO es una petición de API
+        if ($this->isInertiaRequest($request)) {
+            return false;
+        }
+
         // Verificar headers específicos de API
         return $request->expectsJson() ||
         $request->header('Accept') === 'application/json' ||

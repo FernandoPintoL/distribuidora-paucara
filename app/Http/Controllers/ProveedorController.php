@@ -55,12 +55,7 @@ class ProveedorController extends Controller
 
         return Inertia::render('proveedores/index', [
             'proveedores' => $items,
-            'filters'     => [
-                'q'         => $q,
-                'activo'    => $activo,
-                'order_by'  => $orderBy,
-                'order_dir' => $orderDir,
-            ],
+            'filters'     => $request->only(['q', 'activo', 'order_by', 'order_dir']),
         ]);
     }
 

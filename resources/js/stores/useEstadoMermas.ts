@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { EstadoMermaService } from '../services/estadoMermaService';
+import { EstadoMermaService } from '@/infrastructure/services/estadoMermaService';
 
 export interface EstadoMermaApi {
     id: number;

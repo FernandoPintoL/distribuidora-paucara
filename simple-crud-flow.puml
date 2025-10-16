@@ -1,0 +1,55 @@
+@startuml simple-crud-flow
+!theme plain
+
+title Flujo CRUD Simple - Clean Architecture
+
+package "Presentation" {
+  [Pages] as pages
+  [Hooks] as hooks
+  [Components] as components
+}
+
+package "Application" {
+  [UseCases] as usecases
+  [DTOs] as dtos
+}
+
+package "Infrastructure" {
+  [Services] as services
+  [HTTP] as http
+}
+
+package "Domain" {
+  [Entities] as entities
+  [Contracts] as contracts
+}
+
+' Dependencies
+pages -> hooks
+hooks -> usecases
+usecases -> services
+services -> http
+services -> entities
+usecases -> contracts
+
+' Data Flow - CREATE
+note as createFlow
+**CREATE FLOW:**
+1. User fills form (Pages)
+2. Hook calls UseCase (Hooks)
+3. UseCase validates (Application)
+4. Service makes API call (Infrastructure)
+5. Returns Entity (Domain)
+end note
+
+' Data Flow - READ
+note as readFlow
+**READ FLOW:**
+1. Page loads (Pages)
+2. Hook fetches data (Hooks)
+3. UseCase processes (Application)
+4. Service gets data (Infrastructure)
+5. Returns Entity list (Domain)
+end note
+
+@enduml

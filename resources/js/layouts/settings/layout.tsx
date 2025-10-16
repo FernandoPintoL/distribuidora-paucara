@@ -1,6 +1,6 @@
-import Heading from '@/components/heading';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import Heading from '@/presentation/components/heading';
+import { Button } from '@/presentation/components/ui/button';
+import { Separator } from '@/presentation/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { appearance } from '@/routes';
 import { edit as editPassword } from '@/routes/password';

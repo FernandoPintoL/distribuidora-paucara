@@ -1,5 +1,5 @@
-import type { ModuleConfig } from '@/domain/generic';
-import type { Vehiculo, VehiculoFormData } from '@/domain/vehiculos';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Vehiculo, VehiculoFormData } from '@/domain/entities/vehiculos';
 
 export const vehiculosConfig: ModuleConfig<Vehiculo, VehiculoFormData> = {
     moduleName: 'vehiculos',

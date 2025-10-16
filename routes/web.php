@@ -30,6 +30,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('ventas-por-canal', [App\Http\Controllers\DashboardController::class, 'ventasPorCanal'])->name('api.dashboard.ventas-por-canal');
     });
 
+    // Incluir rutas de roles
+    require __DIR__ . '/roles.php';
+
     Route::resource('categorias', CategoriaController::class)->middleware('permission:categorias.manage');
     Route::resource('marcas', \App\Http\Controllers\MarcaController::class)->middleware('permission:marcas.manage');
     Route::resource('almacenes', \App\Http\Controllers\AlmacenController::class)->middleware('permission:almacenes.manage');
@@ -41,6 +44,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
     Route::resource('clientes', \App\Http\Controllers\ClienteController::class)->middleware('permission:clientes.manage');
+
+    // Rutas para fotos de lugar de clientes
+    Route::middleware(['permission:clientes.manage'])->group(function () {
+        Route::get('clientes/{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'index'])->name('clientes.fotos.index');
+        Route::get('clientes/{cliente}/fotos/create', [\App\Http\Controllers\FotoLugarClienteController::class, 'create'])->name('clientes.fotos.create');
+        Route::post('clientes/{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'store'])->name('clientes.fotos.store');
+        Route::get('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'show'])->name('clientes.fotos.show');
+        Route::get('clientes/{cliente}/fotos/{foto}/edit', [\App\Http\Controllers\FotoLugarClienteController::class, 'edit'])->name('clientes.fotos.edit');
+        Route::put('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'update'])->name('clientes.fotos.update');
+        Route::delete('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'destroy'])->name('clientes.fotos.destroy');
+    });
+
     Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
     Route::get('productos/crear/moderno', [\App\Http\Controllers\ProductoController::class, 'createModerno'])->middleware('permission:productos.manage')->name('productos.create.moderno');
     Route::get('productos/{producto}/historial-precios', [\App\Http\Controllers\ProductoController::class, 'historialPrecios'])->middleware('permission:productos.manage')->name('productos.historial-precios');
@@ -271,6 +286,81 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('rotacion', [\App\Http\Controllers\ReporteInventarioController::class, 'rotacion'])->name('rotacion');
             Route::get('movimientos', [\App\Http\Controllers\ReporteInventarioController::class, 'movimientos'])->name('movimientos');
             Route::get('export', [\App\Http\Controllers\ReporteInventarioController::class, 'export'])->name('export');
+        });
+    });
+
+    // ==========================================
+    // RUTAS PARA SISTEMAS AVANZADOS DE INVENTARIO
+    // ==========================================
+
+    // Rutas para Reservas de Stock
+    Route::prefix('inventario/reservas')->name('reservas-stock.')->middleware('permission:inventario.reservas.manage')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ReservaStockController::class, 'index'])->name('index');
+        Route::get('dashboard', [\App\Http\Controllers\ReservaStockController::class, 'dashboard'])->name('dashboard');
+        Route::get('create', [\App\Http\Controllers\ReservaStockController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\ReservaStockController::class, 'store'])->name('store');
+        Route::get('{reservaStock}', [\App\Http\Controllers\ReservaStockController::class, 'show'])->name('show');
+        Route::get('{reservaStock}/edit', [\App\Http\Controllers\ReservaStockController::class, 'edit'])->name('edit');
+        Route::put('{reservaStock}', [\App\Http\Controllers\ReservaStockController::class, 'update'])->name('update');
+        Route::delete('{reservaStock}', [\App\Http\Controllers\ReservaStockController::class, 'destroy'])->name('destroy');
+
+        // Acciones específicas
+        Route::post('{reservaStock}/utilizar', [\App\Http\Controllers\ReservaStockController::class, 'utilizar'])->name('utilizar');
+        Route::post('{reservaStock}/liberar', [\App\Http\Controllers\ReservaStockController::class, 'liberar'])->name('liberar');
+
+        // APIs
+        Route::prefix('api')->name('api.')->group(function () {
+            Route::get('stock-disponible', [\App\Http\Controllers\ReservaStockController::class, 'apiStockDisponible'])->name('stock-disponible');
+            Route::get('reservas-por-producto', [\App\Http\Controllers\ReservaStockController::class, 'apiReservasPorProducto'])->name('reservas-por-producto');
+            Route::post('liberar-vencidas', [\App\Http\Controllers\ReservaStockController::class, 'apiLiberarVencidas'])->name('liberar-vencidas');
+        });
+    });
+
+    // Rutas para Conteos Físicos
+    Route::prefix('inventario/conteos-fisicos')->name('conteos-fisicos.')->middleware('permission:inventario.conteos.manage')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ConteoFisicoController::class, 'index'])->name('index');
+        Route::get('dashboard', [\App\Http\Controllers\ConteoFisicoController::class, 'dashboard'])->name('dashboard');
+        Route::get('create', [\App\Http\Controllers\ConteoFisicoController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\ConteoFisicoController::class, 'store'])->name('store');
+        Route::get('{conteoFisico}', [\App\Http\Controllers\ConteoFisicoController::class, 'show'])->name('show');
+
+        // Acciones de flujo de conteo
+        Route::post('{conteoFisico}/iniciar', [\App\Http\Controllers\ConteoFisicoController::class, 'iniciar'])->name('iniciar');
+        Route::post('{conteoFisico}/finalizar', [\App\Http\Controllers\ConteoFisicoController::class, 'finalizar'])->name('finalizar');
+        Route::post('{conteoFisico}/aprobar', [\App\Http\Controllers\ConteoFisicoController::class, 'aprobar'])->name('aprobar');
+        Route::post('{conteoFisico}/cancelar', [\App\Http\Controllers\ConteoFisicoController::class, 'cancelar'])->name('cancelar');
+
+        // Acciones de conteo de items
+        Route::post('{conteoFisico}/items/{detalle}/contar', [\App\Http\Controllers\ConteoFisicoController::class, 'contarItem'])->name('contar-item');
+        Route::post('{conteoFisico}/items/{detalle}/recontar', [\App\Http\Controllers\ConteoFisicoController::class, 'recontarItem'])->name('recontar-item');
+        Route::post('{conteoFisico}/items/{detalle}/marcar-reconteo', [\App\Http\Controllers\ConteoFisicoController::class, 'marcarParaReconteo'])->name('marcar-reconteo');
+
+        // APIs
+        Route::prefix('api')->name('api.')->group(function () {
+            Route::get('conteos', [\App\Http\Controllers\ConteoFisicoController::class, 'apiConteos'])->name('conteos');
+            Route::get('{conteoFisico}/detalle', [\App\Http\Controllers\ConteoFisicoController::class, 'apiDetalleConteo'])->name('detalle-conteo');
+            Route::post('programar-ciclicos', [\App\Http\Controllers\ConteoFisicoController::class, 'apiProgramarConteosCiclicos'])->name('programar-ciclicos');
+        });
+    });
+
+    // Rutas para Análisis ABC
+    Route::prefix('inventario/analisis-abc')->name('analisis-abc.')->middleware('permission:inventario.analisis.manage')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AnalisisAbcController::class, 'index'])->name('index');
+        Route::get('dashboard', [\App\Http\Controllers\AnalisisAbcController::class, 'dashboard'])->name('dashboard');
+        Route::get('{analisisAbc}', [\App\Http\Controllers\AnalisisAbcController::class, 'show'])->name('show');
+
+        // Acciones de cálculo
+        Route::post('calcular', [\App\Http\Controllers\AnalisisAbcController::class, 'calcular'])->name('calcular');
+        Route::get('export', [\App\Http\Controllers\AnalisisAbcController::class, 'export'])->name('export');
+
+        // Reportes especializados
+        Route::get('reportes/rotacion', [\App\Http\Controllers\AnalisisAbcController::class, 'reporteRotacion'])->name('reporte-rotacion');
+        Route::get('reportes/obsoletos', [\App\Http\Controllers\AnalisisAbcController::class, 'reporteObsoletos'])->name('reporte-obsoletos');
+
+        // APIs
+        Route::prefix('api')->name('api.')->group(function () {
+            Route::post('calcular-analisis', [\App\Http\Controllers\AnalisisAbcController::class, 'apiCalcularAnalisis'])->name('calcular-analisis');
+            Route::get('recomendaciones', [\App\Http\Controllers\AnalisisAbcController::class, 'apiRecomendaciones'])->name('recomendaciones');
         });
     });
 });

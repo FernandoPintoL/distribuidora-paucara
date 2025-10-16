@@ -1,7 +1,8 @@
 <?php
-
 namespace App\Models;
 
+use App\Models\Traits\ChoferTrait;
+use App\Models\Traits\RolesFuncionalesTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,12 +10,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Empleado extends Model
 {
-    use HasFactory;
+    use HasFactory, ChoferTrait, RolesFuncionalesTrait;
 
     protected $fillable = [
         'user_id',
         'codigo_empleado',
         'ci',
+        'licencia',                   // Para choferes
+        'fecha_vencimiento_licencia', // Para choferes
         'telefono',
         'direccion',
         'fecha_nacimiento',
@@ -43,20 +46,28 @@ class Empleado extends Model
         'horario_trabajo',
         'observaciones',
         'notas_rrhh',
+        'datos_rol', // Datos específicos según el rol
     ];
+
+    /**
+     * Atributos que se añaden automáticamente al modelo
+     */
+    protected $appends = ['nombre', 'email', 'usernick', 'roles'];
 
     protected function casts(): array
     {
         return [
-            'fecha_nacimiento' => 'date',
-            'fecha_ingreso' => 'date',
-            'fecha_salida' => 'date',
-            'salario_base' => 'decimal:2',
-            'bonos' => 'decimal:2',
-            'puede_acceder_sistema' => 'boolean',
-            'ultimo_acceso_sistema' => 'datetime',
-            'certificaciones' => 'array',
-            'horario_trabajo' => 'array',
+            'fecha_nacimiento'           => 'date:Y-m-d',
+            'fecha_ingreso'              => 'date:Y-m-d',
+            'fecha_salida'               => 'date:Y-m-d',
+            'fecha_vencimiento_licencia' => 'date:Y-m-d', // Para choferes
+            'salario_base'               => 'decimal:2',
+            'bonos'                      => 'decimal:2',
+            'puede_acceder_sistema'      => 'boolean',
+            'ultimo_acceso_sistema'      => 'datetime',
+            'certificaciones'            => 'array',
+            'horario_trabajo'            => 'array',
+            'datos_rol'                  => 'array', // Datos específicos por rol
         ];
     }
 
@@ -85,6 +96,47 @@ class Empleado extends Model
     }
 
     /**
+     * Accessor: Obtener el nombre del empleado desde el usuario relacionado
+     */
+    public function getNombreAttribute(): string
+    {
+        return $this->user?->name ?? $this->codigo_empleado ?? 'Sin nombre';
+    }
+
+    /**
+     * Accessor: Obtener el email del empleado desde el usuario relacionado
+     */
+    public function getEmailAttribute(): ?string
+    {
+        return $this->user?->email;
+    }
+
+    /**
+     * Accessor: Obtener el usernick del empleado desde el usuario relacionado
+     */
+    public function getUsernickAttribute(): ?string
+    {
+        return $this->user?->usernick;
+    }
+
+    /**
+     * Accessor: Obtener los roles del empleado como array de nombres
+     */
+    public function getRolesAttribute(): array
+    {
+        if (!$this->user) {
+            return [];
+        }
+
+        // Verificar si la relación roles está cargada en el usuario
+        if (!$this->user->relationLoaded('roles')) {
+            return [];
+        }
+
+        return $this->user->roles->pluck('name')->toArray();
+    }
+
+    /**
      * Verificar si el empleado está activo
      */
     public function estaActivo(): bool
@@ -105,9 +157,14 @@ class Empleado extends Model
      */
     public function anosServicio(): int
     {
-        $fechaFin = $this->fecha_salida ?? now();
+        if (! $this->fecha_ingreso) {
+            return 0;
+        }
 
-        return $this->fecha_ingreso->diffInYears($fechaFin);
+        $fechaFin    = $this->fecha_salida ?? now();
+        $fechaInicio = \Carbon\Carbon::parse($this->fecha_ingreso);
+
+        return $fechaInicio->diffInYears($fechaFin);
     }
 
     /**
@@ -115,7 +172,11 @@ class Empleado extends Model
      */
     public function edad(): ?int
     {
-        return $this->fecha_nacimiento?->diffInYears(now());
+        if (! $this->fecha_nacimiento) {
+            return null;
+        }
+
+        return \Carbon\Carbon::parse($this->fecha_nacimiento)->diffInYears(now());
     }
 
     /**
@@ -131,7 +192,11 @@ class Empleado extends Model
      */
     public function enPeriodoPrueba(): bool
     {
-        return $this->fecha_ingreso->diffInMonths(now()) < 3;
+        if (! $this->fecha_ingreso) {
+            return false;
+        }
+
+        return \Carbon\Carbon::parse($this->fecha_ingreso)->diffInMonths(now()) < 3;
     }
 
     /**

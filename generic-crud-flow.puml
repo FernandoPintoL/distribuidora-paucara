@@ -1,0 +1,124 @@
+@startuml generic-crud-flow
+!theme plain
+
+title Flujo Generico CRUD - Arquitectura 3 Capas
+
+package "Presentation Layer" {
+  [GenericContainer\nComponent] as container
+  [useGenericForm\nHook] as formHook
+  [useGenericList\nHook] as listHook
+  [Create/Edit Pages] as pages
+}
+
+package "Application Layer" {
+  [GenericUseCase\nBusiness Logic] as usecase
+  [DTOs & Mappers] as dto
+  [Validation Rules] as validation
+}
+
+package "Infrastructure Layer" {
+  [GenericService\nAPI Client] as service
+  [HTTP Client\nConfiguration] as http
+  [Data Transformers] as transformers
+}
+
+package "Domain Layer" {
+  [Entities\nInterfaces] as entities
+  [Contracts\nRepository] as contracts
+  [Business Rules] as rules
+}
+
+== Lista de Entidades (Read) ==
+container -> listHook : useGenericList(service)
+listHook -> usecase : getEntities(filters)
+usecase -> service : index(params)
+service -> http : GET /api/entities
+http --> service : Response[]
+service -> transformers : Transform API -> Domain
+transformers --> usecase : Entity[]
+usecase --> listHook : Entities with business rules applied
+listHook --> container : "{ data, loading, pagination }"
+
+== Crear Entidad (Create) ==
+pages -> formHook : useGenericForm(null, service)
+formHook -> usecase : createEntity(formData)
+usecase -> validation : Validate business rules
+validation --> usecase : Valid data
+usecase -> service : store(entityData)
+service -> transformers : Transform Domain -> API
+transformers -> http : POST /api/entities
+http --> service : Created Entity
+service -> transformers : Transform API -> Domain
+transformers --> usecase : Entity
+usecase --> formHook : Success with created entity
+formHook --> pages : Success state & redirect
+
+== Editar Entidad (Update) ==
+pages -> formHook : useGenericForm(existingEntity, service)
+formHook -> usecase : updateEntity(id, formData)
+usecase -> validation : Validate changes
+validation --> usecase : Valid updates
+usecase -> service : update(id, entityData)
+service -> transformers : Transform Domain -> API
+transformers -> http : "PUT /api/entities/{id}"
+http --> service : Updated Entity
+service -> transformers : Transform API -> Domain
+transformers --> usecase : Updated Entity
+usecase --> formHook : Success with updated entity
+formHook --> pages : Success state & notification
+
+== Eliminar Entidad (Delete) ==
+container -> listHook : handleDelete(entityId)
+listHook -> usecase : deleteEntity(id)
+usecase -> rules : Check deletion constraints
+rules --> usecase : Deletion allowed
+usecase -> service : destroy(id)
+service -> http : "DELETE /api/entities/{id}"
+http --> service : No Content (204)
+service --> usecase : Deletion confirmed
+usecase --> listHook : Entity removed
+listHook --> container : Updated list without deleted entity
+
+== Busqueda y Filtros ==
+container -> listHook : setFilters(searchCriteria)
+listHook -> usecase : searchEntities(criteria)
+usecase -> service : index(searchParams)
+service -> http : GET /api/entities?search=...
+http --> service : Filtered Results
+service -> transformers : Transform to Domain
+transformers --> usecase : Filtered Entities
+usecase --> listHook : Results with applied business logic
+listHook --> container : Filtered data display
+
+note top of entities
+  **Domain Entities**
+  - Cliente, Producto, Venta
+  - BaseEntity interface
+  - Type definitions
+end note
+
+note bottom of service
+  **Generic Service Pattern**
+  - Extends BaseService
+  - CRUD operations
+  - Error handling
+  - Response transformation
+end note
+
+note left of usecase
+  **Business Logic**
+  - Domain validation
+  - Business rules
+  - Data transformation
+  - Error handling
+end note
+
+note right of formHook
+  **UI State Management**
+  - Form data state
+  - Validation errors
+  - Processing status
+  - Success feedback
+end note
+
+@enduml

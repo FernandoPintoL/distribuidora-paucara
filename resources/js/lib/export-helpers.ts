@@ -1,7 +1,7 @@
 // lib/export-helpers.ts
 import { formatCurrency } from '@/lib/utils';
-import type { ExportData, ExportOptions } from '@/domain/export';
-import type { Compra } from '@/domain/compras';
+import type { ExportData, ExportOptions } from '@/domain/entities/export';
+import type { Compra } from '@/domain/entities/compras';
 
 /**
  * Convierte los datos de una compra al formato de exportación

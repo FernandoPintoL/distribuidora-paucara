@@ -1,6 +1,6 @@
 // Configuration: Localidades module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Localidad, LocalidadFormData } from '@/domain/localidades';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Localidad, LocalidadFormData } from '@/domain/entities/localidades';
 
 export const localidadesConfig: ModuleConfig<Localidad, LocalidadFormData> = {
     // Module identification

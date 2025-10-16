@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { TipoMermaService } from '../services/tipoMermaService';
+import { TipoMermaService } from '@/infrastructure/services/tipoMermaService';
 
 export interface TipoMermaApi {
     id: number;

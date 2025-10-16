@@ -89,26 +89,47 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::findOrCreate($name);
         }
 
-        // Create roles
+        // Create roles - Jerarquía clara
+        // Nivel 1: Super Admin (acceso total + gestión de admins)
+        $superAdmin   = Role::findOrCreate('Super Admin');
+
+        // Nivel 2: Admin/Manager (casi todo, excepto crear Super Admins)
         $admin        = Role::findOrCreate('Admin');
+        $manager      = Role::findOrCreate('Manager');
+
+        // Nivel 3: Roles departamentales/funcionales
+        $gerente      = Role::findOrCreate('Gerente');
         $vendedor     = Role::findOrCreate('Vendedor');
         $compras      = Role::findOrCreate('Compras');
+        $comprador    = Role::findOrCreate('Comprador');
         $inventario   = Role::findOrCreate('Inventario');
-        $reportes     = Role::findOrCreate('Reportes');
+        $gestorAlmacen = Role::findOrCreate('Gestor de Almacén');
         $logistica    = Role::findOrCreate('Logística');
-        $contabilidad = Role::findOrCreate('Contabilidad');
-        $gerente      = Role::findOrCreate('Gerente');
+        $chofer       = Role::findOrCreate('Chofer');
         $cajero       = Role::findOrCreate('Cajero');
+        $contabilidad = Role::findOrCreate('Contabilidad');
+        $reportes     = Role::findOrCreate('Reportes');
+
+        // Nivel 4: Roles de acceso limitado
+        $empleado     = Role::findOrCreate('Empleado');
         $cliente      = Role::findOrCreate('Cliente');
 
-        // Nuevos roles para tipos de empleados específicos
-        $chofer        = Role::findOrCreate('Chofer');
-        $gestorAlmacen = Role::findOrCreate('Gestor de Almacén');
-        $comprador     = Role::findOrCreate('Comprador');
-        $manager       = Role::findOrCreate('Manager');
+        // ============================================
+        // NIVEL 1: Super Admin - Acceso Total
+        // ============================================
+        $superAdmin->givePermissionTo(Permission::all());
 
-        // Assign permissions to roles
-        $admin->givePermissionTo(Permission::all());
+        // ============================================
+        // NIVEL 2: Admin - Casi todos los permisos
+        // (NO puede gestionar Super Admins)
+        // ============================================
+        $adminPerms = Permission::all()->reject(function ($permission) {
+            // Excluir permisos críticos del sistema que solo Super Admin debe tener
+            return in_array($permission->name, [
+                'admin.system',  // Configuraciones críticas del sistema
+            ]);
+        });
+        $admin->syncPermissions($adminPerms);
 
         $vendedorPerms = [
             'ventas.index', 'ventas.create', 'ventas.store', 'ventas.show', 'ventas.edit', 'ventas.update', 'ventas.destroy',
@@ -221,25 +242,88 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
         $comprador->syncPermissions($compradorPerms);
 
+        // ============================================
+        // NIVEL 2: Manager - Gestión operativa completa
+        // (Similar a Admin pero más enfocado en operaciones)
+        // ============================================
         $managerPerms = [
-            // Supervisión completa de operaciones
-            'ventas.index', 'ventas.show', 'compras.index', 'compras.show',
-            'inventario.dashboard', 'cajas.index', 'cajas.estado',
-            'empleados.index', 'empleados.show',
-            // Reportes gerenciales
+            // === GESTIÓN COMPLETA DE OPERACIONES ===
+            // Ventas
+            'ventas.index', 'ventas.create', 'ventas.store', 'ventas.show', 'ventas.edit', 'ventas.update', 'ventas.destroy',
+            'ventas.detalles.index', 'ventas.detalles.store', 'ventas.detalles.update', 'ventas.detalles.destroy',
+            'ventas.verificar-stock', 'ventas.stock.bajo', 'ventas.stock.producto', 'ventas.stock.verificar', 'ventas.stock.resumen',
+            'proformas.index', 'proformas.show', 'proformas.aprobar', 'proformas.rechazar', 'proformas.convertir-venta',
+
+            // Compras
+            'compras.index', 'compras.create', 'compras.store', 'compras.show', 'compras.edit', 'compras.update', 'compras.destroy',
+            'compras.detalles.index', 'compras.detalles.store', 'compras.detalles.update', 'compras.detalles.destroy',
+            'compras.cuentas-por-pagar.index', 'compras.cuentas-por-pagar.show', 'compras.cuentas-por-pagar.actualizar-estado', 'compras.cuentas-por-pagar.export',
+            'compras.pagos.index', 'compras.pagos.create', 'compras.pagos.store', 'compras.pagos.show', 'compras.pagos.destroy', 'compras.pagos.export',
+            'compras.lotes-vencimientos.index', 'compras.lotes-vencimientos.export', 'compras.lotes-vencimientos.actualizar-estado', 'compras.lotes-vencimientos.actualizar-cantidad',
+            'compras.reportes.index', 'compras.reportes.export', 'compras.reportes.export-pdf',
+
+            // Inventario
+            'inventario.dashboard', 'inventario.stock-bajo', 'inventario.proximos-vencer', 'inventario.vencidos', 'inventario.movimientos',
+            'inventario.ajuste.form', 'inventario.ajuste.procesar', 'inventario.api.buscar-productos', 'inventario.api.stock-producto',
+            'inventario.reportes', 'inventario.mermas.index', 'inventario.mermas.registrar', 'inventario.mermas.store', 'inventario.mermas.show',
+            'inventario.mermas.aprobar', 'inventario.mermas.rechazar',
+            'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver', 'inventario.transferencias.edit',
+            'inventario.transferencias.enviar', 'inventario.transferencias.recibir', 'inventario.transferencias.cancelar',
+            'inventario.vehiculos.manage', 'inventario.vehiculos.index', 'inventario.vehiculos.create', 'inventario.vehiculos.store',
+            'inventario.vehiculos.ver', 'inventario.vehiculos.edit', 'inventario.vehiculos.update', 'inventario.vehiculos.destroy',
+
+            // Logística y Envíos
+            'envios.index', 'envios.create', 'envios.store', 'envios.show', 'envios.edit', 'envios.update', 'envios.destroy',
+            'envios.programar', 'envios.cancelar', 'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
+            'envios.choferes-disponibles', 'envios.vehiculos-disponibles',
+            'logistica.dashboard', 'logistica.envios.seguimiento',
+
+            // Cajas
+            'cajas.index', 'cajas.abrir', 'cajas.cerrar', 'cajas.estado', 'cajas.movimientos',
+
+            // Contabilidad
+            'contabilidad.manage', 'contabilidad.asientos.index', 'contabilidad.asientos.show',
+            'contabilidad.reportes.libro-mayor', 'contabilidad.reportes.balance-comprobacion',
+
+            // === REPORTES COMPLETOS ===
             'reportes.precios.index', 'reportes.precios.export',
             'reportes.ganancias.index', 'reportes.ganancias.export',
             'reportes.inventario.stock-actual', 'reportes.inventario.vencimientos', 'reportes.inventario.rotacion',
             'reportes.inventario.movimientos', 'reportes.inventario.export',
-            // Configuración limitada
-            'configuracion-global.ganancias',
-            // Gestión de usuarios básica (solo ver)
-            'usuarios.index', 'usuarios.show',
+
+            // === GESTIÓN DE PERSONAL ===
+            'empleados.index', 'empleados.create', 'empleados.store', 'empleados.show', 'empleados.edit', 'empleados.update',
+            'empleados.toggle-estado', 'empleados.toggle-acceso-sistema',
+
+            // === GESTIÓN DE USUARIOS (limitada) ===
+            'usuarios.index', 'usuarios.create', 'usuarios.store', 'usuarios.show', 'usuarios.edit', 'usuarios.update',
+            'usuarios.assign-role', 'usuarios.remove-role',
+            // NO puede: destroy usuarios ni gestionar Super Admins
+
+            // === MAESTROS ===
+            'categorias.manage', 'marcas.manage', 'almacenes.manage', 'proveedores.manage', 'clientes.manage',
+            'productos.manage', 'unidades.manage', 'tipos-precio.manage', 'tipos-pago.manage', 'monedas.manage',
+
+            // === CONFIGURACIÓN (limitada) ===
+            'configuracion-global.index', 'configuracion-global.show', 'configuracion-global.store', 'configuracion-global.update',
+            'configuracion-global.ganancias', 'configuracion-global.ganancias.update',
+            'modulos-sidebar.index', 'modulos-sidebar.show',
+            'admin.config', // Puede acceder a configuraciones generales
+            // NO puede: admin.system (configuraciones críticas)
         ];
         $manager->syncPermissions($managerPerms);
+
+        // ============================================
+        // NIVEL 3: Empleado Base - Acceso mínimo
+        // ============================================
+        $empleadoPerms = [
+            'empleados.show',  // Solo puede ver su propio perfil
+        ];
+        $empleado->syncPermissions($empleadoPerms);
+        // Asignar Super Admin al primer usuario
         $firstUser = User::query()->orderBy('id')->first();
-        if ($firstUser !== null && ! $firstUser->hasRole('Admin')) {
-            $firstUser->assignRole('Admin');
+        if ($firstUser !== null && ! $firstUser->hasRole('Super Admin')) {
+            $firstUser->assignRole('Super Admin');
         }
     }
 }

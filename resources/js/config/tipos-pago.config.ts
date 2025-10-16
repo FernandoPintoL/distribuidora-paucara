@@ -1,6 +1,6 @@
 // Configuration: Tipos de Pago module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { TipoPago, TipoPagoFormData } from '@/domain/tipos-pago';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { TipoPago, TipoPagoFormData } from '@/domain/entities/tipos-pago';
 
 export const tiposPagoConfig: ModuleConfig<TipoPago, TipoPagoFormData> = {
   // Module identification

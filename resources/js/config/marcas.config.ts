@@ -1,6 +1,6 @@
 // Configuration: Marcas module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Marca, MarcaFormData } from '@/domain/marcas';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Marca, MarcaFormData } from '@/domain/entities/marcas';
 
 export const marcasConfig: ModuleConfig<Marca, MarcaFormData> = {
   // Module identification

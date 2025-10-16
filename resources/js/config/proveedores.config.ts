@@ -1,7 +1,8 @@
 // Configuration: Proveedores module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Proveedor, ProveedorFormData } from '@/domain/proveedores';
-import FileUploadPreview from '@/components/generic/FileUploadPreview';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Proveedor, ProveedorFormData } from '@/domain/entities/proveedores';
+import FileUploadPreview from '@/presentation/components/generic/FileUploadPreview';
+import MapPicker from '@/presentation/components/maps/MapPicker';
 import { createElement } from 'react';
 
 export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
@@ -74,6 +75,30 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
             type: 'text',
             placeholder: 'Nombre del contacto principal',
         },
+        // Campo personalizado para ubicación en mapa
+        {
+            key: 'coordenadas',
+            label: 'Ubicación en el mapa',
+            type: 'custom',
+            render: ({ value, onChange, disabled, formData }) => {
+                // formData contiene latitud y longitud separados
+                const latitud = (formData as any)?.latitud;
+                const longitud = (formData as any)?.longitud;
+
+                return createElement(MapPicker, {
+                    latitude: latitud,
+                    longitude: longitud,
+                    onLocationSelect: (lat: number, lng: number, address?: string) => {
+                        // Actualizar los campos latitud y longitud
+                        onChange({ latitud: lat, longitud: lng, address });
+                    },
+                    label: 'Ubicación del proveedor',
+                    description: 'Selecciona la ubicación del proveedor en el mapa',
+                    disabled: Boolean(disabled),
+                    height: '350px'
+                });
+            }
+        },
         {
             key: 'foto_perfil',
             label: 'Foto de perfil (opcional)',
@@ -82,8 +107,8 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
                 createElement(FileUploadPreview, {
                     label,
                     name: 'foto_perfil',
-                    value,
-                    onChange,
+                    value: value as File | string | null,
+                    onChange: onChange as (file: File | null) => void,
                     previewType: 'circle',
                     disabled,
                 }),
@@ -96,8 +121,8 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
                 createElement(FileUploadPreview, {
                     label,
                     name: 'ci_anverso',
-                    value,
-                    onChange,
+                    value: value as File | string | null,
+                    onChange: onChange as (file: File | null) => void,
                     previewType: 'rect',
                     disabled,
                 }),
@@ -110,8 +135,8 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
                 createElement(FileUploadPreview, {
                     label,
                     name: 'ci_reverso',
-                    value,
-                    onChange,
+                    value: value as File | string | null,
+                    onChange: onChange as (file: File | null) => void,
                     previewType: 'rect',
                     disabled,
                 }),

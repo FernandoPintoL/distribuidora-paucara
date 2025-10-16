@@ -53,14 +53,14 @@ class DatabaseSeeder extends Seeder
                 $admin->forceFill(['usernick' => 'admin'])->save();
             }
         }
-        // darle el rol de admin a $admin
-        $admin->assignRole('Admin');
+        // Darle el rol de Super Admin al usuario admin principal
+        $admin->assignRole('Super Admin');
 
-        // Asegurar que el rol Admin tenga todos los permisos creados por el seeder
-        $adminRole = Role::where('name', 'Admin')->first();
-        if ($adminRole) {
-            // Sincronizar todos los permisos disponibles al rol Admin
-            $adminRole->syncPermissions(Permission::all());
+        // Asegurar que el rol Super Admin tenga todos los permisos
+        $superAdminRole = Role::where('name', 'Super Admin')->first();
+        if ($superAdminRole) {
+            // Sincronizar todos los permisos disponibles al rol Super Admin
+            $superAdminRole->syncPermissions(Permission::all());
         }
 
     }

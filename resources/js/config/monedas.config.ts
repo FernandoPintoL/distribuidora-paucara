@@ -1,6 +1,6 @@
 // Configuration: Monedas module configuration
-import type { ModuleConfig } from '@/domain/generic';
-import type { Moneda, MonedaFormData } from '@/domain/monedas';
+import type { ModuleConfig } from '@/domain/entities/generic';
+import type { Moneda, MonedaFormData } from '@/domain/entities/monedas';
 
 
 export const monedasConfig: ModuleConfig<Moneda, MonedaFormData> = {
