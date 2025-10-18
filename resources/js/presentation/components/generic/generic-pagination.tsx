@@ -22,9 +22,9 @@ export default function GenericPagination({ links, isLoading = false }: GenericP
         NotificationService.info(`Navegando a la página ${cleanLabel}...`);
       }
 
-      router.visit(url, {
-        preserveState: true,
-        preserveScroll: true,
+      router.get(url, {}, {
+        preserveState: false,
+        preserveScroll: false,
         onError: (errors) => {
           NotificationService.error('Error al navegar entre páginas');
           console.error('Pagination errors:', errors);

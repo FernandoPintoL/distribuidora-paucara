@@ -602,6 +602,333 @@ extenderReservas.post = (args: { proforma: number | { id: number } } | [proforma
     
     extenderReservas.form = extenderReservasForm
 /**
+* @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
+ * @see app/Http/Controllers/Api/ApiProformaController.php:470
+ * @route '/api/app/pedidos'
+ */
+export const crearPedidoDesdeApp = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearPedidoDesdeApp.url(options),
+    method: 'post',
+})
+
+crearPedidoDesdeApp.definition = {
+    methods: ["post"],
+    url: '/api/app/pedidos',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
+ * @see app/Http/Controllers/Api/ApiProformaController.php:470
+ * @route '/api/app/pedidos'
+ */
+crearPedidoDesdeApp.url = (options?: RouteQueryOptions) => {
+    return crearPedidoDesdeApp.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
+ * @see app/Http/Controllers/Api/ApiProformaController.php:470
+ * @route '/api/app/pedidos'
+ */
+crearPedidoDesdeApp.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearPedidoDesdeApp.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
+ * @see app/Http/Controllers/Api/ApiProformaController.php:470
+ * @route '/api/app/pedidos'
+ */
+    const crearPedidoDesdeAppForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearPedidoDesdeApp.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
+ * @see app/Http/Controllers/Api/ApiProformaController.php:470
+ * @route '/api/app/pedidos'
+ */
+        crearPedidoDesdeAppForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearPedidoDesdeApp.url(options),
+            method: 'post',
+        })
+    
+    crearPedidoDesdeApp.form = crearPedidoDesdeAppForm
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
+ * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @route '/api/app/cliente/pedidos'
+ */
+export const obtenerHistorialPedidos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerHistorialPedidos.url(options),
+    method: 'get',
+})
+
+obtenerHistorialPedidos.definition = {
+    methods: ["get","head"],
+    url: '/api/app/cliente/pedidos',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
+ * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @route '/api/app/cliente/pedidos'
+ */
+obtenerHistorialPedidos.url = (options?: RouteQueryOptions) => {
+    return obtenerHistorialPedidos.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
+ * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @route '/api/app/cliente/pedidos'
+ */
+obtenerHistorialPedidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerHistorialPedidos.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
+ * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @route '/api/app/cliente/pedidos'
+ */
+obtenerHistorialPedidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerHistorialPedidos.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
+ * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @route '/api/app/cliente/pedidos'
+ */
+    const obtenerHistorialPedidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerHistorialPedidos.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
+ * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @route '/api/app/cliente/pedidos'
+ */
+        obtenerHistorialPedidosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerHistorialPedidos.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
+ * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @route '/api/app/cliente/pedidos'
+ */
+        obtenerHistorialPedidosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerHistorialPedidos.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerHistorialPedidos.form = obtenerHistorialPedidosForm
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @route '/api/app/pedidos/{id}'
+ */
+export const obtenerDetallePedido = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerDetallePedido.url(args, options),
+    method: 'get',
+})
+
+obtenerDetallePedido.definition = {
+    methods: ["get","head"],
+    url: '/api/app/pedidos/{id}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @route '/api/app/pedidos/{id}'
+ */
+obtenerDetallePedido.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return obtenerDetallePedido.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @route '/api/app/pedidos/{id}'
+ */
+obtenerDetallePedido.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerDetallePedido.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @route '/api/app/pedidos/{id}'
+ */
+obtenerDetallePedido.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerDetallePedido.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @route '/api/app/pedidos/{id}'
+ */
+    const obtenerDetallePedidoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerDetallePedido.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @route '/api/app/pedidos/{id}'
+ */
+        obtenerDetallePedidoForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDetallePedido.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @route '/api/app/pedidos/{id}'
+ */
+        obtenerDetallePedidoForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDetallePedido.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerDetallePedido.form = obtenerDetallePedidoForm
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+export const obtenerEstadoPedido = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerEstadoPedido.url(args, options),
+    method: 'get',
+})
+
+obtenerEstadoPedido.definition = {
+    methods: ["get","head"],
+    url: '/api/app/pedidos/{id}/estado',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+obtenerEstadoPedido.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return obtenerEstadoPedido.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+obtenerEstadoPedido.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerEstadoPedido.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+obtenerEstadoPedido.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerEstadoPedido.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+    const obtenerEstadoPedidoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerEstadoPedido.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+        obtenerEstadoPedidoForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerEstadoPedido.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+        obtenerEstadoPedidoForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerEstadoPedido.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerEstadoPedido.form = obtenerEstadoPedidoForm
+/**
 * @see \App\Http\Controllers\Api\ApiProformaController::verificarStock
  * @see app/Http/Controllers/Api/ApiProformaController.php:347
  * @route '/api/app/verificar-stock'
@@ -970,6 +1297,6 @@ rechazar.post = (args: { proforma: number | { id: number } } | [proforma: number
         })
     
     rechazar.form = rechazarForm
-const ApiProformaController = { index, store, show, verificarEstado, verificarReservas, extenderReservas, verificarStock, obtenerProductosDisponibles, listarParaDashboard, aprobar, rechazar }
+const ApiProformaController = { index, store, show, verificarEstado, verificarReservas, extenderReservas, crearPedidoDesdeApp, obtenerHistorialPedidos, obtenerDetallePedido, obtenerEstadoPedido, verificarStock, obtenerProductosDisponibles, listarParaDashboard, aprobar, rechazar }
 
 export default ApiProformaController
