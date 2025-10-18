@@ -57,6 +57,52 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Verificar que el usuario esté activo
+        $user = Auth::user();
+
+        // 1. Verificar si el User tiene el campo activo en false
+        if (isset($user->activo) && !$user->activo) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Tu cuenta de usuario está inactiva. Contacta al administrador.',
+            ]);
+        }
+
+        // 2. Si es un cliente, verificar que el Cliente también esté activo
+        if ($user->cliente) {
+            if (!$user->cliente->activo) {
+                Auth::logout();
+                RateLimiter::hit($this->throttleKey());
+
+                throw ValidationException::withMessages([
+                    'email' => 'Tu cuenta de cliente está inactiva. Contacta al administrador.',
+                ]);
+            }
+        }
+
+        // 3. Si es un empleado, verificar que pueda acceder al sistema
+        if ($user->empleado) {
+            if (!$user->empleado->puedeAccederSistema()) {
+                Auth::logout();
+                RateLimiter::hit($this->throttleKey());
+
+                $mensaje = 'Tu cuenta de empleado no tiene acceso al sistema.';
+
+                // Mensaje más específico según el problema
+                if (!$user->empleado->estaActivo()) {
+                    $mensaje = 'Tu cuenta de empleado está inactiva. Contacta al administrador.';
+                } elseif (!$user->empleado->puede_acceder_sistema) {
+                    $mensaje = 'No tienes permisos para acceder al sistema. Contacta al administrador.';
+                }
+
+                throw ValidationException::withMessages([
+                    'email' => $mensaje,
+                ]);
+            }
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

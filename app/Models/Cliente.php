@@ -24,8 +24,6 @@ class Cliente extends Model
         'foto_perfil',
         'ci_anverso',
         'ci_reverso',
-        'latitud',
-        'longitud',
         'localidad_id',
         'codigo_cliente',
         'user_id',
@@ -36,8 +34,6 @@ class Cliente extends Model
         'activo'         => 'boolean',
         'fecha_registro' => 'datetime',
         'limite_credito' => 'decimal:2',
-        'latitud'        => 'decimal:8',
-        'longitud'       => 'decimal:8',
     ];
 
     public function localidad()

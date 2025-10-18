@@ -234,6 +234,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('{merma}/aprobar', [\App\Http\Controllers\InventarioController::class, 'aprobarMerma'])->middleware('permission:inventario.mermas.aprobar')->name('aprobar');
             Route::post('{merma}/rechazar', [\App\Http\Controllers\InventarioController::class, 'rechazarMerma'])->middleware('permission:inventario.mermas.rechazar')->name('rechazar');
         });
+
+        // Rutas para carga masiva de inventario inicial
+        Route::get('inventario-inicial', [\App\Http\Controllers\InventarioInicialController::class, 'index'])->middleware('permission:inventario.ajuste.form')->name('inicial.index');
+        Route::post('inventario-inicial', [\App\Http\Controllers\InventarioInicialController::class, 'store'])->middleware('permission:inventario.ajuste.procesar')->name('inicial.store');
     });
 
     // Rutas para logística y envíos

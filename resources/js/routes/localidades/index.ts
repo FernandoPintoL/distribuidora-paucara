@@ -80,7 +80,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\LocalidadController::create
- * @see app/Http/Controllers/LocalidadController.php:133
+ * @see app/Http/Controllers/LocalidadController.php:136
  * @route '/localidades/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -95,7 +95,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::create
- * @see app/Http/Controllers/LocalidadController.php:133
+ * @see app/Http/Controllers/LocalidadController.php:136
  * @route '/localidades/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -104,7 +104,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::create
- * @see app/Http/Controllers/LocalidadController.php:133
+ * @see app/Http/Controllers/LocalidadController.php:136
  * @route '/localidades/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -113,7 +113,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\LocalidadController::create
- * @see app/Http/Controllers/LocalidadController.php:133
+ * @see app/Http/Controllers/LocalidadController.php:136
  * @route '/localidades/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -123,7 +123,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\LocalidadController::create
- * @see app/Http/Controllers/LocalidadController.php:133
+ * @see app/Http/Controllers/LocalidadController.php:136
  * @route '/localidades/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -133,7 +133,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\LocalidadController::create
- * @see app/Http/Controllers/LocalidadController.php:133
+ * @see app/Http/Controllers/LocalidadController.php:136
  * @route '/localidades/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -142,7 +142,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\LocalidadController::create
- * @see app/Http/Controllers/LocalidadController.php:133
+ * @see app/Http/Controllers/LocalidadController.php:136
  * @route '/localidades/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -158,7 +158,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\LocalidadController::store
- * @see app/Http/Controllers/LocalidadController.php:140
+ * @see app/Http/Controllers/LocalidadController.php:143
  * @route '/localidades'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -173,7 +173,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::store
- * @see app/Http/Controllers/LocalidadController.php:140
+ * @see app/Http/Controllers/LocalidadController.php:143
  * @route '/localidades'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -182,7 +182,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::store
- * @see app/Http/Controllers/LocalidadController.php:140
+ * @see app/Http/Controllers/LocalidadController.php:143
  * @route '/localidades'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -192,7 +192,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\LocalidadController::store
- * @see app/Http/Controllers/LocalidadController.php:140
+ * @see app/Http/Controllers/LocalidadController.php:143
  * @route '/localidades'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -202,7 +202,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\LocalidadController::store
- * @see app/Http/Controllers/LocalidadController.php:140
+ * @see app/Http/Controllers/LocalidadController.php:143
  * @route '/localidades'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -213,7 +213,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\LocalidadController::show
- * @see app/Http/Controllers/LocalidadController.php:154
+ * @see app/Http/Controllers/LocalidadController.php:157
  * @route '/localidades/{localidade}'
  */
 export const show = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -228,7 +228,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::show
- * @see app/Http/Controllers/LocalidadController.php:154
+ * @see app/Http/Controllers/LocalidadController.php:157
  * @route '/localidades/{localidade}'
  */
 show.url = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -256,7 +256,7 @@ show.url = (args: { localidade: string | number } | [localidade: string | number
 
 /**
 * @see \App\Http\Controllers\LocalidadController::show
- * @see app/Http/Controllers/LocalidadController.php:154
+ * @see app/Http/Controllers/LocalidadController.php:157
  * @route '/localidades/{localidade}'
  */
 show.get = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -265,7 +265,7 @@ show.get = (args: { localidade: string | number } | [localidade: string | number
 })
 /**
 * @see \App\Http\Controllers\LocalidadController::show
- * @see app/Http/Controllers/LocalidadController.php:154
+ * @see app/Http/Controllers/LocalidadController.php:157
  * @route '/localidades/{localidade}'
  */
 show.head = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -275,7 +275,7 @@ show.head = (args: { localidade: string | number } | [localidade: string | numbe
 
     /**
 * @see \App\Http\Controllers\LocalidadController::show
- * @see app/Http/Controllers/LocalidadController.php:154
+ * @see app/Http/Controllers/LocalidadController.php:157
  * @route '/localidades/{localidade}'
  */
     const showForm = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -285,7 +285,7 @@ show.head = (args: { localidade: string | number } | [localidade: string | numbe
 
             /**
 * @see \App\Http\Controllers\LocalidadController::show
- * @see app/Http/Controllers/LocalidadController.php:154
+ * @see app/Http/Controllers/LocalidadController.php:157
  * @route '/localidades/{localidade}'
  */
         showForm.get = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -294,7 +294,7 @@ show.head = (args: { localidade: string | number } | [localidade: string | numbe
         })
             /**
 * @see \App\Http\Controllers\LocalidadController::show
- * @see app/Http/Controllers/LocalidadController.php:154
+ * @see app/Http/Controllers/LocalidadController.php:157
  * @route '/localidades/{localidade}'
  */
         showForm.head = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -310,7 +310,7 @@ show.head = (args: { localidade: string | number } | [localidade: string | numbe
     show.form = showForm
 /**
 * @see \App\Http\Controllers\LocalidadController::edit
- * @see app/Http/Controllers/LocalidadController.php:161
+ * @see app/Http/Controllers/LocalidadController.php:164
  * @route '/localidades/{localidade}/edit'
  */
 export const edit = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -325,7 +325,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::edit
- * @see app/Http/Controllers/LocalidadController.php:161
+ * @see app/Http/Controllers/LocalidadController.php:164
  * @route '/localidades/{localidade}/edit'
  */
 edit.url = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -353,7 +353,7 @@ edit.url = (args: { localidade: string | number } | [localidade: string | number
 
 /**
 * @see \App\Http\Controllers\LocalidadController::edit
- * @see app/Http/Controllers/LocalidadController.php:161
+ * @see app/Http/Controllers/LocalidadController.php:164
  * @route '/localidades/{localidade}/edit'
  */
 edit.get = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -362,7 +362,7 @@ edit.get = (args: { localidade: string | number } | [localidade: string | number
 })
 /**
 * @see \App\Http\Controllers\LocalidadController::edit
- * @see app/Http/Controllers/LocalidadController.php:161
+ * @see app/Http/Controllers/LocalidadController.php:164
  * @route '/localidades/{localidade}/edit'
  */
 edit.head = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -372,7 +372,7 @@ edit.head = (args: { localidade: string | number } | [localidade: string | numbe
 
     /**
 * @see \App\Http\Controllers\LocalidadController::edit
- * @see app/Http/Controllers/LocalidadController.php:161
+ * @see app/Http/Controllers/LocalidadController.php:164
  * @route '/localidades/{localidade}/edit'
  */
     const editForm = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -382,7 +382,7 @@ edit.head = (args: { localidade: string | number } | [localidade: string | numbe
 
             /**
 * @see \App\Http\Controllers\LocalidadController::edit
- * @see app/Http/Controllers/LocalidadController.php:161
+ * @see app/Http/Controllers/LocalidadController.php:164
  * @route '/localidades/{localidade}/edit'
  */
         editForm.get = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -391,7 +391,7 @@ edit.head = (args: { localidade: string | number } | [localidade: string | numbe
         })
             /**
 * @see \App\Http\Controllers\LocalidadController::edit
- * @see app/Http/Controllers/LocalidadController.php:161
+ * @see app/Http/Controllers/LocalidadController.php:164
  * @route '/localidades/{localidade}/edit'
  */
         editForm.head = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -407,7 +407,7 @@ edit.head = (args: { localidade: string | number } | [localidade: string | numbe
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\LocalidadController::update
- * @see app/Http/Controllers/LocalidadController.php:168
+ * @see app/Http/Controllers/LocalidadController.php:171
  * @route '/localidades/{localidade}'
  */
 export const update = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -422,7 +422,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::update
- * @see app/Http/Controllers/LocalidadController.php:168
+ * @see app/Http/Controllers/LocalidadController.php:171
  * @route '/localidades/{localidade}'
  */
 update.url = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -450,7 +450,7 @@ update.url = (args: { localidade: string | number } | [localidade: string | numb
 
 /**
 * @see \App\Http\Controllers\LocalidadController::update
- * @see app/Http/Controllers/LocalidadController.php:168
+ * @see app/Http/Controllers/LocalidadController.php:171
  * @route '/localidades/{localidade}'
  */
 update.put = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -459,7 +459,7 @@ update.put = (args: { localidade: string | number } | [localidade: string | numb
 })
 /**
 * @see \App\Http\Controllers\LocalidadController::update
- * @see app/Http/Controllers/LocalidadController.php:168
+ * @see app/Http/Controllers/LocalidadController.php:171
  * @route '/localidades/{localidade}'
  */
 update.patch = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -469,7 +469,7 @@ update.patch = (args: { localidade: string | number } | [localidade: string | nu
 
     /**
 * @see \App\Http\Controllers\LocalidadController::update
- * @see app/Http/Controllers/LocalidadController.php:168
+ * @see app/Http/Controllers/LocalidadController.php:171
  * @route '/localidades/{localidade}'
  */
     const updateForm = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -484,7 +484,7 @@ update.patch = (args: { localidade: string | number } | [localidade: string | nu
 
             /**
 * @see \App\Http\Controllers\LocalidadController::update
- * @see app/Http/Controllers/LocalidadController.php:168
+ * @see app/Http/Controllers/LocalidadController.php:171
  * @route '/localidades/{localidade}'
  */
         updateForm.put = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -498,7 +498,7 @@ update.patch = (args: { localidade: string | number } | [localidade: string | nu
         })
             /**
 * @see \App\Http\Controllers\LocalidadController::update
- * @see app/Http/Controllers/LocalidadController.php:168
+ * @see app/Http/Controllers/LocalidadController.php:171
  * @route '/localidades/{localidade}'
  */
         updateForm.patch = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -514,7 +514,7 @@ update.patch = (args: { localidade: string | number } | [localidade: string | nu
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\LocalidadController::destroy
- * @see app/Http/Controllers/LocalidadController.php:181
+ * @see app/Http/Controllers/LocalidadController.php:184
  * @route '/localidades/{localidade}'
  */
 export const destroy = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -529,7 +529,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\LocalidadController::destroy
- * @see app/Http/Controllers/LocalidadController.php:181
+ * @see app/Http/Controllers/LocalidadController.php:184
  * @route '/localidades/{localidade}'
  */
 destroy.url = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -557,7 +557,7 @@ destroy.url = (args: { localidade: string | number } | [localidade: string | num
 
 /**
 * @see \App\Http\Controllers\LocalidadController::destroy
- * @see app/Http/Controllers/LocalidadController.php:181
+ * @see app/Http/Controllers/LocalidadController.php:184
  * @route '/localidades/{localidade}'
  */
 destroy.delete = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -567,7 +567,7 @@ destroy.delete = (args: { localidade: string | number } | [localidade: string | 
 
     /**
 * @see \App\Http\Controllers\LocalidadController::destroy
- * @see app/Http/Controllers/LocalidadController.php:181
+ * @see app/Http/Controllers/LocalidadController.php:184
  * @route '/localidades/{localidade}'
  */
     const destroyForm = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -582,7 +582,7 @@ destroy.delete = (args: { localidade: string | number } | [localidade: string | 
 
             /**
 * @see \App\Http\Controllers\LocalidadController::destroy
- * @see app/Http/Controllers/LocalidadController.php:181
+ * @see app/Http/Controllers/LocalidadController.php:184
  * @route '/localidades/{localidade}'
  */
         destroyForm.delete = (args: { localidade: string | number } | [localidade: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

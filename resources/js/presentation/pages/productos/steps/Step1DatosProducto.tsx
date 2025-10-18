@@ -10,12 +10,14 @@ interface Option { value: number | string; label: string; description?: string }
 export interface Step1Props {
   data: {
     nombre: string;
+    sku?: string | null;
     descripcion?: string | null;
     peso?: number | null;
     unidad_medida_id?: number | string;
     categoria_id?: number | string;
     marca_id?: number | string;
     proveedor_id?: number | string;
+    proveedor?: { id: number; nombre: string; razon_social?: string } | null;
     activo?: boolean;
     stock_minimo?: number | null;
     stock_maximo?: number | null;
@@ -30,6 +32,12 @@ export interface Step1Props {
 }
 
 export default function Step1DatosProducto({ data, errors, categoriasOptions, marcasOptions, proveedoresOptions, unidadesOptions, setData, getInputClassName }: Step1Props) {
+  // 🔍 LOGS PARA DEBUG
+  console.log('📦 Step1DatosProducto - Data recibida:', data);
+  console.log('👤 Proveedor en data:', data.proveedor);
+  console.log('🆔 proveedor_id en data:', data.proveedor_id);
+  console.log('📋 proveedoresOptions:', proveedoresOptions);
+
   // Función de búsqueda para proveedores
   const searchProveedores = async (query: string) => {
     console.log('🔍 Buscando proveedores con query:', query);
@@ -64,7 +72,7 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
         <div className="text-xs text-muted-foreground">Complete la información general del producto</div>
       </div> */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-1 sm:col-span-2">
+        <div className="space-y-1 sm:col-span-1">
           <Label htmlFor="nombre">Nombre *</Label>
           <Input
             id="nombre"
@@ -74,6 +82,20 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
             className={getInputClassName('nombre')}
           />
           {errors.nombre && <div className="text-red-500 text-sm mt-1">⚠️ {errors.nombre}</div>}
+        </div>
+        <div className="space-y-1 sm:col-span-1">
+          <Label htmlFor="sku">SKU / Código (opcional)</Label>
+          <Input
+            id="sku"
+            value={data.sku ?? ''}
+            onChange={e => setData('sku', e.target.value)}
+            placeholder="Se genera automáticamente"
+            className={getInputClassName('sku')}
+          />
+          {errors.sku && <div className="text-red-500 text-sm mt-1">⚠️ {errors.sku}</div>}
+          <div className="text-xs text-muted-foreground mt-1">
+            💡 Si no lo ingresas, se generará automáticamente (ej.: PRO0001)
+          </div>
         </div>
         <div className="space-y-1">
           <InputSearch
@@ -144,7 +166,11 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
 
               createProveedor(searchQuery);
             }}
-            displayValue={proveedoresOptions.find(opt => opt.value === data.proveedor_id)?.label}
+            displayValue={
+              data.proveedor
+                ? `${data.proveedor.nombre}${data.proveedor.razon_social ? ` - ${data.proveedor.razon_social}` : ''}`
+                : proveedoresOptions.find(opt => opt.value === data.proveedor_id)?.label
+            }
           />
           <div className="text-xs text-muted-foreground mt-1 px-1">
             💡 Si no encuentras el proveedor, puedes crearlo haciendo clic en el botón ➕. El sistema evitará crear proveedores con nombres duplicados.
@@ -218,7 +244,8 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
           />
           {errors.peso && <div className="text-red-500 text-sm mt-1">⚠️ {errors.peso}</div>}
         </div>
-        <div className="flex items-center gap-2 mt-6">
+        {/* 🆕 Campo activo oculto - el valor por defecto (true) se establece en form.tsx */}
+        <div className="hidden">
           <Checkbox id="activo" checked={!!data.activo} onCheckedChange={(v) => setData('activo', !!v)} />
           <Label htmlFor="activo">Activo</Label>
         </div>
@@ -233,34 +260,57 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
           {errors.descripcion && <div className="text-red-500 text-sm mt-1">⚠️ {errors.descripcion}</div>}
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-        <div className="space-y-1">
-          <Label htmlFor="stock_minimo">Stock Mínimo</Label>
-          <Input
-            id="stock_minimo"
-            type="number"
-            min="0"
-            step="1"
-            value={data.stock_minimo ?? ''}
-            onChange={e => setData('stock_minimo', e.target.value ? Number(e.target.value) : null)}
-            className={getInputClassName('stock_minimo')}
-            placeholder="Cantidad mínima en stock"
-          />
-          {errors.stock_minimo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.stock_minimo}</div>}
+      <div className="space-y-3 mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-start gap-2">
+          <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="text-sm text-blue-800 dark:text-blue-200">
+            <strong>Alertas de Stock Globales:</strong> Estos valores son para TODAS las ubicaciones (almacenes) sumadas.
+            El stock real de cada almacén se gestiona desde <strong>Movimientos de Inventario</strong>.
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="stock_maximo">Stock Máximo</Label>
-          <Input
-            id="stock_maximo"
-            type="number"
-            min="0"
-            step="1"
-            value={data.stock_maximo ?? ''}
-            onChange={e => setData('stock_maximo', e.target.value ? Number(e.target.value) : null)}
-            className={getInputClassName('stock_maximo')}
-            placeholder="Cantidad máxima en stock"
-          />
-          {errors.stock_maximo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.stock_maximo}</div>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label htmlFor="stock_minimo" className="flex items-center gap-2">
+              Stock Mínimo
+              <span className="text-xs font-normal text-muted-foreground">(Alerta global)</span>
+            </Label>
+            <Input
+              id="stock_minimo"
+              type="number"
+              min="0"
+              step="1"
+              value={data.stock_minimo ?? ''}
+              onChange={e => setData('stock_minimo', e.target.value ? Number(e.target.value) : null)}
+              className={getInputClassName('stock_minimo')}
+              placeholder="Ej: 10"
+            />
+            {errors.stock_minimo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.stock_minimo}</div>}
+            <div className="text-xs text-muted-foreground">
+              💡 Recibirás una alerta cuando el stock total sea menor a este valor
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="stock_maximo" className="flex items-center gap-2">
+              Stock Máximo
+              <span className="text-xs font-normal text-muted-foreground">(Alerta global)</span>
+            </Label>
+            <Input
+              id="stock_maximo"
+              type="number"
+              min="0"
+              step="1"
+              value={data.stock_maximo ?? ''}
+              onChange={e => setData('stock_maximo', e.target.value ? Number(e.target.value) : null)}
+              className={getInputClassName('stock_maximo')}
+              placeholder="Ej: 100"
+            />
+            {errors.stock_maximo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.stock_maximo}</div>}
+            <div className="text-xs text-muted-foreground">
+              💡 Recibirás una alerta cuando el stock total supere este valor
+            </div>
+          </div>
         </div>
       </div>
     </div>

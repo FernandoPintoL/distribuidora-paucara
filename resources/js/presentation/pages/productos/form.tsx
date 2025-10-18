@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/components/ui/tabs';
 import { useEntitySelect } from '@/presentation/hooks/use-search-select';
 import NotificationService from '@/infrastructure/services/notification.service';
 import productosService from '@/infrastructure/services/productos.service';
@@ -30,6 +31,7 @@ interface ProductoFormPageProps {
 // Porcentaje de interés global recibido por props (opcional) se mostrará en la UI y puede ayudar a calcular precios
 const initialProductoData: ProductoFormData = {
   nombre: '',
+  sku: '',
   descripcion: '',
   peso: null,
   unidad_medida_id: '',
@@ -51,12 +53,17 @@ const initialProductoData: ProductoFormData = {
 };
 
 export default function ProductoForm({ producto, categorias, marcas, proveedores, unidades, tipos_precio, configuraciones_ganancias, historial_precios }: ProductoFormPageProps) {
+  // 🔍 LOGS PARA DEBUG
+  console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
+  console.log('👤 Proveedor en producto:', producto?.proveedor);
+  console.log('🆔 proveedor_id en producto:', producto?.proveedor_id);
+  console.log('📋 Lista de proveedores disponibles:', proveedores);
+
   // Normalizadores para compatibilidad: el backend puede enviar {id,nombre,...} o {value,label,...}
   const isEditing = !!producto?.id;
   const porcentajeInteres = Number(configuraciones_ganancias?.porcentaje_interes_general ?? 0);
-  // Estado para controlar pasos del formulario (wizard)
-  const [step, setStep] = useState<number>(1);
-  const totalSteps = 3;
+  // Estado para controlar el tab activo (siempre inicia en "datos")
+  const [activeTab, setActiveTab] = useState<string>('datos');
   const DRAFT_KEY = 'producto_form_draft_v1';
 
   // Configurar hooks de búsqueda para cada entidad
@@ -74,6 +81,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
   const { data, setData, processing, errors, recentlySuccessful, clearErrors } = useForm<ProductoFormData>(
     producto ? {
       nombre: producto.nombre,
+      sku: producto.sku ?? '',
       descripcion: producto.descripcion ?? '',
       peso: producto.peso ?? null,
       unidad_medida_id: producto.unidad_medida_id ? Number(producto.unidad_medida_id) : '',
@@ -82,6 +90,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
       categoria_id: producto.categoria_id ? Number(producto.categoria_id) : '',
       marca_id: producto.marca_id ? Number(producto.marca_id) : '',
       proveedor_id: producto.proveedor_id ? Number(producto.proveedor_id) : '',
+      proveedor: producto.proveedor ?? null,
       activo: producto.activo ?? true,
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
@@ -92,7 +101,12 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     } : initialProductoData
   );
 
+  console.log('💾 useForm data inicializada:', data);
+  console.log('👤 Proveedor en data del useForm:', data.proveedor);
+  console.log('🆔 proveedor_id en data del useForm:', data.proveedor_id);
+
   // Autosave: restaurar borrador en carga inicial (solo creación)
+  // Nota: Siempre abre en el tab "datos", solo restaura los datos del formulario
   useEffect(() => {
     if (typeof window === 'undefined') { return; }
     if (isEditing) { return; }
@@ -102,10 +116,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
       const draftUnknown = JSON.parse(raw) as unknown;
       if (!draftUnknown || typeof draftUnknown !== 'object') { return; }
       const draft = draftUnknown as Record<string, unknown>;
-      const nextStep = Number((draft.step as number | string | undefined) ?? 1);
-      if (nextStep >= 1 && nextStep <= totalSteps) {
-        setStep(nextStep);
-      }
+      // NO restauramos el tab, siempre iniciamos en "datos"
       const restoredData = (draft.data as Record<string, unknown> | undefined);
       if (restoredData && typeof restoredData === 'object') {
         try {
@@ -116,19 +127,19 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
         } catch (err) {
           console.warn('No se pudo restaurar completamente el borrador', err);
         }
-        NotificationService.info('Se restauró tu borrador del producto.');
+        // Borrador restaurado silenciosamente
       }
     } catch (e) {
       console.warn('Borrador inválido, se ignora.', e);
     }
   }, [isEditing, setData]);
 
-  // Autosave: guardar borrador al cambiar datos o paso (solo creación)
+  // Autosave: guardar borrador al cambiar datos o tab (solo creación)
   useEffect(() => {
     if (typeof window === 'undefined') { return; }
     if (isEditing) { return; }
     try {
-      const payload = { step, data, ts: Date.now() };
+      const payload = { activeTab, data, ts: Date.now() };
       const replacer = (key: string, value: unknown) => (key === 'file' ? undefined : value);
       // Omitimos cualquier propiedad llamada "file" (File/Blob) para evitar errores de serialización
       localStorage.setItem(
@@ -138,7 +149,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     } catch (err) {
       console.warn('No se pudo guardar el borrador', err);
     }
-  }, [data, step, isEditing, setData]);
+  }, [data, activeTab, isEditing, setData]);
 
   // Mostrar notificaciones de éxito
   useEffect(() => {
@@ -149,58 +160,33 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     }
   }, [recentlySuccessful, isEditing]);
 
-  // Mostrar errores específicos del backend
-  useEffect(() => {
-    if (Object.keys(errors).length > 0) {
-      // Mostrar el primer error específico del backend de forma segura
-      const firstErrorKey = Object.keys(errors)[0];
-      const firstError = errors[firstErrorKey] as unknown;
-      if (firstError) {
-        const message = Array.isArray(firstError) ? (firstError as unknown[]).map(x => String(x)).join(', ') : String(firstError);
-        NotificationService.error(`Error en ${firstErrorKey}: ${message}`);
-      }
-    }
-  }, [errors]);
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Si no es el último paso, validar y avanzar al siguiente
-    // Evitar instanciaciones de tipos profundas en clearErrors
+    // Limpiar errores previos
     (clearErrors as unknown as () => void)();
-    if (step < totalSteps) {
-      // Validaciones por paso
-      if (step === 1) {
-        if (!data.nombre || !String(data.nombre).trim()) {
-          NotificationService.error('El nombre del producto es requerido');
-          return;
-        }
-      }
-      if (step === 2) {
-        const preciosValidos = (data.precios || []).filter((p: Precio) => Number(p.monto) > 0);
-        if (preciosValidos.length === 0) {
-          NotificationService.warning('Debe agregar al menos un precio válido');
-          return;
-        }
-      }
 
-      setStep(step + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    // Último paso: realizar validaciones finales y enviar
-    // Validaciones básicas finales
+    // Validación básica: si no hay nombre, ir a tab de datos pero dejar que el backend valide
     if (!data.nombre || !String(data.nombre).trim()) {
-      NotificationService.error('El nombre del producto es requerido');
-      setStep(1);
-      return;
+      setActiveTab('datos');
+      // El backend mostrará el error al recibir la respuesta
     }
+
+    // Advertencia si no hay precios, pero permitir guardar
     const preciosValidos = (data.precios || []).filter((p: Precio) => Number(p.monto) > 0);
     if (preciosValidos.length === 0) {
-      NotificationService.warning('Debe agregar al menos un precio válido');
-      setStep(2);
-      return;
+      const confirmed = await NotificationService.confirm(
+        '⚠️ El producto no tiene ningún precio definido. No podrá venderse hasta que definas al menos un precio. ¿Deseas continuar?',
+        {
+          confirmText: 'Guardar sin precio',
+          cancelText: 'Cancelar'
+        }
+      );
+
+      if (!confirmed) {
+        setActiveTab('precios');
+        return;
+      }
     }
 
     const formData = new FormData();
@@ -208,6 +194,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     // Campos básicos
     Object.entries({
       nombre: data.nombre.trim(),
+      sku: data.sku?.trim() ?? '',
       descripcion: data.descripcion?.trim() ?? '',
       peso: data.peso ?? '',
       unidad_medida_id: data.unidad_medida_id || '',
@@ -330,13 +317,12 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
   const addCodigo = () => {
     const nuevosCodigos = [...(data.codigos || []), { codigo: '' }];
     setData('codigos', nuevosCodigos);
-    NotificationService.info('Código agregado. Ingresa el código de barras.');
   };
 
   const removeCodigo = async (i: number) => {
     const items = (data.codigos || []);
     if (items.length <= 1) {
-      NotificationService.warning('Debe mantener al menos un código');
+      // No permitir eliminar el último código (validación silenciosa)
       return;
     }
 
@@ -351,15 +337,11 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     if (confirmed) {
       const codigosFiltrados = (data.codigos || []).filter((_: unknown, idx: number) => idx !== i);
       setData('codigos', codigosFiltrados);
-      NotificationService.success('Código eliminado');
     }
   };
 
   const setPerfil = (file: File | undefined) => {
     setData('perfil', file ? { file } : undefined);
-    if (file) {
-      NotificationService.success('Imagen de perfil seleccionada');
-    }
   };
 
   const addGaleria = (files: FileList | null) => {
@@ -368,7 +350,6 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     const imgs = Array.from(files).map(f => ({ file: f } as Imagen));
     const nuevaGaleria = [...(data.galeria ?? []), ...imgs];
     setData('galeria', nuevaGaleria);
-    NotificationService.success(`${files.length} imagen(es) agregada(s) a la galería`);
   };
 
   const removeGaleria = async (i: number) => {
@@ -383,7 +364,6 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     if (confirmed) {
       const galeriaFiltrada = (data.galeria ?? []).filter((_: unknown, idx: number) => idx !== i);
       setData('galeria', galeriaFiltrada);
-      NotificationService.success('Imagen eliminada de la galería');
     }
   };
 
@@ -408,11 +388,10 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
 
       if (confirmed) {
         localStorage.removeItem(DRAFT_KEY);
-        NotificationService.success('Borrador eliminado correctamente');
       }
     } catch (err) {
       console.warn('Error al limpiar el borrador', err);
-      NotificationService.error('Error al limpiar el borrador');
+      // Error silencioso, no mostrar notificación
     }
   };
 
@@ -453,33 +432,28 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={submit} className="space-y-6">
-              {/* Barra de progreso simple */}
-              <div className="flex items-center gap-2">
-                {[1, 2, 3].map(s => (
-                  <div key={s} className={`px-3 py-1 rounded-full text-xs font-medium ${step === s ? 'bg-blue-600 text-white' : 'bg-secondary text-muted-foreground'}`}>
-                    Paso {s}
-                  </div>
-                ))}
-              </div>
+            <Tabs defaultValue="datos" value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="datos">Datos del producto</TabsTrigger>
+                <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
+                <TabsTrigger value="imagenes">Imágenes</TabsTrigger>
+              </TabsList>
 
-              {/* STEP 1: Datos del producto */}
-              {step === 1 && (
-                <Step1DatosProducto
-                  data={data}
-                  errors={errors}
-                  categoriasOptions={categoriasSelect.filteredOptions}
-                  marcasOptions={marcasSelect.filteredOptions}
-                  proveedoresOptions={proveedoresSelect.filteredOptions}
-                  unidadesOptions={unidadesSelect.filteredOptions}
-                  setData={setData}
-                  getInputClassName={getInputClassName}
-                />
-              )}
+              <form onSubmit={submit} className="space-y-6">
+                <TabsContent value="datos" className="space-y-6 mt-6">
+                  <Step1DatosProducto
+                    data={data}
+                    errors={errors}
+                    categoriasOptions={categoriasSelect.filteredOptions}
+                    marcasOptions={marcasSelect.filteredOptions}
+                    proveedoresOptions={proveedoresSelect.filteredOptions}
+                    unidadesOptions={unidadesSelect.filteredOptions}
+                    setData={setData}
+                    getInputClassName={getInputClassName}
+                  />
+                </TabsContent>
 
-              <div className="space-y-6">
-                {/* STEP 2: Precios y códigos */}
-                {step === 2 && (
+                <TabsContent value="precios" className="space-y-6 mt-6">
                   <Step2PreciosCodigos
                     data={{ precios: data.precios, codigos: data.codigos }}
                     errors={errors}
@@ -498,19 +472,18 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
                     setCodigo={setCodigo}
                     historial_precios={historial_precios}
                   />
-                )}
+                </TabsContent>
 
-                {/* STEP 3: Imágenes */}
-                {step === 3 && (
+                <TabsContent value="imagenes" className="space-y-6 mt-6">
                   <Step4Imagenes
                     data={{ perfil: data.perfil ?? undefined, galeria: data.galeria ?? [] }}
                     setPerfil={setPerfil}
                     addGaleria={addGaleria}
                     removeGaleria={removeGaleria}
                   />
-                )}
-              </div>
-            </form>
+                </TabsContent>
+              </form>
+            </Tabs>
           </CardContent>
 
           <CardFooter>
@@ -520,25 +493,18 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
                   {processing ? 'Procesando...' : 'Cancelar'}
                 </Link>
               </Button>
-              <div className="flex items-center gap-2">
-                {step > 1 && (
-                  <Button type="button" variant="outline" onClick={() => setStep(step - 1)} disabled={processing}>
-                    Volver
-                  </Button>
+              <Button
+                type="submit"
+                disabled={processing}
+                onClick={submit}
+                className="min-w-[140px]"
+              >
+                {processing ? (
+                  <span className="flex items-center gap-2">Procesando...</span>
+                ) : (
+                  'Guardar producto'
                 )}
-                <Button
-                  type="submit"
-                  disabled={processing}
-                  onClick={submit}
-                  className="min-w-[140px]"
-                >
-                  {processing ? (
-                    <span className="flex items-center gap-2">Procesando...</span>
-                  ) : (
-                    step < totalSteps ? 'Siguiente' : 'Guardar producto'
-                  )}
-                </Button>
-              </div>
+              </Button>
             </div>
           </CardFooter>
         </Card>

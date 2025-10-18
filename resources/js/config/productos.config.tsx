@@ -34,38 +34,113 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
           <img
             src={value.url}
             alt={entity.nombre}
-            className="w-12 h-12 object-cover rounded shadow border border-border bg-white"
+            className="w-14 h-14 object-cover rounded-lg shadow-sm border-2 border-border bg-white ring-2 ring-transparent hover:ring-blue-400/50 transition-all"
             loading="lazy"
           />
         ) : (
-          <span className="text-xs text-muted-foreground italic">Sin imagen</span>
+          <div className="w-14 h-14 flex items-center justify-center rounded-lg bg-secondary/50 border border-border">
+            <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
         ),
     },
     { key: 'nombre', label: 'Nombre', type: 'text', sortable: true },
-    { key: 'codigo_barras', label: 'Código', type: 'text', sortable: true },
+    {
+      key: 'sku',
+      label: 'SKU',
+      type: 'custom',
+      sortable: true,
+      render: (value) => value ? (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 font-mono text-xs font-semibold border border-indigo-200 dark:border-indigo-700">
+          {value}
+        </span>
+      ) : (
+        <span className="text-muted-foreground/40 italic text-xs">—</span>
+      )
+    },
+    { key: 'codigo_barras', label: 'Código de Barra', type: 'text', sortable: true },
     { key: 'marca', label: 'Marca', type: 'text' },
     { key: 'categoria', label: 'Categoría', type: 'text' },
     { key: 'proveedor', label: 'Proveedor', type: 'text' },
-    { key: 'precio_base', label: 'Precio', type: 'custom', sortable: true, render: v => <span className="font-mono text-sm">{currency(v)}</span> },
-    { key: 'stock_total', label: 'Stock', type: 'number', sortable: true },
-    { key: 'activo', label: 'Estado', type: 'boolean' },
     {
+      key: 'precio_base',
+      label: 'Precio',
+      type: 'custom',
+      sortable: true,
+      render: v => v && v > 0 ? (
+        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 border-2 border-green-200 dark:border-green-700">
+          <span className="font-mono text-sm font-bold text-green-700 dark:text-green-200">{currency(v)}</span>
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/40 dark:to-orange-900/40 border-2 border-amber-300 dark:border-amber-700">
+          <svg className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-bold text-amber-700 dark:text-amber-200">Sin precio</span>
+        </span>
+      )
+    },
+    {
+      key: 'stock_total',
+      label: 'Stock',
+      type: 'custom',
+      sortable: true,
+      render: (value, entity) => {
+        const stock = value ?? 0;
+        const stockMin = entity.stock_minimo ?? 5;
+
+        let badgeClasses = '';
+        let icon = '';
+        let text = '';
+
+        if (stock === 0) {
+          badgeClasses = 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/40 dark:to-red-800/40 border-2 border-red-300 dark:border-red-700 text-red-700 dark:text-red-200';
+          icon = '🚫';
+          text = 'Agotado';
+        } else if (stock < stockMin) {
+          badgeClasses = 'bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 border-2 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-200';
+          icon = '⚠️';
+          text = 'Bajo';
+        } else {
+          badgeClasses = 'bg-gradient-to-r from-emerald-50 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40 border-2 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-200';
+          icon = '✓';
+          text = 'OK';
+        }
+
+        return (
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-sm ${badgeClasses}`}>
+              <span>{icon}</span>
+              <span className="font-mono">{stock}</span>
+              <span className="text-[10px] font-semibold opacity-70">({text})</span>
+            </span>
+          </div>
+        );
+      }
+    },
+    { key: 'activo', label: 'Estado', type: 'boolean' },
+    /* {
       key: 'historial_precios',
       label: 'Historial',
       type: 'custom',
+      hidden: true,
       render: (value, entity, openHistorialModal) => (
         <button
           type="button"
-          className="text-blue-600 underline text-xs hover:text-blue-800"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 text-xs font-semibold border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors"
           onClick={e => {
             e.stopPropagation();
             if (openHistorialModal) openHistorialModal(entity);
           }}
         >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           Ver historial
         </button>
       ),
-    },
+    }, */
   ],
 
   // Form configuration
@@ -122,13 +197,15 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
     {
       key: 'activo',
       label: 'Producto activo',
-      type: 'boolean'
+      type: 'boolean',
+      defaultValue: true, // 🆕 Por defecto activo al crear
+      hidden: true, // 🆕 Oculto en el formulario
     }
   ],
 
   // Search configuration
-  searchableFields: ['nombre', 'codigo_barras', 'descripcion'],
-  searchPlaceholder: 'Buscar productos...',
+  searchableFields: ['nombre', 'codigo_barras', 'sku', 'descripcion'],
+  searchPlaceholder: 'Buscar por nombre, código o SKU...',
 
   // Modern Index filters configuration
   indexFilters: {
@@ -170,6 +247,13 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         type: 'number' as const,
         placeholder: 'Cantidad mínima',
         width: 'sm' as const
+      },
+      {
+        key: 'sin_precio',
+        label: 'Sin precio',
+        type: 'boolean' as const,
+        placeholder: 'Mostrar todos',
+        width: 'sm' as const
       }
     ],
     sortOptions: [
@@ -202,6 +286,9 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
           <span className="absolute top-2 right-2 bg-emerald-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Activo</span>
         ) : (
           <span className="absolute top-2 right-2 bg-red-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Inactivo</span>
+        )}
+        {(!p.precio_base || p.precio_base === 0) && (
+          <span className="absolute bottom-2 left-2 bg-amber-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">⚠️ Sin precio</span>
         )}
       </div>
       <div className="p-3 flex flex-col gap-2">

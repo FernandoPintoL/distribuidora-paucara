@@ -114,6 +114,22 @@ export default function InputSearch({
 
     // Actualizar valor seleccionado cuando cambia el value (solo desde el exterior)
     useEffect(() => {
+        console.log('🔄 InputSearch useEffect - value:', value, 'displayValue:', displayValue, 'isUserTyping:', isUserTypingRef.current);
+        console.log('📊 selectedOption actual:', selectedOption);
+
+        // Si hay displayValue y el query actual no coincide, forzar actualización
+        if (displayValue && query !== displayValue && !isUserTypingRef.current) {
+            console.log('✅ Actualizando con displayValue:', displayValue);
+            setQuery(displayValue);
+            setSelectedOption({
+                value: value || '',
+                label: displayValue,
+                description: ''
+            });
+            lastValueRef.current = value;
+            return;
+        }
+
         // Solo actualizar si el valor cambió desde el exterior (no por la escritura del usuario)
         if (value !== lastValueRef.current && !isUserTypingRef.current) {
             lastValueRef.current = value;
@@ -121,6 +137,7 @@ export default function InputSearch({
             if (value && value !== selectedOption?.value) {
                 // Si se proporciona displayValue, usarlo directamente
                 if (displayValue) {
+                    console.log('✅ Usando displayValue:', displayValue);
                     setQuery(displayValue);
                     setSelectedOption({
                         value: value,
@@ -146,7 +163,7 @@ export default function InputSearch({
             lastValueRef.current = value;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value, selectedOption?.value, displayValue]); // Agregar displayValue a las dependencias
+    }, [value, selectedOption?.value, displayValue, query]); // Agregar query a las dependencias
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newQuery = e.target.value;

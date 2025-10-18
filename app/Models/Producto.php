@@ -15,6 +15,7 @@ class Producto extends Model
 
     protected $fillable = [
         'nombre',
+        'sku',
         'descripcion',
         'peso',
         'unidad_medida_id',
@@ -399,6 +400,14 @@ class Producto extends Model
 
         // Al crear un producto, aplicar configuración global si está habilitada
         static::created(function ($producto) {
+            // 1️⃣ Generar SKU automáticamente si no se proporcionó
+            if (! $producto->sku) {
+                $producto->sku = $producto->generateSku();
+                // Guardar en silencio para evitar eventos recursivos
+                $producto->saveQuietly();
+            }
+
+            // 2️⃣ Configuraciones de ganancia automáticas
             if (ConfiguracionGlobal::aplicarInteresAutomatico()) {
                 // Crear configuraciones de ganancia por defecto para tipos activos
                 $tiposGanancia = TipoPrecio::activos()->ganancias()->get();
@@ -408,6 +417,23 @@ class Producto extends Model
                 }
             }
         });
+    }
+
+    /**
+     * Generar código SKU automático: PRO + ID con padding
+     * Ejemplo: PRO0001, PRO0123, PRO1001
+     */
+    public function generateSku(): string
+    {
+        $numero = (int) $this->id;
+
+        // Para números < 1000: usar padding de 4 dígitos (PRO0001, PRO0123, PRO0999)
+        if ($numero < 1000) {
+            return 'PRO' . str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
+        }
+
+        // Para números >= 1000: usar el número tal cual (PRO1000, PRO1001, ...)
+        return 'PRO' . $numero;
     }
 
     /**

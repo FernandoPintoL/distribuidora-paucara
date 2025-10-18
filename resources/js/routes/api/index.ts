@@ -84,7 +84,7 @@ modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     modulosSidebar.form = modulosSidebarForm
 /**
 * @see \App\Http\Controllers\InventarioController::buscarProductos
- * @see app/Http/Controllers/InventarioController.php:547
+ * @see app/Http/Controllers/InventarioController.php:548
  * @route '/api/buscar-productos'
  */
 export const buscarProductos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -99,7 +99,7 @@ buscarProductos.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::buscarProductos
- * @see app/Http/Controllers/InventarioController.php:547
+ * @see app/Http/Controllers/InventarioController.php:548
  * @route '/api/buscar-productos'
  */
 buscarProductos.url = (options?: RouteQueryOptions) => {
@@ -108,7 +108,7 @@ buscarProductos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::buscarProductos
- * @see app/Http/Controllers/InventarioController.php:547
+ * @see app/Http/Controllers/InventarioController.php:548
  * @route '/api/buscar-productos'
  */
 buscarProductos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -117,7 +117,7 @@ buscarProductos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => (
 })
 /**
 * @see \App\Http\Controllers\InventarioController::buscarProductos
- * @see app/Http/Controllers/InventarioController.php:547
+ * @see app/Http/Controllers/InventarioController.php:548
  * @route '/api/buscar-productos'
  */
 buscarProductos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -127,7 +127,7 @@ buscarProductos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
     /**
 * @see \App\Http\Controllers\InventarioController::buscarProductos
- * @see app/Http/Controllers/InventarioController.php:547
+ * @see app/Http/Controllers/InventarioController.php:548
  * @route '/api/buscar-productos'
  */
     const buscarProductosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -137,7 +137,7 @@ buscarProductos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
             /**
 * @see \App\Http\Controllers\InventarioController::buscarProductos
- * @see app/Http/Controllers/InventarioController.php:547
+ * @see app/Http/Controllers/InventarioController.php:548
  * @route '/api/buscar-productos'
  */
         buscarProductosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -146,7 +146,7 @@ buscarProductos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
         })
             /**
 * @see \App\Http\Controllers\InventarioController::buscarProductos
- * @see app/Http/Controllers/InventarioController.php:547
+ * @see app/Http/Controllers/InventarioController.php:548
  * @route '/api/buscar-productos'
  */
         buscarProductosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -162,7 +162,7 @@ buscarProductos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
     buscarProductos.form = buscarProductosForm
 /**
 * @see \App\Http\Controllers\InventarioController::stockProducto
- * @see app/Http/Controllers/InventarioController.php:573
+ * @see app/Http/Controllers/InventarioController.php:575
  * @route '/api/stock-producto/{producto}'
  */
 export const stockProducto = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -177,7 +177,7 @@ stockProducto.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::stockProducto
- * @see app/Http/Controllers/InventarioController.php:573
+ * @see app/Http/Controllers/InventarioController.php:575
  * @route '/api/stock-producto/{producto}'
  */
 stockProducto.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -210,7 +210,7 @@ stockProducto.url = (args: { producto: number | { id: number } } | [producto: nu
 
 /**
 * @see \App\Http\Controllers\InventarioController::stockProducto
- * @see app/Http/Controllers/InventarioController.php:573
+ * @see app/Http/Controllers/InventarioController.php:575
  * @route '/api/stock-producto/{producto}'
  */
 stockProducto.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -219,7 +219,7 @@ stockProducto.get = (args: { producto: number | { id: number } } | [producto: nu
 })
 /**
 * @see \App\Http\Controllers\InventarioController::stockProducto
- * @see app/Http/Controllers/InventarioController.php:573
+ * @see app/Http/Controllers/InventarioController.php:575
  * @route '/api/stock-producto/{producto}'
  */
 stockProducto.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -229,7 +229,7 @@ stockProducto.head = (args: { producto: number | { id: number } } | [producto: n
 
     /**
 * @see \App\Http\Controllers\InventarioController::stockProducto
- * @see app/Http/Controllers/InventarioController.php:573
+ * @see app/Http/Controllers/InventarioController.php:575
  * @route '/api/stock-producto/{producto}'
  */
     const stockProductoForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -239,7 +239,7 @@ stockProducto.head = (args: { producto: number | { id: number } } | [producto: n
 
             /**
 * @see \App\Http\Controllers\InventarioController::stockProducto
- * @see app/Http/Controllers/InventarioController.php:573
+ * @see app/Http/Controllers/InventarioController.php:575
  * @route '/api/stock-producto/{producto}'
  */
         stockProductoForm.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -248,7 +248,7 @@ stockProducto.head = (args: { producto: number | { id: number } } | [producto: n
         })
             /**
 * @see \App\Http\Controllers\InventarioController::stockProducto
- * @see app/Http/Controllers/InventarioController.php:573
+ * @see app/Http/Controllers/InventarioController.php:575
  * @route '/api/stock-producto/{producto}'
  */
         stockProductoForm.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -264,7 +264,7 @@ stockProducto.head = (args: { producto: number | { id: number } } | [producto: n
     stockProducto.form = stockProductoForm
 /**
 * @see \App\Http\Controllers\InventarioController::vehiculos
- * @see app/Http/Controllers/InventarioController.php:925
+ * @see app/Http/Controllers/InventarioController.php:927
  * @route '/api/vehiculos'
  */
 export const vehiculos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -279,7 +279,7 @@ vehiculos.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::vehiculos
- * @see app/Http/Controllers/InventarioController.php:925
+ * @see app/Http/Controllers/InventarioController.php:927
  * @route '/api/vehiculos'
  */
 vehiculos.url = (options?: RouteQueryOptions) => {
@@ -288,7 +288,7 @@ vehiculos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::vehiculos
- * @see app/Http/Controllers/InventarioController.php:925
+ * @see app/Http/Controllers/InventarioController.php:927
  * @route '/api/vehiculos'
  */
 vehiculos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -297,7 +297,7 @@ vehiculos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::vehiculos
- * @see app/Http/Controllers/InventarioController.php:925
+ * @see app/Http/Controllers/InventarioController.php:927
  * @route '/api/vehiculos'
  */
 vehiculos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -307,7 +307,7 @@ vehiculos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::vehiculos
- * @see app/Http/Controllers/InventarioController.php:925
+ * @see app/Http/Controllers/InventarioController.php:927
  * @route '/api/vehiculos'
  */
     const vehiculosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -317,7 +317,7 @@ vehiculos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::vehiculos
- * @see app/Http/Controllers/InventarioController.php:925
+ * @see app/Http/Controllers/InventarioController.php:927
  * @route '/api/vehiculos'
  */
         vehiculosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -326,7 +326,7 @@ vehiculos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::vehiculos
- * @see app/Http/Controllers/InventarioController.php:925
+ * @see app/Http/Controllers/InventarioController.php:927
  * @route '/api/vehiculos'
  */
         vehiculosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -342,7 +342,7 @@ vehiculos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     vehiculos.form = vehiculosForm
 /**
 * @see \App\Http\Controllers\InventarioController::choferes
- * @see app/Http/Controllers/InventarioController.php:935
+ * @see app/Http/Controllers/InventarioController.php:937
  * @route '/api/choferes'
  */
 export const choferes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -357,7 +357,7 @@ choferes.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::choferes
- * @see app/Http/Controllers/InventarioController.php:935
+ * @see app/Http/Controllers/InventarioController.php:937
  * @route '/api/choferes'
  */
 choferes.url = (options?: RouteQueryOptions) => {
@@ -366,7 +366,7 @@ choferes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::choferes
- * @see app/Http/Controllers/InventarioController.php:935
+ * @see app/Http/Controllers/InventarioController.php:937
  * @route '/api/choferes'
  */
 choferes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -375,7 +375,7 @@ choferes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::choferes
- * @see app/Http/Controllers/InventarioController.php:935
+ * @see app/Http/Controllers/InventarioController.php:937
  * @route '/api/choferes'
  */
 choferes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -385,7 +385,7 @@ choferes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::choferes
- * @see app/Http/Controllers/InventarioController.php:935
+ * @see app/Http/Controllers/InventarioController.php:937
  * @route '/api/choferes'
  */
     const choferesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -395,7 +395,7 @@ choferes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::choferes
- * @see app/Http/Controllers/InventarioController.php:935
+ * @see app/Http/Controllers/InventarioController.php:937
  * @route '/api/choferes'
  */
         choferesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -404,7 +404,7 @@ choferes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::choferes
- * @see app/Http/Controllers/InventarioController.php:935
+ * @see app/Http/Controllers/InventarioController.php:937
  * @route '/api/choferes'
  */
         choferesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

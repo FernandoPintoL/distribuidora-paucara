@@ -292,11 +292,13 @@ class EjemploProductoController extends Controller
             return response()->json(['success' => true, 'data' => []]);
         }
 
+        // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+        $searchLower = strtolower($q);
         $productos = Producto::select(['id', 'nombre', 'codigo', 'precio', 'stock_disponible'])
             ->where('activo', true)
-            ->where(function ($query) use ($q) {
-                $query->where('nombre', 'like', "%$q%")
-                    ->orWhere('codigo', 'like', "%$q%");
+            ->where(function ($query) use ($searchLower) {
+                $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
             })
             ->limit($limite)
             ->get();

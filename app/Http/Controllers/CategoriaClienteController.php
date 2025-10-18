@@ -21,10 +21,11 @@ class CategoriaClienteController extends Controller
 
         $query = CategoriaCliente::query()
             ->when($q, function ($qbuilder) use ($q) {
-                $qbuilder->where(function ($sub) use ($q) {
-                    $sub->where('clave', 'like', "%$q%")
-                        ->orWhere('nombre', 'like', "%$q%")
-                        ->orWhere('descripcion', 'like', "%$q%");
+                $searchLower = strtolower($q);
+                $qbuilder->where(function ($sub) use ($searchLower) {
+                    $sub->whereRaw('LOWER(clave) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"]);
                 });
             })
             ->when($soloActivas, fn ($qbuilder) => $qbuilder->where('activo', true))

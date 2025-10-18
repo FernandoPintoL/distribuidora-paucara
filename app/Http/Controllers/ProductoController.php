@@ -56,6 +56,7 @@ class ProductoController extends Controller
         $categoriaId = $request->integer('categoria_id');
         $marcaId = $request->integer('marca_id');
         $proveedorId = $request->integer('proveedor_id');
+        $sinPrecio = $request->boolean('sin_precio');
         $orderBy = $request->string('order_by')->toString();
         $orderDir = strtolower($request->string('order_dir')->toString()) === 'asc' ? 'asc' : 'desc';
 
@@ -84,14 +85,23 @@ class ProductoController extends Controller
                 'stock:producto_id,cantidad',
             ])
             ->when($q, function ($qq) use ($q) {
-                $qq->where(function ($sub) use ($q) {
-                    $sub->where('productos.nombre', 'ilike', "%$q%")
-                        ->orWhere('productos.codigo_barras', 'ilike', "%$q%");
+                // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+                $searchLower = strtolower($q);
+                $qq->where(function ($sub) use ($searchLower) {
+                    $sub->whereRaw('LOWER(productos.nombre) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(productos.codigo_barras) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(productos.sku) like ?', ["%$searchLower%"]);
                 });
             })
             ->when($categoriaId, fn ($qq) => $qq->where('productos.categoria_id', $categoriaId))
             ->when($marcaId, fn ($qq) => $qq->where('productos.marca_id', $marcaId))
             ->when($proveedorId, fn ($qq) => $qq->where('productos.proveedor_id', $proveedorId))
+            ->when($sinPrecio, function ($qq) {
+                $qq->whereDoesntHave('precios', function ($precioQuery) {
+                    $precioQuery->where('activo', true)
+                        ->where('precio', '>', 0);
+                });
+            })
             ->select('productos.*')
             ->leftJoinSub(
                 'select producto_id, sum(cantidad) as stock_total_calc from stock_productos group by producto_id',
@@ -132,6 +142,7 @@ class ProductoController extends Controller
                 return [
                     'id' => $producto->id,
                     'nombre' => $producto->nombre,
+                    'sku' => $producto->sku,
                     'descripcion' => $producto->descripcion,
                     'peso' => $producto->peso,
                     'unidad_medida_id' => $producto->unidad_medida_id,
@@ -171,6 +182,7 @@ class ProductoController extends Controller
                 'categoria_id' => $categoriaId ?: null,
                 'marca_id' => $marcaId ?: null,
                 'proveedor_id' => $request->integer('proveedor_id') ?: null,
+                'sin_precio' => $sinPrecio ?: null,
                 'order_by' => $orderBy ?: null,
                 'order_dir' => $orderDir,
             ],
@@ -503,11 +515,16 @@ class ProductoController extends Controller
             'id' => $producto->id,
             'nombre' => $producto->nombre,
             'descripcion' => $producto->descripcion,
-            'sku' => null,
+            'sku' => $producto->sku ?? null,
             'numero' => null,
             'categoria_id' => (int) $producto->categoria_id,
             'marca_id' => (int) $producto->marca_id,
             'proveedor_id' => $producto->proveedor_id ? (int) $producto->proveedor_id : null,
+            'proveedor' => $producto->proveedor ? [
+                'id' => $producto->proveedor->id,
+                'nombre' => $producto->proveedor->nombre,
+                'razon_social' => $producto->proveedor->razon_social,
+            ] : null,
             'peso' => $producto->peso ? (float) $producto->peso : null,
             'unidad_medida_id' => $producto->unidad_medida_id ? (int) $producto->unidad_medida_id : null,
             'fecha_vencimiento' => null,
@@ -772,12 +789,15 @@ class ProductoController extends Controller
         $proveedorId = $request->integer('proveedor_id');
         $activo = $request->boolean('activo', true);
 
+        // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+        $searchLower = $q ? strtolower($q) : '';
         $productos = Producto::with(['categoria:id,nombre', 'marca:id,nombre', 'proveedor:id,nombre,razon_social', 'unidadMedida:id,nombre'])
-            ->when($q, fn ($query) => $query->where(function ($subQuery) use ($q) {
-                $subQuery->where('nombre', 'ilike', "%$q%")
-                    ->orWhere('codigo_barras', 'ilike', "%$q%")
-                    ->orWhere('codigo_qr', 'ilike', "%$q%")
-                    ->orWhere('descripcion', 'ilike', "%$q%");
+            ->when($q, fn ($query) => $query->where(function ($subQuery) use ($searchLower) {
+                $subQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(codigo_barras) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(codigo_qr) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"]);
             }))
             ->when($categoriaId, fn ($query) => $query->where('categoria_id', $categoriaId))
             ->when($marcaId, fn ($query) => $query->where('marca_id', $marcaId))
@@ -930,13 +950,16 @@ class ProductoController extends Controller
             return ApiResponse::success([]);
         }
 
-        $productos = Producto::select(['id', 'nombre', 'codigo_barras', 'categoria_id', 'marca_id'])
+        // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+        $searchLower = strtolower($q);
+        $productos = Producto::select(['id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id'])
             ->where('activo', true)
-            ->where(function ($query) use ($q) {
-                $query->where('nombre', 'LIKE', "%$q%")
-                    ->orWhere('codigo_barras', 'LIKE', "%$q%")
-                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($q) {
-                        $codigoQuery->where('codigo', 'LIKE', "%$q%");
+            ->where(function ($query) use ($searchLower) {
+                $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(codigo_barras) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
+                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                        $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
                     });
             })
             ->with([

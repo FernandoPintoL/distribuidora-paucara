@@ -160,7 +160,8 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             key: 'coordenadas',
             label: 'Ubicación en el mapa',
             type: 'custom',
-            colSpan: 3, // Ocupa todo el ancho
+            colSpan: 3,
+            fullWidth: true, // 🆕 Ocupa TODO el ancho de la pantalla
             section: 'Información Personal',
             render: ({ value, onChange, disabled, formData }) => {
                 // formData contiene latitud y longitud separados
@@ -236,6 +237,7 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             colSpan: 1,
             section: 'Información Laboral',
             hidden: true, // 🆕 OCULTO - Se maneja internamente
+            defaultValue: 'activo', // 🆕 Por defecto activo al crear
         },
         {
             key: 'supervisor_id',

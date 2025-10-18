@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Chofer extends Model
 {
     use HasFactory;
+    protected $table = "choferes_legacy";
 
     protected $fillable = [
         'user_id',
@@ -22,7 +22,7 @@ class Chofer extends Model
 
     protected $casts = [
         'fecha_vencimiento_licencia' => 'date',
-        'activo' => 'boolean',
+        'activo'                     => 'boolean',
     ];
 
     /**

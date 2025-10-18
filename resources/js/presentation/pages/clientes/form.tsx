@@ -20,10 +20,8 @@ const initialClienteData: ClienteFormData = {
   ci_anverso: null,
   ci_reverso: null,
   localidad_id: null,
-  latitud: null,
-  longitud: null,
   activo: true,
-  // Inicializar direcciones como array vacío para que GenericForm contenga la propiedad
+  // Inicializar direcciones como array vacío
   direcciones: [],
 };
 

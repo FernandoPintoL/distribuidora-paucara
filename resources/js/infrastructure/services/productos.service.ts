@@ -1,14 +1,16 @@
-// Application Layer: Productos service
+// Infrastructure: Productos service
 // Encapsulates URL building and navigation logic for productos
 
-import { router } from '@inertiajs/react';
 import Controllers from '@/actions/App/Http/Controllers';
+import { GenericService } from '@/infrastructure/services/generic.service';
 import type { Filters, Id } from '@/domain/entities/shared';
-import type { BaseService } from '@/domain/entities/generic';
 import type { Producto, ProductoFormData } from '@/domain/entities/productos';
-import NotificationService from '@/infrastructure/services/notification.service';
 
-export class ProductosService implements BaseService<Producto, ProductoFormData> {
+export class ProductosService extends GenericService<Producto, ProductoFormData> {
+  constructor() {
+    super('productos');
+  }
+
   indexUrl(params?: { query?: Filters }): string {
     return Controllers.ProductoController.index(params).url;
   }
@@ -33,58 +35,9 @@ export class ProductosService implements BaseService<Producto, ProductoFormData>
     return Controllers.ProductoController.destroy(Number(id)).url;
   }
 
-  search(filters: Filters): void {
-    router.get(this.indexUrl({ query: filters }), {}, {
-      preserveState: true,
-      preserveScroll: true,
-      onError: (errors) => {
-        NotificationService.error('Error al realizar la búsqueda');
-        console.error('Search errors:', errors);
-      }
-    });
-  }
-
-  clearFilters(): void {
-    router.get(this.indexUrl(), {}, {
-      preserveState: true,
-      preserveScroll: true,
-      onError: (errors) => {
-        NotificationService.error('Error al limpiar filtros');
-        console.error('Clear filters errors:', errors);
-      }
-    });
-  }
-
-  destroy(id: Id): void {
-    const loadingToast = NotificationService.loading('Eliminando producto...');
-
-    router.delete(this.destroyUrl(id), {
-      preserveState: true,
-      onSuccess: () => {
-        NotificationService.dismiss(loadingToast);
-        NotificationService.success('Producto eliminado correctamente');
-        router.reload({ only: ['productos'] });
-      },
-      onError: (errors) => {
-        NotificationService.dismiss(loadingToast);
-        NotificationService.error('Error al eliminar el producto');
-        console.error('Delete errors:', errors);
-      }
-    });
-  }
-
-  // Implementación específica de validación para productos
+  // Validación específica para productos (sobrescribe la genérica)
   validateData(data: ProductoFormData): string[] {
-    const errors: string[] = [];
-
-    // Validación básica del nombre
-    if (!data.nombre || data.nombre.trim().length === 0) {
-      errors.push('El nombre es requerido');
-    }
-
-    if (data.nombre && data.nombre.length > 255) {
-      errors.push('El nombre no puede tener más de 255 caracteres');
-    }
+    const errors = super.validateData(data); // 🆕 Llama primero a la validación genérica (incluye nombre)
 
     // Validaciones específicas para productos
     if (!data.categoria_id || data.categoria_id === '') {

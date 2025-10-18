@@ -11,7 +11,7 @@ class DireccionCliente extends Model
     protected $table = 'direcciones_cliente';
 
     protected $fillable = [
-        'cliente_id', 'direccion', 'ciudad', 'departamento', 'codigo_postal', 'latitud', 'longitud', 'es_principal', 'activa', 'observaciones',
+        'cliente_id', 'direccion', 'latitud', 'longitud', 'es_principal', 'activa', 'observaciones',
     ];
 
     protected $casts = [

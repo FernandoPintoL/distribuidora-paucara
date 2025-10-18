@@ -12,6 +12,14 @@ class TipoAjustInventarioSeeder extends Seeder
     {
         $tipos = [
             [
+                'clave'       => 'INVENTARIO_INICIAL',
+                'label'       => 'Inventario Inicial',
+                'descripcion' => 'Carga inicial de inventario al implementar el sistema (usar solo una vez por producto)',
+                'color'       => 'purple',
+                'bg_color'    => 'bg-purple-100 dark:bg-purple-900/20',
+                'text_color'  => 'text-purple-800 dark:text-purple-300',
+            ],
+            [
                 'clave'       => 'AJUSTE_FISICO',
                 'label'       => 'Ajuste por Inventario Físico',
                 'descripcion' => 'Corrección tras conteo físico',

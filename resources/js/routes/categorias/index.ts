@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\CategoriaController::create
- * @see app/Http/Controllers/CategoriaController.php:28
+ * @see app/Http/Controllers/CategoriaController.php:31
  * @route '/categorias/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\CategoriaController::create
- * @see app/Http/Controllers/CategoriaController.php:28
+ * @see app/Http/Controllers/CategoriaController.php:31
  * @route '/categorias/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CategoriaController::create
- * @see app/Http/Controllers/CategoriaController.php:28
+ * @see app/Http/Controllers/CategoriaController.php:31
  * @route '/categorias/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CategoriaController::create
- * @see app/Http/Controllers/CategoriaController.php:28
+ * @see app/Http/Controllers/CategoriaController.php:31
  * @route '/categorias/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CategoriaController::create
- * @see app/Http/Controllers/CategoriaController.php:28
+ * @see app/Http/Controllers/CategoriaController.php:31
  * @route '/categorias/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CategoriaController::create
- * @see app/Http/Controllers/CategoriaController.php:28
+ * @see app/Http/Controllers/CategoriaController.php:31
  * @route '/categorias/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CategoriaController::create
- * @see app/Http/Controllers/CategoriaController.php:28
+ * @see app/Http/Controllers/CategoriaController.php:31
  * @route '/categorias/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\CategoriaController::store
- * @see app/Http/Controllers/CategoriaController.php:35
+ * @see app/Http/Controllers/CategoriaController.php:38
  * @route '/categorias'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\CategoriaController::store
- * @see app/Http/Controllers/CategoriaController.php:35
+ * @see app/Http/Controllers/CategoriaController.php:38
  * @route '/categorias'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CategoriaController::store
- * @see app/Http/Controllers/CategoriaController.php:35
+ * @see app/Http/Controllers/CategoriaController.php:38
  * @route '/categorias'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\CategoriaController::store
- * @see app/Http/Controllers/CategoriaController.php:35
+ * @see app/Http/Controllers/CategoriaController.php:38
  * @route '/categorias'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\CategoriaController::store
- * @see app/Http/Controllers/CategoriaController.php:35
+ * @see app/Http/Controllers/CategoriaController.php:38
  * @route '/categorias'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -309,7 +309,7 @@ show.head = (args: { categoria: string | number } | [categoria: string | number 
     show.form = showForm
 /**
 * @see \App\Http\Controllers\CategoriaController::edit
- * @see app/Http/Controllers/CategoriaController.php:48
+ * @see app/Http/Controllers/CategoriaController.php:51
  * @route '/categorias/{categoria}/edit'
  */
 export const edit = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -324,7 +324,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\CategoriaController::edit
- * @see app/Http/Controllers/CategoriaController.php:48
+ * @see app/Http/Controllers/CategoriaController.php:51
  * @route '/categorias/{categoria}/edit'
  */
 edit.url = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -357,7 +357,7 @@ edit.url = (args: { categoria: number | { id: number } } | [categoria: number | 
 
 /**
 * @see \App\Http\Controllers\CategoriaController::edit
- * @see app/Http/Controllers/CategoriaController.php:48
+ * @see app/Http/Controllers/CategoriaController.php:51
  * @route '/categorias/{categoria}/edit'
  */
 edit.get = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -366,7 +366,7 @@ edit.get = (args: { categoria: number | { id: number } } | [categoria: number | 
 })
 /**
 * @see \App\Http\Controllers\CategoriaController::edit
- * @see app/Http/Controllers/CategoriaController.php:48
+ * @see app/Http/Controllers/CategoriaController.php:51
  * @route '/categorias/{categoria}/edit'
  */
 edit.head = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -376,7 +376,7 @@ edit.head = (args: { categoria: number | { id: number } } | [categoria: number |
 
     /**
 * @see \App\Http\Controllers\CategoriaController::edit
- * @see app/Http/Controllers/CategoriaController.php:48
+ * @see app/Http/Controllers/CategoriaController.php:51
  * @route '/categorias/{categoria}/edit'
  */
     const editForm = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -386,7 +386,7 @@ edit.head = (args: { categoria: number | { id: number } } | [categoria: number |
 
             /**
 * @see \App\Http\Controllers\CategoriaController::edit
- * @see app/Http/Controllers/CategoriaController.php:48
+ * @see app/Http/Controllers/CategoriaController.php:51
  * @route '/categorias/{categoria}/edit'
  */
         editForm.get = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -395,7 +395,7 @@ edit.head = (args: { categoria: number | { id: number } } | [categoria: number |
         })
             /**
 * @see \App\Http\Controllers\CategoriaController::edit
- * @see app/Http/Controllers/CategoriaController.php:48
+ * @see app/Http/Controllers/CategoriaController.php:51
  * @route '/categorias/{categoria}/edit'
  */
         editForm.head = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -411,7 +411,7 @@ edit.head = (args: { categoria: number | { id: number } } | [categoria: number |
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\CategoriaController::update
- * @see app/Http/Controllers/CategoriaController.php:55
+ * @see app/Http/Controllers/CategoriaController.php:58
  * @route '/categorias/{categoria}'
  */
 export const update = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -426,7 +426,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\CategoriaController::update
- * @see app/Http/Controllers/CategoriaController.php:55
+ * @see app/Http/Controllers/CategoriaController.php:58
  * @route '/categorias/{categoria}'
  */
 update.url = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -459,7 +459,7 @@ update.url = (args: { categoria: number | { id: number } } | [categoria: number 
 
 /**
 * @see \App\Http\Controllers\CategoriaController::update
- * @see app/Http/Controllers/CategoriaController.php:55
+ * @see app/Http/Controllers/CategoriaController.php:58
  * @route '/categorias/{categoria}'
  */
 update.put = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -468,7 +468,7 @@ update.put = (args: { categoria: number | { id: number } } | [categoria: number 
 })
 /**
 * @see \App\Http\Controllers\CategoriaController::update
- * @see app/Http/Controllers/CategoriaController.php:55
+ * @see app/Http/Controllers/CategoriaController.php:58
  * @route '/categorias/{categoria}'
  */
 update.patch = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -478,7 +478,7 @@ update.patch = (args: { categoria: number | { id: number } } | [categoria: numbe
 
     /**
 * @see \App\Http\Controllers\CategoriaController::update
- * @see app/Http/Controllers/CategoriaController.php:55
+ * @see app/Http/Controllers/CategoriaController.php:58
  * @route '/categorias/{categoria}'
  */
     const updateForm = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -493,7 +493,7 @@ update.patch = (args: { categoria: number | { id: number } } | [categoria: numbe
 
             /**
 * @see \App\Http\Controllers\CategoriaController::update
- * @see app/Http/Controllers/CategoriaController.php:55
+ * @see app/Http/Controllers/CategoriaController.php:58
  * @route '/categorias/{categoria}'
  */
         updateForm.put = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -507,7 +507,7 @@ update.patch = (args: { categoria: number | { id: number } } | [categoria: numbe
         })
             /**
 * @see \App\Http\Controllers\CategoriaController::update
- * @see app/Http/Controllers/CategoriaController.php:55
+ * @see app/Http/Controllers/CategoriaController.php:58
  * @route '/categorias/{categoria}'
  */
         updateForm.patch = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -523,7 +523,7 @@ update.patch = (args: { categoria: number | { id: number } } | [categoria: numbe
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\CategoriaController::destroy
- * @see app/Http/Controllers/CategoriaController.php:67
+ * @see app/Http/Controllers/CategoriaController.php:70
  * @route '/categorias/{categoria}'
  */
 export const destroy = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -538,7 +538,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\CategoriaController::destroy
- * @see app/Http/Controllers/CategoriaController.php:67
+ * @see app/Http/Controllers/CategoriaController.php:70
  * @route '/categorias/{categoria}'
  */
 destroy.url = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -571,7 +571,7 @@ destroy.url = (args: { categoria: number | { id: number } } | [categoria: number
 
 /**
 * @see \App\Http\Controllers\CategoriaController::destroy
- * @see app/Http/Controllers/CategoriaController.php:67
+ * @see app/Http/Controllers/CategoriaController.php:70
  * @route '/categorias/{categoria}'
  */
 destroy.delete = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -581,7 +581,7 @@ destroy.delete = (args: { categoria: number | { id: number } } | [categoria: num
 
     /**
 * @see \App\Http\Controllers\CategoriaController::destroy
- * @see app/Http/Controllers/CategoriaController.php:67
+ * @see app/Http/Controllers/CategoriaController.php:70
  * @route '/categorias/{categoria}'
  */
     const destroyForm = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -596,7 +596,7 @@ destroy.delete = (args: { categoria: number | { id: number } } | [categoria: num
 
             /**
 * @see \App\Http\Controllers\CategoriaController::destroy
- * @see app/Http/Controllers/CategoriaController.php:67
+ * @see app/Http/Controllers/CategoriaController.php:70
  * @route '/categorias/{categoria}'
  */
         destroyForm.delete = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

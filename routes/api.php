@@ -61,6 +61,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{proforma}/extender-reservas', [ApiProformaController::class, 'extenderReservas']);
     });
 
+    // 🛒 ENDPOINTS DE PEDIDOS OPTIMIZADOS PARA LA APP DEL CLIENTE
+    // Estos endpoints están optimizados específicamente para la app móvil:
+    // - Usan el cliente autenticado automáticamente
+    // - Validan dirección de entrega
+    // - Reservan stock automáticamente
+    // - Retornan respuestas optimizadas para la interfaz móvil
+
+    // Crear nuevo pedido
+    Route::post('app/pedidos', [ApiProformaController::class, 'crearPedidoDesdeApp']);
+
+    // Consultar historial de pedidos del cliente
+    Route::get('app/cliente/pedidos', [ApiProformaController::class, 'obtenerHistorialPedidos']);
+
+    // Ver detalle completo de un pedido
+    Route::get('app/pedidos/{id}', [ApiProformaController::class, 'obtenerDetallePedido']);
+
+    // Verificar solo el estado actual de un pedido (endpoint ligero)
+    Route::get('app/pedidos/{id}/estado', [ApiProformaController::class, 'obtenerEstadoPedido']);
+
     // Verificación de stock
     Route::post('/app/verificar-stock', [ApiProformaController::class, 'verificarStock']);
 

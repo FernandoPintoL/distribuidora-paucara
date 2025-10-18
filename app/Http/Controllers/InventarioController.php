@@ -100,7 +100,8 @@ class InventarioController extends Controller
 
         if ($q) {
             $query->whereHas('producto', function ($productQuery) use ($q) {
-                $productQuery->where('nombre', 'ilike', "%$q%");
+                $searchLower = strtolower($q);
+                $productQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
             });
         }
 
@@ -553,7 +554,8 @@ class InventarioController extends Controller
             return ApiResponse::success([]);
         }
 
-        $productos = Producto::where('nombre', 'ilike', "%$q%")
+        $searchLower = strtolower($q);
+        $productos = Producto::whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
             ->where('activo', true)
             ->with(['stock' => function ($query) use ($almacenId) {
                 if ($almacenId) {

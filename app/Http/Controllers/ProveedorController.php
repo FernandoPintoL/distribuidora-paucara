@@ -37,13 +37,15 @@ class ProveedorController extends Controller
 
         $items = Proveedor::query()
             ->when($q, function ($query) use ($q) {
-                $query->where(function ($sub) use ($q) {
-                    $sub->where('nombre', 'like', "%$q%")
-                        ->orWhere('razon_social', 'like', "%$q%")
-                        ->orWhere('nit', 'like', "%$q%")
-                        ->orWhere('telefono', 'like', "%$q%")
-                        ->orWhere('email', 'like', "%$q%")
-                        ->orWhere('contacto', 'like', "%$q%");
+                // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+                $searchLower = strtolower($q);
+                $query->where(function ($sub) use ($searchLower) {
+                    $sub->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(razon_social) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(nit) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(telefono) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(email) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(contacto) like ?', ["%$searchLower%"]);
                 });
             })
             ->when($activo !== null, function ($query) use ($activo) {
@@ -74,15 +76,17 @@ class ProveedorController extends Controller
             ]);
         }
 
+        // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+        $searchLower = strtolower($q);
         $proveedores = Proveedor::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email', 'contacto', 'activo'])
             ->where('activo', true)
-            ->where(function ($query) use ($q) {
-                $query->where('nombre', 'like', "%$q%")
-                    ->orWhere('razon_social', 'like', "%$q%")
-                    ->orWhere('nit', 'like', "%$q%")
-                    ->orWhere('telefono', 'like', "%$q%")
-                    ->orWhere('email', 'like', "%$q%")
-                    ->orWhere('contacto', 'like', "%$q%");
+            ->where(function ($query) use ($searchLower) {
+                $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(razon_social) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(nit) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(telefono) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(email) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(contacto) like ?', ["%$searchLower%"]);
             })
             ->limit($limite)
             ->get();

@@ -14,7 +14,11 @@ class UnidadMedidaController extends Controller
     {
         $q = $request->string('q');
         $items = UnidadMedida::query()
-            ->when($q, fn ($qq) => $qq->where('nombre', 'ilike', "%$q%")->orWhere('codigo', 'ilike', "%$q%"))
+            ->when($q, function ($qq) use ($q) {
+                $searchLower = strtolower($q);
+                $qq->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
+            })
             ->orderBy('id', 'desc')
             ->paginate(10)
             ->withQueryString();

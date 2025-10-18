@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::create
- * @see app/Http/Controllers/TipoPrecioController.php:39
+ * @see app/Http/Controllers/TipoPrecioController.php:40
  * @route '/tipos-precio/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::create
- * @see app/Http/Controllers/TipoPrecioController.php:39
+ * @see app/Http/Controllers/TipoPrecioController.php:40
  * @route '/tipos-precio/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::create
- * @see app/Http/Controllers/TipoPrecioController.php:39
+ * @see app/Http/Controllers/TipoPrecioController.php:40
  * @route '/tipos-precio/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\TipoPrecioController::create
- * @see app/Http/Controllers/TipoPrecioController.php:39
+ * @see app/Http/Controllers/TipoPrecioController.php:40
  * @route '/tipos-precio/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\TipoPrecioController::create
- * @see app/Http/Controllers/TipoPrecioController.php:39
+ * @see app/Http/Controllers/TipoPrecioController.php:40
  * @route '/tipos-precio/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\TipoPrecioController::create
- * @see app/Http/Controllers/TipoPrecioController.php:39
+ * @see app/Http/Controllers/TipoPrecioController.php:40
  * @route '/tipos-precio/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\TipoPrecioController::create
- * @see app/Http/Controllers/TipoPrecioController.php:39
+ * @see app/Http/Controllers/TipoPrecioController.php:40
  * @route '/tipos-precio/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::store
- * @see app/Http/Controllers/TipoPrecioController.php:47
+ * @see app/Http/Controllers/TipoPrecioController.php:48
  * @route '/tipos-precio'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::store
- * @see app/Http/Controllers/TipoPrecioController.php:47
+ * @see app/Http/Controllers/TipoPrecioController.php:48
  * @route '/tipos-precio'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::store
- * @see app/Http/Controllers/TipoPrecioController.php:47
+ * @see app/Http/Controllers/TipoPrecioController.php:48
  * @route '/tipos-precio'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\TipoPrecioController::store
- * @see app/Http/Controllers/TipoPrecioController.php:47
+ * @see app/Http/Controllers/TipoPrecioController.php:48
  * @route '/tipos-precio'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\TipoPrecioController::store
- * @see app/Http/Controllers/TipoPrecioController.php:47
+ * @see app/Http/Controllers/TipoPrecioController.php:48
  * @route '/tipos-precio'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +212,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::show
- * @see app/Http/Controllers/TipoPrecioController.php:89
+ * @see app/Http/Controllers/TipoPrecioController.php:90
  * @route '/tipos-precio/{tipoPrecio}'
  */
 export const show = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +227,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::show
- * @see app/Http/Controllers/TipoPrecioController.php:89
+ * @see app/Http/Controllers/TipoPrecioController.php:90
  * @route '/tipos-precio/{tipoPrecio}'
  */
 show.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -260,7 +260,7 @@ show.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number 
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::show
- * @see app/Http/Controllers/TipoPrecioController.php:89
+ * @see app/Http/Controllers/TipoPrecioController.php:90
  * @route '/tipos-precio/{tipoPrecio}'
  */
 show.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -269,7 +269,7 @@ show.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number 
 })
 /**
 * @see \App\Http\Controllers\TipoPrecioController::show
- * @see app/Http/Controllers/TipoPrecioController.php:89
+ * @see app/Http/Controllers/TipoPrecioController.php:90
  * @route '/tipos-precio/{tipoPrecio}'
  */
 show.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -279,7 +279,7 @@ show.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
 
     /**
 * @see \App\Http\Controllers\TipoPrecioController::show
- * @see app/Http/Controllers/TipoPrecioController.php:89
+ * @see app/Http/Controllers/TipoPrecioController.php:90
  * @route '/tipos-precio/{tipoPrecio}'
  */
     const showForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -289,7 +289,7 @@ show.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
 
             /**
 * @see \App\Http\Controllers\TipoPrecioController::show
- * @see app/Http/Controllers/TipoPrecioController.php:89
+ * @see app/Http/Controllers/TipoPrecioController.php:90
  * @route '/tipos-precio/{tipoPrecio}'
  */
         showForm.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -298,7 +298,7 @@ show.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
         })
             /**
 * @see \App\Http\Controllers\TipoPrecioController::show
- * @see app/Http/Controllers/TipoPrecioController.php:89
+ * @see app/Http/Controllers/TipoPrecioController.php:90
  * @route '/tipos-precio/{tipoPrecio}'
  */
         showForm.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -314,7 +314,7 @@ show.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
     show.form = showForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
- * @see app/Http/Controllers/TipoPrecioController.php:110
+ * @see app/Http/Controllers/TipoPrecioController.php:111
  * @route '/tipos-precio/{tipoPrecio}/edit'
  */
 export const edit = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -329,7 +329,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
- * @see app/Http/Controllers/TipoPrecioController.php:110
+ * @see app/Http/Controllers/TipoPrecioController.php:111
  * @route '/tipos-precio/{tipoPrecio}/edit'
  */
 edit.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -362,7 +362,7 @@ edit.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number 
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
- * @see app/Http/Controllers/TipoPrecioController.php:110
+ * @see app/Http/Controllers/TipoPrecioController.php:111
  * @route '/tipos-precio/{tipoPrecio}/edit'
  */
 edit.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -371,7 +371,7 @@ edit.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number 
 })
 /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
- * @see app/Http/Controllers/TipoPrecioController.php:110
+ * @see app/Http/Controllers/TipoPrecioController.php:111
  * @route '/tipos-precio/{tipoPrecio}/edit'
  */
 edit.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -381,7 +381,7 @@ edit.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
 
     /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
- * @see app/Http/Controllers/TipoPrecioController.php:110
+ * @see app/Http/Controllers/TipoPrecioController.php:111
  * @route '/tipos-precio/{tipoPrecio}/edit'
  */
     const editForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -391,7 +391,7 @@ edit.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
 
             /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
- * @see app/Http/Controllers/TipoPrecioController.php:110
+ * @see app/Http/Controllers/TipoPrecioController.php:111
  * @route '/tipos-precio/{tipoPrecio}/edit'
  */
         editForm.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -400,7 +400,7 @@ edit.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
         })
             /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
- * @see app/Http/Controllers/TipoPrecioController.php:110
+ * @see app/Http/Controllers/TipoPrecioController.php:111
  * @route '/tipos-precio/{tipoPrecio}/edit'
  */
         editForm.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -416,7 +416,7 @@ edit.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::update
- * @see app/Http/Controllers/TipoPrecioController.php:119
+ * @see app/Http/Controllers/TipoPrecioController.php:120
  * @route '/tipos-precio/{tipoPrecio}'
  */
 export const update = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -431,7 +431,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::update
- * @see app/Http/Controllers/TipoPrecioController.php:119
+ * @see app/Http/Controllers/TipoPrecioController.php:120
  * @route '/tipos-precio/{tipoPrecio}'
  */
 update.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -464,7 +464,7 @@ update.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: numbe
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::update
- * @see app/Http/Controllers/TipoPrecioController.php:119
+ * @see app/Http/Controllers/TipoPrecioController.php:120
  * @route '/tipos-precio/{tipoPrecio}'
  */
 update.put = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -473,7 +473,7 @@ update.put = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: numbe
 })
 /**
 * @see \App\Http\Controllers\TipoPrecioController::update
- * @see app/Http/Controllers/TipoPrecioController.php:119
+ * @see app/Http/Controllers/TipoPrecioController.php:120
  * @route '/tipos-precio/{tipoPrecio}'
  */
 update.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -483,7 +483,7 @@ update.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: num
 
     /**
 * @see \App\Http\Controllers\TipoPrecioController::update
- * @see app/Http/Controllers/TipoPrecioController.php:119
+ * @see app/Http/Controllers/TipoPrecioController.php:120
  * @route '/tipos-precio/{tipoPrecio}'
  */
     const updateForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -498,7 +498,7 @@ update.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: num
 
             /**
 * @see \App\Http\Controllers\TipoPrecioController::update
- * @see app/Http/Controllers/TipoPrecioController.php:119
+ * @see app/Http/Controllers/TipoPrecioController.php:120
  * @route '/tipos-precio/{tipoPrecio}'
  */
         updateForm.put = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -512,7 +512,7 @@ update.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: num
         })
             /**
 * @see \App\Http\Controllers\TipoPrecioController::update
- * @see app/Http/Controllers/TipoPrecioController.php:119
+ * @see app/Http/Controllers/TipoPrecioController.php:120
  * @route '/tipos-precio/{tipoPrecio}'
  */
         updateForm.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -528,7 +528,7 @@ update.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: num
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::destroy
- * @see app/Http/Controllers/TipoPrecioController.php:165
+ * @see app/Http/Controllers/TipoPrecioController.php:166
  * @route '/tipos-precio/{tipoPrecio}'
  */
 export const destroy = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -543,7 +543,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::destroy
- * @see app/Http/Controllers/TipoPrecioController.php:165
+ * @see app/Http/Controllers/TipoPrecioController.php:166
  * @route '/tipos-precio/{tipoPrecio}'
  */
 destroy.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -576,7 +576,7 @@ destroy.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: numb
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::destroy
- * @see app/Http/Controllers/TipoPrecioController.php:165
+ * @see app/Http/Controllers/TipoPrecioController.php:166
  * @route '/tipos-precio/{tipoPrecio}'
  */
 destroy.delete = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -586,7 +586,7 @@ destroy.delete = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: n
 
     /**
 * @see \App\Http\Controllers\TipoPrecioController::destroy
- * @see app/Http/Controllers/TipoPrecioController.php:165
+ * @see app/Http/Controllers/TipoPrecioController.php:166
  * @route '/tipos-precio/{tipoPrecio}'
  */
     const destroyForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -601,7 +601,7 @@ destroy.delete = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: n
 
             /**
 * @see \App\Http\Controllers\TipoPrecioController::destroy
- * @see app/Http/Controllers/TipoPrecioController.php:165
+ * @see app/Http/Controllers/TipoPrecioController.php:166
  * @route '/tipos-precio/{tipoPrecio}'
  */
         destroyForm.delete = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -617,7 +617,7 @@ destroy.delete = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: n
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::toggleActivo
- * @see app/Http/Controllers/TipoPrecioController.php:181
+ * @see app/Http/Controllers/TipoPrecioController.php:182
  * @route '/tipos-precio/{tipoPrecio}/toggle-activo'
  */
 export const toggleActivo = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -632,7 +632,7 @@ toggleActivo.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::toggleActivo
- * @see app/Http/Controllers/TipoPrecioController.php:181
+ * @see app/Http/Controllers/TipoPrecioController.php:182
  * @route '/tipos-precio/{tipoPrecio}/toggle-activo'
  */
 toggleActivo.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -665,7 +665,7 @@ toggleActivo.url = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio:
 
 /**
 * @see \App\Http\Controllers\TipoPrecioController::toggleActivo
- * @see app/Http/Controllers/TipoPrecioController.php:181
+ * @see app/Http/Controllers/TipoPrecioController.php:182
  * @route '/tipos-precio/{tipoPrecio}/toggle-activo'
  */
 toggleActivo.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -675,7 +675,7 @@ toggleActivo.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPreci
 
     /**
 * @see \App\Http\Controllers\TipoPrecioController::toggleActivo
- * @see app/Http/Controllers/TipoPrecioController.php:181
+ * @see app/Http/Controllers/TipoPrecioController.php:182
  * @route '/tipos-precio/{tipoPrecio}/toggle-activo'
  */
     const toggleActivoForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -690,7 +690,7 @@ toggleActivo.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPreci
 
             /**
 * @see \App\Http\Controllers\TipoPrecioController::toggleActivo
- * @see app/Http/Controllers/TipoPrecioController.php:181
+ * @see app/Http/Controllers/TipoPrecioController.php:182
  * @route '/tipos-precio/{tipoPrecio}/toggle-activo'
  */
         toggleActivoForm.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

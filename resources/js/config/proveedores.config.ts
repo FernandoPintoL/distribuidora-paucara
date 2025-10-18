@@ -15,6 +15,31 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
     displayName: 'Proveedores',
     description: 'Gestiona los proveedores de productos',
 
+    // 🆕 Form sections (organizar campos en secciones)
+    formSections: [
+        {
+            id: 'Información Personal',
+            title: 'Información Personal',
+            description: 'Datos básicos del proveedor',
+            order: 1,
+        },
+        {
+            id: 'Ubicación',
+            title: 'Ubicación',
+            description: 'Dirección y ubicación en el mapa',
+            order: 2,
+        },
+        {
+            id: 'Fotos',
+            title: 'Fotos',
+            description: 'Imágenes y documentos del proveedor',
+            order: 3,
+        },
+    ],
+
+    // 🆕 Form layout (controla el diseño del formulario)
+    formLayout: 'auto', // Responsive automático
+
     // Table configuration
     tableColumns: [
         { key: 'id', label: 'ID', type: 'number' },
@@ -35,51 +60,85 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
             required: true,
             placeholder: 'Nombre del proveedor',
             validation: { maxLength: 255 },
+            colSpan: 2, // 🆕 Ocupa 2 columnas
+            section: 'Información Personal',
+            description: 'Nombre comercial del proveedor',
         },
         {
             key: 'razon_social',
-            label: 'Razon Social',
+            label: 'Razón Social',
             type: 'text',
-            placeholder: 'Razon social',
+            placeholder: 'Razón social',
             validation: { maxLength: 255 },
+            colSpan: 1,
+            section: 'Información Personal',
         },
         {
             key: 'nit',
-            label: 'N° Documento',
+            label: 'NIT / N° Documento',
             type: 'text',
             required: false,
             placeholder: '20123456789',
             validation: { maxLength: 255 },
+            colSpan: 1,
+            section: 'Información Personal',
+            prefix: '🆔',
         },
         {
             key: 'telefono',
             label: 'Teléfono',
             type: 'text',
             placeholder: '(01) 234-5678',
+            colSpan: 1,
+            section: 'Información Personal',
+            prefix: '📱',
         },
         {
             key: 'email',
             label: 'Email',
             type: 'text',
             placeholder: 'proveedor@empresa.com',
-        },
-        {
-            key: 'direccion',
-            label: 'Dirección',
-            type: 'textarea',
-            placeholder: 'Dirección completa del proveedor',
+            colSpan: 1,
+            section: 'Información Personal',
+            prefix: '✉️',
         },
         {
             key: 'contacto',
             label: 'Persona de Contacto',
             type: 'text',
             placeholder: 'Nombre del contacto principal',
+            colSpan: 1,
+            section: 'Información Personal',
+            prefix: '👤',
+        },
+        {
+            key: 'activo',
+            label: 'Proveedor activo',
+            type: 'boolean',
+            colSpan: 3,
+            section: 'Información Personal',
+            description: 'Marcar como activo para poder realizar compras',
+            defaultValue: true, // 🆕 Por defecto activo al crear
+            hidden: true, // 🆕 Oculto en el formulario
+        },
+        // 📍 SECCIÓN DE UBICACIÓN
+        {
+            key: 'direccion',
+            label: 'Dirección / Observaciones del lugar',
+            type: 'textarea',
+            placeholder: 'Dirección completa del proveedor y observaciones sobre el lugar',
+            colSpan: 3, // 🆕 Ocupa todo el ancho
+            section: 'Ubicación',
+            description: 'Describe la dirección y cualquier observación útil para llegar al lugar',
         },
         // Campo personalizado para ubicación en mapa
         {
             key: 'coordenadas',
             label: 'Ubicación en el mapa',
             type: 'custom',
+            colSpan: 3,
+            fullWidth: true, // 🆕 Ocupa TODO el ancho de la pantalla
+            section: 'Ubicación',
             render: ({ value, onChange, disabled, formData }) => {
                 // formData contiene latitud y longitud separados
                 const latitud = (formData as any)?.latitud;
@@ -99,10 +158,14 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
                 });
             }
         },
+        // 📷 SECCIÓN DE FOTOS
         {
             key: 'foto_perfil',
             label: 'Foto de perfil (opcional)',
             type: 'file',
+            colSpan: 3,
+            section: 'Fotos',
+            description: 'Foto del proveedor o logo de la empresa',
             render: ({ value, onChange, label, disabled }) =>
                 createElement(FileUploadPreview, {
                     label,
@@ -117,6 +180,9 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
             key: 'ci_anverso',
             label: 'CI - Anverso (opcional)',
             type: 'file',
+            colSpan: 1,
+            section: 'Fotos',
+            description: 'Anverso del carnet de identidad',
             render: ({ value, onChange, label, disabled }) =>
                 createElement(FileUploadPreview, {
                     label,
@@ -131,6 +197,9 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
             key: 'ci_reverso',
             label: 'CI - Reverso (opcional)',
             type: 'file',
+            colSpan: 1,
+            section: 'Fotos',
+            description: 'Reverso del carnet de identidad',
             render: ({ value, onChange, label, disabled }) =>
                 createElement(FileUploadPreview, {
                     label,
@@ -140,11 +209,6 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
                     previewType: 'rect',
                     disabled,
                 }),
-        },
-        {
-            key: 'activo',
-            label: 'Proveedor activo',
-            type: 'boolean',
         },
     ],
 

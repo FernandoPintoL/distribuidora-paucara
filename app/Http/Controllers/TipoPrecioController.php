@@ -17,9 +17,10 @@ class TipoPrecioController extends Controller
 
         $tipos = TipoPrecio::query()
             ->when($q, function ($query) use ($q) {
-                $query->where('nombre', 'ilike', "%$q%")
-                    ->orWhere('codigo', 'ilike', "%$q%")
-                    ->orWhere('descripcion', 'ilike', "%$q%");
+                $searchLower = strtolower($q);
+                $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(codigo) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"]);
             })
             ->when($request->has('activo'), fn ($query) => $query->where('activo', $activo))
             ->withCount('precios')

@@ -2,7 +2,7 @@
 import type { ModuleConfig } from '@/domain/entities/generic';
 import type { Cliente, ClienteFormData } from '@/domain/entities/clientes';
 import FileUploadPreview from '@/presentation/components/generic/FileUploadPreview';
-import MapPicker from '@/presentation/components/maps/MapPicker';
+import MapPickerWithLocations from '@/presentation/components/maps/MapPickerWithLocations';
 import React, { createElement } from 'react';
 
 export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
@@ -14,6 +14,31 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
     // Display configuration
     displayName: 'Clientes',
     description: 'Gestiona los clientes',
+
+    // 🆕 Form sections (organizar campos en secciones)
+    formSections: [
+        {
+            id: 'Información Personal',
+            title: 'Información Personal',
+            description: 'Datos básicos del cliente',
+            order: 1,
+        },
+        {
+            id: 'Direcciones',
+            title: 'Direcciones',
+            description: 'Localidad y dirección de entrega',
+            order: 2,
+        },
+        {
+            id: 'Fotos',
+            title: 'Fotos',
+            description: 'Imágenes y documentos del cliente',
+            order: 3,
+        },
+    ],
+
+    // 🆕 Form layout (controla el diseño del formulario)
+    formLayout: 'auto', // Responsive automático
 
     // Table configuration
     tableColumns: [
@@ -30,6 +55,19 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
 
     // Form configuration
     formFields: [
+        // 📋 Código de cliente - Solo visible en modo EDICIÓN
+        {
+            key: 'codigo_cliente',
+            label: 'Código de Cliente',
+            type: 'text',
+            visible: (data) => !!data.id, // Solo visible si tiene ID (modo edición)
+            disabled: () => true, // Siempre deshabilitado (solo lectura)
+            placeholder: 'Se genera automáticamente',
+            colSpan: 1,
+            section: 'Información Personal',
+            description: 'Código único generado automáticamente basado en la localidad',
+            prefix: '#',
+        },
         {
             key: 'nombre',
             label: 'Nombre',
@@ -37,38 +75,103 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             required: true,
             placeholder: 'Nombre del cliente',
             validation: { maxLength: 255 },
+            colSpan: 2, // 🆕 Ocupa 2 columnas
+            section: 'Información Personal',
+            description: 'Nombre completo o razón social del cliente',
         },
         {
             key: 'razon_social',
-            label: 'Razon Social',
+            label: 'Razón Social',
             type: 'text',
-            placeholder: 'Razon social',
+            placeholder: 'Razón social',
             validation: { maxLength: 255 },
+            colSpan: 1,
+            section: 'Información Personal',
         },
         {
             key: 'nit',
-            label: 'N° Documento',
+            label: 'NIT / N° Documento',
             type: 'text',
             required: false,
             placeholder: '20123456789',
             validation: { maxLength: 255 },
+            colSpan: 1,
+            section: 'Información Personal',
+            prefix: '🆔',
         },
         {
             key: 'telefono',
             label: 'Teléfono',
             type: 'text',
             placeholder: '(01) 234-5678',
+            colSpan: 1,
+            section: 'Información Personal',
+            prefix: '📱',
         },
         {
             key: 'email',
             label: 'Email',
             type: 'text',
             placeholder: 'cliente@empresa.com',
+            colSpan: 1,
+            section: 'Información Personal',
+            prefix: '✉️',
         },
+        // ✅ Estado activo - Solo visible en modo EDICIÓN
+        {
+            key: 'activo',
+            label: 'Cliente activo',
+            type: 'boolean',
+            visible: (data) => !!data.id, // Solo visible si tiene ID (modo edición)
+            defaultValue: true,
+            colSpan: 1,
+            section: 'Información Personal',
+            description: 'Marcar como activo para poder realizar ventas',
+        },
+        // 📍 SECCIÓN DE DIRECCIONES
+        {
+            key: 'localidad_id',
+            label: 'Localidad',
+            type: 'select',
+            required: true,
+            placeholder: 'Seleccione una localidad',
+            extraDataKey: 'localidades',
+            options: [], // Se cargarán dinámicamente
+            colSpan: 3,
+            section: 'Direcciones',
+            description: 'Selecciona la localidad donde reside el cliente',
+        },
+        // Campo personalizado para ubicaciones en el mapa con modal
+        {
+            key: 'direcciones',
+            label: 'Ubicaciones del cliente',
+            type: 'custom',
+            fullWidth: true, // Ocupa TODO el ancho de la pantalla
+            section: 'Direcciones',
+            render: ({ value, onChange, disabled }) => {
+                // value es un array de DireccionData
+                const addresses = Array.isArray(value) ? value : [];
+
+                return createElement(MapPickerWithLocations, {
+                    addresses: addresses,
+                    onAddressesChange: (newAddresses: any[]) => {
+                        onChange(newAddresses);
+                    },
+                    label: 'Ubicaciones del cliente',
+                    description: 'Haz clic en el mapa para agregar una nueva ubicación o en un marcador para editarla',
+                    disabled: Boolean(disabled),
+                    height: '450px'
+                });
+            }
+        },
+        // 📷 SECCIÓN DE FOTOS
         {
             key: 'foto_perfil',
             label: 'Foto de perfil (opcional)',
             type: 'file',
+            colSpan: 3,
+            section: 'Fotos',
+            description: 'Foto del cliente o logo de la empresa',
             render: ({ value, onChange, label, disabled, formData }) => {
                 // Buscar el campo _preview si existe (para modo edición)
                 const previewUrl = (formData as any)?.foto_perfil_preview || null;
@@ -87,6 +190,9 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             key: 'ci_anverso',
             label: 'CI - Anverso (opcional)',
             type: 'file',
+            colSpan: 1,
+            section: 'Fotos',
+            description: 'Anverso del carnet de identidad',
             render: ({ value, onChange, label, disabled, formData }) => {
                 // Buscar el campo _preview si existe (para modo edición)
                 const previewUrl = (formData as any)?.ci_anverso_preview || null;
@@ -105,6 +211,9 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             key: 'ci_reverso',
             label: 'CI - Reverso (opcional)',
             type: 'file',
+            colSpan: 1,
+            section: 'Fotos',
+            description: 'Reverso del carnet de identidad',
             render: ({ value, onChange, label, disabled, formData }) => {
                 // Buscar el campo _preview si existe (para modo edición)
                 const previewUrl = (formData as any)?.ci_reverso_preview || null;
@@ -118,121 +227,6 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                     disabled,
                 });
             },
-        },
-        {
-            key: 'localidad_id',
-            label: 'Localidad',
-            type: 'select',
-            required: true,
-            placeholder: 'Seleccione una localidad',
-            extraDataKey: 'localidades',
-            options: [], // Se cargarán dinámicamente
-        },
-        // Campo personalizado para ubicación en mapa
-        {
-            key: 'coordenadas',
-            label: 'Ubicación en el mapa',
-            type: 'custom',
-            render: ({ value, onChange, disabled, formData }) => {
-                // formData contiene latitud y longitud separados
-                const latitud = (formData as any)?.latitud;
-                const longitud = (formData as any)?.longitud;
-
-                return createElement(MapPicker, {
-                    latitude: latitud,
-                    longitude: longitud,
-                    onLocationSelect: (lat: number, lng: number, address?: string) => {
-                        // Actualizar los campos latitud y longitud
-                        onChange({ latitud: lat, longitud: lng, address });
-                    },
-                    label: 'Ubicación del cliente',
-                    description: 'Selecciona la ubicación exacta del cliente en el mapa',
-                    disabled: Boolean(disabled),
-                    height: '350px'
-                });
-            }
-        },
-        {
-            key: 'activo',
-            label: 'Cliente activo',
-            type: 'boolean',
-        },
-        // Campo personalizado para manejar una única dirección simplificada
-        {
-            key: 'direcciones',
-            label: 'Dirección de entrega / domicilio',
-            type: 'custom',
-            render: ({ value, onChange, label, disabled }) => {
-                const items = Array.isArray(value) ? value : [];
-                const addr = items[0] || null;
-
-                const setSingle = (newAddr: { [k: string]: unknown } | null) => {
-                    if (newAddr === null) {
-                        onChange([]);
-                    } else {
-                        // always ensure the single address is principal and active
-                        onChange([{ ...newAddr, es_principal: true, activa: true }]);
-                    }
-                };
-
-                const handleField = (field: string, v: string | boolean) => {
-                    const newAddr = {
-                        direccion: addr?.direccion || '',
-                        observaciones: addr?.observaciones || '',
-                        ...addr,
-                        [field]: v,
-                    };
-                    setSingle(newAddr);
-                };
-
-                // If there's no address, show compact empty state with add button
-                if (!addr) {
-                    return createElement('div', { className: 'space-y-2' },
-                        createElement('label', { className: 'text-sm font-medium block' }, label),
-                        createElement('div', { className: 'p-4 border rounded-md bg-white flex items-center justify-between' },
-                            createElement('span', { className: 'text-sm text-muted-foreground' }, 'No hay dirección. Puedes agregar una dirección para el cliente.'),
-                            createElement('button', {
-                                type: 'button',
-                                onClick: () => setSingle({ direccion: '', observaciones: '' }),
-                                className: 'text-blue-600'
-                            }, 'Agregar dirección')
-                        )
-                    );
-                }
-
-                // Render simplified card for the single address (only direccion & observaciones)
-                return createElement('div', { className: 'space-y-3' },
-                    createElement('label', { className: 'text-sm font-medium block' }, label),
-                    createElement('div', { className: 'p-4 border rounded-lg bg-white shadow-sm' },
-                        createElement('div', { className: 'mb-3' },
-                            createElement('input', {
-                                className: 'w-full p-3 border rounded-md text-sm',
-                                placeholder: 'Dirección (calle, número, referencia)',
-                                value: addr.direccion || '',
-                                onChange: (e: React.ChangeEvent<HTMLInputElement>) => handleField('direccion', e.target.value),
-                                disabled: Boolean(disabled)
-                            })
-                        ),
-                        createElement('div', { className: 'mb-3' },
-                            createElement('textarea', {
-                                className: 'w-full p-3 border rounded-md text-sm',
-                                placeholder: 'Observaciones (p. ej. referencia de entrega)',
-                                value: addr.observaciones || '',
-                                onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => handleField('observaciones', e.target.value),
-                                rows: 3,
-                                disabled: Boolean(disabled)
-                            })
-                        ),
-                        createElement('div', { className: 'flex items-center justify-end' },
-                            createElement('button', {
-                                type: 'button',
-                                onClick: () => setSingle(null),
-                                className: 'text-red-600 text-sm'
-                            }, 'Quitar dirección')
-                        )
-                    )
-                );
-            }
         },
     ],
 
@@ -256,19 +250,6 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                 type: 'select',
                 placeholder: 'Todas las localidades',
                 extraDataKey: 'localidades',
-                width: 'md'
-            },
-            {
-                key: 'tipo_documento',
-                label: 'Tipo de documento',
-                type: 'select',
-                placeholder: 'Todos los tipos',
-                options: [
-                    { value: 'ci', label: 'Cédula de Identidad' },
-                    { value: 'nit', label: 'NIT' },
-                    { value: 'pasaporte', label: 'Pasaporte' },
-                    { value: 'ruc', label: 'RUC' }
-                ],
                 width: 'md'
             }
         ],

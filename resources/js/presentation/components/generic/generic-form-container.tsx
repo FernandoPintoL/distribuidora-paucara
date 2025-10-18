@@ -24,6 +24,17 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
   loadOptions,
   extraData
 }: GenericFormContainerProps<T, F>) {
+  // 🆕 Aplicar valores por defecto solo en modo creación (cuando no hay entity)
+  const dataWithDefaults = !entity
+    ? config.formFields.reduce((acc, field) => {
+        // Solo aplicar defaultValue si el campo no tiene ya un valor en initialData
+        if (field.defaultValue !== undefined && (acc[field.key] === undefined || acc[field.key] === null)) {
+          acc[field.key] = field.defaultValue;
+        }
+        return acc;
+      }, { ...initialData } as F)
+    : initialData;
+
   const {
     data,
     errors,
@@ -32,7 +43,7 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
     handleFieldChange,
     handleReset,
     isEditing
-  } = useGenericForm(entity, service, initialData);
+  } = useGenericForm(entity, service, dataWithDefaults);
 
   const pageTitle = isEditing ? `Editar ${config.singularName}` : `Nuevo ${config.singularName}`;
   const submitButtonText = isEditing ? 'Actualizar' : 'Crear';

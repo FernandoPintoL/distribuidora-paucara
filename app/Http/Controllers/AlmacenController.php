@@ -14,7 +14,10 @@ class AlmacenController extends Controller
     {
         $q = $request->string('q');
         $items = Almacen::query()
-            ->when($q, fn ($qq) => $qq->where('nombre', 'ilike', "%$q%"))
+            ->when($q, function ($qq) use ($q) {
+                $searchLower = strtolower($q);
+                $qq->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+            })
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();

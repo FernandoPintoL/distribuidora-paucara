@@ -102,12 +102,14 @@ export interface FormField<F extends BaseFormData> {
   section?: string; // Sección del formulario
   order?: number; // Orden de renderizado
   colSpan?: 1 | 2 | 3 | 4; // Columnas que ocupa en grid (1-4)
+  fullWidth?: boolean; // Si es true, el campo ocupa todo el ancho de la pantalla (sale del grid)
 
   // 🆕 UI/UX mejorado
   description?: string; // Texto de ayuda debajo del campo
   icon?: string; // Icono del campo (clase de icono)
   prefix?: string; // Prefijo (ej: "$", "Bs.")
   suffix?: string; // Sufijo (ej: "%", "kg")
+  defaultValue?: unknown; // Valor por defecto al crear (solo se aplica en modo creación)
 
   // Permite un renderizado personalizado del campo
   render?: (props: {

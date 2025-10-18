@@ -36,16 +36,18 @@ class EmpleadoController extends Controller
         // Filtros de búsqueda (soporte tanto 'q' como 'search' para compatibilidad)
         $searchTerm = $request->q ?? $request->search;
         if ($searchTerm) {
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('codigo_empleado', 'like', "%{$searchTerm}%")
-                    ->orWhere('ci', 'like', "%{$searchTerm}%")
-                    ->orWhere('telefono', 'like', "%{$searchTerm}%")
-                    ->orWhere('cargo', 'like', "%{$searchTerm}%")
-                    ->orWhere('departamento', 'like', "%{$searchTerm}%")
-                    ->orWhereHas('user', function ($q3) use ($searchTerm) {
-                        $q3->where('name', 'like', "%{$searchTerm}%")
-                            ->orWhere('email', 'like', "%{$searchTerm}%")
-                            ->orWhere('usernick', 'like', "%{$searchTerm}%");
+            // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+            $searchLower = strtolower($searchTerm);
+            $query->where(function ($q) use ($searchLower) {
+                $q->whereRaw('LOWER(codigo_empleado) like ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(ci) like ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(telefono) like ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(cargo) like ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(departamento) like ?', ["%{$searchLower}%"])
+                    ->orWhereHas('user', function ($q3) use ($searchLower) {
+                        $q3->whereRaw('LOWER(name) like ?', ["%{$searchLower}%"])
+                            ->orWhereRaw('LOWER(email) like ?', ["%{$searchLower}%"])
+                            ->orWhereRaw('LOWER(usernick) like ?', ["%{$searchLower}%"]);
                     });
             });
         }

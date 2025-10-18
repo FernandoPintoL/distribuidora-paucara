@@ -1,0 +1,312 @@
+###
+# ═══════════════════════════════════════════════════════════════════════
+# PRUEBAS DEL ENDPOINT: POST /api/app/pedidos
+# ═══════════════════════════════════════════════════════════════════════
+#
+# Este archivo contiene ejemplos para probar el endpoint de creación de pedidos
+# desde la app del cliente.
+#
+# REQUISITOS:
+# 1. Tener un usuario cliente autenticado (con token Sanctum)
+# 2. El cliente debe tener al menos una dirección configurada
+# 3. Los productos deben existir y tener stock disponible
+#
+# CÓMO USAR:
+# - Reemplaza {{baseUrl}} con tu URL (ej: http://localhost:8000)
+# - Reemplaza {{token}} con tu token de autenticación
+# - Ejecuta cada request con tu cliente HTTP favorito (VS Code REST Client, Postman, etc.)
+###
+
+@baseUrl = http://localhost:8000
+@token = TU_TOKEN_AQUI
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 1. LOGIN - Obtener token de autenticación
+# ═══════════════════════════════════════════════════════════════════════
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "usernick": "70123456",
+  "password": "70123456"
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 2. VERIFICAR USUARIO AUTENTICADO
+# ═══════════════════════════════════════════════════════════════════════
+GET {{baseUrl}}/api/user
+Authorization: Bearer {{token}}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 3. CREAR PEDIDO - Caso exitoso
+# ═══════════════════════════════════════════════════════════════════════
+# Este es el caso ideal donde todo funciona correctamente
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 1,
+      "cantidad": 2
+    },
+    {
+      "producto_id": 2,
+      "cantidad": 1
+    }
+  ],
+  "direccion_id": 1,
+  "observaciones": "Por favor entregar en horario de mañana"
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 4. CREAR PEDIDO - Sin especificar dirección (usa la principal)
+# ═══════════════════════════════════════════════════════════════════════
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 1,
+      "cantidad": 5
+    }
+  ],
+  "observaciones": "Pedido urgente"
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 5. CREAR PEDIDO - Con múltiples productos
+# ═══════════════════════════════════════════════════════════════════════
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 1,
+      "cantidad": 3
+    },
+    {
+      "producto_id": 2,
+      "cantidad": 2
+    },
+    {
+      "producto_id": 3,
+      "cantidad": 1
+    }
+  ],
+  "direccion_id": 1
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 6. ERROR: Stock insuficiente
+# ═══════════════════════════════════════════════════════════════════════
+# Este caso debe retornar un error 422 con detalles de stock insuficiente
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 1,
+      "cantidad": 999999
+    }
+  ],
+  "direccion_id": 1
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 7. ERROR: Dirección no existe o no pertenece al cliente
+# ═══════════════════════════════════════════════════════════════════════
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 1,
+      "cantidad": 2
+    }
+  ],
+  "direccion_id": 999999
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 8. ERROR: Sin dirección configurada
+# ═══════════════════════════════════════════════════════════════════════
+# Si el cliente no tiene direcciones configuradas
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 1,
+      "cantidad": 2
+    }
+  ]
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 9. ERROR: Producto no existe
+# ═══════════════════════════════════════════════════════════════════════
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 999999,
+      "cantidad": 1
+    }
+  ],
+  "direccion_id": 1
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 10. ERROR: Validación - cantidad negativa
+# ═══════════════════════════════════════════════════════════════════════
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "producto_id": 1,
+      "cantidad": -5
+    }
+  ],
+  "direccion_id": 1
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# 11. ERROR: Items vacíos
+# ═══════════════════════════════════════════════════════════════════════
+POST {{baseUrl}}/api/app/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [],
+  "direccion_id": 1
+}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# ENDPOINTS AUXILIARES
+# ═══════════════════════════════════════════════════════════════════════
+
+###
+# Obtener catálogo de productos disponibles
+GET {{baseUrl}}/api/app/productos-disponibles?con_stock=true
+Authorization: Bearer {{token}}
+
+###
+# Obtener direcciones del cliente
+GET {{baseUrl}}/api/clientes/1/direcciones
+Authorization: Bearer {{token}}
+
+###
+# Verificar stock antes de crear pedido
+POST {{baseUrl}}/api/app/verificar-stock
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productos": [
+    {
+      "producto_id": 1,
+      "cantidad": 5
+    },
+    {
+      "producto_id": 2,
+      "cantidad": 3
+    }
+  ]
+}
+
+###
+# Historial de pedidos del cliente
+GET {{baseUrl}}/api/app/cliente/proformas
+Authorization: Bearer {{token}}
+
+###
+# Ver detalle de un pedido específico
+GET {{baseUrl}}/api/app/proformas/1
+Authorization: Bearer {{token}}
+
+###
+# Verificar estado de un pedido
+GET {{baseUrl}}/api/app/proformas/1/estado
+Authorization: Bearer {{token}}
+
+###
+# ═══════════════════════════════════════════════════════════════════════
+# RESPUESTAS ESPERADAS
+# ═══════════════════════════════════════════════════════════════════════
+#
+# ÉXITO (201 Created):
+# {
+#   "success": true,
+#   "message": "Pedido creado exitosamente...",
+#   "data": {
+#     "pedido": {
+#       "id": 1,
+#       "codigo": "PRO-20251017-0001",
+#       "fecha": "2025-10-17",
+#       "fecha_vencimiento": "2025-10-24",
+#       "estado": "PENDIENTE",
+#       "canal": "APP_EXTERNA",
+#       "subtotal": 100.00,
+#       "impuesto": 13.00,
+#       "total": 113.00,
+#       "items": [...]
+#     },
+#     "direccion_entrega": {...},
+#     "stock_reservado": {...}
+#   }
+# }
+#
+# ERROR - Stock insuficiente (422):
+# {
+#   "success": false,
+#   "message": "Stock insuficiente para algunos productos",
+#   "productos_sin_stock": [
+#     {
+#       "producto_id": 1,
+#       "producto": "Coca Cola 2L",
+#       "requerido": 10,
+#       "disponible": 5,
+#       "faltante": 5
+#     }
+#   ]
+# }
+#
+# ERROR - Sin dirección (422):
+# {
+#   "success": false,
+#   "message": "No tienes una dirección de entrega configurada...",
+#   "requiere_direccion": true
+# }
+#
+###

@@ -14,7 +14,10 @@ class CategoriaController extends Controller
     {
         $q = $request->string('q');
         $categorias = Categoria::query()
-            ->when($q, fn ($qq) => $qq->where('nombre', 'ilike', "%$q%"))
+            ->when($q, function ($qq) use ($q) {
+                $searchLower = strtolower($q);
+                $qq->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+            })
             ->orderBy('id', 'desc')
             ->paginate(10)
             ->withQueryString();

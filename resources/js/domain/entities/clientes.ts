@@ -13,8 +13,6 @@ export interface Cliente extends BaseEntity {
     ci_anverso?: string | null;
     ci_reverso?: string | null;
     localidad_id?: Id | null;
-    latitud?: number | null;
-    longitud?: number | null;
     codigo_cliente?: string | null;
     activo: boolean;
     localidad?: {
@@ -22,6 +20,15 @@ export interface Cliente extends BaseEntity {
         nombre: string;
         codigo: string;
     } | null;
+    direcciones?: Array<{
+        id?: Id;
+        direccion: string;
+        latitud: number;
+        longitud: number;
+        observaciones?: string | null;
+        es_principal?: boolean;
+        activa?: boolean;
+    }>;
 }
 
 export interface ClienteFormData extends BaseFormData {
@@ -35,16 +42,14 @@ export interface ClienteFormData extends BaseFormData {
     ci_anverso?: File | string | null;
     ci_reverso?: File | string | null;
     localidad_id?: Id | null;
-    latitud?: number | null;
-    longitud?: number | null;
     activo?: boolean;
     // Direcciones anidadas del cliente
     direcciones?: Array<{
         id?: Id;
         direccion: string;
-        ciudad?: string | null;
-        departamento?: string | null;
-        codigo_postal?: string | null;
+        latitud: number;
+        longitud: number;
+        observaciones?: string | null;
         es_principal?: boolean;
         activa?: boolean;
     }>;

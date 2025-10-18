@@ -448,4 +448,639 @@ class ApiProformaController extends Controller
             'message' => 'No se pudieron extender las reservas',
         ], 400);
     }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * ENDPOINT ESPECÍFICO PARA CREAR PEDIDOS DESDE LA APP DEL CLIENTE
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Este endpoint permite que los clientes autenticados creen pedidos (proformas)
+     * directamente desde la aplicación móvil Flutter.
+     *
+     * Diferencias con store():
+     * - No requiere cliente_id (usa el cliente autenticado)
+     * - Requiere/valida dirección de entrega
+     * - Reserva stock automáticamente
+     * - Retorna código de seguimiento
+     * - Incluye validaciones específicas para la app
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function crearPedidoDesdeApp(Request $request)
+    {
+        // Validaciones
+        $validator = Validator::make($request->all(), [
+            'items' => 'required|array|min:1',
+            'items.*.producto_id' => 'required|exists:productos,id',
+            'items.*.cantidad' => 'required|numeric|min:0.01',
+            'direccion_id' => 'nullable|exists:direcciones_cliente,id',
+            'observaciones' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos de validación incorrectos',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Obtener el cliente autenticado
+            $user = Auth::user();
+
+            if (! $user || ! $user->cliente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no tiene un cliente asociado',
+                ], 403);
+            }
+
+            $cliente = $user->cliente;
+
+            // 2. Validar dirección de entrega
+            $direccion = null;
+
+            if ($request->filled('direccion_id')) {
+                // Validar que la dirección pertenece al cliente y está activa
+                $direccion = $cliente->direcciones()
+                    ->where('id', $request->direccion_id)
+                    ->where('activa', true)
+                    ->first();
+
+                if (! $direccion) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La dirección seleccionada no existe o no está activa',
+                    ], 422);
+                }
+            } else {
+                // Usar dirección principal si no se especifica
+                $direccion = $cliente->direcciones()
+                    ->where('es_principal', true)
+                    ->where('activa', true)
+                    ->first();
+
+                if (! $direccion) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tienes una dirección de entrega configurada. Por favor agrega una dirección antes de crear un pedido.',
+                        'requiere_direccion' => true,
+                    ], 422);
+                }
+            }
+
+            // 3. Validar stock y calcular totales
+            $subtotal = 0;
+            $productosValidados = [];
+            $stockInsuficiente = [];
+
+            foreach ($request->items as $item) {
+                $producto = Producto::with('stockProductos')->findOrFail($item['producto_id']);
+                $cantidad = $item['cantidad'];
+
+                // Verificar que el producto esté activo
+                if (! $producto->activo) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El producto {$producto->nombre} no está disponible",
+                    ], 422);
+                }
+
+                // Obtener precio actual del producto
+                $precio = $producto->precio_venta ?? 0;
+
+                if ($precio <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El producto {$producto->nombre} no tiene precio definido",
+                    ], 422);
+                }
+
+                // Verificar disponibilidad de stock
+                $stockDisponible = $producto->stockProductos()->sum('cantidad_disponible');
+
+                if ($stockDisponible < $cantidad) {
+                    $stockInsuficiente[] = [
+                        'producto_id' => $producto->id,
+                        'producto' => $producto->nombre,
+                        'requerido' => $cantidad,
+                        'disponible' => $stockDisponible,
+                        'faltante' => $cantidad - $stockDisponible,
+                    ];
+                }
+
+                $subtotalItem = $cantidad * $precio;
+                $subtotal += $subtotalItem;
+
+                $productosValidados[] = [
+                    'producto_id' => $producto->id,
+                    'producto' => $producto,
+                    'cantidad' => $cantidad,
+                    'precio_unitario' => $precio,
+                    'subtotal' => $subtotalItem,
+                ];
+            }
+
+            // Si hay productos con stock insuficiente, retornar error detallado
+            if (! empty($stockInsuficiente)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stock insuficiente para algunos productos',
+                    'productos_sin_stock' => $stockInsuficiente,
+                ], 422);
+            }
+
+            // 4. Calcular impuestos (13% IVA en Bolivia)
+            $impuesto = $subtotal * 0.13;
+            $total = $subtotal + $impuesto;
+
+            // 5. Crear la proforma
+            $proforma = Proforma::create([
+                'numero' => Proforma::generarNumeroProforma(),
+                'fecha' => now(),
+                'fecha_vencimiento' => now()->addDays(7), // 7 días para aprobar
+                'cliente_id' => $cliente->id,
+                'estado' => Proforma::PENDIENTE,
+                'canal_origen' => Proforma::CANAL_APP_EXTERNA,
+                'subtotal' => $subtotal,
+                'impuesto' => $impuesto,
+                'total' => $total,
+                'moneda_id' => 1, // Bolivianos por defecto
+                'observaciones' => $request->observaciones,
+                'usuario_creador_id' => $user->id,
+            ]);
+
+            // 6. Crear detalles de la proforma
+            foreach ($productosValidados as $detalle) {
+                $proforma->detalles()->create([
+                    'producto_id' => $detalle['producto_id'],
+                    'cantidad' => $detalle['cantidad'],
+                    'precio_unitario' => $detalle['precio_unitario'],
+                    'subtotal' => $detalle['subtotal'],
+                ]);
+            }
+
+            // 7. Reservar stock automáticamente
+            $reservaExitosa = $proforma->reservarStock();
+
+            if (! $reservaExitosa) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo reservar el stock para este pedido. Algunos productos pueden haber sido vendidos recientemente.',
+                    'error_code' => 'RESERVA_FALLIDA',
+                ], 422);
+            }
+
+            // 8. Cargar relaciones para la respuesta
+            $proforma->load([
+                'detalles.producto.categoria',
+                'detalles.producto.marca',
+                'cliente.localidad',
+                'reservasActivas.stockProducto.almacen',
+            ]);
+
+            DB::commit();
+
+            // 9. Retornar respuesta exitosa con toda la información necesaria
+            return response()->json([
+                'success' => true,
+                'message' => 'Pedido creado exitosamente. Será revisado por nuestro equipo en las próximas horas.',
+                'data' => [
+                    'pedido' => [
+                        'id' => $proforma->id,
+                        'codigo' => $proforma->numero,
+                        'fecha' => $proforma->fecha->format('Y-m-d'),
+                        'fecha_vencimiento' => $proforma->fecha_vencimiento->format('Y-m-d'),
+                        'estado' => $proforma->estado,
+                        'canal' => $proforma->canal_origen,
+                        'subtotal' => (float) $proforma->subtotal,
+                        'impuesto' => (float) $proforma->impuesto,
+                        'total' => (float) $proforma->total,
+                        'observaciones' => $proforma->observaciones,
+                        'items' => $proforma->detalles->map(function ($detalle) {
+                            return [
+                                'producto_id' => $detalle->producto_id,
+                                'producto' => $detalle->producto->nombre,
+                                'cantidad' => (float) $detalle->cantidad,
+                                'precio_unitario' => (float) $detalle->precio_unitario,
+                                'subtotal' => (float) $detalle->subtotal,
+                            ];
+                        }),
+                    ],
+                    'direccion_entrega' => [
+                        'id' => $direccion->id,
+                        'direccion' => $direccion->direccion,
+                        'latitud' => $direccion->latitud,
+                        'longitud' => $direccion->longitud,
+                        'observaciones' => $direccion->observaciones,
+                    ],
+                    'stock_reservado' => [
+                        'cantidad_reservas' => $proforma->reservasActivas->count(),
+                        'fecha_expiracion' => $proforma->reservasActivas->first()?->fecha_expiracion,
+                        'tiempo_restante_horas' => $proforma->reservasActivas->first()
+                            ? now()->diffInHours($proforma->reservasActivas->first()->fecha_expiracion, false)
+                            : null,
+                    ],
+                ],
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log del error para debugging
+            \Log::error('Error creando pedido desde app', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el pedido. Por favor intenta nuevamente.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * ENDPOINT: HISTORIAL DE PEDIDOS DEL CLIENTE AUTENTICADO
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Retorna el historial de pedidos (proformas) del cliente autenticado.
+     * Optimizado para la app móvil con paginación y filtros útiles.
+     *
+     * Filtros disponibles:
+     * - estado: PENDIENTE, APROBADA, RECHAZADA, CONVERTIDA_A_VENTA
+     * - fecha_desde: Y-m-d
+     * - fecha_hasta: Y-m-d
+     * - page: número de página (default: 1)
+     * - per_page: items por página (default: 15, max: 50)
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerHistorialPedidos(Request $request)
+    {
+        // Validar que el usuario tiene un cliente asociado
+        $user = Auth::user();
+
+        if (! $user || ! $user->cliente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no tiene un cliente asociado',
+            ], 403);
+        }
+
+        $cliente = $user->cliente;
+
+        // Validar parámetros
+        $validator = Validator::make($request->all(), [
+            'estado' => 'nullable|in:PENDIENTE,APROBADA,RECHAZADA,CONVERTIDA_A_VENTA',
+            'fecha_desde' => 'nullable|date',
+            'fecha_hasta' => 'nullable|date|after_or_equal:fecha_desde',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Parámetros de filtro incorrectos',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // Construir query
+        $query = Proforma::where('cliente_id', $cliente->id);
+
+        // Aplicar filtros
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('fecha_desde')) {
+            $query->whereDate('fecha', '>=', $request->fecha_desde);
+        }
+
+        if ($request->filled('fecha_hasta')) {
+            $query->whereDate('fecha', '<=', $request->fecha_hasta);
+        }
+
+        // Obtener pedidos con paginación
+        $perPage = min($request->get('per_page', 15), 50);
+        $pedidos = $query->with([
+            'detalles.producto.categoria',
+            'detalles.producto.marca',
+            'reservasActivas',
+        ])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        // Transformar datos para la app
+        $pedidosTransformados = $pedidos->map(function ($proforma) {
+            return [
+                'id' => $proforma->id,
+                'codigo' => $proforma->numero,
+                'fecha' => $proforma->fecha->format('Y-m-d'),
+                'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
+                'estado' => $proforma->estado,
+                'total' => (float) $proforma->total,
+                'moneda' => 'BOB', // Bolivianos
+                'cantidad_items' => $proforma->detalles->count(),
+                'total_productos' => (float) $proforma->detalles->sum('cantidad'),
+                'tiene_reserva_activa' => $proforma->reservasActivas->count() > 0,
+                'observaciones' => $proforma->observaciones,
+                'observaciones_rechazo' => $proforma->observaciones_rechazo,
+                // Resumen de items (primeros 3 productos)
+                'items_preview' => $proforma->detalles->take(3)->map(function ($detalle) {
+                    return [
+                        'producto' => $detalle->producto->nombre,
+                        'cantidad' => (float) $detalle->cantidad,
+                    ];
+                }),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'pedidos' => $pedidosTransformados,
+                'paginacion' => [
+                    'total' => $pedidos->total(),
+                    'por_pagina' => $pedidos->perPage(),
+                    'pagina_actual' => $pedidos->currentPage(),
+                    'ultima_pagina' => $pedidos->lastPage(),
+                    'desde' => $pedidos->firstItem(),
+                    'hasta' => $pedidos->lastItem(),
+                ],
+                'resumen' => [
+                    'total_pedidos' => $pedidos->total(),
+                    'pendientes' => Proforma::where('cliente_id', $cliente->id)
+                        ->where('estado', Proforma::PENDIENTE)
+                        ->count(),
+                    'aprobados' => Proforma::where('cliente_id', $cliente->id)
+                        ->where('estado', Proforma::APROBADA)
+                        ->count(),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * ENDPOINT: DETALLE COMPLETO DE UN PEDIDO
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Retorna toda la información detallada de un pedido específico.
+     * Incluye items, dirección de entrega, reservas de stock, etc.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerDetallePedido($id)
+    {
+        // Validar que el usuario tiene un cliente asociado
+        $user = Auth::user();
+
+        if (! $user || ! $user->cliente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no tiene un cliente asociado',
+            ], 403);
+        }
+
+        $cliente = $user->cliente;
+
+        // Buscar el pedido
+        $proforma = Proforma::with([
+            'detalles.producto.categoria',
+            'detalles.producto.marca',
+            'detalles.producto.unidadMedida',
+            'cliente.direcciones' => function ($query) {
+                $query->where('activa', true);
+            },
+            'reservasActivas.stockProducto.almacen',
+            'usuarioCreador',
+            'usuarioAprobador',
+        ])->find($id);
+
+        if (! $proforma) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pedido no encontrado',
+            ], 404);
+        }
+
+        // Verificar que el pedido pertenece al cliente autenticado
+        if ($proforma->cliente_id !== $cliente->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para ver este pedido',
+            ], 403);
+        }
+
+        // Obtener dirección de entrega (la principal por defecto)
+        $direccionEntrega = $cliente->direcciones()->where('es_principal', true)->first();
+
+        // Construir respuesta detallada
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'pedido' => [
+                    'id' => $proforma->id,
+                    'codigo' => $proforma->numero,
+                    'fecha' => $proforma->fecha->format('Y-m-d H:i'),
+                    'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
+                    'estado' => $proforma->estado,
+                    'canal_origen' => $proforma->canal_origen,
+                    'subtotal' => (float) $proforma->subtotal,
+                    'impuesto' => (float) $proforma->impuesto,
+                    'total' => (float) $proforma->total,
+                    'moneda' => 'BOB',
+                    'observaciones' => $proforma->observaciones,
+                    'observaciones_rechazo' => $proforma->observaciones_rechazo,
+                    'fecha_aprobacion' => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
+                    'puede_cancelar' => $proforma->estado === Proforma::PENDIENTE,
+                    'puede_extender_reserva' => $proforma->reservasActivas->count() > 0 &&
+                                                $proforma->estado === Proforma::PENDIENTE,
+                ],
+                'items' => $proforma->detalles->map(function ($detalle) {
+                    return [
+                        'id' => $detalle->id,
+                        'producto_id' => $detalle->producto_id,
+                        'producto' => $detalle->producto->nombre,
+                        'codigo_producto' => $detalle->producto->codigo,
+                        'categoria' => $detalle->producto->categoria?->nombre,
+                        'marca' => $detalle->producto->marca?->nombre,
+                        'unidad_medida' => $detalle->producto->unidadMedida?->abreviacion,
+                        'cantidad' => (float) $detalle->cantidad,
+                        'precio_unitario' => (float) $detalle->precio_unitario,
+                        'subtotal' => (float) $detalle->subtotal,
+                        'imagen_url' => $detalle->producto->imagen_url,
+                    ];
+                }),
+                'direccion_entrega' => $direccionEntrega ? [
+                    'id' => $direccionEntrega->id,
+                    'direccion' => $direccionEntrega->direccion,
+                    'latitud' => $direccionEntrega->latitud,
+                    'longitud' => $direccionEntrega->longitud,
+                    'observaciones' => $direccionEntrega->observaciones,
+                    'es_principal' => $direccionEntrega->es_principal,
+                ] : null,
+                'reservas_stock' => $proforma->reservasActivas->count() > 0 ? [
+                    'tiene_reservas' => true,
+                    'cantidad_reservas' => $proforma->reservasActivas->count(),
+                    'fecha_expiracion' => $proforma->reservasActivas->first()?->fecha_expiracion?->format('Y-m-d H:i'),
+                    'tiempo_restante_horas' => $proforma->reservasActivas->first()
+                        ? now()->diffInHours($proforma->reservasActivas->first()->fecha_expiracion, false)
+                        : null,
+                    'detalles_por_almacen' => $proforma->reservasActivas->groupBy('stockProducto.almacen.nombre')->map(function ($reservas, $almacen) {
+                        return [
+                            'almacen' => $almacen,
+                            'productos_reservados' => $reservas->count(),
+                        ];
+                    })->values(),
+                ] : [
+                    'tiene_reservas' => false,
+                ],
+                'seguimiento' => [
+                    'creado_por' => $proforma->usuarioCreador?->name,
+                    'fecha_creacion' => $proforma->created_at->format('Y-m-d H:i'),
+                    'aprobado_por' => $proforma->usuarioAprobador?->name,
+                    'fecha_aprobacion' => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * ENDPOINT: ESTADO ACTUAL DEL PEDIDO (LIGERO)
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Endpoint ligero para verificar solo el estado actual de un pedido.
+     * Útil para actualizaciones rápidas en la app sin cargar todo el detalle.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerEstadoPedido($id)
+    {
+        // Validar que el usuario tiene un cliente asociado
+        $user = Auth::user();
+
+        if (! $user || ! $user->cliente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no tiene un cliente asociado',
+            ], 403);
+        }
+
+        $cliente = $user->cliente;
+
+        // Buscar el pedido (sin relaciones para ser más rápido)
+        $proforma = Proforma::select([
+            'id',
+            'numero',
+            'cliente_id',
+            'estado',
+            'fecha',
+            'fecha_vencimiento',
+            'fecha_aprobacion',
+            'total',
+            'observaciones',
+            'observaciones_rechazo',
+        ])->find($id);
+
+        if (! $proforma) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pedido no encontrado',
+            ], 404);
+        }
+
+        // Verificar que el pedido pertenece al cliente autenticado
+        if ($proforma->cliente_id !== $cliente->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para ver este pedido',
+            ], 403);
+        }
+
+        // Verificar si tiene reservas activas
+        $tieneReservasActivas = $proforma->reservasActivas()->exists();
+        $reserva = $tieneReservasActivas ? $proforma->reservasActivas()->first() : null;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $proforma->id,
+                'codigo' => $proforma->numero,
+                'estado' => $proforma->estado,
+                'fecha' => $proforma->fecha->format('Y-m-d'),
+                'total' => (float) $proforma->total,
+                'observaciones' => $proforma->observaciones,
+                'estado_detalle' => [
+                    'descripcion' => $this->obtenerDescripcionEstado($proforma->estado),
+                    'color' => $this->obtenerColorEstado($proforma->estado),
+                    'icono' => $this->obtenerIconoEstado($proforma->estado),
+                ],
+                'fecha_aprobacion' => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
+                'observaciones_rechazo' => $proforma->observaciones_rechazo,
+                'tiene_reserva_activa' => $tieneReservasActivas,
+                'reserva_info' => $reserva ? [
+                    'fecha_expiracion' => $reserva->fecha_expiracion->format('Y-m-d H:i'),
+                    'tiempo_restante_horas' => now()->diffInHours($reserva->fecha_expiracion, false),
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Helper: Obtener descripción del estado para la app
+     */
+    private function obtenerDescripcionEstado($estado)
+    {
+        return match ($estado) {
+            Proforma::PENDIENTE => 'Tu pedido está siendo revisado por nuestro equipo',
+            Proforma::APROBADA => 'Tu pedido ha sido aprobado y está listo para ser procesado',
+            Proforma::RECHAZADA => 'Lo sentimos, tu pedido no pudo ser procesado',
+            Proforma::CONVERTIDA_A_VENTA => 'Tu pedido ha sido confirmado y está en proceso de entrega',
+            default => 'Estado desconocido',
+        };
+    }
+
+    /**
+     * Helper: Obtener color del estado para la UI
+     */
+    private function obtenerColorEstado($estado)
+    {
+        return match ($estado) {
+            Proforma::PENDIENTE => '#FFA500', // Naranja
+            Proforma::APROBADA => '#4CAF50', // Verde
+            Proforma::RECHAZADA => '#F44336', // Rojo
+            Proforma::CONVERTIDA_A_VENTA => '#2196F3', // Azul
+            default => '#9E9E9E', // Gris
+        };
+    }
+
+    /**
+     * Helper: Obtener icono del estado para la UI
+     */
+    private function obtenerIconoEstado($estado)
+    {
+        return match ($estado) {
+            Proforma::PENDIENTE => 'clock',
+            Proforma::APROBADA => 'check-circle',
+            Proforma::RECHAZADA => 'x-circle',
+            Proforma::CONVERTIDA_A_VENTA => 'truck',
+            default => 'help-circle',
+        };
+    }
 }

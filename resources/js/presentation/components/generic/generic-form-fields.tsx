@@ -342,7 +342,7 @@ export default function GenericFormFields<F extends BaseFormData>({
   };
 
   // 🆕 Renderizar un campo completo con label, descripción y error
-  const renderFieldBlock = (field: FormField<F>) => {
+  const renderFieldBlock = (field: FormField<F>, isFullWidth: boolean = false) => {
     if (!isFieldVisible(field)) return null;
 
     const error = errors[field.key];
@@ -353,7 +353,7 @@ export default function GenericFormFields<F extends BaseFormData>({
     return (
       <div
         key={String(field.key)}
-        className={`${colSpanClass} space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}
+        className={`${!isFullWidth ? colSpanClass : 'w-full'} space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}
       >
         {(!field.render && field.type !== 'boolean') && (
           <div className="flex items-center justify-between">
@@ -414,6 +414,10 @@ export default function GenericFormFields<F extends BaseFormData>({
       {sections.map((sectionKey) => {
         const sectionFields = groupedFields[sectionKey];
 
+        // 🆕 Separar campos normales de campos de ancho completo
+        const normalFields = sectionFields.filter(field => !field.fullWidth);
+        const fullWidthFields = sectionFields.filter(field => field.fullWidth);
+
         return (
           <div key={sectionKey} className="space-y-6">
             {hasMultipleSections && sectionKey !== 'default' && (
@@ -424,9 +428,19 @@ export default function GenericFormFields<F extends BaseFormData>({
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sectionFields.map((field) => renderFieldBlock(field))}
-            </div>
+            {/* Campos normales en grid */}
+            {normalFields.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {normalFields.map((field) => renderFieldBlock(field, false))}
+              </div>
+            )}
+
+            {/* Campos de ancho completo */}
+            {fullWidthFields.length > 0 && (
+              <div className="space-y-6">
+                {fullWidthFields.map((field) => renderFieldBlock(field, true))}
+              </div>
+            )}
           </div>
         );
       })}

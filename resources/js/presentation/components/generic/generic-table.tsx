@@ -1,11 +1,17 @@
-// Presentation Layer: Generic table component - Enhanced UI
+// Presentation Layer: Generic table component - Enhanced UI (Modernized)
 import { Button } from '@/presentation/components/ui/button';
 import type { BaseEntity, TableColumn } from '@/domain/entities/generic';
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import productosService from '@/infrastructure/services/productos.service';
 import NotificationService from '@/infrastructure/services/notification.service';
-import { Trash2, Pencil, DollarSign, Image } from 'lucide-react';
+import { Trash2, Pencil, DollarSign, Image, Eye, Package } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/presentation/components/ui/tooltip';
 
 interface ProductoLike extends BaseEntity {
   nombre?: string;
@@ -27,6 +33,24 @@ interface GenericTableProps<T extends BaseEntity> {
   isLoading?: boolean;
 }
 
+/**
+ * Obtiene el valor de una propiedad anidada usando notación de punto
+ * Ejemplo: getNestedValue({ user: { name: 'John' } }, 'user.name') => 'John'
+ */
+function getNestedValue<T>(obj: T, path: string): unknown {
+  const keys = path.split('.');
+  let value: any = obj;
+
+  for (const key of keys) {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+    value = value[key];
+  }
+
+  return value;
+}
+
 export default function GenericTable<T extends BaseEntity>({
   entities,
   columns,
@@ -38,11 +62,14 @@ export default function GenericTable<T extends BaseEntity>({
   const [historialModal, setHistorialModal] = useState<{ entity: ProductoLike } | null>(null);
   const [quickPrecioModal, setQuickPrecioModal] = useState<{ entity: ProductoLike } | null>(null);
   const [quickImagenModal, setQuickImagenModal] = useState<{ entity: ProductoLike } | null>(null);
+  const [quickViewModal, setQuickViewModal] = useState<{ entity: T } | null>(null);
 
   const openHistorialModal = (entity: ProductoLike) => setHistorialModal({ entity });
   const closeHistorialModal = () => setHistorialModal(null);
   const closeQuickPrecioModal = () => setQuickPrecioModal(null);
   const closeQuickImagenModal = () => setQuickImagenModal(null);
+  const openQuickViewModal = (entity: T) => setQuickViewModal({ entity });
+  const closeQuickViewModal = () => setQuickViewModal(null);
 
   const openQuickPrecioModal = (entity: T | ProductoLike) => {
     const prod = entity as ProductoLike;
@@ -124,18 +151,21 @@ export default function GenericTable<T extends BaseEntity>({
 
   if (!entities.length) {
     return (
-      <div className="text-center py-12">
-        <div className="mx-auto w-24 h-24 mb-4 text-gray-300">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+      <div className="text-center py-16 px-4">
+        <div className="mx-auto w-20 h-20 mb-4 rounded-full bg-secondary/50 flex items-center justify-center">
+          <Package className="w-10 h-10 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">No hay {entityName}s registrados</h3>
-        <p className="text-muted-foreground mb-4">Comienza agregando tu primer {entityName}.</p>
+        <h3 className="text-xl font-semibold text-foreground mb-2">No hay {entityName}s registrados</h3>
+        <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+          Comienza agregando tu primer {entityName} para verlo aparecer aquí.
+        </p>
       </div>
     );
   }
 
   const renderCellValue = (column: TableColumn<T>, entity: T) => {
-    const value = (entity as Record<string, unknown>)[column.key as string];
+    // Usar getNestedValue para soportar propiedades anidadas como 'localidad.nombre'
+    const value = getNestedValue(entity, column.key as string);
     if (column.render) {
       if (column.key === 'historial_precios') return column.render(value as never, entity, openHistorialModal as unknown as (e: T) => void);
       return column.render(value as never, entity);
@@ -143,148 +173,236 @@ export default function GenericTable<T extends BaseEntity>({
     switch (column.type) {
       case 'boolean':
         return (
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${value
-              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-800'
-              : 'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-800'
+          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all ${value
+              ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-2 border-emerald-300 dark:from-emerald-900/40 dark:to-emerald-800/40 dark:text-emerald-200 dark:border-emerald-600'
+              : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border-2 border-red-300 dark:from-red-900/40 dark:to-red-800/40 dark:text-red-200 dark:border-red-600'
             }`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${value ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+            <span className={`w-2 h-2 rounded-full mr-2 animate-pulse ${value ? 'bg-emerald-500 shadow-emerald-400/50' : 'bg-red-500 shadow-red-400/50'} shadow-md`}></span>
             {value ? 'Activo' : 'Inactivo'}
           </span>
         );
       case 'date':
         return value ? (
-          <span className="text-gray-600 dark:text-gray-300 text-sm">
-            {new Date(String(value)).toLocaleDateString('es-ES')}
-          </span>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-sm font-medium text-foreground">
+              {new Date(String(value)).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
         ) : (
-          <span className="text-gray-400 dark:text-gray-500 italic text-sm">Sin fecha</span>
+          <span className="text-xs text-muted-foreground/60 italic">Sin fecha</span>
         );
       case 'number':
         return typeof value === 'number' ? (
-          <span className="font-mono text-gray-700 dark:text-gray-300 font-medium">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 font-mono text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
             {value.toLocaleString('es-ES')}
           </span>
         ) : (
-          <span className="text-gray-400 dark:text-gray-500">-</span>
+          <span className="text-muted-foreground/40">—</span>
         );
       default:
         if (value && typeof value === 'object' && 'nombre' in (value as Record<string, unknown>)) {
-          return <span className="text-gray-700 dark:text-gray-300">{(value as { nombre: string }).nombre || '-'}</span>;
+          return <span className="font-medium text-foreground">{(value as { nombre: string }).nombre || '-'}</span>;
         }
         if (value && typeof value === 'object' && 'codigo' in (value as Record<string, unknown>) && 'nombre' in (value as Record<string, unknown>)) {
           const v = value as { codigo: string; nombre: string };
           return (
-            <span className="text-gray-700 dark:text-gray-300">
-              <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded mr-2">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 font-semibold">
                 {v.codigo}
               </span>
-              {v.nombre}
-            </span>
+              <span className="font-medium text-foreground">{v.nombre}</span>
+            </div>
           );
         }
         return value ? (
-          <span className="text-gray-700 dark:text-gray-300">{String(value)}</span>
+          <span className="text-foreground">{String(value)}</span>
         ) : (
-          <span className="text-gray-400 dark:text-gray-500 italic">-</span>
+          <span className="text-muted-foreground/40 italic text-sm">—</span>
         );
     }
   };
 
+  // Skeleton Loader Component
+  const SkeletonRow = () => (
+    <tr className="animate-pulse">
+      {columns.map((column, idx) => (
+        <td key={String(column.key)} className="px-4 py-3.5">
+          {idx === 0 ? (
+            <div className="h-6 w-12 bg-muted rounded-full"></div>
+          ) : (
+            <div className="h-4 bg-muted rounded" style={{ width: `${60 + Math.random() * 40}%` }}></div>
+          )}
+        </td>
+      ))}
+      <td className="px-4 py-3.5">
+        <div className="flex justify-end gap-1">
+          <div className="h-8 w-8 bg-muted rounded"></div>
+          <div className="h-8 w-8 bg-muted rounded"></div>
+          <div className="h-8 w-8 bg-muted rounded"></div>
+        </div>
+      </td>
+    </tr>
+  );
+
   return (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700">
-              {columns.map(column => (
-                <th
-                  key={String(column.key)}
-                  onClick={() => toggleSort(column)}
-                  className={`py-3 text-left font-medium text-gray-900 dark:text-gray-100 ${column.sortable ? 'cursor-pointer hover:text-blue-600 dark:hover:text-blue-400' : ''}`}
-                >
-                  <span className="inline-flex items-center gap-1">
-                    {column.label}
-                    {column.sortable && (
-                      <span className="text-xs opacity-60 hover:opacity-100 transition-opacity">
-                        {orderBy === column.key ? (orderDir === 'asc' ? '▲' : '▼') : '⇅'}
-                      </span>
-                    )}
-                  </span>
-                </th>
-              ))}
-              <th className="py-3 text-right font-medium text-gray-900 dark:text-gray-100">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {entities.map((entity) => (
-              <tr
-                key={entity.id}
-                className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
-              >
+    <TooltipProvider>
+      <div className="relative rounded-lg border border-border overflow-hidden bg-card shadow-sm">
+        <div className="overflow-x-auto max-h-[calc(100vh-300px)]">
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b-2 border-border shadow-sm">
+              <tr>
                 {columns.map(column => (
-                  <td key={String(column.key)} className="py-4">
-                    {column.key === 'id' ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-800">
-                        #{entity.id}
-                      </span>
-                    ) : (
-                      <div className={`${column.key === columns[1]?.key ? 'font-medium text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
-                        {renderCellValue(column, entity)}
-                      </div>
-                    )}
-                  </td>
+                  <th
+                    key={String(column.key)}
+                    onClick={() => toggleSort(column)}
+                    className={`px-4 py-3.5 text-left text-xs font-semibold text-foreground uppercase tracking-wider ${
+                      column.sortable ? 'cursor-pointer hover:bg-muted select-none transition-colors' : ''
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      {column.label}
+                      {column.sortable && (
+                        <span className={`text-xs transition-all ${orderBy === column.key ? 'text-blue-600 dark:text-blue-400 opacity-100' : 'opacity-40 hover:opacity-70'}`}>
+                          {orderBy === column.key ? (orderDir === 'asc' ? '↑' : '↓') : '↕'}
+                        </span>
+                      )}
+                    </span>
+                  </th>
                 ))}
-                <td className="py-4">
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onEdit(entity)}
-                      disabled={isLoading}
-                      title={`Editar ${entityName}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {'precios' in (entity as unknown as Record<string, unknown>) && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openQuickPrecioModal(entity)}
-                        title="Editar precios y códigos"
-                        className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
-                      >
-                        <DollarSign className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {'perfil' in (entity as unknown as Record<string, unknown>) && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openQuickImagenModal(entity)}
-                        title="Editar imágenes"
-                        className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
-                      >
-                        <Image className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onDelete(entity)}
-                      disabled={isLoading}
-                      title={`Eliminar ${entityName}`}
-                      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </td>
+                <th className="px-4 py-3.5 text-right text-xs font-semibold text-foreground uppercase tracking-wider sticky right-0 bg-muted/95 backdrop-blur">
+                  Acciones
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {isLoading ? (
+                // Show skeleton loaders when loading
+                <>
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                </>
+              ) : (
+                entities.map((entity, index) => (
+                  <tr
+                    key={entity.id}
+                    className={`transition-colors hover:bg-accent/50 ${
+                      index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
+                    }`}
+                  >
+                    {columns.map(column => (
+                      <td key={String(column.key)} className="px-4 py-3.5">
+                        {column.key === 'id' ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300 dark:from-blue-900/40 dark:to-blue-800/40 dark:text-blue-200 dark:border-blue-700">
+                            #{entity.id}
+                          </span>
+                        ) : (
+                          <div className={`${column.key === columns[1]?.key ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                            {renderCellValue(column, entity)}
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    <td className="px-4 py-3.5 sticky right-0 bg-inherit">
+                      <div className="flex justify-end items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openQuickViewModal(entity)}
+                              className="h-8 w-8 p-0 hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900/40 dark:hover:text-indigo-300 transition-all"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Vista rápida</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => onEdit(entity)}
+                              disabled={isLoading}
+                              className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-300 transition-all"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Editar {entityName}</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {'precios' in (entity as unknown as Record<string, unknown>) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openQuickPrecioModal(entity)}
+                                className="h-8 w-8 p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/40 dark:hover:text-amber-300 transition-all"
+                              >
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Editar precios y códigos</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        {'perfil' in (entity as unknown as Record<string, unknown>) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openQuickImagenModal(entity)}
+                                className="h-8 w-8 p-0 hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/40 dark:hover:text-purple-300 transition-all"
+                              >
+                                <Image className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Editar imágenes</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => onDelete(entity)}
+                              disabled={isLoading}
+                              className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/40 dark:hover:text-red-300 transition-all"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Eliminar {entityName}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {historialModal?.entity?.historial_precios && (
@@ -392,6 +510,91 @@ export default function GenericTable<T extends BaseEntity>({
           </div>
         </div>
       )}
-    </>
+
+      {quickViewModal?.entity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border-2 border-border">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-800 dark:to-blue-800 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Vista Rápida</h2>
+                  <p className="text-xs text-white/80">Información detallada del {entityName}</p>
+                </div>
+              </div>
+              <button
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all"
+                onClick={closeQuickViewModal}
+                aria-label="Cerrar"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {columns.map((column) => {
+                  // Usar getNestedValue para soportar propiedades anidadas
+                  const value = getNestedValue(quickViewModal.entity, column.key as string);
+
+                  // Skip rendering if value is undefined or null or if it's the historial_precios column
+                  if (value === undefined || value === null || column.key === 'historial_precios') return null;
+
+                  return (
+                    <div key={String(column.key)} className={`space-y-2 ${column.key === 'perfil' ? 'md:col-span-2' : ''}`}>
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                        {column.key === 'id' && (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                          </svg>
+                        )}
+                        {column.key === 'perfil' && (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                        {column.label}
+                      </label>
+                      <div className={`bg-secondary/30 border border-border rounded-lg p-3 ${column.key === 'perfil' ? 'flex justify-center' : ''}`}>
+                        {renderCellValue(column, quickViewModal.entity)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-muted/50 px-6 py-4 border-t border-border flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeQuickViewModal}
+                className="hover:bg-secondary"
+              >
+                Cerrar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  closeQuickViewModal();
+                  onEdit(quickViewModal.entity);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              >
+                <Pencil className="w-4 h-4 mr-2" />
+                Editar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </TooltipProvider>
   );
 }

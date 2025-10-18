@@ -29,11 +29,7 @@ export default function ModernFilters({
     className
 }: ModernFiltersProps) {
     const [filters, setFilters] = React.useState<Filters>(currentFilters);
-    const [mostrarFiltrosAvanzados, setMostrarFiltrosAvanzados] = React.useState(
-        Boolean(Object.values(currentFilters).some(value =>
-            value !== undefined && value !== null && value !== ''
-        ))
-    );
+    const [mostrarFiltrosAvanzados, setMostrarFiltrosAvanzados] = React.useState(false); // 🆕 Siempre empiezan cerrados
     const [searchQuery, setSearchQuery] = React.useState<string>(String(currentFilters.q || ''));
 
     // Prepare SearchSelect data for specific filters

@@ -16,9 +16,10 @@ class TipoPagoController extends Controller
 
         $items = TipoPago::query()
             ->when($q, function ($query) use ($q) {
-                return $query->where(function ($sub) use ($q) {
-                    $sub->where('nombre', 'ilike', "%$q%")
-                        ->orWhere('codigo', 'ilike', "%$q%");
+                $searchLower = strtolower($q);
+                return $query->where(function ($sub) use ($searchLower) {
+                    $sub->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
                 });
             })
             ->orderByDesc('id')

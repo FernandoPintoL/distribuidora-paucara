@@ -67,16 +67,18 @@ class ClienteController extends Controller
         $query = ClienteModel::query()
             ->leftJoin('localidades', 'clientes.localidad_id', '=', 'localidades.id')
             ->when($q, function ($query) use ($q, $options) {
-                $query->where(function ($sub) use ($q, $options) {
-                    $sub->where('clientes.nombre', 'like', "%$q%")
-                        ->orWhere('clientes.razon_social', 'like', "%$q%")
-                        ->orWhere('clientes.nit', 'like', "%$q%")
-                        ->orWhere('clientes.telefono', 'like', "%$q%")
-                        ->orWhere('clientes.codigo_cliente', 'like', "%$q%")
-                        ->orWhere('localidades.nombre', 'like', "%$q%");
+                // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+                $searchLower = strtolower($q);
+                $query->where(function ($sub) use ($searchLower, $options) {
+                    $sub->whereRaw('LOWER(clientes.nombre) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(clientes.razon_social) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(clientes.nit) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(clientes.telefono) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(clientes.codigo_cliente) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(localidades.nombre) like ?', ["%$searchLower%"]);
 
                     if ($options['include_email']) {
-                        $sub->orWhere('clientes.email', 'like', "%$q%");
+                        $sub->orWhereRaw('LOWER(clientes.email) like ?', ["%$searchLower%"]);
                     }
                 });
             })
@@ -120,8 +122,26 @@ class ClienteController extends Controller
             if ($this->isApiRequest()) {
                 $clientes->getCollection()->load('localidad', 'categorias', 'direcciones', 'user');
             } else {
-                $clientes->load('localidad');
+                $clientes->getCollection()->load('localidad');
             }
+
+            // 🔍 DEBUG: Log para ver qué datos se están enviando
+            \Log::info('🔍 DEBUG CLIENTES INDEX', [
+                'is_api_request' => $this->isApiRequest(),
+                'total_clientes' => $clientes->total(),
+                'primer_cliente' => $clientes->first() ? [
+                    'id' => $clientes->first()->id,
+                    'nombre' => $clientes->first()->nombre,
+                    'localidad_id' => $clientes->first()->localidad_id,
+                    'localidad_cargada' => $clientes->first()->relationLoaded('localidad'),
+                    'localidad_data' => $clientes->first()->localidad ? [
+                        'id' => $clientes->first()->localidad->id,
+                        'nombre' => $clientes->first()->localidad->nombre,
+                        'codigo' => $clientes->first()->localidad->codigo,
+                    ] : null,
+                    'toArray' => $clientes->first()->toArray(),
+                ] : null,
+            ]);
 
             // Preparar datos adicionales para web
             $additionalData = [];
@@ -184,6 +204,25 @@ class ClienteController extends Controller
             $request->merge($data);
         }
 
+        // Filtrar direcciones vacías o incompletas antes de validar
+        if (isset($data['direcciones']) && is_array($data['direcciones'])) {
+            $data['direcciones'] = array_filter($data['direcciones'], function ($direccion) {
+                // Solo mantener direcciones que tengan al menos dirección, latitud o longitud
+                return !empty($direccion['direccion']) ||
+                       !empty($direccion['latitud']) || !empty($direccion['longitud']);
+            });
+
+            // Reindexar el array para evitar índices no consecutivos
+            $data['direcciones'] = array_values($data['direcciones']);
+
+            // Si el array quedó vacío, eliminarlo completamente
+            if (empty($data['direcciones'])) {
+                unset($data['direcciones']);
+            }
+
+            $request->merge($data);
+        }
+
         // Validaciones base
         $validated = $request->validate([
             'nombre'                         => 'required|string|max:255',
@@ -193,8 +232,6 @@ class ClienteController extends Controller
             'telefono'                       => 'nullable|string|max:20',
             'limite_credito'                 => 'nullable|numeric|min:0',
             'localidad_id'                   => 'nullable|exists:localidades,id',
-            'latitud'                        => 'nullable|numeric|between:-90,90',
-            'longitud'                       => 'nullable|numeric|between:-180,180',
             'activo'                         => 'nullable|boolean',
             'observaciones'                  => 'nullable|string',
             'crear_usuario'                  => 'nullable|boolean',
@@ -206,9 +243,9 @@ class ClienteController extends Controller
             // Direcciones
             'direcciones'                    => 'nullable|array',
             'direcciones.*.direccion'        => 'required_with:direcciones|string|max:500',
-            'direcciones.*.ciudad'           => 'nullable|string|max:100',
-            'direcciones.*.departamento'     => 'nullable|string|max:100',
-            'direcciones.*.codigo_postal'    => 'nullable|string|max:20',
+            'direcciones.*.latitud'          => 'required_with:direcciones|numeric|between:-90,90',
+            'direcciones.*.longitud'         => 'required_with:direcciones|numeric|between:-180,180',
+            'direcciones.*.observaciones'    => 'nullable|string|max:1000',
             'direcciones.*.es_principal'     => 'nullable|boolean',
             'direcciones.*.activa'           => 'nullable|boolean',
             // Ventanas de entrega (solo API)
@@ -307,6 +344,25 @@ class ClienteController extends Controller
             $request->merge($data);
         }
 
+        // Filtrar direcciones vacías o incompletas antes de validar
+        if (isset($data['direcciones']) && is_array($data['direcciones'])) {
+            $data['direcciones'] = array_filter($data['direcciones'], function ($direccion) {
+                // Solo mantener direcciones que tengan al menos dirección, latitud o longitud
+                return !empty($direccion['direccion']) ||
+                       !empty($direccion['latitud']) || !empty($direccion['longitud']);
+            });
+
+            // Reindexar el array para evitar índices no consecutivos
+            $data['direcciones'] = array_values($data['direcciones']);
+
+            // Si el array quedó vacío, eliminarlo completamente
+            if (empty($data['direcciones'])) {
+                unset($data['direcciones']);
+            }
+
+            $request->merge($data);
+        }
+
         // Validaciones base
         $validated = $request->validate([
             'crear_usuario'                  => 'nullable|boolean',
@@ -317,8 +373,6 @@ class ClienteController extends Controller
             'telefono'                       => 'nullable|string|max:20',
             'limite_credito'                 => 'nullable|numeric|min:0',
             'localidad_id'                   => 'nullable|exists:localidades,id',
-            'latitud'                        => 'nullable|numeric|between:-90,90',
-            'longitud'                       => 'nullable|numeric|between:-180,180',
             'activo'                         => 'nullable|boolean',
             'observaciones'                  => 'nullable|string',
             // Archivos de imagen (opcionales)
@@ -328,9 +382,9 @@ class ClienteController extends Controller
             // Direcciones opcionales
             'direcciones'                    => 'nullable|array',
             'direcciones.*.direccion'        => 'required_with:direcciones|string|max:500',
-            'direcciones.*.ciudad'           => 'nullable|string|max:100',
-            'direcciones.*.departamento'     => 'nullable|string|max:100',
-            'direcciones.*.codigo_postal'    => 'nullable|string|max:20',
+            'direcciones.*.latitud'          => 'required_with:direcciones|numeric|between:-90,90',
+            'direcciones.*.longitud'         => 'required_with:direcciones|numeric|between:-180,180',
+            'direcciones.*.observaciones'    => 'nullable|string|max:1000',
             'direcciones.*.es_principal'     => 'nullable|boolean',
             'direcciones.*.activa'           => 'nullable|boolean',
             // Ventanas de entrega preferidas (opcional)
@@ -589,8 +643,6 @@ class ClienteController extends Controller
             'genero'              => $data['genero'] ?? null,
             'limite_credito'      => $data['limite_credito'] ?? 0,
             'localidad_id'        => $data['localidad_id'] ?? null,
-            'latitud'             => $data['latitud'] ?? null,
-            'longitud'            => $data['longitud'] ?? null,
             'activo'              => $data['activo'] ?? true,
             'fecha_registro'      => now(),
             'usuario_creacion_id' => $usuarioCreacionId,
@@ -644,13 +696,15 @@ class ClienteController extends Controller
             return ApiResponse::success([]);
         }
 
+        // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
+        $searchLower = strtolower($q);
         $clientes = ClienteModel::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
             ->where('activo', true)
-            ->where(function ($query) use ($q) {
-                $query->where('nombre', 'like', "%$q%")
-                    ->orWhere('razon_social', 'like', "%$q%")
-                    ->orWhere('nit', 'like', "%$q%")
-                    ->orWhere('telefono', 'like', "%$q%");
+            ->where(function ($query) use ($searchLower) {
+                $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(razon_social) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(nit) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(telefono) like ?', ["%$searchLower%"]);
             })
             ->limit($limite)
             ->get();
@@ -877,15 +931,15 @@ class ClienteController extends Controller
      */
     private function applyFilters($query, Request $request): void
     {
-        // Filtro de búsqueda
+        // Filtro de búsqueda (case-insensitive)
         if ($request->filled('q')) {
-            $q = $request->string('q');
-            $query->where(function ($subQuery) use ($q) {
-                $subQuery->where('nombre', 'like', "%$q%")
-                    ->orWhere('razon_social', 'like', "%$q%")
-                    ->orWhere('nit', 'like', "%$q%")
-                    ->orWhere('telefono', 'like', "%$q%")
-                    ->orWhere('codigo_cliente', 'like', "%$q%");
+            $searchLower = strtolower($request->string('q'));
+            $query->where(function ($subQuery) use ($searchLower) {
+                $subQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(razon_social) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(nit) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(telefono) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(codigo_cliente) like ?', ["%$searchLower%"]);
             });
         }
 

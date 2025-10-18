@@ -35,6 +35,7 @@ export interface StockAlmacen {
 export interface Producto extends BaseEntity {
   id: Id;
   nombre: string;
+  sku?: string | null;
   descripcion?: string | null;
   peso?: number | null;
   unidad_medida_id?: Id;
@@ -68,6 +69,7 @@ export interface Producto extends BaseEntity {
 export interface ProductoFormData extends BaseFormData {
   id?: Id;
   nombre: string;
+  sku?: string | null;
   descripcion?: string | null;
   peso?: number | null;
   unidad_medida_id?: Id | '';
@@ -76,6 +78,7 @@ export interface ProductoFormData extends BaseFormData {
   categoria_id?: Id | '';
   marca_id?: Id | '';
   proveedor_id?: Id | '';
+  proveedor?: { id: number; nombre: string; razon_social?: string } | null;
   stock_minimo?: number | null;
   stock_maximo?: number | null;
   activo?: boolean;

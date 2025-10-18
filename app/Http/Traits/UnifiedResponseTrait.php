@@ -20,16 +20,20 @@ trait UnifiedResponseTrait
         $request = $request ?? request();
 
         // Si es una petición de Inertia, NO es una petición de API
-        if ($request->header('X-Inertia') === 'true') {
+        // Inertia puede enviar el header como string 'true' o boolean true
+        if ($request->hasHeader('X-Inertia')) {
             return false;
         }
 
-        return $request->expectsJson()
-            || $request->is('api/*')
+        // Si viene de una ruta web explícita, no es API
+        if ($request->is('clientes/*') || $request->is('clientes')) {
+            return false;
+        }
+
+        return $request->is('api/*')
             || $request->hasHeader('X-API-Request')
             || $request->hasHeader('X-Flutter-Request')
-            || str_contains($request->header('User-Agent', ''), 'Flutter')
-            || str_contains($request->header('Accept', ''), 'application/json');
+            || str_contains($request->header('User-Agent', ''), 'Flutter');
     }
 
     /**
