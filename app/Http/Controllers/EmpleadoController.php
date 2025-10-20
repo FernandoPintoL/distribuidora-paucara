@@ -1,7 +1,6 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Enums\TipoEmpleado;
 use App\Http\Requests\EmpleadoRequest;
 use App\Models\Empleado;
 use App\Models\User;
@@ -31,7 +30,7 @@ class EmpleadoController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Empleado::with(['user.roles', 'supervisor.user']);
+        $query = Empleado::with(['user.roles']);
 
         // Filtros de búsqueda (soporte tanto 'q' como 'search' para compatibilidad)
         $searchTerm = $request->q ?? $request->search;
@@ -50,11 +49,6 @@ class EmpleadoController extends Controller
                             ->orWhereRaw('LOWER(usernick) like ?', ["%{$searchLower}%"]);
                     });
             });
-        }
-
-        // Filtro por departamento
-        if ($request->has('departamento') && $request->departamento) {
-            $query->where('departamento', $request->departamento);
         }
 
         // Filtro por estado
@@ -95,15 +89,9 @@ class EmpleadoController extends Controller
 
         $empleados = $query->paginate(15);
 
-        // Obtener datos para filtros
-        $departamentos = Empleado::distinct('departamento')->pluck('departamento')->filter();
-        $supervisores  = Empleado::with('user')->whereHas('supervisados')->get();
-
         return Inertia::render('empleados/index', [
-            'empleados'     => $empleados,
-            'departamentos' => $departamentos,
-            'supervisores'  => $supervisores,
-            'filters'       => $request->only(['q', 'search', 'departamento', 'estado', 'puede_acceder_sistema', 'acceso_sistema', 'order_by', 'order_dir']),
+            'empleados' => $empleados,
+            'filters'   => $request->only(['q', 'search', 'estado', 'puede_acceder_sistema', 'acceso_sistema', 'order_by', 'order_dir']),
         ]);
     }
 
@@ -148,35 +136,9 @@ class EmpleadoController extends Controller
             })
             ->values(); // Reindexar después del filtro
 
-        // Definir mapeo de cargos a roles sugeridos basados en TipoEmpleado
-        $cargoRoleMapping = [
-            'Chofer'                 => TipoEmpleado::CHOFER,
-            'Cajero'                 => TipoEmpleado::CAJERO,
-            'Vendedor'               => TipoEmpleado::VENDEDOR,
-            'Comprador'              => TipoEmpleado::COMPRADOR,
-            'Gestor de Almacén'      => TipoEmpleado::GESTOR_ALMACEN,
-            'Supervisor'             => TipoEmpleado::SUPERVISOR,
-            'Gerente RRHH'           => TipoEmpleado::GERENTE_RRHH,
-            'Gerente Administrativo' => TipoEmpleado::GERENTE_ADMINISTRATIVO,
-            'Logístico'              => TipoEmpleado::LOGISTICA,
-        ];
-
-        // Obtener configuración de campos adicionales para cada rol
-        $camposRol = [];
-        foreach (TipoEmpleado::conCamposAdicionales() as $rol => $config) {
-            if (isset($config['campos'])) {
-                $camposRol[$rol] = [
-                    'campos'              => $config['campos'],
-                    'cargos_relacionados' => $config['cargos_relacionados'] ?? [],
-                ];
-            }
-        }
-
         return Inertia::render('empleados/create', [
-            'supervisores'     => $supervisores,
-            'roles'            => $roles,
-            'cargoRoleMapping' => $cargoRoleMapping,
-            'camposRol'        => $camposRol,
+            'supervisores' => $supervisores,
+            'roles'        => $roles,
         ]);
     }
 
@@ -198,42 +160,11 @@ class EmpleadoController extends Controller
         if (! empty($rolesAsignados)) {
             try {
                 $this->validarPermisosAsignacionRoles($rolesAsignados);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 return back()->withErrors([
                     'roles' => $e->getMessage(),
                 ])->withInput();
             }
-        }
-
-        $rolPrincipal = ! empty($rolesAsignados) ? $rolesAsignados[0] : null;
-
-        // Si no hay roles asignados, determinar por cargo
-        if (empty($rolesAsignados)) {
-            $rolDeterminado = $this->determinarRolPorCargo($request->cargo);
-            if ($rolDeterminado) {
-                $rolesAsignados = [$rolDeterminado];
-                $rolPrincipal   = $rolDeterminado;
-            }
-        }
-
-        // Validar campos adicionales según el tipo de empleado/rol principal
-        if ($rolPrincipal === TipoEmpleado::CHOFER ||
-            in_array($request->cargo, ['Chofer', 'Conductor', 'Repartidor', 'Mensajero'])) {
-
-            $request->validate([
-                'licencia'                   => 'nullable|string|max:20',
-                'fecha_vencimiento_licencia' => 'nullable|date|after:today',
-            ], [
-                'licencia.required'                   => 'La licencia de conducir es obligatoria para choferes',
-                'fecha_vencimiento_licencia.required' => 'La fecha de vencimiento de licencia es obligatoria',
-                'fecha_vencimiento_licencia.after'    => 'La fecha de vencimiento debe ser posterior a hoy',
-            ]);
-        }
-
-        // Validar campos adicionales para otros roles según sea necesario
-        if ($rolPrincipal && TipoEmpleado::requiereCamposAdicionales($rolPrincipal)) {
-            $reglas = TipoEmpleado::reglasValidacion($rolPrincipal);
-            $request->validate($reglas);
         }
 
         // Validaciones condicionales si se crea usuario
@@ -241,16 +172,11 @@ class EmpleadoController extends Controller
             $request->validate([
                 'email'    => 'nullable|string|email|max:255|unique:users',
                 'usernick' => 'required|string|max:255|unique:users', // Usernick es requerido si puede acceder al sistema
+                'password' => 'required|string|min:8|confirmed', // Password requerido al crear usuario
             ]);
         }
 
-        // Si aún no hay roles, usar el rol base
-        if (empty($rolesAsignados)) {
-            $rolesAsignados = [TipoEmpleado::EMPLEADO_BASE];
-            $rolPrincipal   = TipoEmpleado::EMPLEADO_BASE;
-        }
-
-        DB::transaction(function () use ($request, $rolesAsignados, $rolPrincipal) {
+        DB::transaction(function () use ($request, $rolesAsignados) {
             $user = null;
 
             // Crear usuario solo si se solicita o puede acceder al sistema
@@ -262,7 +188,7 @@ class EmpleadoController extends Controller
                     'name'              => $request->nombre,
                     'usernick'          => $usernick,
                     'email'             => $request->email,
-                    'password'          => Hash::make('password123'), // Password temporal
+                    'password'          => Hash::make($request->password), // Usar password del request
                     'email_verified_at' => now(),
                     'activo'            => $request->puede_acceder_sistema ?? false,
                 ]);
@@ -291,37 +217,9 @@ class EmpleadoController extends Controller
                 'puede_acceder_sistema'        => $request->puede_acceder_sistema ?? false,
                 'contacto_emergencia_nombre'   => $request->contacto_emergencia_nombre,
                 'contacto_emergencia_telefono' => $request->contacto_emergencia_telefono,
+                'latitud'                      => $request->latitud,
+                'longitud'                     => $request->longitud,
             ];
-
-            // Preparar datos específicos según el rol del empleado
-            $datosRol = [];
-
-            // Usar el rol principal para datos específicos
-            $rol = $rolPrincipal;
-
-            // Verificar si el rol requiere campos adicionales
-            if (TipoEmpleado::requiereCamposAdicionales($rol)) {
-                // Obtener configuración de campos para este rol
-                $configRol = TipoEmpleado::conCamposAdicionales()[$rol];
-
-                // Para cada campo definido en la configuración, agregar al empleado si corresponde
-                foreach ($configRol['campos'] as $campo => $config) {
-                    // Si el campo debe guardarse directamente en el modelo
-                    if (in_array($campo, ['licencia', 'fecha_vencimiento_licencia'])) {
-                        $empleadoData[$campo] = $request->$campo;
-                    }
-                    // Si no, agregar al array de datos_rol
-                    else if ($request->has($campo)) {
-                        $datosRol[$campo] = $request->$campo;
-                    }
-                }
-
-                // Agregar flag identificador de rol en datos_rol
-                $datosRol['rol_identificador'] = $rol;
-
-                // Añadir los datos de rol al empleado
-                $empleadoData['datos_rol'] = $datosRol;
-            }
 
             // Crear empleado sin código inicialmente
             $empleado = Empleado::create($empleadoData);
@@ -394,25 +292,10 @@ class EmpleadoController extends Controller
             })
             ->values(); // Reindexar después del filtro
 
-        // Determinar el rol funcional actual basado en el cargo del empleado
-        $rolActual = TipoEmpleado::determinarRolPorCargo($empleado->cargo);
-
-        // Obtener la configuración de los campos para el rol actual
-        $configuracionCampos = [];
-        if (! empty($rolActual)) {
-            $tiposEmpleadoConCampos = TipoEmpleado::conCamposAdicionales();
-            if (isset($tiposEmpleadoConCampos[$rolActual])) {
-                $configuracionCampos = $tiposEmpleadoConCampos[$rolActual]['campos'];
-            }
-        }
-
         return Inertia::render('empleados/edit', [
-            'empleado'          => $empleado, // Los accessors automáticamente agregan nombre, email, usernick, roles
-            'supervisores'      => $supervisores,
-            'roles'             => $roles,
-            'rolFuncional'      => $rolActual,
-            'camposRol'         => $configuracionCampos,
-            'datosRolGuardados' => $empleado->datos_rol ?? [],
+            'empleado'     => $empleado, // Los accessors automáticamente agregan nombre, email, usernick, roles
+            'supervisores' => $supervisores,
+            'roles'        => $roles,
         ]);
     }
 
@@ -458,10 +341,6 @@ class EmpleadoController extends Controller
             ];
         }
 
-        if ($request->has('fecha_nacimiento')) {
-            $rules['fecha_nacimiento'] = 'nullable|date';
-        }
-
         if ($request->has('telefono')) {
             $rules['telefono'] = 'nullable|string|max:20';
         }
@@ -470,13 +349,9 @@ class EmpleadoController extends Controller
             $rules['direccion'] = 'nullable|string|max:500';
         }
 
-        /* if ($request->has('cargo')) {
-            $rules['cargo'] = 'nullable|string|max:100';
+        if ($request->has('password')) {
+            $rules['password'] = 'nullable|string|min:8|confirmed';
         }
-
-        if ($request->has('departamento')) {
-            $rules['departamento'] = 'nullable|string|max:100';
-        } */
 
         if ($request->has('fecha_ingreso')) {
             $rules['fecha_ingreso'] = 'required|date';
@@ -514,22 +389,7 @@ class EmpleadoController extends Controller
             }
         }
 
-        // Determinar el rol basado en el cargo (usar cargo actual del empleado si no viene en request)
-        $cargo        = $request->cargo ?? $empleado->cargo;
-        $rolFuncional = $cargo ? TipoEmpleado::determinarRolPorCargo($cargo) : null;
-
-        // Si hay un cambio en el cargo, verificar si necesitamos validar campos adicionales
-        if ($rolFuncional !== TipoEmpleado::determinarRolPorCargo($empleado->cargo)) {
-            // Validar campos adicionales según el nuevo rol
-            if (TipoEmpleado::requiereCamposAdicionales($rolFuncional)) {
-                $request->validate(
-                    TipoEmpleado::reglasValidacion($rolFuncional),
-                    TipoEmpleado::mensajesError($rolFuncional)
-                );
-            }
-        }
-
-        DB::transaction(function () use ($request, $empleado, $rolFuncional) {
+        DB::transaction(function () use ($request, $empleado) {
             // Actualizar usuario solo si existe y vienen datos del usuario
             if ($empleado->user && $request->has('nombre')) {
                 $user = $empleado->user;
@@ -546,6 +406,11 @@ class EmpleadoController extends Controller
                     $user->email = $request->email;
                 }
 
+                // Actualizar contraseña si se proporcionó
+                if ($request->has('password') && $request->password) {
+                    $user->password = Hash::make($request->password);
+                }
+
                 $user->save();
 
                 // Actualizar roles si se especifican
@@ -554,31 +419,11 @@ class EmpleadoController extends Controller
                 }
             }
 
-            // Procesar campos específicos del rol funcional
-            $datosRol = [];
-            if ($rolFuncional && TipoEmpleado::requiereCamposAdicionales($rolFuncional)) {
-                $configuracionCampos = TipoEmpleado::conCamposAdicionales()[$rolFuncional]['campos'];
-
-                // Extraer valores de los campos específicos del rol del request
-                foreach ($configuracionCampos as $campo => $configuracion) {
-                    if ($request->has($campo)) {
-                        $datosRol[$campo] = $request->$campo;
-                    }
-                }
-
-                // Mantener el identificador del rol en los datos
-                $datosRol['rol_identificador'] = $rolFuncional;
-            }
-
             // Preparar datos de actualización del empleado - SOLO campos presentes en request
             $datosActualizacion = [];
 
             if ($request->has('ci')) {
                 $datosActualizacion['ci'] = $request->ci;
-            }
-
-            if ($request->has('fecha_nacimiento')) {
-                $datosActualizacion['fecha_nacimiento'] = $request->fecha_nacimiento;
             }
 
             if ($request->has('telefono')) {
@@ -589,14 +434,6 @@ class EmpleadoController extends Controller
                 $datosActualizacion['direccion'] = $request->direccion;
             }
 
-            if ($request->has('cargo')) {
-                $datosActualizacion['cargo'] = $request->cargo;
-            }
-
-            if ($request->has('departamento')) {
-                $datosActualizacion['departamento'] = $request->departamento;
-            }
-
             if ($request->has('fecha_ingreso')) {
                 $datosActualizacion['fecha_ingreso'] = $request->fecha_ingreso;
             }
@@ -605,9 +442,12 @@ class EmpleadoController extends Controller
                 $datosActualizacion['puede_acceder_sistema'] = $request->puede_acceder_sistema;
             }
 
-            // Añadir datos_rol solo si hay datos para guardar
-            if (! empty($datosRol)) {
-                $datosActualizacion['datos_rol'] = $datosRol;
+            if ($request->has('latitud')) {
+                $datosActualizacion['latitud'] = $request->latitud;
+            }
+
+            if ($request->has('longitud')) {
+                $datosActualizacion['longitud'] = $request->longitud;
             }
 
             // Actualizar empleado SOLO si hay datos para actualizar

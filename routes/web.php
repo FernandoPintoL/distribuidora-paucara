@@ -266,13 +266,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Esta ruta DEBE ser la última porque captura cualquier cosa
         Route::get('{envio}', [EnvioController::class, 'show'])->name('show');
-    }); // API routes para inventario
-    Route::get('api/buscar-productos', [\App\Http\Controllers\InventarioController::class, 'buscarProductos'])->middleware('permission:inventario.api.buscar-productos')->name('api.buscar-productos');
-    Route::get('api/stock-producto/{producto}', [\App\Http\Controllers\InventarioController::class, 'stockProducto'])->middleware('permission:inventario.api.stock-producto')->name('api.stock-producto');
-    Route::get('api/vehiculos', [\App\Http\Controllers\InventarioController::class, 'apiVehiculos'])->middleware('permission:inventario.api.vehiculos')->name('api.vehiculos');
-    Route::get('api/choferes', [\App\Http\Controllers\InventarioController::class, 'apiChoferes'])->middleware('permission:inventario.api.choferes')->name('api.choferes');
+    });
 
-    // API routes para autocompletado
+    // API routes para autocompletado (NOTA: Estas rutas deberían moverse a routes/api.php eventualmente)
     Route::get('api/proveedores/buscar', [\App\Http\Controllers\ProveedorController::class, 'buscarApi'])->name('api.proveedores.buscar');
     Route::get('api/productos/buscar', [\App\Http\Controllers\ProductoController::class, 'buscarApi'])->name('api.productos.buscar');
 

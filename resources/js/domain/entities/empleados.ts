@@ -7,21 +7,11 @@ export interface Empleado extends BaseEntity {
     codigo_empleado: string;
     numero_empleado: string;
     ci: string;
-    fecha_nacimiento: string;
     telefono?: string | null;
     direccion?: string | null;
-    cargo: string;
-    puesto?: string | null;
-    departamento: string;
-    supervisor_id?: Id | null;
     fecha_ingreso: string;
-    tipo_contrato: string;
-    salario_base: number;
-    bonos: number;
     estado: string;
     puede_acceder_sistema: boolean;
-    contacto_emergencia_nombre?: string | null;
-    contacto_emergencia_telefono?: string | null;
     created_at: string;
     updated_at: string;
 
@@ -42,15 +32,6 @@ export interface Empleado extends BaseEntity {
             name: string;
         }>;
     } | null;
-
-    supervisor?: {
-        id: Id;
-        nombre: string;
-        cargo: string;
-        user?: {
-            name: string;
-        };
-    } | null;
 }
 
 export interface EmpleadoFormData extends BaseFormData {
@@ -58,21 +39,14 @@ export interface EmpleadoFormData extends BaseFormData {
     // Información personal
     nombre: string;
     ci: string;
-    fecha_nacimiento: string;
     telefono?: string | null;
     direccion?: string | null;
 
     // Información laboral
     codigo_empleado?: string | null;
-    cargo: string;
-    puesto?: string | null;
-    departamento: string;
-    supervisor_id?: Id | string | null;
     fecha_ingreso: string;
-    tipo_contrato: string;
-    salario_base: number | string;
-    bonos: number | string;
     estado: string;
+    observaciones?: string | null;
 
     // Información del sistema
     crear_usuario?: boolean;
@@ -81,9 +55,9 @@ export interface EmpleadoFormData extends BaseFormData {
     email?: string | null;
     roles?: (string | number)[];
 
-    // Contacto de emergencia
-    contacto_emergencia_nombre?: string | null;
-    contacto_emergencia_telefono?: string | null;
+    // Cambio de contraseña (solo para edición)
+    password?: string | null;
+    password_confirmation?: string | null;
 
     // Campos específicos por rol funcional (dinámicos)
     [key: string]: unknown;

@@ -479,7 +479,7 @@ export const show = {
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/api/compras/{compra}'
  */
 const update393676824d4f9c447fe0b228852aaa0e = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -494,7 +494,7 @@ update393676824d4f9c447fe0b228852aaa0e.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/api/compras/{compra}'
  */
 update393676824d4f9c447fe0b228852aaa0e.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -522,7 +522,7 @@ update393676824d4f9c447fe0b228852aaa0e.url = (args: { compra: string | number } 
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/api/compras/{compra}'
  */
 update393676824d4f9c447fe0b228852aaa0e.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -531,7 +531,7 @@ update393676824d4f9c447fe0b228852aaa0e.put = (args: { compra: string | number } 
 })
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/api/compras/{compra}'
  */
 update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -541,7 +541,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
 
     /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/api/compras/{compra}'
  */
     const update393676824d4f9c447fe0b228852aaa0eForm = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -556,7 +556,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
 
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/api/compras/{compra}'
  */
         update393676824d4f9c447fe0b228852aaa0eForm.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -570,7 +570,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
         })
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/api/compras/{compra}'
  */
         update393676824d4f9c447fe0b228852aaa0eForm.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -586,7 +586,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
     update393676824d4f9c447fe0b228852aaa0e.form = update393676824d4f9c447fe0b228852aaa0eForm
     /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/compras/{compra}'
  */
 const update38f98b93ecee7d377531798daf1d6db6 = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -601,7 +601,7 @@ update38f98b93ecee7d377531798daf1d6db6.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/compras/{compra}'
  */
 update38f98b93ecee7d377531798daf1d6db6.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -629,7 +629,7 @@ update38f98b93ecee7d377531798daf1d6db6.url = (args: { compra: string | number } 
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/compras/{compra}'
  */
 update38f98b93ecee7d377531798daf1d6db6.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -638,7 +638,7 @@ update38f98b93ecee7d377531798daf1d6db6.put = (args: { compra: string | number } 
 })
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/compras/{compra}'
  */
 update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -648,7 +648,7 @@ update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number 
 
     /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/compras/{compra}'
  */
     const update38f98b93ecee7d377531798daf1d6db6Form = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -663,7 +663,7 @@ update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number 
 
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/compras/{compra}'
  */
         update38f98b93ecee7d377531798daf1d6db6Form.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -677,7 +677,7 @@ update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number 
         })
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:323
+ * @see app/Http/Controllers/CompraController.php:328
  * @route '/compras/{compra}'
  */
         update38f98b93ecee7d377531798daf1d6db6Form.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -699,7 +699,7 @@ export const update = {
 
 /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:357
+ * @see app/Http/Controllers/CompraController.php:381
  * @route '/api/compras/{compra}'
  */
 export const destroy = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -714,7 +714,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:357
+ * @see app/Http/Controllers/CompraController.php:381
  * @route '/api/compras/{compra}'
  */
 destroy.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -742,7 +742,7 @@ destroy.url = (args: { compra: string | number } | [compra: string | number ] | 
 
 /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:357
+ * @see app/Http/Controllers/CompraController.php:381
  * @route '/api/compras/{compra}'
  */
 destroy.delete = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -752,7 +752,7 @@ destroy.delete = (args: { compra: string | number } | [compra: string | number ]
 
     /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:357
+ * @see app/Http/Controllers/CompraController.php:381
  * @route '/api/compras/{compra}'
  */
     const destroyForm = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -767,7 +767,7 @@ destroy.delete = (args: { compra: string | number } | [compra: string | number ]
 
             /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:357
+ * @see app/Http/Controllers/CompraController.php:381
  * @route '/api/compras/{compra}'
  */
         destroyForm.delete = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

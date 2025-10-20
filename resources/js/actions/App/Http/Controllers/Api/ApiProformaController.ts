@@ -658,7 +658,7 @@ crearPedidoDesdeApp.post = (options?: RouteQueryOptions): RouteDefinition<'post'
     crearPedidoDesdeApp.form = crearPedidoDesdeAppForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
- * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
  * @route '/api/app/cliente/pedidos'
  */
 export const obtenerHistorialPedidos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -673,7 +673,7 @@ obtenerHistorialPedidos.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
- * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
  * @route '/api/app/cliente/pedidos'
  */
 obtenerHistorialPedidos.url = (options?: RouteQueryOptions) => {
@@ -682,7 +682,7 @@ obtenerHistorialPedidos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
- * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
  * @route '/api/app/cliente/pedidos'
  */
 obtenerHistorialPedidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -691,7 +691,7 @@ obtenerHistorialPedidos.get = (options?: RouteQueryOptions): RouteDefinition<'ge
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
- * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
  * @route '/api/app/cliente/pedidos'
  */
 obtenerHistorialPedidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -701,7 +701,7 @@ obtenerHistorialPedidos.head = (options?: RouteQueryOptions): RouteDefinition<'h
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
- * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
  * @route '/api/app/cliente/pedidos'
  */
     const obtenerHistorialPedidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -711,7 +711,7 @@ obtenerHistorialPedidos.head = (options?: RouteQueryOptions): RouteDefinition<'h
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
- * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
  * @route '/api/app/cliente/pedidos'
  */
         obtenerHistorialPedidosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -720,7 +720,7 @@ obtenerHistorialPedidos.head = (options?: RouteQueryOptions): RouteDefinition<'h
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerHistorialPedidos
- * @see app/Http/Controllers/Api/ApiProformaController.php:728
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
  * @route '/api/app/cliente/pedidos'
  */
         obtenerHistorialPedidosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -736,7 +736,7 @@ obtenerHistorialPedidos.head = (options?: RouteQueryOptions): RouteDefinition<'h
     obtenerHistorialPedidos.form = obtenerHistorialPedidosForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @see app/Http/Controllers/Api/ApiProformaController.php:858
  * @route '/api/app/pedidos/{id}'
  */
 export const obtenerDetallePedido = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -751,7 +751,7 @@ obtenerDetallePedido.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @see app/Http/Controllers/Api/ApiProformaController.php:858
  * @route '/api/app/pedidos/{id}'
  */
 obtenerDetallePedido.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -779,7 +779,7 @@ obtenerDetallePedido.url = (args: { id: string | number } | [id: string | number
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @see app/Http/Controllers/Api/ApiProformaController.php:858
  * @route '/api/app/pedidos/{id}'
  */
 obtenerDetallePedido.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -788,7 +788,7 @@ obtenerDetallePedido.get = (args: { id: string | number } | [id: string | number
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @see app/Http/Controllers/Api/ApiProformaController.php:858
  * @route '/api/app/pedidos/{id}'
  */
 obtenerDetallePedido.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -798,7 +798,7 @@ obtenerDetallePedido.head = (args: { id: string | number } | [id: string | numbe
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @see app/Http/Controllers/Api/ApiProformaController.php:858
  * @route '/api/app/pedidos/{id}'
  */
     const obtenerDetallePedidoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -808,7 +808,7 @@ obtenerDetallePedido.head = (args: { id: string | number } | [id: string | numbe
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @see app/Http/Controllers/Api/ApiProformaController.php:858
  * @route '/api/app/pedidos/{id}'
  */
         obtenerDetallePedidoForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -817,7 +817,7 @@ obtenerDetallePedido.head = (args: { id: string | number } | [id: string | numbe
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:846
+ * @see app/Http/Controllers/Api/ApiProformaController.php:858
  * @route '/api/app/pedidos/{id}'
  */
         obtenerDetallePedidoForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -833,7 +833,7 @@ obtenerDetallePedido.head = (args: { id: string | number } | [id: string | numbe
     obtenerDetallePedido.form = obtenerDetallePedidoForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @see app/Http/Controllers/Api/ApiProformaController.php:985
  * @route '/api/app/pedidos/{id}/estado'
  */
 export const obtenerEstadoPedido = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -848,7 +848,7 @@ obtenerEstadoPedido.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @see app/Http/Controllers/Api/ApiProformaController.php:985
  * @route '/api/app/pedidos/{id}/estado'
  */
 obtenerEstadoPedido.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -876,7 +876,7 @@ obtenerEstadoPedido.url = (args: { id: string | number } | [id: string | number 
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @see app/Http/Controllers/Api/ApiProformaController.php:985
  * @route '/api/app/pedidos/{id}/estado'
  */
 obtenerEstadoPedido.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -885,7 +885,7 @@ obtenerEstadoPedido.get = (args: { id: string | number } | [id: string | number 
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @see app/Http/Controllers/Api/ApiProformaController.php:985
  * @route '/api/app/pedidos/{id}/estado'
  */
 obtenerEstadoPedido.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -895,7 +895,7 @@ obtenerEstadoPedido.head = (args: { id: string | number } | [id: string | number
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @see app/Http/Controllers/Api/ApiProformaController.php:985
  * @route '/api/app/pedidos/{id}/estado'
  */
     const obtenerEstadoPedidoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -905,7 +905,7 @@ obtenerEstadoPedido.head = (args: { id: string | number } | [id: string | number
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @see app/Http/Controllers/Api/ApiProformaController.php:985
  * @route '/api/app/pedidos/{id}/estado'
  */
         obtenerEstadoPedidoForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -914,7 +914,7 @@ obtenerEstadoPedido.head = (args: { id: string | number } | [id: string | number
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
- * @see app/Http/Controllers/Api/ApiProformaController.php:973
+ * @see app/Http/Controllers/Api/ApiProformaController.php:985
  * @route '/api/app/pedidos/{id}/estado'
  */
         obtenerEstadoPedidoForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1297,6 +1297,85 @@ rechazar.post = (args: { proforma: number | { id: number } } | [proforma: number
         })
     
     rechazar.form = rechazarForm
-const ApiProformaController = { index, store, show, verificarEstado, verificarReservas, extenderReservas, crearPedidoDesdeApp, obtenerHistorialPedidos, obtenerDetallePedido, obtenerEstadoPedido, verificarStock, obtenerProductosDisponibles, listarParaDashboard, aprobar, rechazar }
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @route '/api/proformas/{proforma}/convertir-venta'
+ */
+export const convertirAVenta = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: convertirAVenta.url(args, options),
+    method: 'post',
+})
+
+convertirAVenta.definition = {
+    methods: ["post"],
+    url: '/api/proformas/{proforma}/convertir-venta',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @route '/api/proformas/{proforma}/convertir-venta'
+ */
+convertirAVenta.url = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { proforma: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { proforma: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    proforma: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        proforma: typeof args.proforma === 'object'
+                ? args.proforma.id
+                : args.proforma,
+                }
+
+    return convertirAVenta.definition.url
+            .replace('{proforma}', parsedArgs.proforma.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @route '/api/proformas/{proforma}/convertir-venta'
+ */
+convertirAVenta.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: convertirAVenta.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @route '/api/proformas/{proforma}/convertir-venta'
+ */
+    const convertirAVentaForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: convertirAVenta.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @route '/api/proformas/{proforma}/convertir-venta'
+ */
+        convertirAVentaForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: convertirAVenta.url(args, options),
+            method: 'post',
+        })
+    
+    convertirAVenta.form = convertirAVentaForm
+const ApiProformaController = { index, store, show, verificarEstado, verificarReservas, extenderReservas, crearPedidoDesdeApp, obtenerHistorialPedidos, obtenerDetallePedido, obtenerEstadoPedido, verificarStock, obtenerProductosDisponibles, listarParaDashboard, aprobar, rechazar, convertirAVenta }
 
 export default ApiProformaController

@@ -6,7 +6,7 @@ import mermas from './mermas'
 import inicial from './inicial'
 /**
 * @see \App\Http\Controllers\InventarioController::index
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -21,7 +21,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::index
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -30,7 +30,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::index
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -39,7 +39,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::index
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -49,7 +49,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::index
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -59,7 +59,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::index
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -68,7 +68,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::index
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -84,7 +84,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\InventarioController::dashboard
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -99,7 +99,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::dashboard
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -108,7 +108,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::dashboard
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -117,7 +117,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::dashboard
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -127,7 +127,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::dashboard
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -137,7 +137,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::dashboard
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -146,7 +146,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::dashboard
- * @see app/Http/Controllers/InventarioController.php:31
+ * @see app/Http/Controllers/InventarioController.php:34
  * @route '/inventario/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -162,7 +162,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\InventarioController::stockBajo
- * @see app/Http/Controllers/InventarioController.php:87
+ * @see app/Http/Controllers/InventarioController.php:90
  * @route '/inventario/stock-bajo'
  */
 export const stockBajo = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -177,7 +177,7 @@ stockBajo.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::stockBajo
- * @see app/Http/Controllers/InventarioController.php:87
+ * @see app/Http/Controllers/InventarioController.php:90
  * @route '/inventario/stock-bajo'
  */
 stockBajo.url = (options?: RouteQueryOptions) => {
@@ -186,7 +186,7 @@ stockBajo.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::stockBajo
- * @see app/Http/Controllers/InventarioController.php:87
+ * @see app/Http/Controllers/InventarioController.php:90
  * @route '/inventario/stock-bajo'
  */
 stockBajo.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -195,7 +195,7 @@ stockBajo.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::stockBajo
- * @see app/Http/Controllers/InventarioController.php:87
+ * @see app/Http/Controllers/InventarioController.php:90
  * @route '/inventario/stock-bajo'
  */
 stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -205,7 +205,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::stockBajo
- * @see app/Http/Controllers/InventarioController.php:87
+ * @see app/Http/Controllers/InventarioController.php:90
  * @route '/inventario/stock-bajo'
  */
     const stockBajoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -215,7 +215,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::stockBajo
- * @see app/Http/Controllers/InventarioController.php:87
+ * @see app/Http/Controllers/InventarioController.php:90
  * @route '/inventario/stock-bajo'
  */
         stockBajoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -224,7 +224,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::stockBajo
- * @see app/Http/Controllers/InventarioController.php:87
+ * @see app/Http/Controllers/InventarioController.php:90
  * @route '/inventario/stock-bajo'
  */
         stockBajoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -240,7 +240,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     stockBajo.form = stockBajoForm
 /**
 * @see \App\Http\Controllers\InventarioController::proximosVencer
- * @see app/Http/Controllers/InventarioController.php:148
+ * @see app/Http/Controllers/InventarioController.php:151
  * @route '/inventario/proximos-vencer'
  */
 export const proximosVencer = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -255,7 +255,7 @@ proximosVencer.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::proximosVencer
- * @see app/Http/Controllers/InventarioController.php:148
+ * @see app/Http/Controllers/InventarioController.php:151
  * @route '/inventario/proximos-vencer'
  */
 proximosVencer.url = (options?: RouteQueryOptions) => {
@@ -264,7 +264,7 @@ proximosVencer.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::proximosVencer
- * @see app/Http/Controllers/InventarioController.php:148
+ * @see app/Http/Controllers/InventarioController.php:151
  * @route '/inventario/proximos-vencer'
  */
 proximosVencer.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -273,7 +273,7 @@ proximosVencer.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::proximosVencer
- * @see app/Http/Controllers/InventarioController.php:148
+ * @see app/Http/Controllers/InventarioController.php:151
  * @route '/inventario/proximos-vencer'
  */
 proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -283,7 +283,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\InventarioController::proximosVencer
- * @see app/Http/Controllers/InventarioController.php:148
+ * @see app/Http/Controllers/InventarioController.php:151
  * @route '/inventario/proximos-vencer'
  */
     const proximosVencerForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -293,7 +293,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\InventarioController::proximosVencer
- * @see app/Http/Controllers/InventarioController.php:148
+ * @see app/Http/Controllers/InventarioController.php:151
  * @route '/inventario/proximos-vencer'
  */
         proximosVencerForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -302,7 +302,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\InventarioController::proximosVencer
- * @see app/Http/Controllers/InventarioController.php:148
+ * @see app/Http/Controllers/InventarioController.php:151
  * @route '/inventario/proximos-vencer'
  */
         proximosVencerForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -318,7 +318,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     proximosVencer.form = proximosVencerForm
 /**
 * @see \App\Http\Controllers\InventarioController::vencidos
- * @see app/Http/Controllers/InventarioController.php:206
+ * @see app/Http/Controllers/InventarioController.php:209
  * @route '/inventario/vencidos'
  */
 export const vencidos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -333,7 +333,7 @@ vencidos.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::vencidos
- * @see app/Http/Controllers/InventarioController.php:206
+ * @see app/Http/Controllers/InventarioController.php:209
  * @route '/inventario/vencidos'
  */
 vencidos.url = (options?: RouteQueryOptions) => {
@@ -342,7 +342,7 @@ vencidos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::vencidos
- * @see app/Http/Controllers/InventarioController.php:206
+ * @see app/Http/Controllers/InventarioController.php:209
  * @route '/inventario/vencidos'
  */
 vencidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -351,7 +351,7 @@ vencidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::vencidos
- * @see app/Http/Controllers/InventarioController.php:206
+ * @see app/Http/Controllers/InventarioController.php:209
  * @route '/inventario/vencidos'
  */
 vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -361,7 +361,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::vencidos
- * @see app/Http/Controllers/InventarioController.php:206
+ * @see app/Http/Controllers/InventarioController.php:209
  * @route '/inventario/vencidos'
  */
     const vencidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -371,7 +371,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::vencidos
- * @see app/Http/Controllers/InventarioController.php:206
+ * @see app/Http/Controllers/InventarioController.php:209
  * @route '/inventario/vencidos'
  */
         vencidosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -380,7 +380,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::vencidos
- * @see app/Http/Controllers/InventarioController.php:206
+ * @see app/Http/Controllers/InventarioController.php:209
  * @route '/inventario/vencidos'
  */
         vencidosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -396,7 +396,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     vencidos.form = vencidosForm
 /**
 * @see \App\Http\Controllers\InventarioController::movimientos
- * @see app/Http/Controllers/InventarioController.php:259
+ * @see app/Http/Controllers/InventarioController.php:262
  * @route '/inventario/movimientos'
  */
 export const movimientos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -411,7 +411,7 @@ movimientos.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::movimientos
- * @see app/Http/Controllers/InventarioController.php:259
+ * @see app/Http/Controllers/InventarioController.php:262
  * @route '/inventario/movimientos'
  */
 movimientos.url = (options?: RouteQueryOptions) => {
@@ -420,7 +420,7 @@ movimientos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::movimientos
- * @see app/Http/Controllers/InventarioController.php:259
+ * @see app/Http/Controllers/InventarioController.php:262
  * @route '/inventario/movimientos'
  */
 movimientos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -429,7 +429,7 @@ movimientos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::movimientos
- * @see app/Http/Controllers/InventarioController.php:259
+ * @see app/Http/Controllers/InventarioController.php:262
  * @route '/inventario/movimientos'
  */
 movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -439,7 +439,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::movimientos
- * @see app/Http/Controllers/InventarioController.php:259
+ * @see app/Http/Controllers/InventarioController.php:262
  * @route '/inventario/movimientos'
  */
     const movimientosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -449,7 +449,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::movimientos
- * @see app/Http/Controllers/InventarioController.php:259
+ * @see app/Http/Controllers/InventarioController.php:262
  * @route '/inventario/movimientos'
  */
         movimientosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -458,7 +458,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::movimientos
- * @see app/Http/Controllers/InventarioController.php:259
+ * @see app/Http/Controllers/InventarioController.php:262
  * @route '/inventario/movimientos'
  */
         movimientosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -474,7 +474,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     movimientos.form = movimientosForm
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:600
+ * @see app/Http/Controllers/InventarioController.php:581
  * @route '/inventario/reportes'
  */
 export const reportes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -489,7 +489,7 @@ reportes.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:600
+ * @see app/Http/Controllers/InventarioController.php:581
  * @route '/inventario/reportes'
  */
 reportes.url = (options?: RouteQueryOptions) => {
@@ -498,7 +498,7 @@ reportes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:600
+ * @see app/Http/Controllers/InventarioController.php:581
  * @route '/inventario/reportes'
  */
 reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -507,7 +507,7 @@ reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:600
+ * @see app/Http/Controllers/InventarioController.php:581
  * @route '/inventario/reportes'
  */
 reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -517,7 +517,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:600
+ * @see app/Http/Controllers/InventarioController.php:581
  * @route '/inventario/reportes'
  */
     const reportesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -527,7 +527,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:600
+ * @see app/Http/Controllers/InventarioController.php:581
  * @route '/inventario/reportes'
  */
         reportesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -536,7 +536,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:600
+ * @see app/Http/Controllers/InventarioController.php:581
  * @route '/inventario/reportes'
  */
         reportesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

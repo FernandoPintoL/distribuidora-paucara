@@ -88,13 +88,28 @@ class VentaController extends Controller
 
     public function create()
     {
+        // FASE 3: Optimización - solo cargar datos activos y ordenados
         return Inertia::render('ventas/create', [
-            'clientes'          => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
+            'clientes'          => \App\Models\Cliente::activo()
+                                        ->select('id', 'nombre', 'nit')
+                                        ->orderBy('nombre')
+                                        ->get(),
             'productos'         => $this->prepararProductosParaFormulario(),
-            'monedas'           => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
-            'estados_documento' => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
-            'tipos_pago'        => \App\Models\TipoPago::select('id', 'codigo', 'nombre')->where('activo', true)->orderBy('nombre')->get(),
-            'tipos_documento'   => \App\Models\TipoDocumento::select('id', 'codigo', 'nombre')->where('activo', true)->get(),
+            'monedas'           => \App\Models\Moneda::where('activo', true)
+                                        ->select('id', 'codigo', 'nombre', 'simbolo')
+                                        ->orderBy('codigo')
+                                        ->get(),
+            'estados_documento' => \App\Models\EstadoDocumento::select('id', 'nombre')
+                                        ->orderBy('nombre')
+                                        ->get(),
+            'tipos_pago'        => \App\Models\TipoPago::where('activo', true)
+                                        ->select('id', 'codigo', 'nombre')
+                                        ->orderBy('nombre')
+                                        ->get(),
+            'tipos_documento'   => \App\Models\TipoDocumento::where('activo', true)
+                                        ->select('id', 'codigo', 'nombre')
+                                        ->orderBy('nombre')
+                                        ->get(),
         ]);
     }
 
@@ -123,27 +138,43 @@ class VentaController extends Controller
 
     public function edit($id)
     {
+        // FASE 3: Optimización - eager loading eficiente
         $venta = Venta::with([
-            'detalles.producto',
+            'detalles.producto:id,nombre,codigo_barras,sku',
+            'cliente:id,nombre,nit',
+            'moneda:id,codigo,nombre,simbolo',
         ])->findOrFail($id);
 
         return Inertia::render('ventas/create', [
             'venta'             => $venta,
-            'clientes'          => \App\Models\Cliente::select('id', 'nombre', 'nit')->orderBy('nombre')->get(),
+            'clientes'          => \App\Models\Cliente::activo()
+                                        ->select('id', 'nombre', 'nit')
+                                        ->orderBy('nombre')
+                                        ->get(),
             'productos'         => $this->prepararProductosParaFormulario(),
-            'monedas'           => \App\Models\Moneda::select('id', 'codigo', 'nombre', 'simbolo')->where('activo', true)->get(),
-            'estados_documento' => \App\Models\EstadoDocumento::select('id', 'nombre')->get(),
-            'tipos_pago'        => \App\Models\TipoPago::select('id', 'codigo', 'nombre')->where('activo', true)->orderBy('nombre')->get(),
-            'tipos_documento'   => \App\Models\TipoDocumento::select('id', 'codigo', 'nombre')->where('activo', true)->get(),
+            'monedas'           => \App\Models\Moneda::where('activo', true)
+                                        ->select('id', 'codigo', 'nombre', 'simbolo')
+                                        ->orderBy('codigo')
+                                        ->get(),
+            'estados_documento' => \App\Models\EstadoDocumento::select('id', 'nombre')
+                                        ->orderBy('nombre')
+                                        ->get(),
+            'tipos_pago'        => \App\Models\TipoPago::where('activo', true)
+                                        ->select('id', 'codigo', 'nombre')
+                                        ->orderBy('nombre')
+                                        ->get(),
+            'tipos_documento'   => \App\Models\TipoDocumento::where('activo', true)
+                                        ->select('id', 'codigo', 'nombre')
+                                        ->orderBy('nombre')
+                                        ->get(),
         ]);
     }
 
     public function store(StoreVentaRequest $request)
     {
-        $data         = $request->validated();
-        $stockService = app(StockService::class);
+        $data = $request->validated();
 
-        return DB::transaction(function () use ($data, $request, $stockService) {
+        return DB::transaction(function () use ($data, $request) {
             // Generar número automáticamente si no se proporciona
             if (empty($data['numero'])) {
                 $data['numero'] = Venta::generarNumero();
@@ -154,19 +185,8 @@ class VentaController extends Controller
                 $data['moneda_id'] = 1; // BOB
             }
 
-            // Validar stock antes de crear la venta
-            $productosParaValidar = array_map(function ($detalle) {
-                return [
-                    'producto_id' => $detalle['producto_id'],
-                    'cantidad'    => $detalle['cantidad'],
-                ];
-            }, $data['detalles']);
-
-            $validacionStock = $stockService->validarStockDisponible($productosParaValidar);
-
-            if (! $validacionStock['valido']) {
-                throw new Exception('Stock insuficiente: ' . implode(', ', $validacionStock['errores']));
-            }
+            // ✅ VALIDACIÓN ELIMINADA: Ahora ocurre dentro de StockService::procesarSalidaVenta()
+            // con bloqueo pesimista (lockForUpdate), eliminando la condición de carrera TOC/TOU
 
             // Crear la venta
             $venta = Venta::create($data);
@@ -177,6 +197,7 @@ class VentaController extends Controller
             }
 
             // Los movimientos de stock se crean automáticamente por el model event
+            // Si hay error de stock insuficiente, se lanzará una excepción desde el Observer
             $venta->load(['detalles.producto', 'cliente', 'usuario', 'estadoDocumento', 'moneda']);
 
             // Si es petición API, devolver JSON
@@ -201,20 +222,38 @@ class VentaController extends Controller
         $data  = $request->validated();
 
         return DB::transaction(function () use ($venta, $data, $request) {
-            // Validar stock antes de actualizar si se modifican los detalles
-            if (isset($data['detalles'])) {
-                $this->validarStockParaActualizacion($venta, $data['detalles']);
-            }
+            // ✅ CORRECCIÓN CR#3 y CR#4: Separar lógica de detalles de la actualización de venta
 
-            // Actualizar la venta
+            // Extraer detalles si existen
+            $detalles = $data['detalles'] ?? null;
+            unset($data['detalles']); // ✅ CR#3: Eliminar 'detalles' del array de actualización
+
+            // Actualizar solo los campos de la venta (sin detalles)
             $venta->update($data);
 
-            // Si se modifican los detalles, ajustar el inventario
-            if (isset($data['detalles'])) {
-                $this->actualizarInventarioPorCambios($venta, $data['detalles']);
+            // Si se modifican los detalles, actualizar inventario
+            if ($detalles !== null) {
+                // 1. Revertir inventario de detalles actuales
+                $this->revertirInventarioDetalles($venta);
+
+                // 2. Borrar detalles viejos
+                $venta->detalles()->delete();
+
+                // 3. Crear nuevos detalles
+                foreach ($detalles as $detalle) {
+                    $venta->detalles()->create($detalle);
+                }
+
+                // 4. Procesar inventario para nuevos detalles
+                // IMPORTANTE: Debe llamarse DESPUÉS de crear detalles
+                // procesarMovimientosStock() obtiene los detalles de $venta->detalles
+                $venta->refresh(); // Recargar para obtener los nuevos detalles
+                $venta->procesarMovimientosStock();
             }
 
-            $venta->fresh(['detalles.producto']);
+            // Recargar la venta con todas sus relaciones actualizadas
+            $venta->refresh();
+            $venta->load(['detalles.producto', 'cliente', 'usuario', 'estadoDocumento', 'moneda']);
 
             // Si es petición API, devolver JSON
             if ($request->expectsJson() || $request->is('api/*')) {
@@ -231,6 +270,9 @@ class VentaController extends Controller
         $venta = Venta::findOrFail($id);
 
         return DB::transaction(function () use ($venta) {
+            // Problema #17: Validar integridad referencial antes de eliminar
+            $this->validarIntegridadReferencial($venta);
+
             // Los movimientos de stock se revierten automáticamente por el model event
             $venta->delete();
 
@@ -242,6 +284,68 @@ class VentaController extends Controller
             // Para peticiones web, redirigir con mensaje
             return redirect()->route('ventas.index')->with('success', 'Venta eliminada exitosamente');
         });
+    }
+
+    /**
+     * Problema #17: Validar integridad referencial antes de eliminar
+     *
+     * Lanza una excepción si la venta tiene dependencias que impiden su eliminación
+     */
+    private function validarIntegridadReferencial(Venta $venta): void
+    {
+        $errores = [];
+
+        // 1. Verificar si tiene pagos
+        if ($venta->pagos()->exists()) {
+            $cantidadPagos = $venta->pagos()->count();
+            $errores[] = "La venta tiene {$cantidadPagos} pago(s) asociado(s)";
+        }
+
+        // 2. Verificar si tiene envío
+        if ($venta->envio()->exists()) {
+            $envio = $venta->envio;
+            $errores[] = "La venta tiene un envío asociado (#{$envio->numero_envio}) en estado {$envio->estado}";
+        }
+
+        // 3. Verificar si tiene cuenta por cobrar con saldo pendiente
+        if ($venta->cuentaPorCobrar()->exists()) {
+            $cuenta = $venta->cuentaPorCobrar;
+            if ($cuenta->saldo_pendiente > 0) {
+                $errores[] = "La venta tiene una cuenta por cobrar con saldo pendiente de " .
+                    number_format($cuenta->saldo_pendiente, 2);
+            }
+        }
+
+        // 4. Verificar si tiene factura electrónica
+        if ($venta->facturaElectronica()->exists()) {
+            $factura = $venta->facturaElectronica;
+            $errores[] = "La venta tiene una factura electrónica asociada (CUF: {$factura->cuf})";
+        }
+
+        // 5. Verificar si tiene asiento contable
+        if ($venta->asientoContable()->exists()) {
+            $asiento = $venta->asientoContable;
+            if ($asiento->cerrado) {
+                $errores[] = "La venta tiene un asiento contable cerrado que no puede revertirse";
+            }
+        }
+
+        // 6. Verificar estado logístico
+        if ($venta->estado_logistico === Venta::ESTADO_ENTREGADO) {
+            $errores[] = "La venta ya fue entregada y no puede eliminarse";
+        }
+
+        if ($venta->estado_logistico === Venta::ESTADO_ENVIADO) {
+            $errores[] = "La venta está en tránsito y no puede eliminarse";
+        }
+
+        // Si hay errores, lanzar excepción
+        if (!empty($errores)) {
+            throw new Exception(
+                "No se puede eliminar la venta #{$venta->numero}:\n" .
+                implode("\n", array_map(fn($e) => "- {$e}", $errores))
+            );
+        }
     }
 
     /**
@@ -411,7 +515,21 @@ class VentaController extends Controller
     }
 
     /**
+     * Revertir inventario de todos los detalles de una venta
+     *
+     * Problema #13: Método para revertir inventario antes de borrar detalles
+     */
+    private function revertirInventarioDetalles(Venta $venta): void
+    {
+        // Revertir movimientos de stock usando el método del modelo
+        $venta->revertirMovimientosStock();
+    }
+
+    /**
      * Actualizar inventario por cambios en detalles de venta
+     *
+     * NOTA: Este método ya no se usa después del Problema #13
+     * Se prefiere borrar todos los detalles y recrearlos
      */
     private function actualizarInventarioPorCambios(Venta $venta, array $nuevosDetalles)
     {
@@ -471,134 +589,93 @@ class VentaController extends Controller
             $this->revertirMovimientosEspecificos($venta, $productosParaRevertir);
         }
 
-        // Validar y agregar stock de productos nuevos/aumentados
+        // Agregar stock de productos nuevos/aumentados
+        // ✅ VALIDACIÓN ELIMINADA: Ahora ocurre dentro de procesarSalidaVenta() con lock
         if (! empty($productosParaAgregar)) {
-            $validacion = $stockService->validarStockDisponible($productosParaAgregar);
-            if (! $validacion['valido']) {
-                throw new Exception('Stock insuficiente para actualización: ' . implode(', ', $validacion['errores']));
-            }
-
+            // La validación de stock ocurre automáticamente dentro de procesarSalidaVenta()
+            // con bloqueo pesimista, eliminando race conditions
             $stockService->procesarSalidaVenta($productosParaAgregar, $venta->numero . '-UPDATE');
         }
     }
 
     /**
      * Revertir movimientos específicos de stock
+     *
+     * IMPORTANTE: Este método debe ejecutarse dentro de una transacción DB (manejada por el caller)
+     * Usa UPDATE atómico para evitar race conditions
      */
     private function revertirMovimientosEspecificos(Venta $venta, array $productosParaRevertir)
     {
-        DB::beginTransaction();
+        foreach ($productosParaRevertir as $item) {
+            $productoId = $item['producto_id'];
+            $cantidad   = $item['cantidad'];
 
-        try {
-            foreach ($productosParaRevertir as $item) {
-                $productoId = $item['producto_id'];
-                $cantidad   = $item['cantidad'];
+            // Obtener movimientos de salida para este producto en esta venta
+            $movimientos = \App\Models\MovimientoInventario::where('numero_documento', $venta->numero)
+                ->where('tipo', \App\Models\MovimientoInventario::TIPO_SALIDA_VENTA)
+                ->whereHas('stockProducto', function ($query) use ($productoId) {
+                    $query->where('producto_id', $productoId);
+                })
+                ->get();
 
-                // Obtener movimientos de salida para este producto en esta venta
-                $movimientos = \App\Models\MovimientoInventario::where('numero_documento', $venta->numero)
-                    ->where('tipo', \App\Models\MovimientoInventario::TIPO_SALIDA_VENTA)
-                    ->whereHas('stockProducto', function ($query) use ($productoId) {
-                        $query->where('producto_id', $productoId);
-                    })
-                    ->get();
+            $cantidadRevertida = 0;
+            foreach ($movimientos as $movimiento) {
+                if ($cantidadRevertida >= $cantidad) {
+                    break;
+                }
 
-                $cantidadRevertida = 0;
-                foreach ($movimientos as $movimiento) {
-                    if ($cantidadRevertida >= $cantidad) {
-                        break;
-                    }
+                $cantidadTomar = min($cantidad - $cantidadRevertida, abs($movimiento->cantidad));
+                $stockProducto = $movimiento->stockProducto;
 
-                    $cantidadTomar = min($cantidad - $cantidadRevertida, abs($movimiento->cantidad));
+                // Obtener cantidad anterior antes de UPDATE
+                $cantidadAnterior = $stockProducto->cantidad;
 
-                    // Revertir el stock
-                    $stockProducto = $movimiento->stockProducto;
-                    $stockProducto->cantidad += $cantidadTomar;
-                    $stockProducto->fecha_actualizacion = now();
-                    $stockProducto->save();
-
-                    // Crear movimiento de reversión
-                    \App\Models\MovimientoInventario::create([
-                        'stock_producto_id' => $stockProducto->id,
-                        'cantidad'          => $cantidadTomar,
-                        'fecha'             => now(),
-                        'observacion'       => "Reversión parcial de venta #{$venta->numero}",
-                        'numero_documento'   => $venta->numero . '-REV',
-                        'cantidad_anterior'  => $stockProducto->cantidad - $cantidadTomar,
-                        'cantidad_posterior' => $stockProducto->cantidad,
-                        'tipo'               => \App\Models\MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                // Actualizar stock usando UPDATE atómico para evitar race conditions
+                // IMPORTANTE: Actualiza tanto cantidad como cantidad_disponible (invariante)
+                $affected = DB::table('stock_productos')
+                    ->where('id', $stockProducto->id)
+                    ->update([
+                        'cantidad' => DB::raw("cantidad + {$cantidadTomar}"),
+                        'cantidad_disponible' => DB::raw("cantidad_disponible + {$cantidadTomar}"),
+                        'fecha_actualizacion' => now(),
                     ]);
 
-                    $cantidadRevertida += $cantidadTomar;
+                if ($affected === 0) {
+                    throw new Exception("Error al revertir stock para stock_producto_id {$stockProducto->id}");
                 }
+
+                // Actualizar modelo en memoria para el registro de movimiento
+                $stockProducto->cantidad += $cantidadTomar;
+                $stockProducto->cantidad_disponible += $cantidadTomar;
+                $stockProducto->fecha_actualizacion = now();
+
+                // Crear movimiento de reversión
+                \App\Models\MovimientoInventario::create([
+                    'stock_producto_id' => $stockProducto->id,
+                    'cantidad'          => $cantidadTomar,
+                    'fecha'             => now(),
+                    'observacion'       => "Reversión parcial de venta #{$venta->numero}",
+                    'numero_documento'   => $venta->numero . '-REV',
+                    'cantidad_anterior'  => $cantidadAnterior,
+                    'cantidad_posterior' => $stockProducto->cantidad,
+                    'tipo'               => \App\Models\MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                ]);
+
+                \Illuminate\Support\Facades\Log::info('Stock revertido por actualización de venta', [
+                    'venta' => $venta->numero,
+                    'producto_id' => $productoId,
+                    'stock_producto_id' => $stockProducto->id,
+                    'cantidad_revertida' => $cantidadTomar,
+                    'cantidad_anterior' => $cantidadAnterior,
+                    'cantidad_posterior' => $stockProducto->cantidad,
+                ]);
+
+                $cantidadRevertida += $cantidadTomar;
             }
-
-            DB::commit();
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception('Error revirtiendo movimientos de stock: ' . $e->getMessage());
         }
     }
 
-    private function validarStockParaActualizacion(Venta $venta, array $nuevosDetalles)
-    {
-        $stockService = app(StockService::class);
-
-        // Obtener detalles actuales
-        $detallesActuales = $venta->detalles->map(function ($detalle) {
-            return [
-                'producto_id' => $detalle->producto_id,
-                'cantidad'    => $detalle->cantidad,
-            ];
-        })->toArray();
-
-        // Crear mapa de nuevos detalles por producto_id
-        $nuevosPorProducto = [];
-        foreach ($nuevosDetalles as $detalle) {
-            $nuevosPorProducto[$detalle['producto_id']] = $detalle['cantidad'];
-        }
-
-        // Calcular productos que necesitan validación
-        $productosParaValidar = [];
-        foreach ($nuevosPorProducto as $productoId => $cantidadNueva) {
-            $cantidadActual = 0;
-            foreach ($detallesActuales as $actual) {
-                if ($actual['producto_id'] == $productoId) {
-                    $cantidadActual = $actual['cantidad'];
-                    break;
-                }
-            }
-
-            if ($cantidadNueva > $cantidadActual) {
-                $productosParaValidar[] = [
-                    'producto_id' => $productoId,
-                    'cantidad'    => $cantidadNueva - $cantidadActual,
-                ];
-            }
-        }
-
-        // Productos completamente nuevos
-        foreach ($nuevosPorProducto as $productoId => $cantidad) {
-            $existe = false;
-            foreach ($detallesActuales as $actual) {
-                if ($actual['producto_id'] == $productoId) {
-                    $existe = true;
-                    break;
-                }
-            }
-            if (! $existe) {
-                $productosParaValidar[] = [
-                    'producto_id' => $productoId,
-                    'cantidad'    => $cantidad,
-                ];
-            }
-        }
-
-        if (! empty($productosParaValidar)) {
-            $validacion = $stockService->validarStockDisponible($productosParaValidar);
-            if (! $validacion['valido']) {
-                throw new Exception('Stock insuficiente: ' . implode(', ', $validacion['errores']));
-            }
-        }
-    }
+    // ✅ MÉTODO ELIMINADO: validarStockParaActualizacion()
+    // Ya no es necesario porque la validación ocurre dentro de
+    // StockService::procesarSalidaVenta() con bloqueo pesimista
 }

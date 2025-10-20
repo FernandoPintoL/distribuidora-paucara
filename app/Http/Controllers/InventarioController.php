@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Requests\StoreAjusteInventarioRequest;
+use App\Http\Requests\StoreMermaRequest;
+use App\Http\Requests\StoreTransferenciaInventarioRequest;
 use App\Models\Almacen;
 use App\Models\Categoria;
 use App\Models\Chofer;
@@ -380,30 +383,64 @@ class InventarioController extends Controller
     }
 
     /**
-     * Procesar ajuste de inventario
+     * Procesar ajuste de inventario (Web)
      */
-    public function procesarAjuste(Request $request): RedirectResponse
+    public function procesarAjuste(StoreAjusteInventarioRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'ajustes' => ['required', 'array'],
-            'ajustes.*.stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'ajustes.*.nueva_cantidad' => ['required', 'integer', 'min:0'],
-            'ajustes.*.observacion' => ['nullable', 'string', 'max:500'],
-            'ajustes.*.tipo_ajuste_id' => ['nullable', 'exists:tipos_ajuste_inventario,id'],
-        ]);
+        try {
+            $movimientos = $this->procesarAjustesInventario($request->validated()['ajustes']);
 
+            return redirect()->route('inventario.ajuste.form')
+                ->with('success', 'Se procesaron '.count($movimientos).' ajustes de inventario');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al procesar ajustes: '.$e->getMessage()]);
+        }
+    }
+
+    /**
+     * API: Procesar ajuste de inventario
+     */
+    public function procesarAjusteApi(StoreAjusteInventarioRequest $request): JsonResponse
+    {
+        try {
+            $movimientos = $this->procesarAjustesInventario($request->validated()['ajustes']);
+
+            return ApiResponse::success(
+                $movimientos,
+                'Se procesaron '.count($movimientos).' ajustes de inventario'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al procesar ajustes: '.$e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Método privado compartido para procesar ajustes de inventario
+     *
+     * @param array $ajustes Array de ajustes a procesar
+     * @return array Array de movimientos creados
+     * @throws \Exception Si hay error al procesar
+     */
+    private function procesarAjustesInventario(array $ajustes): array
+    {
         $movimientos = [];
 
-        DB::transaction(function () use ($data, &$movimientos) {
-            foreach ($data['ajustes'] as $ajuste) {
+        DB::transaction(function () use ($ajustes, &$movimientos) {
+            foreach ($ajustes as $ajuste) {
                 $stockProducto = StockProducto::findOrFail($ajuste['stock_producto_id']);
                 $observacion = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
 
                 // Siempre procesar el ajuste, incluso si la cantidad no ha cambiado
                 // Esto permite registrar el tipo de ajuste y la observación
                 $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
-                // Consultar el tipo de movimiento desde la base de datos o definirlo como string plano
-                $tipo = $diferencia >= 0 ? 'ENTRADA_AJUSTE' : 'SALIDA_AJUSTE';
+                $tipo = $diferencia >= 0 ?
+                    MovimientoInventario::TIPO_ENTRADA_AJUSTE :
+                    MovimientoInventario::TIPO_SALIDA_AJUSTE;
 
                 // Registrar el movimiento con el tipo de ajuste
                 $movimiento = MovimientoInventario::registrar(
@@ -420,63 +457,7 @@ class InventarioController extends Controller
             }
         });
 
-        return redirect()->route('inventario.ajuste.form')
-            ->with('success', 'Se procesaron '.count($movimientos).' ajustes de inventario');
-    }
-
-    /**
-     * API: Procesar ajuste de inventario
-     */
-    public function procesarAjusteApi(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'ajustes' => ['required', 'array'],
-            'ajustes.*.stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'ajustes.*.nueva_cantidad' => ['required', 'integer', 'min:0'],
-            'ajustes.*.observacion' => ['nullable', 'string', 'max:500'],
-            'ajustes.*.tipo_ajuste_id' => ['nullable', 'exists:tipos_ajuste_inventario,id'],
-        ]);
-
-        $movimientos = [];
-
-        try {
-            DB::transaction(function () use ($data, &$movimientos) {
-                foreach ($data['ajustes'] as $ajuste) {
-                    $stockProducto = StockProducto::find($ajuste['stock_producto_id']);
-                    $observacion = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
-
-                    // Siempre procesar el ajuste, incluso si la cantidad no ha cambiado
-                    // Esto permite registrar el tipo de ajuste y la observación
-                    $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
-                    $tipo = $diferencia >= 0 ?
-                    MovimientoInventario::TIPO_ENTRADA_AJUSTE :
-                    MovimientoInventario::TIPO_SALIDA_AJUSTE;
-
-                    // Registrar el movimiento con el tipo de ajuste
-                    $movimiento = MovimientoInventario::registrar(
-                        $stockProducto,
-                        $diferencia,
-                        $tipo,
-                        $observacion,
-                        null,
-                        null,
-                        $ajuste['tipo_ajuste_id'] ?? null
-                    );
-
-                    $movimientos[] = $movimiento;
-                }
-            });
-
-            return ApiResponse::success(
-                $movimientos,
-                'Se procesaron '.count($movimientos).' ajustes de inventario'
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Error al procesar ajustes: '.$e->getMessage(),
-                500
-            );
-        }
+        return $movimientos;
     }
 
     /**
@@ -655,20 +636,9 @@ class InventarioController extends Controller
     /**
      * Crear nueva transferencia de inventario
      */
-    public function crearTransferencia(Request $request): RedirectResponse
+    public function crearTransferencia(StoreTransferenciaInventarioRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'almacen_origen_id' => ['required', 'exists:almacenes,id'],
-            'almacen_destino_id' => ['required', 'exists:almacenes,id', 'different:almacen_origen_id'],
-            'vehiculo_id' => ['nullable', 'exists:vehiculos,id'],
-            'chofer_id' => ['nullable', 'exists:choferes,id'],
-            'observaciones' => ['nullable', 'string', 'max:500'],
-            'detalles' => ['required', 'array', 'min:1'],
-            'detalles.*.producto_id' => ['required', 'exists:productos,id'],
-            'detalles.*.cantidad' => ['required', 'integer', 'min:1'],
-            'detalles.*.lote' => ['nullable', 'string', 'max:50'],
-            'detalles.*.fecha_vencimiento' => ['nullable', 'date'],
-        ]);
+        $data = $request->validated();
 
         try {
             $transferencia = DB::transaction(function () use ($data) {
@@ -721,14 +691,9 @@ class InventarioController extends Controller
     /**
      * Registrar merma de inventario
      */
-    public function registrarMerma(Request $request): JsonResponse
+    public function registrarMerma(StoreMermaRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'cantidad' => ['required', 'integer', 'min:1'],
-            'motivo' => ['required', 'string', 'max:500'],
-            'fecha_merma' => ['nullable', 'date'],
-        ]);
+        $data = $request->validated();
 
         try {
             $stockProducto = StockProducto::findOrFail($data['stock_producto_id']);
@@ -1065,17 +1030,51 @@ class InventarioController extends Controller
      */
     public function verMerma($id): Response
     {
-        // Simulamos datos hasta implementar el modelo
+        $movimiento = MovimientoInventario::with([
+            'stockProducto.producto.categoria',
+            'stockProducto.almacen',
+            'user',
+            'tipoMerma',
+            'estadoMerma'
+        ])
+            ->where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)
+            ->findOrFail($id);
+
+        // Calcular valor de la merma (cantidad * precio promedio)
+        $valorTotal = abs($movimiento->cantidad) * ($movimiento->stockProducto->precio_promedio ?? 0);
+
         $merma = [
-            'id' => $id,
-            'codigo' => 'MER-'.str_pad($id, 6, '0', STR_PAD_LEFT),
-            'almacen' => ['nombre' => 'Almacén Principal'],
-            'tipo_merma' => 'vencimiento',
-            'estado' => 'pendiente',
-            'fecha_registro' => now()->format('Y-m-d H:i:s'),
-            'observaciones' => 'Productos vencidos del lote ABC123',
-            'detalles' => [],
-            'valor_total' => 0,
+            'id' => $movimiento->id,
+            'codigo' => $movimiento->numero_documento ?? 'MER-'.str_pad($movimiento->id, 6, '0', STR_PAD_LEFT),
+            'producto' => [
+                'id' => $movimiento->stockProducto->producto->id,
+                'nombre' => $movimiento->stockProducto->producto->nombre,
+                'categoria' => $movimiento->stockProducto->producto->categoria->nombre ?? 'Sin categoría',
+            ],
+            'almacen' => [
+                'id' => $movimiento->stockProducto->almacen->id,
+                'nombre' => $movimiento->stockProducto->almacen->nombre,
+            ],
+            'cantidad' => abs($movimiento->cantidad),
+            'tipo_merma' => $movimiento->tipoMerma ? [
+                'id' => $movimiento->tipoMerma->id,
+                'nombre' => $movimiento->tipoMerma->label,
+            ] : null,
+            'estado_merma' => $movimiento->estadoMerma ? [
+                'id' => $movimiento->estadoMerma->id,
+                'nombre' => $movimiento->estadoMerma->label,
+            ] : null,
+            'fecha_registro' => $movimiento->fecha->format('Y-m-d H:i:s'),
+            'observaciones' => $movimiento->observacion,
+            'usuario' => [
+                'name' => $movimiento->user->name ?? 'Sistema',
+            ],
+            'stock_anterior' => $movimiento->cantidad_anterior,
+            'stock_posterior' => $movimiento->cantidad_posterior,
+            'valor_unitario' => $movimiento->stockProducto->precio_promedio ?? 0,
+            'valor_total' => $valorTotal,
+            'anulado' => $movimiento->anulado ?? false,
+            'motivo_anulacion' => $movimiento->motivo_anulacion,
         ];
 
         return Inertia::render('inventario/mermas/ver', [
@@ -1092,12 +1091,45 @@ class InventarioController extends Controller
             'observaciones_aprobacion' => 'nullable|string|max:500',
         ]);
 
-        // Lógica de aprobación aquí
+        try {
+            $movimiento = MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)
+                ->findOrFail($id);
 
-        return ApiResponse::success([
-            'message' => 'Merma aprobada exitosamente',
-            'merma_id' => $id,
-        ]);
+            // Verificar que no esté anulado
+            if ($movimiento->anulado) {
+                return ApiResponse::error('No se puede aprobar una merma anulada', 400);
+            }
+
+            // Buscar el estado "aprobado"
+            $estadoAprobado = EstadoMerma::where('clave', 'APROBADO')
+                ->orWhere('label', 'like', '%aprobad%')
+                ->first();
+
+            if (!$estadoAprobado) {
+                return ApiResponse::error('No se encontró el estado "Aprobado" en el sistema', 500);
+            }
+
+            // Actualizar estado
+            $movimiento->update([
+                'estado_merma_id' => $estadoAprobado->id,
+            ]);
+
+            // Si hay observaciones, agregarlas
+            if ($request->observaciones_aprobacion) {
+                $observacionActual = $movimiento->observacion ?? '';
+                $movimiento->update([
+                    'observacion' => $observacionActual . "\n[APROBACIÓN] " . $request->observaciones_aprobacion,
+                ]);
+            }
+
+            return ApiResponse::success([
+                'message' => 'Merma aprobada exitosamente',
+                'merma_id' => $id,
+                'movimiento' => $movimiento->load(['estadoMerma', 'tipoMerma']),
+            ]);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al aprobar la merma: ' . $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -1109,11 +1141,39 @@ class InventarioController extends Controller
             'observaciones_rechazo' => 'required|string|max:500',
         ]);
 
-        // Lógica de rechazo aquí
+        try {
+            $movimiento = MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)
+                ->findOrFail($id);
 
-        return ApiResponse::success([
-            'message' => 'Merma rechazada exitosamente',
-            'merma_id' => $id,
-        ]);
+            // Verificar que no esté anulado
+            if ($movimiento->anulado) {
+                return ApiResponse::error('No se puede rechazar una merma anulada', 400);
+            }
+
+            // Buscar el estado "rechazado"
+            $estadoRechazado = EstadoMerma::where('clave', 'RECHAZADO')
+                ->orWhere('label', 'like', '%rechazad%')
+                ->first();
+
+            if (!$estadoRechazado) {
+                return ApiResponse::error('No se encontró el estado "Rechazado" en el sistema', 500);
+            }
+
+            // Actualizar estado y agregar observaciones
+            $observacionActual = $movimiento->observacion ?? '';
+            $movimiento->update([
+                'estado_merma_id' => $estadoRechazado->id,
+                'observacion' => $observacionActual . "\n[RECHAZO] " . $request->observaciones_rechazo,
+            ]);
+
+            return ApiResponse::success([
+                'message' => 'Merma rechazada exitosamente',
+                'merma_id' => $id,
+                'motivo_rechazo' => $request->observaciones_rechazo,
+                'movimiento' => $movimiento->load(['estadoMerma', 'tipoMerma']),
+            ]);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al rechazar la merma: ' . $e->getMessage(), 500);
+        }
     }
 }

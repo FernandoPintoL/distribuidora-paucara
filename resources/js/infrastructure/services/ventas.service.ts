@@ -249,9 +249,7 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
     async validateData(data: VentaFormData): Promise<string[]> {
         const errors: string[] = [];
 
-        if (!data.numero || data.numero.trim() === '') {
-            errors.push('El número de venta es obligatorio');
-        }
+        // NOTA: El número se genera automáticamente en el backend, no es necesario validarlo aquí
 
         if (!data.fecha) {
             errors.push('La fecha es obligatoria');
@@ -261,9 +259,7 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
             errors.push('Debe seleccionar un cliente');
         }
 
-        if (!data.moneda_id || data.moneda_id === 0) {
-            errors.push('Debe seleccionar una moneda');
-        }
+        // NOTA: La moneda se establece automáticamente a BOB en el backend si no se proporciona
 
         if (!data.estado_documento_id || data.estado_documento_id === 0) {
             errors.push('Debe seleccionar un estado');
@@ -401,6 +397,10 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
 
     /**
      * Verificar stock disponible para múltiples productos
+     *
+     * @route POST /api/ventas/verificar-stock
+     * @see routes/api.php:132
+     * @see VentaController::verificarStock()
      */
     async verificarStockDisponible(productos: Array<{
         producto_id: Id;
@@ -442,6 +442,10 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
 
     /**
      * Obtener stock disponible de un producto específico
+     *
+     * @route GET /api/ventas/{producto}/stock
+     * @see routes/api.php:133
+     * @see VentaController::obtenerStockProducto()
      */
     async obtenerStockProducto(productoId: Id, almacenId: Id = 1): Promise<{
         producto_id: Id;
@@ -476,6 +480,10 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
 
     /**
      * Obtener productos con stock bajo
+     *
+     * @route GET /api/ventas/productos/stock-bajo
+     * @see routes/api.php:134
+     * @see VentaController::productosStockBajo()
      */
     async obtenerProductosStockBajo(): Promise<Array<{
         id: Id;
@@ -508,6 +516,10 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
 
     /**
      * Obtener resumen de stock para una venta específica
+     *
+     * @route GET /ventas/{venta}/stock/resumen
+     * @see routes/web.php:162
+     * @see VentaController::obtenerResumenStock()
      */
     async obtenerResumenStock(ventaId: Id): Promise<ResumenStock | null> {
         try {

@@ -205,18 +205,19 @@ export class MovimientosInventarioService implements BaseService<MovimientoInven
         }
 
         // Validaciones específicas por tipo de movimiento
-        const tiposVenta = ['SALIDA_VENTA', 'SALIDA_DEVOLUCION'] as const;
-        const tiposCompra = ['ENTRADA_COMPRA', 'ENTRADA_DEVOLUCION'] as const;
+        const tiposVenta: MovimientoTipo[] = ['SALIDA_VENTA'];
+        const tiposCompra: MovimientoTipo[] = ['ENTRADA_COMPRA'];
         const tiposDocumento = [...tiposVenta, ...tiposCompra];
 
-        if (tiposDocumento.includes(data.tipo as typeof tiposDocumento[number])) {
+        if (tiposDocumento.includes(data.tipo)) {
             if (!data.numero_documento?.trim()) {
                 errors.push('El número de documento es requerido para este tipo de movimiento');
             }
         }
 
         // Validaciones específicas para salidas
-        if (data.tipo.startsWith('SALIDA_') || data.tipo === 'TRANSFERENCIA_SALIDA') {
+        const tiposSalida: MovimientoTipo[] = ['SALIDA_VENTA', 'SALIDA_AJUSTE', 'SALIDA_MERMA'];
+        if (tiposSalida.includes(data.tipo)) {
             if (!data.observacion?.trim()) {
                 errors.push('La observación es requerida para movimientos de salida');
             }

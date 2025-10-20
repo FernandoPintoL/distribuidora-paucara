@@ -22,19 +22,6 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             description: 'Datos personales del empleado',
             order: 1,
         },
-        /* {
-            id: 'Compensación',
-            title: 'Compensación',
-            description: 'Salarios y bonos',
-            order: 2,
-            
-        },
-        {
-            id: 'Información Laboral',
-            title: 'Información Laboral',
-            description: 'Datos relacionados con el trabajo',
-            order: 3,
-        }, */
         {
             id: 'Acceso al Sistema',
             title: 'Acceso al Sistema',
@@ -52,17 +39,22 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
         { key: 'codigo_empleado', label: 'Código', type: 'text' },
         { key: 'nombre', label: 'Nombre Completo', type: 'text' },
         { key: 'ci', label: 'CI', type: 'text' },
-        // { key: 'cargo', label: 'Cargo', type: 'text' },
-        // { key: 'departamento', label: 'Departamento', type: 'text' },
         { key: 'telefono', label: 'Teléfono', type: 'text' },
         { key: 'email', label: 'Email', type: 'text' },
-        // { key: 'salario_base', label: 'Salario Base', type: 'number' },
         { key: 'estado', label: 'Estado', type: 'text' },
         { key: 'puede_acceder_sistema', label: 'Acceso Sistema', type: 'boolean' },
     ],
 
     // Form configuration
     formFields: [
+        {
+            key: 'codigo_empleado',
+            label: 'Código de Empleado',
+            type: 'text',
+            placeholder: 'Se genera automáticamente si se deja vacío',
+            visible: (data) => !!data.id, // Solo visible si tiene ID (modo edición)
+            section: 'Información Personal',
+        },
         {
             key: 'nombre',
             label: 'Nombre Completo',
@@ -85,44 +77,12 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             section: 'Información Personal',
         },
         {
-            key: 'codigo_empleado',
-            label: 'Código de Empleado',
-            type: 'text',
-            placeholder: 'Se genera automáticamente si se deja vacío',
-            validation: { maxLength: 20 },
-            hidden: true, // 🆕 OCULTO - Lo genera el backend
-        },
-        {
-            key: 'cargo',
-            label: 'Cargo',
-            type: 'text',
-            required: false, // 🆕 Ya no es requerido
-            placeholder: 'Cargo que desempeña',
-            validation: { maxLength: 100 },
-            hidden: true, // 🆕 OCULTO - No necesario por ahora
-        },
-        {
-            key: 'departamento',
-            label: 'Departamento',
-            type: 'text',
-            required: false, // 🆕 Ya no es requerido
-            placeholder: 'Departamento de trabajo',
-            validation: { maxLength: 100 },
-            hidden: true, // 🆕 OCULTO - No necesario por ahora
-        },
-        {
             key: 'fecha_ingreso',
             label: 'Fecha de Ingreso',
             type: 'date',
             required: true,
             colSpan: 1,
             section: 'Información Personal',
-        },
-        {
-            key: 'fecha_nacimiento',
-            label: 'Fecha de Nacimiento',
-            type: 'date',
-            hidden: true, // 🆕 OCULTO - No necesario por ahora
         },
         {
             key: 'telefono',
@@ -158,6 +118,7 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
         // Campo personalizado para ubicación en mapa
         {
             key: 'coordenadas',
+            hidden: true, // Campo oculto, se maneja internamente
             label: 'Ubicación en el mapa',
             type: 'custom',
             colSpan: 3,
@@ -183,46 +144,6 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             }
         },
         {
-            key: 'salario_base',
-            label: 'Salario Base',
-            type: 'number',
-            required: false,
-            placeholder: '0.00',
-            validation: { min: 0 },
-            colSpan: 1,
-            section: 'Compensación',
-            prefix: 'Bs.', // 🆕 Prefijo de bolivianos
-            description: 'Salario base mensual en bolivianos',
-            hidden: true, // 🆕 OCULTO - Se maneja internamente
-        },
-        {
-            key: 'bonos',
-            label: 'Bonos',
-            type: 'number',
-            placeholder: '0.00',
-            validation: { min: 0 },
-            colSpan: 1,
-            section: 'Compensación',
-            prefix: 'Bs.', // 🆕 Prefijo de bolivianos
-            description: 'Bonos adicionales mensuales',
-            hidden: true, // 🆕 OCULTO - Se maneja internamente
-        },
-        {
-            key: 'tipo_contrato',
-            label: 'Tipo de Contrato',
-            type: 'select',
-            required: true,
-            options: [
-                { value: 'indefinido', label: 'Indefinido' },
-                { value: 'temporal', label: 'Temporal' },
-                { value: 'practicante', label: 'Practicante' },
-                { value: 'consultor', label: 'Consultor' },
-            ],
-            colSpan: 1,
-            section: 'Información Laboral',
-            hidden: true, // 🆕 OCULTO - No necesario por ahora
-        },
-        {
             key: 'estado',
             label: 'Estado',
             type: 'select',
@@ -238,27 +159,6 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             section: 'Información Laboral',
             hidden: true, // 🆕 OCULTO - Se maneja internamente
             defaultValue: 'activo', // 🆕 Por defecto activo al crear
-        },
-        {
-            key: 'supervisor_id',
-            label: 'Supervisor',
-            type: 'select',
-            options: [], // Se cargará dinámicamente desde el backend
-            placeholder: 'Seleccionar supervisor',
-            colSpan: 1,
-            section: 'Información Laboral',
-            description: 'Supervisor directo del empleado',
-            hidden: true, // 🆕 OCULTO - No necesario por ahora
-        },
-        {
-            key: 'observaciones',
-            label: 'Observaciones',
-            type: 'textarea',
-            placeholder: 'Notas adicionales sobre el empleado',
-            validation: { maxLength: 1000 },
-            colSpan: 3, // 🆕 Ocupa todo el ancho
-            section: 'Información Laboral',
-            hidden: true, // 🆕 OCULTO - No necesario por ahora
         },
         // Campos de acceso al sistema
         {
@@ -292,10 +192,56 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             description: 'Selecciona uno o más roles que tendrá el empleado',
             maxSelections: 5, // Máximo 5 roles por empleado
         },
+        // Campos de contraseña
+        {
+            key: 'password',
+            label: 'Contraseña',
+            type: 'password',
+            required: (data) => {
+                // Requerido solo cuando se crea un nuevo empleado con acceso al sistema
+                return !!data.puede_acceder_sistema && !data.id;
+            },
+            placeholder: (data) => {
+                // Placeholder diferente según si es creación o edición
+                return data.id
+                    ? 'Dejar vacío para mantener la contraseña actual'
+                    : 'Mínimo 8 caracteres';
+            },
+            validation: { minLength: 8 },
+            colSpan: 1,
+            section: 'Acceso al Sistema',
+            visible: (data) => {
+                // Visible si puede acceder al sistema
+                return !!data.puede_acceder_sistema;
+            },
+            description: (data) => {
+                return data.id
+                    ? 'Mínimo 8 caracteres. Dejar vacío para no cambiar'
+                    : 'Mínimo 8 caracteres';
+            },
+        },
+        {
+            key: 'password_confirmation',
+            label: 'Confirmar Contraseña',
+            type: 'password',
+            required: (data) => {
+                // Requerido solo si se está creando un nuevo empleado con acceso al sistema
+                // O si se está cambiando la contraseña en edición
+                return !!data.puede_acceder_sistema && (!data.id || !!data.password);
+            },
+            placeholder: 'Repetir la contraseña',
+            colSpan: 1,
+            section: 'Acceso al Sistema',
+            visible: (data) => {
+                // Visible si puede acceder al sistema
+                return !!data.puede_acceder_sistema;
+            },
+            description: 'Debe coincidir con la contraseña',
+        },
     ],
 
     // Search configuration
-    searchableFields: ['nombre', 'ci', 'codigo_empleado', 'cargo', 'departamento', 'email'],
+    searchableFields: ['nombre', 'ci', 'codigo_empleado', 'cargo', 'email'],
     searchPlaceholder: 'Buscar empleados por nombre, CI, código...',
 
     // 🆕 Modern index filters configuration (like productos)

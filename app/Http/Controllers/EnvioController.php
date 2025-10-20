@@ -1,12 +1,18 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ActualizarUbicacionRequest;
+use App\Http\Requests\CancelarEnvioRequest;
+use App\Http\Requests\ConfirmarEntregaRequest;
+use App\Http\Requests\ProgramarEnvioRequest;
+use App\Http\Requests\StoreEnvioRequest;
 use App\Models\Envio;
 use App\Models\Proforma;
 use App\Models\User;
 use App\Models\Vehiculo;
 use App\Models\Venta;
 use App\Services\StockService;
+use App\Services\WebSocketNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,14 +22,49 @@ use Inertia\Response;
 
 class EnvioController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $envios = Envio::with(['venta.cliente', 'vehiculo', 'chofer'])
-            ->orderBy('fecha_programada', 'desc')
-            ->paginate(20);
+        $perPage = $request->input('per_page', config('inventario.paginacion.por_pagina_default', 20));
+        $perPage = min($perPage, config('inventario.paginacion.por_pagina_max', 100));
+
+        $query = Envio::with(['venta.cliente', 'vehiculo', 'chofer']);
+
+        // Filtros
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('vehiculo_id')) {
+            $query->where('vehiculo_id', $request->vehiculo_id);
+        }
+
+        if ($request->filled('chofer_id')) {
+            $query->where('chofer_id', $request->chofer_id);
+        }
+
+        if ($request->filled('fecha_desde')) {
+            $query->whereDate('fecha_programada', '>=', $request->fecha_desde);
+        }
+
+        if ($request->filled('fecha_hasta')) {
+            $query->whereDate('fecha_programada', '<=', $request->fecha_hasta);
+        }
+
+        // Búsqueda por número de envío
+        if ($request->filled('search')) {
+            $query->where('numero_envio', 'like', '%' . $request->search . '%');
+        }
+
+        // Ordenamiento
+        $sortBy = $request->input('sort_by', 'fecha_programada');
+        $sortDir = $request->input('sort_dir', 'desc');
+        $query->orderBy($sortBy, $sortDir);
+
+        $envios = $query->paginate($perPage);
 
         return Inertia::render('Envios/Index', [
             'envios' => $envios,
+            'filters' => $request->only(['estado', 'vehiculo_id', 'chofer_id', 'fecha_desde', 'fecha_hasta', 'search']),
         ]);
     }
 
@@ -57,37 +98,26 @@ class EnvioController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreEnvioRequest $request)
     {
-        $request->validate([
-            'venta_id'          => 'required|exists:ventas,id',
-            'vehiculo_id'       => 'required|exists:vehiculos,id',
-            'chofer_id'         => 'required|exists:users,id',
-            'fecha_programada'  => 'required|date|after:now',
-            'direccion_entrega' => 'nullable|string|max:500',
-            'observaciones'     => 'nullable|string|max:1000',
-        ]);
-
         DB::beginTransaction();
         try {
-            // Verificar que la venta no tenga ya un envío
-            $venta = Venta::findOrFail($request->venta_id);
-            if ($venta->envio) {
-                return back()->withErrors(['venta_id' => 'Esta venta ya tiene un envío asignado.']);
-            }
-
             // Crear el envío
             $envio = Envio::create([
+                'numero_envio'      => Envio::generarNumeroEnvio(),
                 'venta_id'          => $request->venta_id,
                 'vehiculo_id'       => $request->vehiculo_id,
                 'chofer_id'         => $request->chofer_id,
                 'fecha_programada'  => $request->fecha_programada,
                 'direccion_entrega' => $request->direccion_entrega,
                 'observaciones'     => $request->observaciones,
-                'estado'            => 'programado',
+                'estado'            => Envio::PROGRAMADO,
             ]);
 
             DB::commit();
+
+            // Notificar vía WebSocket
+            app(WebSocketNotificationService::class)->notifyEnvioProgramado($envio);
 
             return redirect()->route('envios.show', $envio)
                 ->with('success', 'Envío creado correctamente.');
@@ -113,44 +143,38 @@ class EnvioController extends Controller
         ]);
     }
 
-    public function programar(Venta $venta, Request $request)
+    public function programar(Venta $venta, ProgramarEnvioRequest $request)
     {
-        $request->validate([
-            'vehiculo_id'       => 'required|exists:vehiculos,id',
-            'chofer_id'         => 'required|exists:users,id',
-            'fecha_programada'  => 'required|date|after:now',
-            'direccion_entrega' => 'nullable|string|max:500',
-        ]);
-
         if (! $venta->puedeEnviarse()) {
             return back()->withErrors(['error' => 'Esta venta no puede enviarse']);
         }
 
-        // Verificar que el vehículo esté disponible
-        $vehiculo = Vehiculo::find($request->vehiculo_id);
-        if ($vehiculo->estado !== Vehiculo::DISPONIBLE) {
-            return back()->withErrors(['error' => 'El vehículo seleccionado no está disponible']);
-        }
-
         DB::beginTransaction();
         try {
-            // Programar envío
-            $envio = $venta->programarEnvio([
+            // Crear el envío
+            $envio = Envio::create([
+                'numero_envio'      => Envio::generarNumeroEnvio(),
+                'venta_id'          => $venta->id,
                 'vehiculo_id'       => $request->vehiculo_id,
                 'chofer_id'         => $request->chofer_id,
                 'fecha_programada'  => $request->fecha_programada,
-                'direccion_entrega' => $request->direccion_entrega,
+                'direccion_entrega' => $request->direccion_entrega ?? $venta->cliente->direccion,
+                'observaciones'     => $request->observaciones,
+                'estado'            => Envio::PROGRAMADO,
             ]);
 
             // Actualizar estado de venta
             $venta->update(['estado_logistico' => Venta::ESTADO_PREPARANDO]);
 
             // Crear seguimiento inicial
-            $envio->agregarSeguimiento('PROGRAMADO', [
+            $envio->agregarSeguimiento(Envio::PROGRAMADO, [
                 'observaciones' => 'Envío programado para ' . $request->fecha_programada,
             ]);
 
             DB::commit();
+
+            // Notificar vía WebSocket
+            app(WebSocketNotificationService::class)->notifyEnvioProgramado($envio);
 
             return redirect()->route('envios.show', $envio)
                 ->with('success', 'Envío programado exitosamente');
@@ -186,6 +210,9 @@ class EnvioController extends Controller
 
             DB::commit();
 
+            // Notificar vía WebSocket
+            app(WebSocketNotificationService::class)->notifyEnvioEnPreparacion($envio);
+
             return back()->with('success', 'Preparación iniciada. Stock reducido correctamente.');
 
         } catch (\Exception $e) {
@@ -213,18 +240,14 @@ class EnvioController extends Controller
             'observaciones' => 'Vehículo salió del almacén',
         ]);
 
+        // Notificar vía WebSocket
+        app(WebSocketNotificationService::class)->notifyEnvioEnRuta($envio);
+
         return back()->with('success', 'Salida confirmada. El envío está en ruta.');
     }
 
-    public function confirmarEntrega(Envio $envio, Request $request)
+    public function confirmarEntrega(Envio $envio, ConfirmarEntregaRequest $request)
     {
-        $request->validate([
-            'receptor_nombre'       => 'required|string|max:255',
-            'receptor_documento'    => 'nullable|string|max:20',
-            'foto_entrega'          => 'nullable|image|max:2048',
-            'observaciones_entrega' => 'nullable|string|max:500',
-        ]);
-
         if (! $envio->puedeConfirmarEntrega()) {
             return back()->withErrors(['error' => 'Este envío no puede confirmar entrega']);
         }
@@ -250,11 +273,14 @@ class EnvioController extends Controller
             $envio->vehiculo->update(['estado' => Vehiculo::DISPONIBLE]);
 
             // Crear seguimiento final
-            $envio->agregarSeguimiento('ENTREGADO', [
+            $envio->agregarSeguimiento(Envio::ENTREGADO, [
                 'observaciones' => 'Entregado a: ' . $request->receptor_nombre . '. ' . ($request->observaciones_entrega ?? ''),
             ]);
 
             DB::commit();
+
+            // Notificar vía WebSocket
+            app(WebSocketNotificationService::class)->notifyEnvioEntregado($envio);
 
             return back()->with('success', 'Entrega confirmada exitosamente');
 
@@ -265,12 +291,8 @@ class EnvioController extends Controller
         }
     }
 
-    public function cancelar(Envio $envio, Request $request)
+    public function cancelar(Envio $envio, CancelarEnvioRequest $request)
     {
-        $request->validate([
-            'motivo_cancelacion' => 'required|string|max:500',
-        ]);
-
         DB::beginTransaction();
         try {
             // Si ya se había reducido stock, revertirlo
@@ -285,11 +307,14 @@ class EnvioController extends Controller
             $envio->vehiculo->update(['estado' => Vehiculo::DISPONIBLE]);
 
             // Crear seguimiento
-            $envio->agregarSeguimiento('CANCELADO', [
+            $envio->agregarSeguimiento(Envio::CANCELADO, [
                 'observaciones' => 'Cancelado: ' . $request->motivo_cancelacion,
             ]);
 
             DB::commit();
+
+            // Notificar vía WebSocket
+            app(WebSocketNotificationService::class)->notifyEnvioCancelado($envio, $request->motivo_cancelacion);
 
             return back()->with('success', 'Envío cancelado y stock revertido');
 
@@ -318,7 +343,14 @@ class EnvioController extends Controller
         return response()->json($choferes);
     }
 
-    private function reducirStockParaEnvio(Envio $envio)
+    /**
+     * Procesar operaciones de stock para envíos
+     *
+     * @param Envio $envio
+     * @param string $operacion 'reducir' | 'restaurar'
+     * @return void
+     */
+    private function procesarStock(Envio $envio, string $operacion): void
     {
         $stockService = app(StockService::class);
 
@@ -329,29 +361,54 @@ class EnvioController extends Controller
             ];
         })->toArray();
 
-        $stockService->procesarSalidaEnvio(
-            $productos,
-            $envio->numero_envio ?? 'ENV-' . $envio->id,
-            1// almacen_id por defecto
-        );
+        $numeroEnvio = $envio->numero_envio ?? 'ENV-' . $envio->id;
+        $almacenId = $this->obtenerAlmacenParaEnvio($envio);
+
+        if ($operacion === 'reducir') {
+            $stockService->procesarSalidaEnvio($productos, $numeroEnvio, $almacenId);
+        } elseif ($operacion === 'restaurar') {
+            $stockService->procesarEntradaCancelacionEnvio($productos, $numeroEnvio, $almacenId);
+        }
     }
 
-    private function revertirStockDelEnvio(Envio $envio)
+    /**
+     * Obtener el ID del almacén a usar para el envío
+     *
+     * Prioridad:
+     * 1. Almacén asociado a la venta (si existe)
+     * 2. Almacén principal configurado en sistema
+     * 3. Primer almacén activo (fallback)
+     *
+     * @param Envio $envio
+     * @return int
+     */
+    private function obtenerAlmacenParaEnvio(Envio $envio): int
     {
-        $stockService = app(StockService::class);
+        // 1. Intentar obtener almacén de la venta
+        if ($envio->venta && isset($envio->venta->almacen_id)) {
+            return $envio->venta->almacen_id;
+        }
 
-        $productos = $envio->venta->detalles->map(function ($detalle) {
-            return [
-                'producto_id' => $detalle->producto_id,
-                'cantidad'    => $detalle->cantidad,
-            ];
-        })->toArray();
+        // 2. Obtener almacén principal desde configuración
+        $almacenPrincipalId = config('inventario.almacen_principal_id');
+        if ($almacenPrincipalId) {
+            return $almacenPrincipalId;
+        }
 
-        $stockService->procesarEntradaCancelacionEnvio(
-            $productos,
-            $envio->numero_envio ?? 'ENV-' . $envio->id,
-            1// almacen_id por defecto
-        );
+        // 3. Fallback: primer almacén activo
+        $almacen = \App\Models\Almacen::where('activo', true)->first();
+
+        return $almacen ? $almacen->id : 1;
+    }
+
+    private function reducirStockParaEnvio(Envio $envio): void
+    {
+        $this->procesarStock($envio, 'reducir');
+    }
+
+    private function revertirStockDelEnvio(Envio $envio): void
+    {
+        $this->procesarStock($envio, 'restaurar');
     }
 
     // ==========================================
@@ -363,18 +420,135 @@ class EnvioController extends Controller
      */
     public function dashboardStats(): JsonResponse
     {
+        $hoy = today();
+        $estaSemana = now()->startOfWeek();
+        $esteMes = now()->startOfMonth();
+
         $stats = [
-            'proformas_pendientes'  => Proforma::where('estado', 'PENDIENTE')
-                ->where('canal_origen', 'APP_EXTERNA')
-                ->count(),
-            'envios_programados'    => Envio::where('estado', 'PROGRAMADO')->count(),
-            'envios_en_transito'    => Envio::where('estado', 'EN_TRANSITO')->count(),
-            'envios_entregados_hoy' => Envio::where('estado', 'ENTREGADO')
-                ->whereDate('updated_at', today())
-                ->count(),
+            // Métricas de Envíos
+            'envios' => [
+                'programados' => Envio::where('estado', Envio::PROGRAMADO)->count(),
+                'en_preparacion' => Envio::where('estado', Envio::EN_PREPARACION)->count(),
+                'en_ruta' => Envio::where('estado', Envio::EN_RUTA)->count(),
+                'entregados_hoy' => Envio::where('estado', Envio::ENTREGADO)
+                    ->whereDate('fecha_entrega', $hoy)
+                    ->count(),
+                'entregados_semana' => Envio::where('estado', Envio::ENTREGADO)
+                    ->where('fecha_entrega', '>=', $estaSemana)
+                    ->count(),
+                'entregados_mes' => Envio::where('estado', Envio::ENTREGADO)
+                    ->where('fecha_entrega', '>=', $esteMes)
+                    ->count(),
+                'cancelados_mes' => Envio::where('estado', Envio::CANCELADO)
+                    ->where('updated_at', '>=', $esteMes)
+                    ->count(),
+                'total_activos' => Envio::whereIn('estado', [
+                    Envio::PROGRAMADO,
+                    Envio::EN_PREPARACION,
+                    Envio::EN_RUTA
+                ])->count(),
+            ],
+
+            // Métricas de Vehículos
+            'vehiculos' => [
+                'disponibles' => Vehiculo::where('estado', Vehiculo::DISPONIBLE)
+                    ->where('activo', true)
+                    ->count(),
+                'en_ruta' => Vehiculo::where('estado', Vehiculo::EN_RUTA)->count(),
+                'total_activos' => Vehiculo::where('activo', true)->count(),
+            ],
+
+            // Métricas de Proformas (si existe la tabla)
+            'proformas' => [
+                'pendientes' => Proforma::where('estado', 'PENDIENTE')
+                    ->where('canal_origen', 'APP_EXTERNA')
+                    ->count(),
+                'aprobadas' => Proforma::where('estado', 'APROBADA')
+                    ->where('canal_origen', 'APP_EXTERNA')
+                    ->count(),
+            ],
+
+            // Métricas de Performance
+            'performance' => [
+                'tiempo_promedio_entrega' => $this->calcularTiempoPromedioEntrega(),
+                'tasa_cumplimiento' => $this->calcularTasaCumplimiento(),
+                'envios_retrasados' => $this->contarEnviosRetrasados(),
+            ],
+
+            // Próximos envíos (hoy y mañana)
+            'proximos_envios' => [
+                'hoy' => Envio::whereDate('fecha_programada', $hoy)
+                    ->whereIn('estado', [Envio::PROGRAMADO, Envio::EN_PREPARACION])
+                    ->count(),
+                'manana' => Envio::whereDate('fecha_programada', now()->addDay())
+                    ->whereIn('estado', [Envio::PROGRAMADO, Envio::EN_PREPARACION])
+                    ->count(),
+            ],
+
+            // Top choferes (por entregas este mes)
+            'top_choferes' => User::select('users.id', 'users.name', DB::raw('COUNT(envios.id) as entregas'))
+                ->join('envios', 'users.id', '=', 'envios.chofer_id')
+                ->where('envios.estado', Envio::ENTREGADO)
+                ->where('envios.fecha_entrega', '>=', $esteMes)
+                ->groupBy('users.id', 'users.name')
+                ->orderBy('entregas', 'desc')
+                ->limit(5)
+                ->get(),
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Calcular tiempo promedio de entrega (en horas)
+     */
+    private function calcularTiempoPromedioEntrega(): float
+    {
+        $enviosEntregados = Envio::where('estado', Envio::ENTREGADO)
+            ->where('fecha_entrega', '>=', now()->subDays(30))
+            ->whereNotNull('fecha_salida')
+            ->whereNotNull('fecha_entrega')
+            ->get();
+
+        if ($enviosEntregados->isEmpty()) {
+            return 0;
+        }
+
+        $totalHoras = $enviosEntregados->sum(function ($envio) {
+            return $envio->fecha_salida->diffInHours($envio->fecha_entrega);
+        });
+
+        return round($totalHoras / $enviosEntregados->count(), 1);
+    }
+
+    /**
+     * Calcular tasa de cumplimiento (%)
+     */
+    private function calcularTasaCumplimiento(): float
+    {
+        $totalEnvios = Envio::whereIn('estado', [Envio::ENTREGADO, Envio::CANCELADO])
+            ->where('updated_at', '>=', now()->subDays(30))
+            ->count();
+
+        if ($totalEnvios === 0) {
+            return 100;
+        }
+
+        $enviosEntregados = Envio::where('estado', Envio::ENTREGADO)
+            ->where('fecha_entrega', '>=', now()->subDays(30))
+            ->count();
+
+        return round(($enviosEntregados / $totalEnvios) * 100, 1);
+    }
+
+    /**
+     * Contar envíos retrasados
+     */
+    private function contarEnviosRetrasados(): int
+    {
+        return Envio::whereIn('estado', [Envio::PROGRAMADO, Envio::EN_PREPARACION, Envio::EN_RUTA])
+            ->where('fecha_programada', '<', now())
+            ->count();
     }
 
     /**
@@ -463,6 +637,10 @@ class EnvioController extends Controller
     {
         $user = Auth::user();
 
+        // Obtener parámetros de paginación
+        $perPage = $request->input('per_page', config('inventario.paginacion.por_pagina_default', 20));
+        $perPage = min($perPage, config('inventario.paginacion.por_pagina_max', 100));
+
         // Si es un cliente desde la app externa, buscar por cliente_app_id
         $envios = Envio::whereHas('venta', function ($query) use ($user) {
             $query->whereHas('cliente', function ($q) use ($user) {
@@ -471,7 +649,7 @@ class EnvioController extends Controller
         })
             ->with(['venta.cliente', 'vehiculo', 'chofer', 'seguimientos'])
             ->orderBy('fecha_programada', 'desc')
-            ->paginate(10);
+            ->paginate($perPage);
 
         return response()->json($envios);
     }
@@ -505,23 +683,23 @@ class EnvioController extends Controller
     /**
      * Actualizar ubicación desde app móvil
      */
-    public function actualizarUbicacion(Envio $envio, Request $request): JsonResponse
+    public function actualizarUbicacion(Envio $envio, ActualizarUbicacionRequest $request): JsonResponse
     {
-        $request->validate([
-            'latitud'  => 'required|numeric',
-            'longitud' => 'required|numeric',
+        $envio->seguimientos()->create([
+            'estado'         => $envio->estado,
+            'fecha_hora'     => now(),
+            'coordenadas_lat' => $request->latitud,
+            'coordenadas_lng' => $request->longitud,
+            'observaciones'  => 'Actualización de ubicación automática',
+            'user_id'        => Auth::id(),
         ]);
 
-        $envio->seguimientos()->create([
-            'estado'      => $envio->estado,
-            'descripcion' => 'Actualización de ubicación automática',
-            'ubicacion'   => [
-                'latitud'  => $request->latitud,
-                'longitud' => $request->longitud,
-            ],
-            'usuario_id'  => Auth::id(),
-            'fecha'       => now(),
-        ]);
+        // Notificar vía WebSocket (tracking en tiempo real)
+        app(WebSocketNotificationService::class)->notifyEnvioUbicacionActualizada(
+            $envio,
+            $request->latitud,
+            $request->longitud
+        );
 
         return response()->json(['message' => 'Ubicación actualizada']);
     }
@@ -547,20 +725,7 @@ class EnvioController extends Controller
      */
     private function reducirStockPreparacion(Envio $envio): void
     {
-        $stockService = app(StockService::class);
-
-        $productos = $envio->venta->detalles->map(function ($detalle) {
-            return [
-                'producto_id' => $detalle->producto_id,
-                'cantidad'    => $detalle->cantidad,
-            ];
-        })->toArray();
-
-        $stockService->procesarSalidaEnvio(
-            $productos,
-            $envio->numero_envio ?? 'ENV-' . $envio->id,
-            1// almacen_id por defecto
-        );
+        $this->procesarStock($envio, 'reducir');
     }
 
     /**
@@ -568,19 +733,75 @@ class EnvioController extends Controller
      */
     private function restaurarStock(Envio $envio): void
     {
-        $stockService = app(StockService::class);
+        $this->procesarStock($envio, 'restaurar');
+    }
 
-        $productos = $envio->venta->detalles->map(function ($detalle) {
-            return [
-                'producto_id' => $detalle->producto_id,
-                'cantidad'    => $detalle->cantidad,
-            ];
-        })->toArray();
+    // ==========================================
+    // 📊 MÉTODOS DE EXPORTACIÓN
+    // ==========================================
 
-        $stockService->procesarEntradaCancelacionEnvio(
-            $productos,
-            $envio->numero_envio ?? 'ENV-' . $envio->id,
-            1// almacen_id por defecto
+    /**
+     * Exportar envíos a PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = $this->aplicarFiltros(Envio::with(['venta.cliente', 'vehiculo', 'chofer']), $request);
+
+        $envios = $query->orderBy('fecha_programada', 'desc')->get();
+
+        $pdf = \PDF::loadView('exports.envios-pdf', [
+            'envios' => $envios,
+            'fecha_generacion' => now(),
+            'filtros' => $request->only(['estado', 'vehiculo_id', 'chofer_id', 'fecha_desde', 'fecha_hasta']),
+        ]);
+
+        return $pdf->download('envios_' . now()->format('Y-m-d_His') . '.pdf');
+    }
+
+    /**
+     * Exportar envíos a Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $query = $this->aplicarFiltros(Envio::with(['venta.cliente', 'vehiculo', 'chofer']), $request);
+
+        $envios = $query->orderBy('fecha_programada', 'desc')->get();
+
+        return \Excel::download(
+            new \App\Exports\EnviosExport($envios),
+            'envios_' . now()->format('Y-m-d_His') . '.xlsx'
         );
+    }
+
+    /**
+     * Aplicar filtros a la consulta de envíos
+     */
+    private function aplicarFiltros($query, Request $request)
+    {
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('vehiculo_id')) {
+            $query->where('vehiculo_id', $request->vehiculo_id);
+        }
+
+        if ($request->filled('chofer_id')) {
+            $query->where('chofer_id', $request->chofer_id);
+        }
+
+        if ($request->filled('fecha_desde')) {
+            $query->whereDate('fecha_programada', '>=', $request->fecha_desde);
+        }
+
+        if ($request->filled('fecha_hasta')) {
+            $query->whereDate('fecha_programada', '<=', $request->fecha_hasta);
+        }
+
+        if ($request->filled('search')) {
+            $query->where('numero_envio', 'like', '%' . $request->search . '%');
+        }
+
+        return $query;
     }
 }

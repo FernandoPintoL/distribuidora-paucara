@@ -339,10 +339,10 @@ rechazar.post = (args: { proforma: number | { id: number } } | [proforma: number
     rechazar.form = rechazarForm
 /**
 * @see \App\Http\Controllers\ProformaController::convertirVenta
- * @see app/Http/Controllers/ProformaController.php:0
+ * @see app/Http/Controllers/ProformaController.php:64
  * @route '/proformas/{proforma}/convertir-venta'
  */
-export const convertirVenta = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const convertirVenta = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: convertirVenta.url(args, options),
     method: 'post',
 })
@@ -354,14 +354,17 @@ convertirVenta.definition = {
 
 /**
 * @see \App\Http\Controllers\ProformaController::convertirVenta
- * @see app/Http/Controllers/ProformaController.php:0
+ * @see app/Http/Controllers/ProformaController.php:64
  * @route '/proformas/{proforma}/convertir-venta'
  */
-convertirVenta.url = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions) => {
+convertirVenta.url = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { proforma: args }
     }
 
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { proforma: args.id }
+        }
     
     if (Array.isArray(args)) {
         args = {
@@ -372,7 +375,9 @@ convertirVenta.url = (args: { proforma: string | number } | [proforma: string | 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        proforma: args.proforma,
+                        proforma: typeof args.proforma === 'object'
+                ? args.proforma.id
+                : args.proforma,
                 }
 
     return convertirVenta.definition.url
@@ -382,30 +387,30 @@ convertirVenta.url = (args: { proforma: string | number } | [proforma: string | 
 
 /**
 * @see \App\Http\Controllers\ProformaController::convertirVenta
- * @see app/Http/Controllers/ProformaController.php:0
+ * @see app/Http/Controllers/ProformaController.php:64
  * @route '/proformas/{proforma}/convertir-venta'
  */
-convertirVenta.post = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+convertirVenta.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: convertirVenta.url(args, options),
     method: 'post',
 })
 
     /**
 * @see \App\Http\Controllers\ProformaController::convertirVenta
- * @see app/Http/Controllers/ProformaController.php:0
+ * @see app/Http/Controllers/ProformaController.php:64
  * @route '/proformas/{proforma}/convertir-venta'
  */
-    const convertirVentaForm = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const convertirVentaForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: convertirVenta.url(args, options),
         method: 'post',
     })
 
             /**
 * @see \App\Http\Controllers\ProformaController::convertirVenta
- * @see app/Http/Controllers/ProformaController.php:0
+ * @see app/Http/Controllers/ProformaController.php:64
  * @route '/proformas/{proforma}/convertir-venta'
  */
-        convertirVentaForm.post = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        convertirVentaForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: convertirVenta.url(args, options),
             method: 'post',
         })

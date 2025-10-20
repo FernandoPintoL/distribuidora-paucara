@@ -4,14 +4,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MovimientoInventario extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'movimientos_inventario';
 
     public $timestamps = false; // La tabla maneja 'fecha' manualmente
+
+    /**
+     * Nombre del campo deleted_at para soft deletes
+     */
+    const DELETED_AT = 'deleted_at';
 
     protected $fillable = [
         'stock_producto_id',
@@ -41,18 +47,17 @@ class MovimientoInventario extends Model
         'cantidad_anterior'  => 'integer',
         'cantidad_posterior' => 'integer',
         'fecha'              => 'datetime',
+        'deleted_at'         => 'datetime', // ✓ Para SoftDeletes
     ];
 
     // Constantes para tipos de movimiento
     const TIPO_ENTRADA_AJUSTE = 'ENTRADA_AJUSTE';
-
     const TIPO_SALIDA_AJUSTE = 'SALIDA_AJUSTE';
-
+    const TIPO_AJUSTE = 'AJUSTE'; // Tipo genérico de ajuste
     const TIPO_SALIDA_MERMA = 'SALIDA_MERMA';
-
     const TIPO_SALIDA_VENTA = 'SALIDA_VENTA';
-
     const TIPO_ENTRADA_COMPRA = 'ENTRADA_COMPRA';
+    const TIPO_TRANSFERENCIA = 'TRANSFERENCIA'; // Para transferencias entre almacenes
 
     /**
      * Relaciones
@@ -165,9 +170,17 @@ class MovimientoInventario extends Model
     }
 
     /**
-     * Crear movimiento de inventario automáticamente
+     * Crear movimiento de inventario automáticamente (método principal)
+     *
+     * NOTA IMPORTANTE: Para operaciones críticas de venta y compra,
+     * se recomienda usar StockService que tiene mejor manejo de race conditions.
+     *
+     * Este método actualiza tanto cantidad como cantidad_disponible,
+     * manteniendo el invariante: cantidad = cantidad_disponible + cantidad_reservada
+     *
+     * @deprecated Para ventas/compras usar StockService::procesarSalidaVenta() o procesarEntradaCompra()
      */
-    public static function registrarStockProducto(
+    public static function registrar(
         StockProducto $stockProducto,
         int $cantidadMovimiento,
         string $tipo,
@@ -182,11 +195,78 @@ class MovimientoInventario extends Model
         ?string $ipDispositivo = null
     ): self {
         $cantidadAnterior = $stockProducto->cantidad;
+        $cantidadDisponibleAnterior = $stockProducto->cantidad_disponible;
 
-        // Actualizar el stock
+        // Actualizar usando UPDATE atómico para evitar race conditions
+        $affected = \Illuminate\Support\Facades\DB::table('stock_productos')
+            ->where('id', $stockProducto->id)
+            ->update([
+                'cantidad' => \Illuminate\Support\Facades\DB::raw("cantidad + ({$cantidadMovimiento})"),
+                'cantidad_disponible' => \Illuminate\Support\Facades\DB::raw("cantidad_disponible + ({$cantidadMovimiento})"),
+                'fecha_actualizacion' => now(),
+            ]);
+
+        if ($affected === 0) {
+            throw new \Exception("Error al actualizar stock para stock_producto_id {$stockProducto->id}");
+        }
+
+        // Actualizar modelo en memoria
         $stockProducto->cantidad += $cantidadMovimiento;
+        $stockProducto->cantidad_disponible += $cantidadMovimiento;
         $stockProducto->fecha_actualizacion = now();
-        $stockProducto->save();
+
+        // Validar que no quede negativo (BLOQUEAR si es negativo)
+        if ($stockProducto->cantidad < 0) {
+            // Log del error
+            \Illuminate\Support\Facades\Log::error('Intento de dejar stock negativo', [
+                'stock_producto_id' => $stockProducto->id,
+                'producto_id' => $stockProducto->producto_id,
+                'cantidad_actual' => $stockProducto->cantidad - $cantidadMovimiento,
+                'cantidad_movimiento' => $cantidadMovimiento,
+                'cantidad_final' => $stockProducto->cantidad,
+                'tipo' => $tipo,
+            ]);
+
+            // Revertir la operación
+            \Illuminate\Support\Facades\DB::table('stock_productos')
+                ->where('id', $stockProducto->id)
+                ->update([
+                    'cantidad' => \Illuminate\Support\Facades\DB::raw("cantidad - ({$cantidadMovimiento})"),
+                    'cantidad_disponible' => \Illuminate\Support\Facades\DB::raw("cantidad_disponible - ({$cantidadMovimiento})"),
+                ]);
+
+            throw new \Exception(
+                "Stock insuficiente. Stock actual: " . ($stockProducto->cantidad - $cantidadMovimiento) .
+                ", cantidad solicitada: " . abs($cantidadMovimiento) .
+                " (stock_producto_id: {$stockProducto->id})"
+            );
+        }
+
+        if ($stockProducto->cantidad_disponible < 0) {
+            // Log del error
+            \Illuminate\Support\Facades\Log::error('Intento de dejar stock disponible negativo', [
+                'stock_producto_id' => $stockProducto->id,
+                'producto_id' => $stockProducto->producto_id,
+                'cantidad_disponible_actual' => $stockProducto->cantidad_disponible - $cantidadMovimiento,
+                'cantidad_movimiento' => $cantidadMovimiento,
+                'cantidad_disponible_final' => $stockProducto->cantidad_disponible,
+                'tipo' => $tipo,
+            ]);
+
+            // Revertir la operación
+            \Illuminate\Support\Facades\DB::table('stock_productos')
+                ->where('id', $stockProducto->id)
+                ->update([
+                    'cantidad' => \Illuminate\Support\Facades\DB::raw("cantidad - ({$cantidadMovimiento})"),
+                    'cantidad_disponible' => \Illuminate\Support\Facades\DB::raw("cantidad_disponible - ({$cantidadMovimiento})"),
+                ]);
+
+            throw new \Exception(
+                "Stock disponible insuficiente. Stock disponible actual: " . ($stockProducto->cantidad_disponible - $cantidadMovimiento) .
+                ", cantidad solicitada: " . abs($cantidadMovimiento) .
+                " (stock_producto_id: {$stockProducto->id})"
+            );
+        }
 
         // Crear el movimiento
         return self::create([
@@ -206,6 +286,39 @@ class MovimientoInventario extends Model
             'referencia_id'             => $referenciaId,
             'ip_dispositivo'            => $ipDispositivo,
         ]);
+    }
+
+    /**
+     * Alias para compatibilidad con código existente
+     */
+    public static function registrarStockProducto(
+        StockProducto $stockProducto,
+        int $cantidadMovimiento,
+        string $tipo,
+        ?string $observacion = null,
+        ?string $numeroDocumento = null,
+        ?int $userId = null,
+        ?int $tipoAjusteInventarioId = null,
+        ?int $tipoMermaId = null,
+        ?int $estadoMermaId = null,
+        ?string $referenciaTipo = null,
+        ?int $referenciaId = null,
+        ?string $ipDispositivo = null
+    ): self {
+        return self::registrar(
+            $stockProducto,
+            $cantidadMovimiento,
+            $tipo,
+            $observacion,
+            $numeroDocumento,
+            $userId,
+            $tipoAjusteInventarioId,
+            $tipoMermaId,
+            $estadoMermaId,
+            $referenciaTipo,
+            $referenciaId,
+            $ipDispositivo
+        );
     }
 
     /**

@@ -111,6 +111,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/proformas', [ApiProformaController::class, 'listarParaDashboard']);
     Route::post('/proformas/{proforma}/aprobar', [ApiProformaController::class, 'aprobar']);
     Route::post('/proformas/{proforma}/rechazar', [ApiProformaController::class, 'rechazar']);
+    Route::post('/proformas/{proforma}/convertir-venta', [ApiProformaController::class, 'convertirAVenta']);
 
     // Gestión de envíos
     Route::get('/envios', [EnvioController::class, 'index']);

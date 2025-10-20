@@ -520,6 +520,10 @@ class Producto extends Model
 
     /**
      * Registrar movimiento de inventario
+     *
+     * IMPORTANTE: Actualiza tanto cantidad como cantidad_disponible
+     *
+     * @deprecated Para operaciones críticas de venta/compra usar StockService
      */
     public function registrarMovimiento(
         int $almacenId,
@@ -548,6 +552,8 @@ class Producto extends Model
                 'producto_id' => $this->id,
                 'almacen_id' => $almacenId,
                 'cantidad' => 0,
+                'cantidad_disponible' => 0, // ✓ Inicializar correctamente
+                'cantidad_reservada' => 0,  // ✓ Inicializar correctamente
                 'lote' => $lote,
                 'fecha_vencimiento' => $fechaVencimiento,
                 'fecha_actualizacion' => now(),
@@ -566,6 +572,8 @@ class Producto extends Model
 
     /**
      * Ajustar stock directo (para correcciones)
+     *
+     * IMPORTANTE: Actualiza tanto cantidad como cantidad_disponible
      */
     public function ajustarStock(
         int $almacenId,
@@ -590,6 +598,8 @@ class Producto extends Model
                 ],
                 [
                     'cantidad' => 0,
+                    'cantidad_disponible' => 0, // ✓ Inicializar correctamente
+                    'cantidad_reservada' => 0,  // ✓ Inicializar correctamente
                     'fecha_actualizacion' => now(),
                 ]
             );
@@ -654,5 +664,102 @@ class Producto extends Model
                 ->where('fecha_vencimiento', '<', now()->toDateString())
                 ->where('cantidad', '>', 0);
         });
+    }
+
+    /**
+     * FASE 3: Scopes adicionales para optimización
+     */
+
+    /**
+     * Scope: Productos activos
+     * Uso: Producto::activo()->get()
+     */
+    public function scopeActivo($query)
+    {
+        return $query->where('activo', true);
+    }
+
+    /**
+     * Scope: Productos inactivos
+     */
+    public function scopeInactivo($query)
+    {
+        return $query->where('activo', false);
+    }
+
+    /**
+     * Scope: Filtrar por categoría
+     * Uso: Producto::porCategoria(1)->get()
+     */
+    public function scopePorCategoria($query, int $categoriaId)
+    {
+        return $query->where('categoria_id', $categoriaId);
+    }
+
+    /**
+     * Scope: Filtrar por marca
+     * Uso: Producto::porMarca(1)->get()
+     */
+    public function scopePorMarca($query, int $marcaId)
+    {
+        return $query->where('marca_id', $marcaId);
+    }
+
+    /**
+     * Scope: Búsqueda por nombre o SKU
+     * Uso: Producto::buscar('laptop')->get()
+     */
+    public function scopeBuscar($query, string $termino)
+    {
+        return $query->where(function ($q) use ($termino) {
+            $q->where('nombre', 'like', "%{$termino}%")
+              ->orWhere('sku', 'like', "%{$termino}%")
+              ->orWhere('descripcion', 'like', "%{$termino}%");
+        });
+    }
+
+    /**
+     * Scope: Productos con stock
+     * Uso: Producto::conStock()->get()
+     */
+    public function scopeConStock($query)
+    {
+        return $query->whereHas('stock', function ($q) {
+            $q->where('cantidad', '>', 0);
+        });
+    }
+
+    /**
+     * Scope: Productos sin stock
+     */
+    public function scopeSinStock($query)
+    {
+        return $query->whereDoesntHave('stock', function ($q) {
+            $q->where('cantidad', '>', 0);
+        })->orWhereDoesntHave('stock');
+    }
+
+    /**
+     * Scope: Cargar relaciones para listados (previene N+1)
+     * Uso: Producto::conRelacionesBasicas()->get()
+     */
+    public function scopeConRelacionesBasicas($query)
+    {
+        return $query->with([
+            'categoria:id,nombre',
+            'marca:id,nombre',
+            'unidad:id,codigo,nombre',
+            'precios' => function ($q) {
+                $q->where('activo', true)->with('tipoPrecio:id,codigo,nombre');
+            }
+        ]);
+    }
+
+    /**
+     * Scope: Productos alquilables
+     */
+    public function scopeAlquilables($query)
+    {
+        return $query->where('es_alquilable', true);
     }
 }

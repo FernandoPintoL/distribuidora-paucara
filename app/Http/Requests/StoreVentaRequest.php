@@ -43,9 +43,9 @@ class StoreVentaRequest extends FormRequest
             'detalles'                   => 'required|array|min:1',
             'detalles.*.producto_id'     => 'required|exists:productos,id',
             'detalles.*.cantidad'        => 'required|integer|min:1',
-            'detalles.*.precio_unitario' => 'required|numeric|min:0',
+            'detalles.*.precio_unitario' => 'required|numeric|min:0.01|max:999999.99', // Problema #10: > 0 y razonable
             'detalles.*.descuento'       => 'nullable|numeric|min:0',
-            'detalles.*.subtotal'        => 'required|numeric|min:0',
+            'detalles.*.subtotal'        => 'required|numeric|min:0.01',
         ];
     }
 
@@ -89,5 +89,91 @@ class StoreVentaRequest extends FormRequest
             'detalles.*.subtotal.numeric'         => 'El subtotal del detalle debe ser numérico.',
             'detalles.*.subtotal.min'             => 'El subtotal del detalle debe ser mayor a 0.',
         ];
+    }
+
+    /**
+     * Configure el validador para agregar validaciones personalizadas
+     *
+     * Problema #9: Validar coherencia de cálculos
+     * Problema #11: Validar que cliente esté activo
+     * Problema #14: Validar que moneda esté activa
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $data = $validator->getData();
+
+            // Validar coherencia de cálculos de detalles
+            if (isset($data['detalles']) && is_array($data['detalles'])) {
+                $subtotalCalculado = 0;
+
+                foreach ($data['detalles'] as $index => $detalle) {
+                    // Validar que subtotal del detalle sea correcto
+                    $cantidad = $detalle['cantidad'] ?? 0;
+                    $precioUnitario = $detalle['precio_unitario'] ?? 0;
+                    $descuentoDetalle = $detalle['descuento'] ?? 0;
+
+                    $subtotalEsperado = ($cantidad * $precioUnitario) - $descuentoDetalle;
+                    $subtotalRecibido = $detalle['subtotal'] ?? 0;
+
+                    // Usar tolerancia para decimales (0.01)
+                    if (abs($subtotalEsperado - $subtotalRecibido) > 0.01) {
+                        $validator->errors()->add(
+                            "detalles.{$index}.subtotal",
+                            "El subtotal del detalle no coincide. Esperado: " . number_format($subtotalEsperado, 2) .
+                            ", Recibido: " . number_format($subtotalRecibido, 2)
+                        );
+                    }
+
+                    $subtotalCalculado += $subtotalRecibido;
+                }
+
+                // Validar que subtotal de la venta coincida con suma de detalles
+                $subtotalVenta = $data['subtotal'] ?? 0;
+                if (abs($subtotalCalculado - $subtotalVenta) > 0.01) {
+                    $validator->errors()->add(
+                        'subtotal',
+                        "El subtotal no coincide con la suma de los detalles. Esperado: " .
+                        number_format($subtotalCalculado, 2) . ", Recibido: " . number_format($subtotalVenta, 2)
+                    );
+                }
+
+                // Validar que total sea correcto (subtotal - descuento + impuesto)
+                $descuento = $data['descuento'] ?? 0;
+                $impuesto = $data['impuesto'] ?? 0;
+                $totalCalculado = $subtotalVenta - $descuento + $impuesto;
+                $totalRecibido = $data['total'] ?? 0;
+
+                if (abs($totalCalculado - $totalRecibido) > 0.01) {
+                    $validator->errors()->add(
+                        'total',
+                        "El total no coincide con el cálculo. Esperado: " . number_format($totalCalculado, 2) .
+                        ", Recibido: " . number_format($totalRecibido, 2)
+                    );
+                }
+            }
+
+            // Validar que el cliente esté activo
+            if (isset($data['cliente_id'])) {
+                $cliente = \App\Models\Cliente::find($data['cliente_id']);
+                if ($cliente && !$cliente->activo) {
+                    $validator->errors()->add(
+                        'cliente_id',
+                        "El cliente '{$cliente->nombre}' está desactivado. Active el cliente antes de continuar."
+                    );
+                }
+            }
+
+            // Validar que la moneda esté activa
+            if (isset($data['moneda_id'])) {
+                $moneda = \App\Models\Moneda::find($data['moneda_id']);
+                if ($moneda && !$moneda->activo) {
+                    $validator->errors()->add(
+                        'moneda_id',
+                        "La moneda '{$moneda->nombre}' está desactivada. Active la moneda antes de continuar."
+                    );
+                }
+            }
+        });
     }
 }

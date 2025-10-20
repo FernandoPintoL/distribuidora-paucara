@@ -67,23 +67,44 @@ export interface User {
     email: string;
 }
 
+/**
+ * Tipos de movimiento de inventario
+ *
+ * IMPORTANTE: Estos tipos deben coincidir exactamente con las constantes
+ * definidas en app/Models/MovimientoInventario.php
+ *
+ * @see app/Models/MovimientoInventario.php:54-60
+ */
 export type MovimientoTipo =
-    | 'ENTRADA_COMPRA'
-    | 'ENTRADA_AJUSTE'
-    | 'ENTRADA_DEVOLUCION'
-    | 'TRANSFERENCIA_ENTRADA'
-    | 'SALIDA_VENTA'
-    | 'SALIDA_AJUSTE'
-    | 'SALIDA_MERMA'
-    | 'SALIDA_DEVOLUCION'
-    | 'TRANSFERENCIA_SALIDA';
+    | 'ENTRADA_COMPRA'      // MovimientoInventario::TIPO_ENTRADA_COMPRA
+    | 'ENTRADA_AJUSTE'      // MovimientoInventario::TIPO_ENTRADA_AJUSTE
+    | 'SALIDA_VENTA'        // MovimientoInventario::TIPO_SALIDA_VENTA
+    | 'SALIDA_AJUSTE'       // MovimientoInventario::TIPO_SALIDA_AJUSTE
+    | 'SALIDA_MERMA'        // MovimientoInventario::TIPO_SALIDA_MERMA
+    | 'TRANSFERENCIA';      // MovimientoInventario::TIPO_TRANSFERENCIA
 
+/**
+ * FormData para crear movimientos de inventario
+ *
+ * NOTA: Para ajustes de inventario, el backend espera 'nueva_cantidad' (valor objetivo)
+ * en lugar de 'cantidad' (diferencia). Ver StoreAjusteInventarioRequest.php
+ */
 export interface MovimientoInventarioFormData extends BaseFormData {
     stock_producto_id: Id;
-    cantidad: number;
+    cantidad: number;  // Para movimientos normales (compras, ventas, mermas)
     tipo: MovimientoTipo;
     observacion?: string;
     numero_documento?: string;
+}
+
+/**
+ * FormData específico para ajustes de inventario
+ */
+export interface AjusteInventarioFormData extends BaseFormData {
+    stock_producto_id: Id;
+    nueva_cantidad: number;  // Valor objetivo del stock (no la diferencia)
+    observacion?: string;
+    tipo_ajuste_id?: Id;
 }
 
 export interface MovimientoInventarioFilters {
@@ -98,6 +119,11 @@ export interface MovimientoInventarioFilters {
     per_page?: number;
 }
 
+/**
+ * Configuración visual y descripción de cada tipo de movimiento
+ *
+ * IMPORTANTE: Las claves de este objeto deben coincidir con MovimientoTipo
+ */
 export const TIPOS_MOVIMIENTO: Record<MovimientoTipo, {
     label: string;
     color: string;
@@ -115,18 +141,6 @@ export const TIPOS_MOVIMIENTO: Record<MovimientoTipo, {
         color: 'text-blue-800 bg-blue-100 dark:bg-blue-900 dark:text-blue-200',
         icon: '⚖️',
         categoria: 'entrada'
-    },
-    ENTRADA_DEVOLUCION: {
-        label: 'Entrada por Devolución',
-        color: 'text-purple-800 bg-purple-100 dark:bg-purple-900 dark:text-purple-200',
-        icon: '↩️',
-        categoria: 'entrada'
-    },
-    TRANSFERENCIA_ENTRADA: {
-        label: 'Entrada por Transferencia',
-        color: 'text-indigo-800 bg-indigo-100 dark:bg-indigo-900 dark:text-indigo-200',
-        icon: '📥',
-        categoria: 'transferencia'
     },
     SALIDA_VENTA: {
         label: 'Salida por Venta',
@@ -146,16 +160,10 @@ export const TIPOS_MOVIMIENTO: Record<MovimientoTipo, {
         icon: '⚠️',
         categoria: 'salida'
     },
-    SALIDA_DEVOLUCION: {
-        label: 'Salida por Devolución',
-        color: 'text-pink-800 bg-pink-100 dark:bg-pink-900 dark:text-pink-200',
-        icon: '↪️',
-        categoria: 'salida'
-    },
-    TRANSFERENCIA_SALIDA: {
-        label: 'Salida por Transferencia',
-        color: 'text-cyan-800 bg-cyan-100 dark:bg-cyan-900 dark:text-cyan-200',
-        icon: '📤',
+    TRANSFERENCIA: {
+        label: 'Transferencia entre Almacenes',
+        color: 'text-indigo-800 bg-indigo-100 dark:bg-indigo-900 dark:text-indigo-200',
+        icon: '🔄',
         categoria: 'transferencia'
     }
 };

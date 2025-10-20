@@ -24,22 +24,17 @@ const initialEmpleadoData: EmpleadoFormData = {
     nombre: '',
     ci: '',
     codigo_empleado: '',
-    cargo: '',
-    departamento: '',
     fecha_ingreso: new Date().toISOString().split('T')[0], // Fecha actual
-    fecha_nacimiento: '',
     telefono: '',
     email: '',
     direccion: '',
-    salario_base: 0,
-    bonos: 0,
-    tipo_contrato: 'indefinido',
     estado: 'activo',
-    supervisor_id: null,
     observaciones: '',
     puede_acceder_sistema: false,
     usernick: '',
     roles: [],
+    password: '',
+    password_confirmation: '',
 };
 
 export default function EmpleadosForm({ empleado, extraData }: EmpleadosFormProps) {

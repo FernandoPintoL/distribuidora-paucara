@@ -47,12 +47,17 @@ class Venta extends Model
     {
         // Después de crear una venta, generar movimientos automáticamente
         static::created(function ($venta) {
-            // ⚠️ CAMBIO CRÍTICO: Solo procesar stock si NO requiere envío
-            // Para ventas con envío, el stock se procesa al iniciar la preparación
-            if (! $venta->requiere_envio) {
+            // ⚠️ CAMBIO CRÍTICO: Solo procesar stock si:
+            // 1. NO requiere envío (para ventas con envío, se procesa al iniciar preparación)
+            // 2. NO viene de una proforma (el stock ya fue consumido al convertir)
+            //
+            // IMPORTANTE: Si viene de proforma, las reservas ya se consumieron
+            // en ProformaController::convertirAVenta() mediante $proforma->consumirReservas()
+            if (!$venta->requiere_envio && !$venta->proforma_id) {
                 $venta->procesarMovimientosStock();
             }
 
+            // Generar asiento contable y movimiento de caja siempre
             $venta->generarAsientoContable();
             $venta->generarMovimientoCaja();
         });
@@ -180,21 +185,65 @@ class Venta extends Model
     }
 
     /**
-     * Generar número automático para la venta
-     * Formato: VEN + FECHA_ACTUAL + ID_VENTA
+     * Generar número automático para la venta con protección contra race conditions
+     * Formato: VEN + FECHA_ACTUAL + SECUENCIAL (4 dígitos)
+     *
+     * IMPORTANTE: Usa lockForUpdate() para prevenir duplicados en concurrencia alta
      */
     public static function generarNumero(): string
     {
-        $fecha       = now()->format('Ymd');
-        $ultimaVenta = self::whereDate('created_at', today())->latest()->first();
+        $fecha = now()->format('Ymd');
+        $maxIntentos = 5;
+        $intento = 0;
 
-        if ($ultimaVenta) {
-            $numeroSecuencial = intval(substr($ultimaVenta->numero, -4)) + 1;
-        } else {
-            $numeroSecuencial = 1;
+        while ($intento < $maxIntentos) {
+            try {
+                // BLOQUEO PESIMISTA: Previene que dos procesos lean el mismo número
+                $ultimaVenta = self::where('numero', 'like', "VEN{$fecha}%")
+                    ->orderBy('numero', 'desc')
+                    ->lockForUpdate()  // ← BLOQUEO CRÍTICO
+                    ->first();
+
+                if ($ultimaVenta) {
+                    $numeroSecuencial = intval(substr($ultimaVenta->numero, -4)) + 1;
+                } else {
+                    $numeroSecuencial = 1;
+                }
+
+                $numero = 'VEN' . $fecha . str_pad($numeroSecuencial, 4, '0', STR_PAD_LEFT);
+
+                Log::info('Número de venta generado', [
+                    'numero' => $numero,
+                    'intento' => $intento + 1,
+                ]);
+
+                return $numero;
+
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Detectar deadlock o lock wait timeout
+                if ($e->getCode() == '40001' || stripos($e->getMessage(), 'deadlock') !== false) {
+                    $intento++;
+                    if ($intento >= $maxIntentos) {
+                        Log::error('Deadlock generando número de venta después de múltiples intentos', [
+                            'intentos' => $intento,
+                            'error' => $e->getMessage(),
+                        ]);
+                        throw $e;
+                    }
+
+                    // Backoff exponencial
+                    usleep(100000 * $intento); // 100ms, 200ms, 300ms, etc.
+                    continue;
+                }
+
+                // Otro tipo de error - no reintentar
+                throw $e;
+            }
         }
 
-        return 'VEN' . $fecha . str_pad($numeroSecuencial, 4, '0', STR_PAD_LEFT);
+        // Fallback: generar con timestamp si fallan todos los intentos
+        Log::warning('Generando número de venta con fallback (timestamp)');
+        return 'VEN' . $fecha . now()->format('His');
     }
 
     /**
@@ -216,6 +265,9 @@ class Venta extends Model
 
     /**
      * Procesar movimientos de stock automáticamente
+     *
+     * IMPORTANTE: No validar stock aquí - procesarSalidaVenta() ya lo hace CON LOCK
+     * Eliminar la validación previa previene race conditions TOC/TOU
      */
     public function procesarMovimientosStock(int $almacenId = 1): void
     {
@@ -233,14 +285,11 @@ class Venta extends Model
         })->toArray();
 
         try {
-            // Validar stock antes de procesar
-            $validacion = $stockService->validarStockDisponible($productos, $almacenId);
+            // ✅ CORRECCIÓN CR#1: NO validar stock aquí
+            // La validación ocurre DENTRO de procesarSalidaVenta() con lockForUpdate()
+            // Esto previene race conditions TOC/TOU
 
-            if (! $validacion['valido']) {
-                throw new Exception('Stock insuficiente: ' . implode(', ', $validacion['errores']));
-            }
-
-            // Procesar salida de stock
+            // Procesar salida de stock (incluye validación con lock)
             $stockService->procesarSalidaVenta($productos, $this->numero, $almacenId);
 
         } catch (Exception $e) {
@@ -251,6 +300,8 @@ class Venta extends Model
 
     /**
      * Revertir movimientos de stock al eliminar venta
+     *
+     * IMPORTANTE: Actualiza tanto cantidad como cantidad_disponible
      */
     public function revertirMovimientosStock(): void
     {
@@ -263,29 +314,63 @@ class Venta extends Model
 
         try {
             foreach ($movimientos as $movimiento) {
-                // Revertir el stock (agregar la cantidad que se había restado)
                 $stockProducto = $movimiento->stockProducto;
-                $stockProducto->cantidad += abs($movimiento->cantidad);
+                $cantidadADevolver = abs($movimiento->cantidad);
+
+                // Actualizar stock usando UPDATE atómico
+                $affected = DB::table('stock_productos')
+                    ->where('id', $stockProducto->id)
+                    ->update([
+                        'cantidad' => DB::raw("cantidad + {$cantidadADevolver}"),
+                        'cantidad_disponible' => DB::raw("cantidad_disponible + {$cantidadADevolver}"),
+                        'fecha_actualizacion' => now(),
+                    ]);
+
+                if ($affected === 0) {
+                    throw new Exception("Error al revertir stock para stock_producto_id {$stockProducto->id}");
+                }
+
+                // Actualizar modelo en memoria
+                $cantidadAnterior = $stockProducto->cantidad;
+                $stockProducto->cantidad += $cantidadADevolver;
+                $stockProducto->cantidad_disponible += $cantidadADevolver;
                 $stockProducto->fecha_actualizacion = now();
-                $stockProducto->save();
 
                 // Crear movimiento de reversión
                 MovimientoInventario::create([
                     'stock_producto_id' => $stockProducto->id,
-                    'cantidad'          => abs($movimiento->cantidad),
+                    'cantidad'          => $cantidadADevolver,
                     'fecha'             => now(),
                     'observacion'       => "Reversión de venta #{$this->numero}",
-                    'numero_documento'   => $this->numero . '-REV',
-                    'cantidad_anterior'  => $stockProducto->cantidad - abs($movimiento->cantidad),
+                    'numero_documento'  => $this->numero . '-REV',
+                    'cantidad_anterior' => $cantidadAnterior,
                     'cantidad_posterior' => $stockProducto->cantidad,
-                    'tipo'               => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
-                    'user_id'            => Auth::id(),
+                    'tipo'              => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                    'user_id'           => Auth::id(),
+                ]);
+
+                Log::info('Stock revertido por eliminación de venta', [
+                    'venta' => $this->numero,
+                    'stock_producto_id' => $stockProducto->id,
+                    'cantidad_devuelta' => $cantidadADevolver,
                 ]);
             }
 
             DB::commit();
+
+            Log::info('Movimientos de venta revertidos exitosamente', [
+                'venta' => $this->numero,
+                'movimientos_revertidos' => $movimientos->count(),
+            ]);
+
         } catch (Exception $e) {
             DB::rollBack();
+
+            Log::error('Error al revertir movimientos de venta', [
+                'venta' => $this->numero,
+                'error' => $e->getMessage(),
+            ]);
+
             throw $e;
         }
     }

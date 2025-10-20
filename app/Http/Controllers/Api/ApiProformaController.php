@@ -646,6 +646,18 @@ class ApiProformaController extends Controller
 
             DB::commit();
 
+            // 8.5. Enviar notificación WebSocket en tiempo real
+            try {
+                app(\App\Services\WebSocketNotificationService::class)
+                    ->notifyProformaCreated($proforma);
+            } catch (\Exception $e) {
+                // No fallar si WebSocket falla, solo loguear
+                \Log::warning('Error enviando notificación WebSocket', [
+                    'proforma_id' => $proforma->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             // 9. Retornar respuesta exitosa con toda la información necesaria
             return response()->json([
                 'success' => true,
@@ -1082,5 +1094,161 @@ class ApiProformaController extends Controller
             Proforma::CONVERTIDA_A_VENTA => 'truck',
             default => 'help-circle',
         };
+    }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * ENDPOINT: CONVERTIR PROFORMA A VENTA
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Convierte una proforma aprobada a una venta, consumiendo las reservas de stock.
+     * Este es el flujo completo:
+     * 1. Valida que la proforma puede convertirse (estado APROBADA, sin venta asociada)
+     * 2. Verifica que tenga reservas activas y NO expiradas
+     * 3. Crea la venta con los datos de la proforma
+     * 4. Marca la proforma como CONVERTIDA (esto dispara el Observer que consume reservas)
+     * 5. Retorna la venta creada
+     *
+     * @param Proforma $proforma
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function convertirAVenta(Proforma $proforma)
+    {
+        return DB::transaction(function () use ($proforma) {
+            try {
+                // Validación 1: La proforma debe poder convertirse
+                if (!$proforma->puedeConvertirseAVenta()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Esta proforma no puede convertirse a venta',
+                        'estado_actual' => $proforma->estado,
+                    ], 422);
+                }
+
+                // Validación 2: Verificar que tenga reservas activas
+                $reservasActivas = $proforma->reservasActivas()->count();
+                if ($reservasActivas === 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No hay reservas de stock activas para esta proforma',
+                    ], 422);
+                }
+
+                // Validación 3: Verificar que las reservas NO estén expiradas
+                if ($proforma->tieneReservasExpiradas()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Las reservas de stock han expirado',
+                    ], 422);
+                }
+
+                // Validación 4: Verificar disponibilidad de stock actual
+                $disponibilidad = $proforma->verificarDisponibilidadStock();
+                $stockInsuficiente = array_filter($disponibilidad, fn($item) => !$item['disponible']);
+
+                if (!empty($stockInsuficiente)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stock insuficiente para algunos productos',
+                        'productos_sin_stock' => $stockInsuficiente,
+                    ], 422);
+                }
+
+                // Preparar datos para la venta desde la proforma
+                $datosVenta = [
+                    'numero' => \App\Models\Venta::generarNumero(),
+                    'fecha' => now()->toDateString(),
+                    'subtotal' => $proforma->subtotal,
+                    'descuento' => $proforma->descuento ?? 0,
+                    'impuesto' => $proforma->impuesto,
+                    'total' => $proforma->total,
+                    'observaciones' => $proforma->observaciones,
+                    'cliente_id' => $proforma->cliente_id,
+                    'usuario_id' => request()->user()->id,
+                    'moneda_id' => $proforma->moneda_id,
+                    'proforma_id' => $proforma->id,
+                    // Campos de logística
+                    'requiere_envio' => $proforma->esDeAppExterna(),
+                    'canal_origen' => $proforma->canal_origen,
+                    'estado_logistico' => $proforma->esDeAppExterna()
+                        ? \App\Models\Venta::ESTADO_PENDIENTE_ENVIO
+                        : null,
+                    // Estado del documento
+                    'estado_documento_id' => \App\Models\EstadoDocumento::where('nombre', 'PENDIENTE')->first()?->id,
+                ];
+
+                // Crear la venta
+                // IMPORTANTE: NO se procesa stock aquí, se hace al consumir reservas
+                $venta = \App\Models\Venta::create($datosVenta);
+
+                // Crear detalles de la venta desde los detalles de la proforma
+                foreach ($proforma->detalles as $detalleProforma) {
+                    $venta->detalles()->create([
+                        'producto_id' => $detalleProforma->producto_id,
+                        'cantidad' => $detalleProforma->cantidad,
+                        'precio_unitario' => $detalleProforma->precio_unitario,
+                        'subtotal' => $detalleProforma->subtotal,
+                    ]);
+                }
+
+                // Marcar la proforma como convertida
+                // IMPORTANTE: Esto dispara ProformaObserver::updated() que automáticamente
+                // consume las reservas (reduce cantidad física del stock)
+                if (!$proforma->marcarComoConvertida()) {
+                    throw new \Exception('Error al marcar la proforma como convertida');
+                }
+
+                // Cargar relaciones para la respuesta
+                $venta->load(['cliente', 'detalles.producto', 'moneda', 'estadoDocumento']);
+
+                \Log::info('Proforma convertida a venta exitosamente (API)', [
+                    'proforma_id' => $proforma->id,
+                    'proforma_numero' => $proforma->numero,
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'reservas_consumidas' => $reservasActivas,
+                    'usuario_id' => request()->user()->id,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Proforma {$proforma->numero} convertida exitosamente a venta {$venta->numero}",
+                    'data' => [
+                        'venta' => [
+                            'id' => $venta->id,
+                            'numero' => $venta->numero,
+                            'fecha' => $venta->fecha->format('Y-m-d'),
+                            'total' => (float) $venta->total,
+                            'cliente' => [
+                                'id' => $venta->cliente->id,
+                                'nombre' => $venta->cliente->nombre,
+                            ],
+                            'estado_documento' => $venta->estadoDocumento?->nombre,
+                            'requiere_envio' => $venta->requiere_envio,
+                            'estado_logistico' => $venta->estado_logistico,
+                        ],
+                        'proforma' => [
+                            'id' => $proforma->id,
+                            'numero' => $proforma->numero,
+                            'estado' => $proforma->estado,
+                        ],
+                    ],
+                ], 201);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                \Log::error('Error al convertir proforma a venta (API)', [
+                    'proforma_id' => $proforma->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al convertir la proforma a venta: ' . $e->getMessage(),
+                ], 500);
+            }
+        });
     }
 }

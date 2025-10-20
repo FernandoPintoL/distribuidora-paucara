@@ -617,7 +617,7 @@ destroy.delete = (args: { role: number | { id: number } } | [role: number | { id
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:212
+ * @see app/Http/Controllers/RolController.php:189
  * @route '/roles/{role}/crear-funcionalidad'
  */
 export const crearFuncionalidad = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -632,7 +632,7 @@ crearFuncionalidad.definition = {
 
 /**
 * @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:212
+ * @see app/Http/Controllers/RolController.php:189
  * @route '/roles/{role}/crear-funcionalidad'
  */
 crearFuncionalidad.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -665,7 +665,7 @@ crearFuncionalidad.url = (args: { role: number | { id: number } } | [role: numbe
 
 /**
 * @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:212
+ * @see app/Http/Controllers/RolController.php:189
  * @route '/roles/{role}/crear-funcionalidad'
  */
 crearFuncionalidad.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -675,7 +675,7 @@ crearFuncionalidad.post = (args: { role: number | { id: number } } | [role: numb
 
     /**
 * @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:212
+ * @see app/Http/Controllers/RolController.php:189
  * @route '/roles/{role}/crear-funcionalidad'
  */
     const crearFuncionalidadForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -685,7 +685,7 @@ crearFuncionalidad.post = (args: { role: number | { id: number } } | [role: numb
 
             /**
 * @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:212
+ * @see app/Http/Controllers/RolController.php:189
  * @route '/roles/{role}/crear-funcionalidad'
  */
         crearFuncionalidadForm.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

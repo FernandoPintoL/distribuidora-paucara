@@ -297,7 +297,12 @@ class CompraController extends Controller
 
             foreach ($data['detalles'] as $detalle) {
                 $detalleCompra = $compra->detalles()->create($detalle);
-                $this->registrarEntradaInventario($detalleCompra, $compra);
+
+                // Solo registrar inventario si el estado es RECIBIDO
+                $estadoRecibido = \App\Models\EstadoDocumento::where('codigo', 'RECIBIDO')->first();
+                if ($compra->estado_documento_id == $estadoRecibido?->id) {
+                    $this->registrarEntradaInventario($detalleCompra, $compra);
+                }
             }
 
             DB::commit();
@@ -328,7 +333,20 @@ class CompraController extends Controller
         try {
             DB::beginTransaction();
 
+            // Guardar estado anterior para detectar cambios
+            $estadoAnterior = $compra->estado_documento_id;
+            $estadoRecibido = \App\Models\EstadoDocumento::where('codigo', 'RECIBIDO')->first();
+
+            // Si la compra está en estado RECIBIDO y se van a modificar detalles, revertir inventario
+            if (isset($data['detalles']) && $estadoAnterior == $estadoRecibido?->id) {
+                $this->revertirInventarioDetalles($compra);
+            }
+
             $compra->update($data);
+
+            // Verificar si cambió a estado RECIBIDO
+            $cambioARecibido = $estadoAnterior != $estadoRecibido?->id &&
+                             $compra->estado_documento_id == $estadoRecibido?->id;
 
             if (isset($data['detalles'])) {
                 // Eliminar detalles existentes
@@ -337,7 +355,13 @@ class CompraController extends Controller
                 // Crear nuevos detalles
                 foreach ($data['detalles'] as $detalle) {
                     $detalleCompra = $compra->detalles()->create($detalle);
-                    $this->registrarEntradaInventario($detalleCompra, $compra);
+
+                    // Registrar inventario si:
+                    // 1. Cambió a RECIBIDO (nueva recepción)
+                    // 2. Ya estaba RECIBIDO (re-registrar después de revertir)
+                    if ($cambioARecibido || $compra->estado_documento_id == $estadoRecibido?->id) {
+                        $this->registrarEntradaInventario($detalleCompra, $compra);
+                    }
                 }
             }
 
@@ -361,6 +385,9 @@ class CompraController extends Controller
         try {
             DB::beginTransaction();
 
+            // Problema #17: Validar integridad referencial antes de eliminar
+            $this->validarIntegridadReferencialCompra($compra);
+
             $this->revertirMovimientosInventario($compra);
             $compra->delete();
 
@@ -373,6 +400,70 @@ class CompraController extends Controller
             DB::rollback();
 
             return back()->withErrors(['error' => 'Error al eliminar la compra: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Problema #17: Validar integridad referencial antes de eliminar compra
+     *
+     * Lanza una excepción si la compra tiene dependencias que impiden su eliminación
+     */
+    private function validarIntegridadReferencialCompra(\App\Models\Compra $compra): void
+    {
+        $errores = [];
+
+        // 1. Verificar si tiene pagos asociados
+        if ($compra->pagos()->exists()) {
+            $cantidadPagos = $compra->pagos()->count();
+            $errores[] = "La compra tiene {$cantidadPagos} pago(s) asociado(s)";
+        }
+
+        // 2. Verificar si tiene cuenta por pagar con saldo pendiente
+        if ($compra->cuentaPorPagar()->exists()) {
+            $cuenta = $compra->cuentaPorPagar;
+            if ($cuenta->saldo_pendiente > 0) {
+                $errores[] = "La compra tiene una cuenta por pagar con saldo pendiente de " .
+                    number_format($cuenta->saldo_pendiente, 2);
+            }
+        }
+
+        // 3. Verificar si tiene asiento contable cerrado
+        if ($compra->asientoContable()->exists()) {
+            $asiento = $compra->asientoContable;
+            if ($asiento->cerrado) {
+                $errores[] = "La compra tiene un asiento contable cerrado que no puede revertirse";
+            }
+        }
+
+        // 4. Verificar si el stock ya fue utilizado (vendido)
+        // Esto es más complejo, pero podríamos verificar si los movimientos de salida
+        // superan las entradas, indicando que parte del stock se vendió
+        $movimientos = \App\Models\MovimientoInventario::where('numero_documento', $compra->numero)
+            ->where('tipo', \App\Models\MovimientoInventario::TIPO_ENTRADA_COMPRA)
+            ->get();
+
+        foreach ($movimientos as $movimiento) {
+            $stockProducto = $movimiento->stockProducto;
+            if ($stockProducto) {
+                $cantidadEntrada = abs($movimiento->cantidad);
+                $stockActual = $stockProducto->cantidad;
+
+                // Si el stock actual es menor que la cantidad original de la compra,
+                // significa que parte se vendió
+                if ($stockActual < $cantidadEntrada) {
+                    $producto = $stockProducto->producto;
+                    $cantidadVendida = $cantidadEntrada - $stockActual;
+                    $errores[] = "Producto '{$producto->nombre}': se compraron {$cantidadEntrada} unidades pero {$cantidadVendida} ya fueron vendidas";
+                }
+            }
+        }
+
+        // Si hay errores, lanzar excepción
+        if (!empty($errores)) {
+            throw new \Exception(
+                "No se puede eliminar la compra #{$compra->numero}:\n" .
+                implode("\n", array_map(fn($e) => "- {$e}", $errores))
+            );
         }
     }
 
@@ -427,16 +518,49 @@ class CompraController extends Controller
     }
 
     /**
-     * Actualizar inventario por cambios en compra
+     * Revertir inventario de detalles antes de modificarlos
      */
-    private function actualizarInventarioPorCambios(Compra $compra, array $nuevosDetalles): void
+    private function revertirInventarioDetalles(Compra $compra): void
     {
-        // Esta funcionalidad es compleja y puede implementarse según necesidades específicas
-        // Por ahora, registrar un log para implementación futura
-        Log::info('Actualización de compra detectada - requiere ajuste manual de inventario', [
-            'compra_id'  => $compra->id,
-            'usuario_id' => Auth::id(),
-        ]);
+        foreach ($compra->detalles as $detalle) {
+            $producto = $detalle->producto;
+            $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
+
+            if (!$almacenPrincipal) {
+                Log::warning('No hay almacén disponible para revertir inventario', [
+                    'compra_id' => $compra->id,
+                    'detalle_id' => $detalle->id,
+                ]);
+                continue;
+            }
+
+            try {
+                // Registrar salida para revertir la entrada original
+                $producto->registrarMovimiento(
+                    almacenId: $almacenPrincipal->id,
+                    cantidad: -(int) $detalle->cantidad, // Negativo para salida
+                    tipo: \App\Models\MovimientoInventario::TIPO_AJUSTE,
+                    observacion: "Reversión por actualización de compra #{$compra->numero}",
+                    numeroDocumento: $compra->numero_factura,
+                    lote: $detalle->lote,
+                    userId: Auth::id()
+                );
+
+                Log::info('Inventario revertido por actualización de compra', [
+                    'compra_id' => $compra->id,
+                    'producto_id' => $producto->id,
+                    'cantidad' => $detalle->cantidad,
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error('Error al revertir inventario en actualización', [
+                    'compra_id' => $compra->id,
+                    'producto_id' => $producto->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continuar con los demás detalles
+            }
+        }
     }
 
     /**
@@ -558,28 +682,64 @@ class CompraController extends Controller
     }
 
     /**
-     * Generar número automático de compra: COMP + fecha del día + ID incremental
+     * Generar número de compra único con protección contra race conditions
+     *
+     * Formato: COMP20241018-001, COMP20241018-002, etc.
+     *
+     * Usa bloqueo pesimista (FOR UPDATE) para evitar duplicados cuando
+     * múltiples usuarios crean compras simultáneamente.
      */
     private function generarNumeroCompra(): string
     {
         $fecha = date('Ymd'); // Formato: 20240915
+        $maxIntentos = 5; // Máximo de intentos en caso de deadlock
+        $intento = 0;
 
-        // Buscar el último número de compra del día
-        $ultimaCompra = Compra::where('numero', 'like', "COMP{$fecha}%")
-            ->orderBy('numero', 'desc')
-            ->first();
+        while ($intento < $maxIntentos) {
+            try {
+                // Usar bloqueo pesimista (FOR UPDATE) para evitar race conditions
+                $ultimaCompra = Compra::where('numero', 'like', "COMP{$fecha}%")
+                    ->orderBy('numero', 'desc')
+                    ->lockForUpdate() // 🔒 BLOQUEO PESIMISTA
+                    ->first();
 
-        $secuencial = 1;
-        if ($ultimaCompra) {
-            // Extraer el número secuencial del último número de compra
-            $ultimoNumero = $ultimaCompra->numero;
-            $partes       = explode('-', $ultimoNumero);
-            if (count($partes) >= 2) {
-                $secuencial = intval($partes[1]) + 1;
+                $secuencial = 1;
+                if ($ultimaCompra) {
+                    // Extraer el número secuencial del último número de compra
+                    $ultimoNumero = $ultimaCompra->numero;
+                    $partes = explode('-', $ultimoNumero);
+                    if (count($partes) >= 2) {
+                        $secuencial = intval($partes[1]) + 1;
+                    }
+                }
+
+                // Formato: COMP20240915-001
+                $numero = sprintf('COMP%s-%03d', $fecha, $secuencial);
+
+                // Verificar que no exista (por si acaso)
+                $existe = Compra::where('numero', $numero)->exists();
+                if ($existe) {
+                    // Si existe, incrementar y reintentar
+                    $secuencial++;
+                    continue;
+                }
+
+                return $numero;
+
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Si hay deadlock, esperar un poco y reintentar
+                if ($e->getCode() == '40001' || stripos($e->getMessage(), 'deadlock') !== false) {
+                    $intento++;
+                    usleep(100000 * $intento); // Esperar 100ms, 200ms, 300ms, etc.
+                    continue;
+                }
+
+                // Si es otro error, lanzarlo
+                throw $e;
             }
         }
 
-        // Formato: COMP20240915-001
-        return sprintf('COMP%s-%03d', $fecha, $secuencial);
+        // Si después de todos los intentos no se generó, usar timestamp como fallback
+        return sprintf('COMP%s-%s', $fecha, substr(microtime(true) * 10000, -6));
     }
 }

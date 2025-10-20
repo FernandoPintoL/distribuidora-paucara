@@ -178,8 +178,21 @@ export class ComprasService implements BaseService<Compra, CompraFormData> {
 
     /**
      * Validación específica para compras
+     *
+     * Incluye validaciones de coherencia de cálculos similares al backend
+     * @see app/Http/Requests/StoreCompraRequest.php
+     *
+     * @param data Datos del formulario de compra
+     * @param options Opciones adicionales con entidades para validar estado activo
      */
-    validateData(data: CompraFormData): string[] {
+    validateData(
+        data: CompraFormData,
+        options?: {
+            proveedores?: Array<{ id: number | string; activo: boolean; nombre: string }>;
+            monedas?: Array<{ id: number | string; activo: boolean; nombre: string }>;
+            productos?: Array<{ id: number | string; activo: boolean; nombre: string }>;
+        }
+    ): string[] {
         const errors: string[] = [];
 
         // Validar fecha
@@ -206,6 +219,7 @@ export class ComprasService implements BaseService<Compra, CompraFormData> {
         if (!data.detalles || data.detalles.length === 0) {
             errors.push('Debe agregar al menos un producto');
         } else {
+            // Validar cada detalle
             data.detalles.forEach((detalle, index) => {
                 if (!detalle.producto_id || detalle.producto_id === '') {
                     errors.push(`Producto ${index + 1}: Debe seleccionar un producto`);
@@ -231,6 +245,160 @@ export class ComprasService implements BaseService<Compra, CompraFormData> {
                     }
                 }
             });
+
+            // ✅ Validar coherencia de cálculos
+            const erroresCoherencia = this.validateCalculationCoherence(data);
+            errors.push(...erroresCoherencia);
+        }
+
+        // ✅ NUEVO: Validar entidades activas
+        if (options) {
+            const erroresEntidades = this.validateActiveEntities(data, options);
+            errors.push(...erroresEntidades);
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validar que las entidades estén activas (similar al backend)
+     *
+     * @see app/Http/Requests/StoreCompraRequest.php:168-199
+     */
+    private validateActiveEntities(
+        data: CompraFormData,
+        options: {
+            proveedores?: Array<{ id: number | string; activo: boolean; nombre: string }>;
+            monedas?: Array<{ id: number | string; activo: boolean; nombre: string }>;
+            productos?: Array<{ id: number | string; activo: boolean; nombre: string }>;
+        }
+    ): string[] {
+        const errors: string[] = [];
+
+        // Validar proveedor activo
+        if (options.proveedores && data.proveedor_id) {
+            const proveedor = options.proveedores.find(
+                p => String(p.id) === String(data.proveedor_id)
+            );
+
+            if (proveedor && !proveedor.activo) {
+                errors.push(
+                    `El proveedor '${proveedor.nombre}' está desactivado. ` +
+                    `Active el proveedor antes de continuar.`
+                );
+            }
+        }
+
+        // Validar moneda activa
+        if (options.monedas && data.moneda_id) {
+            const moneda = options.monedas.find(
+                m => String(m.id) === String(data.moneda_id)
+            );
+
+            if (moneda && !moneda.activo) {
+                errors.push(
+                    `La moneda '${moneda.nombre}' está desactivada. ` +
+                    `Active la moneda antes de continuar.`
+                );
+            }
+        }
+
+        // Validar productos activos
+        if (options.productos && data.detalles) {
+            data.detalles.forEach((detalle, index) => {
+                const producto = options.productos?.find(
+                    p => String(p.id) === String(detalle.producto_id)
+                );
+
+                if (producto && !producto.activo) {
+                    errors.push(
+                        `Producto ${index + 1}: El producto '${producto.nombre}' no está activo.`
+                    );
+                }
+            });
+        }
+
+        return errors;
+    }
+
+    /**
+     * Validar coherencia de cálculos (similar al backend)
+     *
+     * @see app/Http/Requests/StoreCompraRequest.php:75-144
+     */
+    private validateCalculationCoherence(data: CompraFormData): string[] {
+        const errors: string[] = [];
+
+        // 1. Validar coherencia de subtotales de detalles
+        data.detalles.forEach((detalle, index) => {
+            const cantidad = Number(detalle.cantidad) || 0;
+            const precioUnitario = Number(detalle.precio_unitario) || 0;
+            const descuento = Number(detalle.descuento) || 0;
+            const subtotal = Number(detalle.subtotal) || 0;
+
+            const subtotalCalculado = (cantidad * precioUnitario) - descuento;
+
+            // Tolerancia de 0.01 por redondeos (igual que backend)
+            if (Math.abs(subtotalCalculado - subtotal) > 0.01) {
+                errors.push(
+                    `Producto ${index + 1}: El subtotal (${subtotal.toFixed(2)}) no coincide ` +
+                    `con el cálculo (${subtotalCalculado.toFixed(2)})`
+                );
+            }
+
+            // Validar que el descuento no exceda el subtotal antes del descuento
+            if (descuento > (cantidad * precioUnitario)) {
+                errors.push(
+                    `Producto ${index + 1}: El descuento (${descuento.toFixed(2)}) no puede ` +
+                    `ser mayor al subtotal (${(cantidad * precioUnitario).toFixed(2)})`
+                );
+            }
+        });
+
+        // 2. Validar coherencia del subtotal general
+        if ('subtotal' in data) {
+            const subtotalCalculado = data.detalles.reduce((sum, detalle) => {
+                return sum + (Number(detalle.subtotal) || 0);
+            }, 0);
+            const subtotalDeclarado = Number(data.subtotal) || 0;
+
+            if (Math.abs(subtotalCalculado - subtotalDeclarado) > 0.01) {
+                errors.push(
+                    `El subtotal (${subtotalDeclarado.toFixed(2)}) no coincide con la suma ` +
+                    `de los detalles (${subtotalCalculado.toFixed(2)})`
+                );
+            }
+        }
+
+        // 3. Validar coherencia del total
+        if ('total' in data && 'subtotal' in data) {
+            const subtotal = Number(data.subtotal) || 0;
+            const descuento = Number(data.descuento) || 0;
+            const impuesto = Number(data.impuesto) || 0;
+            const total = Number(data.total) || 0;
+
+            const totalCalculado = subtotal - descuento + impuesto;
+
+            if (Math.abs(totalCalculado - total) > 0.01) {
+                errors.push(
+                    `El total (${total.toFixed(2)}) no coincide con el cálculo ` +
+                    `(subtotal: ${subtotal.toFixed(2)} - descuento: ${descuento.toFixed(2)} ` +
+                    `+ impuesto: ${impuesto.toFixed(2)} = ${totalCalculado.toFixed(2)})`
+                );
+            }
+        }
+
+        // 4. Validar que el descuento no exceda el subtotal
+        if ('descuento' in data && 'subtotal' in data) {
+            const subtotal = Number(data.subtotal) || 0;
+            const descuento = Number(data.descuento) || 0;
+
+            if (descuento > subtotal) {
+                errors.push(
+                    `El descuento (${descuento.toFixed(2)}) no puede ser mayor ` +
+                    `al subtotal (${subtotal.toFixed(2)})`
+                );
+            }
         }
 
         return errors;

@@ -1,7 +1,6 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Enums\TipoEmpleado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -36,16 +35,9 @@ class RolController extends Controller
             ->paginate($request->perPage ?? 10)
             ->withQueryString();
 
-        // Identificar roles con funcionalidad especial (traits)
-        $rolesConFuncionalidad = [];
-        foreach ($roles->items() as $rol) {
-            $rolesConFuncionalidad[$rol->name] = TipoEmpleado::tieneTrait($rol->name);
-        }
-
         return Inertia::render('roles/index', [
-            'roles'                 => $roles,
-            'rolesConFuncionalidad' => $rolesConFuncionalidad,
-            'filters'               => $request->only(['search']),
+            'roles'   => $roles,
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -88,10 +80,7 @@ class RolController extends Controller
         // Asignar permisos
         $role->syncPermissions($request->permissions);
 
-        // Limpiar caché de roles
-        TipoEmpleado::limpiarCache();
-
-        // Crear trait si se solicita
+        // Crear trait si se solicita (OPCIONAL)
         if ($request->crear_funcionalidad) {
             try {
                 Artisan::call('empleados:registrar-rol', [
@@ -117,11 +106,8 @@ class RolController extends Controller
     {
         $role->load('permissions');
 
-        $tieneFuncionalidad = TipoEmpleado::tieneTrait($role->name);
-
         return Inertia::render('roles/show', [
-            'role'               => $role,
-            'tieneFuncionalidad' => $tieneFuncionalidad,
+            'role' => $role,
         ]);
     }
 
@@ -141,12 +127,9 @@ class RolController extends Controller
             ];
         })->groupBy('group');
 
-        $tieneFuncionalidad = TipoEmpleado::tieneTrait($role->name);
-
         return Inertia::render('roles/edit', [
-            'role'               => $role,
-            'permissions'        => $permissions,
-            'tieneFuncionalidad' => $tieneFuncionalidad,
+            'role'        => $role,
+            'permissions' => $permissions,
         ]);
     }
 
@@ -169,9 +152,6 @@ class RolController extends Controller
         if ($role->name !== $request->name) {
             $role->name = $request->name;
             $role->save();
-
-            // Limpiar caché cuando cambia el nombre
-            TipoEmpleado::limpiarCache();
         }
 
         // Sincronizar permisos
@@ -198,9 +178,6 @@ class RolController extends Controller
 
         // Eliminar el rol
         $role->delete();
-
-        // Limpiar caché
-        TipoEmpleado::limpiarCache();
 
         return redirect()->route('roles.index')
             ->with('success', "Rol '{$rolName}' eliminado exitosamente");
