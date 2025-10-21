@@ -66,8 +66,14 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
     const entityName = entity && 'nombre' in entity ? String(entity.nombre) : 'registro';
 
     if (isEditing) {
+      // Preparar datos usando el método del servicio si existe
+      let preparedData = data;
+      if ('prepareDataForBackend' in service && typeof service.prepareDataForBackend === 'function') {
+        preparedData = service.prepareDataForBackend(data);
+      }
+
       // Filtrar datos: eliminar campos null/undefined y campos _preview
-      const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+      const cleanData = Object.entries(preparedData).reduce((acc, [key, value]) => {
         // No enviar campos _preview (solo son para mostrar)
         if (key.endsWith('_preview')) {
           return acc;
@@ -124,18 +130,24 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
         error: 'Error al actualizar el registro'
       });
     } else {
+      // Preparar datos usando el método del servicio si existe
+      let preparedData = data;
+      if ('prepareDataForBackend' in service && typeof service.prepareDataForBackend === 'function') {
+        preparedData = service.prepareDataForBackend(data);
+      }
+
       // LOG: Ver datos que se están enviando
       console.group('🔍 DATOS ENVIADOS AL BACKEND - CREATE');
       console.log('URL:', service.storeUrl());
       console.log('Método: POST');
       console.log('ForceFormData: true');
-      console.log('Datos completos:', data);
-      console.log('Datos serializados:', JSON.stringify(data, null, 2));
+      console.log('Datos completos:', preparedData);
+      console.log('Datos serializados:', JSON.stringify(preparedData, null, 2));
       console.groupEnd();
 
       // Crear promesa para creación
       const createPromise = new Promise<void>((resolve, reject) => {
-        post(service.storeUrl(), {
+        router.post(service.storeUrl(), preparedData as any, {
           forceFormData: true,
           onSuccess: () => {
             console.log('✅ Creación exitosa');

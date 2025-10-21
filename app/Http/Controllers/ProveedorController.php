@@ -115,6 +115,8 @@ class ProveedorController extends Controller
             'telefono'     => ['nullable', 'string', 'max:100'],
             'email'        => ['nullable', 'email', 'max:255'],
             'direccion'    => ['nullable', 'string', 'max:255'],
+            'latitud'      => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'     => ['nullable', 'numeric', 'between:-180,180'],
             'contacto'     => ['nullable', 'string', 'max:255'],
             'activo'       => ['boolean'],
         ];
@@ -200,6 +202,8 @@ class ProveedorController extends Controller
             'telefono'     => ['nullable', 'string', 'max:100'],
             'email'        => ['nullable', 'email', 'max:255'],
             'direccion'    => ['nullable', 'string', 'max:255'],
+            'latitud'      => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'     => ['nullable', 'numeric', 'between:-180,180'],
             'contacto'     => ['nullable', 'string', 'max:255'],
             'activo'       => ['boolean'],
             'foto_perfil'  => ['nullable', 'image', 'max:5120'],

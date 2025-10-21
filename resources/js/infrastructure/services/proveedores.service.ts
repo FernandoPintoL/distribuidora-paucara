@@ -9,6 +9,29 @@ export class ProveedoresService extends GenericService<Proveedor, ProveedorFormD
     super('proveedores');
   }
 
+  /**
+   * Prepara los datos antes de enviarlos al backend
+   * Transforma el objeto coordenadas en campos separados latitud y longitud
+   */
+  prepareDataForBackend(data: ProveedorFormData): ProveedorFormData {
+    const preparedData = { ...data };
+
+    // Si existe el campo coordenadas, extraer latitud y longitud
+    if ('coordenadas' in preparedData && preparedData.coordenadas) {
+      const coords = preparedData.coordenadas as any;
+      if (coords.latitud !== undefined) {
+        preparedData.latitud = coords.latitud;
+      }
+      if (coords.longitud !== undefined) {
+        preparedData.longitud = coords.longitud;
+      }
+      // Eliminar el campo coordenadas ya que no existe en el backend
+      delete (preparedData as any).coordenadas;
+    }
+
+    return preparedData;
+  }
+
   indexUrl(params?: { query?: Filters }) {
     return Controllers.ProveedorController.index(params).url;
   }

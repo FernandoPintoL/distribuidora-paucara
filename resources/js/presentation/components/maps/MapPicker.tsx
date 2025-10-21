@@ -27,10 +27,10 @@ const mapContainerStyle = {
     height: '100%'
 };
 
-const mapOptions: google.maps.MapOptions = {
+const mapOptions = {
     disableDefaultUI: false,
     clickableIcons: false,
-    gestureHandling: 'greedy',
+    gestureHandling: 'greedy' as const,
     styles: [
         {
             featureType: "poi",
@@ -52,10 +52,10 @@ export default function MapPicker({
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
     const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(
-        latitude && longitude ? { lat: latitude, lng: longitude } : null
+        latitude && longitude ? { lat: Number(latitude), lng: Number(longitude) } : null
     );
     const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(
-        latitude && longitude ? { lat: latitude, lng: longitude } : DEFAULT_CENTER
+        latitude && longitude ? { lat: Number(latitude), lng: Number(longitude) } : DEFAULT_CENTER
     );
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
@@ -64,6 +64,20 @@ export default function MapPicker({
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
+
+    // Actualizar posición cuando cambien las props de latitude/longitude
+    useEffect(() => {
+        if (latitude && longitude) {
+            const lat = Number(latitude);
+            const lng = Number(longitude);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                setSelectedPosition({ lat, lng });
+                setMapCenter({ lat, lng });
+            }
+        } else {
+            setSelectedPosition(null);
+        }
+    }, [latitude, longitude]);
 
     // Obtener ubicación actual del usuario al cargar el componente
     useEffect(() => {
@@ -337,7 +351,7 @@ export default function MapPicker({
                                 <Marker
                                     position={selectedPosition}
                                     title="Ubicación seleccionada"
-                                    animation={google.maps.Animation.DROP}
+                                    animation={window.google?.maps?.Animation?.DROP}
                                 />
                             )}
                         </GoogleMap>
@@ -358,7 +372,7 @@ export default function MapPicker({
                                 <div className="text-xs text-muted-foreground">
                                     <span className="font-medium">Coordenadas: </span>
                                     <span>
-                                        {selectedPosition.lat.toFixed(6)}, {selectedPosition.lng.toFixed(6)}
+                                        {Number(selectedPosition.lat).toFixed(6)}, {Number(selectedPosition.lng).toFixed(6)}
                                     </span>
                                 </div>
                             </div>

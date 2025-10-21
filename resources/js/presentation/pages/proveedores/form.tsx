@@ -16,6 +16,8 @@ const initialProveedorData: ProveedorFormData = {
   telefono: '',
   email: '',
   direccion: '',
+  latitud: null,
+  longitud: null,
   contacto: '',
   foto_perfil: null,
   ci_anverso: null,

@@ -125,6 +125,12 @@ class ClienteController extends Controller
                 $clientes->getCollection()->load('localidad');
             }
 
+            // Agregar URLs de fotos de perfil para el listado
+            $clientes->getCollection()->transform(function ($cliente) {
+                $cliente->foto_perfil_url = $cliente->foto_perfil ? Storage::url($cliente->foto_perfil) : null;
+                return $cliente;
+            });
+
             // 🔍 DEBUG: Log para ver qué datos se están enviando
             \Log::info('🔍 DEBUG CLIENTES INDEX', [
                 'is_api_request' => $this->isApiRequest(),
@@ -278,11 +284,11 @@ class ClienteController extends Controller
             // Usar el método compartido para crear el cliente
             $cliente = $this->handleClientCreation($request, $data, false, $handleDirecciones, !$this->isApiRequest());
 
-            // Guardar ventanas de entrega y categorías para API
-            if ($this->isApiRequest()) {
-                $this->syncVentanasEntrega($cliente, isset($data['ventanas_entrega']) ? (array) $data['ventanas_entrega'] : null);
-                $this->syncCategorias($cliente, isset($data['categorias_ids']) ? (array) $data['categorias_ids'] : null);
-            }
+            // Guardar ventanas de entrega (tanto para web como API)
+            $this->syncVentanasEntrega($cliente, isset($data['ventanas_entrega']) ? (array) $data['ventanas_entrega'] : null);
+
+            // Guardar categorías (tanto para web como API)
+            $this->syncCategorias($cliente, isset($data['categorias_ids']) ? (array) $data['categorias_ids'] : null);
 
             // Preparar respuesta según el tipo de request
             if ($this->isApiRequest()) {
@@ -312,7 +318,7 @@ class ClienteController extends Controller
     {
         try {
             return $this->dataResponse('clientes/form', [
-                'cliente'     => $cliente->load(['localidad', 'direcciones']),
+                'cliente'     => $cliente->load(['localidad', 'direcciones', 'ventanasEntrega']),
                 'localidades' => Localidad::where('activo', true)
                     ->orderBy('nombre')
                     ->get(['id', 'nombre', 'codigo']),
@@ -501,11 +507,11 @@ class ClienteController extends Controller
                 }
             }
 
-            // Sincronizar ventanas de entrega y categorías para API
-            if ($this->isApiRequest()) {
-                $this->syncVentanasEntrega($cliente, $request->has('ventanas_entrega') ? (array) $request->input('ventanas_entrega', []) : null);
-                $this->syncCategorias($cliente, $request->has('categorias_ids') ? (array) $request->input('categorias_ids') : null);
-            }
+            // Sincronizar ventanas de entrega (tanto para web como API)
+            $this->syncVentanasEntrega($cliente, $request->has('ventanas_entrega') ? (array) $request->input('ventanas_entrega', []) : null);
+
+            // Sincronizar categorías (tanto para web como API)
+            $this->syncCategorias($cliente, $request->has('categorias_ids') ? (array) $request->input('categorias_ids') : null);
 
             // Preparar respuesta según el tipo de request
             if ($this->isApiRequest()) {

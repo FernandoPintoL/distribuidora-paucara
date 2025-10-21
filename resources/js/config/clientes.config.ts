@@ -3,6 +3,7 @@ import type { ModuleConfig } from '@/domain/entities/generic';
 import type { Cliente, ClienteFormData } from '@/domain/entities/clientes';
 import FileUploadPreview from '@/presentation/components/generic/FileUploadPreview';
 import MapPickerWithLocations from '@/presentation/components/maps/MapPickerWithLocations';
+import VentanasEntregaSelector from '@/presentation/components/clientes/VentanasEntregaSelector';
 import React, { createElement } from 'react';
 
 export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
@@ -30,10 +31,16 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             order: 2,
         },
         {
+            id: 'Dias de visitas',
+            title: 'Días de Visita',
+            description: 'Días y horarios en que el cliente prefiere recibir visitas',
+            order: 3,
+        },
+        {
             id: 'Fotos',
             title: 'Fotos',
             description: 'Imágenes y documentos del cliente',
-            order: 3,
+            order: 4,
         },
     ],
 
@@ -43,6 +50,55 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
     // Table configuration
     tableColumns: [
         { key: 'id', label: 'ID', type: 'number' },
+        {
+            key: 'foto_perfil_url',
+            label: 'Foto',
+            type: 'text',
+            render: (value: unknown) => {
+                const imageUrl = (value as string | null) || null;
+                return createElement('div', { className: 'flex items-center justify-center' },
+                    createElement('div', {
+                        className: 'w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative'
+                    },
+                        imageUrl
+                            ? [
+                                createElement('img', {
+                                    key: 'image',
+                                    src: imageUrl,
+                                    alt: 'Perfil',
+                                    className: 'w-full h-full object-cover',
+                                    onError: (e: any) => {
+                                        // Ocultar la imagen y mostrar el icono cuando falle la carga
+                                        e.target.style.display = 'none';
+                                        const icon = e.target.nextElementSibling;
+                                        if (icon) icon.style.display = 'block';
+                                    }
+                                }),
+                                createElement('svg', {
+                                    key: 'icon',
+                                    className: 'w-6 h-6 text-gray-400',
+                                    fill: 'currentColor',
+                                    viewBox: '0 0 24 24',
+                                    style: { display: 'none' }
+                                },
+                                    createElement('path', {
+                                        d: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'
+                                    })
+                                )
+                            ]
+                            : createElement('svg', {
+                                className: 'w-6 h-6 text-gray-400',
+                                fill: 'currentColor',
+                                viewBox: '0 0 24 24'
+                            },
+                                createElement('path', {
+                                    d: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'
+                                })
+                            )
+                    )
+                );
+            }
+        },
         { key: 'codigo_cliente', label: 'Código', type: 'text' },
         { key: 'nombre', label: 'Nombre', type: 'text' },
         { key: 'razon_social', label: 'Razon Social', type: 'text' },
@@ -61,7 +117,7 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             label: 'Código de Cliente',
             type: 'text',
             visible: (data) => !!data.id, // Solo visible si tiene ID (modo edición)
-            disabled: () => true, // Siempre deshabilitado (solo lectura)
+            //disabled: () => true, // Siempre deshabilitado (solo lectura)
             placeholder: 'Se genera automáticamente',
             colSpan: 1,
             section: 'Información Personal',
@@ -161,6 +217,23 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                     description: 'Haz clic en el mapa para agregar una nueva ubicación o en un marcador para editarla',
                     disabled: Boolean(disabled),
                     height: '450px'
+                });
+            }
+        },
+        // 📅 SECCIÓN DE VENTANAS DE ENTREGA
+        {
+            key: 'ventanas_entrega',
+            label: 'Días y horarios de visita',
+            type: 'custom',
+            fullWidth: true,
+            section: 'Ventanas de Entrega',
+            render: ({ value, onChange, disabled }) => {
+                const ventanas = Array.isArray(value) ? value : [];
+
+                return createElement(VentanasEntregaSelector, {
+                    value: ventanas,
+                    onChange: onChange,
+                    disabled: Boolean(disabled)
                 });
             }
         },

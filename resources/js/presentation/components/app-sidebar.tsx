@@ -6,46 +6,24 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-    Package,
-    Boxes,
-    Users,
-    Truck,
-    Wallet,
-    CreditCard,
-    ShoppingCart,
-    TrendingUp,
-    BarChart3,
-    Settings,
-    FolderTree,
-    Tags,
-    Ruler,
-    DollarSign,
-    Building2,
-    ClipboardList,
-    LucideIcon
-} from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import AppLogo from './app-logo';
 
-// Mapeo de nombres de iconos a componentes
-const iconMap: Record<string, LucideIcon> = {
-    Package,
-    Boxes,
-    Users,
-    Truck,
-    Wallet,
-    CreditCard,
-    ShoppingCart,
-    TrendingUp,
-    BarChart3,
-    Settings,
-    FolderTree,
-    Tags,
-    Ruler,
-    DollarSign,
-    Building2,
-    ClipboardList,
-};
+// Mapeo dinámico de TODOS los iconos de Lucide
+// Simplemente asignamos todo lo que se exporta de lucide-react como LucideIcon
+const iconMap = LucideIcons as unknown as Record<string, LucideIcon>;
+
+// Debug: Ver cuántos iconos se cargaron y qué tipo son
+const availableIcons = Object.keys(iconMap).filter(key =>
+    key[0] === key[0].toUpperCase() && // Empieza con mayúscula
+    !['Icon', 'createLucideIcon', 'default'].includes(key) // No es helper
+);
+
+console.log('[AppSidebar] Total de iconos disponibles:', availableIcons.length);
+console.log('[AppSidebar] Primeros 10 iconos disponibles:', availableIcons.slice(0, 10));
+console.log('[AppSidebar] Ejemplo de icono (Package):', iconMap['Package']);
+console.log('[AppSidebar] Tipo de Package:', typeof iconMap['Package']);
 
 // Tipos para los módulos de la API
 interface ModuloAPI {
@@ -62,12 +40,23 @@ const useSidebarModules = () => {
     const [error, setError] = useState<string | null>(null);
 
     const processModules = useCallback((modules: ModuloAPI[]): NavItem[] => {
-        return modules.map((module) => ({
-            title: module.title,
-            href: module.href,
-            icon: module.icon && iconMap[module.icon] ? iconMap[module.icon] : null,
-            children: module.children ? processModules(module.children) : undefined,
-        }));
+        return modules.map((module) => {
+            // Debug: Ver qué icono se está buscando
+            if (module.icon) {
+                const iconFound = iconMap[module.icon];
+                console.log(`[AppSidebar] Módulo "${module.title}" - Icono buscado: "${module.icon}" - ${iconFound ? '✅ Encontrado' : '❌ NO ENCONTRADO'}`);
+                if (!iconFound) {
+                    console.log(`[AppSidebar] Iconos disponibles que empiezan con "${module.icon[0]}":`, Object.keys(iconMap).filter(k => k.startsWith(module.icon[0])).slice(0, 5));
+                }
+            }
+
+            return {
+                title: module.title,
+                href: module.href,
+                icon: module.icon && iconMap[module.icon] ? iconMap[module.icon] : null,
+                children: module.children ? processModules(module.children) : undefined,
+            };
+        });
     }, []);
 
     useEffect(() => {

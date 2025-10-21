@@ -81,6 +81,7 @@ export default function GenericFormFields<F extends BaseFormData>({
         error,
         disabled: fieldDisabled,
         field,
+        formData: data, // 🆕 Pasar todo el formData para campos que lo necesiten (como MapPicker)
       });
     }
 

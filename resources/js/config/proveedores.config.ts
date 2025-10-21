@@ -43,6 +43,7 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
     // Table configuration
     tableColumns: [
         { key: 'id', label: 'ID', type: 'number' },
+        { key: 'codigo_proveedor', label: 'Código', type: 'text' },
         { key: 'nombre', label: 'Nombre', type: 'text' },
         { key: 'razon_social', label: 'Razon Social', type: 'text' },
         { key: 'nit', label: 'N° Documento', type: 'text' },
@@ -53,6 +54,18 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
 
     // Form configuration
     formFields: [
+        // 📋 Código de proveedor - Solo visible en modo EDICIÓN
+        {
+            key: 'codigo_proveedor',
+            label: 'Código de Proveedor',
+            type: 'text',
+            visible: (data) => !!data.id, // Solo visible si tiene ID (modo edición)
+            placeholder: 'Se genera automáticamente',
+            colSpan: 1,
+            section: 'Información Personal',
+            description: 'Código único generado automáticamente (PRV + ID)',
+            prefix: '#',
+        },
         {
             key: 'nombre',
             label: 'Nombre',
