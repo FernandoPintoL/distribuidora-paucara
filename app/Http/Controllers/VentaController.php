@@ -6,10 +6,12 @@ use App\Http\Requests\StoreVentaRequest;
 use App\Http\Requests\UpdateVentaRequest;
 use App\Models\Venta;
 use App\Services\StockService;
+use App\Services\WebSocketNotificationService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class VentaController extends Controller
@@ -200,6 +202,59 @@ class VentaController extends Controller
             // Si hay error de stock insuficiente, se lanzará una excepción desde el Observer
             $venta->load(['detalles.producto', 'cliente', 'usuario', 'estadoDocumento', 'moneda']);
 
+            // Notificar vía WebSocket sobre nueva venta (sin afectar la respuesta si falla)
+            try {
+                $webSocketService = app(WebSocketNotificationService::class);
+                // Cargar relaciones completas para la notificación
+                $venta->load([
+                    'cliente',
+                    'detalles.producto',
+                    'usuario',
+                    'proforma',
+                    'envio',
+                ]);
+
+                // Enviar notificación con datos completos de la venta
+                $webSocketService->notifyUser(
+                    $venta->usuario_id ?? auth()->id(),
+                    'venta_creada',
+                    [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'cliente_id' => $venta->cliente_id,
+                        'cliente_nombre' => $venta->cliente?->nombre,
+                        'total' => $venta->total,
+                        'subtotal' => $venta->subtotal,
+                        'moneda' => $venta->moneda?->codigo,
+                        'estado_documento' => $venta->estadoDocumento?->nombre,
+                        'requiere_envio' => $venta->requiere_envio,
+                        'canal_origen' => $venta->canal_origen,
+                        'fecha' => $venta->fecha,
+                        'timestamp' => now(),
+                    ]
+                );
+
+                // Notificar a managers sobre nueva venta
+                $webSocketService->notifyRole(
+                    'manager',
+                    'nueva_venta_registrada',
+                    [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'cliente_nombre' => $venta->cliente?->nombre,
+                        'total' => $venta->total,
+                        'usuario_creador' => $venta->usuario?->name,
+                        'timestamp' => now(),
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::warning('Error enviando notificación WebSocket de venta creada', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             // Si es petición API, devolver JSON
             if ($request->expectsJson() || $request->is('api/*')) {
                 return ApiResponse::success(
@@ -273,8 +328,47 @@ class VentaController extends Controller
             // Problema #17: Validar integridad referencial antes de eliminar
             $this->validarIntegridadReferencial($venta);
 
+            // Cargar datos completos antes de eliminar para notificación
+            $venta->load(['cliente', 'usuario', 'estadoDocumento']);
+            $ventaData = [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'cliente_nombre' => $venta->cliente?->nombre,
+                'total' => $venta->total,
+                'usuario_creador' => $venta->usuario?->name,
+                'timestamp' => now(),
+            ];
+
             // Los movimientos de stock se revierten automáticamente por el model event
             $venta->delete();
+
+            // Notificar vía WebSocket sobre venta eliminada (sin afectar la respuesta si falla)
+            try {
+                $webSocketService = app(WebSocketNotificationService::class);
+
+                // Notificar al usuario que creó la venta
+                $webSocketService->notifyUser(
+                    $venta->usuario_id ?? auth()->id(),
+                    'venta_eliminada',
+                    array_merge($ventaData, [
+                        'motivo' => 'Venta cancelada por usuario',
+                    ])
+                );
+
+                // Notificar a managers
+                $webSocketService->notifyRole(
+                    'manager',
+                    'venta_cancelada',
+                    array_merge($ventaData, [
+                        'usuario_que_cancelo' => auth()->user()?->name,
+                    ])
+                );
+            } catch (\Exception $e) {
+                Log::warning('Error enviando notificación WebSocket de venta eliminada', [
+                    'venta_numero' => $ventaData['venta_numero'],
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // Si es petición API, devolver JSON
             if (request()->expectsJson() || request()->is('api/*')) {
@@ -457,6 +551,173 @@ class VentaController extends Controller
         } catch (Exception $e) {
             return ApiResponse::error('Error obteniendo resumen de stock: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * ENDPOINT: REGISTRAR PAGO EN UNA VENTA
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Registra un pago parcial o completo en una venta.
+     * Actualiza automáticamente los campos de pago de la venta.
+     *
+     * Validaciones:
+     * 1. La venta debe existir
+     * 2. El monto no puede ser negativo
+     * 3. El monto no puede exceder el monto pendiente
+     * 4. Actualiza: monto_pagado, monto_pendiente, estado_pago
+     *
+     * Parámetros:
+     * - monto: Monto a pagar (decimal)
+     * - tipo_pago: TRANSFERENCIA, EFECTIVO, TARJETA, CHEQUE (opcional)
+     * - numero_referencia: Número de referencia de pago (opcional)
+     * - observaciones: Observaciones sobre el pago (opcional)
+     *
+     * @param Venta $venta
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function registrarPago(Venta $venta, Request $request)
+    {
+        // Validar parámetros de entrada
+        $request->validate([
+            'monto' => 'required|numeric|min:0.01',
+            'tipo_pago' => 'nullable|in:TRANSFERENCIA,EFECTIVO,TARJETA,CHEQUE',
+            'numero_referencia' => 'nullable|string|max:100',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        return DB::transaction(function () use ($venta, $request) {
+            try {
+                // Validación 1: La venta debe tener política de pago
+                if (!$venta->politica_pago) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La venta no tiene una política de pago configurada',
+                    ], 422);
+                }
+
+                // Validación 2: El monto debe ser positivo
+                $montoAPagar = (float) $request->monto;
+                if ($montoAPagar <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El monto debe ser mayor a 0',
+                    ], 422);
+                }
+
+                // Validación 3: El monto no puede exceder el pendiente
+                $montoPendiente = (float) $venta->monto_pendiente;
+                if ($montoAPagar > $montoPendiente) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El monto a pagar no puede exceder el monto pendiente',
+                        'monto_pendiente' => $montoPendiente,
+                        'monto_solicitado' => $montoAPagar,
+                        'diferencia' => $montoAPagar - $montoPendiente,
+                    ], 422);
+                }
+
+                // Crear registro de pago
+                $pago = $venta->pagos()->create([
+                    'monto' => $montoAPagar,
+                    'tipo_pago_id' => $this->obtenerTipoPagoId($request->tipo_pago),
+                    'numero_transaccion' => $request->numero_referencia,
+                    'observaciones' => $request->observaciones,
+                    'fecha' => now(),
+                ]);
+
+                // Actualizar montos en la venta
+                $montoPagadoNuevo = (float) $venta->monto_pagado + $montoAPagar;
+                $montoPendienteNuevo = (float) $venta->monto_total - $montoPagadoNuevo;
+
+                // Determinar nuevo estado de pago
+                if ($montoPendienteNuevo <= 0) {
+                    $estadoPagoNuevo = 'PAGADO';
+                } elseif ($montoPagadoNuevo > 0) {
+                    $estadoPagoNuevo = 'PARCIALMENTE_PAGADO';
+                } else {
+                    $estadoPagoNuevo = 'PENDIENTE';
+                }
+
+                // Actualizar venta
+                $venta->update([
+                    'monto_pagado' => $montoPagadoNuevo,
+                    'monto_pendiente' => max(0, $montoPendienteNuevo),
+                    'estado_pago' => $estadoPagoNuevo,
+                ]);
+
+                \Log::info('Pago registrado en venta', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'pago_id' => $pago->id,
+                    'monto_pagado' => $montoAPagar,
+                    'estado_pago_nuevo' => $estadoPagoNuevo,
+                    'usuario_id' => auth()->id(),
+                ]);
+
+                // Enviar notificación WebSocket
+                try {
+                    app(WebSocketNotificationService::class)
+                        ->notifyPagoRecibido($venta, $pago);
+                } catch (Exception $e) {
+                    \Log::warning('Error enviando notificación WebSocket de pago', [
+                        'venta_id' => $venta->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Pago de {$montoAPagar} registrado exitosamente",
+                    'data' => [
+                        'pago' => [
+                            'id' => $pago->id,
+                            'monto' => (float) $pago->monto,
+                            'tipo_pago' => $request->tipo_pago,
+                            'numero_referencia' => $pago->numero_transaccion,
+                            'fecha' => $pago->fecha->format('Y-m-d H:i:s'),
+                        ],
+                        'venta_actualizada' => [
+                            'id' => $venta->id,
+                            'numero' => $venta->numero,
+                            'monto_total' => (float) $venta->monto_total,
+                            'monto_pagado' => (float) $montoPagadoNuevo,
+                            'monto_pendiente' => (float) max(0, $montoPendienteNuevo),
+                            'estado_pago' => $estadoPagoNuevo,
+                            'porcentaje_pagado' => round(($montoPagadoNuevo / $venta->monto_total) * 100, 2),
+                        ],
+                    ],
+                ], 201);
+
+            } catch (Exception $e) {
+                DB::rollBack();
+
+                \Log::error('Error registrando pago en venta', [
+                    'venta_id' => $venta->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al registrar el pago: ' . $e->getMessage(),
+                ], 500);
+            }
+        });
+    }
+
+    /**
+     * Helper: Obtener ID de tipo de pago
+     */
+    private function obtenerTipoPagoId($tipoPago = null)
+    {
+        if (!$tipoPago) {
+            // Retornar tipo de pago por defecto si existe
+            return \App\Models\TipoPago::where('codigo', 'TRANSFERENCIA')->first()?->id ?? 1;
+        }
+
+        return \App\Models\TipoPago::where('codigo', $tipoPago)->first()?->id ?? 1;
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Models\Proforma;
 use App\Models\User;
 use App\Models\Vehiculo;
 use App\Models\Venta;
+use App\Services\ReportService;
 use App\Services\StockService;
 use App\Services\WebSocketNotificationService;
 use Illuminate\Http\JsonResponse;
@@ -56,14 +57,14 @@ class EnvioController extends Controller
         }
 
         // Ordenamiento
-        $sortBy = $request->input('sort_by', 'fecha_programada');
+        $sortBy  = $request->input('sort_by', 'fecha_programada');
         $sortDir = $request->input('sort_dir', 'desc');
         $query->orderBy($sortBy, $sortDir);
 
         $envios = $query->paginate($perPage);
 
         return Inertia::render('Envios/Index', [
-            'envios' => $envios,
+            'envios'  => $envios,
             'filters' => $request->only(['estado', 'vehiculo_id', 'chofer_id', 'fecha_desde', 'fecha_hasta', 'search']),
         ]);
     }
@@ -147,6 +148,12 @@ class EnvioController extends Controller
     {
         if (! $venta->puedeEnviarse()) {
             return back()->withErrors(['error' => 'Esta venta no puede enviarse']);
+        }
+
+        // ✅ VALIDACIÓN: Verificar que el pago cumpla con la política de pago
+        $validacionPago = $this->validarPagoParaEnvio($venta);
+        if (!$validacionPago['valido']) {
+            return back()->withErrors(['error' => $validacionPago['mensaje']]);
         }
 
         DB::beginTransaction();
@@ -291,6 +298,92 @@ class EnvioController extends Controller
         }
     }
 
+    // ✅ NUEVO: Rechazar entrega (chofer/cliente reporte problema)
+    public function rechazarEntrega(Envio $envio, Request $request)
+    {
+        $request->validate([
+            'tipo_rechazo'     => 'required|in:cliente_ausente,tienda_cerrada,otro_problema',
+            'motivo_detallado' => 'nullable|string|max:500',
+            'fotos'            => 'nullable|array|max:5',
+            'fotos.*'          => 'image|max:5120', // 5MB cada foto
+        ]);
+
+        if (! $envio->puedeRechazarEntrega()) {
+            return back()->withErrors(['error' => 'Este envío no puede rechazarse en este momento']);
+        }
+
+        DB::beginTransaction();
+        try {
+            $fotosPath = [];
+
+            // Procesar fotos
+            if ($request->hasFile('fotos')) {
+                foreach ($request->file('fotos') as $foto) {
+                    $path        = $foto->store('rechazos-entregas', 'public');
+                    $fotosPath[] = $path;
+                }
+            }
+
+            // Determinar tipo de rechazo y marcar
+            $tipoRechazo = $request->tipo_rechazo;
+            $motivo      = '';
+
+            switch ($tipoRechazo) {
+                case 'cliente_ausente':
+                    $envio->marcarClienteAusente($fotosPath);
+                    $motivo = 'Cliente no se encontraba en el lugar';
+                    break;
+                case 'tienda_cerrada':
+                    $envio->marcarTiendaCerrada($fotosPath);
+                    $motivo = 'Tienda cerrada';
+                    break;
+                case 'otro_problema':
+                    $motivo = $request->motivo_detallado ?? 'Otro problema reportado';
+                    $envio->marcarConProblema($motivo, $fotosPath);
+                    break;
+            }
+
+            // Crear seguimiento detallado
+            $envio->agregarSeguimiento('INTENTO_ENTREGA_FALLIDO', [
+                'observaciones' => "Intento fallido - {$motivo}. Fotos: " . count($fotosPath),
+            ]);
+
+            // Actualizar estado de la venta
+            $envio->venta->update(['estado_logistico' => Venta::ESTADO_PENDIENTE_ENVIO]);
+
+            DB::commit();
+
+            // Notificar vía WebSocket
+            try {
+                app(WebSocketNotificationService::class)->notifyRole(
+                    'manager',
+                    'entrega_rechazada',
+                    [
+                        'envio_id'       => $envio->id,
+                        'envio_numero'   => $envio->numero_envio,
+                        'tipo_rechazo'   => $tipoRechazo,
+                        'motivo'         => $motivo,
+                        'fotos_cantidad' => count($fotosPath),
+                        'chofer'         => $envio->chofer?->name,
+                        'cliente'        => $envio->venta->cliente?->nombre,
+                        'timestamp'      => now(),
+                    ]
+                );
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Error notificando rechazo de entrega', [
+                    'envio_id' => $envio->id,
+                    'error'    => $e->getMessage(),
+                ]);
+            }
+
+            return back()->with('success', 'Rechazo de entrega registrado. El envío requiere acción adicional.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al rechazar entrega: ' . $e->getMessage()]);
+        }
+    }
+
     public function cancelar(Envio $envio, CancelarEnvioRequest $request)
     {
         DB::beginTransaction();
@@ -362,7 +455,7 @@ class EnvioController extends Controller
         })->toArray();
 
         $numeroEnvio = $envio->numero_envio ?? 'ENV-' . $envio->id;
-        $almacenId = $this->obtenerAlmacenParaEnvio($envio);
+        $almacenId   = $this->obtenerAlmacenParaEnvio($envio);
 
         if ($operacion === 'reducir') {
             $stockService->procesarSalidaEnvio($productos, $numeroEnvio, $almacenId);
@@ -420,64 +513,64 @@ class EnvioController extends Controller
      */
     public function dashboardStats(): JsonResponse
     {
-        $hoy = today();
+        $hoy        = today();
         $estaSemana = now()->startOfWeek();
-        $esteMes = now()->startOfMonth();
+        $esteMes    = now()->startOfMonth();
 
         $stats = [
             // Métricas de Envíos
-            'envios' => [
-                'programados' => Envio::where('estado', Envio::PROGRAMADO)->count(),
-                'en_preparacion' => Envio::where('estado', Envio::EN_PREPARACION)->count(),
-                'en_ruta' => Envio::where('estado', Envio::EN_RUTA)->count(),
-                'entregados_hoy' => Envio::where('estado', Envio::ENTREGADO)
+            'envios'          => [
+                'programados'       => Envio::where('estado', Envio::PROGRAMADO)->count(),
+                'en_preparacion'    => Envio::where('estado', Envio::EN_PREPARACION)->count(),
+                'en_ruta'           => Envio::where('estado', Envio::EN_RUTA)->count(),
+                'entregados_hoy'    => Envio::where('estado', Envio::ENTREGADO)
                     ->whereDate('fecha_entrega', $hoy)
                     ->count(),
                 'entregados_semana' => Envio::where('estado', Envio::ENTREGADO)
                     ->where('fecha_entrega', '>=', $estaSemana)
                     ->count(),
-                'entregados_mes' => Envio::where('estado', Envio::ENTREGADO)
+                'entregados_mes'    => Envio::where('estado', Envio::ENTREGADO)
                     ->where('fecha_entrega', '>=', $esteMes)
                     ->count(),
-                'cancelados_mes' => Envio::where('estado', Envio::CANCELADO)
+                'cancelados_mes'    => Envio::where('estado', Envio::CANCELADO)
                     ->where('updated_at', '>=', $esteMes)
                     ->count(),
-                'total_activos' => Envio::whereIn('estado', [
+                'total_activos'     => Envio::whereIn('estado', [
                     Envio::PROGRAMADO,
                     Envio::EN_PREPARACION,
-                    Envio::EN_RUTA
+                    Envio::EN_RUTA,
                 ])->count(),
             ],
 
             // Métricas de Vehículos
-            'vehiculos' => [
-                'disponibles' => Vehiculo::where('estado', Vehiculo::DISPONIBLE)
+            'vehiculos'       => [
+                'disponibles'   => Vehiculo::where('estado', Vehiculo::DISPONIBLE)
                     ->where('activo', true)
                     ->count(),
-                'en_ruta' => Vehiculo::where('estado', Vehiculo::EN_RUTA)->count(),
+                'en_ruta'       => Vehiculo::where('estado', Vehiculo::EN_RUTA)->count(),
                 'total_activos' => Vehiculo::where('activo', true)->count(),
             ],
 
             // Métricas de Proformas (si existe la tabla)
-            'proformas' => [
+            'proformas'       => [
                 'pendientes' => Proforma::where('estado', 'PENDIENTE')
                     ->where('canal_origen', 'APP_EXTERNA')
                     ->count(),
-                'aprobadas' => Proforma::where('estado', 'APROBADA')
+                'aprobadas'  => Proforma::where('estado', 'APROBADA')
                     ->where('canal_origen', 'APP_EXTERNA')
                     ->count(),
             ],
 
             // Métricas de Performance
-            'performance' => [
+            'performance'     => [
                 'tiempo_promedio_entrega' => $this->calcularTiempoPromedioEntrega(),
-                'tasa_cumplimiento' => $this->calcularTasaCumplimiento(),
-                'envios_retrasados' => $this->contarEnviosRetrasados(),
+                'tasa_cumplimiento'       => $this->calcularTasaCumplimiento(),
+                'envios_retrasados'       => $this->contarEnviosRetrasados(),
             ],
 
             // Próximos envíos (hoy y mañana)
             'proximos_envios' => [
-                'hoy' => Envio::whereDate('fecha_programada', $hoy)
+                'hoy'    => Envio::whereDate('fecha_programada', $hoy)
                     ->whereIn('estado', [Envio::PROGRAMADO, Envio::EN_PREPARACION])
                     ->count(),
                 'manana' => Envio::whereDate('fecha_programada', now()->addDay())
@@ -486,7 +579,7 @@ class EnvioController extends Controller
             ],
 
             // Top choferes (por entregas este mes)
-            'top_choferes' => User::select('users.id', 'users.name', DB::raw('COUNT(envios.id) as entregas'))
+            'top_choferes'    => User::select('users.id', 'users.name', DB::raw('COUNT(envios.id) as entregas'))
                 ->join('envios', 'users.id', '=', 'envios.chofer_id')
                 ->where('envios.estado', Envio::ENTREGADO)
                 ->where('envios.fecha_entrega', '>=', $esteMes)
@@ -686,12 +779,12 @@ class EnvioController extends Controller
     public function actualizarUbicacion(Envio $envio, ActualizarUbicacionRequest $request): JsonResponse
     {
         $envio->seguimientos()->create([
-            'estado'         => $envio->estado,
-            'fecha_hora'     => now(),
+            'estado'          => $envio->estado,
+            'fecha_hora'      => now(),
             'coordenadas_lat' => $request->latitud,
             'coordenadas_lng' => $request->longitud,
-            'observaciones'  => 'Actualización de ubicación automática',
-            'user_id'        => Auth::id(),
+            'observaciones'   => 'Actualización de ubicación automática',
+            'user_id'         => Auth::id(),
         ]);
 
         // Notificar vía WebSocket (tracking en tiempo real)
@@ -741,36 +834,50 @@ class EnvioController extends Controller
     // ==========================================
 
     /**
-     * Exportar envíos a PDF
+     * ✅ NUEVO: Exportar envíos a PDF (usando ReportService)
      */
     public function exportPdf(Request $request)
     {
+        $reportService = app(ReportService::class);
         $query = $this->aplicarFiltros(Envio::with(['venta.cliente', 'vehiculo', 'chofer']), $request);
-
         $envios = $query->orderBy('fecha_programada', 'desc')->get();
 
-        $pdf = \PDF::loadView('exports.envios-pdf', [
-            'envios' => $envios,
-            'fecha_generacion' => now(),
-            'filtros' => $request->only(['estado', 'vehiculo_id', 'chofer_id', 'fecha_desde', 'fecha_hasta']),
-        ]);
-
-        return $pdf->download('envios_' . now()->format('Y-m-d_His') . '.pdf');
+        return $reportService->exportarEnviosPdf(
+            $envios,
+            $request->only(['estado', 'vehiculo_id', 'chofer_id', 'fecha_desde', 'fecha_hasta'])
+        );
     }
 
     /**
-     * Exportar envíos a Excel
+     * ✅ NUEVO: Exportar envíos a Excel (usando ReportService)
      */
     public function exportExcel(Request $request)
     {
+        $reportService = app(ReportService::class);
         $query = $this->aplicarFiltros(Envio::with(['venta.cliente', 'vehiculo', 'chofer']), $request);
-
         $envios = $query->orderBy('fecha_programada', 'desc')->get();
 
-        return \Excel::download(
-            new \App\Exports\EnviosExport($envios),
-            'envios_' . now()->format('Y-m-d_His') . '.xlsx'
-        );
+        return $reportService->exportarEnviosExcel($envios);
+    }
+
+    /**
+     * ✅ NUEVO: Exportar entregas rechazadas a Excel
+     */
+    public function exportEntregasRechazadas(Request $request)
+    {
+        $reportService = app(ReportService::class);
+
+        $filtros = [
+            'fecha_desde' => $request->input('fecha_desde'),
+            'fecha_hasta' => $request->input('fecha_hasta'),
+            'tipo_rechazo' => $request->input('tipo_rechazo'),
+            'chofer_id' => $request->input('chofer_id'),
+            'search' => $request->input('search'),
+        ];
+
+        $envios = $reportService->obtenerEnviosRechazados($filtros);
+
+        return $reportService->exportarEntregasRechazadasExcel($envios);
     }
 
     /**
@@ -803,5 +910,58 @@ class EnvioController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * VALIDACIÓN: Verificar que el pago cumple la política de pago
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Valida que una venta haya pagado el mínimo requerido según su política de pago:
+     * - ANTICIPADO_100: Debe estar 100% pagada
+     * - MEDIO_MEDIO: Debe estar al menos 50% pagada
+     * - CONTRA_ENTREGA: No requiere validación previa
+     *
+     * @param Venta $venta
+     * @return array ['valido' => bool, 'mensaje' => string]
+     */
+    private function validarPagoParaEnvio(\App\Models\Venta $venta): array
+    {
+        // Si no tiene política de pago, asumir CONTRA_ENTREGA (sin validación)
+        if (!$venta->politica_pago) {
+            return ['valido' => true, 'mensaje' => ''];
+        }
+
+        $montoPagado = (float) $venta->monto_pagado;
+        $montoTotal = (float) $venta->monto_total;
+        $estadoPago = $venta->estado_pago;
+
+        // Validar según política de pago
+        return match ($venta->politica_pago) {
+            'ANTICIPADO_100' => [
+                // Debe estar 100% pagada
+                'valido' => $estadoPago === 'PAGADO',
+                'mensaje' => $estadoPago !== 'PAGADO'
+                    ? "Esta venta requiere pago 100% anticipado. Pagado: {$montoPagado} de {$montoTotal}"
+                    : '',
+            ],
+            'MEDIO_MEDIO' => [
+                // Debe tener al menos 50% pagado
+                'valido' => $montoPagado >= ($montoTotal * 0.5),
+                'mensaje' => $montoPagado < ($montoTotal * 0.5)
+                    ? "Esta venta requiere mínimo 50% pagado. Pagado: " . round(($montoPagado / $montoTotal) * 100, 2) . "% ({$montoPagado} de {$montoTotal})"
+                    : '',
+            ],
+            'CONTRA_ENTREGA', 'DESPUES_ENTREGA' => [
+                // No requiere validación previa
+                'valido' => true,
+                'mensaje' => '',
+            ],
+            default => [
+                // Cualquier otra política (fallback)
+                'valido' => true,
+                'mensaje' => '',
+            ],
+        };
     }
 }

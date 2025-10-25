@@ -421,6 +421,85 @@ verificarEstado.head = (args: { proforma: number | { id: number } } | [proforma:
     
     verificarEstado.form = verificarEstadoForm
 /**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1120
+ * @route '/api/app/proformas/{proforma}/confirmar'
+ */
+export const confirmarProforma = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: confirmarProforma.url(args, options),
+    method: 'post',
+})
+
+confirmarProforma.definition = {
+    methods: ["post"],
+    url: '/api/app/proformas/{proforma}/confirmar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1120
+ * @route '/api/app/proformas/{proforma}/confirmar'
+ */
+confirmarProforma.url = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { proforma: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { proforma: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    proforma: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        proforma: typeof args.proforma === 'object'
+                ? args.proforma.id
+                : args.proforma,
+                }
+
+    return confirmarProforma.definition.url
+            .replace('{proforma}', parsedArgs.proforma.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1120
+ * @route '/api/app/proformas/{proforma}/confirmar'
+ */
+confirmarProforma.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: confirmarProforma.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1120
+ * @route '/api/app/proformas/{proforma}/confirmar'
+ */
+    const confirmarProformaForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmarProforma.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1120
+ * @route '/api/app/proformas/{proforma}/confirmar'
+ */
+        confirmarProformaForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmarProforma.url(args, options),
+            method: 'post',
+        })
+    
+    confirmarProforma.form = confirmarProformaForm
+/**
 * @see \App\Http\Controllers\Api\ApiProformaController::verificarReservas
  * @see app/Http/Controllers/Api/ApiProformaController.php:398
  * @route '/api/app/proformas/{proforma}/reservas'
@@ -1299,7 +1378,7 @@ rechazar.post = (args: { proforma: number | { id: number } } | [proforma: number
     rechazar.form = rechazarForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
- * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1314
  * @route '/api/proformas/{proforma}/convertir-venta'
  */
 export const convertirAVenta = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1314,7 +1393,7 @@ convertirAVenta.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
- * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1314
  * @route '/api/proformas/{proforma}/convertir-venta'
  */
 convertirAVenta.url = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1347,7 +1426,7 @@ convertirAVenta.url = (args: { proforma: number | { id: number } } | [proforma: 
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
- * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1314
  * @route '/api/proformas/{proforma}/convertir-venta'
  */
 convertirAVenta.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1357,7 +1436,7 @@ convertirAVenta.post = (args: { proforma: number | { id: number } } | [proforma:
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
- * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1314
  * @route '/api/proformas/{proforma}/convertir-venta'
  */
     const convertirAVentaForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1367,7 +1446,7 @@ convertirAVenta.post = (args: { proforma: number | { id: number } } | [proforma:
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
- * @see app/Http/Controllers/Api/ApiProformaController.php:1115
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1314
  * @route '/api/proformas/{proforma}/convertir-venta'
  */
         convertirAVentaForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1376,6 +1455,6 @@ convertirAVenta.post = (args: { proforma: number | { id: number } } | [proforma:
         })
     
     convertirAVenta.form = convertirAVentaForm
-const ApiProformaController = { index, store, show, verificarEstado, verificarReservas, extenderReservas, crearPedidoDesdeApp, obtenerHistorialPedidos, obtenerDetallePedido, obtenerEstadoPedido, verificarStock, obtenerProductosDisponibles, listarParaDashboard, aprobar, rechazar, convertirAVenta }
+const ApiProformaController = { index, store, show, verificarEstado, confirmarProforma, verificarReservas, extenderReservas, crearPedidoDesdeApp, obtenerHistorialPedidos, obtenerDetallePedido, obtenerEstadoPedido, verificarStock, obtenerProductosDisponibles, listarParaDashboard, aprobar, rechazar, convertirAVenta }
 
 export default ApiProformaController

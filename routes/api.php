@@ -57,6 +57,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/', [ApiProformaController::class, 'store']);
         Route::get('/{proforma}', [ApiProformaController::class, 'show']);
         Route::get('/{proforma}/estado', [ApiProformaController::class, 'verificarEstado']);
+        Route::post('/{proforma}/confirmar', [ApiProformaController::class, 'confirmarProforma'])->name('api.proformas.confirmar');
         Route::get('/{proforma}/reservas', [ApiProformaController::class, 'verificarReservas']);
         Route::post('/{proforma}/extender-reservas', [ApiProformaController::class, 'extenderReservas']);
     });
@@ -90,10 +91,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/envios', [EnvioController::class, 'enviosCliente']);
     });
 
+    // 💳 GESTIÓN DE PAGOS EN VENTAS
+    Route::prefix('app/ventas')->group(function () {
+        Route::post('/{venta}/pagos', [VentaController::class, 'registrarPago'])->name('api.ventas.registrar-pago');
+    });
+
     // Seguimiento de envíos desde la app
     Route::prefix('app/envios')->group(function () {
         Route::get('/{envio}/seguimiento', [EnvioController::class, 'seguimientoApi']);
         Route::post('/{envio}/ubicacion', [EnvioController::class, 'actualizarUbicacion']);
+
+        // ✅ NUEVO: Rechazar entrega desde app (chofer reporta problema)
+        Route::put('/{envio}/rechazar', [EnvioController::class, 'rechazarEntrega'])
+            ->name('api.envios.rechazar');
     });
 
     // Catálogo de productos para la app
@@ -176,12 +186,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Rutas API para clientes
     Route::group(['prefix' => 'clientes'], function () {
-        Route::get('/', [ClienteController::class, 'indexApi']);
-        Route::post('/', [ClienteController::class, 'storeApi']);
+        Route::get('/', [ClienteController::class, 'index']);
+        Route::post('/', [ClienteController::class, 'store']);
         Route::get('buscar', [ClienteController::class, 'buscarApi']);
         Route::get('{cliente}', [ClienteController::class, 'showApi']);
-        Route::put('{cliente}', [ClienteController::class, 'updateApi']);
-        Route::delete('{cliente}', [ClienteController::class, 'destroyApi']);
+        Route::put('{cliente}', [ClienteController::class, 'update']);
+        Route::delete('{cliente}', [ClienteController::class, 'destroy']);
         Route::get('{cliente}/saldo-cuentas', [ClienteController::class, 'saldoCuentasPorCobrar']);
         Route::get('{cliente}/historial-ventas', [ClienteController::class, 'historialVentas']);
 

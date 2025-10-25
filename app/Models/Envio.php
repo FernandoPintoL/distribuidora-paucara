@@ -25,14 +25,21 @@ class Envio extends Model
         'firma_cliente',
         'receptor_nombre',
         'receptor_documento',
+        // ✅ NUEVO: Campos para rechazos y problemas de entrega
+        'motivo_rechazo',
+        'fotos_rechazo',
+        'fecha_intento_entrega',
+        'estado_entrega', // EXITOSA, RECHAZADA, CLIENTE_AUSENTE, TIENDA_CERRADA, OTRO_PROBLEMA
     ];
 
     protected $casts = [
         'fecha_programada' => 'datetime',
         'fecha_salida' => 'datetime',
         'fecha_entrega' => 'datetime',
+        'fecha_intento_entrega' => 'datetime',
         'coordenadas_lat' => 'decimal:8',
         'coordenadas_lng' => 'decimal:8',
+        'fotos_rechazo' => 'array', // JSON array de URLs de fotos
     ];
 
     // Estados del envío
@@ -45,6 +52,13 @@ class Envio extends Model
     const ENTREGADO = 'ENTREGADO';
 
     const CANCELADO = 'CANCELADO';
+
+    // ✅ NUEVO: Estados de resultado de entrega
+    const ESTADO_ENTREGA_EXITOSA = 'EXITOSA';
+    const ESTADO_ENTREGA_RECHAZADA = 'RECHAZADA';
+    const ESTADO_ENTREGA_CLIENTE_AUSENTE = 'CLIENTE_AUSENTE';
+    const ESTADO_ENTREGA_TIENDA_CERRADA = 'TIENDA_CERRADA';
+    const ESTADO_ENTREGA_PROBLEMA = 'OTRO_PROBLEMA';
 
     // Relaciones
     public function venta(): BelongsTo
@@ -81,6 +95,69 @@ class Envio extends Model
     public function puedeConfirmarEntrega(): bool
     {
         return $this->estado === self::EN_RUTA;
+    }
+
+    // ✅ NUEVO: Validar si puede rechazar entrega
+    public function puedeRechazarEntrega(): bool
+    {
+        return $this->estado === self::EN_RUTA && $this->estado_entrega === null;
+    }
+
+    // ✅ NUEVO: Marcar como rechazada
+    public function marcarComoRechazada(string $motivo, array $fotos = []): bool
+    {
+        return $this->update([
+            'estado_entrega' => self::ESTADO_ENTREGA_RECHAZADA,
+            'motivo_rechazo' => $motivo,
+            'fotos_rechazo' => $fotos,
+            'fecha_intento_entrega' => now(),
+        ]);
+    }
+
+    // ✅ NUEVO: Marcar como cliente ausente
+    public function marcarClienteAusente(array $fotos = []): bool
+    {
+        return $this->update([
+            'estado_entrega' => self::ESTADO_ENTREGA_CLIENTE_AUSENTE,
+            'motivo_rechazo' => 'Cliente no se encontraba en el lugar',
+            'fotos_rechazo' => $fotos,
+            'fecha_intento_entrega' => now(),
+        ]);
+    }
+
+    // ✅ NUEVO: Marcar como tienda cerrada
+    public function marcarTiendaCerrada(array $fotos = []): bool
+    {
+        return $this->update([
+            'estado_entrega' => self::ESTADO_ENTREGA_TIENDA_CERRADA,
+            'motivo_rechazo' => 'Tienda cerrada',
+            'fotos_rechazo' => $fotos,
+            'fecha_intento_entrega' => now(),
+        ]);
+    }
+
+    // ✅ NUEVO: Marcar como problema general
+    public function marcarConProblema(string $motivo, array $fotos = []): bool
+    {
+        return $this->update([
+            'estado_entrega' => self::ESTADO_ENTREGA_PROBLEMA,
+            'motivo_rechazo' => $motivo,
+            'fotos_rechazo' => $fotos,
+            'fecha_intento_entrega' => now(),
+        ]);
+    }
+
+    // ✅ NUEVO: Marcar como entregada exitosamente
+    public function marcarComoEntregada(string $receptorNombre, ?string $receptorDocumento = null, ?string $firma = null): bool
+    {
+        return $this->update([
+            'estado' => self::ENTREGADO,
+            'estado_entrega' => self::ESTADO_ENTREGA_EXITOSA,
+            'fecha_entrega' => now(),
+            'receptor_nombre' => $receptorNombre,
+            'receptor_documento' => $receptorDocumento,
+            'firma_cliente' => $firma,
+        ]);
     }
 
     public function estaEnRuta(): bool

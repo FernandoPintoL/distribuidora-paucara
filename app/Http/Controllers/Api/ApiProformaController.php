@@ -1098,6 +1098,205 @@ class ApiProformaController extends Controller
 
     /**
      * ═══════════════════════════════════════════════════════════════════════
+     * ENDPOINT: CONFIRMAR PROFORMA → CREAR VENTA CON POLÍTICA DE PAGO
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Convierte una proforma APROBADA en una VENTA con política de pago específica.
+     * Este es el endpoint usado por Flutter cuando el cliente confirma su pedido.
+     *
+     * Validaciones:
+     * 1. Proforma debe estar APROBADA
+     * 2. Debe tener mínimo 5 productos diferentes
+     * 3. Debe tener reservas de stock activas
+     * 4. Las reservas NO deben estar expiradas
+     *
+     * Parámetros:
+     * - politica_pago: ANTICIPADO_100, MEDIO_MEDIO, CONTRA_ENTREGA
+     *
+     * @param Proforma $proforma
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function confirmarProforma(Proforma $proforma, Request $request)
+    {
+        // Validar parámetros de entrada
+        $validator = Validator::make($request->all(), [
+            'politica_pago' => 'required|in:ANTICIPADO_100,MEDIO_MEDIO,CONTRA_ENTREGA',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Parámetros de validación incorrectos',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        return DB::transaction(function () use ($proforma, $request) {
+            try {
+                // Validación 1: La proforma debe estar APROBADA
+                if ($proforma->estado !== Proforma::APROBADA) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La proforma debe estar aprobada para confirmarla',
+                        'estado_actual' => $proforma->estado,
+                    ], 422);
+                }
+
+                // Validación 2: Debe tener mínimo 5 productos diferentes
+                $cantidadProductos = $proforma->detalles()->count();
+                if ($cantidadProductos < 5) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Debe solicitar mínimo 5 productos diferentes',
+                        'productos_solicitados' => $cantidadProductos,
+                        'productos_requeridos' => 5,
+                    ], 422);
+                }
+
+                // Validación 3: Verificar que tenga reservas activas
+                $reservasActivas = $proforma->reservasActivas()->count();
+                if ($reservasActivas === 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No hay reservas de stock activas para esta proforma',
+                    ], 422);
+                }
+
+                // Validación 4: Verificar que las reservas NO estén expiradas
+                if ($proforma->tieneReservasExpiradas()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Las reservas de stock han expirado. Por favor crea un nuevo pedido.',
+                    ], 422);
+                }
+
+                // Validación 5: Verificar disponibilidad de stock actual
+                $disponibilidad = $proforma->verificarDisponibilidadStock();
+                $stockInsuficiente = array_filter($disponibilidad, fn($item) => !$item['disponible']);
+
+                if (!empty($stockInsuficiente)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stock insuficiente para algunos productos',
+                        'productos_sin_stock' => $stockInsuficiente,
+                    ], 422);
+                }
+
+                // Preparar datos para la venta desde la proforma
+                $politicaPago = $request->politica_pago;
+                $montoTotal = $proforma->total;
+
+                $datosVenta = [
+                    'numero' => \App\Models\Venta::generarNumero(),
+                    'fecha' => now()->toDateString(),
+                    'subtotal' => $proforma->subtotal,
+                    'descuento' => $proforma->descuento ?? 0,
+                    'impuesto' => $proforma->impuesto,
+                    'total' => $proforma->total,
+                    'monto_total' => $montoTotal,
+                    'monto_pagado' => 0,
+                    'monto_pendiente' => $montoTotal,
+                    'politica_pago' => $politicaPago,
+                    'estado_pago' => 'PENDIENTE',
+                    'observaciones' => $proforma->observaciones,
+                    'cliente_id' => $proforma->cliente_id,
+                    'usuario_id' => request()->user()->id,
+                    'moneda_id' => $proforma->moneda_id,
+                    'proforma_id' => $proforma->id,
+                    // Campos de logística
+                    'requiere_envio' => $proforma->esDeAppExterna(),
+                    'canal_origen' => $proforma->canal_origen,
+                    'estado_logistico' => $proforma->esDeAppExterna()
+                        ? \App\Models\Venta::ESTADO_PENDIENTE_ENVIO
+                        : null,
+                    // Estado del documento
+                    'estado_documento_id' => \App\Models\EstadoDocumento::where('nombre', 'PENDIENTE')->first()?->id,
+                ];
+
+                // Crear la venta
+                $venta = \App\Models\Venta::create($datosVenta);
+
+                // Crear detalles de la venta desde los detalles de la proforma
+                foreach ($proforma->detalles as $detalleProforma) {
+                    $venta->detalles()->create([
+                        'producto_id' => $detalleProforma->producto_id,
+                        'cantidad' => $detalleProforma->cantidad,
+                        'precio_unitario' => $detalleProforma->precio_unitario,
+                        'subtotal' => $detalleProforma->subtotal,
+                    ]);
+                }
+
+                // Marcar la proforma como convertida
+                if (!$proforma->marcarComoConvertida()) {
+                    throw new \Exception('Error al marcar la proforma como convertida');
+                }
+
+                // Cargar relaciones para la respuesta
+                $venta->load(['cliente', 'detalles.producto']);
+
+                // Enviar notificación WebSocket
+                try {
+                    app(\App\Services\WebSocketNotificationService::class)
+                        ->notifyProformaConfirmada($venta);
+                } catch (\Exception $e) {
+                    \Log::warning('Error enviando notificación WebSocket de confirmación', [
+                        'venta_id' => $venta->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                \Log::info('Proforma confirmada como venta (API)', [
+                    'proforma_id' => $proforma->id,
+                    'proforma_numero' => $proforma->numero,
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'politica_pago' => $politicaPago,
+                    'usuario_id' => request()->user()->id,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Proforma {$proforma->numero} confirmada como venta {$venta->numero}",
+                    'data' => [
+                        'venta' => [
+                            'id' => $venta->id,
+                            'numero' => $venta->numero,
+                            'fecha' => $venta->fecha,
+                            'monto_total' => (float) $venta->monto_total,
+                            'monto_pagado' => (float) $venta->monto_pagado,
+                            'monto_pendiente' => (float) $venta->monto_pendiente,
+                            'politica_pago' => $venta->politica_pago,
+                            'estado_pago' => $venta->estado_pago,
+                            'estado_logistico' => $venta->estado_logistico,
+                        ],
+                        'cliente' => [
+                            'id' => $venta->cliente->id,
+                            'nombre' => $venta->cliente->nombre,
+                        ],
+                        'items_count' => $venta->detalles->count(),
+                    ],
+                ], 201);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                \Log::error('Error al confirmar proforma como venta (API)', [
+                    'proforma_id' => $proforma->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al confirmar la proforma: ' . $e->getMessage(),
+                ], 500);
+            }
+        });
+    }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
      * ENDPOINT: CONVERTIR PROFORMA A VENTA
      * ═══════════════════════════════════════════════════════════════════════
      *

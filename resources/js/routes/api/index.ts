@@ -1,6 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
-import compras from './compras'
+import proformas from './proformas'
 import ventas from './ventas'
+import envios from './envios'
+import compras from './compras'
 import productos from './productos'
 import proveedores from './proveedores'
 import dashboard from './dashboard'
@@ -84,8 +86,10 @@ modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     modulosSidebar.form = modulosSidebarForm
 const api = {
     modulosSidebar,
-compras,
+proformas,
 ventas,
+envios,
+compras,
 productos,
 proveedores,
 dashboard,

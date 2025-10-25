@@ -252,6 +252,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('api/vehiculos-disponibles', [EnvioController::class, 'obtenerVehiculosDisponibles'])->name('vehiculos-disponibles');
         Route::get('api/choferes-disponibles', [EnvioController::class, 'obtenerChoferesDisponibles'])->name('choferes-disponibles');
 
+        // ✅ NUEVO: Rutas de exportación
+        Route::get('export/pdf', [EnvioController::class, 'exportPdf'])->name('export-pdf');
+        Route::get('export/excel', [EnvioController::class, 'exportExcel'])->name('export-excel');
+        Route::get('export/rechazadas', [EnvioController::class, 'exportEntregasRechazadas'])->name('export-rechazadas');
+
         // Rutas básicas de resource
         Route::get('/', [EnvioController::class, 'index'])->name('index');
         Route::get('create', [EnvioController::class, 'create'])->name('create');

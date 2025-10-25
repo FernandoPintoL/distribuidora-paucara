@@ -2,7 +2,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Proforma;
+use App\Services\WebSocketNotificationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -42,6 +44,18 @@ class ProformaController extends Controller
             'fecha_aprobacion'     => now(),
         ]);
 
+        // Notificar vía WebSocket (sin afectar la respuesta si falla)
+        try {
+            $webSocketService = app(WebSocketNotificationService::class);
+            $proforma->load(['cliente', 'detalles.producto', 'usuarioAprobador']);
+            $webSocketService->notifyProformaApproved($proforma);
+        } catch (\Exception $e) {
+            Log::warning('Error enviando notificación WebSocket de proforma aprobada', [
+                'proforma_id' => $proforma->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return back()->with('success', 'Proforma aprobada exitosamente');
     }
 
@@ -51,6 +65,18 @@ class ProformaController extends Controller
         $proforma->update([
             'estado' => Proforma::RECHAZADA,
         ]);
+
+        // Notificar vía WebSocket (sin afectar la respuesta si falla)
+        try {
+            $webSocketService = app(WebSocketNotificationService::class);
+            $proforma->load(['cliente', 'detalles.producto']);
+            $webSocketService->notifyProformaRejected($proforma);
+        } catch (\Exception $e) {
+            Log::warning('Error enviando notificación WebSocket de proforma rechazada', [
+                'proforma_id' => $proforma->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return back()->with('success', 'Proforma rechazada');
     }
@@ -135,6 +161,19 @@ class ProformaController extends Controller
                 'venta_numero' => $venta->numero,
                 'reservas_consumidas' => $reservasActivas,
             ]);
+
+            // Notificar vía WebSocket sobre conversión a venta (sin afectar la respuesta si falla)
+            try {
+                $webSocketService = app(WebSocketNotificationService::class);
+                $proforma->load(['cliente', 'detalles.producto', 'usuarioAprobador']);
+                $webSocketService->notifyProformaConverted($proforma, $venta);
+            } catch (\Exception $e) {
+                Log::warning('Error enviando notificación WebSocket de proforma convertida', [
+                    'proforma_id' => $proforma->id,
+                    'venta_id' => $venta->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return redirect()->route('ventas.show', $venta->id)
                 ->with('success', "Proforma {$proforma->numero} convertida exitosamente a venta {$venta->numero}");
