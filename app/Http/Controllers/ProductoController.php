@@ -791,7 +791,7 @@ class ProductoController extends Controller
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = $q ? strtolower($q) : '';
-        $productos = Producto::with(['categoria:id,nombre', 'marca:id,nombre', 'proveedor:id,nombre,razon_social', 'unidadMedida:id,nombre'])
+        $productos = Producto::with(['categoria:id,nombre', 'marca:id,nombre', 'proveedor:id,nombre,razon_social', 'unidad:id,nombre'])
             ->when($q, fn ($query) => $query->where(function ($subQuery) use ($searchLower) {
                 $subQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
                     ->orWhereRaw('LOWER(codigo_barras) like ?', ["%$searchLower%"])
@@ -818,7 +818,7 @@ class ProductoController extends Controller
             'categoria:id,nombre',
             'marca:id,nombre',
             'proveedor:id,nombre,razon_social',
-            'unidadMedida:id,nombre',
+            'unidad:id,nombre',
             'stock.almacen:id,nombre',
             'precios.tipoPrecio:id,nombre',
             'codigosBarra',
@@ -864,7 +864,7 @@ class ProductoController extends Controller
             });
 
             return ApiResponse::success(
-                $producto->load(['categoria', 'marca', 'proveedor', 'unidadMedida']),
+                $producto->load(['categoria', 'marca', 'proveedor', 'unidad']),
                 'Producto creado exitosamente',
                 201
             );
@@ -898,7 +898,7 @@ class ProductoController extends Controller
             $producto->update($data);
 
             return ApiResponse::success(
-                $producto->fresh(['categoria', 'marca', 'proveedor', 'unidadMedida']),
+                $producto->fresh(['categoria', 'marca', 'proveedor', 'unidad']),
                 'Producto actualizado exitosamente'
             );
 

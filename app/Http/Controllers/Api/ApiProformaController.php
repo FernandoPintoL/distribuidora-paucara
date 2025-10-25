@@ -873,7 +873,7 @@ class ApiProformaController extends Controller
         $proforma = Proforma::with([
             'detalles.producto.categoria',
             'detalles.producto.marca',
-            'detalles.producto.unidadMedida',
+            'detalles.producto.unidad',
             'cliente.direcciones' => function ($query) {
                 $query->where('activa', true);
             },
@@ -930,7 +930,7 @@ class ApiProformaController extends Controller
                         'codigo_producto' => $detalle->producto->codigo,
                         'categoria' => $detalle->producto->categoria?->nombre,
                         'marca' => $detalle->producto->marca?->nombre,
-                        'unidad_medida' => $detalle->producto->unidadMedida?->abreviacion,
+                        'unidad_medida' => $detalle->producto->unidad?->abreviacion,
                         'cantidad' => (float) $detalle->cantidad,
                         'precio_unitario' => (float) $detalle->precio_unitario,
                         'subtotal' => (float) $detalle->subtotal,
