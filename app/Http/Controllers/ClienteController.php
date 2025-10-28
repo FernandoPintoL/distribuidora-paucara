@@ -97,6 +97,9 @@ class ClienteController extends Controller
     public function index(Request $request)
     {
         try {
+            // ✅ Autorizar: Solo roles permitidos pueden ver listado de clientes
+            $this->authorize('viewAny', ClienteModel::class);
+
             // Configurar opciones según el tipo de request
             $options = $this->isApiRequest() ? [
                 'per_page'                 => 20,
@@ -175,6 +178,9 @@ class ClienteController extends Controller
     public function create()
     {
         try {
+            // ✅ Autorizar: Solo roles que pueden crear clientes
+            $this->authorize('create', ClienteModel::class);
+
             $data = [
                 'cliente'     => null,
                 'localidades' => Localidad::where('activo', true)
@@ -191,6 +197,9 @@ class ClienteController extends Controller
 
     public function store(Request $request)
     {
+        // ✅ Autorizar: Solo roles que pueden crear clientes
+        $this->authorize('create', ClienteModel::class);
+
         // Preparar datos convirtiendo valores booleanos para API
         $data = $request->all();
         if ($this->isApiRequest()) {
@@ -317,6 +326,9 @@ class ClienteController extends Controller
     public function edit(ClienteModel $cliente)
     {
         try {
+            // ✅ Autorizar: Solo roles que pueden editar este cliente
+            $this->authorize('update', $cliente);
+
             return $this->dataResponse('clientes/form', [
                 'cliente'     => $cliente->load(['localidad', 'direcciones', 'ventanasEntrega']),
                 'localidades' => Localidad::where('activo', true)
@@ -331,6 +343,9 @@ class ClienteController extends Controller
 
     public function update(Request $request, ClienteModel $cliente)
     {
+        // ✅ Autorizar: Solo roles que pueden editar este cliente
+        $this->authorize('update', $cliente);
+
         // Preparar datos convirtiendo valores booleanos para API
         $data = $request->all();
         if ($this->isApiRequest()) {
@@ -538,6 +553,9 @@ class ClienteController extends Controller
     public function destroy(ClienteModel $cliente)
     {
         try {
+            // ✅ Autorizar: Solo admins y managers pueden eliminar clientes
+            $this->authorize('delete', $cliente);
+
             // Verificar si tiene cuentas por cobrar pendientes
             $tieneCuentasPendientes = $cliente->cuentasPorCobrar()->where('saldo_pendiente', '>', 0)->exists();
             if ($tieneCuentasPendientes) {
@@ -578,6 +596,9 @@ class ClienteController extends Controller
      */
     public function showApi(ClienteModel $cliente): JsonResponse
     {
+        // ✅ Autorizar: Solo roles que pueden ver este cliente
+        $this->authorize('view', $cliente);
+
         $cliente->load([
             'user',
             'direcciones',

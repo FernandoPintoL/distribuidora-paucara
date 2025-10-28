@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EstadoMermaController;
+use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\CategoriaClienteController;
@@ -29,6 +30,15 @@ Route::post('/register', [AuthController::class, 'register']);
 
 // Rutas para empleados
 Route::get('/empleados/determinar-rol', [EmpleadoApiController::class, 'determinarRol']);
+
+// ==========================================
+// 📋 RUTAS PARA GESTIÓN DE ROLES
+// ==========================================
+// Obtener roles con detalles, categorías y descripciones
+Route::get('/roles/details', [RoleController::class, 'getRolesWithDetails']);
+
+// Validar combinación de roles
+Route::post('/roles/validate-combination', [RoleController::class, 'validateRoleCombination']);
 
 // Rutas API para módulos del sidebar (requiere autenticación)
 Route::middleware(['auth'])->get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');

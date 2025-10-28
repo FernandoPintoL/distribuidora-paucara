@@ -102,13 +102,14 @@ class RolesAndPermissionsSeeder extends Seeder
         $vendedor     = Role::findOrCreate('Vendedor');
         $compras      = Role::findOrCreate('Compras');
         $comprador    = Role::findOrCreate('Comprador');
-        $inventario   = Role::findOrCreate('Inventario');
+        $inventario   = Role::findOrCreate('Gestor de Inventario'); // REFACTORIZADO: Nuevo patrón "Gestor de X"
         $gestorAlmacen = Role::findOrCreate('Gestor de Almacén');
-        $logistica    = Role::findOrCreate('Logística');
+        $logistica    = Role::findOrCreate('Gestor de Logística'); // REFACTORIZADO: Nuevo patrón "Gestor de X"
         $chofer       = Role::findOrCreate('Chofer');
         $cajero       = Role::findOrCreate('Cajero');
         $contabilidad = Role::findOrCreate('Contabilidad');
         $reportes     = Role::findOrCreate('Reportes');
+        $gestorClientes = Role::findOrCreate('Gestor de Clientes'); // NUEVO: Para empleados que gestionen clientes
 
         // Nivel 4: Roles de acceso limitado
         $empleado     = Role::findOrCreate('Empleado');
@@ -203,12 +204,24 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
         $cajero->syncPermissions($cajeroPerms);
 
+        // ============================================
+        // NUEVO ROL: Gestor de Clientes
+        // Empleados que crean y modifican clientes
+        // (NO es un rol para usuarios-cliente)
+        // ============================================
+        $gestorClientesPerms = [
+            'clientes.manage', // Puede crear, editar, ver clientes
+            'productos.manage', // Puede ver productos para vender
+            'ventas.index', 'ventas.show', // Puede ver ventas a sus clientes
+        ];
+        $gestorClientes->syncPermissions($gestorClientesPerms);
+
         // Nuevos roles - Asignar permisos específicos
         $choferPerms = [
             'envios.index', 'envios.show',
             'logistica.dashboard', 'logistica.envios.seguimiento',
             'empleados.show',  // Para ver su propio perfil
-            'clientes.manage', // Para registrar clientes durante entregas
+            // NOTA: Si necesita crear clientes, asignarle el rol "Gestor de Clientes" además
         ];
         $chofer->syncPermissions($choferPerms);
 
