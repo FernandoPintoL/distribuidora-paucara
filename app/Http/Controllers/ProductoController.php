@@ -562,6 +562,7 @@ class ProductoController extends Controller
 
         $data = $request->validate([
             'nombre' => ['required', 'string', 'max:255'],
+            'sku' => ['nullable', 'string', 'max:20', 'unique:productos,sku,'.$producto->id],
             'descripcion' => ['nullable', 'string'],
             'peso' => ['nullable', 'numeric', 'min:0'],
             'unidad_medida_id' => ['nullable', 'exists:unidades_medida,id'],
@@ -589,6 +590,7 @@ class ProductoController extends Controller
         DB::transaction(function () use ($data, $request, $producto) {
             $producto->update([
                 'nombre' => $data['nombre'],
+                'sku' => $data['sku'] ?? $producto->sku,
                 'descripcion' => $data['descripcion'] ?? $producto->descripcion,
                 'peso' => $data['peso'] ?? $producto->peso,
                 'unidad_medida_id' => $data['unidad_medida_id'] ?? $producto->unidad_medida_id,
@@ -609,7 +611,7 @@ class ProductoController extends Controller
                 }
                 if (! empty($codigosValidos)) {
                     foreach ($codigosValidos as $index => $codigo) {
-                        $existente = $producto->codigosBarra()->where('codigo', $codigo)->first();
+                        $existente = $producto->codigosBarra()->whereRaw('LOWER(codigo) = ?', [strtolower($codigo)])->first();
                         if ($existente) {
                             $existente->update(['es_principal' => $index === 0, 'activo' => true]);
                         } else {
@@ -881,6 +883,7 @@ class ProductoController extends Controller
     {
         $data = $request->validate([
             'nombre' => ['sometimes', 'required', 'string', 'max:255'],
+            'sku' => ['nullable', 'string', 'max:20', 'unique:productos,sku,'.$producto->id],
             'codigo' => ['nullable', 'string', 'max:100', 'unique:productos,codigo,'.$producto->id],
             'descripcion' => ['nullable', 'string'],
             'categoria_id' => ['sometimes', 'required', 'exists:categorias,id'],

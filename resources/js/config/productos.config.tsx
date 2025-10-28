@@ -295,6 +295,7 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         <div className="space-y-0.5">
           <h3 className="font-semibold text-sm leading-tight line-clamp-2 min-h-[2.25rem]">{p.nombre}</h3>
           <div className="flex flex-wrap gap-2 text-[10px] font-medium text-muted-foreground">
+            {p.sku && <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono font-semibold">{p.sku}</span>}
             {p.marca?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.marca.nombre}</span>}
             {p.categoria?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.categoria.nombre}</span>}
             {p.codigo_barras && <span className="bg-secondary px-1.5 py-0.5 rounded font-mono">{p.codigo_barras}</span>}
