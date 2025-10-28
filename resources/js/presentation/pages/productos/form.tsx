@@ -460,6 +460,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
                     tipos_precio={tipos_precio}
                     porcentajeInteres={porcentajeInteres}
                     precioCosto={data.precios?.find((p: Precio) => Number(p.tipo_precio_id) === 1)?.monto ?? 0}
+                    isEditing={isEditing}
                     addPrecio={() => { }}
                     removePrecio={() => { }}
                     setPrecio={setPrecio}

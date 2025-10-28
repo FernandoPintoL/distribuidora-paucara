@@ -29,6 +29,7 @@ export interface Step2Props {
     tipos_precio: TipoPrecio[];
     porcentajeInteres: number;
     precioCosto: number;
+    isEditing?: boolean;
     addPrecio: () => void;
     removePrecio: (i: number) => void | Promise<void>;
     setPrecio: (i: number, key: string, value: string | number) => void;
@@ -53,10 +54,24 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         addCodigo,
         removeCodigo,
         setCodigo,
+        isEditing,
     } = props;
 
     // IDs de tipo_precio con monto modificado manualmente por el usuario
     const manualOverrideIdsRef = useRef<Set<number>>(new Set());
+    const isEditingInitializedRef = useRef<boolean>(false);
+
+    // Si estamos editando, marcar todos los precios existentes como "manuales" para evitar que se recalculen
+    useEffect(() => {
+        if (isEditing && !isEditingInitializedRef.current && data.precios && data.precios.length > 0) {
+            isEditingInitializedRef.current = true;
+            // Marcar todos los precios existentes como manuales para que no se recalculen automáticamente
+            data.precios.forEach((p: Precio) => {
+                manualOverrideIdsRef.current.add(Number(p.tipo_precio_id));
+            });
+            console.log('✅ Precios marcados como manuales (edición). IDs:', Array.from(manualOverrideIdsRef.current));
+        }
+    }, [isEditing, data.precios]);
 
     // Estado y refs para cámara y escaneo de códigos / fotos
     const [cameraOpen, setCameraOpen] = useState(false);
