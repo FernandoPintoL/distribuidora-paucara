@@ -4,6 +4,7 @@ import SearchSelect from '@/presentation/components/ui/search-select';
 import InputSearch from '@/presentation/components/ui/input-search';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import NotificationService from '@/infrastructure/services/notification.service';
+import { useState } from 'react';
 
 interface Option { value: number | string; label: string; description?: string }
 
@@ -25,45 +26,61 @@ export interface Step1Props {
   errors: Record<string, string>;
   categoriasOptions: Option[];
   marcasOptions: Option[];
-  proveedoresOptions: Option[];
   unidadesOptions: Option[];
   setData: (key: string, value: unknown) => void; // follows useForm API used in parent
   getInputClassName: (fieldName: keyof Record<string, string>) => string;
 }
 
-export default function Step1DatosProducto({ data, errors, categoriasOptions, marcasOptions, proveedoresOptions, unidadesOptions, setData, getInputClassName }: Step1Props) {
-  // 🔍 LOGS PARA DEBUG
-  console.log('📦 Step1DatosProducto - Data recibida:', data);
-  console.log('👤 Proveedor en data:', data.proveedor);
-  console.log('🆔 proveedor_id en data:', data.proveedor_id);
-  console.log('📋 proveedoresOptions:', proveedoresOptions);
+export default function Step1DatosProducto({ data, errors, categoriasOptions, marcasOptions, unidadesOptions, setData, getInputClassName }: Step1Props) {
+  // Estados para controlar la búsqueda de proveedores
+  const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
+  const [searchResultsFound, setSearchResultsFound] = useState<boolean>(false);
 
-  // Función de búsqueda para proveedores
+  // 🔍 Función de búsqueda para proveedores - Busca en la API
   const searchProveedores = async (query: string) => {
     console.log('🔍 Buscando proveedores con query:', query);
-    console.log('📋 Proveedores disponibles:', proveedoresOptions.length);
+    setLastSearchQuery(query);
 
     if (!query || query.length < 2) {
       console.log('❌ Query muy corto, retornando vacío');
+      setSearchResultsFound(false);
       return [];
     }
 
-    const filtered = proveedoresOptions.filter(option =>
-      option.label.toLowerCase().includes(query.toLowerCase()) ||
-      (option.description && option.description.toLowerCase().includes(query.toLowerCase()))
-    );
+    try {
+      const response = await fetch(`/api/proveedores/buscar?q=${encodeURIComponent(query)}&limite=10`);
 
-    console.log('✅ Proveedores filtrados:', filtered.length);
-    console.log('📝 Resultados:', filtered);
+      if (!response.ok) {
+        console.error('❌ Error en búsqueda de proveedores:', response.status);
+        setSearchResultsFound(false);
+        return [];
+      }
 
-    return filtered.map(option => ({
-      value: option.value,
-      label: option.label,
-      description: option.description,
-      codigos_barras: undefined,
-      precio_base: undefined,
-      stock_total: undefined
-    }));
+      const result = await response.json();
+      console.log('✅ Proveedores encontrados:', result.data?.length || 0);
+      console.log('📝 Resultados:', result.data);
+
+      if (result.success && result.data) {
+        const hasResults = result.data.length > 0;
+        setSearchResultsFound(hasResults);
+
+        return result.data.map((proveedor: any) => ({
+          value: proveedor.id,
+          label: proveedor.nombre,
+          description: proveedor.razon_social || `NIT: ${proveedor.nit || 'N/A'}`,
+          codigos_barras: undefined,
+          precio_base: undefined,
+          stock_total: undefined
+        }));
+      }
+
+      setSearchResultsFound(false);
+      return [];
+    } catch (error) {
+      console.error('❌ Error en búsqueda de proveedores:', error);
+      setSearchResultsFound(false);
+      return [];
+    }
   };
   return (
     <div>
@@ -100,18 +117,21 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
         <div className="space-y-1">
           <InputSearch
             id="proveedor"
-            label="Proveedor"
+            label="Proveedor (opcional)"
             value={data.proveedor_id ?? ''}
             onChange={(value) => setData('proveedor_id', value ? Number(value) : '')}
             onSearch={searchProveedores}
-            placeholder="Buscar proveedor..."
-            emptyText="No se encontró ningún proveedor con ese nombre"
+            placeholder="busca o crea tu proveedor"
+            emptyText="No se encontró ningún proveedor. Puedes crear uno nuevo clickeando el botón +"
             error={errors.proveedor_id}
             showCreateIconButton={true}
-            createIconButtonTitle="Crear nuevo proveedor"
+            createIconButtonTitle="Crear nuevo proveedor con el nombre buscado"
             onCreateClick={(searchQuery) => {
+              if (!searchQuery || searchQuery.length < 2) {
+                NotificationService.warning('Por favor escribe al menos 2 caracteres para el proveedor');
+                return;
+              }
               console.log('🚀 onCreateClick ejecutado con query:', searchQuery);
-              console.log('📋 Estado actual - proveedoresOptions:', proveedoresOptions.length);
               // Crear nuevo proveedor automáticamente con solo el nombre
               const createProveedor = async (nombre: string) => {
                 console.log('🔧 Creando proveedor:', nombre);
@@ -169,11 +189,19 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
             displayValue={
               data.proveedor
                 ? `${data.proveedor.nombre}${data.proveedor.razon_social ? ` - ${data.proveedor.razon_social}` : ''}`
-                : proveedoresOptions.find(opt => opt.value === data.proveedor_id)?.label
+                : undefined
             }
           />
-          <div className="text-xs text-muted-foreground mt-1 px-1">
-            💡 Si no encuentras el proveedor, puedes crearlo haciendo clic en el botón ➕. El sistema evitará crear proveedores con nombres duplicados.
+          <div className="text-xs mt-1 px-1">
+            {lastSearchQuery && lastSearchQuery.length >= 2 && !searchResultsFound ? (
+              <div className="text-amber-700 dark:text-amber-200 font-semibold">
+                ⚠️ No encontramos "{lastSearchQuery}" en la base de datos. Puedes crearlo haciendo clic en el botón ➕.
+              </div>
+            ) : (
+              <div className="text-muted-foreground">
+                💡 Si no encuentras el proveedor, puedes crearlo haciendo clic en el botón ➕. El sistema evitará crear proveedores con nombres duplicados.
+              </div>
+            )}
           </div>
         </div>
       </div>

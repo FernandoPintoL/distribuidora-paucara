@@ -174,6 +174,11 @@ export default function InputSearch({
         if (!newQuery) {
             setSelectedOption(null);
             onChange(null);
+        } else {
+            // Si el usuario está escribiendo pero no hay selección válida, mostrar que debe seleccionar de la lista
+            if (!selectedOption || selectedOption.label !== newQuery) {
+                setSelectedOption(null);
+            }
         }
 
         // Resetear el flag después de un pequeño delay
@@ -373,6 +378,22 @@ export default function InputSearch({
                         <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
                             {options.length === 0 && !loading ? (
                                 <div className="px-6 py-8 text-center">
+                                    {/* Banner de advertencia si hay búsqueda pero sin resultados */}
+                                    {query.length >= 2 && showCreateButton && onCreateClick && (
+                                        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 dark:border-amber-600 rounded-r">
+                                            <div className="flex items-start space-x-3">
+                                                <div className="text-2xl">⚠️</div>
+                                                <div className="flex-1 text-left">
+                                                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                                        No encontramos "{query}"
+                                                    </p>
+                                                    <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+                                                        Este proveedor no existe en la base de datos. Puedes crearlo usando el botón de abajo.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                                         <Search className="h-6 w-6 text-gray-400" />
                                     </div>
@@ -385,20 +406,20 @@ export default function InputSearch({
 
                                     {/* Botón para crear nuevo elemento */}
                                     {showCreateButton && query.length >= 2 && onCreateClick && (
-                                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     console.log('🖱️ Botón crear clickeado con query:', query);
                                                     onCreateClick(query);
                                                 }}
-                                                className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors duration-150"
+                                                className="w-full inline-flex items-center justify-center px-4 py-3 text-sm font-bold text-white bg-green-600 dark:bg-green-700 border-2 border-green-700 dark:border-green-800 rounded-md hover:bg-green-700 dark:hover:bg-green-800 transition-colors duration-150 shadow-md hover:shadow-lg"
                                             >
-                                                <span className="mr-2">➕</span>
-                                                {createButtonText}
+                                                <span className="mr-2 text-lg">➕</span>
+                                                {createButtonText} "{query}"
                                             </button>
-                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                                                Crear un nuevo elemento con "{query}"
+                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 text-center font-medium">
+                                                Haz clic para crear el proveedor
                                             </p>
                                         </div>
                                     )}

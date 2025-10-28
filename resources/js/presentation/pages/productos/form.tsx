@@ -57,7 +57,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
   console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
   console.log('👤 Proveedor en producto:', producto?.proveedor);
   console.log('🆔 proveedor_id en producto:', producto?.proveedor_id);
-  console.log('📋 Lista de proveedores disponibles:', proveedores);
+  // Nota: Los proveedores se buscan por API, no se precarga aquí
 
   // Normalizadores para compatibilidad: el backend puede enviar {id,nombre,...} o {value,label,...}
   const isEditing = !!producto?.id;
@@ -69,7 +69,8 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
   // Configurar hooks de búsqueda para cada entidad
   const categoriasSelect = useEntitySelect(categorias);
   const marcasSelect = useEntitySelect(marcas);
-  const proveedoresSelect = useEntitySelect(proveedores, {
+  // ⚠️ Los proveedores se buscan por API en Step1DatosProducto (no se precarga aquí)
+  const proveedoresSelect = useEntitySelect([], {
     searchFields: ['nombre', 'razon_social'],
     descriptionField: 'razon_social'
   });
@@ -446,7 +447,6 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
                     errors={errors}
                     categoriasOptions={categoriasSelect.filteredOptions}
                     marcasOptions={marcasSelect.filteredOptions}
-                    proveedoresOptions={proveedoresSelect.filteredOptions}
                     unidadesOptions={unidadesSelect.filteredOptions}
                     setData={setData}
                     getInputClassName={getInputClassName}
