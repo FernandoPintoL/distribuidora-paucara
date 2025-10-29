@@ -53,23 +53,41 @@ class InventarioController extends Controller
         // Movimientos recientes (últimos 7 días)
         $movimientosRecientes = MovimientoInventario::with(['stockProducto.producto', 'stockProducto.almacen', 'user'])
             ->whereBetween('fecha', [now()->subDays(7), now()])
+            ->whereHas('stockProducto.producto')
             ->orderByDesc('fecha')
             ->limit(10)
-            ->get();
+            ->get()
+            ->filter(function ($movimiento) {
+                // Filtrar movimientos que tengan relaciones válidas
+                return $movimiento->stockProducto && $movimiento->stockProducto->producto && $movimiento->stockProducto->almacen;
+            })
+            ->values();
 
         // Top productos con más movimientos en el mes
-        $productosMasMovidos = MovimientoInventario::select([
+        $productosMasMovidosData = MovimientoInventario::select([
             'stock_productos.producto_id',
             DB::raw('COUNT(*) as total_movimientos'),
             DB::raw('SUM(ABS(movimientos_inventario.cantidad)) as cantidad_total'),
         ])
             ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
-            ->whereBetween('fecha', [now()->startOfMonth(), now()])
+            ->whereBetween('movimientos_inventario.fecha', [now()->startOfMonth(), now()])
             ->groupBy('stock_productos.producto_id')
             ->orderByDesc('total_movimientos')
             ->limit(10)
-            ->with('producto:id,nombre')
             ->get();
+
+        // Obtener productos en una sola query
+        $productoIds = $productosMasMovidosData->pluck('producto_id')->unique();
+        $productos = Producto::whereIn('id', $productoIds)->select('id', 'nombre')->get()->keyBy('id');
+
+        $productosMasMovidos = $productosMasMovidosData->map(function ($item) use ($productos) {
+            $producto = $productos->get($item->producto_id);
+            return [
+                'producto_id' => $item->producto_id,
+                'nombre_producto' => $producto?->nombre ?? 'Producto desconocido',
+                'total_movimientos' => $item->total_movimientos,
+            ];
+        });
 
         return Inertia::render('inventario/index', [
             'estadisticas' => [
@@ -291,6 +309,7 @@ class InventarioController extends Controller
                 return [
                     'id' => $movimiento->id,
                     'tipo' => $this->mapearTipoMovimiento($movimiento->tipo),
+                    'tipo_ajuste_id' => $movimiento->tipo_ajuste_inventario_id,
                     'motivo' => $this->obtenerMotivoMovimiento($movimiento->tipo),
                     'cantidad' => $movimiento->cantidad,
                     'stock_anterior' => $movimiento->cantidad_anterior,
@@ -314,7 +333,10 @@ class InventarioController extends Controller
             });
 
         $tipo_mermas = TipoMerma::all();
-        $tipos_ajueste_inventario = TipoAjustInventario::all();
+        $tipos_ajueste_inventario = TipoAjustInventario::where('activo', true)
+            ->select('id', 'clave', 'label')
+            ->orderBy('label')
+            ->get();
         $estado_mermas = EstadoMerma::all();
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
@@ -340,11 +362,11 @@ class InventarioController extends Controller
     private function mapearTipoMovimiento(string $tipo): string
     {
         if (str_starts_with($tipo, 'ENTRADA_')) {
-            return 'entrada';
+            return 'ENTRADA';
         } elseif (str_starts_with($tipo, 'SALIDA_')) {
-            return 'salida';
+            return 'SALIDA';
         } else {
-            return 'ajuste';
+            return 'AJUSTE';
         }
     }
 
@@ -368,7 +390,7 @@ class InventarioController extends Controller
         $stockProductos = collect();
         if ($almacenId) {
             $stockProductos = StockProducto::where('almacen_id', $almacenId)
-                ->with(['producto:id,nombre', 'almacen:id,nombre'])
+                ->with(['producto:id,nombre,codigo_barras,codigo_qr', 'producto.codigos', 'almacen:id,nombre'])
                 ->orderBy('cantidad', 'desc')
                 ->get();
         }

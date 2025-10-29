@@ -85,6 +85,7 @@ export type SubtipoMovimiento =
 export interface MovimientoUnificado {
     id: number;
     tipo: TipoMovimiento;
+    tipo_ajuste_id?: number;
     subtipo: SubtipoMovimiento;
     numero_documento?: string;
     fecha: string;
@@ -259,6 +260,7 @@ export interface FiltrosMovimientos {
     // Filtros básicos
     tipo?: TipoMovimiento;
     tipos?: TipoMovimiento[];
+    tipo_ajuste_id?: number;
     subtipo?: SubtipoMovimiento;
     subtipos?: SubtipoMovimiento[];
 

@@ -20,10 +20,10 @@ const availableIcons = Object.keys(iconMap).filter(key =>
     !['Icon', 'createLucideIcon', 'default'].includes(key) // No es helper
 );
 
-console.log('[AppSidebar] Total de iconos disponibles:', availableIcons.length);
+/* console.log('[AppSidebar] Total de iconos disponibles:', availableIcons.length);
 console.log('[AppSidebar] Primeros 10 iconos disponibles:', availableIcons.slice(0, 10));
 console.log('[AppSidebar] Ejemplo de icono (Package):', iconMap['Package']);
-console.log('[AppSidebar] Tipo de Package:', typeof iconMap['Package']);
+console.log('[AppSidebar] Tipo de Package:', typeof iconMap['Package']); */
 
 // Tipos para los módulos de la API
 interface ModuloAPI {
@@ -44,7 +44,7 @@ const useSidebarModules = () => {
             // Debug: Ver qué icono se está buscando
             if (module.icon) {
                 const iconFound = iconMap[module.icon];
-                console.log(`[AppSidebar] Módulo "${module.title}" - Icono buscado: "${module.icon}" - ${iconFound ? '✅ Encontrado' : '❌ NO ENCONTRADO'}`);
+                // console.log(`[AppSidebar] Módulo "${module.title}" - Icono buscado: "${module.icon}" - ${iconFound ? '✅ Encontrado' : '❌ NO ENCONTRADO'}`);
                 if (!iconFound) {
                     console.log(`[AppSidebar] Iconos disponibles que empiezan con "${module.icon[0]}":`, Object.keys(iconMap).filter(k => k.startsWith(module.icon[0])).slice(0, 5));
                 }

@@ -270,14 +270,17 @@ export default function Dashboard() {
                             </p>
                         ) : (
                             <div className="space-y-3">
-                                {movimientos_recientes.slice(0, 5).map((movimiento) => (
+                                {movimientos_recientes
+                                    .filter(m => m.stockProducto?.producto && m.stockProducto?.almacen)
+                                    .slice(0, 5)
+                                    .map((movimiento) => (
                                     <div key={movimiento.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                                         <div>
                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                {movimiento.stockProducto.producto.nombre}
+                                                {movimiento.stockProducto?.producto?.nombre || 'Producto desconocido'}
                                             </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                {movimiento.stockProducto.almacen.nombre}
+                                                {movimiento.stockProducto?.almacen?.nombre || 'Almacén desconocido'}
                                             </p>
                                         </div>
                                         <div className="text-right">

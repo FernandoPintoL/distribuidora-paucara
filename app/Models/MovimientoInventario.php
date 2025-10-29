@@ -12,7 +12,10 @@ class MovimientoInventario extends Model
 
     protected $table = 'movimientos_inventario';
 
-    public $timestamps = false; // La tabla maneja 'fecha' manualmente
+    public $timestamps = true; // Habilitar created_at y updated_at automáticos
+
+    const CREATED_AT = 'created_at';
+    const UPDATED_AT = 'updated_at';
 
     /**
      * Nombre del campo deleted_at para soft deletes
@@ -39,6 +42,8 @@ class MovimientoInventario extends Model
         'referencia_tipo',
         'referencia_id',
         'ip_dispositivo',
+        'created_at',
+        'updated_at',
         'deleted_at',
     ];
 
@@ -47,6 +52,8 @@ class MovimientoInventario extends Model
         'cantidad_anterior'  => 'integer',
         'cantidad_posterior' => 'integer',
         'fecha'              => 'datetime',
+        'created_at'         => 'datetime',
+        'updated_at'         => 'datetime',
         'deleted_at'         => 'datetime', // ✓ Para SoftDeletes
     ];
 

@@ -3,31 +3,35 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/presentation/components/ui/select';
+import SearchSelect from '@/presentation/components/ui/search-select';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Calendar, Filter, X, Search } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/presentation/components/ui/collapsible';
 import type { FiltrosMovimientos as IFiltrosMovimientos } from '@/types/inventario';
+
+interface TipoAjuste {
+    id: number;
+    clave: string;
+    label: string;
+}
 
 interface FiltrosMovimientosProps {
     filtros: IFiltrosMovimientos;
     onFiltrosChange: (filtros: IFiltrosMovimientos) => void;
     almacenes: Array<{ id: number; nombre: string; }>;
     productos: Array<{ id: number; nombre: string; codigo?: string; }>;
+    tiposAjuste?: TipoAjuste[];
     showAdvanced?: boolean;
 }
 
 const tiposMovimiento = [
-    { value: 'entrada', label: 'Entradas' },
-    { value: 'salida', label: 'Salidas' },
-    { value: 'transferencia', label: 'Transferencias' },
-    { value: 'ajuste', label: 'Ajustes' },
+    { value: 'ENTRADA', label: 'Entradas' },
+    { value: 'SALIDA', label: 'Salidas' },
+    { value: 'AJUSTE', label: 'Ajustes' },
+    { value: 'TRANSFERENCIA', label: 'Transferencias' },
+    { value: 'MERMA', label: 'Mermas' },
+    { value: 'PRODUCCION', label: 'Producción' },
+    { value: 'DEVOLUCION', label: 'Devoluciones' },
 ];
 
 export default function FiltrosMovimientos({
@@ -35,9 +39,32 @@ export default function FiltrosMovimientos({
     onFiltrosChange,
     almacenes,
     productos,
+    tiposAjuste = [],
     showAdvanced = false
 }: FiltrosMovimientosProps) {
     const [isOpen, setIsOpen] = React.useState(false);
+
+    // Convertir opciones a formato SearchSelect
+    const tiposMovimientoOptions = tiposMovimiento.map(tipo => ({
+        value: tipo.value,
+        label: tipo.label,
+    }));
+
+    const almacenesOptions = almacenes.map(a => ({
+        value: a.id.toString(),
+        label: a.nombre,
+    }));
+
+    const productosOptions = productos.map(p => ({
+        value: p.id.toString(),
+        label: p.codigo ? `${p.codigo} - ${p.nombre}` : p.nombre,
+    }));
+
+    const tiposAjusteOptions = tiposAjuste.map(ta => ({
+        value: ta.id.toString(),
+        label: ta.label,
+        description: ta.clave,
+    }));
 
     const updateFiltro = (key: keyof IFiltrosMovimientos, value: string | number | boolean | undefined) => {
         onFiltrosChange({
@@ -126,45 +153,42 @@ export default function FiltrosMovimientos({
                             {/* Tipo de movimiento */}
                             <div className="space-y-2">
                                 <Label>Tipo de movimiento</Label>
-                                <Select
-                                    value={filtros.tipo || 'all'}
-                                    onValueChange={(value) => updateFiltro('tipo', value === 'all' ? undefined : value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Todos los tipos" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los tipos</SelectItem>
-                                        {tiposMovimiento.map((tipo) => (
-                                            <SelectItem key={tipo.value} value={tipo.value}>
-                                                {tipo.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <SearchSelect
+                                    placeholder="Seleccionar tipo..."
+                                    value={filtros.tipo || ''}
+                                    options={tiposMovimientoOptions}
+                                    onChange={(value) => updateFiltro('tipo', value || undefined)}
+                                    allowClear={true}
+                                    emptyText="No se encontraron tipos"
+                                />
                             </div>
+
+                            {/* Tipo de Ajuste */}
+                            {tiposAjusteOptions.length > 0 && (
+                                <div className="space-y-2">
+                                    <Label>Tipo de Ajuste</Label>
+                                    <SearchSelect
+                                        placeholder="Seleccionar ajuste..."
+                                        value={filtros.tipo_ajuste_id?.toString() || ''}
+                                        options={tiposAjusteOptions}
+                                        onChange={(value) => updateFiltro('tipo_ajuste_id', value ? parseInt(value) : undefined)}
+                                        allowClear={true}
+                                        emptyText="No se encontraron ajustes"
+                                    />
+                                </div>
+                            )}
 
                             {/* Almacén */}
                             <div className="space-y-2">
                                 <Label>Almacén</Label>
-                                <Select
-                                    value={filtros.almacen_id?.toString() || 'all'}
-                                    onValueChange={(value) =>
-                                        updateFiltro('almacen_id', value === 'all' ? undefined : parseInt(value))
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Todos los almacenes" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los almacenes</SelectItem>
-                                        {almacenes.map((almacen) => (
-                                            <SelectItem key={almacen.id} value={almacen.id.toString()}>
-                                                {almacen.nombre}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <SearchSelect
+                                    placeholder="Seleccionar almacén..."
+                                    value={filtros.almacen_id?.toString() || ''}
+                                    options={almacenesOptions}
+                                    onChange={(value) => updateFiltro('almacen_id', value ? parseInt(value) : undefined)}
+                                    allowClear={true}
+                                    emptyText="No se encontraron almacenes"
+                                />
                             </div>
 
                             {/* Fecha desde */}
@@ -203,24 +227,14 @@ export default function FiltrosMovimientos({
                                 {/* Producto específico */}
                                 <div className="space-y-2">
                                     <Label>Producto</Label>
-                                    <Select
-                                        value={filtros.producto_id?.toString() || 'all'}
-                                        onValueChange={(value) =>
-                                            updateFiltro('producto_id', value === 'all' ? undefined : parseInt(value))
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Todos los productos" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos los productos</SelectItem>
-                                            {productos.map((producto) => (
-                                                <SelectItem key={producto.id} value={producto.id.toString()}>
-                                                    {producto.codigo ? `${producto.codigo} - ` : ''}{producto.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchSelect
+                                        placeholder="Buscar producto..."
+                                        value={filtros.producto_id?.toString() || ''}
+                                        options={productosOptions}
+                                        onChange={(value) => updateFiltro('producto_id', value ? parseInt(value) : undefined)}
+                                        allowClear={true}
+                                        emptyText="No se encontraron productos"
+                                    />
                                 </div>
 
                                 {/* Número de referencia */}
@@ -272,6 +286,10 @@ export default function FiltrosMovimientos({
                                             const tipo = tiposMovimiento.find(t => t.value === value);
                                             displayValue = tipo?.label || value.toString();
                                             displayKey = 'Tipo';
+                                        } else if (key === 'tipo_ajuste_id') {
+                                            const ajuste = tiposAjuste.find(ta => ta.id === value);
+                                            displayValue = ajuste?.label || value.toString();
+                                            displayKey = 'Tipo Ajuste';
                                         }
 
                                         return (

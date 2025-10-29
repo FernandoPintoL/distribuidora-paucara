@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Almacen;
@@ -28,30 +27,30 @@ class InventarioInicialController extends Controller
             ->get()
             ->map(function ($producto) {
                 return [
-                    'id' => $producto->id,
-                    'nombre' => $producto->nombre,
-                    'sku' => $producto->sku,
-                    'categoria' => $producto->categoria?->nombre,
-                    'marca' => $producto->marca?->nombre,
-                    'unidad' => $producto->unidad?->codigo,
-                    'stock_minimo' => $producto->stock_minimo,
+                    'id'                       => $producto->id,
+                    'nombre'                   => $producto->nombre,
+                    'sku'                      => $producto->sku,
+                    'categoria'                => $producto->categoria?->nombre,
+                    'marca'                    => $producto->marca?->nombre,
+                    'unidad'                   => $producto->unidad?->codigo,
+                    'stock_minimo'             => $producto->stock_minimo,
                     // Verificar si ya tiene inventario inicial cargado
                     'tiene_inventario_inicial' => $this->tieneInventarioInicial($producto->id),
                 ];
             });
 
         // Obtener almacenes activos
-        $almacenes = Almacen::where('activa', true)
-            ->select('id', 'nombre', 'ubicacion')
+        $almacenes = Almacen::where('activo', true)
+            ->select('id', 'nombre')
             ->orderBy('nombre')
             ->get();
 
         // Obtener el tipo de ajuste INVENTARIO_INICIAL
-        $tipoInventarioInicial = TipoAjustInventario::where('clave', 'INVENTARIO_INICIAL')->first();
+        $tipoInventarioInicial = TipoAjustInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
 
         return Inertia::render('inventario/inventario-inicial', [
-            'productos' => $productos,
-            'almacenes' => $almacenes,
+            'productos'             => $productos,
+            'almacenes'             => $almacenes,
             'tipoInventarioInicial' => $tipoInventarioInicial,
         ]);
     }
@@ -62,23 +61,23 @@ class InventarioInicialController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.producto_id' => 'required|exists:productos,id',
-            'items.*.almacen_id' => 'required|exists:almacenes,id',
-            'items.*.cantidad' => 'required|integer|min:1',
-            'items.*.lote' => 'nullable|string|max:50',
+            'items'                     => 'required|array|min:1',
+            'items.*.producto_id'       => 'required|exists:productos,id',
+            'items.*.almacen_id'        => 'required|exists:almacenes,id',
+            'items.*.cantidad'          => 'required|integer|min:1',
+            'items.*.lote'              => 'nullable|string|max:50',
             'items.*.fecha_vencimiento' => 'nullable|date',
-            'items.*.observaciones' => 'nullable|string|max:500',
+            'items.*.observaciones'     => 'nullable|string|max:500',
         ]);
 
         // Obtener el tipo de ajuste INVENTARIO_INICIAL
         $tipoInventarioInicial = TipoAjustInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
 
         $resultados = [
-            'exitosos' => 0,
-            'fallidos' => 0,
+            'exitosos'     => 0,
+            'fallidos'     => 0,
             'advertencias' => [],
-            'errores' => [],
+            'errores'      => [],
         ];
 
         DB::beginTransaction();
@@ -103,40 +102,59 @@ class InventarioInicialController extends Controller
                     $stockProducto = StockProducto::firstOrCreate(
                         [
                             'producto_id' => $item['producto_id'],
-                            'almacen_id' => $item['almacen_id'],
-                            'lote' => $item['lote'] ?? null,
+                            'almacen_id'  => $item['almacen_id'],
+                            'lote'        => $item['lote'] ?? null,
                         ],
                         [
-                            'cantidad' => 0,
-                            'fecha_actualizacion' => now(),
-                            'fecha_vencimiento' => $item['fecha_vencimiento'] ?? null,
+                            'cantidad'              => 0,
+                            'cantidad_disponible'   => 0,  // Stock disponible (sin reservas)
+                            'cantidad_reservada'    => 0,  // Stock reservado
+                            'fecha_actualizacion'   => now(),
+                            'fecha_vencimiento'     => $item['fecha_vencimiento'] ?? null,
                         ]
                     );
 
                     // Si el stock ya existe pero tiene una fecha de vencimiento diferente, actualizarla
-                    if (!$stockProducto->wasRecentlyCreated && isset($item['fecha_vencimiento'])) {
+                    if (! $stockProducto->wasRecentlyCreated && isset($item['fecha_vencimiento'])) {
                         $stockProducto->fecha_vencimiento = $item['fecha_vencimiento'];
                     }
 
                     $cantidadAnterior = $stockProducto->cantidad;
 
-                    // Actualizar cantidad
+                    // Actualizar cantidad y mantener el invariante: cantidad = cantidad_disponible + cantidad_reservada
+                    // Como es carga inicial, TODO el stock es disponible (sin reservas)
                     $stockProducto->cantidad += $item['cantidad'];
+                    $stockProducto->cantidad_disponible += $item['cantidad'];  // Todo es disponible en carga inicial
+                    // cantidad_reservada se mantiene igual (sigue siendo 0 en carga inicial)
                     $stockProducto->fecha_actualizacion = now();
                     $stockProducto->save();
 
+                    // Validar que el invariante se mantiene
+                    if ($stockProducto->validarInvariante() === false) {
+                        throw new \Exception(
+                            "Invariante de stock roto para producto_id={$item['producto_id']}, almacen_id={$item['almacen_id']}: " .
+                            "cantidad ({$stockProducto->cantidad}) != cantidad_disponible ({$stockProducto->cantidad_disponible}) + cantidad_reservada ({$stockProducto->cantidad_reservada})"
+                        );
+                    }
+
+                    // Generar número de documento para la carga inicial
+                    $numeroDocumento = 'INV-INICIAL-' . now()->format('Ymd') . '-' . str_pad($index + 1, 4, '0', STR_PAD_LEFT);
+
                     // Registrar el movimiento
                     MovimientoInventario::create([
-                        'stock_producto_id' => $stockProducto->id,
-                        'cantidad' => $item['cantidad'],
-                        'cantidad_anterior' => $cantidadAnterior,
-                        'cantidad_posterior' => $stockProducto->cantidad,
-                        'fecha' => now(),
-                        'observacion' => $item['observaciones'] ?? 'Carga inicial de inventario al implementar el sistema',
-                        'tipo' => 'ENTRADA_AJUSTE',
+                        'stock_producto_id'         => $stockProducto->id,
+                        'cantidad'                  => $item['cantidad'],
+                        'cantidad_anterior'         => $cantidadAnterior,
+                        'cantidad_posterior'        => $stockProducto->cantidad,
+                        'fecha'                     => now(),
+                        'numero_documento'          => $numeroDocumento,
+                        'observacion'               => $item['observaciones'] ?? 'Carga inicial de inventario al implementar el sistema',
+                        'tipo'                      => 'ENTRADA_AJUSTE',
                         'tipo_ajuste_inventario_id' => $tipoInventarioInicial->id,
-                        'user_id' => Auth::id(),
-                        'ip_dispositivo' => $request->ip(),
+                        'referencia_tipo'           => 'inventario_inicial',
+                        'referencia_id'             => null,
+                        'user_id'                   => Auth::id(),
+                        'ip_dispositivo'            => $request->ip(),
                     ]);
 
                     $resultados['exitosos']++;
@@ -144,7 +162,7 @@ class InventarioInicialController extends Controller
                     $resultados['fallidos']++;
                     $resultados['errores'][] = "Item #" . ($index + 1) . ": {$e->getMessage()}";
                     Log::error("Error en carga de inventario inicial item #" . ($index + 1), [
-                        'item' => $item,
+                        'item'  => $item,
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -171,7 +189,7 @@ class InventarioInicialController extends Controller
     {
         $tipoInventarioInicial = TipoAjustInventario::where('clave', 'INVENTARIO_INICIAL')->first();
 
-        if (!$tipoInventarioInicial) {
+        if (! $tipoInventarioInicial) {
             return false;
         }
 

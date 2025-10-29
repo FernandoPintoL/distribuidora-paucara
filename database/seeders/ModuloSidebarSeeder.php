@@ -67,14 +67,15 @@ class ModuloSidebarSeeder extends Seeder
         // Submódulos de Inventario
         $submenuInventario = [
             ['titulo' => 'Dashboard', 'ruta' => '/inventario/dashboard', 'icono' => 'BarChart3', 'orden' => 1, 'permisos' => ['inventario.dashboard']],
-            ['titulo' => 'Stock Bajo', 'ruta' => '/inventario/stock-bajo', 'icono' => 'TrendingDown', 'orden' => 2, 'permisos' => ['inventario.stock-bajo']],
-            ['titulo' => 'Próximos a Vencer', 'ruta' => '/inventario/proximos-vencer', 'icono' => 'Calendar', 'orden' => 3, 'permisos' => ['inventario.proximos-vencer']],
-            ['titulo' => 'Productos Vencidos', 'ruta' => '/inventario/vencidos', 'icono' => 'AlertTriangle', 'orden' => 4, 'permisos' => ['inventario.vencidos']],
-            ['titulo' => 'Movimientos', 'ruta' => '/inventario/movimientos', 'icono' => 'ArrowUpDown', 'orden' => 5, 'permisos' => ['inventario.movimientos']],
-            ['titulo' => 'Transferencias', 'ruta' => '/inventario/transferencias', 'icono' => 'ArrowRightLeft', 'orden' => 6, 'permisos' => ['inventario.transferencias.index']],
-            ['titulo' => 'Mermas', 'ruta' => '/inventario/mermas', 'icono' => 'Package2', 'orden' => 7, 'permisos' => ['inventario.mermas.index']],
-            ['titulo' => 'Ajustes', 'ruta' => '/inventario/ajuste', 'icono' => 'Settings', 'orden' => 8, 'permisos' => ['inventario.ajuste.form']],
-            ['titulo' => 'Reportes', 'ruta' => '/inventario/reportes', 'icono' => 'FileText', 'orden' => 9, 'permisos' => ['reportes.inventario.stock-actual']],
+            ['titulo' => 'Carga Inicial', 'ruta' => '/inventario/inventario-inicial', 'icono' => 'Upload', 'orden' => 2, 'permisos' => ['inventario.dashboard']],
+            ['titulo' => 'Stock Bajo', 'ruta' => '/inventario/stock-bajo', 'icono' => 'TrendingDown', 'orden' => 3, 'permisos' => ['inventario.stock-bajo']],
+            ['titulo' => 'Próximos a Vencer', 'ruta' => '/inventario/proximos-vencer', 'icono' => 'Calendar', 'orden' => 4, 'permisos' => ['inventario.proximos-vencer']],
+            ['titulo' => 'Productos Vencidos', 'ruta' => '/inventario/vencidos', 'icono' => 'AlertTriangle', 'orden' => 5, 'permisos' => ['inventario.vencidos']],
+            ['titulo' => 'Movimientos', 'ruta' => '/inventario/movimientos', 'icono' => 'ArrowUpDown', 'orden' => 6, 'permisos' => ['inventario.movimientos']],
+            ['titulo' => 'Transferencias', 'ruta' => '/inventario/transferencias', 'icono' => 'ArrowRightLeft', 'orden' => 7, 'permisos' => ['inventario.transferencias.index']],
+            ['titulo' => 'Mermas', 'ruta' => '/inventario/mermas', 'icono' => 'Package2', 'orden' => 8, 'permisos' => ['inventario.mermas.index']],
+            ['titulo' => 'Ajustes', 'ruta' => '/inventario/ajuste', 'icono' => 'Settings', 'orden' => 9, 'permisos' => ['inventario.ajuste.form']],
+            ['titulo' => 'Reportes', 'ruta' => '/inventario/reportes', 'icono' => 'FileText', 'orden' => 10, 'permisos' => ['reportes.inventario.stock-actual']],
         ];
 
         foreach ($submenuInventario as $submenu) {

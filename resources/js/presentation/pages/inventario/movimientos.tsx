@@ -24,10 +24,17 @@ import type {
 } from '@/types/inventario';
 import { CONFIGURACION_MOVIMIENTOS } from '@/types/inventario';
 
+interface TipoAjuste {
+    id: number;
+    clave: string;
+    label: string;
+}
+
 interface PageProps extends InertiaPageProps {
     movimientos: MovimientoUnificado[];
     almacenes: Array<{ id: number; nombre: string; }>;
     productos: Array<{ id: number; nombre: string; codigo?: string; }>;
+    tipos_ajuste_inventario?: TipoAjuste[];
     estadisticas?: EstadisticasMovimientos;
     filtros?: IFiltrosMovimientos;
 }
@@ -49,6 +56,7 @@ export default function MovimientosInventario() {
         movimientos: movimientosRaw,
         almacenes = [],
         productos = [],
+        tipos_ajuste_inventario = [],
         estadisticas,
         filtros: filtrosIniciales = {}
     } = props;
@@ -81,6 +89,16 @@ export default function MovimientosInventario() {
             // Filtro por tipos
             if (filtros.tipos && filtros.tipos.length > 0) {
                 if (!filtros.tipos.includes(movimiento.tipo)) return false;
+            }
+
+            // Filtro por tipo
+            if (filtros.tipo) {
+                if (movimiento.tipo !== filtros.tipo) return false;
+            }
+
+            // Filtro por tipo de ajuste específico
+            if (filtros.tipo_ajuste_id) {
+                if (movimiento.tipo_ajuste_id !== filtros.tipo_ajuste_id) return false;
             }
 
             // Filtro por estados
@@ -310,6 +328,7 @@ export default function MovimientosInventario() {
                     onFiltrosChange={setFiltros}
                     almacenes={almacenes}
                     productos={productos}
+                    tiposAjuste={tipos_ajuste_inventario}
                     showAdvanced={false}
                 />
 

@@ -48,6 +48,21 @@ export const MovimientoCard: React.FC<MovimientoCardProps> = ({
     compact = false
 }) => {
     const config = CONFIGURACION_MOVIMIENTOS[movimiento.tipo];
+
+    // Fallback si el tipo de movimiento no está configurado
+    if (!config) {
+        return (
+            <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900 text-center">
+                <p className="text-sm text-red-600 dark:text-red-400">
+                    Tipo de movimiento desconocido: <strong>{movimiento.tipo}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                    Por favor, revisa la configuración del sistema
+                </p>
+            </div>
+        );
+    }
+
     const IconComponent = iconMap[config.icon as keyof typeof iconMap] || Package;
 
     const getStockChangeIcon = () => {
@@ -95,9 +110,9 @@ export const MovimientoCard: React.FC<MovimientoCardProps> = ({
                         <IconComponent className={`h-4 w-4 ${config.textColor}`} />
                     </div>
                     <div>
-                        <p className="font-medium text-sm">{movimiento.producto.nombre}</p>
+                        <p className="font-medium text-sm">{movimiento.producto?.nombre || 'Producto desconocido'}</p>
                         <p className="text-xs text-muted-foreground">
-                            {movimiento.almacen.nombre} • {formatDate(movimiento.fecha)}
+                            {movimiento.almacen?.nombre || 'Almacén desconocido'} • {formatDate(movimiento.fecha)}
                         </p>
                     </div>
                 </div>
@@ -131,7 +146,7 @@ export const MovimientoCard: React.FC<MovimientoCardProps> = ({
                                     variant="outline"
                                     className={`${config.bgColor} ${config.textColor} border-current`}
                                 >
-                                    {movimiento.subtipo.replace('_', ' ')}
+                                    {movimiento.subtipo?.replace('_', ' ') || 'Subtipo desconocido'}
                                 </Badge>
                             </div>
                             {movimiento.numero_referencia && (
@@ -159,14 +174,14 @@ export const MovimientoCard: React.FC<MovimientoCardProps> = ({
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{movimiento.producto.nombre}</span>
+                            <span className="font-medium">{movimiento.producto?.nombre || 'Producto desconocido'}</span>
                         </div>
-                        {movimiento.producto.codigo && (
+                        {movimiento.producto?.codigo && (
                             <p className="text-sm text-muted-foreground pl-6">
                                 Código: {movimiento.producto.codigo}
                             </p>
                         )}
-                        {movimiento.producto.categoria && (
+                        {movimiento.producto?.categoria && (
                             <p className="text-sm text-muted-foreground pl-6">
                                 Categoría: {movimiento.producto.categoria.nombre}
                             </p>
@@ -176,7 +191,7 @@ export const MovimientoCard: React.FC<MovimientoCardProps> = ({
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{movimiento.almacen.nombre}</span>
+                            <span className="font-medium">{movimiento.almacen?.nombre || 'Almacén desconocido'}</span>
                         </div>
                         {movimiento.almacen_origen && movimiento.almacen_destino && (
                             <p className="text-sm text-muted-foreground pl-6">
@@ -246,7 +261,7 @@ export const MovimientoCard: React.FC<MovimientoCardProps> = ({
                 <div className="flex items-center justify-between pt-2 border-t">
                     <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{movimiento.usuario.name}</span>
+                        <span className="text-sm">{movimiento.usuario?.name || 'Usuario desconocido'}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
