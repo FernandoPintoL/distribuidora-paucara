@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FilaAjusteValidada } from '@/infrastructure/services/ajustesCSV.service';
 import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select';
+import InputSearch from '@/presentation/components/ui/input-search';
 
 interface TipoOperacion {
   id: number;
@@ -19,6 +20,8 @@ interface TablaAjustesPreviewProps {
   tiposMerma: any[];
   almacenes: any[];
   productos: any[];
+  proveedores?: any[];
+  clientes?: any[];
   onFilasActualizadas: (filasActualizadas: FilaAjusteValidada[]) => void;
 }
 
@@ -29,6 +32,8 @@ export default function TablaAjustesPreview({
   tiposMerma,
   almacenes,
   productos,
+  proveedores = [],
+  clientes = [],
   onFilasActualizadas,
 }: TablaAjustesPreviewProps) {
   const [filas, setFilas] = useState<FilaAjusteValidada[]>(filasInicial);
@@ -97,6 +102,37 @@ export default function TablaAjustesPreview({
       value: op.value,
       label: op.label,
     }));
+  };
+
+  /**
+   * Busca proveedores o clientes según la operación
+   */
+  const buscarProveedorCliente = async (query: string, tipoOperacionClave: string) => {
+    const operacion = tiposOperacion.find(o => o.clave === tipoOperacionClave);
+
+    if (!operacion) return [];
+
+    let lista: any[] = [];
+    if (operacion.requiere_proveedor) {
+      lista = proveedores;
+    } else if (operacion.requiere_cliente) {
+      lista = clientes;
+    }
+
+    if (!query.trim()) return [];
+
+    const queryLower = query.toLowerCase();
+    return lista
+      .filter(item =>
+        item.nombre?.toLowerCase().includes(queryLower) ||
+        item.razon_social?.toLowerCase().includes(queryLower) ||
+        item.ci_nit?.toLowerCase().includes(queryLower)
+      )
+      .map(item => ({
+        value: item.id,
+        label: item.nombre || item.razon_social,
+        description: item.ci_nit || '',
+      }));
   };
 
   const handleCambio = (index: number, campo: keyof FilaAjusteValidada, valor: any) => {
@@ -313,6 +349,25 @@ export default function TablaAjustesPreview({
                           emptyText="No hay opciones disponibles"
                           className="w-full"
                         />
+                      ) : fila.tipo_operacion &&
+                        (tiposOperacion.find(o => o.clave === fila.tipo_operacion)?.requiere_proveedor ||
+                          tiposOperacion.find(o => o.clave === fila.tipo_operacion)?.requiere_cliente) ? (
+                        <InputSearch
+                          value={fila.tipo_motivo}
+                          onChange={(value) => handleCambio(indexOriginal, 'tipo_motivo', value)}
+                          onSearch={(query) => buscarProveedorCliente(query, fila.tipo_operacion)}
+                          placeholder={
+                            tiposOperacion.find(o => o.clave === fila.tipo_operacion)?.requiere_proveedor
+                              ? "Buscar proveedor..."
+                              : "Buscar cliente..."
+                          }
+                          emptyText={
+                            tiposOperacion.find(o => o.clave === fila.tipo_operacion)?.requiere_proveedor
+                              ? "No hay proveedores disponibles"
+                              : "No hay clientes disponibles"
+                          }
+                          className="w-full"
+                        />
                       ) : (
                         <input
                           type="text"
@@ -320,7 +375,7 @@ export default function TablaAjustesPreview({
                           onChange={(e) => handleCambio(indexOriginal, 'tipo_motivo', e.target.value)}
                           onFocus={() => setFilaEditando(indexOriginal)}
                           onBlur={() => setFilaEditando(null)}
-                          placeholder="Proveedor/Cliente o motivo"
+                          placeholder="Motivo o detalle"
                           className={`w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
                             esValida
                               ? 'border-gray-300 dark:border-gray-600 focus:border-blue-500'

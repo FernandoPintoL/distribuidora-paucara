@@ -11,6 +11,8 @@ interface PageProps {
   tipos_merma: any[];
   tipos_operacion: any[];
   almacenes: any[];
+  proveedores?: any[];
+  clientes?: any[];
 }
 
 const breadcrumbs = [
@@ -28,7 +30,15 @@ const breadcrumbs = [
   },
 ];
 
-export default function AjusteMasivo({ productos, tipos_ajuste, tipos_merma, tipos_operacion, almacenes }: PageProps) {
+export default function AjusteMasivo({
+  productos,
+  tipos_ajuste,
+  tipos_merma,
+  tipos_operacion,
+  almacenes,
+  proveedores = [],
+  clientes = [],
+}: PageProps) {
   const { can } = useAuth();
 
   if (!can('inventario.ajuste.form')) {
@@ -87,6 +97,8 @@ export default function AjusteMasivo({ productos, tipos_ajuste, tipos_merma, tip
             tiposAjuste={tipos_ajuste}
             tiposMerma={tipos_merma}
             almacenes={almacenes}
+            proveedores={proveedores}
+            clientes={clientes}
             onCargaExitosa={() => {
               // Recargar la página después de 2 segundos
               setTimeout(() => {

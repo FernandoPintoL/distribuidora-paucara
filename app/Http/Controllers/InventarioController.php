@@ -1262,11 +1262,13 @@ class InventarioController extends Controller
      */
     public function ajusteMasivoForm(Request $request): Response
     {
-        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'activo']);
         $tiposAjuste = TipoAjustInventario::where('activo', true)->get();
         $tiposMerma = TipoMerma::where('activo', true)->get();
         $tiposOperacion = TipoOperacion::where('activo', true)->get();
         $productos = Producto::all(['id', 'sku', 'nombre'])->take(1000);
+        $proveedores = \App\Models\Proveedor::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'razon_social', 'ci_nit'])->take(500);
+        $clientes = \App\Models\Cliente::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'razon_social', 'ci_nit'])->take(500);
 
         return Inertia::render('inventario/ajuste-masivo', [
             'almacenes' => $almacenes,
@@ -1274,6 +1276,8 @@ class InventarioController extends Controller
             'tipos_merma' => $tiposMerma,
             'tipos_operacion' => $tiposOperacion,
             'productos' => $productos,
+            'proveedores' => $proveedores,
+            'clientes' => $clientes,
         ]);
     }
 

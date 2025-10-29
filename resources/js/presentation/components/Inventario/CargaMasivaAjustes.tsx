@@ -22,6 +22,8 @@ interface CargaMasivaAjustesProps {
   tiposAjuste: any[];
   tiposMerma: any[];
   almacenes: any[];
+  proveedores?: any[];
+  clientes?: any[];
   onCargaExitosa?: () => void;
 }
 
@@ -30,6 +32,8 @@ export default function CargaMasivaAjustes({
   tiposAjuste,
   tiposMerma,
   almacenes,
+  proveedores = [],
+  clientes = [],
   onCargaExitosa,
 }: CargaMasivaAjustesProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -423,6 +427,8 @@ export default function CargaMasivaAjustes({
                 tiposMerma={tiposMerma}
                 almacenes={almacenes}
                 productos={productos}
+                proveedores={proveedores}
+                clientes={clientes}
                 onFilasActualizadas={handleFilasActualizadas}
               />
             </div>

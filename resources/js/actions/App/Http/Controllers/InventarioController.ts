@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\InventarioController::importarAjustesMasivos
- * @see app/Http/Controllers/InventarioController.php:1283
+ * @see app/Http/Controllers/InventarioController.php:1287
  * @route '/api/inventario/ajustes-masivos'
  */
 export const importarAjustesMasivos = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ importarAjustesMasivos.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::importarAjustesMasivos
- * @see app/Http/Controllers/InventarioController.php:1283
+ * @see app/Http/Controllers/InventarioController.php:1287
  * @route '/api/inventario/ajustes-masivos'
  */
 importarAjustesMasivos.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ importarAjustesMasivos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::importarAjustesMasivos
- * @see app/Http/Controllers/InventarioController.php:1283
+ * @see app/Http/Controllers/InventarioController.php:1287
  * @route '/api/inventario/ajustes-masivos'
  */
 importarAjustesMasivos.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ importarAjustesMasivos.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
     /**
 * @see \App\Http\Controllers\InventarioController::importarAjustesMasivos
- * @see app/Http/Controllers/InventarioController.php:1283
+ * @see app/Http/Controllers/InventarioController.php:1287
  * @route '/api/inventario/ajustes-masivos'
  */
     const importarAjustesMasivosForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ importarAjustesMasivos.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
             /**
 * @see \App\Http\Controllers\InventarioController::importarAjustesMasivos
- * @see app/Http/Controllers/InventarioController.php:1283
+ * @see app/Http/Controllers/InventarioController.php:1287
  * @route '/api/inventario/ajustes-masivos'
  */
         importarAjustesMasivosForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -56,7 +56,7 @@ importarAjustesMasivos.post = (options?: RouteQueryOptions): RouteDefinition<'po
     importarAjustesMasivos.form = importarAjustesMasivosForm
 /**
 * @see \App\Http\Controllers\InventarioController::listarCargosCsv
- * @see app/Http/Controllers/InventarioController.php:1462
+ * @see app/Http/Controllers/InventarioController.php:1466
  * @route '/api/inventario/cargos-csv'
  */
 export const listarCargosCsv = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -71,7 +71,7 @@ listarCargosCsv.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::listarCargosCsv
- * @see app/Http/Controllers/InventarioController.php:1462
+ * @see app/Http/Controllers/InventarioController.php:1466
  * @route '/api/inventario/cargos-csv'
  */
 listarCargosCsv.url = (options?: RouteQueryOptions) => {
@@ -80,7 +80,7 @@ listarCargosCsv.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::listarCargosCsv
- * @see app/Http/Controllers/InventarioController.php:1462
+ * @see app/Http/Controllers/InventarioController.php:1466
  * @route '/api/inventario/cargos-csv'
  */
 listarCargosCsv.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -89,7 +89,7 @@ listarCargosCsv.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => (
 })
 /**
 * @see \App\Http\Controllers\InventarioController::listarCargosCsv
- * @see app/Http/Controllers/InventarioController.php:1462
+ * @see app/Http/Controllers/InventarioController.php:1466
  * @route '/api/inventario/cargos-csv'
  */
 listarCargosCsv.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -99,7 +99,7 @@ listarCargosCsv.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
     /**
 * @see \App\Http\Controllers\InventarioController::listarCargosCsv
- * @see app/Http/Controllers/InventarioController.php:1462
+ * @see app/Http/Controllers/InventarioController.php:1466
  * @route '/api/inventario/cargos-csv'
  */
     const listarCargosCsvForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -109,7 +109,7 @@ listarCargosCsv.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
             /**
 * @see \App\Http\Controllers\InventarioController::listarCargosCsv
- * @see app/Http/Controllers/InventarioController.php:1462
+ * @see app/Http/Controllers/InventarioController.php:1466
  * @route '/api/inventario/cargos-csv'
  */
         listarCargosCsvForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -118,7 +118,7 @@ listarCargosCsv.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
         })
             /**
 * @see \App\Http\Controllers\InventarioController::listarCargosCsv
- * @see app/Http/Controllers/InventarioController.php:1462
+ * @see app/Http/Controllers/InventarioController.php:1466
  * @route '/api/inventario/cargos-csv'
  */
         listarCargosCsvForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -134,7 +134,7 @@ listarCargosCsv.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
     listarCargosCsv.form = listarCargosCsvForm
 /**
 * @see \App\Http\Controllers\InventarioController::obtenerDetalleCargo
- * @see app/Http/Controllers/InventarioController.php:1506
+ * @see app/Http/Controllers/InventarioController.php:1510
  * @route '/api/inventario/cargos-csv/{cargo}'
  */
 export const obtenerDetalleCargo = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -149,7 +149,7 @@ obtenerDetalleCargo.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::obtenerDetalleCargo
- * @see app/Http/Controllers/InventarioController.php:1506
+ * @see app/Http/Controllers/InventarioController.php:1510
  * @route '/api/inventario/cargos-csv/{cargo}'
  */
 obtenerDetalleCargo.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -182,7 +182,7 @@ obtenerDetalleCargo.url = (args: { cargo: number | { id: number } } | [cargo: nu
 
 /**
 * @see \App\Http\Controllers\InventarioController::obtenerDetalleCargo
- * @see app/Http/Controllers/InventarioController.php:1506
+ * @see app/Http/Controllers/InventarioController.php:1510
  * @route '/api/inventario/cargos-csv/{cargo}'
  */
 obtenerDetalleCargo.get = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -191,7 +191,7 @@ obtenerDetalleCargo.get = (args: { cargo: number | { id: number } } | [cargo: nu
 })
 /**
 * @see \App\Http\Controllers\InventarioController::obtenerDetalleCargo
- * @see app/Http/Controllers/InventarioController.php:1506
+ * @see app/Http/Controllers/InventarioController.php:1510
  * @route '/api/inventario/cargos-csv/{cargo}'
  */
 obtenerDetalleCargo.head = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -201,7 +201,7 @@ obtenerDetalleCargo.head = (args: { cargo: number | { id: number } } | [cargo: n
 
     /**
 * @see \App\Http\Controllers\InventarioController::obtenerDetalleCargo
- * @see app/Http/Controllers/InventarioController.php:1506
+ * @see app/Http/Controllers/InventarioController.php:1510
  * @route '/api/inventario/cargos-csv/{cargo}'
  */
     const obtenerDetalleCargoForm = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -211,7 +211,7 @@ obtenerDetalleCargo.head = (args: { cargo: number | { id: number } } | [cargo: n
 
             /**
 * @see \App\Http\Controllers\InventarioController::obtenerDetalleCargo
- * @see app/Http/Controllers/InventarioController.php:1506
+ * @see app/Http/Controllers/InventarioController.php:1510
  * @route '/api/inventario/cargos-csv/{cargo}'
  */
         obtenerDetalleCargoForm.get = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -220,7 +220,7 @@ obtenerDetalleCargo.head = (args: { cargo: number | { id: number } } | [cargo: n
         })
             /**
 * @see \App\Http\Controllers\InventarioController::obtenerDetalleCargo
- * @see app/Http/Controllers/InventarioController.php:1506
+ * @see app/Http/Controllers/InventarioController.php:1510
  * @route '/api/inventario/cargos-csv/{cargo}'
  */
         obtenerDetalleCargoForm.head = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -236,7 +236,7 @@ obtenerDetalleCargo.head = (args: { cargo: number | { id: number } } | [cargo: n
     obtenerDetalleCargo.form = obtenerDetalleCargoForm
 /**
 * @see \App\Http\Controllers\InventarioController::revertirCargo
- * @see app/Http/Controllers/InventarioController.php:1546
+ * @see app/Http/Controllers/InventarioController.php:1550
  * @route '/api/inventario/cargos-csv/{cargo}/revertir'
  */
 export const revertirCargo = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -251,7 +251,7 @@ revertirCargo.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::revertirCargo
- * @see app/Http/Controllers/InventarioController.php:1546
+ * @see app/Http/Controllers/InventarioController.php:1550
  * @route '/api/inventario/cargos-csv/{cargo}/revertir'
  */
 revertirCargo.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -284,7 +284,7 @@ revertirCargo.url = (args: { cargo: number | { id: number } } | [cargo: number |
 
 /**
 * @see \App\Http\Controllers\InventarioController::revertirCargo
- * @see app/Http/Controllers/InventarioController.php:1546
+ * @see app/Http/Controllers/InventarioController.php:1550
  * @route '/api/inventario/cargos-csv/{cargo}/revertir'
  */
 revertirCargo.post = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -294,7 +294,7 @@ revertirCargo.post = (args: { cargo: number | { id: number } } | [cargo: number 
 
     /**
 * @see \App\Http\Controllers\InventarioController::revertirCargo
- * @see app/Http/Controllers/InventarioController.php:1546
+ * @see app/Http/Controllers/InventarioController.php:1550
  * @route '/api/inventario/cargos-csv/{cargo}/revertir'
  */
     const revertirCargoForm = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -304,7 +304,7 @@ revertirCargo.post = (args: { cargo: number | { id: number } } | [cargo: number 
 
             /**
 * @see \App\Http\Controllers\InventarioController::revertirCargo
- * @see app/Http/Controllers/InventarioController.php:1546
+ * @see app/Http/Controllers/InventarioController.php:1550
  * @route '/api/inventario/cargos-csv/{cargo}/revertir'
  */
         revertirCargoForm.post = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1368,7 +1368,7 @@ ajusteMasivoForm.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
     ajusteMasivoForm.form = ajusteMasivoFormForm
 /**
 * @see \App\Http\Controllers\InventarioController::historialCargasForm
- * @see app/Http/Controllers/InventarioController.php:1452
+ * @see app/Http/Controllers/InventarioController.php:1456
  * @route '/inventario/historial-cargas'
  */
 export const historialCargasForm = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1383,7 +1383,7 @@ historialCargasForm.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::historialCargasForm
- * @see app/Http/Controllers/InventarioController.php:1452
+ * @see app/Http/Controllers/InventarioController.php:1456
  * @route '/inventario/historial-cargas'
  */
 historialCargasForm.url = (options?: RouteQueryOptions) => {
@@ -1392,7 +1392,7 @@ historialCargasForm.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::historialCargasForm
- * @see app/Http/Controllers/InventarioController.php:1452
+ * @see app/Http/Controllers/InventarioController.php:1456
  * @route '/inventario/historial-cargas'
  */
 historialCargasForm.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1401,7 +1401,7 @@ historialCargasForm.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
 })
 /**
 * @see \App\Http\Controllers\InventarioController::historialCargasForm
- * @see app/Http/Controllers/InventarioController.php:1452
+ * @see app/Http/Controllers/InventarioController.php:1456
  * @route '/inventario/historial-cargas'
  */
 historialCargasForm.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1411,7 +1411,7 @@ historialCargasForm.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
     /**
 * @see \App\Http\Controllers\InventarioController::historialCargasForm
- * @see app/Http/Controllers/InventarioController.php:1452
+ * @see app/Http/Controllers/InventarioController.php:1456
  * @route '/inventario/historial-cargas'
  */
     const historialCargasFormForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1421,7 +1421,7 @@ historialCargasForm.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
             /**
 * @see \App\Http\Controllers\InventarioController::historialCargasForm
- * @see app/Http/Controllers/InventarioController.php:1452
+ * @see app/Http/Controllers/InventarioController.php:1456
  * @route '/inventario/historial-cargas'
  */
         historialCargasFormForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1430,7 +1430,7 @@ historialCargasForm.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
             /**
 * @see \App\Http\Controllers\InventarioController::historialCargasForm
- * @see app/Http/Controllers/InventarioController.php:1452
+ * @see app/Http/Controllers/InventarioController.php:1456
  * @route '/inventario/historial-cargas'
  */
         historialCargasFormForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
