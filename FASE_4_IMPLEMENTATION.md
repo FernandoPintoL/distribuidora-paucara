@@ -86,34 +86,85 @@ interface FilaAjusteCSV {
 
 #### Componentes React Actualizados
 
-1. **CargaMasivaAjustes.tsx**
+1. **CargaMasivaAjustes.tsx** ⭐ MEJORADO
    - Soporte para múltiples formatos (CSV, XLSX, ODS)
    - Uso de `parsearArchivo()` automático
    - Validación de extensiones
+   - **NUEVO:** Integración del componente InstruccionesAjustes
 
 2. **TablaAjustesPreview.tsx**
    - Una columna unificada para producto
    - Placeholder descriptivo: "SKU, nombre o código"
    - Búsqueda por producto
 
-3. **HistorialCargasCSV.tsx** & **DetalleCargoCSV.tsx**
+3. **InstruccionesAjustes.tsx** ⭐ NUEVO
+   - Panel expandible con instrucciones visuales
+   - Muestra valores reales de BD (tipos_ajuste, almacenes)
+   - Usa emojis para identificación clara
+   - Responsive design (grid multi-columna)
+   - Secciones por columna con ejemplos
+   - Notas importantes destacadas
+   - Información de formatos soportados
+
+4. **HistorialCargasCSV.tsx** & **DetalleCargoCSV.tsx**
    - Sin cambios (compatibles con nueva estructura)
 
-### 5. Cómo Usar
+### 5. Instrucciones Mejoradas
+
+#### Panel Expandible en la Interfaz
+Se agregó un componente visual `InstruccionesAjustes.tsx` que muestra:
+- ✅ Valores reales de tu BD (tipos de ajuste, almacenes)
+- ✅ Instrucciones claras por columna
+- ✅ Ejemplos prácticos
+- ✅ Notas importantes
+- ✅ Formatos soportados
+
+**Características:**
+- Panel que se expande/colapsa
+- Usa emojis para fácil identificación
+- Responsive (grid en desktop)
+- Integrado en la pantalla principal (no necesita descargar)
 
 #### Descargar Plantilla
 La plantilla CSV descargada ahora incluye:
 ```
 producto,cantidad_ajuste,tipo_ajuste,almacen,observacion
-PRD001,10,ENTRADA,Almacén 1,Recuento físico
-Producto B,5,SALIDA,almacen,Merma
+PRD001,10,AJUSTE_FISICO,Almacén Principal,Recuento físico
+Producto B,-5,CORRECCION,Depósito,Merma por vencimiento
+
+=== INSTRUCCIONES DE USO ===
+
+📦 COLUMNA "producto":
+Ingresa el SKU, nombre o código del producto
+Ejemplos válidos: PRD001, "Café Molido", CAR-050, codigo123
+La búsqueda es flexible: sin tildes, mayúsculas o minúsculas
+
+🔢 COLUMNA "cantidad_ajuste":
+Número positivo para ENTRADA, negativo para SALIDA
+Ejemplos: 10 (entrada), -5 (salida), 100, -50
+NO se acepta: 0 (cero)
+
+⚙️ COLUMNA "tipo_ajuste":
+Valores válidos (copia exactamente uno):
+  • AJUSTE_FISICO - Ajuste por Inventario Físico
+  • DONACION - Donación
+  • CORRECCION - Corrección de Error
+
+🏢 COLUMNA "almacen":
+Nombre del almacén registrado en el sistema
+Almacenes disponibles:
+  • Almacén Principal
+  • Depósito
+  • Sala de Ventas
 ```
 
-Con instrucciones incluidas sobre:
-- Cómo ingresar productos
+Con instrucciones sobre:
+- Cómo ingresar productos (SKU/nombre/código)
 - Formato de cantidad (positivo/negativo)
+- Valores reales de tipos de ajuste de tu BD
+- Valores reales de almacenes de tu BD
 - Búsqueda flexible
-- Manejo de tildes
+- Manejo de tildes y mayúsculas
 
 #### Crear un Archivo XLSX
 Excel / LibreOffice:
