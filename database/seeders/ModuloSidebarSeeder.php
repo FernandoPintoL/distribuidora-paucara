@@ -75,8 +75,9 @@ class ModuloSidebarSeeder extends Seeder
             ['titulo' => 'Transferencias', 'ruta' => '/inventario/transferencias', 'icono' => 'ArrowRightLeft', 'orden' => 7, 'permisos' => ['inventario.transferencias.index']],
             ['titulo' => 'Mermas', 'ruta' => '/inventario/mermas', 'icono' => 'Package2', 'orden' => 8, 'permisos' => ['inventario.mermas.index']],
             ['titulo' => 'Ajustes', 'ruta' => '/inventario/ajuste', 'icono' => 'Settings', 'orden' => 9, 'permisos' => ['inventario.ajuste.form']],
-            ['titulo' => 'Tipos de Ajuste', 'ruta' => '/inventario/tipos-ajuste-inventario', 'icono' => 'Sliders', 'orden' => 10, 'permisos' => ['inventario.tipos-ajuste.index']],
-            ['titulo' => 'Reportes', 'ruta' => '/inventario/reportes', 'icono' => 'FileText', 'orden' => 11, 'permisos' => ['reportes.inventario.stock-actual']],
+            ['titulo' => 'Carga Masiva', 'ruta' => '/inventario/ajuste-masivo', 'icono' => 'FileUp', 'orden' => 10, 'permisos' => ['inventario.ajuste.form']],
+            ['titulo' => 'Tipos de Ajuste', 'ruta' => '/inventario/tipos-ajuste-inventario', 'icono' => 'Sliders', 'orden' => 11, 'permisos' => ['inventario.tipos-ajuste.index']],
+            ['titulo' => 'Reportes', 'ruta' => '/inventario/reportes', 'icono' => 'FileText', 'orden' => 12, 'permisos' => ['reportes.inventario.stock-actual']],
         ];
 
         foreach ($submenuInventario as $submenu) {

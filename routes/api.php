@@ -35,6 +35,9 @@ Route::get('/empleados/determinar-rol', [EmpleadoApiController::class, 'determin
 // Catálogos públicos - GET only (para cargar datos en selects/dropdowns)
 // Nota: El control de acceso se hace a nivel de página web con permisos
 Route::get('/tipos-ajuste-inventario', [TipoAjusteInventarioController::class, 'index']);
+Route::get('/tipo-operaciones', function () {
+    return \App\Models\TipoOperacion::activos()->get();
+});
 
 // Procesar ajustes masivos (requiere autenticación)
 Route::middleware(['auth:sanctum,web'])->group(function () {

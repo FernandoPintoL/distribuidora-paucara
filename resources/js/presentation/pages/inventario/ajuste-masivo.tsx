@@ -8,6 +8,8 @@ import { router } from '@inertiajs/react';
 interface PageProps {
   productos: any[];
   tipos_ajuste: any[];
+  tipos_merma: any[];
+  tipos_operacion: any[];
   almacenes: any[];
 }
 
@@ -26,7 +28,7 @@ const breadcrumbs = [
   },
 ];
 
-export default function AjusteMasivo({ productos, tipos_ajuste, almacenes }: PageProps) {
+export default function AjusteMasivo({ productos, tipos_ajuste, tipos_merma, tipos_operacion, almacenes }: PageProps) {
   const { can } = useAuth();
 
   if (!can('inventario.ajuste.form')) {
@@ -44,16 +46,16 @@ export default function AjusteMasivo({ productos, tipos_ajuste, almacenes }: Pag
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Carga Masiva de Ajustes" />
+      <Head title="Carga Masiva de Operaciones de Inventario" />
       <div className="flex flex-col gap-6 p-4">
         {/* ENCABEZADO */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-              Carga Masiva de Ajustes
+              Carga Masiva de Operaciones
             </h2>
             <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-              Importa múltiples ajustes de inventario desde un archivo CSV
+              Importa múltiples operaciones de inventario (ajustes, compras, ventas, mermas) desde CSV, XLSX u ODS
             </p>
           </div>
           <div className="flex gap-2">
@@ -83,6 +85,7 @@ export default function AjusteMasivo({ productos, tipos_ajuste, almacenes }: Pag
           <CargaMasivaAjustes
             productos={productos}
             tiposAjuste={tipos_ajuste}
+            tiposMerma={tipos_merma}
             almacenes={almacenes}
             onCargaExitosa={() => {
               // Recargar la página después de 2 segundos
@@ -100,26 +103,26 @@ export default function AjusteMasivo({ productos, tipos_ajuste, almacenes }: Pag
               <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
               </svg>
-              Formato CSV requerido
+              Formato CSV, XLSX u ODS
             </h3>
             <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
               <li>
-                <strong>sku</strong> - Código único del producto (obligatorio)
+                <strong>producto</strong> - SKU, nombre o código del producto (obligatorio)
               </li>
               <li>
-                <strong>nombre_producto</strong> - Nombre del producto (opcional)
+                <strong>cantidad</strong> - Cantidad a ajustar (siempre positiva) (obligatorio)
               </li>
               <li>
-                <strong>cantidad_ajuste</strong> - Cantidad a ajustar (obligatorio)
+                <strong>tipo_operacion</strong> - Tipo de operación: ENTRADA_AJUSTE, SALIDA_AJUSTE, ENTRADA_COMPRA, SALIDA_VENTA, SALIDA_MERMA (obligatorio)
               </li>
               <li>
-                <strong>tipo_ajuste</strong> - Tipo de ajuste: ENTRADA, SALIDA, etc. (obligatorio)
+                <strong>tipo_motivo</strong> - Depende de la operación: tipo_ajuste, tipo_merma, proveedor, cliente, etc. (obligatorio)
               </li>
               <li>
                 <strong>almacen</strong> - Nombre del almacén (obligatorio)
               </li>
               <li>
-                <strong>observacion</strong> - Motivo del ajuste (obligatorio)
+                <strong>observacion</strong> - Observaciones o detalles adicionales (obligatorio)
               </li>
             </ul>
           </div>

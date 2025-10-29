@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
 import { FilaAjusteValidada } from '@/infrastructure/services/ajustesCSV.service';
 
+interface TipoOperacion {
+  id: number;
+  clave: string;
+  label: string;
+  direccion: 'entrada' | 'salida';
+  requiere_tipo_motivo: string | null;
+  requiere_proveedor: boolean;
+  requiere_cliente: boolean;
+}
+
 interface TablaAjustesPreviewProps {
   filas: FilaAjusteValidada[];
+  tiposOperacion: TipoOperacion[];
   tiposAjuste: any[];
+  tiposMerma: any[];
   almacenes: any[];
   productos: any[];
   onFilasActualizadas: (filasActualizadas: FilaAjusteValidada[]) => void;
@@ -11,7 +23,9 @@ interface TablaAjustesPreviewProps {
 
 export default function TablaAjustesPreview({
   filas: filasInicial,
+  tiposOperacion,
   tiposAjuste,
+  tiposMerma,
   almacenes,
   productos,
   onFilasActualizadas,
@@ -24,24 +38,86 @@ export default function TablaAjustesPreview({
     f.producto.toLowerCase().includes(busqueda.toLowerCase())
   );
 
+  /**
+   * Obtiene los valores válidos para el campo tipo_motivo basado en la operación seleccionada
+   */
+  const obtenerOpcionesMotivo = (tipoOperacionClave: string): { id: any; label: string; value: string }[] => {
+    const operacion = tiposOperacion.find(o => o.clave === tipoOperacionClave);
+    if (!operacion) return [];
+
+    if (operacion.requiere_tipo_motivo === 'tipo_ajuste') {
+      return tiposAjuste.map(t => ({
+        id: t.id,
+        label: `${t.clave} - ${t.label}`,
+        value: t.clave,
+      }));
+    } else if (operacion.requiere_tipo_motivo === 'tipo_merma') {
+      return tiposMerma.map(t => ({
+        id: t.id,
+        label: `${t.clave} - ${t.label}`,
+        value: t.clave,
+      }));
+    } else if (operacion.requiere_proveedor || operacion.requiere_cliente) {
+      // Para proveedor/cliente, el tipo_motivo es texto libre
+      return [];
+    }
+    return [];
+  };
+
   const handleCambio = (index: number, campo: keyof FilaAjusteValidada, valor: any) => {
     const filasActualizadas = [...filas];
     const fila = filasActualizadas[index];
 
     // Actualizar campo
-    if (campo === 'cantidad_ajuste') {
+    if (campo === 'cantidad') {
       fila[campo] = valor === '' ? '' : parseInt(valor, 10);
     } else {
       fila[campo] = valor;
     }
 
+    // Si cambia el tipo_operacion, resetear tipo_motivo
+    if (campo === 'tipo_operacion') {
+      fila.tipo_motivo = '';
+    }
+
     // Revalidar esta fila
     const nuevosErrores: string[] = [];
 
-    if (campo === 'cantidad_ajuste') {
-      const cantidad = parseInt(String(fila.cantidad_ajuste), 10);
-      if (isNaN(cantidad) || cantidad === 0) {
-        nuevosErrores.push('La cantidad debe ser un número diferente de 0');
+    if (campo === 'cantidad' || campo === 'tipo_operacion' || campo === 'tipo_motivo') {
+      const cantidad = parseInt(String(fila.cantidad), 10);
+      if (isNaN(cantidad) || cantidad <= 0) {
+        nuevosErrores.push('La cantidad debe ser un número entero positivo');
+      }
+
+      // Validar tipo_operacion
+      const operacion = tiposOperacion.find(o => o.clave === fila.tipo_operacion);
+      if (!operacion) {
+        nuevosErrores.push('Tipo de operación no válido');
+      } else {
+        fila.tipo_operacion_id = operacion.id;
+
+        // Validar tipo_motivo según la operación
+        if (operacion.requiere_tipo_motivo === 'tipo_ajuste') {
+          const tipoAjuste = tiposAjuste.find(t => t.clave === fila.tipo_motivo);
+          if (!tipoAjuste) {
+            nuevosErrores.push(`Tipo de ajuste no válido para esta operación`);
+          } else {
+            fila.tipo_motivo_id = tipoAjuste.id;
+          }
+        } else if (operacion.requiere_tipo_motivo === 'tipo_merma') {
+          const tipoMerma = tiposMerma.find(t => t.clave === fila.tipo_motivo);
+          if (!tipoMerma) {
+            nuevosErrores.push(`Tipo de merma no válido para esta operación`);
+          } else {
+            fila.tipo_motivo_id = tipoMerma.id;
+          }
+        } else if (operacion.requiere_proveedor || operacion.requiere_cliente) {
+          if (!fila.tipo_motivo || fila.tipo_motivo.trim().length === 0) {
+            nuevosErrores.push(
+              `${operacion.requiere_proveedor ? 'Proveedor' : 'Cliente'} es requerido`
+            );
+          }
+        }
       }
     }
 
@@ -51,18 +127,6 @@ export default function TablaAjustesPreview({
         nuevosErrores.push(`Almacén "${fila.almacen}" no encontrado`);
       } else {
         fila.almacen_id = almacen.id;
-      }
-    }
-
-    if (campo === 'tipo_ajuste') {
-      const tipo = tiposAjuste.find(t =>
-        t.clave?.toLowerCase() === fila.tipo_ajuste.toLowerCase() ||
-        t.label?.toLowerCase() === fila.tipo_ajuste.toLowerCase()
-      );
-      if (!tipo) {
-        nuevosErrores.push(`Tipo de ajuste "${fila.tipo_ajuste}" no válido`);
-      } else {
-        fila.tipo_ajuste_id = tipo.id;
       }
     }
 
@@ -116,25 +180,28 @@ export default function TablaAjustesPreview({
         <table className="min-w-full text-sm border-collapse">
           <thead>
             <tr className="bg-gray-100 dark:bg-gray-900">
-              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100">
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">
                 Fila
               </th>
-              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100">
-                Producto (SKU/Nombre/Código)
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                Producto
               </th>
-              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center font-semibold text-gray-900 dark:text-gray-100">
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center font-semibold text-gray-900 dark:text-gray-100 text-xs">
                 Cantidad
               </th>
-              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100">
-                Tipo
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                Tipo Operación
               </th>
-              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100">
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">
+                Tipo Motivo
+              </th>
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">
                 Almacén
               </th>
-              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100">
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">
                 Observación
               </th>
-              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center font-semibold text-gray-900 dark:text-gray-100">
+              <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center font-semibold text-gray-900 dark:text-gray-100 text-xs">
                 Acción
               </th>
             </tr>
@@ -176,8 +243,8 @@ export default function TablaAjustesPreview({
                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-center">
                       <input
                         type="number"
-                        value={fila.cantidad_ajuste}
-                        onChange={(e) => handleCambio(indexOriginal, 'cantidad_ajuste', e.target.value)}
+                        value={fila.cantidad}
+                        onChange={(e) => handleCambio(indexOriginal, 'cantidad', e.target.value)}
                         onFocus={() => setFilaEditando(indexOriginal)}
                         onBlur={() => setFilaEditando(null)}
                         className={`w-full px-2 py-1 text-sm border rounded text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
@@ -190,8 +257,8 @@ export default function TablaAjustesPreview({
 
                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
                       <select
-                        value={fila.tipo_ajuste}
-                        onChange={(e) => handleCambio(indexOriginal, 'tipo_ajuste', e.target.value)}
+                        value={fila.tipo_operacion}
+                        onChange={(e) => handleCambio(indexOriginal, 'tipo_operacion', e.target.value)}
                         onFocus={() => setFilaEditando(indexOriginal)}
                         onBlur={() => setFilaEditando(null)}
                         className={`w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
@@ -200,13 +267,50 @@ export default function TablaAjustesPreview({
                             : 'border-red-300 dark:border-red-600 focus:border-red-500'
                         }`}
                       >
-                        <option value="">Selecciona tipo...</option>
-                        {tiposAjuste.map((tipo) => (
-                          <option key={tipo.id} value={tipo.clave}>
-                            {tipo.label}
+                        <option value="">Selecciona operación...</option>
+                        {tiposOperacion.map((op) => (
+                          <option key={op.id} value={op.clave}>
+                            {op.label}
                           </option>
                         ))}
                       </select>
+                    </td>
+
+                    <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
+                      {fila.tipo_operacion && obtenerOpcionesMotivo(fila.tipo_operacion).length > 0 ? (
+                        <select
+                          value={fila.tipo_motivo}
+                          onChange={(e) => handleCambio(indexOriginal, 'tipo_motivo', e.target.value)}
+                          onFocus={() => setFilaEditando(indexOriginal)}
+                          onBlur={() => setFilaEditando(null)}
+                          className={`w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                            esValida
+                              ? 'border-gray-300 dark:border-gray-600 focus:border-blue-500'
+                              : 'border-red-300 dark:border-red-600 focus:border-red-500'
+                          }`}
+                        >
+                          <option value="">Selecciona...</option>
+                          {obtenerOpcionesMotivo(fila.tipo_operacion).map((opcion) => (
+                            <option key={opcion.id} value={opcion.value}>
+                              {opcion.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={fila.tipo_motivo}
+                          onChange={(e) => handleCambio(indexOriginal, 'tipo_motivo', e.target.value)}
+                          onFocus={() => setFilaEditando(indexOriginal)}
+                          onBlur={() => setFilaEditando(null)}
+                          placeholder="Proveedor/Cliente o motivo"
+                          className={`w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                            esValida
+                              ? 'border-gray-300 dark:border-gray-600 focus:border-blue-500'
+                              : 'border-red-300 dark:border-red-600 focus:border-red-500'
+                          }`}
+                        />
+                      )}
                     </td>
 
                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
@@ -263,7 +367,7 @@ export default function TablaAjustesPreview({
                   {/* Mostrar errores debajo de la fila */}
                   {!esValida && (
                     <tr className="bg-red-50 dark:bg-red-900/20 border-b border-gray-300 dark:border-gray-600">
-                      <td colSpan={8} className="px-3 py-2">
+                      <td colSpan={9} className="px-3 py-2">
                         <div className="space-y-1">
                           {fila.errores.map((error, i) => (
                             <div key={i} className="text-red-700 dark:text-red-300 text-xs flex items-start">

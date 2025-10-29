@@ -4,8 +4,9 @@
 
 export interface FilaAjusteCSV {
   producto: string; // SKU, nombre o código para búsqueda flexible
-  cantidad_ajuste: string | number;
-  tipo_ajuste: string;
+  cantidad: string | number; // Siempre positiva
+  tipo_operacion: string; // ENTRADA_AJUSTE, SALIDA_AJUSTE, ENTRADA_COMPRA, SALIDA_VENTA, SALIDA_MERMA
+  tipo_motivo: string; // tipo_ajuste, tipo_merma, proveedor, cliente, o similar según operación
   almacen: string;
   observacion: string;
 }
@@ -15,7 +16,8 @@ export interface FilaAjusteValidada extends FilaAjusteCSV {
   valido: boolean;
   errores: string[];
   producto_id?: number;
-  tipo_ajuste_id?: number;
+  tipo_operacion_id?: number;
+  tipo_motivo_id?: number;
   almacen_id?: number;
 }
 
@@ -110,8 +112,8 @@ class AjustesCSVService {
     // Obtener encabezados
     const encabezados = lineas[0].toLowerCase().split(',').map(h => h.trim());
 
-    // Validar encabezados requeridos (ahora usa "producto" en lugar de "sku" y "nombre_producto")
-    const encabezadosRequeridos = ['producto', 'cantidad_ajuste', 'tipo_ajuste', 'almacen'];
+    // Validar encabezados requeridos - nuevo formato dinámico
+    const encabezadosRequeridos = ['producto', 'cantidad', 'tipo_operacion', 'tipo_motivo', 'almacen'];
     const encabezadosFaltantes = encabezadosRequeridos.filter(
       e => !encabezados.includes(e)
     );
@@ -135,8 +137,9 @@ class AjustesCSVService {
 
       const fila: FilaAjusteCSV = {
         producto: valores[encabezados.indexOf('producto')] || '',
-        cantidad_ajuste: valores[encabezados.indexOf('cantidad_ajuste')] || '',
-        tipo_ajuste: valores[encabezados.indexOf('tipo_ajuste')] || '',
+        cantidad: valores[encabezados.indexOf('cantidad')] || '',
+        tipo_operacion: valores[encabezados.indexOf('tipo_operacion')] || '',
+        tipo_motivo: valores[encabezados.indexOf('tipo_motivo')] || '',
         almacen: valores[encabezados.indexOf('almacen')] || '',
         observacion: valores[encabezados.indexOf('observacion')] || 'Carga masiva CSV',
       };
@@ -152,12 +155,48 @@ class AjustesCSVService {
   }
 
   /**
+   * Busca una operación por clave de forma flexible
+   */
+  private buscarOperacion(busqueda: string, operaciones: any[]): any | null {
+    const busquedaNormalizada = this.normalizarTexto(busqueda);
+
+    // Búsqueda exacta por clave
+    let operacion = operaciones.find(
+      o => this.normalizarTexto(o.clave) === busquedaNormalizada
+    );
+    if (operacion) return operacion;
+
+    // Búsqueda exacta por label
+    operacion = operaciones.find(
+      o => this.normalizarTexto(o.label) === busquedaNormalizada
+    );
+    if (operacion) return operacion;
+
+    // Búsqueda parcial por clave
+    operacion = operaciones.find(
+      o => this.normalizarTexto(o.clave).includes(busquedaNormalizada)
+    );
+    if (operacion) return operacion;
+
+    // Búsqueda parcial por label
+    operacion = operaciones.find(
+      o => this.normalizarTexto(o.label).includes(busquedaNormalizada)
+    );
+    if (operacion) return operacion;
+
+    return null;
+  }
+
+  /**
    * Valida las filas del CSV contra la base de datos
+   * Requiere operaciones, productos, tipos_ajuste, tipos_merma, almacenes
    */
   async validarFilas(
     filas: FilaAjusteCSV[],
     productos: any[],
+    tiposOperacion: any[],
     tiposAjuste: any[],
+    tiposMerma: any[],
     almacenes: any[]
   ): Promise<ResultadoValidacion> {
     const filasValidas: FilaAjusteValidada[] = [];
@@ -183,27 +222,71 @@ class AjustesCSVService {
         productosProcessados.add(producto.sku);
       }
 
-      // Validar Tipo de Ajuste (también con normalización)
-      let tipoAjuste = tiposAjuste.find(t =>
-        this.normalizarTexto(t.clave) === this.normalizarTexto(fila.tipo_ajuste) ||
-        this.normalizarTexto(t.label) === this.normalizarTexto(fila.tipo_ajuste)
-      );
-
-      // Si no encuentra por normalización exacta, busca parcial
-      if (!tipoAjuste) {
-        tipoAjuste = tiposAjuste.find(t =>
-          this.normalizarTexto(t.clave).includes(this.normalizarTexto(fila.tipo_ajuste)) ||
-          this.normalizarTexto(t.label).includes(this.normalizarTexto(fila.tipo_ajuste))
-        );
-      }
-
-      if (!tipoAjuste) {
+      // Validar Tipo de Operación
+      const operacion = this.buscarOperacion(fila.tipo_operacion, tiposOperacion);
+      if (!operacion) {
         filaValidada.errores.push(
-          `Tipo de ajuste "${fila.tipo_ajuste}" no encontrado. Valores válidos: ${tiposAjuste.map(t => t.clave).join(', ')}`
+          `Tipo de operación "${fila.tipo_operacion}" no encontrado. Valores válidos: ${tiposOperacion.map(o => o.clave).join(', ')}`
         );
         filaValidada.valido = false;
       } else {
-        filaValidada.tipo_ajuste_id = tipoAjuste.id;
+        filaValidada.tipo_operacion_id = operacion.id;
+
+        // Validar Tipo Motivo según los requerimientos de la operación
+        if (operacion.requiere_tipo_motivo === 'tipo_ajuste') {
+          // Validar contra tipos de ajuste
+          let tipoAjuste = tiposAjuste.find(t =>
+            this.normalizarTexto(t.clave) === this.normalizarTexto(fila.tipo_motivo) ||
+            this.normalizarTexto(t.label) === this.normalizarTexto(fila.tipo_motivo)
+          );
+
+          if (!tipoAjuste) {
+            tipoAjuste = tiposAjuste.find(t =>
+              this.normalizarTexto(t.clave).includes(this.normalizarTexto(fila.tipo_motivo)) ||
+              this.normalizarTexto(t.label).includes(this.normalizarTexto(fila.tipo_motivo))
+            );
+          }
+
+          if (!tipoAjuste) {
+            filaValidada.errores.push(
+              `Tipo de ajuste "${fila.tipo_motivo}" no encontrado para esta operación. Valores válidos: ${tiposAjuste.map(t => t.clave).join(', ')}`
+            );
+            filaValidada.valido = false;
+          } else {
+            filaValidada.tipo_motivo_id = tipoAjuste.id;
+          }
+        } else if (operacion.requiere_tipo_motivo === 'tipo_merma') {
+          // Validar contra tipos de merma
+          let tipoMerma = tiposMerma.find(t =>
+            this.normalizarTexto(t.clave) === this.normalizarTexto(fila.tipo_motivo) ||
+            this.normalizarTexto(t.label) === this.normalizarTexto(fila.tipo_motivo)
+          );
+
+          if (!tipoMerma) {
+            tipoMerma = tiposMerma.find(t =>
+              this.normalizarTexto(t.clave).includes(this.normalizarTexto(fila.tipo_motivo)) ||
+              this.normalizarTexto(t.label).includes(this.normalizarTexto(fila.tipo_motivo))
+            );
+          }
+
+          if (!tipoMerma) {
+            filaValidada.errores.push(
+              `Tipo de merma "${fila.tipo_motivo}" no encontrado para esta operación. Valores válidos: ${tiposMerma.map(t => t.clave).join(', ')}`
+            );
+            filaValidada.valido = false;
+          } else {
+            filaValidada.tipo_motivo_id = tipoMerma.id;
+          }
+        } else if (operacion.requiere_proveedor || operacion.requiere_cliente) {
+          // Para ENTRADA_COMPRA o SALIDA_VENTA, el tipo_motivo es un texto libre (proveedor/cliente name)
+          // Validar que no esté vacío
+          if (!fila.tipo_motivo || fila.tipo_motivo.trim().length === 0) {
+            filaValidada.errores.push(
+              `${operacion.requiere_proveedor ? 'Proveedor' : 'Cliente'} es requerido para esta operación`
+            );
+            filaValidada.valido = false;
+          }
+        }
       }
 
       // Validar Almacén (búsqueda flexible con normalización)
@@ -217,10 +300,10 @@ class AjustesCSVService {
         filaValidada.almacen_id = almacen.id;
       }
 
-      // Validar Cantidad
-      const cantidad = parseInt(String(fila.cantidad_ajuste), 10);
-      if (isNaN(cantidad) || cantidad === 0) {
-        filaValidada.errores.push('La cantidad debe ser un número entero diferente de 0');
+      // Validar Cantidad (siempre positiva)
+      const cantidad = parseInt(String(fila.cantidad), 10);
+      if (isNaN(cantidad) || cantidad <= 0) {
+        filaValidada.errores.push('La cantidad debe ser un número entero positivo');
         filaValidada.valido = false;
       }
 
@@ -245,7 +328,7 @@ class AjustesCSVService {
       resumen: {
         productosUnicos: productosProcessados.size,
         ajustesTotales: filasValidas.length,
-        cantidadTotal: filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad_ajuste), 10), 0),
+        cantidadTotal: filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0),
       },
     };
   }
@@ -253,18 +336,26 @@ class AjustesCSVService {
   /**
    * Genera una plantilla CSV para descargar con valores reales
    */
-  generarPlantillaCSV(tiposAjuste: any[], almacenes: any[]): string {
-    const encabezados = ['producto', 'cantidad_ajuste', 'tipo_ajuste', 'almacen', 'observacion'];
+  generarPlantillaCSV(
+    tiposOperacion: any[],
+    tiposAjuste: any[],
+    tiposMerma: any[],
+    almacenes: any[]
+  ): string {
+    const encabezados = ['producto', 'cantidad', 'tipo_operacion', 'tipo_motivo', 'almacen', 'observacion'];
 
-    // Seleccionar tipo de ajuste y almacén para ejemplos
-    const tipoEjemplo = tiposAjuste.length > 0 ? tiposAjuste[0].clave : 'AJUSTE_FISICO';
+    // Seleccionar operaciones y almacén para ejemplos
+    const operacionAjuste = tiposOperacion.find(o => o.clave === 'ENTRADA_AJUSTE') || tiposOperacion[0];
+    const operacionMerma = tiposOperacion.find(o => o.clave === 'SALIDA_MERMA') || tiposOperacion[0];
+    const tipoAjusteEjemplo = tiposAjuste.length > 0 ? tiposAjuste[0].clave : 'AJUSTE_FISICO';
+    const tipoMermaEjemplo = tiposMerma.length > 0 ? tiposMerma[0].clave : 'VENCIMIENTO';
     const almacenEjemplo = almacenes.length > 0 ? almacenes[0].nombre : 'Almacén Principal';
 
-    // Crear filas de ejemplo
+    // Crear filas de ejemplo con nuevo formato
     const ejemplos = [
-      ['PRD001', '10', tipoEjemplo, almacenEjemplo, 'Recuento físico'],
-      ['Producto B', '-5', tiposAjuste.length > 1 ? tiposAjuste[1].clave : 'CORRECCION', almacenes.length > 1 ? almacenes[1].nombre : almacenEjemplo, 'Merma por vencimiento'],
-      ['', '', '', '', ''],
+      ['PRO0001', '10', operacionAjuste?.clave || 'ENTRADA_AJUSTE', tipoAjusteEjemplo, almacenEjemplo, 'Recuento físico'],
+      ['Producto B', '5', operacionMerma?.clave || 'SALIDA_MERMA', tipoMermaEjemplo, almacenes.length > 1 ? almacenes[1].nombre : almacenEjemplo, 'Producto vencido'],
+      ['', '', '', '', '', ''],
     ];
 
     let csv = encabezados.join(',') + '\n';
@@ -272,54 +363,6 @@ class AjustesCSVService {
     ejemplos.forEach(fila => {
       csv += fila.join(',') + '\n';
     });
-
-    // Agregar sección de INSTRUCCIONES
-    csv += '\n=== INSTRUCCIONES DE USO ===\n\n';
-
-    // Columna Producto
-    csv += '📦 COLUMNA "producto":\n';
-    csv += 'Ingresa el SKU, nombre o código del producto\n';
-    csv += 'Ejemplos válidos: PRD001, "Café Molido", CAR-050, codigo123\n';
-    csv += 'La búsqueda es flexible: sin tildes, mayúsculas o minúsculas\n\n';
-
-    // Columna Cantidad
-    csv += '🔢 COLUMNA "cantidad_ajuste":\n';
-    csv += 'Número positivo para ENTRADA, negativo para SALIDA\n';
-    csv += 'Ejemplos: 10 (entrada), -5 (salida), 100, -50\n';
-    csv += 'NO se acepta: 0 (cero)\n\n';
-
-    // Columna Tipo Ajuste
-    csv += '⚙️ COLUMNA "tipo_ajuste":\n';
-    csv += 'Valores válidos (copia exactamente uno):\n';
-    tiposAjuste.forEach(t => {
-      csv += `  • ${t.clave} - ${t.label}\n`;
-    });
-    csv += 'La búsqueda es flexible: prueba "AJUSTE" o "ajuste" o "ajuste_fisico"\n\n';
-
-    // Columna Almacén
-    csv += '🏢 COLUMNA "almacen":\n';
-    csv += 'Nombre del almacén registrado en el sistema\n';
-    csv += 'Almacenes disponibles:\n';
-    almacenes.forEach(a => {
-      csv += `  • ${a.nombre}\n`;
-    });
-    csv += 'La búsqueda es flexible: puedes escribir "almacen" o "Almacén"\n\n';
-
-    // Columna Observación
-    csv += '📝 COLUMNA "observacion":\n';
-    csv += 'Descripción o motivo del ajuste (máximo 500 caracteres)\n';
-    csv += 'Ejemplos: "Recuento físico diferencia", "Merma por vencimiento", "Error en entrada anterior"\n\n';
-
-    // Notas adicionales
-    csv += '⚡ NOTAS IMPORTANTES:\n';
-    csv += '• La búsqueda de productos y almacenes es FLEXIBLE (insensible a tildes y mayúsculas)\n';
-    csv += '• Ejemplos de búsqueda flexible:\n';
-    csv += '  - "Almacén" = "almacen" = "ALMACEN" = "almacenista"\n';
-    csv += '  - "Café" = "cafe" = "CAFE"\n';
-    csv += '  - "PRD001" = "prd001" = "Prd001"\n';
-    csv += '• Las columnas deben estar en este orden: producto, cantidad_ajuste, tipo_ajuste, almacen, observacion\n';
-    csv += '• NO incluyas espacios al inicio o final de los valores\n';
-    csv += '• Para valores con comas, enciérralos entre comillas: "Producto, Especial"\n\n';
 
     return csv;
   }
@@ -356,8 +399,8 @@ class AjustesCSVService {
 
             const encabezadosNormalizados = encabezados.map(h => h?.toLowerCase().trim() || '');
 
-            // Validar encabezados requeridos
-            const encabezadosRequeridos = ['producto', 'cantidad_ajuste', 'tipo_ajuste', 'almacen'];
+            // Validar encabezados requeridos - nuevo formato dinámico
+            const encabezadosRequeridos = ['producto', 'cantidad', 'tipo_operacion', 'tipo_motivo', 'almacen'];
             const encabezadosFaltantes = encabezadosRequeridos.filter(
               e => !encabezadosNormalizados.includes(e)
             );
@@ -386,8 +429,9 @@ class AjustesCSVService {
               if (Object.values(filaObj).some(v => v !== '' && v !== null)) {
                 filas.push({
                   producto: filaObj.producto || '',
-                  cantidad_ajuste: filaObj.cantidad_ajuste || '',
-                  tipo_ajuste: filaObj.tipo_ajuste || '',
+                  cantidad: filaObj.cantidad || '',
+                  tipo_operacion: filaObj.tipo_operacion || '',
+                  tipo_motivo: filaObj.tipo_motivo || '',
                   almacen: filaObj.almacen || '',
                   observacion: filaObj.observacion || 'Carga masiva XLSX',
                 });
@@ -451,8 +495,8 @@ class AjustesCSVService {
 
               const encabezados = (hoja.data[0] || []).map((h: any) => String(h || '').toLowerCase().trim());
 
-              // Validar encabezados requeridos
-              const encabezadosRequeridos = ['producto', 'cantidad_ajuste', 'tipo_ajuste', 'almacen'];
+              // Validar encabezados requeridos - nuevo formato dinámico
+              const encabezadosRequeridos = ['producto', 'cantidad', 'tipo_operacion', 'tipo_motivo', 'almacen'];
               const encabezadosFaltantes = encabezadosRequeridos.filter(
                 e => !encabezados.includes(e)
               );
@@ -476,8 +520,9 @@ class AjustesCSVService {
 
                 const filaObj: FilaAjusteCSV = {
                   producto: String(fila[encabezados.indexOf('producto')] || '').trim(),
-                  cantidad_ajuste: String(fila[encabezados.indexOf('cantidad_ajuste')] || '').trim(),
-                  tipo_ajuste: String(fila[encabezados.indexOf('tipo_ajuste')] || '').trim(),
+                  cantidad: String(fila[encabezados.indexOf('cantidad')] || '').trim(),
+                  tipo_operacion: String(fila[encabezados.indexOf('tipo_operacion')] || '').trim(),
+                  tipo_motivo: String(fila[encabezados.indexOf('tipo_motivo')] || '').trim(),
                   almacen: String(fila[encabezados.indexOf('almacen')] || '').trim(),
                   observacion: String(fila[encabezados.indexOf('observacion')] || 'Carga masiva ODS').trim(),
                 };

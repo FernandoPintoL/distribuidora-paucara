@@ -1,14 +1,26 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import ajustesCSVService, { ResultadoValidacion, FilaAjusteValidada } from '@/infrastructure/services/ajustesCSV.service';
 import TablaAjustesPreview from '@/presentation/components/Inventario/TablaAjustesPreview';
 import ResumenAjustes from '@/presentation/components/Inventario/ResumenAjustes';
-import InstruccionesAjustes from '@/presentation/components/Inventario/InstruccionesAjustes';
+import InstruccionesOperaciones from '@/presentation/components/Inventario/InstruccionesOperaciones';
 import axios from 'axios';
+
+interface TipoOperacion {
+  id: number;
+  clave: string;
+  label: string;
+  direccion: 'entrada' | 'salida';
+  requiere_tipo_motivo: string | null;
+  requiere_proveedor: boolean;
+  requiere_cliente: boolean;
+  descripcion: string;
+}
 
 interface CargaMasivaAjustesProps {
   productos: any[];
   tiposAjuste: any[];
+  tiposMerma: any[];
   almacenes: any[];
   onCargaExitosa?: () => void;
 }
@@ -16,6 +28,7 @@ interface CargaMasivaAjustesProps {
 export default function CargaMasivaAjustes({
   productos,
   tiposAjuste,
+  tiposMerma,
   almacenes,
   onCargaExitosa,
 }: CargaMasivaAjustesProps) {
@@ -27,9 +40,29 @@ export default function CargaMasivaAjustes({
   const [cargando, setCargando] = useState(false);
   const [progreso, setProgreso] = useState(0);
   const [paso, setPaso] = useState<'carga' | 'validacion' | 'edicion' | 'confirmacion' | 'procesando'>('carga');
+  const [tiposOperacion, setTiposOperacion] = useState<TipoOperacion[]>([]);
+
+  // Cargar tipos de operación desde API
+  useEffect(() => {
+    const cargarTiposOperacion = async () => {
+      try {
+        const response = await axios.get('/api/tipo-operaciones');
+        setTiposOperacion(response.data);
+      } catch (error) {
+        console.error('Error al cargar tipos de operación:', error);
+        toast.error('Error al cargar tipos de operación');
+      }
+    };
+    cargarTiposOperacion();
+  }, []);
 
   const handleDescargarPlantilla = () => {
-    const contenido = ajustesCSVService.generarPlantillaCSV(tiposAjuste, almacenes);
+    const contenido = ajustesCSVService.generarPlantillaCSV(
+      tiposOperacion,
+      tiposAjuste,
+      tiposMerma,
+      almacenes
+    );
     ajustesCSVService.descargarCSV(contenido, 'plantilla-ajustes-inventario.csv');
     toast.success('Plantilla descargada correctamente');
   };
@@ -65,11 +98,13 @@ export default function CargaMasivaAjustes({
       // Guardar los datos originales para la carga
       setDatosCsvOriginal(filas);
 
-      // Validar filas
+      // Validar filas con los nuevos tipos de operación
       const resultado = await ajustesCSVService.validarFilas(
         filas,
         productos,
+        tiposOperacion,
         tiposAjuste,
+        tiposMerma,
         almacenes
       );
 
@@ -140,10 +175,12 @@ export default function CargaMasivaAjustes({
         datos_csv: datosCsvOriginal,
         ajustes: filasValidas.map(fila => ({
           stock_producto_id: fila.producto_id,
-          tipo_ajuste_id: fila.tipo_ajuste_id,
+          tipo_operacion_id: fila.tipo_operacion_id,
+          tipo_motivo_id: fila.tipo_motivo_id,
           almacen_id: fila.almacen_id,
-          cantidad_ajuste: parseInt(String(fila.cantidad_ajuste), 10),
+          cantidad: parseInt(String(fila.cantidad), 10),
           observacion: fila.observacion,
+          tipo_motivo_valor: fila.tipo_motivo, // Para proveedor/cliente libre
         })),
       };
 
@@ -231,8 +268,14 @@ export default function CargaMasivaAjustes({
       {/* PASO 1: CARGA */}
       {paso === 'carga' && (
         <div className="space-y-6">
-          {/* Instrucciones de uso expandibles */}
-          <InstruccionesAjustes tiposAjuste={tiposAjuste} almacenes={almacenes} />
+          {/* Instrucciones de uso expandibles - Operaciones Dinámicas */}
+          {tiposOperacion.length > 0 && (
+            <InstruccionesOperaciones
+              tiposOperacion={tiposOperacion}
+              tiposAjuste={tiposAjuste}
+              tiposMerma={tiposMerma}
+            />
+          )}
 
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
             <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
@@ -375,7 +418,9 @@ export default function CargaMasivaAjustes({
             <div>
               <TablaAjustesPreview
                 filas={filasValidas}
+                tiposOperacion={tiposOperacion}
                 tiposAjuste={tiposAjuste}
+                tiposMerma={tiposMerma}
                 almacenes={almacenes}
                 productos={productos}
                 onFilasActualizadas={handleFilasActualizadas}
@@ -389,7 +434,7 @@ export default function CargaMasivaAjustes({
               <ResumenAjustes
                 filasValidas={filasValidas}
                 totalProductos={resultadoValidacion.resumen.productosUnicos}
-                cantidadTotal={filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad_ajuste), 10), 0)}
+                cantidadTotal={filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0)}
               />
             </div>
           )}
@@ -431,7 +476,7 @@ export default function CargaMasivaAjustes({
             <ResumenAjustes
               filasValidas={filasValidas}
               totalProductos={new Set(filasValidas.map(f => f.producto_id)).size}
-              cantidadTotal={filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad_ajuste), 10), 0)}
+              cantidadTotal={filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0)}
             />
           </div>
 

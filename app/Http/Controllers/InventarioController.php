@@ -16,6 +16,7 @@ use App\Models\Producto;
 use App\Models\StockProducto;
 use App\Models\TipoAjustInventario;
 use App\Models\TipoMerma;
+use App\Models\TipoOperacion;
 use App\Models\TransferenciaInventario;
 use App\Models\Vehiculo;
 use Illuminate\Http\JsonResponse;
@@ -1263,13 +1264,32 @@ class InventarioController extends Controller
     {
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
         $tiposAjuste = TipoAjustInventario::where('activo', true)->get();
+        $tiposMerma = TipoMerma::where('activo', true)->get();
+        $tiposOperacion = TipoOperacion::where('activo', true)->get();
         $productos = Producto::all(['id', 'sku', 'nombre'])->take(1000);
 
         return Inertia::render('inventario/ajuste-masivo', [
             'almacenes' => $almacenes,
             'tipos_ajuste' => $tiposAjuste,
+            'tipos_merma' => $tiposMerma,
+            'tipos_operacion' => $tiposOperacion,
             'productos' => $productos,
         ]);
+    }
+
+    /**
+     * Mapea la clave de tipo de operación al tipo de movimiento correcto
+     */
+    private function mapearTipoMovimiento(string $operacionClave): string
+    {
+        return match($operacionClave) {
+            'ENTRADA_AJUSTE' => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+            'SALIDA_AJUSTE' => MovimientoInventario::TIPO_SALIDA_AJUSTE,
+            'ENTRADA_COMPRA' => 'entrada_compra', // Puedes definir nuevas constantes si es necesario
+            'SALIDA_VENTA' => 'salida_venta',
+            'SALIDA_MERMA' => MovimientoInventario::TIPO_SALIDA_AJUSTE, // Usa el mismo tipo que salida_ajuste
+            default => MovimientoInventario::TIPO_ENTRADA_AJUSTE, // Default
+        };
     }
 
     /**
@@ -1280,10 +1300,12 @@ class InventarioController extends Controller
         $request->validate([
             'ajustes' => 'required|array|min:1',
             'ajustes.*.stock_producto_id' => 'required|integer|exists:stock_productos,id',
-            'ajustes.*.tipo_ajuste_id' => 'required|integer|exists:tipo_ajust_inventario,id',
+            'ajustes.*.tipo_operacion_id' => 'required|integer|exists:tipo_operaciones,id',
+            'ajustes.*.tipo_motivo_id' => 'nullable|integer', // Puede ser null para operaciones sin tipo motivo específico
             'ajustes.*.almacen_id' => 'required|integer|exists:almacenes,id',
-            'ajustes.*.cantidad_ajuste' => 'required|integer|not_in:0',
+            'ajustes.*.cantidad' => 'required|integer|min:1', // Siempre positiva
             'ajustes.*.observacion' => 'required|string|max:500',
+            'ajustes.*.tipo_motivo_valor' => 'nullable|string|max:255', // Para proveedor/cliente
             'nombre_archivo' => 'required|string|max:255',
             'datos_csv' => 'required|array', // Datos originales del CSV para almacenamiento
         ]);
@@ -1328,32 +1350,55 @@ class InventarioController extends Controller
                     // Obtener el stock del producto
                     $stock = StockProducto::findOrFail($ajuste['stock_producto_id']);
                     $producto = $stock->producto;
-                    $tipoAjuste = TipoAjustInventario::findOrFail($ajuste['tipo_ajuste_id']);
+
+                    // Obtener la operación para determinar la dirección
+                    $operacion = TipoOperacion::findOrFail($ajuste['tipo_operacion_id']);
 
                     // Generar número de ajuste
                     $numeroAjuste = $this->generarNumeroAjuste();
 
-                    // Determinar tipo de movimiento según el tipo de ajuste
-                    $cantidad = $ajuste['cantidad_ajuste'];
-                    $tipoMovimiento = $cantidad > 0
-                        ? MovimientoInventario::TIPO_ENTRADA_AJUSTE
-                        : MovimientoInventario::TIPO_SALIDA_AJUSTE;
+                    // Determinar tipo de movimiento según la dirección de la operación
+                    // La cantidad siempre es positiva, la dirección viene del tipo de operación
+                    $cantidad = $ajuste['cantidad'];
+                    $esEntrada = $operacion->direccion === 'entrada';
+
+                    // Mapear el tipo de operación al tipo de movimiento
+                    $tipoMovimiento = $this->mapearTipoMovimiento($operacion->clave);
 
                     // Crear movimiento de inventario
-                    $movimiento = MovimientoInventario::create([
+                    $movimientoData = [
                         'numero_documento' => $numeroAjuste,
                         'stock_producto_id' => $ajuste['stock_producto_id'],
                         'almacen_id' => $ajuste['almacen_id'],
-                        'cantidad' => abs($cantidad),
+                        'cantidad' => $cantidad,
                         'tipo' => $tipoMovimiento,
-                        'tipo_ajust_inventario_id' => $ajuste['tipo_ajuste_id'],
                         'observacion' => $ajuste['observacion'],
                         'usuario_id' => Auth::id(),
                         'fecha_movimiento' => now(),
-                    ]);
+                    ];
 
-                    // Actualizar stock
-                    $stock->cantidad += $cantidad;
+                    // Agregar campos específicos según el tipo de operación
+                    if ($operacion->requiere_tipo_motivo === 'tipo_ajuste' && $ajuste['tipo_motivo_id']) {
+                        $movimientoData['tipo_ajust_inventario_id'] = $ajuste['tipo_motivo_id'];
+                    } else if ($operacion->requiere_tipo_motivo === 'tipo_merma' && $ajuste['tipo_motivo_id']) {
+                        $movimientoData['tipo_merma_id'] = $ajuste['tipo_motivo_id'];
+                    } else if ($operacion->requiere_proveedor || $operacion->requiere_cliente) {
+                        // Guardar el nombre del proveedor/cliente en observación o campo adicional
+                        $movimientoData['observacion'] .= ' (' . $ajuste['tipo_motivo_valor'] . ')';
+                    }
+
+                    $movimiento = MovimientoInventario::create($movimientoData);
+
+                    // Actualizar stock según la dirección
+                    if ($esEntrada) {
+                        $stock->cantidad += $cantidad;
+                    } else {
+                        $stock->cantidad -= $cantidad;
+                        // Evitar stock negativo
+                        if ($stock->cantidad < 0) {
+                            $stock->cantidad = 0;
+                        }
+                    }
                     $stock->save();
 
                     $procesados++;
