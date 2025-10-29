@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FilaAjusteValidada } from '@/infrastructure/services/ajustesCSV.service';
+import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select';
 
 interface TipoOperacion {
   id: number;
@@ -62,6 +63,40 @@ export default function TablaAjustesPreview({
       return [];
     }
     return [];
+  };
+
+  /**
+   * Convierte las opciones de tipo operación al formato de SelectOption
+   */
+  const opcionesTiposOperacion = useMemo<SelectOption[]>(() => {
+    return tiposOperacion.map(op => ({
+      value: op.clave,
+      label: op.label,
+      description: op.clave,
+    }));
+  }, [tiposOperacion]);
+
+  /**
+   * Convierte las opciones de almacenes al formato de SelectOption
+   */
+  const opcionesAlmacenes = useMemo<SelectOption[]>(() => {
+    return almacenes.map(almacen => ({
+      value: almacen.nombre,
+      label: almacen.nombre,
+      description: almacen.activo ? 'Activo' : 'Inactivo',
+      disabled: !almacen.activo,
+    }));
+  }, [almacenes]);
+
+  /**
+   * Obtiene las opciones de motivo como SelectOption
+   */
+  const obtenerOpcionesMotivoBusqueda = (tipoOperacionClave: string): SelectOption[] => {
+    const opciones = obtenerOpcionesMotivo(tipoOperacionClave);
+    return opciones.map(op => ({
+      value: op.value,
+      label: op.label,
+    }));
   };
 
   const handleCambio = (index: number, campo: keyof FilaAjusteValidada, valor: any) => {
@@ -256,46 +291,28 @@ export default function TablaAjustesPreview({
                     </td>
 
                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
-                      <select
+                      <SearchSelect
                         value={fila.tipo_operacion}
-                        onChange={(e) => handleCambio(indexOriginal, 'tipo_operacion', e.target.value)}
-                        onFocus={() => setFilaEditando(indexOriginal)}
-                        onBlur={() => setFilaEditando(null)}
-                        className={`w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
-                          esValida
-                            ? 'border-gray-300 dark:border-gray-600 focus:border-blue-500'
-                            : 'border-red-300 dark:border-red-600 focus:border-red-500'
-                        }`}
-                      >
-                        <option value="">Selecciona operación...</option>
-                        {tiposOperacion.map((op) => (
-                          <option key={op.id} value={op.clave}>
-                            {op.label}
-                          </option>
-                        ))}
-                      </select>
+                        options={opcionesTiposOperacion}
+                        onChange={(value) => handleCambio(indexOriginal, 'tipo_operacion', value)}
+                        placeholder="Selecciona operación..."
+                        searchPlaceholder="Buscar operación..."
+                        emptyText="No hay operaciones disponibles"
+                        className="w-full"
+                      />
                     </td>
 
                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
                       {fila.tipo_operacion && obtenerOpcionesMotivo(fila.tipo_operacion).length > 0 ? (
-                        <select
+                        <SearchSelect
                           value={fila.tipo_motivo}
-                          onChange={(e) => handleCambio(indexOriginal, 'tipo_motivo', e.target.value)}
-                          onFocus={() => setFilaEditando(indexOriginal)}
-                          onBlur={() => setFilaEditando(null)}
-                          className={`w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
-                            esValida
-                              ? 'border-gray-300 dark:border-gray-600 focus:border-blue-500'
-                              : 'border-red-300 dark:border-red-600 focus:border-red-500'
-                          }`}
-                        >
-                          <option value="">Selecciona...</option>
-                          {obtenerOpcionesMotivo(fila.tipo_operacion).map((opcion) => (
-                            <option key={opcion.id} value={opcion.value}>
-                              {opcion.label}
-                            </option>
-                          ))}
-                        </select>
+                          options={obtenerOpcionesMotivoBusqueda(fila.tipo_operacion)}
+                          onChange={(value) => handleCambio(indexOriginal, 'tipo_motivo', value)}
+                          placeholder="Selecciona motivo..."
+                          searchPlaceholder="Buscar motivo..."
+                          emptyText="No hay opciones disponibles"
+                          className="w-full"
+                        />
                       ) : (
                         <input
                           type="text"
@@ -314,24 +331,15 @@ export default function TablaAjustesPreview({
                     </td>
 
                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
-                      <select
+                      <SearchSelect
                         value={fila.almacen}
-                        onChange={(e) => handleCambio(indexOriginal, 'almacen', e.target.value)}
-                        onFocus={() => setFilaEditando(indexOriginal)}
-                        onBlur={() => setFilaEditando(null)}
-                        className={`w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
-                          esValida
-                            ? 'border-gray-300 dark:border-gray-600 focus:border-blue-500'
-                            : 'border-red-300 dark:border-red-600 focus:border-red-500'
-                        }`}
-                      >
-                        <option value="">Selecciona almacén...</option>
-                        {almacenes.map((almacen) => (
-                          <option key={almacen.id} value={almacen.nombre}>
-                            {almacen.nombre}
-                          </option>
-                        ))}
-                      </select>
+                        options={opcionesAlmacenes}
+                        onChange={(value) => handleCambio(indexOriginal, 'almacen', value)}
+                        placeholder="Selecciona almacén..."
+                        searchPlaceholder="Buscar almacén..."
+                        emptyText="No hay almacenes disponibles"
+                        className="w-full"
+                      />
                     </td>
 
                     <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
