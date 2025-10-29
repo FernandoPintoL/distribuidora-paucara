@@ -251,15 +251,19 @@ class AjustesCSVService {
   }
 
   /**
-   * Genera una plantilla CSV para descargar
+   * Genera una plantilla CSV para descargar con valores reales
    */
   generarPlantillaCSV(tiposAjuste: any[], almacenes: any[]): string {
     const encabezados = ['producto', 'cantidad_ajuste', 'tipo_ajuste', 'almacen', 'observacion'];
 
+    // Seleccionar tipo de ajuste y almacén para ejemplos
+    const tipoEjemplo = tiposAjuste.length > 0 ? tiposAjuste[0].clave : 'AJUSTE_FISICO';
+    const almacenEjemplo = almacenes.length > 0 ? almacenes[0].nombre : 'Almacén Principal';
+
     // Crear filas de ejemplo
     const ejemplos = [
-      ['PRD001', '10', 'ENTRADA', almacenes[0]?.nombre || 'Almacén 1', 'Recuento físico'],
-      ['Producto B', '5', 'SALIDA', almacenes[0]?.nombre || 'Almacén 1', 'Merma por vencimiento'],
+      ['PRD001', '10', tipoEjemplo, almacenEjemplo, 'Recuento físico'],
+      ['Producto B', '-5', tiposAjuste.length > 1 ? tiposAjuste[1].clave : 'CORRECCION', almacenes.length > 1 ? almacenes[1].nombre : almacenEjemplo, 'Merma por vencimiento'],
       ['', '', '', '', ''],
     ];
 
@@ -269,23 +273,53 @@ class AjustesCSVService {
       csv += fila.join(',') + '\n';
     });
 
-    // Agregar comentarios de referencia
-    csv += '\n# COLUMNA "producto": Ingresa el SKU, nombre o código del producto\n';
-    csv += '# COLUMNA "cantidad_ajuste": Número positivo (entrada) o negativo (salida)\n';
-    csv += '# COLUMNA "tipo_ajuste": Valores válidos:\n';
+    // Agregar sección de INSTRUCCIONES
+    csv += '\n=== INSTRUCCIONES DE USO ===\n\n';
+
+    // Columna Producto
+    csv += '📦 COLUMNA "producto":\n';
+    csv += 'Ingresa el SKU, nombre o código del producto\n';
+    csv += 'Ejemplos válidos: PRD001, "Café Molido", CAR-050, codigo123\n';
+    csv += 'La búsqueda es flexible: sin tildes, mayúsculas o minúsculas\n\n';
+
+    // Columna Cantidad
+    csv += '🔢 COLUMNA "cantidad_ajuste":\n';
+    csv += 'Número positivo para ENTRADA, negativo para SALIDA\n';
+    csv += 'Ejemplos: 10 (entrada), -5 (salida), 100, -50\n';
+    csv += 'NO se acepta: 0 (cero)\n\n';
+
+    // Columna Tipo Ajuste
+    csv += '⚙️ COLUMNA "tipo_ajuste":\n';
+    csv += 'Valores válidos (copia exactamente uno):\n';
     tiposAjuste.forEach(t => {
-      csv += `#   - ${t.clave} (${t.label})\n`;
+      csv += `  • ${t.clave} - ${t.label}\n`;
     });
+    csv += 'La búsqueda es flexible: prueba "AJUSTE" o "ajuste" o "ajuste_fisico"\n\n';
 
-    csv += '# COLUMNA "almacen": Nombre del almacén (se busca de forma flexible)\n';
+    // Columna Almacén
+    csv += '🏢 COLUMNA "almacen":\n';
+    csv += 'Nombre del almacén registrado en el sistema\n';
+    csv += 'Almacenes disponibles:\n';
     almacenes.forEach(a => {
-      csv += `#   - ${a.nombre}\n`;
+      csv += `  • ${a.nombre}\n`;
     });
+    csv += 'La búsqueda es flexible: puedes escribir "almacen" o "Almacén"\n\n';
 
-    csv += '# COLUMNA "observacion": Descripción del ajuste (máximo 500 caracteres)\n';
-    csv += '\n# NOTA: La búsqueda de productos y almacenes es flexible.\n';
-    csv += '# Puedes escribir con o sin tildes, mayúsculas o minúsculas.\n';
-    csv += '# Ejemplo: "Almacén" o "almacen" serán encontrados correctamente.\n';
+    // Columna Observación
+    csv += '📝 COLUMNA "observacion":\n';
+    csv += 'Descripción o motivo del ajuste (máximo 500 caracteres)\n';
+    csv += 'Ejemplos: "Recuento físico diferencia", "Merma por vencimiento", "Error en entrada anterior"\n\n';
+
+    // Notas adicionales
+    csv += '⚡ NOTAS IMPORTANTES:\n';
+    csv += '• La búsqueda de productos y almacenes es FLEXIBLE (insensible a tildes y mayúsculas)\n';
+    csv += '• Ejemplos de búsqueda flexible:\n';
+    csv += '  - "Almacén" = "almacen" = "ALMACEN" = "almacenista"\n';
+    csv += '  - "Café" = "cafe" = "CAFE"\n';
+    csv += '  - "PRD001" = "prd001" = "Prd001"\n';
+    csv += '• Las columnas deben estar en este orden: producto, cantidad_ajuste, tipo_ajuste, almacen, observacion\n';
+    csv += '• NO incluyas espacios al inicio o final de los valores\n';
+    csv += '• Para valores con comas, enciérralos entre comillas: "Producto, Especial"\n\n';
 
     return csv;
   }

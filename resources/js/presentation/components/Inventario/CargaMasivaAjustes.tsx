@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import ajustesCSVService, { ResultadoValidacion, FilaAjusteValidada } from '@/infrastructure/services/ajustesCSV.service';
 import TablaAjustesPreview from '@/presentation/components/Inventario/TablaAjustesPreview';
 import ResumenAjustes from '@/presentation/components/Inventario/ResumenAjustes';
+import InstruccionesAjustes from '@/presentation/components/Inventario/InstruccionesAjustes';
 import axios from 'axios';
 
 interface CargaMasivaAjustesProps {
@@ -230,12 +231,15 @@ export default function CargaMasivaAjustes({
       {/* PASO 1: CARGA */}
       {paso === 'carga' && (
         <div className="space-y-6">
+          {/* Instrucciones de uso expandibles */}
+          <InstruccionesAjustes tiposAjuste={tiposAjuste} almacenes={almacenes} />
+
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
             <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
               💡 Carga masiva de ajustes de inventario
             </h3>
             <p className="text-sm text-blue-800 dark:text-blue-300 mb-4">
-              Importa múltiples ajustes de inventario desde un archivo CSV para procesarlos en lote.
+              Importa múltiples ajustes de inventario desde un archivo CSV, XLSX u ODS para procesarlos en lote.
             </p>
 
             <button
