@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import InputSearch from '@/presentation/components/ui/input-search';
 import SearchSelect from '@/presentation/components/ui/search-select';
-import { TipoAjustInventarioCrudModal } from '@/presentation/components/Inventario/TipoAjustInventarioCrudModal';
 import { useTipoAjustInventario } from '@/stores/useTipoAjustInventario';
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
@@ -61,8 +60,7 @@ export default function AjusteInventario() {
     // Estado para el tipo de operación (entrada/salida)
     const [tipoOperacion, setTipoOperacion] = useState<'entrada' | 'salida'>('entrada');
 
-    // Modal CRUD TipoAjustInventario
-    const [openTipoAjustModal, setOpenTipoAjustModal] = useState(false);
+    // Obtener tipos de ajuste del custom hook
     const { tipos, fetchTipos } = useTipoAjustInventario();
     const [mostrarSoloConAjustes] = useState(false);
 
@@ -73,8 +71,8 @@ export default function AjusteInventario() {
         fetchTipos();
     }, [fetchTipos]);
 
-    // Función para obtener tipos a mostrar (filtrados o todos)
-    const getTiposAMostrar = () => {
+    // Función para obtener tipos a mostrar (filtrados o todos) - Memoizada
+    const getTiposAMostrar = useCallback(() => {
         if (!tipos.length) return [];
 
         if (mostrarTodosTipos) {
@@ -83,10 +81,10 @@ export default function AjusteInventario() {
         }
 
         return getTiposFiltrados();
-    };
+    }, [tipos, mostrarTodosTipos]);
 
-    // Función para manejar cambio de tipo de operación
-    const handleTipoOperacionChange = (nuevaOperacion: 'entrada' | 'salida') => {
+    // Función para manejar cambio de tipo de operación - Memoizada
+    const handleTipoOperacionChange = useCallback((nuevaOperacion: 'entrada' | 'salida') => {
         setTipoOperacion(nuevaOperacion);
 
         // Si hay un producto seleccionado, recalcular el stock total
@@ -115,10 +113,10 @@ export default function AjusteInventario() {
                 },
             }));
         }
-    };
+    }, [productoSeleccionado, ajustes]);
 
-    // Función para filtrar tipos de ajuste según la operación seleccionada
-    const getTiposFiltrados = () => {
+    // Función para filtrar tipos de ajuste según la operación seleccionada - Memoizada
+    const getTiposFiltrados = useCallback(() => {
         if (!tipos.length) return [];
 
         console.log('Tipos de ajuste disponibles:', tipos);
@@ -169,13 +167,13 @@ export default function AjusteInventario() {
         }
 
         return tiposFiltrados;
-    };
+    }, [tipos, tipoOperacion]);
 
     const { setData, post, processing } = useForm({
         ajustes: [] as AjusteItem[]
     });
 
-    const handleAlmacenChange = (almacenId: string) => {
+    const handleAlmacenChange = useCallback((almacenId: string) => {
         setAlmacenSeleccionado(almacenId);
         setAjustes({});
 
@@ -185,9 +183,9 @@ export default function AjusteInventario() {
                 replace: true,
             });
         }
-    };
+    }, []);
 
-    const handleCantidadChange = (stockProductoId: number | string, nuevaCantidad: string) => {
+    const handleCantidadChange = useCallback((stockProductoId: number | string, nuevaCantidad: string) => {
         const id = typeof stockProductoId === 'string' ? parseInt(stockProductoId, 10) : stockProductoId;
         // Permitir vacío
         const input = nuevaCantidad.replace(/^0+(?!$)/, ''); // Elimina ceros a la izquierda excepto si es solo "0"
@@ -257,9 +255,9 @@ export default function AjusteInventario() {
                 tipoOperacion: tipoOperacion,
             }
         }));
-    };
+    }, [tipos, tipoOperacion, ajustes, stock_productos]);
 
-    const handleTipoAjusteChange = (stockProductoId: number | string, tipoAjusteId: number) => {
+    const handleTipoAjusteChange = useCallback((stockProductoId: number | string, tipoAjusteId: number) => {
         const id = typeof stockProductoId === 'string' ? parseInt(stockProductoId, 10) : stockProductoId;
         const stockProducto = stock_productos.find(sp => sp.id === id);
         if (!stockProducto) return;
@@ -306,9 +304,9 @@ export default function AjusteInventario() {
                 tipoOperacion: tipoOperacion,
             },
         }));
-    };
+    }, [tipos, tipoOperacion, ajustes, stock_productos]);
 
-    const handleObservacionChange = (stockProductoId: number | string, observacion: string) => {
+    const handleObservacionChange = useCallback((stockProductoId: number | string, observacion: string) => {
         const id = typeof stockProductoId === 'string' ? parseInt(stockProductoId, 10) : stockProductoId;
         setAjustes(prev => ({
             ...prev,
@@ -317,14 +315,55 @@ export default function AjusteInventario() {
                 observacion
             }
         }));
-    };
+    }, []);
+
+    // Inicializar ajuste cuando se selecciona un producto - Memoizada
+    const inicializarAjuste = useCallback((stockProducto: StockProducto) => {
+        const id = typeof stockProducto.id === 'string' ? parseInt(stockProducto.id, 10) : stockProducto.id;
+
+        // Obtener el primer tipo de ajuste que sea de entrada (por defecto)
+        let tipoAjusteIdDefault = undefined;
+        if (tipos.length > 0) {
+            // Buscar un tipo de ajuste que sea de entrada
+            const tipoEntrada = tipos.find(t => {
+                const label = t.label?.toLowerCase() || '';
+                return label.includes('entrada') || label.includes('ingreso') || label.includes('incremento');
+            });
+            tipoAjusteIdDefault = tipoEntrada?.id || tipos[0]?.id;
+        }
+
+        setAjustes(prev => ({
+            ...prev,
+            [id]: {
+                stock_producto_id: id,
+                nueva_cantidad: stockProducto.cantidad,
+                observacion: '',
+                tipo_ajuste_id: tipoAjusteIdDefault,
+                inputCantidad: '',
+                tipoOperacion: tipoOperacion,
+            }
+        }));
+    }, [tipos, tipoOperacion]);
 
     const guardarAjusteIndividual = (stockProductoId: Id) => {
         const ajuste = ajustes[stockProductoId];
+        const stockProducto = stock_productos.find(sp => sp.id === stockProductoId);
 
         // Validar que exista el ajuste
         if (!ajuste) {
             toast.error('No hay cambios para guardar');
+            return;
+        }
+
+        // Validar que se haya ingresado una cantidad
+        if (!ajuste.inputCantidad || ajuste.inputCantidad.trim() === '') {
+            toast.error('Debe ingresar una cantidad');
+            return;
+        }
+
+        // Validar que la cantidad haya cambiado
+        if (stockProducto && ajuste.nueva_cantidad === stockProducto.cantidad) {
+            toast.error('La cantidad no ha cambiado. Ingresa una cantidad diferente');
             return;
         }
 
@@ -340,9 +379,15 @@ export default function AjusteInventario() {
             return;
         }
 
-        // Crear lista con solo este ajuste
-        const ajustesList = [ajuste];
+        // Crear lista con solo este ajuste, filtrando propiedades innecesarias
+        const ajustesList = [{
+            stock_producto_id: ajuste.stock_producto_id,
+            nueva_cantidad: ajuste.nueva_cantidad,
+            observacion: ajuste.observacion,
+            tipo_ajuste_id: ajuste.tipo_ajuste_id,
+        }];
 
+        console.log('Enviando ajuste individual:', ajustesList);
         setData('ajustes', ajustesList);
 
         post('/inventario/ajuste', {
@@ -359,23 +404,31 @@ export default function AjusteInventario() {
                 // Limpiar el producto seleccionado
                 setProductoSeleccionado(null);
             },
-            onError: () => {
-                toast.error('Error al guardar el ajuste');
+            onError: (errors: Record<string, string[]>) => {
+                console.error('Errores del servidor:', errors);
+                console.error('Datos enviados:', ajustesList);
+                // Obtener el primer error disponible
+                const errorMessages = Object.values(errors).flat();
+                if (errorMessages.length > 0) {
+                    toast.error(errorMessages[0]);
+                } else {
+                    toast.error('Error al guardar el ajuste');
+                }
             }
         });
     };
 
     const procesarAjustes = () => {
         // Procesar todos los ajustes sin filtrar por cambio de cantidad
-        const ajustesList = Object.values(ajustes);
+        const ajustesRaw = Object.values(ajustes);
 
-        if (ajustesList.length === 0) {
+        if (ajustesRaw.length === 0) {
             toast.error('No hay ajustes para procesar');
             return;
         }
 
         // Validar que todos los ajustes tengan tipo de ajuste y observación
-        const ajustesInvalidos = ajustesList.filter(ajuste =>
+        const ajustesInvalidos = ajustesRaw.filter(ajuste =>
             !ajuste.tipo_ajuste_id || !ajuste.observacion || ajuste.observacion.trim() === ''
         );
 
@@ -384,6 +437,15 @@ export default function AjusteInventario() {
             return;
         }
 
+        // Crear lista con ajustes filtrados, removiendo propiedades innecesarias
+        const ajustesList = ajustesRaw.map(ajuste => ({
+            stock_producto_id: ajuste.stock_producto_id,
+            nueva_cantidad: ajuste.nueva_cantidad,
+            observacion: ajuste.observacion,
+            tipo_ajuste_id: ajuste.tipo_ajuste_id,
+        }));
+
+        console.log('Enviando ajustes múltiples:', ajustesList);
         setData('ajustes', ajustesList);
 
         post('/inventario/ajuste', {
@@ -392,8 +454,16 @@ export default function AjusteInventario() {
                 setAjustes({});
                 router.reload({ only: ['stock_productos'] });
             },
-            onError: () => {
-                toast.error('Error al procesar los ajustes');
+            onError: (errors: Record<string, string[]>) => {
+                console.error('Errores al procesar ajustes:', errors);
+                console.error('Datos enviados:', ajustesList);
+                // Obtener el primer error disponible
+                const errorMessages = Object.values(errors).flat();
+                if (errorMessages.length > 0) {
+                    toast.error(errorMessages[0]);
+                } else {
+                    toast.error('Error al procesar los ajustes');
+                }
             }
         });
     };
@@ -454,16 +524,15 @@ export default function AjusteInventario() {
                                     </svg>
                                     Volver al Dashboard
                                 </Link>
-                                <button
-                                    type="button"
-                                    onClick={() => setOpenTipoAjustModal(true)}
+                                <Link
+                                    href="/inventario/tipos-ajuste-inventario"
                                     className="inline-flex items-center px-4 py-2 border border-blue-300 dark:border-blue-600 rounded-md shadow-sm text-sm font-medium text-blue-700 dark:text-blue-300 bg-white dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-800 transition-colors duration-200"
                                 >
                                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                                     </svg>
                                     Tipos de Ajuste
-                                </button>
+                                </Link>
                             </div>
                         </div>
                         {/* Selección de almacén y buscador de productos en una fila */}
@@ -488,11 +557,16 @@ export default function AjusteInventario() {
                                         onChange={(_id, option) => {
                                             if (option) {
                                                 const prod = stock_productos.find(p => p.id === option.value);
-                                                setProductoSeleccionado(prod || null);
+                                                if (prod) {
+                                                    setProductoSeleccionado(prod);
+                                                    // Inicializar el ajuste con valores por defecto
+                                                    inicializarAjuste(prod);
+                                                }
                                             } else {
                                                 setProductoSeleccionado(null);
                                             }
                                         }}
+                                        showSearchButton={true}
                                         onSearch={async (query) => {
                                             const q = query.toLowerCase().trim();
                                             if (!q) return [];
@@ -506,6 +580,9 @@ export default function AjusteInventario() {
 
                                                     // Búsqueda por nombre
                                                     if (p.producto.nombre.toLowerCase().includes(q)) return true;
+
+                                                    // Búsqueda por SKU
+                                                    if (p.producto.sku && p.producto.sku.toLowerCase().includes(q)) return true;
 
                                                     // Búsqueda por código de barras principal (si existe)
                                                     if (p.producto.codigo_barras && p.producto.codigo_barras.toLowerCase().includes(q)) return true;
@@ -528,6 +605,11 @@ export default function AjusteInventario() {
                                                 .map(p => {
                                                     const descripciones = [];
 
+                                                    // Agregar SKU (primero, como identificador único)
+                                                    if (p.producto?.sku) {
+                                                        descripciones.push(`SKU: ${p.producto.sku}`);
+                                                    }
+
                                                     // Agregar código de barras principal
                                                     if (p.producto?.codigo_barras) {
                                                         descripciones.push(`CB: ${p.producto.codigo_barras}`);
@@ -543,6 +625,9 @@ export default function AjusteInventario() {
                                                         descripciones.push(`Lote: ${p.lote}`);
                                                     }
 
+                                                    // Agregar stock disponible
+                                                    descripciones.push(`Stock: ${p.cantidad}`);
+
                                                     return {
                                                         value: p.id,
                                                         label: p.producto?.nombre || 'Producto sin nombre',
@@ -550,7 +635,7 @@ export default function AjusteInventario() {
                                                     };
                                                 });
                                         }}
-                                        placeholder="Buscar por ID, nombre, código de barras, QR, lote..."
+                                        placeholder="Buscar por ID, nombre, SKU, código de barras, QR, lote..."
                                         emptyText="No se encontraron productos"
                                         disabled={!almacenSeleccionado}
                                     />
@@ -566,8 +651,15 @@ export default function AjusteInventario() {
                                             <div className="font-medium text-lg text-gray-900 dark:text-gray-100">
                                                 {productoSeleccionado.producto?.nombre || 'Producto no encontrado'}
                                             </div>
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                Código: {productoSeleccionado.producto?.codigo_barras || 'Sin código'}
+                                            <div className="flex flex-wrap gap-4 mt-2">
+                                                {productoSeleccionado.producto?.sku && (
+                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                        <span className="font-medium text-gray-700 dark:text-gray-300">SKU:</span> {productoSeleccionado.producto.sku}
+                                                    </div>
+                                                )}
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                    <span className="font-medium text-gray-700 dark:text-gray-300">Código:</span> {productoSeleccionado.producto?.codigo_barras || 'Sin código'}
+                                                </div>
                                             </div>
                                             {/* Mostrar código QR si existe */}
                                             {(() => {
@@ -994,7 +1086,6 @@ export default function AjusteInventario() {
                         )}
                         {/* Aquí irán los siguientes pasos: agregar a lista y resumen */}
                     </div>
-                    <TipoAjustInventarioCrudModal open={openTipoAjustModal} onOpenChange={setOpenTipoAjustModal} />
                 </>
             </AppLayout>
         );

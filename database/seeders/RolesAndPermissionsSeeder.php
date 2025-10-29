@@ -48,6 +48,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'inventario.ajuste.form', 'inventario.ajuste.procesar', 'inventario.api.buscar-productos', 'inventario.api.stock-producto',
             'inventario.reportes', 'inventario.mermas.index', 'inventario.mermas.registrar', 'inventario.mermas.store', 'inventario.mermas.show',
             'inventario.mermas.aprobar', 'inventario.mermas.rechazar',
+            'inventario.tipos-ajuste.manage', 'inventario.tipos-ajuste.index', 'inventario.tipos-ajuste.create', 'inventario.tipos-ajuste.store', 'inventario.tipos-ajuste.edit', 'inventario.tipos-ajuste.update', 'inventario.tipos-ajuste.destroy',
 
             // Transferencias de inventario
             'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver', 'inventario.transferencias.edit',
@@ -159,6 +160,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'inventario.mermas.aprobar', 'inventario.mermas.rechazar',
             'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver', 'inventario.transferencias.edit',
             'inventario.transferencias.enviar', 'inventario.transferencias.recibir', 'inventario.transferencias.cancelar',
+            'inventario.tipos-ajuste.manage', 'inventario.tipos-ajuste.index', 'inventario.tipos-ajuste.create', 'inventario.tipos-ajuste.store', 'inventario.tipos-ajuste.edit', 'inventario.tipos-ajuste.update', 'inventario.tipos-ajuste.destroy',
             'productos.manage', 'almacenes.manage',
         ];
         $inventario->syncPermissions($inventarioPerms);
@@ -237,6 +239,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver',
             'inventario.transferencias.enviar', 'inventario.transferencias.recibir',
             'inventario.mermas.index', 'inventario.mermas.registrar', 'inventario.mermas.store', 'inventario.mermas.show',
+            'inventario.tipos-ajuste.index', 'inventario.tipos-ajuste.manage',
             'almacenes.manage',
             'productos.manage', // Para gestionar productos en almacén
             'reportes.inventario.stock-actual', 'reportes.inventario.vencimientos', 'reportes.inventario.movimientos',
@@ -282,6 +285,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'inventario.mermas.aprobar', 'inventario.mermas.rechazar',
             'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver', 'inventario.transferencias.edit',
             'inventario.transferencias.enviar', 'inventario.transferencias.recibir', 'inventario.transferencias.cancelar',
+            'inventario.tipos-ajuste.manage', 'inventario.tipos-ajuste.index', 'inventario.tipos-ajuste.create', 'inventario.tipos-ajuste.store', 'inventario.tipos-ajuste.edit', 'inventario.tipos-ajuste.update', 'inventario.tipos-ajuste.destroy',
             'inventario.vehiculos.manage', 'inventario.vehiculos.index', 'inventario.vehiculos.create', 'inventario.vehiculos.store',
             'inventario.vehiculos.ver', 'inventario.vehiculos.edit', 'inventario.vehiculos.update', 'inventario.vehiculos.destroy',
 

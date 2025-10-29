@@ -1,11 +1,11 @@
 import Api from './Api'
+import InventarioController from './InventarioController'
 import ModuloSidebarController from './ModuloSidebarController'
 import ProductoController from './ProductoController'
 import VentaController from './VentaController'
 import EnvioController from './EnvioController'
 import CompraController from './CompraController'
 import AsientoContableController from './AsientoContableController'
-import InventarioController from './InventarioController'
 import ReporteInventarioApiController from './ReporteInventarioApiController'
 import ClienteController from './ClienteController'
 import DireccionClienteApiController from './DireccionClienteApiController'
@@ -35,6 +35,7 @@ import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import ProformaController from './ProformaController'
 import CajaController from './CajaController'
+import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import VehiculoController from './VehiculoController'
 import InventarioInicialController from './InventarioInicialController'
 import Web from './Web'
@@ -47,13 +48,13 @@ import Settings from './Settings'
 import Auth from './Auth'
 const Controllers = {
     Api,
+InventarioController,
 ModuloSidebarController,
 ProductoController,
 VentaController,
 EnvioController,
 CompraController,
 AsientoContableController,
-InventarioController,
 ReporteInventarioApiController,
 ClienteController,
 DireccionClienteApiController,
@@ -83,6 +84,7 @@ DetalleCompraController,
 DetalleVentaController,
 ProformaController,
 CajaController,
+TipoAjusteInventarioController,
 VehiculoController,
 InventarioInicialController,
 Web,

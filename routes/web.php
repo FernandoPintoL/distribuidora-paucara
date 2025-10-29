@@ -200,7 +200,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('movimientos', [\App\Http\Controllers\InventarioController::class, 'movimientos'])->middleware('permission:inventario.movimientos')->name('movimientos');
         Route::get('ajuste', [\App\Http\Controllers\InventarioController::class, 'ajusteForm'])->middleware('permission:inventario.ajuste.form')->name('ajuste.form');
         Route::post('ajuste', [\App\Http\Controllers\InventarioController::class, 'procesarAjuste'])->middleware('permission:inventario.ajuste.procesar')->name('ajuste.procesar');
+        Route::get('ajuste-masivo', [\App\Http\Controllers\InventarioController::class, 'ajusteMasivoForm'])->middleware('permission:inventario.ajuste.form')->name('ajuste-masivo.form');
+        Route::get('historial-cargas', [\App\Http\Controllers\InventarioController::class, 'historialCargasForm'])->middleware('permission:inventario.ajuste.form')->name('historial-cargas.form');
         Route::get('reportes', [\App\Http\Controllers\InventarioController::class, 'reportes'])->middleware('permission:inventario.reportes')->name('reportes');
+
+        // Rutas para gestión de tipos de ajuste de inventario
+        Route::resource('tipos-ajuste-inventario', \App\Http\Controllers\TipoAjusteInventarioController::class)->parameters(['tipos-ajuste-inventario' => 'tipoAjusteInventario'])->middleware('permission:inventario.tipos-ajuste.manage');
 
         // Rutas para gestión de vehículos desde inventario
         Route::prefix('vehiculos')->name('vehiculos.')->group(function () {

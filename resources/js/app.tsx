@@ -6,8 +6,12 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { ToastContainer } from 'react-toastify';
 import { initializeTheme } from '@/presentation/hooks/use-appearance';
+import { configureAxios } from '@/infrastructure/config/axios.config';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+// Configurar axios con interceptadores para autenticación
+configureAxios();
 
 createInertiaApp({
     title: (title) => title ? `${title} - ${appName}` : appName,

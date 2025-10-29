@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\TipoAjusteInventarioController;
 use App\Http\Controllers\Api\TipoMermaController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\CategoriaClienteController;
@@ -31,6 +32,20 @@ Route::post('/register', [AuthController::class, 'register']);
 // Rutas para empleados
 Route::get('/empleados/determinar-rol', [EmpleadoApiController::class, 'determinarRol']);
 
+// Catálogos públicos - GET only (para cargar datos en selects/dropdowns)
+// Nota: El control de acceso se hace a nivel de página web con permisos
+Route::get('/tipos-ajuste-inventario', [TipoAjusteInventarioController::class, 'index']);
+
+// Procesar ajustes masivos (requiere autenticación)
+Route::middleware(['auth:sanctum,web'])->group(function () {
+    Route::post('/inventario/ajustes-masivos', [InventarioController::class, 'importarAjustesMasivos']);
+
+    // Historial de cargas CSV
+    Route::get('/inventario/cargos-csv', [InventarioController::class, 'listarCargosCsv']);
+    Route::get('/inventario/cargos-csv/{cargo}', [InventarioController::class, 'obtenerDetalleCargo']);
+    Route::post('/inventario/cargos-csv/{cargo}/revertir', [InventarioController::class, 'revertirCargo']);
+});
+
 // ==========================================
 // 📋 RUTAS PARA GESTIÓN DE ROLES
 // ==========================================
@@ -46,7 +61,7 @@ Route::middleware(['auth'])->get('/modulos-sidebar', [App\Http\Controllers\Modul
 // ==========================================
 // 📱 RUTAS PARA APP EXTERNA (Flutter)
 // ==========================================
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum,web'])->group(function () {
     // Rutas de autenticación protegidas
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -55,6 +70,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Catálogos de mermas
     Route::apiResource('tipo-mermas', TipoMermaController::class);
     Route::apiResource('estado-mermas', EstadoMermaController::class);
+
+    // Catálogos de inventario - Operaciones que modifican datos (POST, PUT, DELETE)
+    // El GET está en la ruta pública para que cualquier usuario autenticado pueda obtener los datos
+    Route::apiResource('tipos-ajuste-inventario', TipoAjusteInventarioController::class, [
+        'only' => ['store', 'update', 'destroy', 'show']
+    ]);
 
     // Productos para la app
     Route::get('/app/productos', [ProductoController::class, 'indexApi']);
@@ -123,7 +144,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // ==========================================
 // 📊 RUTAS PARA DASHBOARD DE LOGÍSTICA
 // ==========================================
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum,web'])->group(function () {
     // Estadísticas del dashboard
     Route::get('/logistica/dashboard/stats', [EnvioController::class, 'dashboardStats']);
 
@@ -182,7 +203,7 @@ Route::group(['prefix' => 'inventario'], function () {
 });
 
 // Rutas API para localidades
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum,web'])->group(function () {
     // Rutas API para productos
     Route::group(['prefix' => 'productos'], function () {
         Route::get('/', [ProductoController::class, 'indexApi']);

@@ -29,6 +29,51 @@ use Inertia\Response;
 class InventarioController extends Controller
 {
     /**
+     * Generar número secuencial para ajuste de inventario
+     * Formato: AJ + YYYYMMDD + XXXX (ejemplo: AJ202510290001)
+     */
+    private function generarNumeroAjuste(): string
+    {
+        $fecha = now()->format('Ymd');
+        $maxIntentos = 5;
+        $intento = 0;
+
+        while ($intento < $maxIntentos) {
+            try {
+                // Buscar el último movimiento de ajuste del día
+                $ultimoAjuste = MovimientoInventario::where('numero_documento', 'like', "AJ{$fecha}%")
+                    ->orderBy('numero_documento', 'desc')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($ultimoAjuste) {
+                    $numeroSecuencial = intval(substr($ultimoAjuste->numero_documento, -4)) + 1;
+                } else {
+                    $numeroSecuencial = 1;
+                }
+
+                $numero = 'AJ' . $fecha . str_pad($numeroSecuencial, 4, '0', STR_PAD_LEFT);
+
+                \Illuminate\Support\Facades\Log::info('Número de ajuste generado', [
+                    'numero' => $numero,
+                    'intento' => $intento + 1,
+                ]);
+
+                return $numero;
+
+            } catch (\Illuminate\Database\QueryException $e) {
+                $intento++;
+                if ($intento >= $maxIntentos) {
+                    throw new \Exception('No se pudo generar el número de ajuste después de ' . $maxIntentos . ' intentos');
+                }
+                usleep(100000); // Esperar 100ms antes de reintentar
+            }
+        }
+
+        throw new \Exception('Error al generar número de ajuste');
+    }
+
+    /**
      * Dashboard principal de inventario
      */
     public function dashboard(): Response
@@ -390,7 +435,7 @@ class InventarioController extends Controller
         $stockProductos = collect();
         if ($almacenId) {
             $stockProductos = StockProducto::where('almacen_id', $almacenId)
-                ->with(['producto:id,nombre,codigo_barras,codigo_qr', 'producto.codigos', 'almacen:id,nombre'])
+                ->with(['producto:id,nombre,sku,codigo_barras,codigo_qr', 'producto.codigosBarra', 'almacen:id,nombre'])
                 ->orderBy('cantidad', 'desc')
                 ->get();
         }
@@ -414,10 +459,19 @@ class InventarioController extends Controller
 
             return redirect()->route('inventario.ajuste.form')
                 ->with('success', 'Se procesaron '.count($movimientos).' ajustes de inventario');
-        } catch (\Exception $e) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['error' => 'Error al procesar ajustes: '.$e->getMessage()]);
+                ->withErrors(['error' => 'El producto no existe. Por favor, recarga la página e intenta nuevamente.']);
+        } catch (\Exception $e) {
+            \Log::error('Error al procesar ajuste de inventario: ' . $e->getMessage(), [
+                'exception' => $e,
+                'ajustes' => $request->validated()['ajustes'],
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al procesar ajustes: ' . $e->getMessage()]);
         }
     }
 
@@ -457,6 +511,9 @@ class InventarioController extends Controller
                 $stockProducto = StockProducto::findOrFail($ajuste['stock_producto_id']);
                 $observacion = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
 
+                // Generar número de documento único para este ajuste
+                $numeroDocumento = $this->generarNumeroAjuste();
+
                 // Siempre procesar el ajuste, incluso si la cantidad no ha cambiado
                 // Esto permite registrar el tipo de ajuste y la observación
                 $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
@@ -464,13 +521,13 @@ class InventarioController extends Controller
                     MovimientoInventario::TIPO_ENTRADA_AJUSTE :
                     MovimientoInventario::TIPO_SALIDA_AJUSTE;
 
-                // Registrar el movimiento con el tipo de ajuste
+                // Registrar el movimiento con el tipo de ajuste y número de documento
                 $movimiento = MovimientoInventario::registrar(
                     $stockProducto,
                     $diferencia,
                     $tipo,
                     $observacion,
-                    null,
+                    $numeroDocumento,
                     null,
                     $ajuste['tipo_ajuste_id'] ?? null
                 );
@@ -1196,6 +1253,304 @@ class InventarioController extends Controller
             ]);
         } catch (\Exception $e) {
             return ApiResponse::error('Error al rechazar la merma: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Mostrar formulario para ajuste masivo
+     */
+    public function ajusteMasivoForm(Request $request): Response
+    {
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $tiposAjuste = TipoAjustInventario::where('activo', true)->get();
+        $productos = Producto::all(['id', 'sku', 'nombre'])->take(1000);
+
+        return Inertia::render('inventario/ajuste-masivo', [
+            'almacenes' => $almacenes,
+            'tipos_ajuste' => $tiposAjuste,
+            'productos' => $productos,
+        ]);
+    }
+
+    /**
+     * Procesar ajustes masivos desde CSV
+     */
+    public function importarAjustesMasivos(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ajustes' => 'required|array|min:1',
+            'ajustes.*.stock_producto_id' => 'required|integer|exists:stock_productos,id',
+            'ajustes.*.tipo_ajuste_id' => 'required|integer|exists:tipo_ajust_inventario,id',
+            'ajustes.*.almacen_id' => 'required|integer|exists:almacenes,id',
+            'ajustes.*.cantidad_ajuste' => 'required|integer|not_in:0',
+            'ajustes.*.observacion' => 'required|string|max:500',
+            'nombre_archivo' => 'required|string|max:255',
+            'datos_csv' => 'required|array', // Datos originales del CSV para almacenamiento
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $ajustes = $request->input('ajustes');
+            $nombreArchivo = $request->input('nombre_archivo');
+            $datosCsv = $request->input('datos_csv');
+            $procesados = 0;
+            $errores = [];
+            $movimientosCreados = [];
+
+            // Calcular hash del archivo para detectar duplicados
+            $hashArchivo = hash('sha256', json_encode($datosCsv));
+
+            // Verificar si el archivo ya fue cargado (deduplicación)
+            $cargaPrevious = \App\Models\CargoCSVInventario::where('hash_archivo', $hashArchivo)->first();
+            if ($cargaPrevious) {
+                DB::rollBack();
+                return ApiResponse::error('Este archivo ya fue procesado anteriormente', 409);
+            }
+
+            // Crear registro de carga CSV
+            $cargo = \App\Models\CargoCSVInventario::create([
+                'usuario_id' => Auth::id(),
+                'nombre_archivo' => $nombreArchivo,
+                'hash_archivo' => $hashArchivo,
+                'cantidad_filas' => count($datosCsv),
+                'cantidad_validas' => count($ajustes),
+                'cantidad_errores' => 0,
+                'estado' => 'pendiente',
+                'datos_json' => json_encode($datosCsv),
+                'errores_json' => json_encode([]),
+                'cambios_json' => json_encode([]),
+            ]);
+
+            // Procesar cada ajuste
+            foreach ($ajustes as $index => $ajuste) {
+                try {
+                    // Obtener el stock del producto
+                    $stock = StockProducto::findOrFail($ajuste['stock_producto_id']);
+                    $producto = $stock->producto;
+                    $tipoAjuste = TipoAjustInventario::findOrFail($ajuste['tipo_ajuste_id']);
+
+                    // Generar número de ajuste
+                    $numeroAjuste = $this->generarNumeroAjuste();
+
+                    // Determinar tipo de movimiento según el tipo de ajuste
+                    $cantidad = $ajuste['cantidad_ajuste'];
+                    $tipoMovimiento = $cantidad > 0
+                        ? MovimientoInventario::TIPO_ENTRADA_AJUSTE
+                        : MovimientoInventario::TIPO_SALIDA_AJUSTE;
+
+                    // Crear movimiento de inventario
+                    $movimiento = MovimientoInventario::create([
+                        'numero_documento' => $numeroAjuste,
+                        'stock_producto_id' => $ajuste['stock_producto_id'],
+                        'almacen_id' => $ajuste['almacen_id'],
+                        'cantidad' => abs($cantidad),
+                        'tipo' => $tipoMovimiento,
+                        'tipo_ajust_inventario_id' => $ajuste['tipo_ajuste_id'],
+                        'observacion' => $ajuste['observacion'],
+                        'usuario_id' => Auth::id(),
+                        'fecha_movimiento' => now(),
+                    ]);
+
+                    // Actualizar stock
+                    $stock->cantidad += $cantidad;
+                    $stock->save();
+
+                    $procesados++;
+                    $movimientosCreados[] = $movimiento->id;
+                } catch (\Exception $e) {
+                    $errores[] = [
+                        'fila' => $index + 1,
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            // Actualizar errores en cargo
+            if (!empty($errores)) {
+                $cargo->update([
+                    'cantidad_errores' => count($errores),
+                    'errores_json' => json_encode($errores),
+                ]);
+            }
+
+            DB::commit();
+
+            // Después de commit, vincular movimientos al cargo
+            if (!empty($movimientosCreados)) {
+                foreach ($movimientosCreados as $movimientoId) {
+                    DB::table('cargo_csv_movimientos')->insert([
+                        'cargo_csv_id' => $cargo->id,
+                        'movimiento_inventario_id' => $movimientoId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // Marcar cargo como procesado
+                $cargo->update(['estado' => 'procesado']);
+            }
+
+            if ($errores) {
+                \Log::warning('Errores en importación de ajustes masivos', [
+                    'cargo_id' => $cargo->id,
+                    'errores' => $errores,
+                ]);
+            }
+
+            return ApiResponse::success([
+                'cargo_id' => $cargo->id,
+                'procesados' => $procesados,
+                'total' => count($ajustes),
+                'errores' => $errores,
+                'mensaje' => "Se procesaron {$procesados} de " . count($ajustes) . " ajustes",
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al procesar ajustes masivos', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return ApiResponse::error('Error al procesar los ajustes masivos: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Mostrar formulario de historial de cargas CSV
+     */
+    public function historialCargasForm()
+    {
+        return Inertia::render('inventario/historial-cargas', [
+            'initialCargos' => [],
+        ]);
+    }
+
+    /**
+     * Obtener listado de cargas CSV
+     */
+    public function listarCargosCsv(Request $request): JsonResponse
+    {
+        try {
+            $page = $request->input('page', 1);
+            $perPage = $request->input('per_page', 15);
+            $estado = $request->input('estado'); // Opcional: filtrar por estado
+            $usuario = $request->input('usuario'); // Opcional: filtrar por usuario
+
+            $query = \App\Models\CargoCSVInventario::with(['usuario', 'revertidoPorUsuario'])
+                ->latest('created_at');
+
+            if ($estado) {
+                $query->where('estado', $estado);
+            }
+
+            if ($usuario) {
+                $query->where('usuario_id', $usuario);
+            }
+
+            $cargos = $query->paginate($perPage, ['*'], 'page', $page);
+
+            return ApiResponse::success([
+                'data' => $cargos->map(function ($cargo) {
+                    return $cargo->getResumenAttribute();
+                })->toArray(),
+                'pagination' => [
+                    'current_page' => $cargos->currentPage(),
+                    'per_page' => $cargos->perPage(),
+                    'total' => $cargos->total(),
+                    'last_page' => $cargos->lastPage(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener cargos CSV', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return ApiResponse::error('Error al obtener el historial de cargas', 500);
+        }
+    }
+
+    /**
+     * Obtener detalles de un cargo CSV
+     */
+    public function obtenerDetalleCargo(\App\Models\CargoCSVInventario $cargo): JsonResponse
+    {
+        try {
+            $movimientos = $cargo->movimientos()
+                ->with(['stockProducto.producto', 'almacen', 'tipoAjuste'])
+                ->get()
+                ->map(function ($mov) {
+                    return [
+                        'id' => $mov->id,
+                        'numero_documento' => $mov->numero_documento,
+                        'producto' => $mov->stockProducto->producto->nombre,
+                        'sku' => $mov->stockProducto->producto->sku,
+                        'cantidad' => $mov->cantidad,
+                        'tipo' => $mov->tipo,
+                        'almacen' => $mov->almacen->nombre,
+                        'observacion' => $mov->observacion,
+                        'fecha' => $mov->fecha_movimiento->format('d/m/Y H:i'),
+                    ];
+                });
+
+            return ApiResponse::success([
+                'cargo' => $cargo->getResumenAttribute(),
+                'movimientos' => $movimientos,
+                'puede_revertir' => $cargo->estado === 'procesado',
+                'datos_originales' => json_decode($cargo->datos_json, true),
+                'errores' => json_decode($cargo->errores_json, true),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener detalles del cargo', [
+                'cargo_id' => $cargo->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ApiResponse::error('Error al obtener los detalles del cargo', 500);
+        }
+    }
+
+    /**
+     * Revertir un cargo CSV
+     */
+    public function revertirCargo(Request $request, \App\Models\CargoCSVInventario $cargo): JsonResponse
+    {
+        $request->validate([
+            'motivo' => 'required|string|max:500',
+        ]);
+
+        try {
+            // Verificar que el cargo pueda ser revertido
+            if ($cargo->estado !== 'procesado') {
+                return ApiResponse::error('Este cargo no puede ser revertido. Estado actual: ' . $cargo->estado, 400);
+            }
+
+            // Revertir el cargo
+            $resultado = $cargo->revertir(Auth::user(), $request->input('motivo'));
+
+            if (!$resultado) {
+                return ApiResponse::error('Error al revertir el cargo', 500);
+            }
+
+            \Log::info('Cargo CSV revertido', [
+                'cargo_id' => $cargo->id,
+                'usuario_id' => Auth::id(),
+                'movimientos_afectados' => $cargo->movimientos()->count(),
+            ]);
+
+            return ApiResponse::success([
+                'cargo_id' => $cargo->id,
+                'mensaje' => 'Cargo revertido exitosamente. Se han deshecho todos los cambios.',
+                'movimientos_revertidos' => $cargo->movimientos()->count(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al revertir cargo CSV', [
+                'cargo_id' => $cargo->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return ApiResponse::error('Error al revertir el cargo: ' . $e->getMessage(), 500);
         }
     }
 }

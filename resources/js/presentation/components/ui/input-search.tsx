@@ -30,6 +30,8 @@ interface InputSearchProps {
     showCreateIconButton?: boolean;
     createIconButtonTitle?: string;
     displayValue?: string; // Texto a mostrar cuando el valor cambia desde el exterior
+    showSearchButton?: boolean; // Mostrar botón de búsqueda manual
+    onSearchButtonClick?: (query: string) => void; // Callback cuando se hace click en el botón de búsqueda
 }
 
 export default function InputSearch({
@@ -51,7 +53,9 @@ export default function InputSearch({
     createButtonText = "Crear nuevo",
     showCreateIconButton = false,
     createIconButtonTitle = "Crear nuevo elemento",
-    displayValue
+    displayValue,
+    showSearchButton = false,
+    onSearchButtonClick
 }: InputSearchProps) {
     const [query, setQuery] = useState('');
     const [options, setOptions] = useState<SearchOption[]>([]);
@@ -119,7 +123,7 @@ export default function InputSearch({
 
         // Si hay displayValue y el query actual no coincide, forzar actualización
         if (displayValue && query !== displayValue && !isUserTypingRef.current) {
-            console.log('✅ Actualizando con displayValue:', displayValue);
+            // console.log('✅ Actualizando con displayValue:', displayValue);
             setQuery(displayValue);
             setSelectedOption({
                 value: value || '',
@@ -137,7 +141,7 @@ export default function InputSearch({
             if (value && value !== selectedOption?.value) {
                 // Si se proporciona displayValue, usarlo directamente
                 if (displayValue) {
-                    console.log('✅ Usando displayValue:', displayValue);
+                    // console.log('✅ Usando displayValue:', displayValue);
                     setQuery(displayValue);
                     setSelectedOption({
                         value: value,
@@ -249,6 +253,34 @@ export default function InputSearch({
         // El useEffect se encargará de la búsqueda cuando query cambie
     };
 
+    const handleSearchButtonClick = async () => {
+        if (!query || query.length < 2) {
+            console.warn('La búsqueda requiere al menos 2 caracteres');
+            return;
+        }
+
+        // Si hay un callback personalizado, usarlo
+        if (onSearchButtonClick) {
+            onSearchButtonClick(query);
+            return;
+        }
+
+        // Sino, dispara la búsqueda directa
+        setLoading(true);
+        try {
+            const results = await onSearch(query);
+            setOptions(results);
+            setIsOpen(results.length > 0 || (query.length >= 2 && showCreateButton && !!onCreateClick));
+            setSelectedIndex(-1);
+        } catch (error) {
+            console.error('Error en búsqueda:', error);
+            setOptions([]);
+            setIsOpen(false);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (!isOpen || options.length === 0) return;
 
@@ -315,6 +347,18 @@ export default function InputSearch({
                     />
 
                     <div className="absolute inset-y-0 right-0 pr-4 flex items-center space-x-2">
+                        {showSearchButton && query && query.length >= 2 && (
+                            <button
+                                type="button"
+                                onClick={handleSearchButtonClick}
+                                disabled={disabled || loading}
+                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-150"
+                                title="Buscar"
+                            >
+                                <Search className="h-5 w-5" />
+                            </button>
+                        )}
+
                         {showCreateIconButton && onCreateClick && (
                             <button
                                 type="button"

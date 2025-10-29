@@ -67,9 +67,9 @@ export default function SearchSelect({
 
   // Encontrar la opción seleccionada
   const selectedOption = useMemo(() => {
-    console.log('SearchSelect Debug:', { value, options: options.slice(0, 3), valueType: typeof value });
+    // console.log('SearchSelect Debug:', { value, options: options.slice(0, 3), valueType: typeof value });
     const found = options.find(option => String(option.value) === String(value));
-    console.log('Selected option found:', found);
+    // console.log('Selected option found:', found);
     return found;
   }, [options, value]);
 
