@@ -37,7 +37,7 @@ interface TipoAjuste {
 interface InventarioItem {
     producto_id: number | '';
     almacen_id: number | '';
-    cantidad: number;
+    cantidad: number | '';
     lote?: string;
     fecha_vencimiento?: string;
     observaciones?: string;
@@ -76,7 +76,7 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
             {
                 producto_id: '',
                 almacen_id: '',
-                cantidad: 0,
+                cantidad: '',
                 lote: '',
                 fecha_vencimiento: '',
                 observaciones: ''
@@ -278,10 +278,11 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                                                     <Input
                                                         id={`cantidad-${index}`}
                                                         type="number"
-                                                        min="0"
+                                                        min="1"
+                                                        step="1"
                                                         value={item.cantidad}
                                                         onChange={(e) => actualizarItem(index, 'cantidad', Number(e.target.value))}
-                                                        placeholder="0"
+                                                        placeholder="Ej: 100"
                                                     />
                                                 </div>
 

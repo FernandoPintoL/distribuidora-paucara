@@ -65,7 +65,7 @@ class InventarioInicialController extends Controller
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
             'items.*.almacen_id' => 'required|exists:almacenes,id',
-            'items.*.cantidad' => 'required|integer|min:0',
+            'items.*.cantidad' => 'required|integer|min:1',
             'items.*.lote' => 'nullable|string|max:50',
             'items.*.fecha_vencimiento' => 'nullable|date',
             'items.*.observaciones' => 'nullable|string|max:500',
