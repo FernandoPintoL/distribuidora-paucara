@@ -1278,21 +1278,6 @@ class InventarioController extends Controller
     }
 
     /**
-     * Mapea la clave de tipo de operación al tipo de movimiento correcto
-     */
-    private function mapearTipoMovimiento(string $operacionClave): string
-    {
-        return match($operacionClave) {
-            'ENTRADA_AJUSTE' => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
-            'SALIDA_AJUSTE' => MovimientoInventario::TIPO_SALIDA_AJUSTE,
-            'ENTRADA_COMPRA' => 'entrada_compra', // Puedes definir nuevas constantes si es necesario
-            'SALIDA_VENTA' => 'salida_venta',
-            'SALIDA_MERMA' => MovimientoInventario::TIPO_SALIDA_AJUSTE, // Usa el mismo tipo que salida_ajuste
-            default => MovimientoInventario::TIPO_ENTRADA_AJUSTE, // Default
-        };
-    }
-
-    /**
      * Procesar ajustes masivos desde CSV
      */
     public function importarAjustesMasivos(Request $request): JsonResponse
