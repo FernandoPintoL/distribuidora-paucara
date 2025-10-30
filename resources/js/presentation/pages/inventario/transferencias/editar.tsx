@@ -89,7 +89,7 @@ export default function EditarTransferencia() {
 
         setCargandoProductos(true);
         try {
-            const response = await fetch(`/api/inventario/buscar-productos?q=${encodeURIComponent(termino)}&almacen_id=${transferencia.almacen_origen_id}`);
+            const response = await fetch(`/inventario/buscar-productos?q=${encodeURIComponent(termino)}&almacen_id=${transferencia.almacen_origen_id}`);
             const data = await response.json();
             setProductosDisponibles(data.data || []);
         } catch (error) {
@@ -133,6 +133,11 @@ export default function EditarTransferencia() {
     const validarFormulario = (): boolean => {
         if (!formData.almacen_destino_id) {
             NotificationService.error('Debe seleccionar un almacén de destino');
+            return false;
+        }
+
+        if (formData.almacen_destino_id === transferencia.almacen_origen_id) {
+            NotificationService.error('Los almacenes de origen y destino deben ser diferentes');
             return false;
         }
 
