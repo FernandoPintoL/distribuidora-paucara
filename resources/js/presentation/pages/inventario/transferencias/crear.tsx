@@ -139,6 +139,23 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
             return;
         }
 
+        // Validar lote max 50 caracteres
+        if (loteProducto && loteProducto.length > 50) {
+            NotificationService.error('El lote no puede exceder 50 caracteres');
+            return;
+        }
+
+        // Validar fecha vencimiento no sea pasada
+        if (fechaVencimiento) {
+            const fechaIngresada = new Date(fechaVencimiento);
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            if (fechaIngresada < hoy) {
+                NotificationService.error('La fecha de vencimiento no puede ser una fecha pasada');
+                return;
+            }
+        }
+
         // Validar stock disponible en almacén origen
         if (data.almacen_origen_id) {
             const stockEnOrigen = producto.stock_por_almacen?.[data.almacen_origen_id] || 0;
@@ -181,6 +198,16 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
 
         if (!data.almacen_origen_id || !data.almacen_destino_id) {
             NotificationService.warning('Debe seleccionar almacén origen y destino');
+            return;
+        }
+
+        if (data.almacen_origen_id === data.almacen_destino_id) {
+            NotificationService.warning('Los almacenes de origen y destino deben ser diferentes');
+            return;
+        }
+
+        if (data.observaciones && data.observaciones.length > 500) {
+            NotificationService.warning('Las observaciones no pueden exceder 500 caracteres');
             return;
         }
 
