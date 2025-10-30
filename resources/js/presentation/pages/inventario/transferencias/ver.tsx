@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
@@ -19,7 +19,8 @@ import {
     CheckCircle,
     XCircle,
     ArrowRight,
-    Edit
+    Edit,
+    X
 } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
@@ -31,6 +32,10 @@ export default function VerTransferencia() {
     const { props } = usePage<PageProps>();
     const { transferencia } = props;
     const { can } = useAuth();
+
+    const [mostrarModalCancelacion, setMostrarModalCancelacion] = useState(false);
+    const [motivoCancelacion, setMotivoCancelacion] = useState('');
+    const [cancelando, setCancelando] = useState(false);
 
     const breadcrumbs = [
         {
@@ -97,10 +102,22 @@ export default function VerTransferencia() {
         }
     };
 
-    const cancelarTransferencia = async () => {
-        const motivo = prompt('Motivo de cancelación:');
-        if (!motivo || motivo.trim() === '') return;
+    const cancelarTransferencia = () => {
+        setMostrarModalCancelacion(true);
+    };
 
+    const confirmarCancelacion = async () => {
+        if (!motivoCancelacion.trim()) {
+            NotificationService.error('Debe ingresar un motivo de cancelación');
+            return;
+        }
+
+        if (motivoCancelacion.length > 500) {
+            NotificationService.error('El motivo no puede exceder 500 caracteres');
+            return;
+        }
+
+        setCancelando(true);
         try {
             const response = await fetch(`/inventario/transferencias/${transferencia.id}/cancelar`, {
                 method: 'POST',
@@ -108,19 +125,23 @@ export default function VerTransferencia() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify({ motivo_cancelacion: motivo }),
+                body: JSON.stringify({ motivo_cancelacion: motivoCancelacion }),
             });
 
             const result = await response.json();
 
             if (result.success) {
                 NotificationService.success('Transferencia cancelada exitosamente');
+                setMostrarModalCancelacion(false);
+                setMotivoCancelacion('');
                 router.reload();
             } else {
                 NotificationService.error(result.message || 'Error al cancelar transferencia');
             }
         } catch {
             NotificationService.error('Error al procesar la solicitud');
+        } finally {
+            setCancelando(false);
         }
     };
 
@@ -479,6 +500,73 @@ export default function VerTransferencia() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Cancelación */}
+            {mostrarModalCancelacion && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                Cancelar Transferencia
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setMostrarModalCancelacion(false);
+                                    setMotivoCancelacion('');
+                                }}
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                                    Motivo de cancelación *
+                                </label>
+                                <textarea
+                                    value={motivoCancelacion}
+                                    onChange={(e) => setMotivoCancelacion(e.target.value)}
+                                    placeholder="Describe el motivo por el cual cancelas esta transferencia..."
+                                    maxLength={500}
+                                    rows={4}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {motivoCancelacion.length}/500 caracteres
+                                </p>
+                            </div>
+
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                                <p className="text-sm text-amber-800 dark:text-amber-300">
+                                    ⚠️ Esta acción cancelará la transferencia. Si ya fue enviada, el stock será restaurado al almacén origen.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setMostrarModalCancelacion(false);
+                                    setMotivoCancelacion('');
+                                }}
+                                disabled={cancelando}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={confirmarCancelacion}
+                                disabled={cancelando || !motivoCancelacion.trim()}
+                            >
+                                {cancelando ? 'Cancelando...' : 'Confirmar Cancelación'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }
