@@ -37,6 +37,10 @@ export default function VerTransferencia() {
     const [motivoCancelacion, setMotivoCancelacion] = useState('');
     const [cancelando, setCancelando] = useState(false);
 
+    const [mostrarModalRecepcion, setMostrarModalRecepcion] = useState(false);
+    const [cantidadesRecibidas, setCantidadesRecibidas] = useState<{ [key: number]: number }>({});
+    const [recibiendo, setRecibiendo] = useState(false);
+
     const breadcrumbs = [
         {
             title: 'Inventario',
@@ -77,9 +81,18 @@ export default function VerTransferencia() {
         }
     };
 
-    const recibirTransferencia = async () => {
-        if (!confirm('¿Confirmas la recepción de esta transferencia?')) return;
+    const recibirTransferencia = () => {
+        // Inicializar cantidades recibidas con las cantidades enviadas
+        const cantidadesIniciales: { [key: number]: number } = {};
+        transferencia.detalles.forEach((detalle, index) => {
+            cantidadesIniciales[index] = detalle.cantidad;
+        });
+        setCantidadesRecibidas(cantidadesIniciales);
+        setMostrarModalRecepcion(true);
+    };
 
+    const confirmarRecepcion = async () => {
+        setRecibiendo(true);
         try {
             const response = await fetch(`/inventario/transferencias/${transferencia.id}/recibir`, {
                 method: 'POST',
@@ -87,18 +100,22 @@ export default function VerTransferencia() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
+                body: JSON.stringify({ cantidades_recibidas: cantidadesRecibidas }),
             });
 
             const result = await response.json();
 
             if (result.success) {
                 NotificationService.success('Transferencia recibida exitosamente');
+                setMostrarModalRecepcion(false);
                 router.reload();
             } else {
                 NotificationService.error(result.message || 'Error al recibir transferencia');
             }
         } catch {
             NotificationService.error('Error al procesar la solicitud');
+        } finally {
+            setRecibiendo(false);
         }
     };
 
@@ -500,6 +517,111 @@ export default function VerTransferencia() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Recepción - Confirmar Cantidades */}
+            {mostrarModalRecepcion && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full my-8">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                Confirmar Recepción de Transferencia
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setMostrarModalRecepcion(false);
+                                    setCantidadesRecibidas({});
+                                }}
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                <p className="text-sm text-blue-800 dark:text-blue-300">
+                                    ℹ️ Verifica las cantidades recibidas. Si hay diferencias con lo enviado, ajusta los valores.
+                                </p>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Producto</th>
+                                            <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Enviado</th>
+                                            <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Recibido</th>
+                                            <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Diferencia</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transferencia.detalles.map((detalle, index) => {
+                                            const recibido = cantidadesRecibidas[index] || detalle.cantidad;
+                                            const diferencia = recibido - detalle.cantidad;
+                                            return (
+                                                <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                                                        <div className="font-medium">{detalle.producto?.nombre}</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{detalle.producto?.codigo}</div>
+                                                    </td>
+                                                    <td className="text-center py-3 px-4 text-gray-900 dark:text-gray-100">
+                                                        {detalle.cantidad}
+                                                    </td>
+                                                    <td className="text-center py-3 px-4">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            value={recibido}
+                                                            onChange={(e) => {
+                                                                const nuevoValor = parseInt(e.target.value) || 0;
+                                                                setCantidadesRecibidas(prev => ({
+                                                                    ...prev,
+                                                                    [index]: nuevoValor
+                                                                }));
+                                                            }}
+                                                            className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-center"
+                                                        />
+                                                    </td>
+                                                    <td className="text-center py-3 px-4">
+                                                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                                            diferencia === 0
+                                                                ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300'
+                                                                : diferencia < 0
+                                                                ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+                                                                : 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
+                                                        }`}>
+                                                            {diferencia > 0 ? '+' : ''}{diferencia}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setMostrarModalRecepcion(false);
+                                    setCantidadesRecibidas({});
+                                }}
+                                disabled={recibiendo}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                onClick={confirmarRecepcion}
+                                disabled={recibiendo}
+                            >
+                                {recibiendo ? 'Confirmando...' : 'Confirmar Recepción'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal de Cancelación */}
             {mostrarModalCancelacion && (
