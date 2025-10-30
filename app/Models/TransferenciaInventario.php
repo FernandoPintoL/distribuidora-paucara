@@ -119,8 +119,8 @@ class TransferenciaInventario extends Model
                     throw new \Exception("No se encontró stock para el producto {$detalle->producto->nombre} en el almacén origen");
                 }
 
-                if ($stockProducto->cantidad < $detalle->cantidad) {
-                    throw new \Exception("Stock insuficiente para el producto {$detalle->producto->nombre}. Disponible: {$stockProducto->cantidad}, Requerido: {$detalle->cantidad}");
+                if ($stockProducto->cantidad_disponible < $detalle->cantidad) {
+                    throw new \Exception("Stock insuficiente para el producto {$detalle->producto->nombre}. Disponible: {$stockProducto->cantidad_disponible}, Requerido: {$detalle->cantidad}");
                 }
 
                 MovimientoInventario::registrar(
