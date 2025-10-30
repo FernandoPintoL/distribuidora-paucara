@@ -431,7 +431,7 @@ export default function TransferenciasIndex() {
                                                         <Eye className="w-4 h-4" />
                                                     </Link>
 
-                                                    {transferencia.estado === 'PENDIENTE' && can('inventario.transferencias.edit') && (
+                                                    {transferencia.estado === 'BORRADOR' && can('inventario.transferencias.edit') && (
                                                         <Link
                                                             href={`/inventario/transferencias/${transferencia.id}/edit`}
                                                             className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300 ml-2"
@@ -440,7 +440,7 @@ export default function TransferenciasIndex() {
                                                         </Link>
                                                     )}
 
-                                                    {transferencia.estado === 'PENDIENTE' && can('inventario.transferencias.enviar') && (
+                                                    {transferencia.estado === 'BORRADOR' && can('inventario.transferencias.enviar') && (
                                                         <button
                                                             onClick={() => enviarTransferencia(transferencia)}
                                                             className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 ml-2"
@@ -458,7 +458,7 @@ export default function TransferenciasIndex() {
                                                         </button>
                                                     )}
 
-                                                    {['PENDIENTE', 'ENVIADO'].includes(transferencia.estado) && can('inventario.transferencias.cancelar') && (
+                                                    {['BORRADOR', 'ENVIADO'].includes(transferencia.estado) && can('inventario.transferencias.cancelar') && (
                                                         <button
                                                             onClick={() => cancelarTransferencia(transferencia)}
                                                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 ml-2"

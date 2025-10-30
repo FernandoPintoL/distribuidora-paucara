@@ -205,7 +205,7 @@ export default function EditarTransferencia() {
         );
     }
 
-    if (transferencia.estado !== 'PENDIENTE') {
+    if (transferencia.estado !== 'BORRADOR') {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="No Editable" />
@@ -214,7 +214,7 @@ export default function EditarTransferencia() {
                         Transferencia No Editable
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400 mt-2">
-                        Solo se pueden editar transferencias en estado PENDIENTE.
+                        Solo se pueden editar transferencias en estado BORRADOR.
                     </p>
                 </div>
             </AppLayout>

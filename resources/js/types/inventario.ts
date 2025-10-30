@@ -376,7 +376,7 @@ export interface TransferenciaInventario {
     detalles: DetalleTransferencia[];
 }
 
-export type EstadoTransferencia = 'PENDIENTE' | 'ENVIADO' | 'RECIBIDO' | 'CANCELADO';
+export type EstadoTransferencia = 'BORRADOR' | 'ENVIADO' | 'RECIBIDO' | 'CANCELADO';
 
 export interface EstadoConfig {
     label: string;
@@ -387,8 +387,8 @@ export interface EstadoConfig {
 }
 
 export const ESTADOS_TRANSFERENCIA: Record<EstadoTransferencia, EstadoConfig> = {
-    PENDIENTE: {
-        label: 'Pendiente',
+    BORRADOR: {
+        label: 'Borrador',
         color: 'gray',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         textColor: 'text-gray-800 dark:text-gray-200',
@@ -399,7 +399,7 @@ export const ESTADOS_TRANSFERENCIA: Record<EstadoTransferencia, EstadoConfig> = 
         color: 'blue',
         bgColor: 'bg-blue-100 dark:bg-blue-800',
         textColor: 'text-blue-800 dark:text-blue-200',
-        actions: ['recibir', 'cancel']
+        actions: ['recibir', 'cancelar']
     },
     RECIBIDO: {
         label: 'Recibido',
