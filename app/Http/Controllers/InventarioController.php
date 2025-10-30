@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
@@ -35,9 +34,9 @@ class InventarioController extends Controller
      */
     private function generarNumeroAjuste(): string
     {
-        $fecha = now()->format('Ymd');
+        $fecha       = now()->format('Ymd');
         $maxIntentos = 5;
-        $intento = 0;
+        $intento     = 0;
 
         while ($intento < $maxIntentos) {
             try {
@@ -56,7 +55,7 @@ class InventarioController extends Controller
                 $numero = 'AJ' . $fecha . str_pad($numeroSecuencial, 4, '0', STR_PAD_LEFT);
 
                 \Illuminate\Support\Facades\Log::info('Número de ajuste generado', [
-                    'numero' => $numero,
+                    'numero'  => $numero,
                     'intento' => $intento + 1,
                 ]);
 
@@ -80,10 +79,10 @@ class InventarioController extends Controller
     public function dashboard(): Response
     {
         // Estadísticas generales
-        $totalProductos = Producto::where('activo', true)->count();
-        $productosStockBajo = Producto::where('activo', true)->stockBajo()->count();
+        $totalProductos          = Producto::where('activo', true)->count();
+        $productosStockBajo      = Producto::where('activo', true)->stockBajo()->count();
         $productosProximosVencer = Producto::where('activo', true)->proximosVencer(30)->count();
-        $productosVencidos = Producto::where('activo', true)->vencidos()->count();
+        $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
 
         // Stock total por almacén
         $stockPorAlmacen = Almacen::withSum('stockProductos', 'cantidad')
@@ -91,7 +90,7 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($almacen) {
                 return [
-                    'nombre' => $almacen->nombre,
+                    'nombre'      => $almacen->nombre,
                     'stock_total' => $almacen->stock_productos_sum_cantidad ?? 0,
                 ];
             });
@@ -124,25 +123,25 @@ class InventarioController extends Controller
 
         // Obtener productos en una sola query
         $productoIds = $productosMasMovidosData->pluck('producto_id')->unique();
-        $productos = Producto::whereIn('id', $productoIds)->select('id', 'nombre')->get()->keyBy('id');
+        $productos   = Producto::whereIn('id', $productoIds)->select('id', 'nombre')->get()->keyBy('id');
 
         $productosMasMovidos = $productosMasMovidosData->map(function ($item) use ($productos) {
             $producto = $productos->get($item->producto_id);
             return [
-                'producto_id' => $item->producto_id,
-                'nombre_producto' => $producto?->nombre ?? 'Producto desconocido',
+                'producto_id'       => $item->producto_id,
+                'nombre_producto'   => $producto?->nombre ?? 'Producto desconocido',
                 'total_movimientos' => $item->total_movimientos,
             ];
         });
 
         return Inertia::render('inventario/index', [
-            'estadisticas' => [
-                'total_productos' => $totalProductos,
-                'productos_stock_bajo' => $productosStockBajo,
+            'estadisticas'          => [
+                'total_productos'           => $totalProductos,
+                'productos_stock_bajo'      => $productosStockBajo,
                 'productos_proximos_vencer' => $productosProximosVencer,
-                'productos_vencidos' => $productosVencidos,
+                'productos_vencidos'        => $productosVencidos,
             ],
-            'stock_por_almacen' => $stockPorAlmacen,
+            'stock_por_almacen'     => $stockPorAlmacen,
             'movimientos_recientes' => $movimientosRecientes,
             'productos_mas_movidos' => $productosMasMovidos,
         ]);
@@ -153,7 +152,7 @@ class InventarioController extends Controller
      */
     public function stockBajo(Request $request): Response
     {
-        $q = (string) $request->string('q');
+        $q         = (string) $request->string('q');
         $almacenId = $request->integer('almacen_id');
 
         // Obtener productos con stock bajo directamente desde StockProducto
@@ -179,20 +178,20 @@ class InventarioController extends Controller
         $productos = $query->get()
             ->map(function ($stock) {
                 return [
-                    'id' => $stock->id,
-                    'producto' => [
-                        'id' => $stock->producto->id,
-                        'nombre' => $stock->producto->nombre,
+                    'id'                => $stock->id,
+                    'producto'          => [
+                        'id'        => $stock->producto->id,
+                        'nombre'    => $stock->producto->nombre,
                         'categoria' => [
                             'nombre' => $stock->producto->categoria->nombre ?? 'Sin categoría',
                         ],
                     ],
-                    'almacen' => [
-                        'id' => $stock->almacen->id,
+                    'almacen'           => [
+                        'id'     => $stock->almacen->id,
                         'nombre' => $stock->almacen->nombre,
                     ],
-                    'stock_actual' => $stock->cantidad,
-                    'stock_minimo' => $stock->producto->stock_minimo,
+                    'stock_actual'      => $stock->cantidad,
+                    'stock_minimo'      => $stock->producto->stock_minimo,
                     'fecha_vencimiento' => $stock->fecha_vencimiento,
                 ];
             });
@@ -202,8 +201,8 @@ class InventarioController extends Controller
         return Inertia::render('inventario/stock-bajo', [
             'productos' => $productos,
             'almacenes' => $almacenes,
-            'filters' => [
-                'q' => $q,
+            'filters'   => [
+                'q'          => $q,
                 'almacen_id' => $almacenId,
             ],
         ]);
@@ -215,7 +214,7 @@ class InventarioController extends Controller
     public function proximosVencer(Request $request): Response
     {
         $diasAnticipacion = $request->integer('dias', 30);
-        $almacenId = $request->integer('almacen_id');
+        $almacenId        = $request->integer('almacen_id');
 
         // Obtener productos próximos a vencer directamente desde StockProducto
         $fechaLimite = now()->addDays($diasAnticipacion);
@@ -237,21 +236,21 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($stock) {
                 return [
-                    'id' => $stock->id,
-                    'producto' => [
-                        'id' => $stock->producto->id,
-                        'nombre' => $stock->producto->nombre,
+                    'id'                => $stock->id,
+                    'producto'          => [
+                        'id'        => $stock->producto->id,
+                        'nombre'    => $stock->producto->nombre,
                         'categoria' => [
                             'nombre' => $stock->producto->categoria->nombre ?? 'Sin categoría',
                         ],
                     ],
-                    'almacen' => [
-                        'id' => $stock->almacen->id,
+                    'almacen'           => [
+                        'id'     => $stock->almacen->id,
                         'nombre' => $stock->almacen->nombre,
                     ],
-                    'stock_actual' => $stock->cantidad,
+                    'stock_actual'      => $stock->cantidad,
                     'fecha_vencimiento' => $stock->fecha_vencimiento,
-                    'dias_para_vencer' => now()->diffInDays($stock->fecha_vencimiento, false),
+                    'dias_para_vencer'  => now()->diffInDays($stock->fecha_vencimiento, false),
                 ];
             });
 
@@ -260,8 +259,8 @@ class InventarioController extends Controller
         return Inertia::render('inventario/proximos-vencer', [
             'productos' => $productos,
             'almacenes' => $almacenes,
-            'filters' => [
-                'dias' => $diasAnticipacion,
+            'filters'   => [
+                'dias'       => $diasAnticipacion,
                 'almacen_id' => $almacenId,
             ],
         ]);
@@ -291,21 +290,21 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($stock) {
                 return [
-                    'id' => $stock->id,
-                    'producto' => [
-                        'id' => $stock->producto->id,
-                        'nombre' => $stock->producto->nombre,
+                    'id'                => $stock->id,
+                    'producto'          => [
+                        'id'        => $stock->producto->id,
+                        'nombre'    => $stock->producto->nombre,
                         'categoria' => [
                             'nombre' => $stock->producto->categoria->nombre ?? 'Sin categoría',
                         ],
                     ],
-                    'almacen' => [
-                        'id' => $stock->almacen->id,
+                    'almacen'           => [
+                        'id'     => $stock->almacen->id,
                         'nombre' => $stock->almacen->nombre,
                     ],
-                    'stock_actual' => $stock->cantidad,
+                    'stock_actual'      => $stock->cantidad,
                     'fecha_vencimiento' => $stock->fecha_vencimiento,
-                    'dias_vencido' => now()->diffInDays($stock->fecha_vencimiento, false) * -1,
+                    'dias_vencido'      => now()->diffInDays($stock->fecha_vencimiento, false) * -1,
                 ];
             });
 
@@ -314,7 +313,7 @@ class InventarioController extends Controller
         return Inertia::render('inventario/vencidos', [
             'productos' => $productos,
             'almacenes' => $almacenes,
-            'filters' => [
+            'filters'   => [
                 'almacen_id' => $almacenId,
             ],
         ]);
@@ -326,10 +325,10 @@ class InventarioController extends Controller
     public function movimientos(Request $request): Response
     {
         $fechaInicio = $request->date('fecha_inicio') ?? now()->subMonth();
-        $fechaFin = $request->date('fecha_fin') ?? now();
-        $tipo = $request->filled('tipo') ? $request->string('tipo') : null;
-        $almacenId = $request->filled('almacen_id') ? $request->integer('almacen_id') : null;
-        $productoId = $request->filled('producto_id') ? $request->integer('producto_id') : null;
+        $fechaFin    = $request->date('fecha_fin') ?? now();
+        $tipo        = $request->filled('tipo') ? $request->string('tipo') : null;
+        $almacenId   = $request->filled('almacen_id') ? $request->integer('almacen_id') : null;
+        $productoId  = $request->filled('producto_id') ? $request->integer('producto_id') : null;
 
         $query = MovimientoInventario::with([
             'stockProducto.producto:id,nombre',
@@ -353,51 +352,51 @@ class InventarioController extends Controller
             ->get()
             ->map(function ($movimiento) {
                 return [
-                    'id' => $movimiento->id,
-                    'tipo' => $this->mapearTipoMovimiento($movimiento->tipo),
+                    'id'             => $movimiento->id,
+                    'tipo'           => $this->mapearTipoMovimiento($movimiento->tipo),
                     'tipo_ajuste_id' => $movimiento->tipo_ajuste_inventario_id,
-                    'motivo' => $this->obtenerMotivoMovimiento($movimiento->tipo),
-                    'cantidad' => $movimiento->cantidad,
+                    'motivo'         => $this->obtenerMotivoMovimiento($movimiento->tipo),
+                    'cantidad'       => $movimiento->cantidad,
                     'stock_anterior' => $movimiento->cantidad_anterior,
-                    'stock_nuevo' => $movimiento->cantidad_posterior,
-                    'fecha' => $movimiento->fecha->toISOString(),
-                    'usuario' => [
+                    'stock_nuevo'    => $movimiento->cantidad_posterior,
+                    'fecha'          => $movimiento->fecha->toISOString(),
+                    'usuario'        => [
                         'name' => $movimiento->user->name ?? 'Sistema',
                     ],
-                    'producto' => [
-                        'nombre' => $movimiento->stockProducto->producto->nombre,
+                    'producto'       => [
+                        'nombre'    => $movimiento->stockProducto->producto->nombre,
                         'categoria' => [
                             'nombre' => 'General', // Simplificado por ahora
                         ],
                     ],
-                    'almacen' => [
+                    'almacen'        => [
                         'nombre' => $movimiento->stockProducto->almacen->nombre,
                     ],
-                    'referencia' => $movimiento->numero_documento,
-                    'observaciones' => $movimiento->observacion,
+                    'referencia'     => $movimiento->numero_documento,
+                    'observaciones'  => $movimiento->observacion,
                 ];
             });
 
-        $tipo_mermas = TipoMerma::all();
+        $tipo_mermas              = TipoMerma::all();
         $tipos_ajueste_inventario = TipoAjustInventario::where('activo', true)
             ->select('id', 'clave', 'label')
             ->orderBy('label')
             ->get();
         $estado_mermas = EstadoMerma::all();
-        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $almacenes     = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/movimientos', [
-            'movimientos' => $movimientos,
-            'tipo_mermas' => $tipo_mermas,
+            'movimientos'             => $movimientos,
+            'tipo_mermas'             => $tipo_mermas,
             'tipos_ajuste_inventario' => $tipos_ajueste_inventario,
-            'estado_mermas' => $estado_mermas,
-            'almacenes' => $almacenes,
-            'filtros' => [
+            'estado_mermas'           => $estado_mermas,
+            'almacenes'               => $almacenes,
+            'filtros'                 => [
                 'fecha_inicio' => $fechaInicio->toDateString(),
-                'fecha_fin' => $fechaFin->toDateString(),
-                'tipo' => $tipo,
-                'almacen_id' => $almacenId,
-                'producto_id' => $productoId,
+                'fecha_fin'    => $fechaFin->toDateString(),
+                'tipo'         => $tipo,
+                'almacen_id'   => $almacenId,
+                'producto_id'  => $productoId,
             ],
         ]);
     }
@@ -437,15 +436,15 @@ class InventarioController extends Controller
         if ($almacenId) {
             $stockProductos = StockProducto::where('almacen_id', $almacenId)
                 ->with(['producto:id,nombre,sku,codigo_barras,codigo_qr', 'producto.codigosBarra', 'almacen:id,nombre'])
-                ->orderBy('cantidad', 'desc')
+                ->orderBy('cantidad_disponible', 'desc')
                 ->get();
         }
 
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/ajuste', [
-            'almacenes' => $almacenes,
-            'stock_productos' => $stockProductos,
+            'almacenes'            => $almacenes,
+            'stock_productos'      => $stockProductos,
             'almacen_seleccionado' => $almacenId,
         ]);
     }
@@ -459,7 +458,7 @@ class InventarioController extends Controller
             $movimientos = $this->procesarAjustesInventario($request->validated()['ajustes']);
 
             return redirect()->route('inventario.ajuste.form')
-                ->with('success', 'Se procesaron '.count($movimientos).' ajustes de inventario');
+                ->with('success', 'Se procesaron ' . count($movimientos) . ' ajustes de inventario');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()
                 ->withInput()
@@ -467,7 +466,7 @@ class InventarioController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error al procesar ajuste de inventario: ' . $e->getMessage(), [
                 'exception' => $e,
-                'ajustes' => $request->validated()['ajustes'],
+                'ajustes'   => $request->validated()['ajustes'],
             ]);
 
             return redirect()->back()
@@ -486,11 +485,11 @@ class InventarioController extends Controller
 
             return ApiResponse::success(
                 $movimientos,
-                'Se procesaron '.count($movimientos).' ajustes de inventario'
+                'Se procesaron ' . count($movimientos) . ' ajustes de inventario'
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al procesar ajustes: '.$e->getMessage(),
+                'Error al procesar ajustes: ' . $e->getMessage(),
                 500
             );
         }
@@ -510,7 +509,7 @@ class InventarioController extends Controller
         DB::transaction(function () use ($ajustes, &$movimientos) {
             foreach ($ajustes as $ajuste) {
                 $stockProducto = StockProducto::findOrFail($ajuste['stock_producto_id']);
-                $observacion = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
+                $observacion   = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
 
                 // Generar número de documento único para este ajuste
                 $numeroDocumento = $this->generarNumeroAjuste();
@@ -518,9 +517,9 @@ class InventarioController extends Controller
                 // Siempre procesar el ajuste, incluso si la cantidad no ha cambiado
                 // Esto permite registrar el tipo de ajuste y la observación
                 $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
-                $tipo = $diferencia >= 0 ?
-                    MovimientoInventario::TIPO_ENTRADA_AJUSTE :
-                    MovimientoInventario::TIPO_SALIDA_AJUSTE;
+                $tipo       = $diferencia >= 0 ?
+                MovimientoInventario::TIPO_ENTRADA_AJUSTE :
+                MovimientoInventario::TIPO_SALIDA_AJUSTE;
 
                 // Registrar el movimiento con el tipo de ajuste y número de documento
                 $movimiento = MovimientoInventario::registrar(
@@ -545,22 +544,22 @@ class InventarioController extends Controller
      */
     public function movimientosApi(Request $request): JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
-        $almacenId = $request->integer('almacen_id');
-        $productoId = $request->integer('producto_id');
-        $tipo = $request->string('tipo');
+        $perPage     = $request->integer('per_page', 15);
+        $almacenId   = $request->integer('almacen_id');
+        $productoId  = $request->integer('producto_id');
+        $tipo        = $request->string('tipo');
         $fechaInicio = $request->date('fecha_inicio');
-        $fechaFin = $request->date('fecha_fin');
+        $fechaFin    = $request->date('fecha_fin');
 
         $movimientos = MovimientoInventario::with([
             'stockProducto.producto:id,nombre,codigo',
             'user:id,name',
         ])
-            ->when($almacenId, fn ($q) => $q->whereHas('stockProducto', fn ($sq) => $sq->where('almacen_id', $almacenId)))
-            ->when($productoId, fn ($q) => $q->whereHas('stockProducto', fn ($sq) => $sq->where('producto_id', $productoId)))
-            ->when($tipo, fn ($q) => $q->where('tipo', $tipo))
-            ->when($fechaInicio, fn ($q) => $q->whereDate('fecha', '>=', $fechaInicio))
-            ->when($fechaFin, fn ($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->when($almacenId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId)))
+            ->when($productoId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('producto_id', $productoId)))
+            ->when($tipo, fn($q) => $q->where('tipo', $tipo))
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate($perPage);
@@ -575,9 +574,9 @@ class InventarioController extends Controller
     {
         $data = $request->validate([
             'stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'cantidad' => ['required', 'integer', 'not_in:0'],
-            'tipo' => ['required', 'in:entrada_ajuste,salida_ajuste'],
-            'observacion' => ['required', 'string', 'max:500'],
+            'cantidad'          => ['required', 'integer', 'not_in:0'],
+            'tipo'              => ['required', 'in:entrada_ajuste,salida_ajuste'],
+            'observacion'       => ['required', 'string', 'max:500'],
         ]);
 
         try {
@@ -597,7 +596,7 @@ class InventarioController extends Controller
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al registrar movimiento: '.$e->getMessage(),
+                'Error al registrar movimiento: ' . $e->getMessage(),
                 500
             );
         }
@@ -608,7 +607,7 @@ class InventarioController extends Controller
      */
     public function buscarProductos(Request $request): JsonResponse
     {
-        $q = $request->string('q');
+        $q         = $request->string('q');
         $almacenId = $request->integer('almacen_id');
 
         if (! $q || strlen($q) < 2) {
@@ -616,7 +615,7 @@ class InventarioController extends Controller
         }
 
         $searchLower = strtolower($q);
-        $productos = Producto::whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+        $productos   = Producto::whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
             ->where('activo', true)
             ->with(['stock' => function ($query) use ($almacenId) {
                 if ($almacenId) {
@@ -638,18 +637,18 @@ class InventarioController extends Controller
         $almacenId = $request->integer('almacen_id');
 
         $stock = $producto->stock()
-            ->when($almacenId, fn ($q) => $q->where('almacen_id', $almacenId))
+            ->when($almacenId, fn($q) => $q->where('almacen_id', $almacenId))
             ->with('almacen')
             ->get();
 
         return ApiResponse::success([
-            'producto' => [
-                'id' => $producto->id,
-                'nombre' => $producto->nombre,
+            'producto'          => [
+                'id'           => $producto->id,
+                'nombre'       => $producto->nombre,
                 'stock_minimo' => $producto->stock_minimo,
                 'stock_maximo' => $producto->stock_maximo,
-                'stock_total' => $producto->stockTotal(),
-                'stock_bajo' => $producto->stockBajo(),
+                'stock_total'  => $producto->stockTotal(),
+                'stock_bajo'   => $producto->stockBajo(),
             ],
             'stock_por_almacen' => $stock,
         ]);
@@ -661,11 +660,11 @@ class InventarioController extends Controller
     public function reportes(): Response
     {
         $categorias = Categoria::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
-        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $almacenes  = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/reportes', [
             'categorias' => $categorias,
-            'almacenes' => $almacenes,
+            'almacenes'  => $almacenes,
         ]);
     }
 
@@ -700,16 +699,16 @@ class InventarioController extends Controller
 
         $almacenes = Almacen::where('activo', true)->get(['id', 'nombre']);
         $vehiculos = Vehiculo::activos()->get(['id', 'placa']);
-        $choferes = Chofer::activos()->with('user:id,name')->get();
-        $estados = TransferenciaInventario::getEstados();
+        $choferes  = Chofer::activos()->with('user:id,name')->get();
+        $estados   = TransferenciaInventario::getEstados();
 
         return Inertia::render('inventario/transferencias/index', [
             'transferencias' => $transferencias,
-            'almacenes' => $almacenes,
-            'vehiculos' => $vehiculos,
-            'choferes' => $choferes,
-            'estados' => $estados,
-            'filtros' => $request->only(['estado', 'almacen_id', 'fecha_inicio', 'fecha_fin']),
+            'almacenes'      => $almacenes,
+            'vehiculos'      => $vehiculos,
+            'choferes'       => $choferes,
+            'estados'        => $estados,
+            'filtros'        => $request->only(['estado', 'almacen_id', 'fecha_inicio', 'fecha_fin']),
         ]);
     }
 
@@ -724,31 +723,31 @@ class InventarioController extends Controller
             $transferencia = DB::transaction(function () use ($data) {
                 // Generar número
                 $ultimoNumero = TransferenciaInventario::max('numero') ?? 'TRF-000000';
-                $numero = (int) substr($ultimoNumero, 4);
-                $nuevoNumero = 'TRF-'.str_pad($numero + 1, 6, '0', STR_PAD_LEFT);
+                $numero       = (int) substr($ultimoNumero, 4);
+                $nuevoNumero  = 'TRF-' . str_pad($numero + 1, 6, '0', STR_PAD_LEFT);
 
                 // Crear transferencia
                 $transferencia = TransferenciaInventario::create([
-                    'numero' => $nuevoNumero,
-                    'fecha' => now(),
-                    'almacen_origen_id' => $data['almacen_origen_id'],
+                    'numero'             => $nuevoNumero,
+                    'fecha'              => now(),
+                    'almacen_origen_id'  => $data['almacen_origen_id'],
                     'almacen_destino_id' => $data['almacen_destino_id'],
-                    'usuario_id' => Auth::id(),
-                    'estado' => TransferenciaInventario::ESTADO_BORRADOR,
-                    'vehiculo_id' => $data['vehiculo_id'] ?? null,
-                    'chofer_id' => $data['chofer_id'] ?? null,
-                    'observaciones' => $data['observaciones'] ?? null,
-                    'total_productos' => count($data['detalles']),
-                    'total_cantidad' => array_sum(array_column($data['detalles'], 'cantidad')),
+                    'usuario_id'         => Auth::id(),
+                    'estado'             => TransferenciaInventario::ESTADO_BORRADOR,
+                    'vehiculo_id'        => $data['vehiculo_id'] ?? null,
+                    'chofer_id'          => $data['chofer_id'] ?? null,
+                    'observaciones'      => $data['observaciones'] ?? null,
+                    'total_productos'    => count($data['detalles']),
+                    'total_cantidad'     => array_sum(array_column($data['detalles'], 'cantidad')),
                 ]);
 
                 // Crear detalles
                 foreach ($data['detalles'] as $detalle) {
                     DetalleTransferenciaInventario::create([
-                        'transferencia_id' => $transferencia->id,
-                        'producto_id' => $detalle['producto_id'],
-                        'cantidad' => $detalle['cantidad'],
-                        'lote' => $detalle['lote'] ?? null,
+                        'transferencia_id'  => $transferencia->id,
+                        'producto_id'       => $detalle['producto_id'],
+                        'cantidad'          => $detalle['cantidad'],
+                        'lote'              => $detalle['lote'] ?? null,
                         'fecha_vencimiento' => $detalle['fecha_vencimiento'] ?? null,
                     ]);
                 }
@@ -764,7 +763,7 @@ class InventarioController extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Error al crear transferencia: '.$e->getMessage()]);
+                ->withErrors(['error' => 'Error al crear transferencia: ' . $e->getMessage()]);
         }
     }
 
@@ -787,7 +786,7 @@ class InventarioController extends Controller
                 -$data['cantidad'],
                 MovimientoInventario::TIPO_SALIDA_MERMA,
                 $data['motivo'],
-                'MERMA-'.now()->format('Ymd-His')
+                'MERMA-' . now()->format('Ymd-His')
             );
 
             return ApiResponse::success(
@@ -797,7 +796,7 @@ class InventarioController extends Controller
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al registrar merma: '.$e->getMessage(),
+                'Error al registrar merma: ' . $e->getMessage(),
                 500
             );
         }
@@ -812,7 +811,7 @@ class InventarioController extends Controller
             ->select('id', 'nombre', 'direccion', 'ubicacion_fisica', 'requiere_transporte_externo')
             ->get();
         $vehiculos = Vehiculo::activos()->get();
-        $choferes = Chofer::with('user')->get();
+        $choferes  = Chofer::with('user')->get();
         $productos = Producto::where('activo', true)
             ->with(['codigoPrincipal', 'stock' => function ($query) {
                 $query->select('producto_id', 'almacen_id', 'cantidad')
@@ -825,10 +824,10 @@ class InventarioController extends Controller
                 $stockTotal = $producto->stock->sum('cantidad');
 
                 return [
-                    'id' => $producto->id,
-                    'nombre' => $producto->nombre,
-                    'codigo' => $producto->codigoPrincipal?->codigo ?? $producto->codigo_qr ?? 'SIN-CODIGO',
-                    'stock_disponible' => $stockTotal,
+                    'id'                => $producto->id,
+                    'nombre'            => $producto->nombre,
+                    'codigo'            => $producto->codigoPrincipal?->codigo ?? $producto->codigo_qr ?? 'SIN-CODIGO',
+                    'stock_disponible'  => $stockTotal,
                     'stock_por_almacen' => $producto->stock->groupBy('almacen_id')->map(function ($stock) {
                         return $stock->sum('cantidad');
                     })->toArray(),
@@ -838,7 +837,7 @@ class InventarioController extends Controller
         return Inertia::render('inventario/transferencias/crear', [
             'almacenes' => $almacenes,
             'vehiculos' => $vehiculos,
-            'choferes' => $choferes,
+            'choferes'  => $choferes,
             'productos' => $productos,
         ]);
     }
@@ -877,7 +876,7 @@ class InventarioController extends Controller
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al enviar transferencia: '.$e->getMessage(),
+                'Error al enviar transferencia: ' . $e->getMessage(),
                 400
             );
         }
@@ -898,7 +897,7 @@ class InventarioController extends Controller
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al recibir transferencia: '.$e->getMessage(),
+                'Error al recibir transferencia: ' . $e->getMessage(),
                 400
             );
         }
@@ -923,7 +922,7 @@ class InventarioController extends Controller
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Error al cancelar transferencia: '.$e->getMessage(),
+                'Error al cancelar transferencia: ' . $e->getMessage(),
                 400
             );
         }
@@ -941,15 +940,15 @@ class InventarioController extends Controller
 
         // Calcular estadísticas de mermas
         $estadisticas = [
-            'total_mermas' => MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)->count(),
+            'total_mermas'     => MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)->count(),
             'total_pendientes' => 0, // No existe la columna estado en movimientos_inventario
-            'total_aprobadas' => MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)->count(),
+            'total_aprobadas'  => MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)->count(),
             'total_rechazadas' => 0, // No existe la columna estado en movimientos_inventario
-            'costo_total_mes' => 0, // Temporalmente 0, se puede calcular con JOIN a precios_producto más adelante
+            'costo_total_mes'  => 0, // Temporalmente 0, se puede calcular con JOIN a precios_producto más adelante
         ];
 
         return Inertia::render('inventario/mermas/index', [
-            'mermas' => $mermas,
+            'mermas'       => $mermas,
             'estadisticas' => $estadisticas,
         ]);
     }
@@ -983,12 +982,12 @@ class InventarioController extends Controller
     {
         $choferes = Chofer::with('user')->get()->map(function ($chofer) {
             return [
-                'id' => $chofer->id,
-                'user_id' => $chofer->user_id,
-                'nombre' => $chofer->user->name,
+                'id'       => $chofer->id,
+                'user_id'  => $chofer->user_id,
+                'nombre'   => $chofer->user->name,
                 'licencia' => $chofer->licencia,
                 'telefono' => $chofer->telefono,
-                'activo' => $chofer->activo,
+                'activo'   => $chofer->activo,
             ];
         });
 
@@ -1004,13 +1003,13 @@ class InventarioController extends Controller
 
         $almacenes = Almacen::where('activo', true)->get();
         $vehiculos = Vehiculo::where('activo', true)->get();
-        $choferes = Chofer::with('user')->get();
+        $choferes  = Chofer::with('user')->get();
 
         return Inertia::render('inventario/transferencias/editar', [
             'transferencia' => $transferencia,
-            'almacenes' => $almacenes,
-            'vehiculos' => $vehiculos,
-            'choferes' => $choferes,
+            'almacenes'     => $almacenes,
+            'vehiculos'     => $vehiculos,
+            'choferes'      => $choferes,
         ]);
     }
 
@@ -1020,13 +1019,13 @@ class InventarioController extends Controller
     public function actualizarTransferencia(Request $request, TransferenciaInventario $transferencia): RedirectResponse
     {
         $request->validate([
-            'almacen_destino_id' => 'required|exists:almacenes,id',
-            'vehiculo_id' => 'nullable|exists:vehiculos,id',
-            'chofer_id' => 'nullable|exists:choferes,id',
-            'observaciones' => 'nullable|string|max:500',
-            'productos' => 'required|array|min:1',
+            'almacen_destino_id'            => 'required|exists:almacenes,id',
+            'vehiculo_id'                   => 'nullable|exists:vehiculos,id',
+            'chofer_id'                     => 'nullable|exists:choferes,id',
+            'observaciones'                 => 'nullable|string|max:500',
+            'productos'                     => 'required|array|min:1',
             'productos.*.stock_producto_id' => 'required|exists:stock_productos,id',
-            'productos.*.cantidad' => 'required|numeric|min:0.01',
+            'productos.*.cantidad'          => 'required|numeric|min:0.01',
         ]);
 
         DB::beginTransaction();
@@ -1039,9 +1038,9 @@ class InventarioController extends Controller
             // Actualizar datos principales
             $transferencia->update([
                 'almacen_destino_id' => $request->almacen_destino_id,
-                'vehiculo_id' => $request->vehiculo_id,
-                'chofer_id' => $request->chofer_id,
-                'observaciones' => $request->observaciones,
+                'vehiculo_id'        => $request->vehiculo_id,
+                'chofer_id'          => $request->chofer_id,
+                'observaciones'      => $request->observaciones,
             ]);
 
             // Eliminar detalles existentes
@@ -1051,10 +1050,10 @@ class InventarioController extends Controller
             foreach ($request->productos as $producto) {
                 DetalleTransferenciaInventario::create([
                     'transferencia_inventario_id' => $transferencia->id,
-                    'stock_producto_id' => $producto['stock_producto_id'],
-                    'cantidad_solicitada' => $producto['cantidad'],
-                    'cantidad_enviada' => 0,
-                    'cantidad_recibida' => 0,
+                    'stock_producto_id'           => $producto['stock_producto_id'],
+                    'cantidad_solicitada'         => $producto['cantidad'],
+                    'cantidad_enviada'            => 0,
+                    'cantidad_recibida'           => 0,
                 ]);
             }
 
@@ -1066,7 +1065,7 @@ class InventarioController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->withErrors(['error' => 'Error al actualizar la transferencia: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al actualizar la transferencia: ' . $e->getMessage()]);
         }
     }
 
@@ -1077,19 +1076,19 @@ class InventarioController extends Controller
     {
         // Aquí iría la lógica para obtener mermas desde la base de datos
         // Por ahora simulamos datos para que funcione el frontend
-        $mermas = collect([]);
+        $mermas       = collect([]);
         $estadisticas = [
-            'total_mermas' => 0,
+            'total_mermas'        => 0,
             'valor_total_perdido' => 0,
-            'mermas_pendientes' => 0,
-            'mermas_aprobadas' => 0,
-            'mermas_rechazadas' => 0,
+            'mermas_pendientes'   => 0,
+            'mermas_aprobadas'    => 0,
+            'mermas_rechazadas'   => 0,
         ];
 
         return Inertia::render('inventario/mermas/index', [
-            'mermas' => $mermas,
+            'mermas'       => $mermas,
             'estadisticas' => $estadisticas,
-            'filtros' => $request->all(),
+            'filtros'      => $request->all(),
         ]);
     }
 
@@ -1115,7 +1114,7 @@ class InventarioController extends Controller
             'stockProducto.almacen',
             'user',
             'tipoMerma',
-            'estadoMerma'
+            'estadoMerma',
         ])
             ->where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)
             ->findOrFail($id);
@@ -1124,36 +1123,36 @@ class InventarioController extends Controller
         $valorTotal = abs($movimiento->cantidad) * ($movimiento->stockProducto->precio_promedio ?? 0);
 
         $merma = [
-            'id' => $movimiento->id,
-            'codigo' => $movimiento->numero_documento ?? 'MER-'.str_pad($movimiento->id, 6, '0', STR_PAD_LEFT),
-            'producto' => [
-                'id' => $movimiento->stockProducto->producto->id,
-                'nombre' => $movimiento->stockProducto->producto->nombre,
+            'id'               => $movimiento->id,
+            'codigo'           => $movimiento->numero_documento ?? 'MER-' . str_pad($movimiento->id, 6, '0', STR_PAD_LEFT),
+            'producto'         => [
+                'id'        => $movimiento->stockProducto->producto->id,
+                'nombre'    => $movimiento->stockProducto->producto->nombre,
                 'categoria' => $movimiento->stockProducto->producto->categoria->nombre ?? 'Sin categoría',
             ],
-            'almacen' => [
-                'id' => $movimiento->stockProducto->almacen->id,
+            'almacen'          => [
+                'id'     => $movimiento->stockProducto->almacen->id,
                 'nombre' => $movimiento->stockProducto->almacen->nombre,
             ],
-            'cantidad' => abs($movimiento->cantidad),
-            'tipo_merma' => $movimiento->tipoMerma ? [
-                'id' => $movimiento->tipoMerma->id,
+            'cantidad'         => abs($movimiento->cantidad),
+            'tipo_merma'       => $movimiento->tipoMerma ? [
+                'id'     => $movimiento->tipoMerma->id,
                 'nombre' => $movimiento->tipoMerma->label,
             ] : null,
-            'estado_merma' => $movimiento->estadoMerma ? [
-                'id' => $movimiento->estadoMerma->id,
+            'estado_merma'     => $movimiento->estadoMerma ? [
+                'id'     => $movimiento->estadoMerma->id,
                 'nombre' => $movimiento->estadoMerma->label,
             ] : null,
-            'fecha_registro' => $movimiento->fecha->format('Y-m-d H:i:s'),
-            'observaciones' => $movimiento->observacion,
-            'usuario' => [
+            'fecha_registro'   => $movimiento->fecha->format('Y-m-d H:i:s'),
+            'observaciones'    => $movimiento->observacion,
+            'usuario'          => [
                 'name' => $movimiento->user->name ?? 'Sistema',
             ],
-            'stock_anterior' => $movimiento->cantidad_anterior,
-            'stock_posterior' => $movimiento->cantidad_posterior,
-            'valor_unitario' => $movimiento->stockProducto->precio_promedio ?? 0,
-            'valor_total' => $valorTotal,
-            'anulado' => $movimiento->anulado ?? false,
+            'stock_anterior'   => $movimiento->cantidad_anterior,
+            'stock_posterior'  => $movimiento->cantidad_posterior,
+            'valor_unitario'   => $movimiento->stockProducto->precio_promedio ?? 0,
+            'valor_total'      => $valorTotal,
+            'anulado'          => $movimiento->anulado ?? false,
             'motivo_anulacion' => $movimiento->motivo_anulacion,
         ];
 
@@ -1185,7 +1184,7 @@ class InventarioController extends Controller
                 ->orWhere('label', 'like', '%aprobad%')
                 ->first();
 
-            if (!$estadoAprobado) {
+            if (! $estadoAprobado) {
                 return ApiResponse::error('No se encontró el estado "Aprobado" en el sistema', 500);
             }
 
@@ -1203,8 +1202,8 @@ class InventarioController extends Controller
             }
 
             return ApiResponse::success([
-                'message' => 'Merma aprobada exitosamente',
-                'merma_id' => $id,
+                'message'    => 'Merma aprobada exitosamente',
+                'merma_id'   => $id,
                 'movimiento' => $movimiento->load(['estadoMerma', 'tipoMerma']),
             ]);
         } catch (\Exception $e) {
@@ -1235,7 +1234,7 @@ class InventarioController extends Controller
                 ->orWhere('label', 'like', '%rechazad%')
                 ->first();
 
-            if (!$estadoRechazado) {
+            if (! $estadoRechazado) {
                 return ApiResponse::error('No se encontró el estado "Rechazado" en el sistema', 500);
             }
 
@@ -1243,14 +1242,14 @@ class InventarioController extends Controller
             $observacionActual = $movimiento->observacion ?? '';
             $movimiento->update([
                 'estado_merma_id' => $estadoRechazado->id,
-                'observacion' => $observacionActual . "\n[RECHAZO] " . $request->observaciones_rechazo,
+                'observacion'     => $observacionActual . "\n[RECHAZO] " . $request->observaciones_rechazo,
             ]);
 
             return ApiResponse::success([
-                'message' => 'Merma rechazada exitosamente',
-                'merma_id' => $id,
+                'message'        => 'Merma rechazada exitosamente',
+                'merma_id'       => $id,
                 'motivo_rechazo' => $request->observaciones_rechazo,
-                'movimiento' => $movimiento->load(['estadoMerma', 'tipoMerma']),
+                'movimiento'     => $movimiento->load(['estadoMerma', 'tipoMerma']),
             ]);
         } catch (\Exception $e) {
             return ApiResponse::error('Error al rechazar la merma: ' . $e->getMessage(), 500);
@@ -1262,22 +1261,22 @@ class InventarioController extends Controller
      */
     public function ajusteMasivoForm(Request $request): Response
     {
-        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'activo']);
-        $tiposAjuste = TipoAjustInventario::where('activo', true)->get();
-        $tiposMerma = TipoMerma::where('activo', true)->get();
+        $almacenes      = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'activo']);
+        $tiposAjuste    = TipoAjustInventario::where('activo', true)->get();
+        $tiposMerma     = TipoMerma::where('activo', true)->get();
         $tiposOperacion = TipoOperacion::where('activo', true)->get();
-        $productos = Producto::all(['id', 'sku', 'nombre'])->take(1000);
-        $proveedores = \App\Models\Proveedor::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'razon_social', 'ci_nit'])->take(500);
-        $clientes = \App\Models\Cliente::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'razon_social', 'ci_nit'])->take(500);
+        $productos      = Producto::all(['id', 'sku', 'nombre'])->take(1000);
+        $proveedores    = \App\Models\Proveedor::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'razon_social', 'nit'])->take(500);
+        $clientes       = \App\Models\Cliente::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'razon_social', 'nit'])->take(500);
 
         return Inertia::render('inventario/ajuste-masivo', [
-            'almacenes' => $almacenes,
-            'tipos_ajuste' => $tiposAjuste,
-            'tipos_merma' => $tiposMerma,
+            'almacenes'       => $almacenes,
+            'tipos_ajuste'    => $tiposAjuste,
+            'tipos_merma'     => $tiposMerma,
             'tipos_operacion' => $tiposOperacion,
-            'productos' => $productos,
-            'proveedores' => $proveedores,
-            'clientes' => $clientes,
+            'productos'       => $productos,
+            'proveedores'     => $proveedores,
+            'clientes'        => $clientes,
         ]);
     }
 
@@ -1287,26 +1286,26 @@ class InventarioController extends Controller
     public function importarAjustesMasivos(Request $request): JsonResponse
     {
         $request->validate([
-            'ajustes' => 'required|array|min:1',
+            'ajustes'                     => 'required|array|min:1',
             'ajustes.*.stock_producto_id' => 'required|integer|exists:stock_productos,id',
             'ajustes.*.tipo_operacion_id' => 'required|integer|exists:tipo_operaciones,id',
-            'ajustes.*.tipo_motivo_id' => 'nullable|integer', // Puede ser null para operaciones sin tipo motivo específico
-            'ajustes.*.almacen_id' => 'required|integer|exists:almacenes,id',
-            'ajustes.*.cantidad' => 'required|integer|min:1', // Siempre positiva
-            'ajustes.*.observacion' => 'required|string|max:500',
+            'ajustes.*.tipo_motivo_id'    => 'nullable|integer', // Puede ser null para operaciones sin tipo motivo específico
+            'ajustes.*.almacen_id'        => 'required|integer|exists:almacenes,id',
+            'ajustes.*.cantidad'          => 'required|integer|min:1', // Siempre positiva
+            'ajustes.*.observacion'       => 'required|string|max:500',
             'ajustes.*.tipo_motivo_valor' => 'nullable|string|max:255', // Para proveedor/cliente
-            'nombre_archivo' => 'required|string|max:255',
-            'datos_csv' => 'required|array', // Datos originales del CSV para almacenamiento
+            'nombre_archivo'              => 'required|string|max:255',
+            'datos_csv'                   => 'required|array', // Datos originales del CSV para almacenamiento
         ]);
 
         try {
             DB::beginTransaction();
 
-            $ajustes = $request->input('ajustes');
-            $nombreArchivo = $request->input('nombre_archivo');
-            $datosCsv = $request->input('datos_csv');
-            $procesados = 0;
-            $errores = [];
+            $ajustes            = $request->input('ajustes');
+            $nombreArchivo      = $request->input('nombre_archivo');
+            $datosCsv           = $request->input('datos_csv');
+            $procesados         = 0;
+            $errores            = [];
             $movimientosCreados = [];
 
             // Calcular hash del archivo para detectar duplicados
@@ -1321,24 +1320,32 @@ class InventarioController extends Controller
 
             // Crear registro de carga CSV
             $cargo = \App\Models\CargoCSVInventario::create([
-                'usuario_id' => Auth::id(),
-                'nombre_archivo' => $nombreArchivo,
-                'hash_archivo' => $hashArchivo,
-                'cantidad_filas' => count($datosCsv),
+                'usuario_id'       => Auth::id(),
+                'nombre_archivo'   => $nombreArchivo,
+                'hash_archivo'     => $hashArchivo,
+                'cantidad_filas'   => count($datosCsv),
                 'cantidad_validas' => count($ajustes),
                 'cantidad_errores' => 0,
-                'estado' => 'pendiente',
-                'datos_json' => json_encode($datosCsv),
-                'errores_json' => json_encode([]),
-                'cambios_json' => json_encode([]),
+                'estado'           => 'pendiente',
+                'datos_json'       => json_encode($datosCsv),
+                'errores_json'     => json_encode([]),
+                'cambios_json'     => json_encode([]),
             ]);
 
             // Procesar cada ajuste
             foreach ($ajustes as $index => $ajuste) {
                 try {
                     // Obtener el stock del producto
-                    $stock = StockProducto::findOrFail($ajuste['stock_producto_id']);
+                    $stock    = StockProducto::findOrFail($ajuste['stock_producto_id']);
                     $producto = $stock->producto;
+
+                    // VALIDACIÓN CRÍTICA: Verificar que el stock pertenece al almacén especificado
+                    if ($stock->almacen_id !== $ajuste['almacen_id']) {
+                        throw new \Exception(
+                            "El producto '{$producto->nombre}' no existe en el almacén especificado. " .
+                            "Pertenece al almacén: {$stock->almacen->nombre}"
+                        );
+                    }
 
                     // Obtener la operación para determinar la dirección
                     $operacion = TipoOperacion::findOrFail($ajuste['tipo_operacion_id']);
@@ -1348,22 +1355,51 @@ class InventarioController extends Controller
 
                     // Determinar tipo de movimiento según la dirección de la operación
                     // La cantidad siempre es positiva, la dirección viene del tipo de operación
-                    $cantidad = $ajuste['cantidad'];
+                    $cantidad  = $ajuste['cantidad'];
                     $esEntrada = $operacion->direccion === 'entrada';
 
                     // Mapear el tipo de operación al tipo de movimiento
                     $tipoMovimiento = $this->mapearTipoMovimiento($operacion->clave);
 
-                    // Crear movimiento de inventario
+                    // Capturar cantidad anterior ANTES de actualizar el stock
+                    $cantidadAnterior = $stock->cantidad;
+
+                    // Actualizar stock según la dirección
+                    // IMPORTANTE: Mantener el invariante: cantidad = cantidad_disponible + cantidad_reservada
+                    if ($esEntrada) {
+                        $stock->cantidad += $cantidad;
+                        $stock->cantidad_disponible += $cantidad;
+                    } else {
+                        $stock->cantidad -= $cantidad;
+                        $stock->cantidad_disponible -= $cantidad;
+
+                        // Evitar stock negativo
+                        if ($stock->cantidad < 0) {
+                            $stock->cantidad = 0;
+                        }
+                        if ($stock->cantidad_disponible < 0) {
+                            $stock->cantidad_disponible = 0;
+                        }
+                    }
+
+                    $stock->fecha_actualizacion = now();
+                    $stock->save();
+
+                    // Ahora crear el movimiento CON los datos actualizados
+                    $cantidadPosterior = $stock->cantidad;
+
                     $movimientoData = [
-                        'numero_documento' => $numeroAjuste,
-                        'stock_producto_id' => $ajuste['stock_producto_id'],
-                        'almacen_id' => $ajuste['almacen_id'],
-                        'cantidad' => $cantidad,
-                        'tipo' => $tipoMovimiento,
-                        'observacion' => $ajuste['observacion'],
-                        'usuario_id' => Auth::id(),
-                        'fecha_movimiento' => now(),
+                        'numero_documento'      => $numeroAjuste,
+                        'stock_producto_id'     => $ajuste['stock_producto_id'],
+                        'cantidad'              => $cantidad,
+                        'cantidad_anterior'     => $cantidadAnterior,
+                        'cantidad_posterior'    => $cantidadPosterior,
+                        'tipo'                  => $tipoMovimiento,
+                        'observacion'           => $ajuste['observacion'],
+                        'user_id'               => Auth::id(),
+                        'fecha'                 => now(),
+                        'referencia_tipo'       => 'CARGA_CSV',
+                        'referencia_id'         => $cargo->id, // Vincular al cargo CSV
                     ];
 
                     // Agregar campos específicos según el tipo de operación
@@ -1378,46 +1414,34 @@ class InventarioController extends Controller
 
                     $movimiento = MovimientoInventario::create($movimientoData);
 
-                    // Actualizar stock según la dirección
-                    if ($esEntrada) {
-                        $stock->cantidad += $cantidad;
-                    } else {
-                        $stock->cantidad -= $cantidad;
-                        // Evitar stock negativo
-                        if ($stock->cantidad < 0) {
-                            $stock->cantidad = 0;
-                        }
-                    }
-                    $stock->save();
-
                     $procesados++;
                     $movimientosCreados[] = $movimiento->id;
                 } catch (\Exception $e) {
                     $errores[] = [
-                        'fila' => $index + 1,
+                        'fila'  => $index + 1,
                         'error' => $e->getMessage(),
                     ];
                 }
             }
 
             // Actualizar errores en cargo
-            if (!empty($errores)) {
+            if (! empty($errores)) {
                 $cargo->update([
                     'cantidad_errores' => count($errores),
-                    'errores_json' => json_encode($errores),
+                    'errores_json'     => json_encode($errores),
                 ]);
             }
 
             DB::commit();
 
             // Después de commit, vincular movimientos al cargo
-            if (!empty($movimientosCreados)) {
+            if (! empty($movimientosCreados)) {
                 foreach ($movimientosCreados as $movimientoId) {
                     DB::table('cargo_csv_movimientos')->insert([
-                        'cargo_csv_id' => $cargo->id,
+                        'cargo_csv_id'             => $cargo->id,
                         'movimiento_inventario_id' => $movimientoId,
-                        'created_at' => now(),
-                        'updated_at' => now(),
+                        'created_at'               => now(),
+                        'updated_at'               => now(),
                     ]);
                 }
 
@@ -1428,16 +1452,16 @@ class InventarioController extends Controller
             if ($errores) {
                 \Log::warning('Errores en importación de ajustes masivos', [
                     'cargo_id' => $cargo->id,
-                    'errores' => $errores,
+                    'errores'  => $errores,
                 ]);
             }
 
             return ApiResponse::success([
-                'cargo_id' => $cargo->id,
+                'cargo_id'   => $cargo->id,
                 'procesados' => $procesados,
-                'total' => count($ajustes),
-                'errores' => $errores,
-                'mensaje' => "Se procesaron {$procesados} de " . count($ajustes) . " ajustes",
+                'total'      => count($ajustes),
+                'errores'    => $errores,
+                'mensaje'    => "Se procesaron {$procesados} de " . count($ajustes) . " ajustes",
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1466,9 +1490,9 @@ class InventarioController extends Controller
     public function listarCargosCsv(Request $request): JsonResponse
     {
         try {
-            $page = $request->input('page', 1);
+            $page    = $request->input('page', 1);
             $perPage = $request->input('per_page', 15);
-            $estado = $request->input('estado'); // Opcional: filtrar por estado
+            $estado  = $request->input('estado');  // Opcional: filtrar por estado
             $usuario = $request->input('usuario'); // Opcional: filtrar por usuario
 
             $query = \App\Models\CargoCSVInventario::with(['usuario', 'revertidoPorUsuario'])
@@ -1485,14 +1509,14 @@ class InventarioController extends Controller
             $cargos = $query->paginate($perPage, ['*'], 'page', $page);
 
             return ApiResponse::success([
-                'data' => $cargos->map(function ($cargo) {
+                'data'       => $cargos->map(function ($cargo) {
                     return $cargo->getResumenAttribute();
                 })->toArray(),
                 'pagination' => [
                     'current_page' => $cargos->currentPage(),
-                    'per_page' => $cargos->perPage(),
-                    'total' => $cargos->total(),
-                    'last_page' => $cargos->lastPage(),
+                    'per_page'     => $cargos->perPage(),
+                    'total'        => $cargos->total(),
+                    'last_page'    => $cargos->lastPage(),
                 ],
             ]);
         } catch (\Exception $e) {
@@ -1515,29 +1539,29 @@ class InventarioController extends Controller
                 ->get()
                 ->map(function ($mov) {
                     return [
-                        'id' => $mov->id,
+                        'id'               => $mov->id,
                         'numero_documento' => $mov->numero_documento,
-                        'producto' => $mov->stockProducto->producto->nombre,
-                        'sku' => $mov->stockProducto->producto->sku,
-                        'cantidad' => $mov->cantidad,
-                        'tipo' => $mov->tipo,
-                        'almacen' => $mov->almacen->nombre,
-                        'observacion' => $mov->observacion,
-                        'fecha' => $mov->fecha_movimiento->format('d/m/Y H:i'),
+                        'producto'         => $mov->stockProducto->producto->nombre,
+                        'sku'              => $mov->stockProducto->producto->sku,
+                        'cantidad'         => $mov->cantidad,
+                        'tipo'             => $mov->tipo,
+                        'almacen'          => $mov->almacen->nombre,
+                        'observacion'      => $mov->observacion,
+                        'fecha'            => $mov->fecha_movimiento->format('d/m/Y H:i'),
                     ];
                 });
 
             return ApiResponse::success([
-                'cargo' => $cargo->getResumenAttribute(),
-                'movimientos' => $movimientos,
-                'puede_revertir' => $cargo->estado === 'procesado',
+                'cargo'            => $cargo->getResumenAttribute(),
+                'movimientos'      => $movimientos,
+                'puede_revertir'   => $cargo->estado === 'procesado',
                 'datos_originales' => json_decode($cargo->datos_json, true),
-                'errores' => json_decode($cargo->errores_json, true),
+                'errores'          => json_decode($cargo->errores_json, true),
             ]);
         } catch (\Exception $e) {
             \Log::error('Error al obtener detalles del cargo', [
                 'cargo_id' => $cargo->id,
-                'error' => $e->getMessage(),
+                'error'    => $e->getMessage(),
             ]);
 
             return ApiResponse::error('Error al obtener los detalles del cargo', 500);
@@ -1562,26 +1586,26 @@ class InventarioController extends Controller
             // Revertir el cargo
             $resultado = $cargo->revertir(Auth::user(), $request->input('motivo'));
 
-            if (!$resultado) {
+            if (! $resultado) {
                 return ApiResponse::error('Error al revertir el cargo', 500);
             }
 
             \Log::info('Cargo CSV revertido', [
-                'cargo_id' => $cargo->id,
-                'usuario_id' => Auth::id(),
+                'cargo_id'              => $cargo->id,
+                'usuario_id'            => Auth::id(),
                 'movimientos_afectados' => $cargo->movimientos()->count(),
             ]);
 
             return ApiResponse::success([
-                'cargo_id' => $cargo->id,
-                'mensaje' => 'Cargo revertido exitosamente. Se han deshecho todos los cambios.',
+                'cargo_id'               => $cargo->id,
+                'mensaje'                => 'Cargo revertido exitosamente. Se han deshecho todos los cambios.',
                 'movimientos_revertidos' => $cargo->movimientos()->count(),
             ]);
         } catch (\Exception $e) {
             \Log::error('Error al revertir cargo CSV', [
                 'cargo_id' => $cargo->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'    => $e->getMessage(),
+                'trace'    => $e->getTraceAsString(),
             ]);
 
             return ApiResponse::error('Error al revertir el cargo: ' . $e->getMessage(), 500);

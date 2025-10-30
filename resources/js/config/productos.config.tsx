@@ -82,23 +82,25 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       )
     },
     {
-      key: 'stock_total',
-      label: 'Stock',
+      key: 'stock_disponible_calc',
+      label: 'Stock Disponible',
       type: 'custom',
       sortable: true,
       render: (value, entity) => {
-        const stock = value ?? 0;
+        const stockDisponible = value ?? 0;
+        const stockTotal = (entity as any).stock_total_calc ?? 0;
         const stockMin = entity.stock_minimo ?? 5;
+        const stockReservado = stockTotal - stockDisponible;
 
         let badgeClasses = '';
         let icon = '';
         let text = '';
 
-        if (stock === 0) {
+        if (stockDisponible === 0) {
           badgeClasses = 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/40 dark:to-red-800/40 border-2 border-red-300 dark:border-red-700 text-red-700 dark:text-red-200';
           icon = '🚫';
           text = 'Agotado';
-        } else if (stock < stockMin) {
+        } else if (stockDisponible < stockMin) {
           badgeClasses = 'bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 border-2 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-200';
           icon = '⚠️';
           text = 'Bajo';
@@ -109,12 +111,20 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         }
 
         return (
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-sm ${badgeClasses}`}>
-              <span>{icon}</span>
-              <span className="font-mono">{stock}</span>
-              <span className="text-[10px] font-semibold opacity-70">({text})</span>
-            </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-sm ${badgeClasses}`}>
+                <span>{icon}</span>
+                <span className="font-mono">{stockDisponible}</span>
+                <span className="text-[10px] font-semibold opacity-70">({text})</span>
+              </span>
+            </div>
+            {stockTotal > 0 && (
+              <div className="text-[10px] text-muted-foreground px-3">
+                <span>Total: {stockTotal}</span>
+                {stockReservado > 0 && <span className="ml-2 text-amber-600 dark:text-amber-400">Reservado: {stockReservado}</span>}
+              </div>
+            )}
           </div>
         );
       }
@@ -308,12 +318,20 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
               <span className="font-bold text-sm">{currency(p.precio_base)}</span>
             </div>
             <div>
-              <span className="block text-[10px] uppercase tracking-wide">Stock</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${(p.stock_total ?? 0) === 0 ? 'bg-red-100 text-red-700' : (p.stock_total ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+              <span className="block text-[10px] uppercase tracking-wide">Stock Disponible</span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${((p as any).stock_disponible_calc ?? 0) === 0 ? 'bg-red-100 text-red-700' : ((p as any).stock_disponible_calc ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
                 }`}>
-                {(p.stock_total ?? 0)}
+                {((p as any).stock_disponible_calc ?? 0)}
               </span>
             </div>
+            {((p as any).stock_total_calc ?? 0) > 0 && (
+              <div className="text-[10px] text-muted-foreground">
+                Total: {((p as any).stock_total_calc ?? 0)}
+                {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0)) > 0 && (
+                  <span className="ml-1 text-amber-600">Reservado: {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0))}</span>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={() => onEdit(p)} className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 text-[10px] font-medium">

@@ -26,11 +26,11 @@ export default defineConfig({
     server: {
         // Listen on all network interfaces so you can access from other devices and any Wi‑Fi network
         host: "192.168.1.23", // Permite conexiones desde cualquier IP
-        port: 5437,
+        port: 5173,
         strictPort: false, // Permite usar puerto alternativo si está ocupado
         cors: true, // Habilita CORS para requests cross-origin
         hmr: {
-            port: 5438, // Puerto separado para Hot Module Replacement
+            port: 5174, // Puerto separado para Hot Module Replacement
         },
     },
     esbuild: {

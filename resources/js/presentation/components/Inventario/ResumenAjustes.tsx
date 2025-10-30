@@ -1,29 +1,43 @@
 import React from 'react';
 import { FilaAjusteValidada } from '@/infrastructure/services/ajustesCSV.service';
 
+interface TipoOperacion {
+  id: number;
+  clave: string;
+  label: string;
+  direccion: 'entrada' | 'salida';
+}
+
 interface ResumenAjustesProps {
   filasValidas: FilaAjusteValidada[];
   totalProductos: number;
   cantidadTotal: number;
+  tiposOperacion?: TipoOperacion[];
 }
 
 export default function ResumenAjustes({
   filasValidas,
   totalProductos,
   cantidadTotal,
+  tiposOperacion = [],
 }: ResumenAjustesProps) {
-  // Contar entradas y salidas
-  const entradas = filasValidas.filter(f => parseInt(String(f.cantidad_ajuste), 10) > 0).length;
-  const salidas = filasValidas.filter(f => parseInt(String(f.cantidad_ajuste), 10) < 0).length;
+  // Contar entradas y salidas basándose en la dirección de la operación
+  const obtenerDireccion = (tipoOperacionClave: string): 'entrada' | 'salida' | null => {
+    const operacion = tiposOperacion.find(o => o.clave === tipoOperacionClave);
+    return operacion?.direccion || null;
+  };
+
+  const entradas = filasValidas.filter(f => obtenerDireccion(f.tipo_operacion) === 'entrada').length;
+  const salidas = filasValidas.filter(f => obtenerDireccion(f.tipo_operacion) === 'salida').length;
 
   // Sumar cantidades
   const sumaEntradas = filasValidas
-    .filter(f => parseInt(String(f.cantidad_ajuste), 10) > 0)
-    .reduce((sum, f) => sum + parseInt(String(f.cantidad_ajuste), 10), 0);
+    .filter(f => obtenerDireccion(f.tipo_operacion) === 'entrada')
+    .reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0);
 
   const sumaSalidas = filasValidas
-    .filter(f => parseInt(String(f.cantidad_ajuste), 10) < 0)
-    .reduce((sum, f) => sum + Math.abs(parseInt(String(f.cantidad_ajuste), 10)), 0);
+    .filter(f => obtenerDireccion(f.tipo_operacion) === 'salida')
+    .reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0);
 
   return (
     <div className="space-y-4">

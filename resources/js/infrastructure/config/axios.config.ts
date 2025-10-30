@@ -36,9 +36,15 @@ export function configureAxios() {
         (response) => response,
         (error) => {
             if (error.response?.status === 401) {
-                // Si no autenticado, limpiar tokens y redirigir al login
-                localStorage.removeItem('auth_token');
-                window.location.href = '/login';
+                // Si la solicitud tiene el flag skipErrorHandler, no redirigir automáticamente
+                // Esto permite al componente manejar el error manualmente
+                const skipErrorHandler = error.config?.skipErrorHandler;
+
+                if (!skipErrorHandler) {
+                    // Si no autenticado, limpiar tokens y redirigir al login
+                    localStorage.removeItem('auth_token');
+                    window.location.href = '/login';
+                }
             }
             return Promise.reject(error);
         }
@@ -50,12 +56,27 @@ export function configureAxios() {
  * Laravel coloca el token en la cookie 'XSRF-TOKEN'
  */
 function getXsrfToken(): string | null {
-    // Buscar en las cookies
     const name = 'XSRF-TOKEN';
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-        return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+
+    // Buscar la cookie XSRF-TOKEN
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+            const token = cookie.substring((name + '=').length);
+            try {
+                return decodeURIComponent(token);
+            } catch (e) {
+                return token;
+            }
+        }
     }
+
+    // Si no encuentra la cookie, intentar obtenerla del meta tag (alternativa)
+    const metaToken = document.querySelector('meta[name="csrf-token"]');
+    if (metaToken && metaToken.getAttribute('content')) {
+        return metaToken.getAttribute('content');
+    }
+
     return null;
 }

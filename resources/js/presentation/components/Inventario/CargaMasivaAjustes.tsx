@@ -45,6 +45,11 @@ export default function CargaMasivaAjustes({
   const [progreso, setProgreso] = useState(0);
   const [paso, setPaso] = useState<'carga' | 'validacion' | 'edicion' | 'confirmacion' | 'procesando'>('carga');
   const [tiposOperacion, setTiposOperacion] = useState<TipoOperacion[]>([]);
+  const [mostrarModalDuplicados, setMostrarModalDuplicados] = useState(false);
+  const [duplicadosEncontrados, setDuplicadosEncontrados] = useState<any[]>([]);
+  const [filasAgrupadas, setFilasAgrupadas] = useState<FilaAjusteValidada[]>([]);
+  const [mostrarModalError, setMostrarModalError] = useState(false);
+  const [errorModal, setErrorModal] = useState<{ titulo: string; mensaje: string }>({ titulo: '', mensaje: '' });
 
   // Cargar tipos de operación desde API
   useEffect(() => {
@@ -59,6 +64,99 @@ export default function CargaMasivaAjustes({
     };
     cargarTiposOperacion();
   }, []);
+
+  /**
+   * Resuelve un nombre de producto a su producto_id buscando por nombre, SKU o código de barras
+   */
+  const resolverProductoId = (nombreProducto: string): number | null => {
+    const productoEncontrado = productos.find(p =>
+      p.nombre?.toLowerCase() === nombreProducto.toLowerCase() ||
+      p.sku?.toLowerCase() === nombreProducto.toLowerCase() ||
+      p.codigo_barras?.toLowerCase() === nombreProducto.toLowerCase()
+    );
+    return productoEncontrado?.id || null;
+  };
+
+  /**
+   * Detecta duplicados en las filas validadas
+   * Agrupa por producto_id + tipo_operación + almacén
+   */
+  const detectarDuplicados = (filas: FilaAjusteValidada[]) => {
+    const grupos: { [key: string]: FilaAjusteValidada[] } = {};
+    const duplicados: any[] = [];
+
+    // Agrupar filas
+    filas.forEach(fila => {
+      const productoId = resolverProductoId(fila.producto);
+      if (!productoId) return; // Saltar si no se encuentra el producto
+
+      const clave = `${productoId}|${fila.tipo_operacion}|${fila.almacen}`;
+      if (!grupos[clave]) {
+        grupos[clave] = [];
+      }
+      grupos[clave].push(fila);
+    });
+
+    // Identificar duplicados
+    Object.entries(grupos).forEach(([clave, filasGrupo]) => {
+      if (filasGrupo.length > 1) {
+        const [productoId, tipoOp, almacen] = clave.split('|');
+        const producto = productos.find(p => p.id.toString() === productoId);
+        duplicados.push({
+          clave,
+          producto: producto?.nombre || 'Desconocido',
+          tipo_operacion: tipoOp,
+          almacen,
+          cantidad: filasGrupo.length,
+          cantidadTotal: filasGrupo.reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0),
+          filas: filasGrupo,
+        });
+      }
+    });
+
+    return duplicados;
+  };
+
+  /**
+   * Agrupa las filas duplicadas sumando sus cantidades
+   */
+  const agruparDuplicados = () => {
+    const nuevasFilas: FilaAjusteValidada[] = [];
+    const filasAgregadas = new Set<number>();
+
+    filasValidas.forEach((fila, index) => {
+      if (filasAgregadas.has(index)) return;
+
+      const productoId = resolverProductoId(fila.producto);
+      const clave = `${productoId}|${fila.tipo_operacion}|${fila.almacen}`;
+      const filasDelMismoGrupo = filasValidas.filter((f, i) => {
+        const pId = resolverProductoId(f.producto);
+        return `${pId}|${f.tipo_operacion}|${f.almacen}` === clave;
+      });
+
+      if (filasDelMismoGrupo.length > 1) {
+        // Agrupar
+        const cantidadTotal = filasDelMismoGrupo.reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0);
+        const filasAgrupadas: FilaAjusteValidada = {
+          ...fila,
+          cantidad: cantidadTotal,
+          observacion: `${filasDelMismoGrupo.length} filas agrupadas`,
+        };
+        nuevasFilas.push(filasAgrupadas);
+        filasDelMismoGrupo.forEach((f) => {
+          filasAgregadas.add(filasValidas.indexOf(f));
+        });
+      } else {
+        // No agrupar, mantener como está
+        nuevasFilas.push(fila);
+        filasAgregadas.add(index);
+      }
+    });
+
+    setFilasValidas(nuevasFilas);
+    setMostrarModalDuplicados(false);
+    toast.success('Filas agrupadas correctamente');
+  };
 
   const handleDescargarPlantilla = () => {
     const contenido = ajustesCSVService.generarPlantillaCSV(
@@ -155,6 +253,14 @@ export default function CargaMasivaAjustes({
       return;
     }
 
+    // Detectar duplicados
+    const duplicados = detectarDuplicados(filasValidas);
+    if (duplicados.length > 0) {
+      setDuplicadosEncontrados(duplicados);
+      setMostrarModalDuplicados(true);
+      return;
+    }
+
     setPaso('confirmacion');
   };
 
@@ -173,6 +279,8 @@ export default function CargaMasivaAjustes({
     setPaso('procesando');
     const toastId = toast.loading('Procesando ajustes...');
 
+    let intervalo: NodeJS.Timeout | null = null;
+
     try {
       const datos = {
         nombre_archivo: archivoSeleccionado.name,
@@ -190,12 +298,14 @@ export default function CargaMasivaAjustes({
 
       // Simular progreso
       let progresoActual = 0;
-      const intervalo = setInterval(() => {
+      intervalo = setInterval(() => {
         progresoActual = Math.min(progresoActual + Math.random() * 30, 90);
         setProgreso(progresoActual);
       }, 300);
 
-      const response = await axios.post('/api/inventario/ajustes-masivos', datos);
+      const response = await axios.post('/api/inventario/ajustes-masivos', datos, {
+        skipErrorHandler: true, // No redirigir automáticamente en caso de 401
+      });
 
       clearInterval(intervalo);
       setProgreso(100);
@@ -220,10 +330,39 @@ export default function CargaMasivaAjustes({
         onCargaExitosa?.();
       }, 2000);
     } catch (error: any) {
+      if (intervalo) clearInterval(intervalo);
       toast.dismiss(toastId);
-      const mensaje = error.response?.data?.message || error.message || 'Error al procesar ajustes';
-      toast.error(mensaje);
-      console.error('Error:', error);
+
+      // Extraer información del error
+      const status = error.response?.status;
+      const mensaje = error.response?.data?.message || error.response?.data?.error || error.message || 'Error al procesar ajustes';
+      const detalles = error.response?.data?.details || error.response?.data || null;
+
+      console.error('Error completo:', error);
+      console.error('Status:', status);
+      console.error('Mensaje:', mensaje);
+      console.error('Detalles:', detalles);
+
+      // Mostrar modal de error con más información
+      let titulo = 'Error al procesar ajustes';
+      let mensajeCompleto = mensaje;
+
+      if (status === 401) {
+        titulo = '⚠️ Sesión expirada o no autenticado';
+        mensajeCompleto = 'Tu sesión ha expirado. Por favor, recarga la página e inicia sesión nuevamente.';
+      } else if (status === 403) {
+        titulo = '🔒 Acceso denegado';
+        mensajeCompleto = 'No tienes permisos para realizar esta acción.';
+      } else if (status === 422) {
+        titulo = '⚠️ Datos inválidos';
+        mensajeCompleto = mensaje;
+      } else if (status === 500) {
+        titulo = '❌ Error del servidor';
+        mensajeCompleto = 'Ocurrió un error en el servidor. Por favor, intenta más tarde o contacta al administrador.';
+      }
+
+      setErrorModal({ titulo, mensaje: mensajeCompleto });
+      setMostrarModalError(true);
       setPaso('confirmacion');
     } finally {
       setCargando(false);
@@ -441,6 +580,7 @@ export default function CargaMasivaAjustes({
                 filasValidas={filasValidas}
                 totalProductos={resultadoValidacion.resumen.productosUnicos}
                 cantidadTotal={filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0)}
+                tiposOperacion={tiposOperacion}
               />
             </div>
           )}
@@ -483,6 +623,7 @@ export default function CargaMasivaAjustes({
               filasValidas={filasValidas}
               totalProductos={new Set(filasValidas.map(f => f.producto_id)).size}
               cantidadTotal={filasValidas.reduce((sum, f) => sum + parseInt(String(f.cantidad), 10), 0)}
+              tiposOperacion={tiposOperacion}
             />
           </div>
 
@@ -583,6 +724,119 @@ export default function CargaMasivaAjustes({
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {Math.round(progreso)}% completado
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE ERROR */}
+      {mostrarModalError && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-xl">
+            <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-700 px-6 py-4">
+              <h3 className="text-lg font-semibold text-red-900 dark:text-red-200">
+                {errorModal.titulo}
+              </h3>
+            </div>
+
+            <div className="p-6">
+              <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-4">
+                <p className="text-sm text-red-800 dark:text-red-300 whitespace-pre-wrap">
+                  {errorModal.mensaje}
+                </p>
+              </div>
+
+              <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 rounded-lg p-3 mb-4 max-h-40 overflow-y-auto">
+                <p className="font-mono font-semibold mb-1">Detalles técnicos (visible en la consola):</p>
+                <p>Abre la consola del navegador (F12) para ver más información de depuración.</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 px-6 py-4 flex gap-3 justify-end">
+              <button
+                onClick={() => setMostrarModalError(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-md text-sm font-medium transition-colors"
+              >
+                Entendido
+              </button>
+              <button
+                onClick={() => {
+                  setMostrarModalError(false);
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+              >
+                🔄 Recargar página
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA DUPLICADOS */}
+      {mostrarModalDuplicados && duplicadosEncontrados.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-yellow-200 dark:border-yellow-700 px-6 py-4">
+              <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-200 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Se encontraron {duplicadosEncontrados.length} productos duplicados
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                El mismo producto aparece múltiples veces con la misma operación y almacén.
+                ¿Qué deseas hacer?
+              </p>
+
+              <div className="space-y-3">
+                {duplicadosEncontrados.map((dup, idx) => (
+                  <div key={idx} className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{dup.producto}</p>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 space-y-1">
+                          <p>Tipo de operación: <span className="font-mono">{dup.tipo_operacion}</span></p>
+                          <p>Almacén: <span className="font-mono">{dup.almacen}</span></p>
+                          <p>Filas encontradas: <span className="font-bold text-yellow-700 dark:text-yellow-300">{dup.cantidad}</span></p>
+                          <p>Cantidad total si se agrupan: <span className="font-bold text-blue-700 dark:text-blue-300">{dup.cantidadTotal} unidades</span></p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Botones */}
+            <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 px-6 py-4 flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setMostrarModalDuplicados(false);
+                  setPaso('edicion');
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+              >
+                🔧 Editar y corregir
+              </button>
+              <button
+                onClick={() => {
+                  setMostrarModalDuplicados(false);
+                  setPaso('confirmacion');
+                }}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md text-sm font-medium transition-colors"
+              >
+                ⚠️ Procesar separados
+              </button>
+              <button
+                onClick={agruparDuplicados}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors"
+              >
+                ✓ Agrupar cantidades
+              </button>
+            </div>
           </div>
         </div>
       )}

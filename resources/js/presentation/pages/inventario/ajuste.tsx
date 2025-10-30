@@ -90,15 +90,15 @@ export default function AjusteInventario() {
         // Si hay un producto seleccionado, recalcular el stock total
         if (productoSeleccionado) {
             const id = typeof productoSeleccionado.id === 'string' ? parseInt(productoSeleccionado.id, 10) : productoSeleccionado.id;
-            const inputCantidad = ajustes[id]?.inputCantidad || String(productoSeleccionado.cantidad);
+            const inputCantidad = ajustes[id]?.inputCantidad || String(productoSeleccionado.cantidad_disponible);
             const cantidad = inputCantidad === '' ? 0 : parseInt(inputCantidad, 10);
 
-            let stockTotal = productoSeleccionado.cantidad;
+            let stockTotal = productoSeleccionado.cantidad_disponible;
 
             if (nuevaOperacion === 'entrada') {
-                stockTotal = productoSeleccionado.cantidad + cantidad;
+                stockTotal = productoSeleccionado.cantidad_disponible + cantidad;
             } else {
-                stockTotal = productoSeleccionado.cantidad - cantidad;
+                stockTotal = productoSeleccionado.cantidad_disponible - cantidad;
                 if (stockTotal < 0) {
                     stockTotal = 0;
                 }
@@ -214,17 +214,17 @@ export default function AjusteInventario() {
         const tipoAjuste = tipos.find(t => t.id === tipoAjusteId);
 
         // Calcular el stock total automáticamente basado en la cantidad ingresada y el tipo de ajuste
-        let stockTotal = stockProducto.cantidad;
+        let stockTotal = stockProducto.cantidad_disponible;
 
         // Si hay un tipo de ajuste seleccionado, aplicar la lógica correspondiente
         if (tipoAjuste) {
             // Si el tipo de ajuste es de incremento (entrada)
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = stockProducto.cantidad_disponible + cantidad;
             }
             // Si el tipo de ajuste es de decremento (salida)
             else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = stockProducto.cantidad_disponible - cantidad;
                 // Evitar stock negativo
                 if (stockTotal < 0) {
                     stockTotal = 0;
@@ -233,9 +233,9 @@ export default function AjusteInventario() {
         } else {
             // Si no hay tipo de ajuste, usar la lógica basada en la operación seleccionada
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = stockProducto.cantidad_disponible + cantidad;
             } else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = stockProducto.cantidad_disponible - cantidad;
                 if (stockTotal < 0) {
                     stockTotal = 0;
                 }
@@ -266,18 +266,18 @@ export default function AjusteInventario() {
         const tipoAjuste = tipos.find(t => t.id === tipoAjusteId);
 
         // Obtener la cantidad ingresada actual
-        const inputCantidad = ajustes[id]?.inputCantidad || String(stockProducto.cantidad);
+        const inputCantidad = ajustes[id]?.inputCantidad || String(stockProducto.cantidad_disponible);
         const cantidad = inputCantidad === '' ? 0 : parseInt(inputCantidad, 10);
 
         // Calcular el nuevo stock total basado en el tipo de ajuste
-        let stockTotal = stockProducto.cantidad;
+        let stockTotal = stockProducto.cantidad_disponible;
 
         if (tipoAjuste) {
             // Usar la lógica basada en la operación seleccionada en lugar de la propiedad incrementa
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = stockProducto.cantidad_disponible + cantidad;
             } else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = stockProducto.cantidad_disponible - cantidad;
                 // Evitar stock negativo
                 if (stockTotal < 0) {
                     stockTotal = 0;
@@ -286,9 +286,9 @@ export default function AjusteInventario() {
         } else {
             // Si no hay tipo de ajuste, usar la lógica basada en la operación seleccionada
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = stockProducto.cantidad_disponible + cantidad;
             } else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = stockProducto.cantidad_disponible - cantidad;
                 if (stockTotal < 0) {
                     stockTotal = 0;
                 }
@@ -336,7 +336,7 @@ export default function AjusteInventario() {
             ...prev,
             [id]: {
                 stock_producto_id: id,
-                nueva_cantidad: stockProducto.cantidad,
+                nueva_cantidad: stockProducto.cantidad_disponible,
                 observacion: '',
                 tipo_ajuste_id: tipoAjusteIdDefault,
                 inputCantidad: '',
@@ -362,7 +362,7 @@ export default function AjusteInventario() {
         }
 
         // Validar que la cantidad haya cambiado
-        if (stockProducto && ajuste.nueva_cantidad === stockProducto.cantidad) {
+        if (stockProducto && ajuste.nueva_cantidad === stockProducto.cantidad_disponible) {
             toast.error('La cantidad no ha cambiado. Ingresa una cantidad diferente');
             return;
         }

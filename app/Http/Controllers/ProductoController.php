@@ -82,7 +82,7 @@ class ProductoController extends Controller
                         ->orderByDesc('es_principal')
                         ->select('id', 'producto_id', 'codigo', 'tipo', 'es_principal', 'activo');
                 },
-                'stock:producto_id,cantidad',
+                'stock:producto_id,cantidad,cantidad_disponible',
             ])
             ->when($q, function ($qq) use ($q) {
                 // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
@@ -104,13 +104,16 @@ class ProductoController extends Controller
             })
             ->select('productos.*')
             ->leftJoinSub(
-                'select producto_id, sum(cantidad) as stock_total_calc from stock_productos group by producto_id',
+                'select producto_id, sum(cantidad) as stock_total_calc, sum(cantidad_disponible) as stock_disponible_calc from stock_productos where deleted_at is null group by producto_id',
                 'stock_totales',
                 'stock_totales.producto_id',
                 '=',
                 'productos.id'
             )
-            ->addSelect(DB::raw('coalesce(stock_totales.stock_total_calc,0) as stock_total_calc'))
+            ->addSelect(
+                DB::raw('coalesce(stock_totales.stock_total_calc,0) as stock_total_calc'),
+                DB::raw('coalesce(stock_totales.stock_disponible_calc,0) as stock_disponible_calc')
+            )
             ->orderBy($orderColumnRaw === 'precio_base' ? DB::raw('(select precio from precios_producto p where p.producto_id = productos.id and p.activo = true and p.es_precio_base = true limit 1)') : $orderColumnRaw, $orderDir)
             ->paginate(12)
             ->through(function ($producto) {
@@ -138,6 +141,7 @@ class ProductoController extends Controller
                 ])->values();
 
                 $stockTotal = (int) ($producto->stock_total_calc ?? $producto->stock?->sum('cantidad') ?? 0);
+                $stockDisponible = (int) ($producto->stock_disponible_calc ?? 0);
 
                 return [
                     'id' => $producto->id,
@@ -151,6 +155,7 @@ class ProductoController extends Controller
                     'stock_minimo' => $producto->stock_minimo,
                     'stock_maximo' => $producto->stock_maximo,
                     'stock_total' => $stockTotal,
+                    'stock_disponible_calc' => $stockDisponible,
                     'activo' => $producto->activo,
                     'fecha_creacion' => $producto->fecha_creacion,
                     'es_alquilable' => $producto->es_alquilable,
