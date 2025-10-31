@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/presentation/compone
 import ModoManual from './components/modo-manual';
 import ModoTabla from './components/modo-tabla';
 import ModoImportacion from './components/modo-importacion';
+import { store as storeInventarioInicial } from '@/routes/inventario/inicial';
 
 interface Producto {
     id: number;
@@ -127,7 +128,7 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
             if (!confirmado) return;
 
             // Enviar al backend
-            post('/inventario/inventario-inicial', {
+            post(storeInventarioInicial().url, {
                 onSuccess: () => {
                     NotificationService.success('Inventario inicial cargado exitosamente');
                     setData('items', []);
