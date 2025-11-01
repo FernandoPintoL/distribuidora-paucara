@@ -30,6 +30,22 @@ return [
 
     'connections' => [
 
+        'socket-io' => [
+            'driver' => 'pusher',
+            'key' => env('SOCKET_IO_KEY', 'distribuidora-socket-key'),
+            'secret' => env('SOCKET_IO_SECRET', 'distribuidora-socket-secret'),
+            'app_id' => env('SOCKET_IO_APP_ID', 'distribuidora-app'),
+            'options' => [
+                'scheme' => env('SOCKET_IO_SCHEME', 'http'),
+                'host' => env('SOCKET_IO_HOST', 'localhost'),
+                'port' => env('SOCKET_IO_PORT', 3001),
+                'path' => '/api/broadcast',
+            ],
+            'client_options' => [
+                // Guzzle client options
+            ],
+        ],
+
         'reverb' => [
             'driver' => 'reverb',
             'key' => env('REVERB_APP_KEY'),

@@ -100,6 +100,11 @@ class Proforma extends Model
         return $this->reservas()->activas();
     }
 
+    public function entrega(): HasOne
+    {
+        return $this->hasOne(Entrega::class);
+    }
+
     // Métodos de utilidad
     public function puedeAprobarse(): bool
     {

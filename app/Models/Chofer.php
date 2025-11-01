@@ -42,6 +42,14 @@ class Chofer extends Model
     }
 
     /**
+     * Entregas asignadas a este chofer
+     */
+    public function entregas(): HasMany
+    {
+        return $this->hasMany(Entrega::class);
+    }
+
+    /**
      * Verificar si la licencia está vigente
      */
     public function licenciaVigente(): bool

@@ -13,7 +13,10 @@ import {
     CheckCircle,
     AlertCircle,
     MapPin,
-    User
+    User,
+    ChevronRight,
+    List,
+    Map as MapIcon
 } from 'lucide-react';
 
 interface ProformaAppExterna {
@@ -180,11 +183,71 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                 </div>
 
                 {/* Tabs principales */}
-                <Tabs defaultValue="proformas" className="space-y-4">
+                <Tabs defaultValue="entregas" className="space-y-4">
                     <TabsList>
+                        <TabsTrigger value="entregas">Entregas</TabsTrigger>
                         <TabsTrigger value="proformas">Proformas App Externa</TabsTrigger>
                         <TabsTrigger value="envios">Envíos Activos</TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="entregas" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Truck className="h-5 w-5" />
+                                    Gestión de Entregas
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <Button
+                                        variant="outline"
+                                        className="h-auto p-6 flex flex-col items-start gap-3 justify-start"
+                                        onClick={() => window.location.href = '/logistica/entregas-asignadas'}
+                                    >
+                                        <div className="flex items-center gap-2 w-full">
+                                            <List className="h-5 w-5" />
+                                            <span className="font-semibold">Entregas Asignadas</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Gestiona entregas asignadas y pendientes de asignar chofer/vehículo</p>
+                                        <div className="flex items-center gap-1 text-xs mt-2">
+                                            Ir <ChevronRight className="h-3 w-3" />
+                                        </div>
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="h-auto p-6 flex flex-col items-start gap-3 justify-start"
+                                        onClick={() => window.location.href = '/logistica/entregas-en-transito'}
+                                    >
+                                        <div className="flex items-center gap-2 w-full">
+                                            <MapIcon className="h-5 w-5" />
+                                            <span className="font-semibold">En Tránsito</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Visualiza en mapa el seguimiento de entregas en tiempo real</p>
+                                        <div className="flex items-center gap-1 text-xs mt-2">
+                                            Ir <ChevronRight className="h-3 w-3" />
+                                        </div>
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="h-auto p-6 flex flex-col items-start gap-3 justify-start"
+                                        onClick={() => window.location.href = '/logistica/proformas-pendientes'}
+                                    >
+                                        <div className="flex items-center gap-2 w-full">
+                                            <AlertCircle className="h-5 w-5" />
+                                            <span className="font-semibold">Proformas</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Aprueba o rechaza proformas pendientes de gestión</p>
+                                        <div className="flex items-center gap-1 text-xs mt-2">
+                                            Ir <ChevronRight className="h-3 w-3" />
+                                        </div>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
                     <TabsContent value="proformas" className="space-y-4">
                         <Card>

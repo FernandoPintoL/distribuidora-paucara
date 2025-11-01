@@ -82,6 +82,14 @@ class Vehiculo extends Model
         return $this->hasMany(TransferenciaInventario::class);
     }
 
+    /**
+     * Entregas asignadas a este vehículo
+     */
+    public function entregas(): HasMany
+    {
+        return $this->hasMany(Entrega::class);
+    }
+
     // Métodos de utilidad
     public function estaDisponible(): bool
     {

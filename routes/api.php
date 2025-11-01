@@ -3,10 +3,13 @@
 use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmpleadoApiController;
+use App\Http\Controllers\Api\EntregaController;
+use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TipoAjusteInventarioController;
 use App\Http\Controllers\Api\TipoMermaController;
+use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\CategoriaClienteController;
 use App\Http\Controllers\ClienteController;
@@ -262,6 +265,57 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
         Route::get('{categoria}', [CategoriaClienteController::class, 'showApi']);
         Route::put('{categoria}', [CategoriaClienteController::class, 'updateApi']);
         Route::delete('{categoria}', [CategoriaClienteController::class, 'destroyApi']);
+    });
+});
+
+// ==========================================
+// 📦 RUTAS API PARA LOGÍSTICA
+// ==========================================
+
+// CHOFER - Entregas y tracking
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('chofer')->group(function () {
+        Route::get('/entregas', [EntregaController::class, 'entregasAsignadas']);
+        Route::get('/entregas/{id}', [EntregaController::class, 'showEntrega']);
+        Route::post('/entregas/{id}/iniciar-ruta', [EntregaController::class, 'iniciarRuta']);
+        Route::post('/entregas/{id}/actualizar-estado', [EntregaController::class, 'actualizarEstado']);
+        Route::post('/entregas/{id}/marcar-llegada', [EntregaController::class, 'marcarLlegada']);
+        Route::post('/entregas/{id}/confirmar-entrega', [EntregaController::class, 'confirmarEntrega']);
+        Route::post('/entregas/{id}/reportar-novedad', [EntregaController::class, 'reportarNovedad']);
+        Route::post('/entregas/{id}/ubicacion', [EntregaController::class, 'registrarUbicacion']);
+        Route::get('/historial', [EntregaController::class, 'historialEntregas']);
+    });
+
+    // CLIENTE - Tracking de pedidos
+    Route::prefix('cliente')->group(function () {
+        Route::get('/pedidos/{proformaId}/tracking', [EntregaController::class, 'obtenerTracking']);
+    });
+
+    // TRACKING - Información de ubicación y ETA
+    Route::prefix('tracking')->group(function () {
+        Route::get('/entregas/{id}/ubicaciones', [TrackingController::class, 'obtenerUbicaciones']);
+        Route::get('/entregas/{id}/ultima-ubicacion', [TrackingController::class, 'ultimaUbicacion']);
+        Route::post('/entregas/{id}/calcular-eta', [TrackingController::class, 'calcularETA']);
+    });
+
+    // ENCARGADO - Gestión de proformas y entregas
+    Route::prefix('encargado')->group(function () {
+        Route::get('/dashboard', [EncargadoController::class, 'dashboard']);
+        Route::get('/proformas/pendientes', [EncargadoController::class, 'proformasPendientes']);
+        Route::post('/proformas/{id}/aprobar', [EncargadoController::class, 'aprobarProforma']);
+        Route::post('/proformas/{id}/rechazar', [EncargadoController::class, 'rechazarProforma']);
+        Route::get('/entregas/asignadas', [EncargadoController::class, 'entregasAsignadas']);
+        Route::post('/entregas/{id}/procesar-carga', [EncargadoController::class, 'procesarCargaVehiculo']);
+        Route::get('/entregas', [EncargadoController::class, 'indexAdmin']);
+        Route::post('/entregas/{id}/asignar', [EncargadoController::class, 'asignarEntrega']);
+        Route::get('/entregas/activas', [EncargadoController::class, 'entregasActivas']);
+    });
+
+    // ADMIN - Gestión completa de entregas
+    Route::prefix('admin')->group(function () {
+        Route::get('/entregas', [EntregaController::class, 'indexAdmin']);
+        Route::post('/entregas/{id}/asignar', [EntregaController::class, 'asignarEntrega']);
+        Route::get('/entregas/activas', [EntregaController::class, 'entregasActivas']);
     });
 });
 
