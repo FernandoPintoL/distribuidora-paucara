@@ -1,0 +1,774 @@
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard'
+ */
+const dashboardf1e2d93ec6437123741988cc59b4615f = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboardf1e2d93ec6437123741988cc59b4615f.url(options),
+    method: 'get',
+})
+
+dashboardf1e2d93ec6437123741988cc59b4615f.definition = {
+    methods: ["get","head"],
+    url: '/api/encargado/dashboard',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard'
+ */
+dashboardf1e2d93ec6437123741988cc59b4615f.url = (options?: RouteQueryOptions) => {
+    return dashboardf1e2d93ec6437123741988cc59b4615f.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard'
+ */
+dashboardf1e2d93ec6437123741988cc59b4615f.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboardf1e2d93ec6437123741988cc59b4615f.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard'
+ */
+dashboardf1e2d93ec6437123741988cc59b4615f.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: dashboardf1e2d93ec6437123741988cc59b4615f.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard'
+ */
+    const dashboardf1e2d93ec6437123741988cc59b4615fForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: dashboardf1e2d93ec6437123741988cc59b4615f.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard'
+ */
+        dashboardf1e2d93ec6437123741988cc59b4615fForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboardf1e2d93ec6437123741988cc59b4615f.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard'
+ */
+        dashboardf1e2d93ec6437123741988cc59b4615fForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboardf1e2d93ec6437123741988cc59b4615f.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    dashboardf1e2d93ec6437123741988cc59b4615f.form = dashboardf1e2d93ec6437123741988cc59b4615fForm
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard/stats'
+ */
+const dashboard41c3b76b10db8984949bf0fd16d8e3e3 = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboard41c3b76b10db8984949bf0fd16d8e3e3.url(options),
+    method: 'get',
+})
+
+dashboard41c3b76b10db8984949bf0fd16d8e3e3.definition = {
+    methods: ["get","head"],
+    url: '/api/encargado/dashboard/stats',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard/stats'
+ */
+dashboard41c3b76b10db8984949bf0fd16d8e3e3.url = (options?: RouteQueryOptions) => {
+    return dashboard41c3b76b10db8984949bf0fd16d8e3e3.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard/stats'
+ */
+dashboard41c3b76b10db8984949bf0fd16d8e3e3.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboard41c3b76b10db8984949bf0fd16d8e3e3.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard/stats'
+ */
+dashboard41c3b76b10db8984949bf0fd16d8e3e3.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: dashboard41c3b76b10db8984949bf0fd16d8e3e3.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard/stats'
+ */
+    const dashboard41c3b76b10db8984949bf0fd16d8e3e3Form = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: dashboard41c3b76b10db8984949bf0fd16d8e3e3.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard/stats'
+ */
+        dashboard41c3b76b10db8984949bf0fd16d8e3e3Form.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard41c3b76b10db8984949bf0fd16d8e3e3.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::dashboard
+ * @see app/Http/Controllers/Api/EncargadoController.php:18
+ * @route '/api/encargado/dashboard/stats'
+ */
+        dashboard41c3b76b10db8984949bf0fd16d8e3e3Form.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard41c3b76b10db8984949bf0fd16d8e3e3.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    dashboard41c3b76b10db8984949bf0fd16d8e3e3.form = dashboard41c3b76b10db8984949bf0fd16d8e3e3Form
+
+export const dashboard = {
+    '/api/encargado/dashboard': dashboardf1e2d93ec6437123741988cc59b4615f,
+    '/api/encargado/dashboard/stats': dashboard41c3b76b10db8984949bf0fd16d8e3e3,
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::proformasPendientes
+ * @see app/Http/Controllers/Api/EncargadoController.php:60
+ * @route '/api/encargado/proformas/pendientes'
+ */
+export const proformasPendientes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: proformasPendientes.url(options),
+    method: 'get',
+})
+
+proformasPendientes.definition = {
+    methods: ["get","head"],
+    url: '/api/encargado/proformas/pendientes',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::proformasPendientes
+ * @see app/Http/Controllers/Api/EncargadoController.php:60
+ * @route '/api/encargado/proformas/pendientes'
+ */
+proformasPendientes.url = (options?: RouteQueryOptions) => {
+    return proformasPendientes.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::proformasPendientes
+ * @see app/Http/Controllers/Api/EncargadoController.php:60
+ * @route '/api/encargado/proformas/pendientes'
+ */
+proformasPendientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: proformasPendientes.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::proformasPendientes
+ * @see app/Http/Controllers/Api/EncargadoController.php:60
+ * @route '/api/encargado/proformas/pendientes'
+ */
+proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: proformasPendientes.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::proformasPendientes
+ * @see app/Http/Controllers/Api/EncargadoController.php:60
+ * @route '/api/encargado/proformas/pendientes'
+ */
+    const proformasPendientesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: proformasPendientes.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::proformasPendientes
+ * @see app/Http/Controllers/Api/EncargadoController.php:60
+ * @route '/api/encargado/proformas/pendientes'
+ */
+        proformasPendientesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: proformasPendientes.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::proformasPendientes
+ * @see app/Http/Controllers/Api/EncargadoController.php:60
+ * @route '/api/encargado/proformas/pendientes'
+ */
+        proformasPendientesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: proformasPendientes.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    proformasPendientes.form = proformasPendientesForm
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::aprobarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:94
+ * @route '/api/encargado/proformas/{id}/aprobar'
+ */
+export const aprobarProforma = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: aprobarProforma.url(args, options),
+    method: 'post',
+})
+
+aprobarProforma.definition = {
+    methods: ["post"],
+    url: '/api/encargado/proformas/{id}/aprobar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::aprobarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:94
+ * @route '/api/encargado/proformas/{id}/aprobar'
+ */
+aprobarProforma.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return aprobarProforma.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::aprobarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:94
+ * @route '/api/encargado/proformas/{id}/aprobar'
+ */
+aprobarProforma.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: aprobarProforma.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::aprobarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:94
+ * @route '/api/encargado/proformas/{id}/aprobar'
+ */
+    const aprobarProformaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: aprobarProforma.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::aprobarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:94
+ * @route '/api/encargado/proformas/{id}/aprobar'
+ */
+        aprobarProformaForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: aprobarProforma.url(args, options),
+            method: 'post',
+        })
+    
+    aprobarProforma.form = aprobarProformaForm
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::rechazarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:135
+ * @route '/api/encargado/proformas/{id}/rechazar'
+ */
+export const rechazarProforma = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: rechazarProforma.url(args, options),
+    method: 'post',
+})
+
+rechazarProforma.definition = {
+    methods: ["post"],
+    url: '/api/encargado/proformas/{id}/rechazar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::rechazarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:135
+ * @route '/api/encargado/proformas/{id}/rechazar'
+ */
+rechazarProforma.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return rechazarProforma.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::rechazarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:135
+ * @route '/api/encargado/proformas/{id}/rechazar'
+ */
+rechazarProforma.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: rechazarProforma.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::rechazarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:135
+ * @route '/api/encargado/proformas/{id}/rechazar'
+ */
+    const rechazarProformaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: rechazarProforma.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::rechazarProforma
+ * @see app/Http/Controllers/Api/EncargadoController.php:135
+ * @route '/api/encargado/proformas/{id}/rechazar'
+ */
+        rechazarProformaForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: rechazarProforma.url(args, options),
+            method: 'post',
+        })
+    
+    rechazarProforma.form = rechazarProformaForm
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasAsignadas
+ * @see app/Http/Controllers/Api/EncargadoController.php:176
+ * @route '/api/encargado/entregas/asignadas'
+ */
+export const entregasAsignadas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregasAsignadas.url(options),
+    method: 'get',
+})
+
+entregasAsignadas.definition = {
+    methods: ["get","head"],
+    url: '/api/encargado/entregas/asignadas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasAsignadas
+ * @see app/Http/Controllers/Api/EncargadoController.php:176
+ * @route '/api/encargado/entregas/asignadas'
+ */
+entregasAsignadas.url = (options?: RouteQueryOptions) => {
+    return entregasAsignadas.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasAsignadas
+ * @see app/Http/Controllers/Api/EncargadoController.php:176
+ * @route '/api/encargado/entregas/asignadas'
+ */
+entregasAsignadas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregasAsignadas.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasAsignadas
+ * @see app/Http/Controllers/Api/EncargadoController.php:176
+ * @route '/api/encargado/entregas/asignadas'
+ */
+entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: entregasAsignadas.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasAsignadas
+ * @see app/Http/Controllers/Api/EncargadoController.php:176
+ * @route '/api/encargado/entregas/asignadas'
+ */
+    const entregasAsignadasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: entregasAsignadas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasAsignadas
+ * @see app/Http/Controllers/Api/EncargadoController.php:176
+ * @route '/api/encargado/entregas/asignadas'
+ */
+        entregasAsignadasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregasAsignadas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasAsignadas
+ * @see app/Http/Controllers/Api/EncargadoController.php:176
+ * @route '/api/encargado/entregas/asignadas'
+ */
+        entregasAsignadasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregasAsignadas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    entregasAsignadas.form = entregasAsignadasForm
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
+ * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @route '/api/encargado/entregas/{id}/procesar-carga'
+ */
+export const procesarCargaVehiculo = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: procesarCargaVehiculo.url(args, options),
+    method: 'post',
+})
+
+procesarCargaVehiculo.definition = {
+    methods: ["post"],
+    url: '/api/encargado/entregas/{id}/procesar-carga',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
+ * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @route '/api/encargado/entregas/{id}/procesar-carga'
+ */
+procesarCargaVehiculo.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return procesarCargaVehiculo.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
+ * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @route '/api/encargado/entregas/{id}/procesar-carga'
+ */
+procesarCargaVehiculo.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: procesarCargaVehiculo.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
+ * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @route '/api/encargado/entregas/{id}/procesar-carga'
+ */
+    const procesarCargaVehiculoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: procesarCargaVehiculo.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
+ * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @route '/api/encargado/entregas/{id}/procesar-carga'
+ */
+        procesarCargaVehiculoForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: procesarCargaVehiculo.url(args, options),
+            method: 'post',
+        })
+    
+    procesarCargaVehiculo.form = procesarCargaVehiculoForm
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
+ * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @route '/api/encargado/entregas'
+ */
+export const indexAdmin = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: indexAdmin.url(options),
+    method: 'get',
+})
+
+indexAdmin.definition = {
+    methods: ["get","head"],
+    url: '/api/encargado/entregas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
+ * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @route '/api/encargado/entregas'
+ */
+indexAdmin.url = (options?: RouteQueryOptions) => {
+    return indexAdmin.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
+ * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @route '/api/encargado/entregas'
+ */
+indexAdmin.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: indexAdmin.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
+ * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @route '/api/encargado/entregas'
+ */
+indexAdmin.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: indexAdmin.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
+ * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @route '/api/encargado/entregas'
+ */
+    const indexAdminForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: indexAdmin.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
+ * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @route '/api/encargado/entregas'
+ */
+        indexAdminForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: indexAdmin.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
+ * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @route '/api/encargado/entregas'
+ */
+        indexAdminForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: indexAdmin.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    indexAdmin.form = indexAdminForm
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
+ * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @route '/api/encargado/entregas/{id}/asignar'
+ */
+export const asignarEntrega = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: asignarEntrega.url(args, options),
+    method: 'post',
+})
+
+asignarEntrega.definition = {
+    methods: ["post"],
+    url: '/api/encargado/entregas/{id}/asignar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
+ * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @route '/api/encargado/entregas/{id}/asignar'
+ */
+asignarEntrega.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return asignarEntrega.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
+ * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @route '/api/encargado/entregas/{id}/asignar'
+ */
+asignarEntrega.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: asignarEntrega.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
+ * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @route '/api/encargado/entregas/{id}/asignar'
+ */
+    const asignarEntregaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: asignarEntrega.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
+ * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @route '/api/encargado/entregas/{id}/asignar'
+ */
+        asignarEntregaForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: asignarEntrega.url(args, options),
+            method: 'post',
+        })
+    
+    asignarEntrega.form = asignarEntregaForm
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
+ * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @route '/api/encargado/entregas/activas'
+ */
+export const entregasActivas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregasActivas.url(options),
+    method: 'get',
+})
+
+entregasActivas.definition = {
+    methods: ["get","head"],
+    url: '/api/encargado/entregas/activas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
+ * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @route '/api/encargado/entregas/activas'
+ */
+entregasActivas.url = (options?: RouteQueryOptions) => {
+    return entregasActivas.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
+ * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @route '/api/encargado/entregas/activas'
+ */
+entregasActivas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregasActivas.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
+ * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @route '/api/encargado/entregas/activas'
+ */
+entregasActivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: entregasActivas.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
+ * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @route '/api/encargado/entregas/activas'
+ */
+    const entregasActivasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: entregasActivas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
+ * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @route '/api/encargado/entregas/activas'
+ */
+        entregasActivasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregasActivas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
+ * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @route '/api/encargado/entregas/activas'
+ */
+        entregasActivasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregasActivas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    entregasActivas.form = entregasActivasForm
+const EncargadoController = { dashboard, proformasPendientes, aprobarProforma, rechazarProforma, entregasAsignadas, procesarCargaVehiculo, indexAdmin, asignarEntrega, entregasActivas }
+
+export default EncargadoController
