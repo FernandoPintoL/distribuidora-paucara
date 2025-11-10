@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react'
+import { Head, Link, router, usePage } from '@inertiajs/react'
+import { useState } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Button } from '@/presentation/components/ui/button'
@@ -12,7 +13,28 @@ import {
     TableHeader,
     TableRow,
 } from '@/presentation/components/ui/table'
-import { ArrowLeft, FileText, Package, Calendar, Clock, MapPin, AlertCircle } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/presentation/components/ui/dialog'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/presentation/components/ui/alert-dialog'
+import { Textarea } from '@/presentation/components/ui/textarea'
+import { Label } from '@/presentation/components/ui/label'
+import { ArrowLeft, FileText, Package, Calendar, Clock, MapPin, AlertCircle, Check, X } from 'lucide-react'
+import MapView from '@/presentation/components/maps/MapView'
 
 interface Cliente {
     id: number
@@ -60,6 +82,7 @@ interface Direccion {
     direccion: string
     latitud?: number
     longitud?: number
+    observaciones?: string
 }
 
 interface Proforma {
@@ -81,11 +104,11 @@ interface Proforma {
     fecha_entrega_solicitada?: string
     hora_entrega_solicitada?: string
     direccion_entrega_solicitada_id?: number
-    direccionSolicitada?: Direccion
+    direccion_solicitada?: Direccion // snake_case como viene del backend
     fecha_entrega_confirmada?: string
     hora_entrega_confirmada?: string
     direccion_entrega_confirmada_id?: number
-    direccionConfirmada?: Direccion
+    direccion_confirmada?: Direccion // snake_case como viene del backend
     coordinacion_completada?: boolean
     comentario_coordinacion?: string
 }
@@ -108,6 +131,52 @@ const getEstadoBadge = (estado: string) => {
 
 export default function ProformasShow({ proforma }: Props) {
     const estado = getEstadoBadge(proforma.estado)
+    const { errors } = usePage().props as any
+    const [showAprobarDialog, setShowAprobarDialog] = useState(false)
+    const [showRechazarDialog, setShowRechazarDialog] = useState(false)
+    const [motivoRechazo, setMotivoRechazo] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const handleAprobar = () => {
+        setIsSubmitting(true)
+        router.post(
+            route('proformas.aprobar', proforma.id),
+            {},
+            {
+                onSuccess: () => {
+                    setShowAprobarDialog(false)
+                    setIsSubmitting(false)
+                },
+                onError: () => {
+                    setIsSubmitting(false)
+                },
+            }
+        )
+    }
+
+    const handleRechazar = () => {
+        if (!motivoRechazo.trim()) {
+            return
+        }
+        setIsSubmitting(true)
+        router.post(
+            route('proformas.rechazar', proforma.id),
+            { motivo: motivoRechazo },
+            {
+                onSuccess: () => {
+                    setShowRechazarDialog(false)
+                    setMotivoRechazo('')
+                    setIsSubmitting(false)
+                },
+                onError: () => {
+                    setIsSubmitting(false)
+                },
+            }
+        )
+    }
+
+    const puedeAprobar = proforma.estado === 'PENDIENTE'
+    const puedeRechazar = proforma.estado === 'PENDIENTE'
 
     return (
         <AppLayout>
@@ -127,10 +196,32 @@ export default function ProformasShow({ proforma }: Props) {
                             </p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <Badge variant={estado.variant} className="text-sm px-3 py-1">
                             {estado.label}
                         </Badge>
+
+                        {puedeAprobar && (
+                            <Button
+                                variant="default"
+                                onClick={() => setShowAprobarDialog(true)}
+                                className="bg-green-600 hover:bg-green-700"
+                            >
+                                <Check className="mr-2 h-4 w-4" />
+                                Aprobar
+                            </Button>
+                        )}
+
+                        {puedeRechazar && (
+                            <Button
+                                variant="destructive"
+                                onClick={() => setShowRechazarDialog(true)}
+                            >
+                                <X className="mr-2 h-4 w-4" />
+                                Rechazar
+                            </Button>
+                        )}
+
                         <Button variant="outline">
                             <FileText className="mr-2 h-4 w-4" />
                             Imprimir
@@ -245,14 +336,14 @@ export default function ProformasShow({ proforma }: Props) {
                                                     </p>
                                                 </div>
                                             )}
-                                            {proforma.direccionSolicitada && (
+                                            {proforma.direccion_solicitada && (
                                                 <div>
                                                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                                         <MapPin className="h-4 w-4" />
                                                         <span>Dirección Solicitada</span>
                                                     </div>
                                                     <p className="font-medium text-xs">
-                                                        {proforma.direccionSolicitada.direccion}
+                                                        {proforma.direccion_solicitada.direccion}
                                                     </p>
                                                 </div>
                                             )}
@@ -298,16 +389,16 @@ export default function ProformasShow({ proforma }: Props) {
                                                     </div>
                                                 )}
 
-                                                {proforma.direccionConfirmada && (
+                                                {proforma.direccion_confirmada && (
                                                     <div>
                                                         <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                                             <MapPin className="h-4 w-4" />
                                                             <span>Dirección Confirmada</span>
                                                         </div>
                                                         <p className="font-medium text-xs">
-                                                            {proforma.direccionConfirmada.direccion}
+                                                            {proforma.direccion_confirmada.direccion}
                                                         </p>
-                                                        {proforma.direccionConfirmada.id !== proforma.direccionSolicitada?.id && (
+                                                        {proforma.direccion_confirmada.id !== proforma.direccion_solicitada?.id && (
                                                             <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
                                                                 <AlertCircle className="h-3 w-3" />
                                                                 Cambio detectado
@@ -375,7 +466,7 @@ export default function ProformasShow({ proforma }: Props) {
                         </Card>
 
                         {/* Dirección de Entrega Solicitada */}
-                        {proforma.direccionSolicitada && (
+                        {proforma.direccion_solicitada && (
                             <Card className="border-l-4 border-blue-500">
                                 <CardHeader>
                                     <CardTitle className="text-base">Dirección de Entrega</CardTitle>
@@ -384,12 +475,29 @@ export default function ProformasShow({ proforma }: Props) {
                                     <div>
                                         <div className="text-xs font-medium text-muted-foreground uppercase">Dirección Solicitada</div>
                                         <div className="text-sm mt-2 text-muted-foreground">
-                                            {proforma.direccionSolicitada.direccion}
+                                            {proforma.direccion_solicitada.direccion}
                                         </div>
                                     </div>
-                                    {proforma.direccionSolicitada.latitud && proforma.direccionSolicitada.longitud && (
-                                        <div className="text-xs text-muted-foreground">
-                                            <span className="font-medium">Coordenadas:</span> {proforma.direccionSolicitada.latitud.toFixed(4)}, {proforma.direccionSolicitada.longitud.toFixed(4)}
+                                    {proforma.direccion_solicitada.latitud && proforma.direccion_solicitada.longitud ? (
+                                        <>
+                                            <div className="text-xs text-muted-foreground">
+                                                <span className="font-medium">Coordenadas:</span> {proforma.direccion_solicitada.latitud.toFixed(4)}, {proforma.direccion_solicitada.longitud.toFixed(4)}
+                                            </div>
+                                            {/* Mapa de ubicación */}
+                                            <div className="pt-2">
+                                                <div className="text-xs font-medium text-muted-foreground mb-2">Ubicación en el mapa:</div>
+                                                <MapView
+                                                    latitude={proforma.direccion_solicitada.latitud}
+                                                    longitude={proforma.direccion_solicitada.longitud}
+                                                    height="250px"
+                                                    zoom={15}
+                                                    markerTitle="Ubicación de entrega solicitada"
+                                                />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-xs text-amber-600 dark:text-amber-400">
+                                            No hay coordenadas disponibles para esta dirección
                                         </div>
                                     )}
                                     {proforma.fecha_entrega_solicitada && (
@@ -471,6 +579,80 @@ export default function ProformasShow({ proforma }: Props) {
                     </div>
                 </div>
             </div>
+
+            {/* Diálogo de confirmación para aprobar */}
+            <AlertDialog open={showAprobarDialog} onOpenChange={setShowAprobarDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Aprobar Proforma</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ¿Estás seguro de que deseas aprobar la proforma {proforma.numero}?
+                            Esta acción reservará el stock de los productos incluidos.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isSubmitting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleAprobar}
+                            disabled={isSubmitting}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {isSubmitting ? 'Aprobando...' : 'Aprobar'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Diálogo para rechazar con motivo */}
+            <Dialog open={showRechazarDialog} onOpenChange={setShowRechazarDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Rechazar Proforma</DialogTitle>
+                        <DialogDescription>
+                            Por favor, indica el motivo del rechazo de la proforma {proforma.numero}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="motivo">Motivo del rechazo *</Label>
+                            <Textarea
+                                id="motivo"
+                                placeholder="Escribe el motivo del rechazo (mínimo 10 caracteres)..."
+                                value={motivoRechazo}
+                                onChange={(e) => setMotivoRechazo(e.target.value)}
+                                disabled={isSubmitting}
+                                rows={4}
+                                className="resize-none"
+                            />
+                            {errors?.motivo && (
+                                <p className="text-sm text-destructive">{errors.motivo}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                                {motivoRechazo.length}/500 caracteres
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowRechazarDialog(false)
+                                setMotivoRechazo('')
+                            }}
+                            disabled={isSubmitting}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleRechazar}
+                            disabled={isSubmitting || !motivoRechazo.trim()}
+                        >
+                            {isSubmitting ? 'Rechazando...' : 'Rechazar'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     )
 }

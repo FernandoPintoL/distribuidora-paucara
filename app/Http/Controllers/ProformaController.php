@@ -25,7 +25,13 @@ class ProformaController extends Controller
 
     public function index(): Response
     {
-        $proformas = Proforma::with(['cliente', 'usuarioCreador', 'detalles.producto'])
+        $proformas = Proforma::with([
+            'cliente',
+            'usuarioCreador',
+            'detalles.producto',
+            'direccionSolicitada',
+            'direccionConfirmada'
+        ])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
@@ -41,6 +47,8 @@ class ProformaController extends Controller
             'usuarioCreador',
             'detalles.producto.marca',
             'detalles.producto.categoria',
+            'direccionSolicitada',
+            'direccionConfirmada',
         ]);
 
         return Inertia::render('Proformas/Show', [
@@ -74,9 +82,19 @@ class ProformaController extends Controller
 
     public function rechazar(Proforma $proforma)
     {
+        // Validar que se proporcione un motivo
+        $validated = request()->validate([
+            'motivo' => 'required|string|min:10|max:500',
+        ], [
+            'motivo.required' => 'Debe proporcionar un motivo para el rechazo',
+            'motivo.min' => 'El motivo debe tener al menos 10 caracteres',
+            'motivo.max' => 'El motivo no puede exceder 500 caracteres',
+        ]);
+
         // Implementar lógica de rechazo
         $proforma->update([
             'estado' => Proforma::RECHAZADA,
+            'observaciones_rechazo' => $validated['motivo'],
         ]);
 
         // Notificar vía WebSocket (sin afectar la respuesta si falla)
@@ -91,7 +109,7 @@ class ProformaController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Proforma rechazada');
+        return back()->with('success', 'Proforma rechazada exitosamente');
     }
 
     /**

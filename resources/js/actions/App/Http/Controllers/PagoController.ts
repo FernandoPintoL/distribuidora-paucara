@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\PagoController::index
- * @see app/Http/Controllers/PagoController.php:13
- * @route '/compras/pagos'
- */
+* @see app/Http/Controllers/PagoController.php:13
+* @route '/compras/pagos'
+*/
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -16,72 +16,75 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\PagoController::index
- * @see app/Http/Controllers/PagoController.php:13
- * @route '/compras/pagos'
- */
+* @see app/Http/Controllers/PagoController.php:13
+* @route '/compras/pagos'
+*/
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\PagoController::index
- * @see app/Http/Controllers/PagoController.php:13
- * @route '/compras/pagos'
- */
+* @see app/Http/Controllers/PagoController.php:13
+* @route '/compras/pagos'
+*/
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\PagoController::index
- * @see app/Http/Controllers/PagoController.php:13
- * @route '/compras/pagos'
- */
+* @see app/Http/Controllers/PagoController.php:13
+* @route '/compras/pagos'
+*/
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
 })
 
-    /**
+/**
 * @see \App\Http\Controllers\PagoController::index
- * @see app/Http/Controllers/PagoController.php:13
- * @route '/compras/pagos'
- */
-    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: index.url(options),
-        method: 'get',
-    })
+* @see app/Http/Controllers/PagoController.php:13
+* @route '/compras/pagos'
+*/
+const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
 
-            /**
+/**
 * @see \App\Http\Controllers\PagoController::index
- * @see app/Http/Controllers/PagoController.php:13
- * @route '/compras/pagos'
- */
-        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(options),
-            method: 'get',
-        })
-            /**
+* @see app/Http/Controllers/PagoController.php:13
+* @route '/compras/pagos'
+*/
+indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
 * @see \App\Http\Controllers\PagoController::index
- * @see app/Http/Controllers/PagoController.php:13
- * @route '/compras/pagos'
- */
-        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    index.form = indexForm
+* @see app/Http/Controllers/PagoController.php:13
+* @route '/compras/pagos'
+*/
+indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+index.form = indexForm
+
 /**
 * @see \App\Http\Controllers\PagoController::create
- * @see app/Http/Controllers/PagoController.php:85
- * @route '/compras/pagos/create'
- */
+* @see app/Http/Controllers/PagoController.php:85
+* @route '/compras/pagos/create'
+*/
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: create.url(options),
     method: 'get',
@@ -94,72 +97,75 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\PagoController::create
- * @see app/Http/Controllers/PagoController.php:85
- * @route '/compras/pagos/create'
- */
+* @see app/Http/Controllers/PagoController.php:85
+* @route '/compras/pagos/create'
+*/
 create.url = (options?: RouteQueryOptions) => {
     return create.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\PagoController::create
- * @see app/Http/Controllers/PagoController.php:85
- * @route '/compras/pagos/create'
- */
+* @see app/Http/Controllers/PagoController.php:85
+* @route '/compras/pagos/create'
+*/
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: create.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\PagoController::create
- * @see app/Http/Controllers/PagoController.php:85
- * @route '/compras/pagos/create'
- */
+* @see app/Http/Controllers/PagoController.php:85
+* @route '/compras/pagos/create'
+*/
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: create.url(options),
     method: 'head',
 })
 
-    /**
+/**
 * @see \App\Http\Controllers\PagoController::create
- * @see app/Http/Controllers/PagoController.php:85
- * @route '/compras/pagos/create'
- */
-    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: create.url(options),
-        method: 'get',
-    })
+* @see app/Http/Controllers/PagoController.php:85
+* @route '/compras/pagos/create'
+*/
+const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: create.url(options),
+    method: 'get',
+})
 
-            /**
+/**
 * @see \App\Http\Controllers\PagoController::create
- * @see app/Http/Controllers/PagoController.php:85
- * @route '/compras/pagos/create'
- */
-        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url(options),
-            method: 'get',
-        })
-            /**
+* @see app/Http/Controllers/PagoController.php:85
+* @route '/compras/pagos/create'
+*/
+createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: create.url(options),
+    method: 'get',
+})
+
+/**
 * @see \App\Http\Controllers\PagoController::create
- * @see app/Http/Controllers/PagoController.php:85
- * @route '/compras/pagos/create'
- */
-        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    create.form = createForm
+* @see app/Http/Controllers/PagoController.php:85
+* @route '/compras/pagos/create'
+*/
+createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: create.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+create.form = createForm
+
 /**
 * @see \App\Http\Controllers\PagoController::store
- * @see app/Http/Controllers/PagoController.php:100
- * @route '/compras/pagos'
- */
+* @see app/Http/Controllers/PagoController.php:100
+* @route '/compras/pagos'
+*/
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -172,49 +178,50 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\PagoController::store
- * @see app/Http/Controllers/PagoController.php:100
- * @route '/compras/pagos'
- */
+* @see app/Http/Controllers/PagoController.php:100
+* @route '/compras/pagos'
+*/
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\PagoController::store
- * @see app/Http/Controllers/PagoController.php:100
- * @route '/compras/pagos'
- */
+* @see app/Http/Controllers/PagoController.php:100
+* @route '/compras/pagos'
+*/
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
 })
 
-    /**
+/**
 * @see \App\Http\Controllers\PagoController::store
- * @see app/Http/Controllers/PagoController.php:100
- * @route '/compras/pagos'
- */
-    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: store.url(options),
-        method: 'post',
-    })
+* @see app/Http/Controllers/PagoController.php:100
+* @route '/compras/pagos'
+*/
+const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
 
-            /**
+/**
 * @see \App\Http\Controllers\PagoController::store
- * @see app/Http/Controllers/PagoController.php:100
- * @route '/compras/pagos'
- */
-        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: store.url(options),
-            method: 'post',
-        })
-    
-    store.form = storeForm
+* @see app/Http/Controllers/PagoController.php:100
+* @route '/compras/pagos'
+*/
+storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+store.form = storeForm
+
 /**
 * @see \App\Http\Controllers\PagoController::show
- * @see app/Http/Controllers/PagoController.php:146
- * @route '/compras/pagos/{pago}'
- */
+* @see app/Http/Controllers/PagoController.php:146
+* @route '/compras/pagos/{pago}'
+*/
 export const show = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
@@ -227,31 +234,31 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\PagoController::show
- * @see app/Http/Controllers/PagoController.php:146
- * @route '/compras/pagos/{pago}'
- */
+* @see app/Http/Controllers/PagoController.php:146
+* @route '/compras/pagos/{pago}'
+*/
 show.url = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pago: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { pago: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { pago: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    pago: args[0],
-                }
+            pago: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        pago: typeof args.pago === 'object'
-                ? args.pago.id
-                : args.pago,
-                }
+        pago: typeof args.pago === 'object'
+        ? args.pago.id
+        : args.pago,
+    }
 
     return show.definition.url
             .replace('{pago}', parsedArgs.pago.toString())
@@ -260,63 +267,66 @@ show.url = (args: { pago: number | { id: number } } | [pago: number | { id: numb
 
 /**
 * @see \App\Http\Controllers\PagoController::show
- * @see app/Http/Controllers/PagoController.php:146
- * @route '/compras/pagos/{pago}'
- */
+* @see app/Http/Controllers/PagoController.php:146
+* @route '/compras/pagos/{pago}'
+*/
 show.get = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\PagoController::show
- * @see app/Http/Controllers/PagoController.php:146
- * @route '/compras/pagos/{pago}'
- */
+* @see app/Http/Controllers/PagoController.php:146
+* @route '/compras/pagos/{pago}'
+*/
 show.head = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
 
-    /**
+/**
 * @see \App\Http\Controllers\PagoController::show
- * @see app/Http/Controllers/PagoController.php:146
- * @route '/compras/pagos/{pago}'
- */
-    const showForm = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show.url(args, options),
-        method: 'get',
-    })
+* @see app/Http/Controllers/PagoController.php:146
+* @route '/compras/pagos/{pago}'
+*/
+const showForm = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, options),
+    method: 'get',
+})
 
-            /**
+/**
 * @see \App\Http\Controllers\PagoController::show
- * @see app/Http/Controllers/PagoController.php:146
- * @route '/compras/pagos/{pago}'
- */
-        showForm.get = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, options),
-            method: 'get',
-        })
-            /**
+* @see app/Http/Controllers/PagoController.php:146
+* @route '/compras/pagos/{pago}'
+*/
+showForm.get = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, options),
+    method: 'get',
+})
+
+/**
 * @see \App\Http\Controllers\PagoController::show
- * @see app/Http/Controllers/PagoController.php:146
- * @route '/compras/pagos/{pago}'
- */
-        showForm.head = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show.form = showForm
+* @see app/Http/Controllers/PagoController.php:146
+* @route '/compras/pagos/{pago}'
+*/
+showForm.head = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+show.form = showForm
+
 /**
 * @see \App\Http\Controllers\PagoController::destroy
- * @see app/Http/Controllers/PagoController.php:155
- * @route '/compras/pagos/{pago}'
- */
+* @see app/Http/Controllers/PagoController.php:155
+* @route '/compras/pagos/{pago}'
+*/
 export const destroy = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -329,31 +339,31 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\PagoController::destroy
- * @see app/Http/Controllers/PagoController.php:155
- * @route '/compras/pagos/{pago}'
- */
+* @see app/Http/Controllers/PagoController.php:155
+* @route '/compras/pagos/{pago}'
+*/
 destroy.url = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { pago: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { pago: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { pago: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    pago: args[0],
-                }
+            pago: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        pago: typeof args.pago === 'object'
-                ? args.pago.id
-                : args.pago,
-                }
+        pago: typeof args.pago === 'object'
+        ? args.pago.id
+        : args.pago,
+    }
 
     return destroy.definition.url
             .replace('{pago}', parsedArgs.pago.toString())
@@ -362,50 +372,51 @@ destroy.url = (args: { pago: number | { id: number } } | [pago: number | { id: n
 
 /**
 * @see \App\Http\Controllers\PagoController::destroy
- * @see app/Http/Controllers/PagoController.php:155
- * @route '/compras/pagos/{pago}'
- */
+* @see app/Http/Controllers/PagoController.php:155
+* @route '/compras/pagos/{pago}'
+*/
 destroy.delete = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
 
-    /**
+/**
 * @see \App\Http\Controllers\PagoController::destroy
- * @see app/Http/Controllers/PagoController.php:155
- * @route '/compras/pagos/{pago}'
- */
-    const destroyForm = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: destroy.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'DELETE',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
+* @see app/Http/Controllers/PagoController.php:155
+* @route '/compras/pagos/{pago}'
+*/
+const destroyForm = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
 
-            /**
+/**
 * @see \App\Http\Controllers\PagoController::destroy
- * @see app/Http/Controllers/PagoController.php:155
- * @route '/compras/pagos/{pago}'
- */
-        destroyForm.delete = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: destroy.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'DELETE',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    destroy.form = destroyForm
+* @see app/Http/Controllers/PagoController.php:155
+* @route '/compras/pagos/{pago}'
+*/
+destroyForm.delete = (args: { pago: number | { id: number } } | [pago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+destroy.form = destroyForm
+
 /**
 * @see \App\Http\Controllers\PagoController::exportMethod
- * @see app/Http/Controllers/PagoController.php:172
- * @route '/compras/pagos/export'
- */
+* @see app/Http/Controllers/PagoController.php:172
+* @route '/compras/pagos/export'
+*/
 export const exportMethod = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: exportMethod.url(options),
     method: 'get',
@@ -418,67 +429,70 @@ exportMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\PagoController::exportMethod
- * @see app/Http/Controllers/PagoController.php:172
- * @route '/compras/pagos/export'
- */
+* @see app/Http/Controllers/PagoController.php:172
+* @route '/compras/pagos/export'
+*/
 exportMethod.url = (options?: RouteQueryOptions) => {
     return exportMethod.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\PagoController::exportMethod
- * @see app/Http/Controllers/PagoController.php:172
- * @route '/compras/pagos/export'
- */
+* @see app/Http/Controllers/PagoController.php:172
+* @route '/compras/pagos/export'
+*/
 exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: exportMethod.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\PagoController::exportMethod
- * @see app/Http/Controllers/PagoController.php:172
- * @route '/compras/pagos/export'
- */
+* @see app/Http/Controllers/PagoController.php:172
+* @route '/compras/pagos/export'
+*/
 exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: exportMethod.url(options),
     method: 'head',
 })
 
-    /**
+/**
 * @see \App\Http\Controllers\PagoController::exportMethod
- * @see app/Http/Controllers/PagoController.php:172
- * @route '/compras/pagos/export'
- */
-    const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: exportMethod.url(options),
-        method: 'get',
-    })
+* @see app/Http/Controllers/PagoController.php:172
+* @route '/compras/pagos/export'
+*/
+const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: exportMethod.url(options),
+    method: 'get',
+})
 
-            /**
+/**
 * @see \App\Http\Controllers\PagoController::exportMethod
- * @see app/Http/Controllers/PagoController.php:172
- * @route '/compras/pagos/export'
- */
-        exportMethodForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: exportMethod.url(options),
-            method: 'get',
-        })
-            /**
+* @see app/Http/Controllers/PagoController.php:172
+* @route '/compras/pagos/export'
+*/
+exportMethodForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: exportMethod.url(options),
+    method: 'get',
+})
+
+/**
 * @see \App\Http\Controllers\PagoController::exportMethod
- * @see app/Http/Controllers/PagoController.php:172
- * @route '/compras/pagos/export'
- */
-        exportMethodForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: exportMethod.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    exportMethod.form = exportMethodForm
+* @see app/Http/Controllers/PagoController.php:172
+* @route '/compras/pagos/export'
+*/
+exportMethodForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: exportMethod.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+exportMethod.form = exportMethodForm
+
 const PagoController = { index, create, store, show, destroy, exportMethod, export: exportMethod }
 
 export default PagoController

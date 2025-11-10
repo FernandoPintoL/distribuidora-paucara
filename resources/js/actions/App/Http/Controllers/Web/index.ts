@@ -1,4 +1,5 @@
 import LogisticaController from './LogisticaController'
+
 const Web = {
     LogisticaController,
 }
