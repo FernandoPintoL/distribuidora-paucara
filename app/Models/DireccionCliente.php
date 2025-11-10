@@ -11,7 +11,7 @@ class DireccionCliente extends Model
     protected $table = 'direcciones_cliente';
 
     protected $fillable = [
-        'cliente_id', 'direccion', 'latitud', 'longitud', 'es_principal', 'activa', 'observaciones',
+        'cliente_id', 'localidad_id', 'direccion', 'latitud', 'longitud', 'es_principal', 'activa', 'observaciones',
     ];
 
     protected $casts = [
@@ -24,5 +24,10 @@ class DireccionCliente extends Model
     public function cliente()
     {
         return $this->belongsTo(Cliente::class, 'cliente_id');
+    }
+
+    public function localidad()
+    {
+        return $this->belongsTo(Localidad::class, 'localidad_id');
     }
 }

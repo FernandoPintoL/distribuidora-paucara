@@ -25,6 +25,7 @@ class DireccionClienteApiController extends Controller
     public function index(Cliente $cliente): JsonResponse
     {
         $direcciones = $cliente->direcciones()
+            ->with('localidad')
             ->orderByDesc('es_principal')
             ->orderBy('id')
             ->get();
@@ -39,9 +40,9 @@ class DireccionClienteApiController extends Controller
     {
         $data = $request->validate([
             'direccion'     => ['required', 'string', 'max:500'],
-            'ciudad'        => ['nullable', 'string', 'max:100'],
-            'departamento'  => ['nullable', 'string', 'max:100'],
-            'codigo_postal' => ['nullable', 'string', 'max:20'],
+            'localidad_id'  => ['nullable', 'exists:localidades,id'],
+            'latitud'       => ['nullable', 'numeric'],
+            'longitud'      => ['nullable', 'numeric'],
             'es_principal'  => ['boolean'],
             'observaciones' => ['nullable', 'string', 'max:255'],
         ]);
@@ -52,17 +53,22 @@ class DireccionClienteApiController extends Controller
                 $cliente->direcciones()->update(['es_principal' => false]);
             }
 
+            // Si no se proporciona localidad_id, usar la del cliente
+            if (!isset($data['localidad_id'])) {
+                $data['localidad_id'] = $cliente->localidad_id;
+            }
+
             $direccion = $cliente->direcciones()->create([
                 'direccion'     => $data['direccion'],
-                'ciudad'        => $data['ciudad'] ?? null,
-                'departamento'  => $data['departamento'] ?? null,
-                'codigo_postal' => $data['codigo_postal'] ?? null,
+                'localidad_id'  => $data['localidad_id'],
+                'latitud'       => $data['latitud'] ?? null,
+                'longitud'      => $data['longitud'] ?? null,
                 'es_principal'  => $data['es_principal'] ?? false,
                 'observaciones' => $data['observaciones'] ?? null,
             ]);
 
             return ApiResponse::success(
-                $direccion,
+                $direccion->load('localidad'),
                 'Dirección creada exitosamente',
                 201
             );
@@ -84,9 +90,9 @@ class DireccionClienteApiController extends Controller
 
         $data = $request->validate([
             'direccion'     => ['sometimes', 'required', 'string', 'max:500'],
-            'ciudad'        => ['nullable', 'string', 'max:100'],
-            'departamento'  => ['nullable', 'string', 'max:100'],
-            'codigo_postal' => ['nullable', 'string', 'max:20'],
+            'localidad_id'  => ['nullable', 'exists:localidades,id'],
+            'latitud'       => ['nullable', 'numeric'],
+            'longitud'      => ['nullable', 'numeric'],
             'es_principal'  => ['boolean'],
             'observaciones' => ['nullable', 'string', 'max:255'],
         ]);
@@ -100,7 +106,7 @@ class DireccionClienteApiController extends Controller
             $direccion->update($data);
 
             return ApiResponse::success(
-                $direccion->fresh(),
+                $direccion->fresh()->load('localidad'),
                 'Dirección actualizada exitosamente'
             );
 
