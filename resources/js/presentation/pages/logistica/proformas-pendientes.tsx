@@ -26,6 +26,16 @@ interface Props {
     proformas?: Proforma[];
 }
 
+// Motivos predefinidos de rechazo
+const MOTIVOS_RECHAZO = [
+    { value: 'cliente_cancelo', label: 'Cliente canceló el pedido' },
+    { value: 'sin_disponibilidad', label: 'No hay disponibilidad para la fecha solicitada' },
+    { value: 'sin_respuesta', label: 'Cliente no contestó llamadas' },
+    { value: 'fuera_cobertura', label: 'Dirección fuera de cobertura' },
+    { value: 'stock_insuficiente', label: 'Stock insuficiente' },
+    { value: 'otro', label: 'Otro motivo (especificar abajo)' },
+];
+
 export default function ProformasPendientes({ proformas: initialProformas = [] }: Props) {
     const [proformas, setProformas] = useState<Proforma[]>(initialProformas);
     const [loading, setLoading] = useState(false);
@@ -35,6 +45,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
     const [mostrarModalAprobacion, setMostrarModalAprobacion] = useState(false);
     const [proformaSeleccionada, setProformaSeleccionada] = useState<Proforma | null>(null);
     const [motivoRechazo, setMotivoRechazo] = useState('');
+    const [motivoRechazoSeleccionado, setMotivoRechazoSeleccionado] = useState<string>('');
     const [datosConfirmacion, setDatosConfirmacion] = useState({
         fecha_entrega_confirmada: '',
         hora_entrega_confirmada: '',
@@ -112,6 +123,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
     const abrirModalRechazo = (proforma: Proforma) => {
         setProformaSeleccionada(proforma);
         setMotivoRechazo('');
+        setMotivoRechazoSeleccionado('');
         setMostrarModalRechazo(true);
     };
 
@@ -119,12 +131,21 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
         setMostrarModalRechazo(false);
         setProformaSeleccionada(null);
         setMotivoRechazo('');
+        setMotivoRechazoSeleccionado('');
     };
 
     const rechazarProforma = async () => {
         if (!proformaSeleccionada) return;
 
-        const errores = logisticaService.validateRechazarProforma(motivoRechazo);
+        // Construir motivo final
+        const motivoSeleccionadoLabel = MOTIVOS_RECHAZO.find(m => m.value === motivoRechazoSeleccionado)?.label || '';
+        const motivoFinal = motivoRechazoSeleccionado === 'otro'
+            ? motivoRechazo
+            : motivoRechazo
+                ? `${motivoSeleccionadoLabel} - ${motivoRechazo}`
+                : motivoSeleccionadoLabel;
+
+        const errores = logisticaService.validateRechazarProforma(motivoFinal);
         if (errores.length > 0) {
             errores.forEach(error => toast.error(error));
             return;
@@ -132,7 +153,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
 
         setProcesandoId(proformaSeleccionada.id);
         try {
-            await logisticaService.rechazarProforma(proformaSeleccionada.id, motivoRechazo);
+            await logisticaService.rechazarProforma(proformaSeleccionada.id, motivoFinal);
             cerrarModalRechazo();
             cargarProformas();
         } catch (error) {
@@ -345,13 +366,14 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
 
             {/* Modal Rechazo */}
             <Dialog open={mostrarModalRechazo} onOpenChange={setMostrarModalRechazo}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Rechazar Proforma</DialogTitle>
                     </DialogHeader>
 
                     {proformaSeleccionada && (
                         <div className="space-y-4">
+                            {/* Resumen de Proforma */}
                             <div className="bg-muted/30 rounded-lg p-3">
                                 <p className="text-sm font-medium">{proformaSeleccionada.numero}</p>
                                 <p className="text-xs text-muted-foreground">
@@ -359,17 +381,60 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
                                 </p>
                             </div>
 
+                            {/* Advertencia */}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2">
+                                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                <div className="text-sm">
+                                    <p className="font-semibold text-red-900">Esta acción liberará las reservas de stock</p>
+                                    <p className="text-red-700 mt-1">El cliente será notificado del rechazo.</p>
+                                </div>
+                            </div>
+
+                            {/* Motivos Predefinidos */}
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Motivo de rechazo *</label>
+                                <label className="text-sm font-medium mb-3 block">Motivo del rechazo *</label>
+                                <div className="space-y-2">
+                                    {MOTIVOS_RECHAZO.map((motivo) => (
+                                        <label
+                                            key={motivo.value}
+                                            className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                                                motivoRechazoSeleccionado === motivo.value
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'border-border hover:border-primary/50'
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="motivoRechazo"
+                                                value={motivo.value}
+                                                checked={motivoRechazoSeleccionado === motivo.value}
+                                                onChange={(e) => setMotivoRechazoSeleccionado(e.target.value)}
+                                                className="w-4 h-4"
+                                            />
+                                            <span className="text-sm">{motivo.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Detalles Adicionales */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">
+                                    Detalles adicionales {motivoRechazoSeleccionado === 'otro' && '*'}
+                                </label>
                                 <Textarea
-                                    placeholder="Explica por qué estás rechazando esta proforma..."
+                                    placeholder={
+                                        motivoRechazoSeleccionado === 'otro'
+                                            ? 'Explica el motivo del rechazo...'
+                                            : 'Agrega información adicional (opcional)...'
+                                    }
                                     value={motivoRechazo}
                                     onChange={(e) => setMotivoRechazo(e.target.value)}
-                                    rows={4}
+                                    rows={3}
                                     className="resize-none"
                                 />
                                 <p className="text-xs text-muted-foreground mt-2">
-                                    Mínimo 10 caracteres, máximo 500 caracteres
+                                    {motivoRechazoSeleccionado === 'otro' ? 'Mínimo 10 caracteres' : 'Máximo 500 caracteres'}
                                 </p>
                             </div>
                         </div>
@@ -386,13 +451,13 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
                         <Button
                             variant="destructive"
                             onClick={rechazarProforma}
-                            disabled={procesandoId === proformaSeleccionada?.id}
+                            disabled={procesandoId === proformaSeleccionada?.id || !motivoRechazoSeleccionado}
                             className="gap-2"
                         >
                             {procesandoId === proformaSeleccionada?.id ? 'Rechazando...' : (
                                 <>
                                     <XCircle className="h-4 w-4" />
-                                    Rechazar
+                                    Rechazar Proforma
                                 </>
                             )}
                         </Button>

@@ -21,7 +21,7 @@ class ProformaAprobada implements ShouldBroadcast
         $this->proforma = $proforma;
         $this->usuarioAprobadorId = $usuarioAprobadorId ?? auth()->id();
 
-        $this->proforma->load(['cliente', 'usuario']);
+        $this->proforma->load(['cliente', 'usuarioAprobador', 'usuarioCreador']);
     }
 
     public function broadcastOn(): array

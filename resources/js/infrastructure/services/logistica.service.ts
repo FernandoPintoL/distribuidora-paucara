@@ -2,6 +2,7 @@
 // Encapsulates URL building and API calls for logistics operations (entregas, proformas)
 
 import { router } from '@inertiajs/react';
+import axios from 'axios';
 import type { Filters, Id } from '@/domain/entities/shared';
 import type { BaseService } from '@/domain/entities/generic';
 import NotificationService from '@/infrastructure/services/notification.service';
@@ -76,6 +77,10 @@ export interface AprobarProformaData {
     hora_entrega_confirmada?: string;
     direccion_entrega_confirmada_id?: number;
     comentario_coordinacion?: string;
+}
+
+export interface RechazarProformaData {
+    comentario: string;  // Motivo obligatorio
 }
 
 export class LogisticaService implements BaseService<Entrega, AsignarEntregaData> {
@@ -280,6 +285,15 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
     /**
      * Obtener proformas pendientes de aprobación (API call)
      */
+    /**
+     * Obtener proformas pendientes
+     *
+     * Usa el endpoint /api/proformas con filtro de estado PENDIENTE
+     * El backend filtra automáticamente por rol:
+     * - Cliente: Solo sus proformas
+     * - Preventista: Solo las que él creó
+     * - Logística/Admin/Cajero: Todas las proformas
+     */
     async obtenerProformasPendientes(page: number = 1, filters?: FiltrosProformas): Promise<{
         data: Proforma[];
         total: number;
@@ -289,6 +303,8 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
         try {
             const params = new URLSearchParams();
             params.append('page', page.toString());
+            params.append('estado', 'PENDIENTE'); // Filtrar solo pendientes
+
             if (filters) {
                 Object.entries(filters).forEach(([key, value]) => {
                     if (value !== '' && value != null && value !== undefined) {
@@ -297,7 +313,7 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
                 });
             }
 
-            const response = await fetch(`/api/encargado/proformas/pendientes?${params}`, {
+            const response = await fetch(`/api/proformas?${params}`, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
@@ -308,7 +324,25 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
                 throw new Error('Error al obtener proformas pendientes');
             }
 
-            return await response.json();
+            const result = await response.json();
+
+            // El endpoint /api/proformas retorna { success: true, data: [], meta: {} }
+            // Normalizar la respuesta para compatibilidad
+            if (result.success && result.data) {
+                return {
+                    data: result.data,
+                    total: result.meta?.total || result.data.length,
+                    per_page: result.meta?.per_page || 15,
+                    current_page: result.meta?.current_page || page,
+                };
+            }
+
+            return {
+                data: [],
+                total: 0,
+                per_page: 15,
+                current_page: page,
+            };
         } catch (error) {
             console.error('Error obteniendo proformas pendientes:', error);
             NotificationService.error('Error al obtener proformas');
@@ -324,28 +358,13 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
         message: string;
     }> {
         try {
-            const response = await fetch(`/api/encargado/entregas/${entregaId}/asignar`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Error al asignar entrega');
-            }
-
-            const result = await response.json();
+            const response = await axios.post(`/api/encargado/entregas/${entregaId}/asignar`, data);
             NotificationService.success('Entrega asignada exitosamente');
-            return result;
-        } catch (error) {
+            return response.data;
+        } catch (error: any) {
             console.error('Error asignando entrega:', error);
-            NotificationService.error(error instanceof Error ? error.message : 'Error al asignar entrega');
+            const message = error.response?.data?.message || 'Error al asignar entrega';
+            NotificationService.error(message);
             throw error;
         }
     }
@@ -361,28 +380,13 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
             // Soportar llamadas antiguas con solo comentario string
             const payload = typeof data === 'string' ? { comentario: data } : data;
 
-            const response = await fetch(`/api/encargado/proformas/${proformaId}/aprobar`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Error al aprobar proforma');
-            }
-
-            const result = await response.json();
+            const response = await axios.post(`/api/encargado/proformas/${proformaId}/aprobar`, payload);
             NotificationService.success('Proforma aprobada exitosamente');
-            return result;
-        } catch (error) {
+            return response.data;
+        } catch (error: any) {
             console.error('Error aprobando proforma:', error);
-            NotificationService.error(error instanceof Error ? error.message : 'Error al aprobar proforma');
+            const message = error.response?.data?.message || 'Error al aprobar proforma';
+            NotificationService.error(message);
             throw error;
         }
     }
@@ -399,28 +403,13 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
                 throw new Error('El motivo de rechazo es obligatorio');
             }
 
-            const response = await fetch(`/api/encargado/proformas/${proformaId}/rechazar`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify({ motivo }),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Error al rechazar proforma');
-            }
-
-            const result = await response.json();
+            const response = await axios.post(`/api/encargado/proformas/${proformaId}/rechazar`, { motivo });
             NotificationService.success('Proforma rechazada');
-            return result;
-        } catch (error) {
+            return response.data;
+        } catch (error: any) {
             console.error('Error rechazando proforma:', error);
-            NotificationService.error(error instanceof Error ? error.message : 'Error al rechazar proforma');
+            const message = error.response?.data?.message || 'Error al rechazar proforma';
+            NotificationService.error(message);
             throw error;
         }
     }
@@ -518,6 +507,64 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
             return await response.json();
         } catch (error) {
             console.error('Error obteniendo estadísticas:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener estadísticas específicas de proformas
+     *
+     * Retorna estadísticas detalladas de proformas filtradas por rol del usuario:
+     * - Cliente: Solo sus proformas
+     * - Preventista: Solo las que él creó
+     * - Logística/Admin/Cajero: Todas las proformas
+     */
+    async obtenerEstadisticasProformas(): Promise<{
+        success: boolean;
+        data: {
+            total: number;
+            por_estado: {
+                pendiente: number;
+                aprobada: number;
+                rechazada: number;
+                convertida: number;
+                vencida: number;
+            };
+            montos_por_estado: {
+                pendiente: number;
+                aprobada: number;
+                rechazada: number;
+                convertida: number;
+                vencida: number;
+            };
+            por_canal: {
+                app_externa: number;
+                web: number;
+                presencial: number;
+            };
+            alertas: {
+                vencidas: number;
+                por_vencer: number;
+            };
+            monto_total: number;
+        };
+    }> {
+        try {
+            const response = await fetch('/api/proformas/estadisticas', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error obteniendo estadísticas de proformas');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error obteniendo estadísticas de proformas:', error);
+            NotificationService.error('Error al obtener estadísticas de proformas');
             throw error;
         }
     }

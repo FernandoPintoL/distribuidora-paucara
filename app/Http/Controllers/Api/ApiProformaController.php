@@ -10,11 +10,12 @@ use App\Events\ProformaCreada;
 use App\Events\ProformaAprobada;
 use App\Events\ProformaRechazada;
 use App\Events\ProformaConvertida;
-use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ApiProformaController extends Controller
 {
@@ -210,36 +211,318 @@ class ApiProformaController extends Controller
         ]);
     }
 
+    /**
+     * Listar proformas (método inteligente según rol del usuario)
+     *
+     * Este método unificado reemplaza:
+     * - index() original
+     * - listarParaDashboard()
+     * - obtenerHistorialPedidos()
+     *
+     * Filtra automáticamente según el rol:
+     * - Cliente: Solo sus proformas
+     * - Preventista: Solo las que él creó
+     * - Logística/Admin/Cajero: Todas las proformas
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index(Request $request)
     {
-        $query = Proforma::query();
+        $user = Auth::user();
 
-        // Si es un cliente, solo sus proformas
-        if (Auth::user()->cliente_id) {
-            $query->where('cliente_id', Auth::user()->cliente_id);
+        // Validar parámetros opcionales
+        $validator = Validator::make($request->all(), [
+            'estado' => 'nullable|in:PENDIENTE,APROBADA,RECHAZADA,CONVERTIDA_A_VENTA',
+            'canal_origen' => 'nullable|string',
+            'fecha_desde' => 'nullable|date',
+            'fecha_hasta' => 'nullable|date|after_or_equal:fecha_desde',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'format' => 'nullable|in:default,app', // Formato de respuesta
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Parámetros de filtro incorrectos',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        // Filtros
-        if ($request->estado) {
+        // Construir query base
+        $query = Proforma::query();
+
+        // ========================================
+        // FILTRADO POR ROL DE USUARIO
+        // ========================================
+
+        // Verificar rol del usuario (case-insensitive)
+        $userRoles = $user->roles->pluck('name')->map(fn($role) => strtolower($role))->toArray();
+
+        if (in_array('cliente', $userRoles)) {
+            // CLIENTE: Solo sus propias proformas
+            // Buscar el cliente asociado al usuario autenticado
+            $cliente = $user->cliente; // Relación HasOne en el modelo User
+
+            if (!$cliente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no tiene un cliente asociado',
+                ], 403);
+            }
+
+            $query->where('cliente_id', $cliente->id);
+        }
+        elseif (in_array('preventista', $userRoles)) {
+            // PREVENTISTA: Solo las proformas que él creó
+            $query->where('usuario_creador_id', $user->id);
+        }
+        elseif (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado'], $userRoles)) {
+            // DASHBOARD: Todas las proformas (sin filtro adicional)
+            // Opcionalmente se puede filtrar por canal_origen, estado, etc.
+        }
+        else {
+            // Usuario sin rol reconocido: sin acceso
+            return response()->json([
+                'success' => false,
+                'message' => 'No tiene permisos para ver proformas',
+            ], 403);
+        }
+
+        // ========================================
+        // FILTROS OPCIONALES (Query String)
+        // ========================================
+
+        if ($request->filled('estado')) {
             $query->where('estado', $request->estado);
         }
 
-        if ($request->fecha_desde) {
+        if ($request->filled('canal_origen')) {
+            $query->where('canal_origen', $request->canal_origen);
+        }
+
+        if ($request->filled('fecha_desde')) {
             $query->whereDate('fecha', '>=', $request->fecha_desde);
         }
 
-        if ($request->fecha_hasta) {
+        if ($request->filled('fecha_hasta')) {
             $query->whereDate('fecha', '<=', $request->fecha_hasta);
         }
 
-        $proformas = $query->with(['cliente', 'detalles.producto'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        // Búsqueda por número de proforma
+        if ($request->filled('numero')) {
+            $query->where('numero', 'like', '%' . $request->numero . '%');
+        }
 
+        // ========================================
+        // RELACIONES Y ORDENAMIENTO
+        // ========================================
+
+        $query->with([
+            'cliente',
+            'usuarioCreador',
+            'detalles.producto.categoria',
+            'detalles.producto.marca',
+            'direccionSolicitada',
+            'direccionConfirmada',
+        ]);
+
+        $query->orderBy('created_at', 'desc');
+
+        // ========================================
+        // PAGINACIÓN
+        // ========================================
+
+        $perPage = min($request->get('per_page', 20), 100);
+        $proformas = $query->paginate($perPage);
+
+        // ========================================
+        // FORMATO DE RESPUESTA
+        // ========================================
+
+        // Formato para app móvil (simplificado)
+        if ($request->format === 'app') {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'pedidos' => $proformas->map(function ($proforma) {
+                        return [
+                            'id' => $proforma->id,
+                            'codigo' => $proforma->numero,
+                            'fecha' => $proforma->fecha?->format('Y-m-d'),
+                            'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
+                            'estado' => $proforma->estado,
+                            'total' => (float) $proforma->total,
+                            'moneda' => 'BOB',
+                            'cantidad_items' => $proforma->detalles->count(),
+                            'total_productos' => (float) $proforma->detalles->sum('cantidad'),
+                            'tiene_reserva_activa' => $proforma->reservasActivas()->count() > 0,
+                            'observaciones' => $proforma->observaciones,
+                            'observaciones_rechazo' => $proforma->observaciones_rechazo,
+                            'items_preview' => $proforma->detalles->take(3)->map(function ($detalle) {
+                                return [
+                                    'producto' => $detalle->producto->nombre ?? 'Producto',
+                                    'cantidad' => (float) $detalle->cantidad,
+                                ];
+                            }),
+                        ];
+                    }),
+                    'paginacion' => [
+                        'total' => $proformas->total(),
+                        'por_pagina' => $proformas->perPage(),
+                        'pagina_actual' => $proformas->currentPage(),
+                        'ultima_pagina' => $proformas->lastPage(),
+                        'desde' => $proformas->firstItem(),
+                        'hasta' => $proformas->lastItem(),
+                    ],
+                ],
+            ]);
+        }
+
+        // Formato default (dashboard web)
         return response()->json([
             'success' => true,
-            'data' => $proformas,
+            'data' => $proformas->items(),
+            'meta' => [
+                'current_page' => $proformas->currentPage(),
+                'last_page' => $proformas->lastPage(),
+                'per_page' => $proformas->perPage(),
+                'total' => $proformas->total(),
+                'from' => $proformas->firstItem(),
+                'to' => $proformas->lastItem(),
+            ],
         ]);
+    }
+
+    /**
+     * Obtener estadísticas de proformas del usuario autenticado
+     *
+     * GET /api/proformas/estadisticas
+     *
+     * Retorna contadores agrupados por estado, total de montos, etc.
+     * Filtrado automático según el rol del usuario (igual que index())
+     */
+    public function stats(Request $request)
+    {
+        $user = Auth::user();
+
+        // Construir query base
+        $query = Proforma::query();
+
+        // ========================================
+        // FILTRADO POR ROL DE USUARIO (misma lógica que index)
+        // ========================================
+
+        $userRoles = $user->roles->pluck('name')->map(fn($role) => strtolower($role))->toArray();
+
+        if (in_array('cliente', $userRoles)) {
+            // CLIENTE: Solo sus propias proformas
+            $cliente = $user->cliente;
+
+            if (!$cliente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no tiene un cliente asociado',
+                ], 403);
+            }
+
+            $query->where('cliente_id', $cliente->id);
+        }
+        elseif (in_array('preventista', $userRoles)) {
+            // PREVENTISTA: Solo las proformas que él creó
+            $query->where('usuario_creador_id', $user->id);
+        }
+        elseif (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado'], $userRoles)) {
+            // DASHBOARD: Todas las proformas
+        }
+        else {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tiene permisos para ver estadísticas de proformas',
+            ], 403);
+        }
+
+        // ========================================
+        // CALCULAR ESTADÍSTICAS
+        // ========================================
+
+        try {
+            // Total general
+            $total = $query->count();
+
+            // Por estado
+            $porEstado = (clone $query)
+                ->selectRaw('estado, COUNT(*) as cantidad, SUM(total) as monto_total')
+                ->groupBy('estado')
+                ->get()
+                ->keyBy('estado');
+
+            // Por canal origen
+            $porCanal = (clone $query)
+                ->selectRaw('canal_origen, COUNT(*) as cantidad')
+                ->groupBy('canal_origen')
+                ->get()
+                ->keyBy('canal_origen');
+
+            // Proformas vencidas (PENDIENTE o APROBADA con fecha_vencimiento < now)
+            $vencidas = (clone $query)
+                ->whereIn('estado', [Proforma::PENDIENTE, Proforma::APROBADA])
+                ->where('fecha_vencimiento', '<', now())
+                ->count();
+
+            // Proformas por vencer (próximos 2 días)
+            $porVencer = (clone $query)
+                ->whereIn('estado', [Proforma::PENDIENTE, Proforma::APROBADA])
+                ->whereBetween('fecha_vencimiento', [now(), now()->addDays(2)])
+                ->count();
+
+            // Monto total por estado
+            $montoTotal = $query->sum('total');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total' => $total,
+                    'por_estado' => [
+                        'pendiente' => $porEstado->get(Proforma::PENDIENTE)?->cantidad ?? 0,
+                        'aprobada' => $porEstado->get(Proforma::APROBADA)?->cantidad ?? 0,
+                        'rechazada' => $porEstado->get(Proforma::RECHAZADA)?->cantidad ?? 0,
+                        'convertida' => $porEstado->get(Proforma::CONVERTIDA)?->cantidad ?? 0,
+                        'vencida' => $porEstado->get(Proforma::VENCIDA)?->cantidad ?? 0,
+                    ],
+                    'montos_por_estado' => [
+                        'pendiente' => (float) ($porEstado->get(Proforma::PENDIENTE)?->monto_total ?? 0),
+                        'aprobada' => (float) ($porEstado->get(Proforma::APROBADA)?->monto_total ?? 0),
+                        'rechazada' => (float) ($porEstado->get(Proforma::RECHAZADA)?->monto_total ?? 0),
+                        'convertida' => (float) ($porEstado->get(Proforma::CONVERTIDA)?->monto_total ?? 0),
+                        'vencida' => (float) ($porEstado->get(Proforma::VENCIDA)?->monto_total ?? 0),
+                    ],
+                    'por_canal' => [
+                        'app_externa' => $porCanal->get(Proforma::CANAL_APP_EXTERNA)?->cantidad ?? 0,
+                        'web' => $porCanal->get(Proforma::CANAL_WEB)?->cantidad ?? 0,
+                        'presencial' => $porCanal->get(Proforma::CANAL_PRESENCIAL)?->cantidad ?? 0,
+                    ],
+                    'alertas' => [
+                        'vencidas' => $vencidas,
+                        'por_vencer' => $porVencer,
+                    ],
+                    'monto_total' => (float) $montoTotal,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo estadísticas de proformas', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener estadísticas de proformas',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
     }
 
     public function verificarEstado(Proforma $proforma)
@@ -367,7 +650,16 @@ class ApiProformaController extends Controller
                 'comentario_coordinacion' => $request->comentario_coordinacion,
             ]);
 
-            $proforma->aprobar(request()->user(), $request->comentario);
+            $aprobada = $proforma->aprobar(request()->user(), $request->comentario);
+
+            if (!$aprobada) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $proforma->estaVencida()
+                        ? 'No se puede aprobar una proforma vencida (venció el ' . $proforma->fecha_vencimiento->format('d/m/Y') . ')'
+                        : 'No se puede aprobar la proforma en su estado actual',
+                ], 400);
+            }
 
             // ✅ Emitir evento para notificaciones WebSocket
             event(new ProformaAprobada($proforma, request()->user()->id));
@@ -379,9 +671,16 @@ class ApiProformaController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('❌ Error al aprobar proforma', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'proforma_id' => $proforma->id,
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error al aprobar la proforma: '.$e->getMessage(),
+                'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
     }
@@ -423,42 +722,48 @@ class ApiProformaController extends Controller
     }
 
     /**
-     * Listar proformas con filtros para el dashboard (método específico para dashboard)
+     * Extender fecha de vencimiento de una proforma
      */
-    public function listarParaDashboard(Request $request)
+    public function extenderVencimiento(Proforma $proforma, Request $request)
     {
-        $query = Proforma::with(['cliente', 'usuarioCreador', 'detalles.producto']);
-
-        // Filtros
-        if ($request->canal_origen) {
-            $query->where('canal_origen', $request->canal_origen);
-        }
-
-        if ($request->estado) {
-            $query->where('estado', $request->estado);
-        }
-
-        if ($request->fecha_desde) {
-            $query->whereDate('fecha', '>=', $request->fecha_desde);
-        }
-
-        if ($request->fecha_hasta) {
-            $query->whereDate('fecha', '<=', $request->fecha_hasta);
-        }
-
-        $proformas = $query->orderBy('fecha', 'desc')
-            ->paginate($request->per_page ?? 20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $proformas->items(),
-            'meta' => [
-                'current_page' => $proformas->currentPage(),
-                'last_page' => $proformas->lastPage(),
-                'per_page' => $proformas->perPage(),
-                'total' => $proformas->total(),
-            ],
+        $request->validate([
+            'dias' => 'nullable|integer|min:1|max:30',
         ]);
+
+        try {
+            $dias = $request->input('dias', 7); // Por defecto 7 días
+
+            $extendida = $proforma->extenderVencimiento($dias);
+
+            if (!$extendida) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede extender el vencimiento. Solo se permite para proformas PENDIENTES o APROBADAS.',
+                ], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Fecha de vencimiento extendida {$dias} días",
+                'data' => [
+                    'proforma' => $proforma->fresh(),
+                    'nueva_fecha_vencimiento' => $proforma->fecha_vencimiento->format('Y-m-d'),
+                    'dias_extendidos' => $dias,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ Error al extender vencimiento de proforma', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'proforma_id' => $proforma->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al extender el vencimiento: '.$e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -767,16 +1072,8 @@ class ApiProformaController extends Controller
             DB::commit();
 
             // 8.5. Enviar notificación WebSocket en tiempo real
-            try {
-                app(\App\Services\WebSocketNotificationService::class)
-                    ->notifyProformaCreated($proforma);
-            } catch (\Exception $e) {
-                // No fallar si WebSocket falla, solo loguear
-                \Log::warning('Error enviando notificación WebSocket', [
-                    'proforma_id' => $proforma->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            // NOTA: Las notificaciones WebSocket ahora se envían a través de los Events/Listeners
+            // Ver: ProformaCreada event → SendProformaCreatedNotification listener
 
             // 9. Retornar respuesta exitosa con toda la información necesaria
             return response()->json([
@@ -839,130 +1136,6 @@ class ApiProformaController extends Controller
         }
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════════════════
-     * ENDPOINT: HISTORIAL DE PEDIDOS DEL CLIENTE AUTENTICADO
-     * ═══════════════════════════════════════════════════════════════════════
-     *
-     * Retorna el historial de pedidos (proformas) del cliente autenticado.
-     * Optimizado para la app móvil con paginación y filtros útiles.
-     *
-     * Filtros disponibles:
-     * - estado: PENDIENTE, APROBADA, RECHAZADA, CONVERTIDA_A_VENTA
-     * - fecha_desde: Y-m-d
-     * - fecha_hasta: Y-m-d
-     * - page: número de página (default: 1)
-     * - per_page: items por página (default: 15, max: 50)
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function obtenerHistorialPedidos(Request $request)
-    {
-        // Validar que el usuario tiene un cliente asociado
-        $user = Auth::user();
-
-        if (! $user || ! $user->cliente) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Usuario no tiene un cliente asociado',
-            ], 403);
-        }
-
-        $cliente = $user->cliente;
-
-        // Validar parámetros
-        $validator = Validator::make($request->all(), [
-            'estado' => 'nullable|in:PENDIENTE,APROBADA,RECHAZADA,CONVERTIDA_A_VENTA',
-            'fecha_desde' => 'nullable|date',
-            'fecha_hasta' => 'nullable|date|after_or_equal:fecha_desde',
-            'page' => 'nullable|integer|min:1',
-            'per_page' => 'nullable|integer|min:1|max:50',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Parámetros de filtro incorrectos',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        // Construir query
-        $query = Proforma::where('cliente_id', $cliente->id);
-
-        // Aplicar filtros
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
-        if ($request->filled('fecha_desde')) {
-            $query->whereDate('fecha', '>=', $request->fecha_desde);
-        }
-
-        if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha', '<=', $request->fecha_hasta);
-        }
-
-        // Obtener pedidos con paginación
-        $perPage = min($request->get('per_page', 15), 50);
-        $pedidos = $query->with([
-            'detalles.producto.categoria',
-            'detalles.producto.marca',
-            'reservasActivas',
-        ])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
-
-        // Transformar datos para la app
-        $pedidosTransformados = $pedidos->map(function ($proforma) {
-            return [
-                'id' => $proforma->id,
-                'codigo' => $proforma->numero,
-                'fecha' => $proforma->fecha->format('Y-m-d'),
-                'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
-                'estado' => $proforma->estado,
-                'total' => (float) $proforma->total,
-                'moneda' => 'BOB', // Bolivianos
-                'cantidad_items' => $proforma->detalles->count(),
-                'total_productos' => (float) $proforma->detalles->sum('cantidad'),
-                'tiene_reserva_activa' => $proforma->reservasActivas->count() > 0,
-                'observaciones' => $proforma->observaciones,
-                'observaciones_rechazo' => $proforma->observaciones_rechazo,
-                // Resumen de items (primeros 3 productos)
-                'items_preview' => $proforma->detalles->take(3)->map(function ($detalle) {
-                    return [
-                        'producto' => $detalle->producto->nombre,
-                        'cantidad' => (float) $detalle->cantidad,
-                    ];
-                }),
-            ];
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'pedidos' => $pedidosTransformados,
-                'paginacion' => [
-                    'total' => $pedidos->total(),
-                    'por_pagina' => $pedidos->perPage(),
-                    'pagina_actual' => $pedidos->currentPage(),
-                    'ultima_pagina' => $pedidos->lastPage(),
-                    'desde' => $pedidos->firstItem(),
-                    'hasta' => $pedidos->lastItem(),
-                ],
-                'resumen' => [
-                    'total_pedidos' => $pedidos->total(),
-                    'pendientes' => Proforma::where('cliente_id', $cliente->id)
-                        ->where('estado', Proforma::PENDIENTE)
-                        ->count(),
-                    'aprobados' => Proforma::where('cliente_id', $cliente->id)
-                        ->where('estado', Proforma::APROBADA)
-                        ->count(),
-                ],
-            ],
-        ]);
-    }
 
     /**
      * ═══════════════════════════════════════════════════════════════════════
@@ -1356,15 +1529,8 @@ class ApiProformaController extends Controller
                 $venta->load(['cliente', 'detalles.producto']);
 
                 // Enviar notificación WebSocket
-                try {
-                    app(\App\Services\WebSocketNotificationService::class)
-                        ->notifyProformaConfirmada($venta);
-                } catch (\Exception $e) {
-                    \Log::warning('Error enviando notificación WebSocket de confirmación', [
-                        'venta_id' => $venta->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
+                // NOTA: Las notificaciones WebSocket ahora se envían a través de los Events/Listeners
+                // Ver: ProformaConvertida event → SendProformaConvertedNotification listener
 
                 \Log::info('Proforma confirmada como venta (API)', [
                     'proforma_id' => $proforma->id,
@@ -1686,5 +1852,104 @@ class ApiProformaController extends Controller
                 'message' => 'Error al recuperar el carrito: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    // ==========================================
+    // MÉTODOS PARA VISTAS INERTIA
+    // ==========================================
+
+    /**
+     * Renderizar vista Inertia de lista de proformas
+     *
+     * Este método usa el mismo index() pero devuelve una vista Inertia
+     * en lugar de JSON cuando es llamado desde rutas web.
+     */
+    public function indexInertia(Request $request): Response
+    {
+        // Reutilizar la lógica del método index() pero devolver Inertia
+        $user = Auth::user();
+
+        // Construir query base
+        $query = Proforma::query();
+
+        // Filtrado por rol (mismo código que index())
+        if ($user->hasRole('cliente') || $user->cliente_id) {
+            $clienteId = $user->cliente_id ?? $user->cliente->id ?? null;
+
+            if (!$clienteId) {
+                return Inertia::render('Error', [
+                    'message' => 'Usuario no tiene un cliente asociado',
+                    'status' => 403
+                ]);
+            }
+
+            $query->where('cliente_id', $clienteId);
+        }
+        elseif ($user->hasRole('preventista')) {
+            $query->where('usuario_creador_id', $user->id);
+        }
+        elseif ($user->hasAnyRole(['logistica', 'admin', 'cajero', 'manager', 'encargado'])) {
+            // Dashboard: todas las proformas
+        }
+        else {
+            return Inertia::render('Error', [
+                'message' => 'No tiene permisos para ver proformas',
+                'status' => 403
+            ]);
+        }
+
+        // Aplicar filtros opcionales
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('canal_origen')) {
+            $query->where('canal_origen', $request->canal_origen);
+        }
+
+        if ($request->filled('fecha_desde')) {
+            $query->whereDate('fecha', '>=', $request->fecha_desde);
+        }
+
+        if ($request->filled('fecha_hasta')) {
+            $query->whereDate('fecha', '<=', $request->fecha_hasta);
+        }
+
+        // Eager loading y paginación
+        $proformas = $query->with([
+            'cliente',
+            'usuarioCreador',
+            'detalles.producto',
+            'direccionSolicitada',
+            'direccionConfirmada'
+        ])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return Inertia::render('Proformas/Index', [
+            'proformas' => $proformas,
+        ]);
+    }
+
+    /**
+     * Renderizar vista Inertia de detalle de proforma
+     *
+     * Este método usa el mismo show() pero devuelve una vista Inertia
+     * en lugar de JSON cuando es llamado desde rutas web.
+     */
+    public function showInertia(Proforma $proforma): Response
+    {
+        $proforma->load([
+            'cliente',
+            'usuarioCreador',
+            'detalles.producto.marca',
+            'detalles.producto.categoria',
+            'direccionSolicitada',
+            'direccionConfirmada',
+        ]);
+
+        return Inertia::render('Proformas/Show', [
+            'proforma' => $proforma,
+        ]);
     }
 }

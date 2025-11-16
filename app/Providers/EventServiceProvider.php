@@ -2,8 +2,14 @@
 
 namespace App\Providers;
 
+use App\Events\ProformaAprobada;
+use App\Events\ProformaConvertida;
 use App\Events\ProformaCreada;
+use App\Events\ProformaRechazada;
+use App\Listeners\SendProformaApprovedNotification;
+use App\Listeners\SendProformaConvertedNotification;
 use App\Listeners\SendProformaCreatedNotification;
+use App\Listeners\SendProformaRejectedNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -19,6 +25,15 @@ class EventServiceProvider extends ServiceProvider
         // Eventos de Proformas
         ProformaCreada::class => [
             SendProformaCreatedNotification::class,
+        ],
+        ProformaAprobada::class => [
+            SendProformaApprovedNotification::class,
+        ],
+        ProformaRechazada::class => [
+            SendProformaRejectedNotification::class,
+        ],
+        ProformaConvertida::class => [
+            SendProformaConvertedNotification::class,
         ],
     ];
 
@@ -38,3 +53,4 @@ class EventServiceProvider extends ServiceProvider
         return true;
     }
 }
+

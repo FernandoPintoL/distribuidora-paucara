@@ -1,13 +1,18 @@
-import { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { useState, useEffect, useCallback } from 'react';
+import { Head, router } from '@inertiajs/react';
+import axios from 'axios';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/components/ui/tabs';
 import { Input } from '@/presentation/components/ui/input';
+import { Textarea } from '@/presentation/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import { toast } from 'react-toastify';
 import { formatDate } from '@/lib/utils';
+import { useProformaStats } from '@/application/hooks/use-proforma-stats';
+import logisticaService from '@/infrastructure/services/logistica.service';
 import {
     Package,
     Truck,
@@ -21,7 +26,10 @@ import {
     Map as MapIcon,
     Search,
     Eye,
-    X
+    X,
+    TrendingUp,
+    RefreshCw,
+    XCircle
 } from 'lucide-react';
 
 interface ProformaAppExterna {
@@ -29,10 +37,22 @@ interface ProformaAppExterna {
     numero: string;
     cliente_nombre: string;
     total: number;
-    estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+    estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA' | 'VENCIDA';
     canal_origen: string;
     fecha: string;
+    fecha_vencimiento?: string;
     usuario_creador_nombre: string;
+    // Solicitud del cliente
+    fecha_entrega_solicitada?: string;
+    hora_entrega_solicitada?: string;
+    direccion_entrega_solicitada_id?: number;
+    direccionSolicitada?: {
+        id: number;
+        direccion: string;
+        latitud?: number;
+        longitud?: number;
+        referencia?: string;
+    };
 }
 
 interface Envio {
@@ -53,28 +73,143 @@ interface DashboardStats {
     envios_entregados_hoy: number;
 }
 
+interface PaginatedProformas {
+    data: ProformaAppExterna[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number;
+    to: number;
+}
+
 interface Props {
     estadisticas: DashboardStats;
-    proformasRecientes: ProformaAppExterna[];
+    proformasRecientes: PaginatedProformas;
     enviosActivos: Envio[];
 }
 
+// Motivos predefinidos de rechazo
+const MOTIVOS_RECHAZO = [
+    { value: 'cliente_cancelo', label: 'Cliente canceló el pedido' },
+    { value: 'sin_disponibilidad', label: 'No hay disponibilidad para la fecha solicitada' },
+    { value: 'sin_respuesta', label: 'Cliente no contestó llamadas' },
+    { value: 'fuera_cobertura', label: 'Dirección fuera de cobertura' },
+    { value: 'stock_insuficiente', label: 'Stock insuficiente' },
+    { value: 'otro', label: 'Otro motivo (especificar abajo)' },
+];
+
 export default function LogisticaDashboard({ estadisticas, proformasRecientes, enviosActivos }: Props) {
     const [stats] = useState<DashboardStats>(estadisticas);
-    const [proformas] = useState<ProformaAppExterna[]>(proformasRecientes);
+    const [proformas, setProformas] = useState<ProformaAppExterna[]>(proformasRecientes.data);
+    const [paginationInfo, setPaginationInfo] = useState({
+        current_page: proformasRecientes.current_page,
+        last_page: proformasRecientes.last_page,
+        per_page: proformasRecientes.per_page,
+        total: proformasRecientes.total,
+        from: proformasRecientes.from,
+        to: proformasRecientes.to,
+    });
     const [envios] = useState<Envio[]>(enviosActivos);
-    const [searchProforma, setSearchProforma] = useState('');
-    const [filtroEstadoProforma, setFiltroEstadoProforma] = useState<'TODOS' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA'>('TODOS');
+
+    // Inicializar filtros desde query params de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const [searchProforma, setSearchProforma] = useState(urlParams.get('search') || '');
+    const [filtroEstadoProforma, setFiltroEstadoProforma] = useState<'TODOS' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA' | 'VENCIDA'>((urlParams.get('estado') as any) || 'TODOS');
+    const [soloVencidas, setSoloVencidas] = useState(urlParams.get('solo_vencidas') === 'true');
     const [searchEnvio, setSearchEnvio] = useState('');
     const [filtroEstadoEnvio, setFiltroEstadoEnvio] = useState<'TODOS' | 'PROGRAMADO' | 'EN_PREPARACION' | 'EN_RUTA' | 'ENTREGADO' | 'FALLIDO'>('TODOS');
+    const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
 
-    // Filtrar proformas
-    const proformasFiltradas = proformas.filter(p => {
-        const coincideTexto = p.numero.toLowerCase().includes(searchProforma.toLowerCase()) ||
-            p.cliente_nombre.toLowerCase().includes(searchProforma.toLowerCase());
-        const coincideEstado = filtroEstadoProforma === 'TODOS' || p.estado === filtroEstadoProforma;
-        return coincideTexto && coincideEstado;
+    // Actualizar estados cuando las props cambian (cuando Inertia recarga los datos)
+    useEffect(() => {
+        setProformas(proformasRecientes.data);
+        setPaginationInfo({
+            current_page: proformasRecientes.current_page,
+            last_page: proformasRecientes.last_page,
+            per_page: proformasRecientes.per_page,
+            total: proformasRecientes.total,
+            from: proformasRecientes.from,
+            to: proformasRecientes.to,
+        });
+    }, [proformasRecientes]);
+
+    // Estados para modals de coordinación
+    const [mostrarModalRechazo, setMostrarModalRechazo] = useState(false);
+    const [mostrarModalAprobacion, setMostrarModalAprobacion] = useState(false);
+    const [proformaSeleccionada, setProformaSeleccionada] = useState<ProformaAppExterna | null>(null);
+    const [motivoRechazo, setMotivoRechazo] = useState('');
+    const [motivoRechazoSeleccionado, setMotivoRechazoSeleccionado] = useState<string>('');
+    const [datosConfirmacion, setDatosConfirmacion] = useState({
+        fecha_entrega_confirmada: '',
+        hora_entrega_confirmada: '',
+        direccion_entrega_confirmada_id: '',
+        comentario_coordinacion: '',
+        comentario: '',
     });
+    const [procesandoId, setProcesandoId] = useState<number | null>(null);
+
+    // Hook para estadísticas de proformas con actualización automática
+    const {
+        stats: proformaStats,
+        loading: loadingStats,
+        error: errorStats,
+        lastUpdate,
+        refresh: refreshStats
+    } = useProformaStats({
+        autoRefresh: true,
+        refreshInterval: 30, // Actualizar cada 30 segundos
+    });
+
+    // Verificar si una proforma está vencida
+    const estaVencida = (proforma: ProformaAppExterna): boolean => {
+        if (!proforma.fecha_vencimiento) return false;
+        const fechaVenc = new Date(proforma.fecha_vencimiento);
+        return fechaVenc < new Date() && !['RECHAZADA', 'CONVERTIDA'].includes(proforma.estado);
+    };
+
+    // Función para aplicar filtros (recarga desde backend)
+    const aplicarFiltros = useCallback((page: number = 1) => {
+        const params: any = { page };
+
+        if (filtroEstadoProforma !== 'TODOS') {
+            params.estado = filtroEstadoProforma;
+        }
+
+        if (searchProforma.trim()) {
+            params.search = searchProforma.trim();
+        }
+
+        if (soloVencidas) {
+            params.solo_vencidas = 'true';
+        }
+
+        router.get('/logistica/dashboard', params, {
+            preserveState: true, // Mantener estados locales (filtros, búsqueda)
+            preserveScroll: true, // Mantener scroll en la misma posición
+            only: ['proformasRecientes'], // Solo actualizar proformas
+            replace: true, // Reemplazar en el historial para no acumular navegación
+        });
+    }, [filtroEstadoProforma, searchProforma, soloVencidas]);
+
+    // Aplicar filtros cuando cambian (con debounce para búsqueda)
+    useEffect(() => {
+        // Limpiar timeout anterior
+        if (debounceTimeout) {
+            clearTimeout(debounceTimeout);
+        }
+
+        // Crear nuevo timeout para búsqueda (500ms de espera)
+        const timeout = setTimeout(() => {
+            aplicarFiltros(1); // Siempre ir a página 1 cuando cambian filtros
+        }, searchProforma ? 500 : 0); // Debounce solo para búsqueda
+
+        setDebounceTimeout(timeout);
+
+        return () => {
+            if (timeout) clearTimeout(timeout);
+        };
+    }, [filtroEstadoProforma, soloVencidas, searchProforma, aplicarFiltros]); // Dependencias: cuando cambian, recargar
 
     // Filtrar envíos
     const enviosFiltrados = envios.filter(e => {
@@ -84,63 +219,118 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
         return coincideTexto && coincideEstado;
     });
 
-    const aprobarProforma = async (proformaId: number) => {
-        try {
-            const response = await fetch(`/api/proformas/${proformaId}/aprobar`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                },
-                body: JSON.stringify({
-                    comentario: 'Aprobado desde dashboard de logística'
-                })
-            });
+    // Funciones para manejar modals de coordinación
+    const abrirModalAprobacion = (proforma: ProformaAppExterna) => {
+        setProformaSeleccionada(proforma);
+        setDatosConfirmacion({
+            fecha_entrega_confirmada: proforma.fecha_entrega_solicitada || '',
+            hora_entrega_confirmada: proforma.hora_entrega_solicitada || '',
+            direccion_entrega_confirmada_id: String(proforma.direccion_entrega_solicitada_id || ''),
+            comentario_coordinacion: '',
+            comentario: '',
+        });
+        setMostrarModalAprobacion(true);
+    };
 
-            if (response.ok) {
-                toast.success('Proforma aprobada exitosamente');
-                // Recargar página para actualizar datos
-                window.location.reload();
-            } else {
-                toast.error('Error al aprobar la proforma');
-            }
+    const cerrarModalAprobacion = () => {
+        setMostrarModalAprobacion(false);
+        setProformaSeleccionada(null);
+        setDatosConfirmacion({
+            fecha_entrega_confirmada: '',
+            hora_entrega_confirmada: '',
+            direccion_entrega_confirmada_id: '',
+            comentario_coordinacion: '',
+            comentario: '',
+        });
+    };
+
+    const aprobarProforma = async () => {
+        if (!proformaSeleccionada) return;
+
+        setProcesandoId(proformaSeleccionada.id);
+        try {
+            await logisticaService.aprobarProforma(proformaSeleccionada.id, {
+                comentario: datosConfirmacion.comentario,
+                fecha_entrega_confirmada: datosConfirmacion.fecha_entrega_confirmada || undefined,
+                hora_entrega_confirmada: datosConfirmacion.hora_entrega_confirmada || undefined,
+                direccion_entrega_confirmada_id: datosConfirmacion.direccion_entrega_confirmada_id
+                    ? parseInt(datosConfirmacion.direccion_entrega_confirmada_id)
+                    : undefined,
+                comentario_coordinacion: datosConfirmacion.comentario_coordinacion || undefined,
+            });
+            toast.success('Proforma aprobada exitosamente');
+            cerrarModalAprobacion();
+            router.reload(); // Recargar página Inertia
         } catch (error) {
-            toast.error('Error al aprobar la proforma');
-            console.error('Error:', error);
+            console.error(error);
+        } finally {
+            setProcesandoId(null);
         }
     };
 
-    const rechazarProforma = async (proformaId: number) => {
-        try {
-            const response = await fetch(`/api/proformas/${proformaId}/rechazar`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                },
-                body: JSON.stringify({
-                    comentario: 'Rechazado desde dashboard de logística'
-                })
-            });
+    const abrirModalRechazo = (proforma: ProformaAppExterna) => {
+        setProformaSeleccionada(proforma);
+        setMotivoRechazo('');
+        setMotivoRechazoSeleccionado('');
+        setMostrarModalRechazo(true);
+    };
 
-            if (response.ok) {
-                toast.success('Proforma rechazada');
-                // Recargar página para actualizar datos
-                window.location.reload();
-            } else {
-                toast.error('Error al rechazar la proforma');
-            }
+    const cerrarModalRechazo = () => {
+        setMostrarModalRechazo(false);
+        setProformaSeleccionada(null);
+        setMotivoRechazo('');
+        setMotivoRechazoSeleccionado('');
+    };
+
+    const rechazarProforma = async () => {
+        if (!proformaSeleccionada) return;
+
+        // Construir motivo final
+        const motivoSeleccionadoLabel = MOTIVOS_RECHAZO.find(m => m.value === motivoRechazoSeleccionado)?.label || '';
+        const motivoFinal = motivoRechazoSeleccionado === 'otro'
+            ? motivoRechazo
+            : motivoRechazo
+                ? `${motivoSeleccionadoLabel} - ${motivoRechazo}`
+                : motivoSeleccionadoLabel;
+
+        const errores = logisticaService.validateRechazarProforma(motivoFinal);
+        if (errores.length > 0) {
+            errores.forEach(error => toast.error(error));
+            return;
+        }
+
+        setProcesandoId(proformaSeleccionada.id);
+        try {
+            await logisticaService.rechazarProforma(proformaSeleccionada.id, motivoFinal);
+            toast.success('Proforma rechazada');
+            cerrarModalRechazo();
+            router.reload(); // Recargar página Inertia
         } catch (error) {
-            toast.error('Error al rechazar la proforma');
-            console.error('Error:', error);
+            console.error(error);
+        } finally {
+            setProcesandoId(null);
         }
     };
 
-    const getEstadoBadge = (estado: string) => {
+    // Función para cambiar de página
+    const cambiarPagina = (page: number) => {
+        aplicarFiltros(page);
+    };
+
+    const getEstadoBadge = (estado: string, proforma?: ProformaAppExterna) => {
+        // Verificar si está vencida
+        const vencida = proforma && estaVencida(proforma);
+
+        if (vencida) {
+            return <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-400">⚫ VENCIDA</Badge>;
+        }
+
         const variants = {
             'PENDIENTE': 'secondary',
             'APROBADA': 'default',
             'RECHAZADA': 'destructive',
+            'CONVERTIDA': 'outline',
+            'VENCIDA': 'outline',
             'PROGRAMADO': 'secondary',
             'EN_PREPARACION': 'default',
             'EN_TRANSITO': 'default',
@@ -148,8 +338,21 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
             'FALLIDO': 'destructive'
         };
 
+        const emojis = {
+            'PENDIENTE': '🟡',
+            'APROBADA': '🟢',
+            'RECHAZADA': '🔴',
+            'CONVERTIDA': '🔵',
+            'VENCIDA': '⚫'
+        };
+
         type VariantType = 'default' | 'destructive' | 'outline' | 'secondary';
-        return <Badge variant={variants[estado as keyof typeof variants] as VariantType}>{estado}</Badge>;
+        const emoji = emojis[estado as keyof typeof emojis] || '';
+        return (
+            <Badge variant={variants[estado as keyof typeof variants] as VariantType}>
+                {emoji} {estado}
+            </Badge>
+        );
     };
 
     return (
@@ -158,9 +361,24 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
             <div className="space-y-6 p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">Dashboard de Logística</h1>
+                    <div className="flex items-center gap-2">
+                        {lastUpdate && (
+                            <span className="text-xs text-muted-foreground">
+                                Actualizado: {lastUpdate.toLocaleTimeString()}
+                            </span>
+                        )}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={refreshStats}
+                            disabled={loadingStats}
+                        >
+                            <RefreshCw className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Estadísticas */}
+                {/* Estadísticas de Proformas */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -168,11 +386,90 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                             <Clock className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats.proformas_pendientes}</div>
+                            <div className="text-2xl font-bold">
+                                {loadingStats ? '...' : proformaStats?.por_estado.pendiente ?? stats.proformas_pendientes}
+                            </div>
                             <p className="text-xs text-muted-foreground">Esperando aprobación</p>
                         </CardContent>
                     </Card>
 
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Proformas Aprobadas</CardTitle>
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-green-600">
+                                {loadingStats ? '...' : proformaStats?.por_estado.aprobada ?? 0}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Listas para convertir</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Proformas Vencidas</CardTitle>
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-red-600">
+                                {loadingStats ? '...' : proformaStats?.alertas.vencidas ?? 0}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Requieren atención</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Por Vencer (2 días)</CardTitle>
+                            <AlertCircle className="h-4 w-4 text-orange-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-orange-600">
+                                {loadingStats ? '...' : proformaStats?.alertas.por_vencer ?? 0}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Atención priorizada</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Card de Monto Total */}
+                {proformaStats && (
+                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Monto Total en Proformas</CardTitle>
+                            <TrendingUp className="h-4 w-4 text-blue-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold text-blue-600">
+                                Bs {proformaStats.monto_total.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                                <div>
+                                    <p className="text-muted-foreground">Pendientes</p>
+                                    <p className="font-semibold">
+                                        Bs {proformaStats.montos_por_estado.pendiente.toLocaleString('es-BO', { maximumFractionDigits: 0 })}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Aprobadas</p>
+                                    <p className="font-semibold text-green-600">
+                                        Bs {proformaStats.montos_por_estado.aprobada.toLocaleString('es-BO', { maximumFractionDigits: 0 })}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Convertidas</p>
+                                    <p className="font-semibold text-blue-600">
+                                        Bs {proformaStats.montos_por_estado.convertida.toLocaleString('es-BO', { maximumFractionDigits: 0 })}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Estadísticas de Envíos */}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Envíos Programados</CardTitle>
@@ -255,20 +552,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                                         </div>
                                     </Button>
 
-                                    <Button
-                                        variant="outline"
-                                        className="h-auto p-6 flex flex-col items-start gap-3 justify-start"
-                                        onClick={() => window.location.href = '/logistica/proformas-pendientes'}
-                                    >
-                                        <div className="flex items-center gap-2 w-full">
-                                            <AlertCircle className="h-5 w-5" />
-                                            <span className="font-semibold">Proformas</span>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">Aprueba o rechaza proformas pendientes de gestión</p>
-                                        <div className="flex items-center gap-1 text-xs mt-2">
-                                            Ir <ChevronRight className="h-3 w-3" />
-                                        </div>
-                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>
@@ -308,21 +591,41 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
 
                                     {/* Filtro por estado */}
                                     <div className="flex gap-2 flex-wrap">
-                                        {(['TODOS', 'PENDIENTE', 'APROBADA', 'RECHAZADA'] as const).map((estado) => (
+                                        {(['TODOS', 'PENDIENTE', 'APROBADA', 'RECHAZADA', 'CONVERTIDA', 'VENCIDA'] as const).map((estado) => (
                                             <Button
                                                 key={estado}
                                                 variant={filtroEstadoProforma === estado ? 'default' : 'outline'}
                                                 size="sm"
                                                 onClick={() => setFiltroEstadoProforma(estado)}
+                                                className={
+                                                    estado === 'VENCIDA' ? 'border-gray-400 text-gray-600 hover:bg-gray-100' :
+                                                    estado === 'CONVERTIDA' ? 'border-blue-400 text-blue-600 hover:bg-blue-50' :
+                                                    ''
+                                                }
                                             >
-                                                {estado}
+                                                {estado === 'VENCIDA' ? '⚫ ' : estado === 'CONVERTIDA' ? '🔵 ' : ''}{estado}
                                             </Button>
                                         ))}
+                                    </div>
+
+                                    {/* Checkbox: Solo vencidas */}
+                                    <div className="flex items-center gap-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={soloVencidas}
+                                                onChange={(e) => setSoloVencidas(e.target.checked)}
+                                                className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                                            />
+                                            <span className="text-sm font-medium">
+                                                Mostrar solo proformas vencidas ({proformas.filter(estaVencida).length})
+                                            </span>
+                                        </label>
                                     </div>
                                 </div>
 
                                 {/* Resultados */}
-                                {proformasFiltradas.length === 0 ? (
+                                {proformas.length === 0 ? (
                                     <p className="text-center text-muted-foreground py-8">
                                         {searchProforma || filtroEstadoProforma !== 'TODOS'
                                             ? 'No hay proformas que coincidan con los filtros'
@@ -330,12 +633,12 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                                     </p>
                                 ) : (
                                     <div className="space-y-4">
-                                        {proformasFiltradas.map((proforma) => (
+                                        {proformas.map((proforma) => (
                                             <div key={proforma.id} className="border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <h3 className="font-semibold text-base">{proforma.numero}</h3>
-                                                        {getEstadoBadge(proforma.estado)}
+                                                        {getEstadoBadge(proforma.estado, proforma)}
                                                     </div>
                                                     <div className="text-right">
                                                         <p className="font-semibold text-green-600">Bs {parseFloat(String(proforma.total)).toFixed(2)}</p>
@@ -381,23 +684,91 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                                                         <Eye className="h-4 w-4" />
                                                         Ver detalles
                                                     </Button>
-                                                    <Button
-                                                        onClick={() => rechazarProforma(proforma.id)}
-                                                        size="sm"
-                                                        variant="destructive"
-                                                    >
-                                                        Rechazar
-                                                    </Button>
-                                                    <Button
-                                                        onClick={() => aprobarProforma(proforma.id)}
-                                                        size="sm"
-                                                        className="bg-green-600 hover:bg-green-700"
-                                                    >
-                                                        Aprobar
-                                                    </Button>
+                                                    {proforma.estado === 'PENDIENTE' && (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => abrirModalRechazo(proforma)}
+                                                                size="sm"
+                                                                variant="destructive"
+                                                                disabled={procesandoId === proforma.id}
+                                                                className="gap-2"
+                                                            >
+                                                                <XCircle className="h-4 w-4" />
+                                                                Rechazar
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => abrirModalAprobacion(proforma)}
+                                                                size="sm"
+                                                                disabled={procesandoId === proforma.id}
+                                                                className="gap-2 bg-green-600 hover:bg-green-700"
+                                                            >
+                                                                <CheckCircle className="h-4 w-4" />
+                                                                {procesandoId === proforma.id ? 'Procesando...' : 'Aprobar'}
+                                                            </Button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+
+                                {/* Paginación */}
+                                {paginationInfo.last_page > 1 && (
+                                    <div className="flex items-center justify-between border-t pt-4 mt-6">
+                                        <div className="text-sm text-muted-foreground">
+                                            Mostrando {paginationInfo.from} - {paginationInfo.to} de {paginationInfo.total} proformas
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => cambiarPagina(paginationInfo.current_page - 1)}
+                                                disabled={paginationInfo.current_page === 1}
+                                            >
+                                                Anterior
+                                            </Button>
+
+                                            {/* Páginas */}
+                                            <div className="flex gap-1">
+                                                {Array.from({ length: paginationInfo.last_page }, (_, i) => i + 1).map((page) => {
+                                                    // Mostrar solo algunas páginas alrededor de la actual
+                                                    const showPage =
+                                                        page === 1 ||
+                                                        page === paginationInfo.last_page ||
+                                                        (page >= paginationInfo.current_page - 1 && page <= paginationInfo.current_page + 1);
+
+                                                    if (!showPage) {
+                                                        // Mostrar puntos suspensivos
+                                                        if (page === paginationInfo.current_page - 2 || page === paginationInfo.current_page + 2) {
+                                                            return <span key={page} className="px-2 py-1 text-sm text-muted-foreground">...</span>;
+                                                        }
+                                                        return null;
+                                                    }
+
+                                                    return (
+                                                        <Button
+                                                            key={page}
+                                                            variant={page === paginationInfo.current_page ? 'default' : 'outline'}
+                                                            size="sm"
+                                                            onClick={() => cambiarPagina(page)}
+                                                            className="min-w-[40px]"
+                                                        >
+                                                            {page}
+                                                        </Button>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => cambiarPagina(paginationInfo.current_page + 1)}
+                                                disabled={paginationInfo.current_page === paginationInfo.last_page}
+                                            >
+                                                Siguiente
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>
@@ -528,6 +899,280 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {/* Modals de Coordinación */}
+            {/* Modal Rechazo */}
+            <Dialog open={mostrarModalRechazo} onOpenChange={setMostrarModalRechazo}>
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Rechazar Proforma</DialogTitle>
+                    </DialogHeader>
+
+                    {proformaSeleccionada && (
+                        <div className="space-y-4">
+                            {/* Resumen de Proforma */}
+                            <div className="bg-muted/30 rounded-lg p-3">
+                                <p className="text-sm font-medium">{proformaSeleccionada.numero}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {proformaSeleccionada.cliente_nombre} - Bs {parseFloat(String(proformaSeleccionada.total)).toFixed(2)}
+                                </p>
+                            </div>
+
+                            {/* Advertencia */}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2">
+                                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                <div className="text-sm">
+                                    <p className="font-semibold text-red-900">Esta acción liberará las reservas de stock</p>
+                                    <p className="text-red-700 mt-1">El cliente será notificado del rechazo.</p>
+                                </div>
+                            </div>
+
+                            {/* Motivos Predefinidos */}
+                            <div>
+                                <label className="text-sm font-medium mb-3 block">Motivo del rechazo *</label>
+                                <div className="space-y-2">
+                                    {MOTIVOS_RECHAZO.map((motivo) => (
+                                        <label
+                                            key={motivo.value}
+                                            className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                                                motivoRechazoSeleccionado === motivo.value
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'border-border hover:border-primary/50'
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="motivoRechazo"
+                                                value={motivo.value}
+                                                checked={motivoRechazoSeleccionado === motivo.value}
+                                                onChange={(e) => setMotivoRechazoSeleccionado(e.target.value)}
+                                                className="w-4 h-4"
+                                            />
+                                            <span className="text-sm">{motivo.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Detalles Adicionales */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">
+                                    Detalles adicionales {motivoRechazoSeleccionado === 'otro' && '*'}
+                                </label>
+                                <Textarea
+                                    placeholder={
+                                        motivoRechazoSeleccionado === 'otro'
+                                            ? 'Explica el motivo del rechazo...'
+                                            : 'Agrega información adicional (opcional)...'
+                                    }
+                                    value={motivoRechazo}
+                                    onChange={(e) => setMotivoRechazo(e.target.value)}
+                                    rows={3}
+                                    className="resize-none"
+                                />
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    {motivoRechazoSeleccionado === 'otro' ? 'Mínimo 10 caracteres' : 'Máximo 500 caracteres'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={cerrarModalRechazo}
+                            disabled={procesandoId === proformaSeleccionada?.id}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={rechazarProforma}
+                            disabled={procesandoId === proformaSeleccionada?.id || !motivoRechazoSeleccionado}
+                            className="gap-2"
+                        >
+                            {procesandoId === proformaSeleccionada?.id ? 'Rechazando...' : (
+                                <>
+                                    <XCircle className="h-4 w-4" />
+                                    Rechazar Proforma
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Aprobación */}
+            <Dialog open={mostrarModalAprobacion} onOpenChange={setMostrarModalAprobacion}>
+                <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Aprobar Proforma - Confirmar Entrega</DialogTitle>
+                    </DialogHeader>
+
+                    {proformaSeleccionada && (
+                        <div className="space-y-6">
+                            {/* Resumen de Proforma */}
+                            <div className="bg-muted/30 rounded-lg p-4">
+                                <div className="grid md:grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Proforma</p>
+                                        <p className="font-semibold">{proformaSeleccionada.numero}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Cliente</p>
+                                        <p className="font-semibold">{proformaSeleccionada.cliente_nombre}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Total</p>
+                                        <p className="font-semibold">Bs {parseFloat(String(proformaSeleccionada.total)).toFixed(2)}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Solicitud Original del Cliente */}
+                            <div className="border rounded-lg p-4 bg-blue-50/30">
+                                <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
+                                    <Package className="h-4 w-4" />
+                                    Solicitud Original del Cliente
+                                </h4>
+                                <div className="grid md:grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Fecha Solicitada</p>
+                                        <p className="font-medium">{proformaSeleccionada.fecha_entrega_solicitada || 'Sin especificar'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Hora Solicitada</p>
+                                        <p className="font-medium">{proformaSeleccionada.hora_entrega_solicitada || 'Sin especificar'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Dirección</p>
+                                        <p className="font-medium">{proformaSeleccionada.direccionSolicitada?.direccion || 'Sin especificar'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Mini Mapa con Ubicación */}
+                            {proformaSeleccionada.direccionSolicitada?.latitud && proformaSeleccionada.direccionSolicitada?.longitud && (
+                                <div className="border rounded-lg overflow-hidden">
+                                    <div className="bg-muted/50 px-4 py-2 border-b">
+                                        <h4 className="font-semibold text-sm flex items-center gap-2">
+                                            <MapPin className="h-4 w-4" />
+                                            Ubicación de Entrega
+                                        </h4>
+                                    </div>
+                                    <div className="h-[250px] bg-gray-100 flex items-center justify-center relative">
+                                        <iframe
+                                            width="100%"
+                                            height="100%"
+                                            frameBorder="0"
+                                            style={{ border: 0 }}
+                                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${proformaSeleccionada.direccionSolicitada.longitud - 0.005},${proformaSeleccionada.direccionSolicitada.latitud - 0.005},${proformaSeleccionada.direccionSolicitada.longitud + 0.005},${proformaSeleccionada.direccionSolicitada.latitud + 0.005}&layer=mapnik&marker=${proformaSeleccionada.direccionSolicitada.latitud},${proformaSeleccionada.direccionSolicitada.longitud}`}
+                                            allowFullScreen
+                                        />
+                                    </div>
+                                    {proformaSeleccionada.direccionSolicitada?.referencia && (
+                                        <div className="bg-yellow-50 px-4 py-2 border-t">
+                                            <p className="text-xs font-medium text-yellow-800">
+                                                <span className="font-semibold">Referencia:</span> {proformaSeleccionada.direccionSolicitada.referencia}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Confirmar Datos después de Coordinación */}
+                            <div className="border rounded-lg p-4 bg-green-50/30">
+                                <h4 className="font-semibold mb-4 text-sm flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                    Confirmación después de Coordinación
+                                </h4>
+                                <div className="space-y-4">
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block">
+                                                Fecha de Entrega {datosConfirmacion.fecha_entrega_confirmada && '*'}
+                                            </label>
+                                            <Input
+                                                type="date"
+                                                value={datosConfirmacion.fecha_entrega_confirmada}
+                                                onChange={(e) => setDatosConfirmacion({
+                                                    ...datosConfirmacion,
+                                                    fecha_entrega_confirmada: e.target.value
+                                                })}
+                                            />
+                                            {datosConfirmacion.fecha_entrega_confirmada && (
+                                                <p className="text-xs mt-1 text-muted-foreground">
+                                                    {datosConfirmacion.fecha_entrega_confirmada === proformaSeleccionada.fecha_entrega_solicitada
+                                                        ? '✓ Sin cambios'
+                                                        : '⚠ Fecha modificada'}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block">
+                                                Hora de Entrega {datosConfirmacion.hora_entrega_confirmada && '*'}
+                                            </label>
+                                            <Input
+                                                type="time"
+                                                value={datosConfirmacion.hora_entrega_confirmada}
+                                                onChange={(e) => setDatosConfirmacion({
+                                                    ...datosConfirmacion,
+                                                    hora_entrega_confirmada: e.target.value
+                                                })}
+                                            />
+                                            {datosConfirmacion.hora_entrega_confirmada && (
+                                                <p className="text-xs mt-1 text-muted-foreground">
+                                                    {datosConfirmacion.hora_entrega_confirmada === proformaSeleccionada.hora_entrega_solicitada
+                                                        ? '✓ Sin cambios'
+                                                        : '⚠ Hora modificada'}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block">Notas de Coordinación</label>
+                                        <Textarea
+                                            placeholder="Ej: Cliente confirmó la fecha y hora por teléfono..."
+                                            value={datosConfirmacion.comentario_coordinacion}
+                                            onChange={(e) => setDatosConfirmacion({
+                                                ...datosConfirmacion,
+                                                comentario_coordinacion: e.target.value
+                                            })}
+                                            rows={3}
+                                            className="resize-none"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">Opcional - Máximo 1000 caracteres</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={cerrarModalAprobacion}
+                            disabled={procesandoId === proformaSeleccionada?.id}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={aprobarProforma}
+                            disabled={procesandoId === proformaSeleccionada?.id || !datosConfirmacion.fecha_entrega_confirmada || !datosConfirmacion.hora_entrega_confirmada}
+                            className="gap-2 bg-green-600 hover:bg-green-700"
+                        >
+                            {procesandoId === proformaSeleccionada?.id ? 'Aprobando...' : (
+                                <>
+                                    <CheckCircle className="h-4 w-4" />
+                                    Aprobar y Confirmar Entrega
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

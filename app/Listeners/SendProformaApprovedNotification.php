@@ -2,21 +2,20 @@
 
 namespace App\Listeners;
 
-use App\Events\ProformaCreada;
+use App\Events\ProformaAprobada;
 use App\Services\Notifications\ProformaNotificationService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Listener que envía notificaciones de proforma creada
+ * Listener que envía notificaciones cuando una proforma es aprobada
  *
- * Se ejecuta automáticamente y síncronamente cuando se dispara el evento ProformaCreada
- * No implementa ShouldQueue porque queremos ejecución inmediata
+ * Se ejecuta automáticamente cuando se dispara el evento ProformaAprobada
  *
  * ✅ Utiliza ProformaNotificationService que:
  *    - Guarda la notificación en BD (persistente)
  *    - Envía notificación en tiempo real vía WebSocket
  */
-class SendProformaCreatedNotification
+class SendProformaApprovedNotification
 {
     protected ProformaNotificationService $notificationService;
 
@@ -27,17 +26,13 @@ class SendProformaCreatedNotification
 
     /**
      * Handle the event.
-     *
-     * Delega al ProformaNotificationService para:
-     * 1. Guardar la notificación en la base de datos (tabla notifications)
-     * 2. Enviar notificación en tiempo real al servidor WebSocket Node.js
      */
-    public function handle(ProformaCreada $event): void
+    public function handle(ProformaAprobada $event): void
     {
         try {
             $proforma = $event->proforma;
 
-            Log::info('🔔 SendProformaCreatedNotification - Listener disparado', [
+            Log::info('🔔 SendProformaApprovedNotification - Listener disparado', [
                 'proforma_id' => $proforma->id,
                 'proforma_numero' => $proforma->numero,
             ]);
@@ -46,18 +41,15 @@ class SendProformaCreatedNotification
             if (!$proforma->relationLoaded('cliente')) {
                 $proforma->load('cliente');
             }
-            if (!$proforma->relationLoaded('detalles')) {
-                $proforma->load('detalles.producto');
-            }
-            if (!$proforma->relationLoaded('usuarioCreador')) {
-                $proforma->load('usuarioCreador');
+            if (!$proforma->relationLoaded('usuarioAprobador')) {
+                $proforma->load('usuarioAprobador');
             }
 
             // ✅ Usar el servicio especializado de proformas
-            $result = $this->notificationService->notifyCreated($proforma);
+            $result = $this->notificationService->notifyApproved($proforma);
 
             if ($result) {
-                Log::info('✅ Notificación de proforma creada procesada exitosamente', [
+                Log::info('✅ Notificación de proforma aprobada procesada exitosamente', [
                     'proforma_id' => $proforma->id,
                     'proforma_numero' => $proforma->numero,
                 ]);
@@ -68,7 +60,7 @@ class SendProformaCreatedNotification
             }
 
         } catch (\Exception $e) {
-            Log::error('❌ Error procesando notificación de proforma creada', [
+            Log::error('❌ Error procesando notificación de proforma aprobada', [
                 'proforma_id' => $event->proforma->id ?? null,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

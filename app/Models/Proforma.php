@@ -142,7 +142,9 @@ class Proforma extends Model
     // Métodos de utilidad
     public function puedeAprobarse(): bool
     {
-        return $this->estado === self::PENDIENTE && ! $this->estaVencida();
+        // Solo verificar el estado, no la fecha de vencimiento
+        // Si está vencida, se extenderá automáticamente al aprobar
+        return $this->estado === self::PENDIENTE;
     }
 
     public function puedeRechazarse(): bool
@@ -206,12 +208,20 @@ class Proforma extends Model
             return false;
         }
 
-        $this->update([
+        // Si la proforma está vencida, extender automáticamente 7 días desde ahora
+        $updateData = [
             'estado' => self::APROBADA,
             'usuario_aprobador_id' => $usuario->id,
             'fecha_aprobacion' => now(),
             'observaciones' => $observaciones ?? $this->observaciones,
-        ]);
+        ];
+
+        // Auto-extender si está vencida
+        if ($this->estaVencida()) {
+            $updateData['fecha_vencimiento'] = now()->addDays(7);
+        }
+
+        $this->update($updateData);
 
         // Enviar notificación WebSocket en tiempo real
         try {
@@ -251,6 +261,25 @@ class Proforma extends Model
                 'error' => $e->getMessage(),
             ]);
         }
+
+        return true;
+    }
+
+    // Extender fecha de vencimiento
+    public function extenderVencimiento(int $dias = 7): bool
+    {
+        // Permitir extensión solo si está PENDIENTE o APROBADA
+        if (!in_array($this->estado, [self::PENDIENTE, self::APROBADA])) {
+            return false;
+        }
+
+        // Si ya está vencida, extender desde ahora
+        // Si no, extender desde la fecha actual de vencimiento
+        $fechaBase = $this->estaVencida() ? now() : $this->fecha_vencimiento;
+
+        $this->update([
+            'fecha_vencimiento' => $fechaBase->addDays($dias),
+        ]);
 
         return true;
     }

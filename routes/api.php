@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\EstadoMermaController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TipoAjusteInventarioController;
 use App\Http\Controllers\Api\TipoMermaController;
@@ -74,6 +75,35 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
 
+    // ==========================================
+    // 🔔 GESTIÓN DE NOTIFICACIONES
+    // ==========================================
+    Route::prefix('notificaciones')->group(function () {
+        // Listar todas las notificaciones del usuario
+        Route::get('/', [NotificationController::class, 'index']);
+
+        // Listar solo notificaciones no leídas
+        Route::get('/no-leidas', [NotificationController::class, 'unread']);
+
+        // Obtener estadísticas de notificaciones
+        Route::get('/estadisticas', [NotificationController::class, 'stats']);
+
+        // Obtener notificaciones por tipo
+        Route::get('/por-tipo/{type}', [NotificationController::class, 'byType']);
+
+        // Marcar todas las notificaciones como leídas
+        Route::post('/marcar-todas-leidas', [NotificationController::class, 'markAllAsRead']);
+
+        // Eliminar todas las notificaciones
+        Route::delete('/eliminar-todas', [NotificationController::class, 'destroyAll']);
+
+        // Operaciones sobre notificación específica
+        Route::get('/{notification}', [NotificationController::class, 'show']);
+        Route::post('/{notification}/marcar-leida', [NotificationController::class, 'markAsRead']);
+        Route::post('/{notification}/marcar-no-leida', [NotificationController::class, 'markAsUnread']);
+        Route::delete('/{notification}', [NotificationController::class, 'destroy']);
+    });
+
     // Catálogos de mermas
     Route::apiResource('tipo-mermas', TipoMermaController::class);
     Route::apiResource('estado-mermas', EstadoMermaController::class);
@@ -89,45 +119,43 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
     Route::get('/app/productos/{producto}', [ProductoController::class, 'showApi']);
     Route::get('/app/productos/buscar', [ProductoController::class, 'buscarApi']);
 
-    // Proformas desde app externa
-    Route::prefix('app/proformas')->group(function () {
-        Route::get('/', [ApiProformaController::class, 'index']);
-        Route::post('/', [ApiProformaController::class, 'store']);
-        Route::get('/{proforma}', [ApiProformaController::class, 'show']);
-        Route::get('/{proforma}/estado', [ApiProformaController::class, 'verificarEstado']);
-        Route::post('/{proforma}/confirmar', [ApiProformaController::class, 'confirmarProforma'])->name('api.proformas.confirmar');
-        Route::get('/{proforma}/reservas', [ApiProformaController::class, 'verificarReservas']);
-        Route::post('/{proforma}/extender-reservas', [ApiProformaController::class, 'extenderReservas']);
-    });
+    // ==========================================
+    // 🛒 PROFORMAS - API UNIFICADA
+    // ==========================================
+    // Una sola fuente de verdad para todas las operaciones de proformas
+    // El método index() filtra automáticamente según el rol del usuario
 
-    // 🛒 ENDPOINTS DE PROFORMAS OPTIMIZADOS PARA LA APP DEL CLIENTE
-    // Estos endpoints están optimizados específicamente para la app móvil:
-    // - Usan el cliente autenticado automáticamente
-    // - Validan dirección de entrega
-    // - Reservan stock automáticamente
-    // - Retornan respuestas optimizadas para la interfaz móvil
+    // CRUD básico
+    Route::get('/proformas', [ApiProformaController::class, 'index']);                    // Lista (inteligente por rol)
+    Route::get('/proformas/estadisticas', [ApiProformaController::class, 'stats']);       // Estadísticas (debe ir antes de {proforma})
+    Route::post('/proformas', [ApiProformaController::class, 'store']);                   // Crear
+    Route::get('/proformas/{proforma}', [ApiProformaController::class, 'show']);          // Ver detalle
 
-    // Crear nueva proforma
+    // Acciones sobre proforma
+    Route::post('/proformas/{proforma}/aprobar', [ApiProformaController::class, 'aprobar']);
+    Route::post('/proformas/{proforma}/rechazar', [ApiProformaController::class, 'rechazar']);
+    Route::post('/proformas/{proforma}/convertir-venta', [ApiProformaController::class, 'convertirAVenta']);
+    Route::post('/proformas/{proforma}/confirmar', [ApiProformaController::class, 'confirmarProforma'])->name('api.proformas.confirmar');
+    Route::post('/proformas/{proforma}/extender-vencimiento', [ApiProformaController::class, 'extenderVencimiento']);
+
+    // Estado y verificaciones
+    Route::get('/proformas/{proforma}/estado', [ApiProformaController::class, 'verificarEstado']);
+    Route::get('/proformas/{proforma}/reservas', [ApiProformaController::class, 'verificarReservas']);
+    Route::post('/proformas/{proforma}/extender-reservas', [ApiProformaController::class, 'extenderReservas']);
+
+    // Utilidades
+    Route::post('/proformas/verificar-stock', [ApiProformaController::class, 'verificarStock']);
+    Route::get('/proformas/productos-disponibles', [ApiProformaController::class, 'obtenerProductosDisponibles']);
+
+    // 🛒 ENDPOINTS LEGACY PARA APP MÓVIL (mantener por compatibilidad)
+    // TODO: Migrar app móvil para usar /proformas en lugar de /app/pedidos
     Route::post('app/pedidos', [ApiProformaController::class, 'crearPedidoDesdeApp']);
-
-    // Consultar historial de proformas del cliente
-    Route::get('app/cliente/proformas', [ApiProformaController::class, 'obtenerHistorialPedidos']);
-
-    // Ver detalle completo de un pedido
     Route::get('app/pedidos/{id}', [ApiProformaController::class, 'obtenerDetallePedido']);
-
-    // Verificar solo el estado actual de un pedido (endpoint ligero)
     Route::get('app/pedidos/{id}/estado', [ApiProformaController::class, 'obtenerEstadoPedido']);
-
-    // 🛒 ENDPOINT DE CARRITO - Obtener el último carrito (proforma pendiente) del usuario
     Route::get('carritos/usuario/{usuarioId}/ultimo', [ApiProformaController::class, 'obtenerUltimoCarrito']);
-
-    // Verificación de stock
-    Route::post('/app/verificar-stock', [ApiProformaController::class, 'verificarStock']);
 
     // Cliente puede ver sus datos desde la app
     Route::prefix('app/cliente')->group(function () {
-        Route::get('/proformas', [ApiProformaController::class, 'index']);
         Route::get('/ventas', [VentaController::class, 'ventasCliente']);
         Route::get('/envios', [EnvioController::class, 'enviosCliente']);
     });
@@ -146,9 +174,6 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
         Route::put('/{envio}/rechazar', [EnvioController::class, 'rechazarEntrega'])
             ->name('api.envios.rechazar');
     });
-
-    // Catálogo de productos para la app
-    Route::get('/app/productos-disponibles', [ApiProformaController::class, 'obtenerProductosDisponibles']);
 });
 
 // ==========================================
@@ -157,13 +182,6 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
 Route::middleware(['auth:sanctum,web'])->group(function () {
     // Estadísticas del dashboard
     Route::get('/logistica/dashboard/stats', [EnvioController::class, 'dashboardStats']);
-
-    // Gestión de proformas
-    Route::get('/proformas', [ApiProformaController::class, 'listarParaDashboard']);
-    Route::post('/proformas', [ApiProformaController::class, 'store']); // ✅ NUEVO: Crear proforma
-    Route::post('/proformas/{proforma}/aprobar', [ApiProformaController::class, 'aprobar']);
-    Route::post('/proformas/{proforma}/rechazar', [ApiProformaController::class, 'rechazar']);
-    Route::post('/proformas/{proforma}/convertir-venta', [ApiProformaController::class, 'convertirAVenta']);
 
     // Gestión de envíos
     Route::get('/envios', [EnvioController::class, 'index']);
@@ -307,13 +325,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/entregas/{id}/calcular-eta', [TrackingController::class, 'calcularETA']);
     });
 
-    // ENCARGADO - Gestión de proformas y entregas
+    // ENCARGADO - Gestión de entregas
     Route::prefix('encargado')->group(function () {
         Route::get('/dashboard', [EncargadoController::class, 'dashboard']);
         Route::get('/dashboard/stats', [EncargadoController::class, 'dashboard']); // Alias para obtener estadísticas
-        Route::get('/proformas/pendientes', [EncargadoController::class, 'proformasPendientes']);
-        Route::post('/proformas/{id}/aprobar', [EncargadoController::class, 'aprobarProforma']);
-        Route::post('/proformas/{id}/rechazar', [EncargadoController::class, 'rechazarProforma']);
+
+        // ✅ Entregas (mantener en EncargadoController - lógica específica)
         Route::get('/entregas/asignadas', [EncargadoController::class, 'entregasAsignadas']);
         Route::post('/entregas/{id}/procesar-carga', [EncargadoController::class, 'procesarCargaVehiculo']);
         Route::get('/entregas', [EncargadoController::class, 'indexAdmin']);

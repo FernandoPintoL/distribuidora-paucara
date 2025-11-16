@@ -2,21 +2,20 @@
 
 namespace App\Listeners;
 
-use App\Events\ProformaCreada;
+use App\Events\ProformaRechazada;
 use App\Services\Notifications\ProformaNotificationService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Listener que envía notificaciones de proforma creada
+ * Listener que envía notificaciones cuando una proforma es rechazada
  *
- * Se ejecuta automáticamente y síncronamente cuando se dispara el evento ProformaCreada
- * No implementa ShouldQueue porque queremos ejecución inmediata
+ * Se ejecuta automáticamente cuando se dispara el evento ProformaRechazada
  *
  * ✅ Utiliza ProformaNotificationService que:
  *    - Guarda la notificación en BD (persistente)
  *    - Envía notificación en tiempo real vía WebSocket
  */
-class SendProformaCreatedNotification
+class SendProformaRejectedNotification
 {
     protected ProformaNotificationService $notificationService;
 
@@ -27,37 +26,29 @@ class SendProformaCreatedNotification
 
     /**
      * Handle the event.
-     *
-     * Delega al ProformaNotificationService para:
-     * 1. Guardar la notificación en la base de datos (tabla notifications)
-     * 2. Enviar notificación en tiempo real al servidor WebSocket Node.js
      */
-    public function handle(ProformaCreada $event): void
+    public function handle(ProformaRechazada $event): void
     {
         try {
             $proforma = $event->proforma;
+            $motivoRechazo = $event->motivoRechazo ?? 'Sin motivo especificado';
 
-            Log::info('🔔 SendProformaCreatedNotification - Listener disparado', [
+            Log::info('🔔 SendProformaRejectedNotification - Listener disparado', [
                 'proforma_id' => $proforma->id,
                 'proforma_numero' => $proforma->numero,
+                'motivo' => $motivoRechazo,
             ]);
 
             // Cargar relaciones necesarias si no están cargadas
             if (!$proforma->relationLoaded('cliente')) {
                 $proforma->load('cliente');
             }
-            if (!$proforma->relationLoaded('detalles')) {
-                $proforma->load('detalles.producto');
-            }
-            if (!$proforma->relationLoaded('usuarioCreador')) {
-                $proforma->load('usuarioCreador');
-            }
 
             // ✅ Usar el servicio especializado de proformas
-            $result = $this->notificationService->notifyCreated($proforma);
+            $result = $this->notificationService->notifyRejected($proforma, $motivoRechazo);
 
             if ($result) {
-                Log::info('✅ Notificación de proforma creada procesada exitosamente', [
+                Log::info('✅ Notificación de proforma rechazada procesada exitosamente', [
                     'proforma_id' => $proforma->id,
                     'proforma_numero' => $proforma->numero,
                 ]);
@@ -68,7 +59,7 @@ class SendProformaCreatedNotification
             }
 
         } catch (\Exception $e) {
-            Log::error('❌ Error procesando notificación de proforma creada', [
+            Log::error('❌ Error procesando notificación de proforma rechazada', [
                 'proforma_id' => $event->proforma->id ?? null,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

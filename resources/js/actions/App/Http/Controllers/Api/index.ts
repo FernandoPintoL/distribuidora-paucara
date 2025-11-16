@@ -2,6 +2,7 @@ import AuthController from './AuthController'
 import EmpleadoApiController from './EmpleadoApiController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import RoleController from './RoleController'
+import NotificationController from './NotificationController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
@@ -14,6 +15,7 @@ const Api = {
     EmpleadoApiController,
     TipoAjusteInventarioController,
     RoleController,
+    NotificationController,
     TipoMermaController,
     EstadoMermaController,
     ApiProformaController,

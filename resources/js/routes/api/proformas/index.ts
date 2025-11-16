@@ -1,8 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmar
-* @see app/Http/Controllers/Api/ApiProformaController.php:1240
-* @route '/api/app/proformas/{proforma}/confirmar'
+* @see app/Http/Controllers/Api/ApiProformaController.php:1413
+* @route '/api/proformas/{proforma}/confirmar'
 */
 export const confirmar = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: confirmar.url(args, options),
@@ -11,13 +11,13 @@ export const confirmar = (args: { proforma: number | { id: number } } | [proform
 
 confirmar.definition = {
     methods: ["post"],
-    url: '/api/app/proformas/{proforma}/confirmar',
+    url: '/api/proformas/{proforma}/confirmar',
 } satisfies RouteDefinition<["post"]>
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmar
-* @see app/Http/Controllers/Api/ApiProformaController.php:1240
-* @route '/api/app/proformas/{proforma}/confirmar'
+* @see app/Http/Controllers/Api/ApiProformaController.php:1413
+* @route '/api/proformas/{proforma}/confirmar'
 */
 confirmar.url = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
@@ -49,8 +49,8 @@ confirmar.url = (args: { proforma: number | { id: number } } | [proforma: number
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmar
-* @see app/Http/Controllers/Api/ApiProformaController.php:1240
-* @route '/api/app/proformas/{proforma}/confirmar'
+* @see app/Http/Controllers/Api/ApiProformaController.php:1413
+* @route '/api/proformas/{proforma}/confirmar'
 */
 confirmar.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: confirmar.url(args, options),
@@ -59,8 +59,8 @@ confirmar.post = (args: { proforma: number | { id: number } } | [proforma: numbe
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmar
-* @see app/Http/Controllers/Api/ApiProformaController.php:1240
-* @route '/api/app/proformas/{proforma}/confirmar'
+* @see app/Http/Controllers/Api/ApiProformaController.php:1413
+* @route '/api/proformas/{proforma}/confirmar'
 */
 const confirmarForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
     action: confirmar.url(args, options),
@@ -69,8 +69,8 @@ const confirmarForm = (args: { proforma: number | { id: number } } | [proforma: 
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmar
-* @see app/Http/Controllers/Api/ApiProformaController.php:1240
-* @route '/api/app/proformas/{proforma}/confirmar'
+* @see app/Http/Controllers/Api/ApiProformaController.php:1413
+* @route '/api/proformas/{proforma}/confirmar'
 */
 confirmarForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
     action: confirmar.url(args, options),

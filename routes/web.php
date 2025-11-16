@@ -174,13 +174,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Ruta para resumen de stock de una venta específica
     Route::get('ventas/{venta}/stock/resumen', [\App\Http\Controllers\VentaController::class, 'obtenerResumenStock'])->name('ventas.stock.resumen');
 
-    // Rutas para gestión de proformas con app externa
+    // ==========================================
+    // PROFORMAS - VISTAS INERTIA (usan ApiProformaController)
+    // ==========================================
+    // Vistas Inertia que reciben datos desde ApiProformaController
+    // Todas las acciones (aprobar, rechazar, convertir) van a /api/proformas/*
     Route::prefix('proformas')->name('proformas.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ProformaController::class, 'index'])->name('index');
-        Route::get('/{proforma}', [\App\Http\Controllers\ProformaController::class, 'show'])->name('show');
-        Route::post('/{proforma}/aprobar', [\App\Http\Controllers\ProformaController::class, 'aprobar'])->name('aprobar');
-        Route::post('/{proforma}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
-        Route::post('/{proforma}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])->name('convertir-venta');
+        // Vista: Lista de proformas (usa ApiProformaController::index)
+        Route::get('/', [\App\Http\Controllers\Api\ApiProformaController::class, 'indexInertia'])->name('index');
+
+        // Vista: Detalle de proforma (usa ApiProformaController::show)
+        Route::get('/{proforma}', [\App\Http\Controllers\Api\ApiProformaController::class, 'showInertia'])->name('show');
+
+        // NOTA: Las acciones POST usan las rutas API (definidas en routes/api.php):
+        // - POST /api/proformas/{id}/aprobar → ApiProformaController::aprobar()
+        // - POST /api/proformas/{id}/rechazar → ApiProformaController::rechazar()
+        // - POST /api/proformas/{id}/convertir-venta → ApiProformaController::convertirAVenta()
     });
 
     // Rutas para gestión de cajas

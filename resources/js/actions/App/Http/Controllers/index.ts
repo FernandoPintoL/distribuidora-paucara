@@ -34,7 +34,6 @@ import LoteVencimientoController from './LoteVencimientoController'
 import ReporteComprasController from './ReporteComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
-import ProformaController from './ProformaController'
 import CajaController from './CajaController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import VehiculoController from './VehiculoController'
@@ -85,7 +84,6 @@ const Controllers = {
     ReporteComprasController,
     DetalleCompraController,
     DetalleVentaController,
-    ProformaController,
     CajaController,
     TipoAjusteInventarioController,
     VehiculoController,

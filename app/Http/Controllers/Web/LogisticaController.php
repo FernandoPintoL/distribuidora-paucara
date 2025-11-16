@@ -25,25 +25,65 @@ class LogisticaController extends Controller
                 ->count(),
         ];
 
-        // Proformas recientes de app externa
-        $proformasRecientes = Proforma::with(['cliente', 'usuarioCreador'])
-            ->where('canal_origen', 'APP_EXTERNA')
-            ->where('estado', 'PENDIENTE')
-            ->orderBy('fecha', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(function ($proforma) {
-                return [
-                    'id'                     => $proforma->id,
-                    'numero'                 => $proforma->numero,
-                    'cliente_nombre'         => $proforma->cliente->nombre ?? 'N/A',
-                    'total'                  => $proforma->total,
-                    'fecha'                  => $proforma->fecha,
-                    'estado'                 => $proforma->estado,
-                    'canal_origen'           => $proforma->canal_origen,
-                    'usuario_creador_nombre' => $proforma->usuarioCreador->name ?? 'Sistema',
-                ];
+        // Proformas recientes de app externa con paginación y filtros
+        $query = Proforma::with(['cliente', 'usuarioCreador', 'direccionSolicitada'])
+            ->where('canal_origen', 'APP_EXTERNA');
+
+        // Aplicar filtros desde query params
+        if (request()->has('estado') && request('estado') !== 'TODOS') {
+            $query->where('estado', request('estado'));
+        }
+
+        if (request()->has('search') && request('search') !== '') {
+            $search = request('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('numero', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', function ($clienteQuery) use ($search) {
+                      $clienteQuery->where('nombre', 'like', "%{$search}%");
+                  });
             });
+        }
+
+        if (request()->has('solo_vencidas') && request('solo_vencidas') === 'true') {
+            $query->where('fecha_vencimiento', '<', now())
+                  ->whereNotIn('estado', ['RECHAZADA', 'CONVERTIDA']);
+        }
+
+        $proformasPaginated = $query->orderBy('fecha', 'desc')
+            ->paginate(15); // 15 por página
+
+        $proformasRecientes = [
+            'data' => $proformasPaginated->map(function ($proforma) {
+                return [
+                    'id'                              => $proforma->id,
+                    'numero'                          => $proforma->numero,
+                    'cliente_nombre'                  => $proforma->cliente->nombre ?? 'N/A',
+                    'total'                           => $proforma->total,
+                    'fecha'                           => $proforma->fecha,
+                    'estado'                          => $proforma->estado,
+                    'canal_origen'                    => $proforma->canal_origen,
+                    'usuario_creador_nombre'          => $proforma->usuarioCreador->name ?? 'Sistema',
+                    'fecha_vencimiento'               => $proforma->fecha_vencimiento,
+                    // Datos de solicitud
+                    'fecha_entrega_solicitada'        => $proforma->fecha_entrega_solicitada,
+                    'hora_entrega_solicitada'         => $proforma->hora_entrega_solicitada,
+                    'direccion_entrega_solicitada_id' => $proforma->direccion_entrega_solicitada_id,
+                    'direccionSolicitada'             => $proforma->direccionSolicitada ? [
+                        'id'         => $proforma->direccionSolicitada->id,
+                        'direccion'  => $proforma->direccionSolicitada->direccion,
+                        'latitud'    => $proforma->direccionSolicitada->latitud,
+                        'longitud'   => $proforma->direccionSolicitada->longitud,
+                        'referencia' => $proforma->direccionSolicitada->referencia,
+                    ] : null,
+                ];
+            }),
+            'current_page' => $proformasPaginated->currentPage(),
+            'last_page'    => $proformasPaginated->lastPage(),
+            'per_page'     => $proformasPaginated->perPage(),
+            'total'        => $proformasPaginated->total(),
+            'from'         => $proformasPaginated->firstItem(),
+            'to'           => $proformasPaginated->lastItem(),
+        ];
 
         // Envíos activos
         $enviosActivos = Envio::with(['venta.cliente'])

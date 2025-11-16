@@ -11,6 +11,13 @@ class ProformaObserver
      */
     public function created(Proforma $proforma): void
     {
+        // Actualizar número de proforma con ID concatenado
+        $fecha = $proforma->created_at->format('Ymd');
+        $nuevoNumero = "PRO-{$fecha}-" . str_pad($proforma->id, 4, '0', STR_PAD_LEFT);
+
+        // Actualizar sin disparar eventos para evitar loop infinito
+        $proforma->updateQuietly(['numero' => $nuevoNumero]);
+
         // Reservar stock automáticamente al crear proforma desde app externa
         if ($proforma->esDeAppExterna() && $proforma->estado === Proforma::PENDIENTE) {
             $proforma->reservarStock();

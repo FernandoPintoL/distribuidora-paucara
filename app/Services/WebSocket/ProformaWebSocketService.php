@@ -1,0 +1,99 @@
+<?php
+
+namespace App\Services\WebSocket;
+
+/**
+ * Servicio especializado para notificaciones WebSocket de Proformas
+ *
+ * Maneja todas las notificaciones en tiempo real relacionadas con proformas
+ */
+class ProformaWebSocketService extends BaseWebSocketService
+{
+    /**
+     * Notificar creación de proforma
+     */
+    public function notifyCreated($proforma): bool
+    {
+        return $this->send('notify/proforma-created', [
+            'id' => $proforma->id,
+            'numero' => $proforma->numero,
+            'cliente_id' => $proforma->cliente_id,
+            'cliente' => [
+                'id' => $proforma->cliente_id,
+                'nombre' => $proforma->cliente?->nombre ?? 'Cliente',
+                'apellido' => $proforma->cliente?->apellido ?? '',
+                'telefono' => $proforma->cliente?->telefono ?? null,
+            ],
+            'subtotal' => (float) $proforma->subtotal,
+            'impuesto' => (float) $proforma->impuesto,
+            'total' => (float) $proforma->total,
+            'estado' => $proforma->estado,
+            'items' => ($proforma->detalles ?? collect())->map(function ($item) {
+                return [
+                    'producto_id' => $item->producto_id,
+                    'producto_nombre' => $item->producto?->nombre ?? 'Producto',
+                    'cantidad' => $item->cantidad,
+                    'precio_unitario' => (float) $item->precio_unitario,
+                    'subtotal' => (float) $item->subtotal,
+                ];
+            })->toArray(),
+            'fecha_creacion' => $proforma->created_at?->toIso8601String(),
+            'fecha_vencimiento' => $proforma->fecha_vencimiento?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Notificar aprobación de proforma
+     */
+    public function notifyApproved($proforma): bool
+    {
+        return $this->send('notify/proforma-approved', [
+            'id' => $proforma->id,
+            'numero' => $proforma->numero,
+            'cliente_id' => $proforma->cliente_id,
+            'estado' => $proforma->estado,
+            'total' => (float) $proforma->total,
+            'usuario_aprobador' => [
+                'id' => $proforma->usuario_aprobador_id,
+                'name' => $proforma->usuarioAprobador?->name ?? 'Sistema',
+            ],
+            'comentarios' => $proforma->comentario_aprobacion,
+            'fecha_aprobacion' => $proforma->fecha_aprobacion?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Notificar rechazo de proforma
+     */
+    public function notifyRejected($proforma, ?string $motivoRechazo = null): bool
+    {
+        return $this->send('notify/proforma-rejected', [
+            'id' => $proforma->id,
+            'numero' => $proforma->numero,
+            'cliente_id' => $proforma->cliente_id,
+            'estado' => $proforma->estado,
+            'usuario_rechazador' => [
+                'id' => $proforma->usuario_aprobador_id ?? auth()->id(),
+                'name' => $proforma->usuarioAprobador?->name ?? auth()->user()?->name ?? 'Sistema',
+            ],
+            'motivo_rechazo' => $motivoRechazo ?? 'Sin motivo especificado',
+            'fecha_rechazo' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Notificar conversión de proforma a venta
+     */
+    public function notifyConverted($proforma, $venta): bool
+    {
+        return $this->send('notify/proforma-converted', [
+            'proforma_id' => $proforma->id,
+            'proforma_numero' => $proforma->numero,
+            'venta_id' => $venta->id,
+            'venta_numero' => $venta->numero ?? null,
+            'cliente_id' => $proforma->cliente_id,
+            'total' => (float) $proforma->total,
+            'fecha_conversion' => now()->toIso8601String(),
+        ]);
+    }
+}
