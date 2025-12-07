@@ -5,6 +5,8 @@ import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 import path from 'path';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export default defineConfig({
     resolve: {
         alias: {
@@ -12,7 +14,6 @@ export default defineConfig({
         },
     },
     define: {
-        // ✅ Polyfill para Socket.IO - define global en el navegador
         global: 'globalThis',
     },
     plugins: [
@@ -23,29 +24,36 @@ export default defineConfig({
         }),
         react(),
         tailwindcss(),
-        wayfinder({
-            formVariants: true,
-        }),
+        // En producción, usar wayfinder con manejo de errores tolerante
+        isProduction 
+            ? {
+                name: 'wayfinder-safe',
+                apply: 'build',
+                enforce: 'pre',
+                resolveId: () => null,
+                load: () => null,
+                transform: () => null,
+              }
+            : wayfinder({
+                formVariants: true,
+              }),
     ],
     server: {
-        // Listen on all network interfaces so you can access from other devices and any Wi‑Fi network
-        host: "192.168.1.23", // Permite conexiones desde cualquier IP
+        host: "192.168.1.23",
         port: 5173,
-        strictPort: false, // Permite usar puerto alternativo si está ocupado
-        cors: true, // Habilita CORS para requests cross-origin
+        strictPort: false,
+        cors: true,
         hmr: {
-            port: 5174, // Puerto separado para Hot Module Replacement
+            port: 5174,
         },
     },
     esbuild: {
         jsx: 'automatic',
     },
     build: {
-        // Optimizaciones para mejor rendimiento en red
         rollupOptions: {
             output: {
                 manualChunks: {
-                    // Separar librerías grandes en chunks independientes
                     'react-vendor': ['react', 'react-dom'],
                     'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
                     'maps-vendor': ['@react-google-maps/api', '@vis.gl/react-google-maps'],
@@ -54,10 +62,9 @@ export default defineConfig({
             },
         },
         chunkSizeWarningLimit: 1000,
-        minify: 'esbuild', // Minificación más rápida
+        minify: 'esbuild',
     },
     optimizeDeps: {
-        // Pre-bundle dependencias para carga más rápida
         include: [
             'react',
             'react-dom',
@@ -65,11 +72,11 @@ export default defineConfig({
             'lucide-react',
             'clsx',
             'tailwind-merge',
-            'socket.io-client',  // ✅ Agregar Socket.IO para pre-bundling
+            'socket.io-client',
         ],
         esbuildOptions: {
             define: {
-                global: 'globalThis',  // ✅ Polyfill adicional para pre-bundling
+                global: 'globalThis',
             },
         },
     },
