@@ -1,6 +1,8 @@
 import Api from './Api'
 import InventarioController from './InventarioController'
 import ModuloSidebarController from './ModuloSidebarController'
+import Auth from './Auth'
+import PermissionController from './PermissionController'
 import ProductoController from './ProductoController'
 import VentaController from './VentaController'
 import EnvioController from './EnvioController'
@@ -26,7 +28,6 @@ import TipoPrecioController from './TipoPrecioController'
 import MonedaController from './MonedaController'
 import TipoPagoController from './TipoPagoController'
 import UserController from './UserController'
-import PermissionController from './PermissionController'
 import EmpleadoController from './EmpleadoController'
 import CuentaPorPagarController from './CuentaPorPagarController'
 import PagoController from './PagoController'
@@ -39,63 +40,71 @@ import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import VehiculoController from './VehiculoController'
 import InventarioInicialController from './InventarioInicialController'
 import Web from './Web'
+import VendedorController from './VendedorController'
+import ChoferController from './ChoferController'
+import PreventistController from './PreventistController'
+import AdminController from './AdminController'
+import RutaController from './RutaController'
 import ReportePreciosController from './ReportePreciosController'
 import ReporteInventarioController from './ReporteInventarioController'
 import ReservaStockController from './ReservaStockController'
 import ConteoFisicoController from './ConteoFisicoController'
 import AnalisisAbcController from './AnalisisAbcController'
 import Settings from './Settings'
-import Auth from './Auth'
-
 const Controllers = {
     Api,
-    InventarioController,
-    ModuloSidebarController,
-    ProductoController,
-    VentaController,
-    EnvioController,
-    CompraController,
-    AsientoContableController,
-    ReporteInventarioApiController,
-    ClienteController,
-    DireccionClienteApiController,
-    FotoLugarClienteController,
-    LocalidadController,
-    CategoriaClienteController,
-    ProveedorController,
-    ImageBackupController,
-    DashboardController,
-    RolController,
-    RoleController,
-    CategoriaController,
-    MarcaController,
-    AlmacenController,
-    ConfiguracionGlobalController,
-    UnidadMedidaController,
-    TipoPrecioController,
-    MonedaController,
-    TipoPagoController,
-    UserController,
-    PermissionController,
-    EmpleadoController,
-    CuentaPorPagarController,
-    PagoController,
-    LoteVencimientoController,
-    ReporteComprasController,
-    DetalleCompraController,
-    DetalleVentaController,
-    CajaController,
-    TipoAjusteInventarioController,
-    VehiculoController,
-    InventarioInicialController,
-    Web,
-    ReportePreciosController,
-    ReporteInventarioController,
-    ReservaStockController,
-    ConteoFisicoController,
-    AnalisisAbcController,
-    Settings,
-    Auth,
+InventarioController,
+ModuloSidebarController,
+Auth,
+PermissionController,
+ProductoController,
+VentaController,
+EnvioController,
+CompraController,
+AsientoContableController,
+ReporteInventarioApiController,
+ClienteController,
+DireccionClienteApiController,
+FotoLugarClienteController,
+LocalidadController,
+CategoriaClienteController,
+ProveedorController,
+ImageBackupController,
+DashboardController,
+RolController,
+RoleController,
+CategoriaController,
+MarcaController,
+AlmacenController,
+ConfiguracionGlobalController,
+UnidadMedidaController,
+TipoPrecioController,
+MonedaController,
+TipoPagoController,
+UserController,
+EmpleadoController,
+CuentaPorPagarController,
+PagoController,
+LoteVencimientoController,
+ReporteComprasController,
+DetalleCompraController,
+DetalleVentaController,
+CajaController,
+TipoAjusteInventarioController,
+VehiculoController,
+InventarioInicialController,
+Web,
+VendedorController,
+ChoferController,
+PreventistController,
+AdminController,
+RutaController,
+ReportePreciosController,
+ReporteInventarioController,
+ReservaStockController,
+ConteoFisicoController,
+AnalisisAbcController,
+Settings,
 }
 
 export default Controllers

@@ -151,7 +151,7 @@ class LimpiarReservasExpiradas extends Command
         // Resumen
         $this->info('📊 RESUMEN DE LIMPIEZA:');
         $this->line("  • Reservas liberadas: {$reservasLiberadas}");
-        $this->line("  • Proformas marcadas como VENCIDA: {$proformasActualizadas}");
+        $this->line("  • proformas marcadas como VENCIDA: {$proformasActualizadas}");
 
         if ($errores > 0) {
             $this->error("  • Errores encontrados: {$errores}");

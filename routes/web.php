@@ -111,7 +111,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('roles/{role}/audit', [\App\Http\Controllers\RoleController::class, 'getAudit'])->name('roles.audit');
     Route::get('roles-data/permissions-grouped', [\App\Http\Controllers\RoleController::class, 'getPermissionsGrouped'])->name('roles.permissions-grouped');
 
-    Route::resource('permissions', \App\Http\Controllers\PermissionController::class);
+    // ✅ PANEL DE GESTIÓN DE PERMISOS
+    Route::prefix('permisos')->name('permisos.')->group(function () {
+        // Ver todos los permisos
+        Route::get('/', [\App\Http\Controllers\PermissionController::class, 'index'])
+            ->middleware('permission:permissions.index')
+            ->name('index');
+
+        // Editar permisos de usuario
+        Route::get('usuario/{user}/editar', [\App\Http\Controllers\PermissionController::class, 'editarUsuario'])
+            ->middleware('permission:usuarios.assign-permission')
+            ->name('usuario.editar');
+        Route::patch('usuario/{user}', [\App\Http\Controllers\PermissionController::class, 'actualizarUsuario'])
+            ->middleware('permission:usuarios.assign-permission')
+            ->name('usuario.actualizar');
+
+        // Editar permisos de rol
+        Route::get('rol/{role}/editar', [\App\Http\Controllers\PermissionController::class, 'editarRol'])
+            ->middleware('permission:roles.assign-permission')
+            ->name('rol.editar');
+        Route::patch('rol/{role}', [\App\Http\Controllers\PermissionController::class, 'actualizarRol'])
+            ->middleware('permission:roles.assign-permission')
+            ->name('rol.actualizar');
+    });
 
     // Rutas para gestión de empleados
     Route::resource('empleados', \App\Http\Controllers\EmpleadoController::class);
@@ -274,6 +296,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('entregas-en-transito', fn() => Inertia::render('logistica/entregas-en-transito'))->name('entregas-en-transito');
         Route::get('proformas-pendientes', fn() => Inertia::render('logistica/proformas-pendientes'))->name('proformas-pendientes');
         Route::get('envios/{envio}/seguimiento', [App\Http\Controllers\Web\LogisticaController::class, 'seguimiento'])->name('envios.seguimiento');
+    });
+
+    // ✅ NUEVO: Dashboard para Vendedor/Cajero
+    Route::prefix('vendedor')->name('vendedor.')->group(function () {
+        Route::get('dashboard', [App\Http\Controllers\VendedorController::class, 'dashboard'])->name('dashboard');
+    });
+
+    // ✅ NUEVO: Dashboard para Chofer
+    Route::prefix('chofer')->name('chofer.')->group(function () {
+        Route::get('dashboard', [App\Http\Controllers\ChoferController::class, 'dashboard'])->name('dashboard');
+    });
+
+    // ✅ NUEVO: Dashboard para Preventista
+    Route::prefix('preventista')->name('preventista.')->group(function () {
+        Route::get('dashboard', [App\Http\Controllers\PreventistController::class, 'dashboard'])->name('dashboard');
+    });
+
+    // ✅ NUEVO: Dashboard para Admin
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])->name('dashboard');
+    });
+
+    // Rutas para gestión de rutas (planificación y seguimiento)
+    Route::prefix('rutas')->name('rutas.')->middleware('permission:envios.manage')->group(function () {
+        Route::get('/', [\App\Http\Controllers\RutaController::class, 'index'])->name('index');
+        Route::get('create', [\App\Http\Controllers\RutaController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\RutaController::class, 'store'])->name('store');
+        Route::post('/planificar', [\App\Http\Controllers\RutaController::class, 'planificar'])->name('planificar');
+        Route::get('{ruta}', [\App\Http\Controllers\RutaController::class, 'show'])->name('show');
+        Route::post('{ruta}/iniciar', [\App\Http\Controllers\RutaController::class, 'iniciar'])->name('iniciar');
+        Route::post('{ruta}/completar', [\App\Http\Controllers\RutaController::class, 'completar'])->name('completar');
+        Route::post('{ruta}/cancelar', [\App\Http\Controllers\RutaController::class, 'cancelar'])->name('cancelar');
+        Route::post('detalles/{detalle}/registrar-entrega', [\App\Http\Controllers\RutaController::class, 'registrarEntrega'])->name('registrar-entrega');
     });
 
     // Rutas de envíos - todas en un grupo para evitar conflictos

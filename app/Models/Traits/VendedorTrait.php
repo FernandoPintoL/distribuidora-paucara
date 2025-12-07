@@ -29,7 +29,7 @@ trait VendedorTrait
     }
 
     /**
-     * Proformas creadas por este vendedor
+     * proformas creadas por este vendedor
      */
     public function proformas(): HasMany
     {

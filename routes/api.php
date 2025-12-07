@@ -66,6 +66,9 @@ Route::post('/roles/validate-combination', [RoleController::class, 'validateRole
 // Rutas API para módulos del sidebar (requiere autenticación)
 Route::middleware(['auth'])->get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');
 
+// ✅ NUEVA: Ruta API para obtener la redirección del dashboard según el rol
+Route::middleware(['auth'])->get('/dashboard-redirect', [App\Http\Controllers\Auth\DashboardRedirectController::class, 'getRedirectApi'])->name('api.dashboard-redirect');
+
 // ==========================================
 // 📱 RUTAS PARA APP EXTERNA (Flutter)
 // ==========================================
@@ -74,6 +77,45 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
+    // ✅ NUEVO: Refrescar permisos sin logout
+    Route::get('/auth/refresh-permissions', [AuthController::class, 'refreshPermissions']);
+
+    // ✅ NUEVO: API DE PERMISOS (para mobile o admin panel)
+    Route::prefix('permisos')->group(function () {
+        // Obtener estructura de permisos
+        Route::get('/estructura', [\App\Http\Controllers\PermissionController::class, 'getStructure'])
+            ->middleware('permission:permissions.index');
+
+        // Obtener permisos agrupados
+        Route::get('/agrupados', [\App\Http\Controllers\PermissionController::class, 'getGrouped'])
+            ->middleware('permission:permissions.index');
+
+        // Gestionar permisos de usuarios
+        Route::get('usuario/{user}', [\App\Http\Controllers\PermissionController::class, 'editarUsuario'])
+            ->middleware('permission:usuarios.assign-permission');
+        Route::patch('usuario/{user}', [\App\Http\Controllers\PermissionController::class, 'actualizarUsuario'])
+            ->middleware('permission:usuarios.assign-permission');
+
+        // Gestionar permisos de roles
+        Route::get('rol/{role}', [\App\Http\Controllers\PermissionController::class, 'editarRol'])
+            ->middleware('permission:roles.assign-permission');
+        Route::patch('rol/{role}', [\App\Http\Controllers\PermissionController::class, 'actualizarRol'])
+            ->middleware('permission:roles.assign-permission');
+    });
+
+    // ✅ NUEVO: Lista de usuarios y roles para panel central
+    Route::get('/usuarios', [\App\Http\Controllers\PermissionController::class, 'getUsuarios'])
+        ->middleware('permission:permissions.index');
+    Route::get('/roles', [\App\Http\Controllers\PermissionController::class, 'getRoles'])
+        ->middleware('permission:permissions.index');
+
+    // ✅ NUEVO: Historial de auditoría
+    Route::get('/permisos/historial', [\App\Http\Controllers\PermissionController::class, 'getHistorial'])
+        ->middleware('permission:permissions.index');
+
+    // ✅ NUEVO: Bulk edit de permisos
+    Route::post('/permisos/bulk-edit', [\App\Http\Controllers\PermissionController::class, 'bulkEdit'])
+        ->middleware('permission:permissions.index');
 
     // ==========================================
     // 🔔 GESTIÓN DE NOTIFICACIONES
@@ -298,6 +340,18 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
 // ==========================================
 // 📦 RUTAS API PARA LOGÍSTICA
 // ==========================================
+
+// RUTAS - Planificación y gestión
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('rutas')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\RutaApiController::class, 'index']);
+        Route::post('/planificar', [\App\Http\Controllers\Api\RutaApiController::class, 'planificar']);
+        Route::get('/{ruta}', [\App\Http\Controllers\Api\RutaApiController::class, 'show']);
+        Route::patch('/{ruta}/estado', [\App\Http\Controllers\Api\RutaApiController::class, 'actualizarEstado']);
+        Route::get('/{ruta}/detalles', [\App\Http\Controllers\Api\RutaApiController::class, 'obtenerDetalles']);
+        Route::post('/{ruta}/detalles/{detalle}/completar', [\App\Http\Controllers\Api\RutaApiController::class, 'completarDetalle']);
+    });
+});
 
 // CHOFER - Entregas y tracking
 Route::middleware(['auth:sanctum'])->group(function () {

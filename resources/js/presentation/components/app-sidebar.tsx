@@ -9,6 +9,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import * as LucideIcons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import AppLogo from './app-logo';
+import { useDashboardRoute } from '@/application/hooks/use-dashboard-route';
+import { cn } from '@/lib/utils';
 
 // Mapeo dinámico de TODOS los iconos de Lucide
 // Simplemente asignamos todo lo que se exporta de lucide-react como LucideIcon
@@ -90,16 +92,27 @@ const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     const { modules, loading, error } = useSidebarModules();
+    const dashboardRoute = useDashboardRoute();
 
     // Mientras carga, mostrar esqueleto
     if (loading) {
         return (
             <Sidebar collapsible="icon" variant="inset">
-                <SidebarHeader>
+                <SidebarHeader className="border-b border-sidebar-foreground/10 dark:border-sidebar-foreground/10">
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <SidebarMenuButton size="lg" asChild>
-                                <Link href={dashboard()} prefetch>
+                            <SidebarMenuButton
+                                size="lg"
+                                asChild
+                                className={cn(
+                                    "group relative flex items-center justify-center w-full px-3 py-2.5 rounded-lg",
+                                    "transition-all duration-200 ease-out",
+                                    "hover:bg-sidebar-accent/50 dark:hover:bg-sidebar-accent/40",
+                                    "border border-sidebar-foreground/10 dark:border-sidebar-foreground/10",
+                                    "hover:border-sidebar-accent/30 dark:hover:border-sidebar-accent/30"
+                                )}
+                            >
+                                <Link href={dashboardRoute} prefetch>
                                     <AppLogo />
                                 </Link>
                             </SidebarMenuButton>
@@ -125,11 +138,21 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+            <SidebarHeader className="border-b border-sidebar-foreground/10 dark:border-sidebar-foreground/10">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                        <SidebarMenuButton
+                            size="lg"
+                            asChild
+                            className={cn(
+                                "group relative flex items-center justify-center w-full px-3 py-2.5 rounded-lg",
+                                "transition-all duration-200 ease-out",
+                                "hover:bg-sidebar-accent/50 dark:hover:bg-sidebar-accent/40",
+                                "border border-sidebar-foreground/10 dark:border-sidebar-foreground/10",
+                                "hover:border-sidebar-accent/30 dark:hover:border-sidebar-accent/30"
+                            )}
+                        >
+                            <Link href={dashboardRoute} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

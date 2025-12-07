@@ -3,7 +3,7 @@
 namespace App\Services\WebSocket;
 
 /**
- * Servicio especializado para notificaciones WebSocket de Proformas
+ * Servicio especializado para notificaciones WebSocket de proformas
  *
  * Maneja todas las notificaciones en tiempo real relacionadas con proformas
  */

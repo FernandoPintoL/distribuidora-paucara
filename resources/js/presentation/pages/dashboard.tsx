@@ -125,10 +125,25 @@ export default function Dashboard({
         datasets: [],
     };
 
-    const safeMetricas = metricas || defaultMetricas;
-    const safeGraficoVentas = graficoVentas || defaultGraficoVentas;
+    // Merge con valores por defecto para garantizar estructura completa
+    const safeMetricas = {
+        ...defaultMetricas,
+        ...(metricas || {}),
+        ventas: { ...defaultMetricas.ventas, ...(metricas?.ventas || {}) },
+        compras: { ...defaultMetricas.compras, ...(metricas?.compras || {}) },
+        inventario: { ...defaultMetricas.inventario, ...(metricas?.inventario || {}) },
+        caja: { ...defaultMetricas.caja, ...(metricas?.caja || {}) },
+        clientes: { ...defaultMetricas.clientes, ...(metricas?.clientes || {}) },
+        proformas: { ...defaultMetricas.proformas, ...(metricas?.proformas || {}) },
+    };
+
+    const safeGraficoVentas = { ...defaultGraficoVentas, ...(graficoVentas || {}) };
     const safeProductosMasVendidos = productosMasVendidos || [];
-    const safeAlertasStock = alertasStock || { stock_bajo: 0, stock_critico: 0, productos_afectados: [] };
+    const safeAlertasStock = {
+        stock_bajo: alertasStock?.stock_bajo ?? 0,
+        stock_critico: alertasStock?.stock_critico ?? 0,
+        productos_afectados: alertasStock?.productos_afectados ?? [],
+    };
     const safeVentasPorCanal = ventasPorCanal || {};
 
     const handlePeriodChange = (newPeriod: string) => {

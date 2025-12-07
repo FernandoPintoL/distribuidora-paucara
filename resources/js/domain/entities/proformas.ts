@@ -1,4 +1,4 @@
-// Domain: Proformas
+// Domain: proformas
 import type { Id } from './shared';
 import type { BaseEntity, BaseFormData } from './generic';
 import type { Cliente } from './clientes';

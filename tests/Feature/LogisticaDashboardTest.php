@@ -30,7 +30,7 @@ it('muestra estadísticas correctas en el dashboard', function () {
     // Crear datos de prueba
     $cliente = Cliente::factory()->create();
 
-    // Proformas pendientes de app externa
+    // proformas pendientes de app externa
     Proforma::factory()->count(3)->create([
         'estado'       => 'PENDIENTE',
         'canal_origen' => 'APP_EXTERNA',

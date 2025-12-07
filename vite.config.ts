@@ -29,7 +29,7 @@ export default defineConfig({
     ],
     server: {
         // Listen on all network interfaces so you can access from other devices and any Wi‑Fi network
-        host: "192.168.1.35", // Permite conexiones desde cualquier IP
+        host: "192.168.1.23", // Permite conexiones desde cualquier IP
         port: 5173,
         strictPort: false, // Permite usar puerto alternativo si está ocupado
         cors: true, // Habilita CORS para requests cross-origin

@@ -266,6 +266,195 @@ class DashboardService
     }
 
     /**
+     * Obtener datos dinámicos solo para los módulos permitidos del usuario
+     * Optimizado para no cargar datos innecesarios
+     */
+    public function getDataForAllowedModules(array $modulosPermitidos, string $periodo = 'mes_actual'): array
+    {
+        $data = [];
+        $fechas = $this->getFechasPeriodo($periodo);
+
+        // Mapeo de módulos a métodos de datos
+        $modulosData = [
+            'general' => function () use ($fechas, $periodo) {
+                return [
+                    'metricas_principales' => [
+                        'ventas' => $this->getMetricasVentas($fechas),
+                        'compras' => $this->getMetricasCompras($fechas),
+                        'inventario' => $this->getMetricasInventario(),
+                        'caja' => $this->getMetricasCaja($fechas),
+                    ],
+                    'metricas_secundarias' => [
+                        'clientes' => $this->getMetricasClientes($fechas),
+                        'proformas' => $this->getMetricasProformas($fechas),
+                    ],
+                    'grafico_ventas' => $this->getGraficoVentas('mes', 30),
+                    'ventas_por_canal' => $this->getVentasPorCanal($periodo),
+                    'productos_mas_vendidos' => $this->getProductosMasVendidos(10),
+                    'alertas_stock' => $this->getAlertasStock(),
+                ];
+            },
+            'compras' => function () use ($fechas, $periodo) {
+                return [
+                    'metricas_compras' => $this->getMetricasCompras($fechas),
+                    'grafico_compras' => $this->getGraficoCompras($fechas),
+                    'cuentas_por_pagar' => $this->getCuentasPagar(),
+                    'pagos_realizados' => $this->getPagosRealizados($fechas),
+                    'lotes_proximos_vencer' => $this->getLotesProximosVencer(),
+                ];
+            },
+            'logistica' => function () use ($fechas) {
+                return [
+                    'metricas_logistica' => $this->getMetricasLogistica(),
+                    'rutas_del_dia' => $this->getRutasDelDia(),
+                    'envios_activos' => $this->getEnviosActivos(),
+                ];
+            },
+            'inventario' => function () use ($fechas) {
+                return [
+                    'metricas_inventario' => $this->getMetricasInventario(),
+                    'alertas_stock' => $this->getAlertasStock(),
+                ];
+            },
+            'contabilidad' => function () use ($fechas, $periodo) {
+                return [
+                    'saldo_caja' => $this->getMetricasCaja($fechas),
+                    'movimientos_caja' => $this->getMovimientosCaja($fechas),
+                ];
+            },
+        ];
+
+        // Cargar datos solo para módulos permitidos
+        foreach ($modulosPermitidos as $modulo) {
+            if (isset($modulosData[$modulo])) {
+                $data[$modulo] = $modulosData[$modulo]();
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Obtener gráfico de compras
+     */
+    public function getGraficoCompras(array $fechas): array
+    {
+        $compras = Compra::select(
+            DB::raw('DATE(fecha) as fecha'),
+            DB::raw('COUNT(*) as total_compras'),
+            DB::raw('SUM(total) as monto_total')
+        )
+            ->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])
+            ->groupBy(DB::raw('DATE(fecha)'))
+            ->orderBy('fecha')
+            ->get();
+
+        return [
+            'labels' => $compras->pluck('fecha')->map(function ($fecha) {
+                return Carbon::parse($fecha)->format('d/m');
+            })->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'Monto de Compras (Bs)',
+                    'data' => $compras->pluck('monto_total')->toArray(),
+                    'backgroundColor' => 'rgba(245, 158, 11, 0.5)',
+                    'borderColor' => 'rgb(245, 158, 11)',
+                    'tension' => 0.1,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Obtener cuentas por pagar
+     */
+    public function getCuentasPagar(): array
+    {
+        return [
+            'total_pendiente' => 0,
+            'cantidad_cuentas' => 0,
+            'proveedores' => [],
+        ];
+    }
+
+    /**
+     * Obtener pagos realizados en período
+     */
+    public function getPagosRealizados(array $fechas): array
+    {
+        return [
+            'total_pagado' => 0,
+            'cantidad_pagos' => 0,
+        ];
+    }
+
+    /**
+     * Obtener lotes próximos a vencer (30 días)
+     */
+    public function getLotesProximosVencer(): array
+    {
+        return [
+            'cantidad' => 0,
+            'lotes' => [],
+        ];
+    }
+
+    /**
+     * Obtener métricas de logística
+     */
+    public function getMetricasLogistica(): array
+    {
+        return [
+            'rutas_programadas' => 0,
+            'rutas_completadas' => 0,
+            'km_recorridos' => 0,
+        ];
+    }
+
+    /**
+     * Obtener rutas del día
+     */
+    public function getRutasDelDia(): array
+    {
+        return [
+            'total' => 0,
+            'rutas' => [],
+        ];
+    }
+
+    /**
+     * Obtener envíos activos
+     */
+    public function getEnviosActivos(): array
+    {
+        return [
+            'en_transito' => 0,
+            'entregados' => 0,
+            'pendientes' => 0,
+        ];
+    }
+
+    /**
+     * Obtener movimientos de caja
+     */
+    public function getMovimientosCaja(array $fechas): array
+    {
+        return MovimientoCaja::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(function ($movimiento) {
+                return [
+                    'fecha' => $movimiento->fecha->format('d/m/Y H:i'),
+                    'tipo' => $movimiento->tipoOperacion->nombre ?? 'N/A',
+                    'monto' => $movimiento->monto,
+                    'descripcion' => $movimiento->descripcion,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
      * Obtener fechas para el período especificado
      */
     private function getFechasPeriodo(string $periodo): array

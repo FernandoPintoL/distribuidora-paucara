@@ -551,6 +551,7 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
     }> {
         try {
             const response = await fetch('/api/proformas/estadisticas', {
+                credentials: 'include', // FIX: Include session cookies for authentication
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',

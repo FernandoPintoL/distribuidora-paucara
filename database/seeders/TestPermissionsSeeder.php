@@ -36,7 +36,7 @@ class TestPermissionsSeeder extends Seeder
             'reportes.inventario.movimientos', 'reportes.inventario.rotacion', 'reportes.inventario.vencimientos',
             // Logística
             'envios.index', 'envios.create',
-            // Proformas
+            // proformas
             'proformas.index',
             // Módulos principales
             'cajas.index', 'almacenes.manage', 'proveedores.manage', 'clientes.manage',

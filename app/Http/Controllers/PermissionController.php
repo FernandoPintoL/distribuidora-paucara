@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PermissionService;
+use App\Services\AuditService;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
@@ -9,164 +12,327 @@ use Spatie\Permission\Models\Role;
 
 class PermissionController extends Controller
 {
-    public function __construct()
+    public function __construct(
+        private PermissionService $permissionService
+    ) {}
+
+    /**
+     * ✅ PANEL UNIFICADO: Centro de permisos y roles
+     * Renderiza el nuevo panel con tabs para usuarios y roles
+     */
+    public function index()
     {
-        $this->middleware('permission:permissions.index')->only('index');
-        $this->middleware('permission:permissions.show')->only('show');
-        $this->middleware('permission:permissions.create')->only(['create', 'store']);
-        $this->middleware('permission:permissions.edit')->only(['edit', 'update']);
-        $this->middleware('permission:permissions.delete')->only('destroy');
+        $this->authorize('permissions.index');
+
+        // El nuevo componente React carga los datos dinámicamente via API
+        return Inertia::render('admin/permisos/index');
     }
 
-    public function index(Request $request)
+    /**
+     * ✅ PANEL WEB: Editar permisos de un usuario específico
+     */
+    public function editarUsuario(User $user)
     {
-        $query = Permission::withCount(['roles', 'users']);
+        $this->authorize('usuarios.assign-permission');
 
-        // Filtros de búsqueda
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where('name', 'like', "%{$search}%");
-        }
+        $permisosActuales = $user->getAllPermissions()->pluck('id')->toArray();
+        $todosLosPermisos = $this->permissionService->getPermissionsForUI();
+        $rolesActuales = $user->roles->pluck('name')->toArray();
 
-        if ($request->has('module') && $request->module) {
-            $module = $request->module;
-            $query->where('name', 'like', "{$module}.%");
-        }
+        return Inertia::render('admin/permisos/usuario', [
+            'usuario' => $user,
+            'permisosActuales' => $permisosActuales,
+            'rolesActuales' => $rolesActuales,
+            'todosLosPermisos' => $todosLosPermisos,
+        ]);
+    }
 
-        $permissions = $query->orderBy('name')->paginate(20);
+    /**
+     * ✅ API: Actualizar permisos de un usuario
+     * Usado por: Panel web + APP móvil
+     */
+    public function actualizarUsuario(Request $request, User $user)
+    {
+        $this->authorize('usuarios.assign-permission');
 
-        // Obtener módulos únicos para el filtro
-        $modules = Permission::select('name')
-            ->get()
-            ->map(function ($permission) {
-                return explode('.', $permission->name)[0];
-            })
-            ->unique()
-            ->sort()
-            ->values();
+        $validated = $request->validate([
+            'permisos' => 'array',
+            'permisos.*' => 'exists:permissions,id',
+        ]);
 
-        return Inertia::render('permissions/index', [
-            'permissions' => $permissions,
-            'modules' => $modules,
-            'filters' => [
-                'search' => $request->search,
-                'module' => $request->module,
+        // Actualizar en BD
+        $this->permissionService->assignPermissionsToUser($user, $validated['permisos'] ?? []);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Permisos actualizados correctamente',
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+        ]);
+    }
+
+    /**
+     * ✅ PANEL WEB: Editar permisos de un rol
+     */
+    public function editarRol(Role $role)
+    {
+        $this->authorize('roles.assign-permission');
+
+        $permisosActuales = $role->permissions()->pluck('id')->toArray();
+        $todosLosPermisos = $this->permissionService->getPermissionsForUI();
+
+        return Inertia::render('admin/permisos/rol', [
+            'rol' => $role,
+            'permisosActuales' => $permisosActuales,
+            'todosLosPermisos' => $todosLosPermisos,
+        ]);
+    }
+
+    /**
+     * ✅ API: Actualizar permisos de un rol
+     */
+    public function actualizarRol(Request $request, Role $role)
+    {
+        $this->authorize('roles.assign-permission');
+
+        $validated = $request->validate([
+            'permisos' => 'array',
+            'permisos.*' => 'exists:permissions,id',
+        ]);
+
+        $this->permissionService->assignPermissionsToRole($role, $validated['permisos'] ?? []);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Permisos del rol actualizados correctamente',
+            'permissions' => $role->permissions()->pluck('name')->toArray(),
+        ]);
+    }
+
+    /**
+     * ✅ API: Obtener estructura de permisos (para dropdown/selector en UI)
+     */
+    public function getStructure()
+    {
+        $this->authorize('permissions.index');
+
+        return response()->json([
+            'success' => true,
+            'permissions' => $this->permissionService->getPermissionsForUI(),
+            'total' => Permission::count(),
+        ]);
+    }
+
+    /**
+     * ✅ API: Obtener permisos agrupados
+     */
+    public function getGrouped()
+    {
+        $this->authorize('permissions.index');
+
+        return response()->json([
+            'success' => true,
+            'grouped' => $this->permissionService->getPermissionsGrouped(),
+        ]);
+    }
+
+    /**
+     * ✅ API: Obtener lista de usuarios para el panel central
+     * Soporta búsqueda por nombre/email y filtrado por rol
+     */
+    public function getUsuarios(Request $request)
+    {
+        $this->authorize('permissions.index');
+
+        $search = $request->query('search');
+        $rol = $request->query('rol');
+        $page = $request->query('page', 1);
+        $perPage = $request->query('per_page', 50);
+
+        $result = $this->permissionService->obtenerUsuariosPaginados(
+            page: $page,
+            perPage: $perPage,
+            search: $search,
+            rol: $rol
+        );
+
+        $usuarios = $result->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles->pluck('name')->toArray(),
+                'permissions_count' => $user->getAllPermissions()->count(),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $usuarios,
+            'pagination' => [
+                'current_page' => $result->currentPage(),
+                'per_page' => $result->perPage(),
+                'total' => $result->total(),
+                'last_page' => $result->lastPage(),
             ],
         ]);
     }
 
-    public function create()
+    /**
+     * ✅ API: Obtener lista de roles para el panel central
+     * Soporta búsqueda por nombre
+     */
+    public function getRoles(Request $request)
     {
-        $roles = Role::all();
+        $this->authorize('permissions.index');
 
-        return Inertia::render('permissions/create', [
-            'roles' => $roles,
+        $search = $request->query('search');
+        $page = $request->query('page', 1);
+        $perPage = $request->query('per_page', 50);
+
+        $result = $this->permissionService->obtenerRolesPaginados(
+            page: $page,
+            perPage: $perPage,
+            search: $search
+        );
+
+        $roles = $result->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'display_name' => $role->display_name ?? $role->name,
+                'permissions_count' => $role->permissions()->count(),
+                'description' => $role->description ?? '',
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $roles,
+            'pagination' => [
+                'current_page' => $result->currentPage(),
+                'per_page' => $result->perPage(),
+                'total' => $result->total(),
+                'last_page' => $result->lastPage(),
+            ],
         ]);
     }
 
-    public function store(Request $request)
+    /**
+     * ✅ API: Obtener historial de auditoría
+     * Usado por: Panel de historial y auditoría
+     */
+    public function getHistorial(Request $request)
     {
+        $this->authorize('permissions.index');
+
+        $targetType = $request->query('target_type'); // 'usuario' o 'rol'
+        $targetId = $request->query('target_id');
+        $action = $request->query('action'); // 'crear', 'editar', 'eliminar'
+        $page = $request->query('page', 1);
+        $perPage = $request->query('per_page', 50);
+
+        $historial = AuditService::obtenerHistorial(
+            perPage: $perPage,
+            targetType: $targetType,
+            targetId: $targetId ? (int)$targetId : null,
+            action: $action
+        );
+
+        $datos = $historial->map(function ($audit) {
+            return [
+                'id' => $audit->id,
+                'admin' => [
+                    'id' => $audit->admin->id,
+                    'name' => $audit->admin->name,
+                    'email' => $audit->admin->email,
+                ],
+                'target_type' => $audit->target_type,
+                'target_id' => $audit->target_id,
+                'target_name' => $audit->target_name,
+                'action' => $audit->action,
+                'descripcion' => $audit->descripcion,
+                'permisos_changed' => $audit->permisos_changed,
+                'ip_address' => $audit->ip_address,
+                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+
+        // Obtener estadísticas
+        $estadisticas = AuditService::obtenerEstadisticas();
+
+        return response()->json([
+            'success' => true,
+            'data' => $datos,
+            'pagination' => [
+                'current_page' => $historial->currentPage(),
+                'per_page' => $historial->perPage(),
+                'total' => $historial->total(),
+                'last_page' => $historial->lastPage(),
+            ],
+            'estadisticas' => $estadisticas,
+        ]);
+    }
+
+    /**
+     * ✅ API: Bulk edit de permisos
+     * Asignar los mismos permisos a múltiples usuarios o roles
+     */
+    public function bulkEdit(Request $request)
+    {
+        $this->authorize('permissions.index');
+
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:permissions'],
-            'guard_name' => ['required', 'string', 'max:255'],
-            'roles' => ['array'],
-            'roles.*' => ['exists:roles,id'],
+            'tipo' => 'required|in:usuario,rol',
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'required|integer|exists:' . ($request->input('tipo') === 'usuario' ? 'users' : 'roles') . ',id',
+            'permisos' => 'required|array|min:1',
+            'permisos.*' => 'required|integer|exists:permissions,id',
+            'accion' => 'required|in:reemplazar,agregar,eliminar', // reemplazar todos, agregar a existentes, eliminar de existentes
         ]);
 
-        $permission = Permission::create([
-            'name' => $validated['name'],
-            'guard_name' => $validated['guard_name'] ?? 'web',
-        ]);
+        $tipo = $validated['tipo'];
+        $ids = $validated['ids'];
+        $permisos = $validated['permisos'];
+        $accion = $validated['accion'];
 
-        // Asignar a roles
-        if (isset($validated['roles'])) {
-            $roles = Role::whereIn('id', $validated['roles'])->get();
-            foreach ($roles as $role) {
-                $role->givePermissionTo($permission);
+        try {
+            foreach ($ids as $id) {
+                if ($tipo === 'usuario') {
+                    $usuario = User::find($id);
+                    if (!$usuario) continue;
+
+                    $permisosAnteriores = $usuario->getAllPermissions()->pluck('id')->toArray();
+                    $permisosNuevos = match ($accion) {
+                        'reemplazar' => $permisos,
+                        'agregar' => array_unique(array_merge($permisosAnteriores, $permisos)),
+                        'eliminar' => array_diff($permisosAnteriores, $permisos),
+                    };
+
+                    $this->permissionService->assignPermissionsToUser($usuario, $permisosNuevos);
+                } else {
+                    $role = Role::find($id);
+                    if (!$role) continue;
+
+                    $permisosAnteriores = $role->permissions()->pluck('id')->toArray();
+                    $permisosNuevos = match ($accion) {
+                        'reemplazar' => $permisos,
+                        'agregar' => array_unique(array_merge($permisosAnteriores, $permisos)),
+                        'eliminar' => array_diff($permisosAnteriores, $permisos),
+                    };
+
+                    $this->permissionService->assignPermissionsToRole($role, $permisosNuevos);
+                }
             }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Permisos asignados a " . count($ids) . " " . ($tipo === 'usuario' ? 'usuarios' : 'roles'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en asignación en lote: ' . $e->getMessage(),
+            ], 400);
         }
-
-        return redirect()->route('permissions.index')
-            ->with('success', 'Permiso creado exitosamente.');
-    }
-
-    public function show(Permission $permission)
-    {
-        $permission->load(['roles', 'users']);
-
-        return Inertia::render('permissions/show', [
-            'permission' => $permission,
-            'permissionRoles' => $permission->roles,
-            'permissionUsers' => $permission->users,
-        ]);
-    }
-
-    public function edit(Permission $permission)
-    {
-        $permission->load('roles');
-        $roles = Role::all();
-
-        return Inertia::render('permissions/edit', [
-            'permission' => $permission,
-            'roles' => $roles,
-            'permissionRoles' => $permission->roles->pluck('id'),
-        ]);
-    }
-
-    public function update(Request $request, Permission $permission)
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:permissions,name,'.$permission->id],
-            'guard_name' => ['required', 'string', 'max:255'],
-            'roles' => ['array'],
-            'roles.*' => ['exists:roles,id'],
-        ]);
-
-        $permission->update([
-            'name' => $validated['name'],
-            'guard_name' => $validated['guard_name'] ?? 'web',
-        ]);
-
-        // Sincronizar roles
-        if (isset($validated['roles'])) {
-            $roles = Role::whereIn('id', $validated['roles'])->get();
-
-            // Primero remover el permiso de todos los roles
-            foreach ($permission->roles as $role) {
-                $role->revokePermissionTo($permission);
-            }
-
-            // Luego asignar a los roles seleccionados
-            foreach ($roles as $role) {
-                $role->givePermissionTo($permission);
-            }
-        } else {
-            // Remover de todos los roles
-            foreach ($permission->roles as $role) {
-                $role->revokePermissionTo($permission);
-            }
-        }
-
-        return redirect()->route('permissions.index')
-            ->with('success', 'Permiso actualizado exitosamente.');
-    }
-
-    public function destroy(Permission $permission)
-    {
-        // Evitar eliminar permisos críticos
-        $criticalPermissions = [
-            'usuarios.index',
-            'roles.index',
-            'permissions.index',
-        ];
-
-        if (in_array($permission->name, $criticalPermissions)) {
-            return back()->with('error', 'No puedes eliminar permisos críticos del sistema.');
-        }
-
-        $permission->delete();
-
-        return redirect()->route('permissions.index')
-            ->with('success', 'Permiso eliminado exitosamente.');
     }
 }

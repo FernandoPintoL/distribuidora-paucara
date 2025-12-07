@@ -2,264 +2,303 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Ruta;
-use App\Models\RutaDetalle;
-use App\Models\Zona;
+use App\DTOs\Logistica\CrearRutaDTO;
+use App\Exceptions\DomainException;
+use App\Exceptions\Venta\EstadoInvalidoException;
+use App\Http\Traits\ApiInertiaUnifiedResponse;
 use App\Models\Empleado;
-use App\Services\RutaAsignacionService;
+use App\Models\Vehiculo;
+use App\Services\Logistica\RutaService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Exception;
-use Illuminate\Support\Facades\DB;
+use Inertia\Response as InertiaResponse;
 
-class RutaController extends Controller
+/**
+ * RutaController - REFACTORIZADO (THIN Controller Pattern)
+ *
+ * Responsabilidades:
+ * ✓ Manejo de HTTP request/response
+ * ✓ Autenticación/Autorización
+ * ✓ Renderización de vistas
+ *
+ * Delegadas a RutaService:
+ * ✗ Planificación de rutas
+ * ✗ Optimización de rutas
+ * ✗ Cambios de estado
+ * ✗ Asignación de recursos
+ */
+class RutaControllerRefactored extends Controller
 {
-    protected $rutaService;
+    use ApiInertiaUnifiedResponse;
 
-    public function __construct(RutaAsignacionService $rutaService)
-    {
-        $this->rutaService = $rutaService;
-        $this->middleware('permission:envios.index')->only(['index']);
-        $this->middleware('permission:envios.create')->only(['create', 'store', 'generar']);
-        $this->middleware('permission:envios.edit')->only(['edit', 'update', 'iniciar', 'completar']);
+    public function __construct(
+        private RutaService $rutaService,
+    ) {
+        $this->middleware('permission:rutas.index')->only('index');
+        $this->middleware('permission:rutas.show')->only('show');
+        $this->middleware('permission:rutas.create')->only('create', 'store');
+        $this->middleware('permission:rutas.planificar')->only('planificar');
     }
 
     /**
-     * Listar rutas del día
+     * Listar rutas con filtros
      */
-    public function index(Request $request)
-    {
-        $query = Ruta::with(['zona', 'chofer.user', 'vehiculo'])
-            ->orderBy('fecha_ruta', 'desc')
-            ->orderBy('codigo', 'desc');
-
-        // Filtro por fecha
-        if ($request->has('fecha') && $request->fecha) {
-            $query->whereDate('fecha_ruta', $request->fecha);
-        } else {
-            // Por defecto, mostrar de hoy
-            $query->whereDate('fecha_ruta', today());
-        }
-
-        // Filtro por zona
-        if ($request->has('zona_id') && $request->zona_id) {
-            $query->where('zona_id', $request->zona_id);
-        }
-
-        // Filtro por estado
-        if ($request->has('estado') && $request->estado) {
-            $query->where('estado', $request->estado);
-        }
-
-        // Filtro por chofer
-        if ($request->has('chofer_id') && $request->chofer_id) {
-            $query->where('chofer_id', $request->chofer_id);
-        }
-
-        $rutas = $query->paginate(15);
-
-        $zonas = Zona::activas()->get(['id', 'nombre', 'codigo']);
-        $choferes = Empleado::whereHasRole('Chofer')
-            ->activos()
-            ->with('user')
-            ->get(['id']);
-
-        return Inertia::render('rutas/index', [
-            'rutas' => $rutas,
-            'zonas' => $zonas,
-            'choferes' => $choferes,
-            'filters' => $request->only(['fecha', 'zona_id', 'estado', 'chofer_id']),
-        ]);
-    }
-
-    /**
-     * Generar rutas automáticas para hoy
-     */
-    public function generar(Request $request)
+    public function index(Request $request): JsonResponse|InertiaResponse
     {
         try {
-            $opciones = [
-                'fecha' => $request->get('fecha', today()),
-                'choferes' => $request->get('choferes_por_zona', []),
+            $filtros = [
+                'fecha' => $request->input('fecha'),
+                'estado' => $request->input('estado'),
+                'chofer_id' => $request->input('chofer_id'),
             ];
 
-            DB::transaction(function () use ($opciones) {
-                $rutasCreadas = $this->rutaService->crearRutasDelDia($opciones);
+            $rutasPaginadas = $this->rutaService->listar(
+                array_filter($filtros)
+            );
 
-                session()->flash('success', "Se crearon {$rutasCreadas->count()} rutas automáticamente.");
-            });
+            return $this->respondPaginated(
+                $rutasPaginadas,
+                'Rutas/Index',
+                [
+                    'filtros' => $filtros,
+                    'choferes' => Empleado::where('tipo', 'CHOFER')->select('id', 'nombre')->get(),
+                ]
+            );
 
-            return redirect()->route('rutas.index');
-        } catch (Exception $e) {
-            return back()->withErrors(['error' => "Error: " . $e->getMessage()]);
+        } catch (\Exception $e) {
+            return $this->respondError('Error al obtener rutas');
         }
     }
 
     /**
-     * Ver detalles de una ruta
+     * Mostrar formulario de creación manual
      */
-    public function show(Ruta $ruta)
+    public function create(): InertiaResponse
     {
-        $ruta->load(['zona', 'chofer.user', 'vehiculo', 'detalles.cliente']);
-
-        $progreso = $ruta->obtenerProgreso();
-        $estadisticas = [
-            'progreso' => $progreso,
-            'duracion' => $ruta->hora_salida && $ruta->hora_llegada
-                ? $ruta->hora_llegada->diffInMinutes($ruta->hora_salida)
-                : null,
-        ];
-
-        return Inertia::render('rutas/show', [
-            'ruta' => $ruta,
-            'estadisticas' => $estadisticas,
+        return Inertia::render('Rutas/Create', [
+            'choferes' => Empleado::where('tipo', 'CHOFER')
+                ->select('id', 'nombre')
+                ->get(),
+            'vehiculos' => Vehiculo::where('operativo', true)
+                ->select('id', 'placa', 'capacidad')
+                ->get(),
         ]);
     }
 
     /**
-     * Iniciar ruta
+     * Crear una ruta manualmente
+     *
+     * POST /rutas
+     *
+     * Body:
+     * {
+     *   "zona_id": 1,
+     *   "entrega_ids": [1, 2, 3],
+     *   "fecha": "2025-12-08",
+     *   "chofer_id": 5,
+     *   "vehiculo_id": 10
+     * }
      */
-    public function iniciar(Ruta $ruta)
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         try {
-            $this->rutaService->iniciarRuta($ruta);
+            $dto = new CrearRutaDTO(
+                zona_id: (int) $request->input('zona_id'),
+                entrega_ids: (array) $request->input('entrega_ids', []),
+                fecha: $request->input('fecha'),
+                chofer_id: $request->input('chofer_id') ? (int) $request->input('chofer_id') : null,
+                vehiculo_id: $request->input('vehiculo_id') ? (int) $request->input('vehiculo_id') : null,
+            );
 
-            return back()->with('success', 'Ruta iniciada correctamente.');
-        } catch (Exception $e) {
-            return back()->withErrors(['error' => $e->getMessage()]);
+            $dto->validarDetalles();
+
+            $rutaDTO = $this->rutaService->crear($dto);
+
+            return $this->respondSuccess(
+                data: $rutaDTO,
+                message: 'Ruta creada exitosamente',
+                redirectTo: route('rutas.show', $rutaDTO->id),
+                statusCode: 201,
+            );
+
+        } catch (\InvalidArgumentException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (DomainException $e) {
+            return $this->respondError($e->getMessage());
+
+        } catch (\Exception $e) {
+            return $this->respondError('Error al crear ruta');
         }
     }
 
     /**
-     * Completar ruta
+     * Mostrar detalle de ruta con entregas
      */
-    public function completar(Ruta $ruta)
+    public function show(int $id): JsonResponse|InertiaResponse
     {
         try {
-            $this->rutaService->completarRuta($ruta);
+            $rutaDTO = $this->rutaService->obtener($id);
 
-            return back()->with('success', 'Ruta completada correctamente.');
-        } catch (Exception $e) {
-            return back()->withErrors(['error' => $e->getMessage()]);
+            return $this->respondShow(
+                data: $rutaDTO,
+                inertiaComponent: 'Rutas/Show',
+            );
+
+        } catch (\Exception $e) {
+            return $this->respondNotFound('Ruta no encontrada');
         }
     }
 
     /**
-     * Registrar entrega
+     * Planificar rutas para un día
+     *
+     * POST /rutas/planificar
+     *
+     * Body:
+     * {
+     *   "fecha": "2025-12-08"
+     * }
+     *
+     * FLUJO:
+     * 1. RutaService::planificar($fecha)
+     * 2. Obtiene Entregas PENDIENTES
+     * 3. Agrupa por zona
+     * 4. Optimiza orden (Nearest Neighbor)
+     * 5. Crea Rutas
+     * 6. Emite eventos
      */
-    public function registrarEntrega(Request $request, RutaDetalle $detalle)
+    public function planificar(Request $request): JsonResponse|RedirectResponse
     {
-        $request->validate([
-            'estado' => 'required|in:entregado,no_entregado,reprogramado',
-            'razon' => 'required_if:estado,no_entregado,reprogramado|string',
-            'foto' => 'nullable|image|max:5120',
-            'firma' => 'nullable|string',
-        ]);
-
         try {
-            DB::transaction(function () use ($request, $detalle) {
-                $datos = $request->only(['estado', 'razon']);
+            $fecha = $request->input('fecha', today());
+            $fecha = \Carbon\Carbon::parse($fecha);
 
-                if ($request->hasFile('foto')) {
-                    $path = $request->file('foto')->store('entregas', 'public');
-                    $datos['foto_entrega'] = $path;
-                }
+            $rutasCreadas = $this->rutaService->planificar($fecha);
 
-                if ($request->has('firma') && $request->firma) {
-                    $datos['firma_cliente'] = $request->firma;
-                }
+            if (empty($rutasCreadas)) {
+                return $this->respondError(
+                    message: 'No hay entregas para planificar en esa fecha',
+                    statusCode: 422,
+                );
+            }
 
-                $this->rutaService->registrarEntrega($detalle, $datos);
-            });
+            return $this->respondSuccess(
+                data: ['rutas' => $rutasCreadas],
+                message: sprintf(
+                    '%d rutas planificadas exitosamente',
+                    count($rutasCreadas)
+                ),
+                redirectTo: route('rutas.index'),
+            );
 
-            return back()->with('success', 'Entrega registrada correctamente.');
-        } catch (Exception $e) {
-            return back()->withErrors(['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            return $this->respondError($e->getMessage());
         }
     }
 
     /**
-     * Cancelar ruta
+     * Asignar chofer y vehículo a una ruta
+     *
+     * POST /rutas/{id}/asignar
      */
-    public function cancelar(Request $request, Ruta $ruta)
+    public function asignarRecursos(Request $request, int $id): JsonResponse|RedirectResponse
     {
-        $request->validate([
-            'motivo' => 'required|string|max:500',
-        ]);
-
-        if ($ruta->estado !== 'planificada') {
-            return back()->withErrors(['error' => 'Solo se pueden cancelar rutas planificadas.']);
-        }
-
-        $ruta->update([
-            'estado' => 'cancelada',
-            'observaciones' => $request->motivo,
-        ]);
-
-        // Revertir estado de envíos
-        $ruta->detalles()->update(['estado' => 'pendiente']);
-
-        return back()->with('success', 'Ruta cancelada correctamente.');
-    }
-
-    /**
-     * Crear ruta manual
-     */
-    public function create()
-    {
-        $zonas = Zona::activas()->get(['id', 'nombre', 'codigo']);
-        $choferes = Empleado::whereHasRole('Chofer')
-            ->activos()
-            ->with('user')
-            ->get();
-
-        return Inertia::render('rutas/create', [
-            'zonas' => $zonas,
-            'choferes' => $choferes,
-        ]);
-    }
-
-    /**
-     * Guardar ruta manual
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'zona_id' => 'required|exists:zonas,id',
-            'chofer_id' => 'required|exists:empleados,id',
-            'fecha_ruta' => 'required|date',
-            'detalles' => 'required|array|min:1',
-            'detalles.*.cliente_id' => 'required|exists:clientes,id',
-            'detalles.*.secuencia' => 'required|integer|min:1',
-        ]);
-
         try {
-            DB::transaction(function () use ($request) {
-                $ruta = Ruta::create([
-                    'codigo' => Ruta::generarCodigo(Zona::findOrFail($request->zona_id)),
-                    'fecha_ruta' => $request->fecha_ruta,
-                    'zona_id' => $request->zona_id,
-                    'chofer_id' => $request->chofer_id,
-                    'estado' => 'planificada',
-                    'creado_por' => auth()->id(),
-                ]);
+            $choferId = $request->input('chofer_id');
+            $vehiculoId = $request->input('vehiculo_id');
 
-                foreach ($request->detalles as $detalle) {
-                    RutaDetalle::create([
-                        'ruta_id' => $ruta->id,
-                        'cliente_id' => $detalle['cliente_id'],
-                        'secuencia' => $detalle['secuencia'],
-                        'direccion_entrega' => $detalle['direccion'] ?? '',
-                        'estado' => 'pendiente',
-                    ]);
-                }
+            if (!$choferId || !$vehiculoId) {
+                throw new \InvalidArgumentException('Chofer y vehículo son requeridos');
+            }
 
-                $ruta->recalcularParadas();
-            });
+            $rutaDTO = $this->rutaService->asignarRecursos(
+                $id,
+                (int) $choferId,
+                (int) $vehiculoId,
+            );
 
-            return redirect()->route('rutas.index')->with('success', 'Ruta creada correctamente.');
-        } catch (Exception $e) {
-            return back()->withErrors(['error' => $e->getMessage()])->withInput();
+            return $this->respondSuccess(
+                data: $rutaDTO,
+                message: 'Recursos asignados exitosamente',
+                redirectTo: route('rutas.show', $id),
+            );
+
+        } catch (\InvalidArgumentException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (\Exception $e) {
+            return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Cambiar estado de una ruta
+     *
+     * PATCH /rutas/{id}/estado
+     *
+     * Body:
+     * {
+     *   "estado": "EN_PROCESO"
+     * }
+     */
+    public function cambiarEstado(Request $request, int $id): JsonResponse|RedirectResponse
+    {
+        try {
+            $estado = $request->input('estado');
+
+            if (!$estado) {
+                throw new \InvalidArgumentException('Estado es requerido');
+            }
+
+            $rutaDTO = $this->rutaService->cambiarEstado($id, $estado);
+
+            return $this->respondSuccess(
+                data: $rutaDTO,
+                message: "Ruta marcada como {$estado}",
+                redirectTo: route('rutas.show', $id),
+            );
+
+        } catch (EstadoInvalidoException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (\InvalidArgumentException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (\Exception $e) {
+            return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Generar matriz de distancias para optimización
+     *
+     * GET /rutas/{id}/matriz-distancias
+     *
+     * Retorna matriz de distancias entre entregas
+     */
+    public function matrizDistancias(int $id): JsonResponse
+    {
+        try {
+            $rutaDTO = $this->rutaService->obtener($id);
+
+            // TODO: Calcular matriz de distancias desde ubicaciones
+            // Por ahora retornar estructura
+
+            return response()->json([
+                'success' => true,
+                'ruta_id' => $id,
+                'entregas' => count($rutaDTO->detalles),
+                'matriz' => [],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 404);
         }
     }
 }

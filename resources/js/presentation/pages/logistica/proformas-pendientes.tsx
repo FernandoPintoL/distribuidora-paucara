@@ -241,7 +241,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
                     )}
                 </div>
 
-                {/* Proformas */}
+                {/* proformas */}
                 <div className="space-y-3">
                     {loading ? (
                         <Card>

@@ -6,22 +6,23 @@ import NotificationController from './NotificationController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
+import RutaApiController from './RutaApiController'
 import EntregaController from './EntregaController'
 import TrackingController from './TrackingController'
 import EncargadoController from './EncargadoController'
-
 const Api = {
     AuthController,
-    EmpleadoApiController,
-    TipoAjusteInventarioController,
-    RoleController,
-    NotificationController,
-    TipoMermaController,
-    EstadoMermaController,
-    ApiProformaController,
-    EntregaController,
-    TrackingController,
-    EncargadoController,
+EmpleadoApiController,
+TipoAjusteInventarioController,
+RoleController,
+NotificationController,
+TipoMermaController,
+EstadoMermaController,
+ApiProformaController,
+RutaApiController,
+EntregaController,
+TrackingController,
+EncargadoController,
 }
 
 export default Api

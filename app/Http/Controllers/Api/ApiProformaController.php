@@ -278,7 +278,7 @@ class ApiProformaController extends Controller
             // PREVENTISTA: Solo las proformas que él creó
             $query->where('usuario_creador_id', $user->id);
         }
-        elseif (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado'], $userRoles)) {
+        elseif (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado', 'chofer'], $userRoles)) {
             // DASHBOARD: Todas las proformas (sin filtro adicional)
             // Opcionalmente se puede filtrar por canal_origen, estado, etc.
         }
@@ -407,6 +407,14 @@ class ApiProformaController extends Controller
     {
         $user = Auth::user();
 
+        // Verificar autenticación
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado',
+            ], 401);
+        }
+
         // Construir query base
         $query = Proforma::query();
 
@@ -416,7 +424,11 @@ class ApiProformaController extends Controller
 
         $userRoles = $user->roles->pluck('name')->map(fn($role) => strtolower($role))->toArray();
 
-        if (in_array('cliente', $userRoles)) {
+        // Verificar permisos en orden: admin/logistica primero (mayor prioridad)
+        if (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado', 'chofer'], $userRoles)) {
+            // DASHBOARD: Todas las proformas
+        }
+        elseif (in_array('cliente', $userRoles)) {
             // CLIENTE: Solo sus propias proformas
             $cliente = $user->cliente;
 
@@ -432,9 +444,6 @@ class ApiProformaController extends Controller
         elseif (in_array('preventista', $userRoles)) {
             // PREVENTISTA: Solo las proformas que él creó
             $query->where('usuario_creador_id', $user->id);
-        }
-        elseif (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado'], $userRoles)) {
-            // DASHBOARD: Todas las proformas
         }
         else {
             return response()->json([
@@ -465,13 +474,13 @@ class ApiProformaController extends Controller
                 ->get()
                 ->keyBy('canal_origen');
 
-            // Proformas vencidas (PENDIENTE o APROBADA con fecha_vencimiento < now)
+            // proformas vencidas (PENDIENTE o APROBADA con fecha_vencimiento < now)
             $vencidas = (clone $query)
                 ->whereIn('estado', [Proforma::PENDIENTE, Proforma::APROBADA])
                 ->where('fecha_vencimiento', '<', now())
                 ->count();
 
-            // Proformas por vencer (próximos 2 días)
+            // proformas por vencer (próximos 2 días)
             $porVencer = (clone $query)
                 ->whereIn('estado', [Proforma::PENDIENTE, Proforma::APROBADA])
                 ->whereBetween('fecha_vencimiento', [now(), now()->addDays(2)])
@@ -1888,7 +1897,7 @@ class ApiProformaController extends Controller
         elseif ($user->hasRole('preventista')) {
             $query->where('usuario_creador_id', $user->id);
         }
-        elseif ($user->hasAnyRole(['logistica', 'admin', 'cajero', 'manager', 'encargado'])) {
+        elseif ($user->hasAnyRole(['logistica', 'admin', 'cajero', 'manager', 'encargado', 'chofer'])) {
             // Dashboard: todas las proformas
         }
         else {
@@ -1926,7 +1935,7 @@ class ApiProformaController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return Inertia::render('Proformas/Index', [
+        return Inertia::render('proformas/Index', [
             'proformas' => $proformas,
         ]);
     }
@@ -1948,7 +1957,7 @@ class ApiProformaController extends Controller
             'direccionConfirmada',
         ]);
 
-        return Inertia::render('Proformas/Show', [
+        return Inertia::render('proformas/Show', [
             'proforma' => $proforma,
         ]);
     }

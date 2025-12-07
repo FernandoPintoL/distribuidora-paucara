@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
+use App\Http\Controllers\Auth\DashboardRedirectController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -37,6 +38,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    // ✅ RUTA DE REDIRECCIÓN DINÁMICA
+    // Después de login, el usuario es redirigido aquí
+    // El backend (DashboardRouterService) decide a dónde debe ir
+    Route::get('dashboard-redirect', [DashboardRedirectController::class, 'redirect'])
+        ->name('dashboard-redirect');
+
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 

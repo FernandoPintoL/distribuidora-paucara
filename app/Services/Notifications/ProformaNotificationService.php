@@ -9,7 +9,7 @@ use App\Services\WebSocket\ProformaWebSocketService;
 use Illuminate\Support\Collection;
 
 /**
- * Servicio orquestador de notificaciones de Proformas
+ * Servicio orquestador de notificaciones de proformas
  *
  * Este servicio coordina entre:
  * - Notificaciones en BD (DatabaseNotificationService)

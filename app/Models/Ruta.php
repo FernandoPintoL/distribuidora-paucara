@@ -16,6 +16,7 @@ class Ruta extends Model
     protected $fillable = [
         'codigo',
         'fecha_ruta',
+        'localidad_id',
         'zona_id',
         'chofer_id',
         'vehiculo_id',
@@ -40,7 +41,15 @@ class Ruta extends Model
     ];
 
     /**
-     * Zona de la ruta
+     * Localidad de la ruta
+     */
+    public function localidad(): BelongsTo
+    {
+        return $this->belongsTo(Localidad::class);
+    }
+
+    /**
+     * Zona de la ruta (para compatibilidad backwards)
      */
     public function zona(): BelongsTo
     {

@@ -248,9 +248,9 @@ class ModuloSidebarSeeder extends Seeder
             );
         }
 
-        // Módulo de Proformas
+        // Módulo de proformas
         $proformas = ModuloSidebar::firstOrCreate(
-            ['titulo' => 'Proformas', 'ruta' => '/proformas', 'es_submenu' => false],
+            ['titulo' => 'proformas', 'ruta' => '/proformas', 'es_submenu' => false],
             [
                 'icono'       => 'FileText',
                 'descripcion' => 'Gestión de proformas',

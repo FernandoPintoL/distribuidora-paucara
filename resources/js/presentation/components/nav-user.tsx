@@ -6,6 +6,7 @@ import { useIsMobile } from '@/presentation/hooks/use-mobile';
 import { type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function NavUser() {
     const { auth } = usePage<SharedData>().props;
@@ -19,11 +20,25 @@ export function NavUser() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
+                            className={cn(
+                                // Base styles
+                                "group relative flex items-center justify-between w-full px-3 py-2.5 rounded-lg",
+                                "transition-all duration-200 ease-out",
+                                // Hover and active states
+                                "hover:bg-sidebar-accent/50 dark:hover:bg-sidebar-accent/40",
+                                "data-[state=open]:bg-sidebar-accent/20 dark:data-[state=open]:bg-sidebar-accent/15",
+                                // Border for visual definition
+                                "border border-sidebar-foreground/10 dark:border-sidebar-foreground/10",
+                                "hover:border-sidebar-accent/30 dark:hover:border-sidebar-accent/30",
+                                "data-[state=open]:border-sidebar-accent/30 dark:data-[state=open]:border-sidebar-accent/30"
+                            )}
                             tooltip={state === "collapsed" ? `Menú de ${auth.user.name}` : undefined}
                         >
                             <UserInfo user={auth.user} />
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <ChevronsUpDown className={cn(
+                                "ml-auto size-4 flex-shrink-0 transition-transform duration-300",
+                                "group-data-[state=open]:rotate-180"
+                            )} />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent

@@ -52,6 +52,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -61,8 +62,11 @@ class AuthController extends Controller
                 'cliente_id' => $clienteId,  // ⭐ IMPORTANTE: Incluir cliente_id
             ],
             'token' => $token,
-            'roles' => $user->roles->pluck('name'),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
+            'roles' => $user->getRoleNames()->toArray(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            // ✅ NUEVO: TTL para caché en app móvil
+            'cache_ttl' => 24 * 60 * 60, // 24 horas en segundos
+            'permissions_updated_at' => now()->timestamp,
         ]);
     }
 
@@ -92,6 +96,7 @@ class AuthController extends Controller
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
+            'success' => true,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -100,8 +105,11 @@ class AuthController extends Controller
                 'activo' => $user->activo,
             ],
             'token' => $token,
-            'roles' => $user->roles->pluck('name'),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
+            'roles' => $user->getRoleNames()->toArray(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            // ✅ NUEVO: TTL para caché en app móvil
+            'cache_ttl' => 24 * 60 * 60,
+            'permissions_updated_at' => now()->timestamp,
         ], 201);
     }
 
@@ -130,16 +138,19 @@ class AuthController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'usernick' => $user->usernick,
                 'email' => $user->email,
                 'activo' => $user->activo,
-                'cliente_id' => $clienteId,  // ⭐ IMPORTANTE: Incluir cliente_id
+                'cliente_id' => $clienteId,
             ],
-            'roles' => $user->roles->pluck('name'),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
+            'roles' => $user->getRoleNames()->toArray(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            'cache_ttl' => 24 * 60 * 60,
+            'permissions_updated_at' => now()->timestamp,
         ]);
     }
 
@@ -157,7 +168,28 @@ class AuthController extends Controller
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
+            'success' => true,
             'token' => $token,
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            'cache_ttl' => 24 * 60 * 60,
+        ]);
+    }
+
+    /**
+     * ✅ NUEVO: Refrescar permisos sin logout
+     * Útil para app móvil que quiere actualizar permisos sin volver a login
+     * Valida permisos en tiempo real contra BD
+     */
+    public function refreshPermissions(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'success' => true,
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            'roles' => $user->getRoleNames()->toArray(),
+            'cache_ttl' => 24 * 60 * 60, // 24 horas
+            'permissions_updated_at' => now()->timestamp,
         ]);
     }
 }

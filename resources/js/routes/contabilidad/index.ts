@@ -1,9 +1,8 @@
 import asientos from './asientos'
 import reportes from './reportes'
-
 const contabilidad = {
     asientos,
-    reportes,
+reportes,
 }
 
 export default contabilidad

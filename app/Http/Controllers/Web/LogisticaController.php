@@ -13,19 +13,26 @@ class LogisticaController extends Controller
      */
     public function dashboard()
     {
-        // Estadísticas del dashboard
+        // Estadísticas de rutas planificadas
+        $rutasStats = [
+            'planificadas'  => \App\Models\Ruta::where('estado', 'planificada')->whereDate('fecha_ruta', today())->count(),
+            'en_progreso'   => \App\Models\Ruta::where('estado', 'en_progreso')->whereDate('fecha_ruta', today())->count(),
+            'completadas'   => \App\Models\Ruta::where('estado', 'completada')->whereDate('fecha_ruta', today())->count(),
+            'total_distancia' => (float) \App\Models\Ruta::whereDate('fecha_ruta', today())->sum('distancia_km'),
+        ];
+
+        // Estadísticas del dashboard - Consistent with API endpoints
         $estadisticas = [
-            'proformas_pendientes'  => Proforma::where('estado', 'PENDIENTE')
-                ->where('canal_origen', 'APP_EXTERNA')
-                ->count(),
+            'proformas_pendientes'  => Proforma::where('estado', 'PENDIENTE')->count(),  // Count ALL pending, not just APP_EXTERNA
             'envios_programados'    => Envio::where('estado', 'PROGRAMADO')->count(),
             'envios_en_transito'    => Envio::where('estado', 'EN_RUTA')->count(),
             'envios_entregados_hoy' => Envio::whereDate('fecha_entrega', today())
                 ->where('estado', 'ENTREGADO')
                 ->count(),
+            'rutas' => $rutasStats,
         ];
 
-        // Proformas recientes de app externa con paginación y filtros
+        // proformas recientes de app externa con paginación y filtros
         $query = Proforma::with(['cliente', 'usuarioCreador', 'direccionSolicitada'])
             ->where('canal_origen', 'APP_EXTERNA');
 
@@ -85,13 +92,31 @@ class LogisticaController extends Controller
             'to'           => $proformasPaginated->lastItem(),
         ];
 
-        // Envíos activos
-        $enviosActivos = Envio::with(['venta.cliente'])
+        // Envíos activos con paginación (FIXED: was hardcoded limit(10))
+        $enviosQuery = Envio::with(['venta.cliente'])
             ->whereIn('estado', ['PROGRAMADO', 'EN_PREPARACION', 'EN_RUTA'])
-            ->orderBy('fecha_programada', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(function ($envio) {
+            ->orderBy('fecha_programada', 'desc');
+
+        // Apply search filter for envios
+        if (request()->has('search_envios') && request('search_envios') !== '') {
+            $searchEnvios = request('search_envios');
+            $enviosQuery->where(function ($q) use ($searchEnvios) {
+                $q->where('numero_envio', 'like', "%{$searchEnvios}%")
+                  ->orWhereHas('venta.cliente', function ($clienteQuery) use ($searchEnvios) {
+                      $clienteQuery->where('nombre', 'like', "%{$searchEnvios}%");
+                  });
+            });
+        }
+
+        // Apply estado filter for envios
+        if (request()->has('estado_envios') && request('estado_envios') !== 'TODOS') {
+            $enviosQuery->where('estado', request('estado_envios'));
+        }
+
+        $enviosPaginados = $enviosQuery->paginate(15, ['*'], 'page_envios'); // Paginate with 15 per page
+
+        $enviosActivos = [
+            'data' => $enviosPaginados->map(function ($envio) {
                 return [
                     'id'                 => $envio->id,
                     'numero_seguimiento' => $envio->numero_envio,
@@ -102,12 +127,47 @@ class LogisticaController extends Controller
                     'fecha_entrega'      => $envio->fecha_entrega,
                     'direccion_entrega'  => $envio->direccion_entrega,
                 ];
-            });
+            }),
+            'current_page' => $enviosPaginados->currentPage(),
+            'last_page'    => $enviosPaginados->lastPage(),
+            'per_page'     => $enviosPaginados->perPage(),
+            'total'        => $enviosPaginados->total(),
+            'from'         => $enviosPaginados->firstItem(),
+            'to'           => $enviosPaginados->lastItem(),
+        ];
+
+        // Rutas del día
+        $rutasDelDia = \App\Models\Ruta::with(['localidad', 'chofer.user', 'vehiculo'])
+            ->whereDate('fecha_ruta', today())
+            ->orderBy('codigo', 'asc')
+            ->paginate(10, ['*'], 'page_rutas');
+
+        $rutasData = [
+            'data' => $rutasDelDia->map(function ($ruta) {
+                return [
+                    'id'              => $ruta->id,
+                    'codigo'          => $ruta->codigo,
+                    'localidad_nombre' => $ruta->localidad->nombre ?? 'N/A',
+                    'chofer_nombre'   => $ruta->chofer?->user?->name ?? 'N/A',
+                    'vehiculo_placa'  => $ruta->vehiculo?->placa ?? 'N/A',
+                    'estado'          => $ruta->estado,
+                    'paradas'         => $ruta->cantidad_paradas ?? 0,
+                    'distancia_km'    => $ruta->distancia_km ?? 0,
+                ];
+            }),
+            'current_page' => $rutasDelDia->currentPage(),
+            'last_page'    => $rutasDelDia->lastPage(),
+            'per_page'     => $rutasDelDia->perPage(),
+            'total'        => $rutasDelDia->total(),
+            'from'         => $rutasDelDia->firstItem(),
+            'to'           => $rutasDelDia->lastItem(),
+        ];
 
         return Inertia::render('logistica/dashboard', [
             'estadisticas'       => $estadisticas,
             'proformasRecientes' => $proformasRecientes,
             'enviosActivos'      => $enviosActivos,
+            'rutasDelDia'        => $rutasData,
         ]);
     }
 

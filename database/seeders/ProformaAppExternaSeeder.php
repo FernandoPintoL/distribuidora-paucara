@@ -134,6 +134,6 @@ class ProformaAppExternaSeeder extends Seeder
             }
         }
 
-        $this->command->info('Proformas de app externa creadas exitosamente.');
+        $this->command->info('proformas de app externa creadas exitosamente.');
     }
 }

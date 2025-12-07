@@ -79,86 +79,126 @@ export function NavMain({ items }: NavMainProps) {
     };
 
     return (
-        <SidebarGroup>
-            <SidebarGroupLabel>Navegación Principal</SidebarGroupLabel>
-            <SidebarMenu>
-                {items.map((item) => {
+        <SidebarGroup className="py-4">
+            <SidebarGroupLabel className="px-2 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60 dark:text-sidebar-foreground/50">
+                Navegación
+            </SidebarGroupLabel>
+            <SidebarMenu className="gap-0.5">
+                {items.map((item, index) => {
                     const isExpanded = expandedItems.has(item.title);
                     const hasChildren = item.children && item.children.length > 0;
                     const itemActive = isParentActive(item);
 
                     return (
-                        <SidebarMenuItem key={item.title}>
+                        <SidebarMenuItem key={item.title} className="relative">
                             <SidebarMenuButton
                                 asChild={!hasChildren}
                                 onClick={hasChildren ? () => toggleExpanded(item.title) : undefined}
                                 className={cn(
-                                    "group flex items-center justify-between w-full transition-colors",
-                                    hasChildren && "cursor-pointer hover:bg-sidebar-accent",
-                                    itemActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                    // Base styles
+                                    "group relative flex items-center justify-between w-full px-3 py-2.5 rounded-lg",
+                                    "transition-all duration-200 ease-out",
+                                    // Hover state
+                                    "hover:bg-sidebar-accent/50 dark:hover:bg-sidebar-accent/40",
+                                    // Active state with better visual feedback
+                                    itemActive && cn(
+                                        "bg-sidebar-accent/15 dark:bg-sidebar-accent/20",
+                                        "border-l-3 border-l-blue-500 dark:border-l-blue-400",
+                                        "text-sidebar-accent-foreground font-semibold"
+                                    ),
+                                    hasChildren && "cursor-pointer"
                                 )}
                                 data-active={itemActive}
                                 tooltip={state === "collapsed" ? item.title : undefined}
                             >
                                 {hasChildren ? (
-                                    <div className="flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-between w-full gap-2">
+                                        <div className="flex items-center gap-3 min-w-0">
                                             {item.icon && (
-                                                <item.icon className={cn(
-                                                    "h-4 w-4 transition-colors",
-                                                    itemActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/70"
-                                                )} />
+                                                <div className={cn(
+                                                    "flex-shrink-0 h-5 w-5 rounded-md flex items-center justify-center",
+                                                    "transition-all duration-200",
+                                                    itemActive
+                                                        ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                                                        : "bg-sidebar-foreground/5 dark:bg-sidebar-foreground/10 text-sidebar-foreground/70 dark:text-sidebar-foreground/60"
+                                                )}>
+                                                    <item.icon className="h-4 w-4" />
+                                                </div>
                                             )}
-                                            <span className="font-medium">{item.title}</span>
+                                            <span className="truncate text-sm font-medium">{item.title}</span>
                                         </div>
-                                        {isExpanded ? (
-                                            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                                        ) : (
-                                            <ChevronRight className="h-4 w-4 transition-transform duration-200" />
-                                        )}
+                                        <div className={cn(
+                                            "flex-shrink-0 transition-transform duration-300",
+                                            isExpanded && "rotate-180"
+                                        )}>
+                                            <ChevronDown className="h-4 w-4 text-sidebar-foreground/50 dark:text-sidebar-foreground/40" />
+                                        </div>
                                     </div>
                                 ) : (
                                     <Link
                                         href={item.href}
                                         className={cn(
-                                            "flex items-center gap-3 w-full",
-                                            isActive(item.href) && "text-sidebar-accent-foreground font-medium"
+                                            "flex items-center gap-3 w-full min-w-0",
+                                            isActive(item.href) && "text-sidebar-accent-foreground"
                                         )}
                                     >
                                         {item.icon && (
-                                            <item.icon className={cn(
-                                                "h-4 w-4 transition-colors",
-                                                isActive(item.href) ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/70"
-                                            )} />
+                                            <div className={cn(
+                                                "flex-shrink-0 h-5 w-5 rounded-md flex items-center justify-center",
+                                                "transition-all duration-200",
+                                                isActive(item.href)
+                                                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                                                    : "bg-sidebar-foreground/5 dark:bg-sidebar-foreground/10 text-sidebar-foreground/70 dark:text-sidebar-foreground/60"
+                                            )}>
+                                                <item.icon className="h-4 w-4" />
+                                            </div>
                                         )}
-                                        <span className="font-medium">{item.title}</span>
+                                        <span className="truncate text-sm font-medium">{item.title}</span>
                                     </Link>
                                 )}
                             </SidebarMenuButton>
 
+                            {/* Submenu con animación mejorada */}
                             {hasChildren && isExpanded && (
-                                <SidebarMenuSub className="animate-in slide-in-from-top-1 duration-200">
-                                    {item.children!.map((child) => (
-                                        <SidebarMenuSubItem key={child.title}>
+                                <SidebarMenuSub className="animate-in fade-in slide-in-from-top-1 duration-200 ml-0 mt-1 border-l border-sidebar-foreground/10 dark:border-sidebar-foreground/10">
+                                    {item.children!.map((child, childIndex) => (
+                                        <SidebarMenuSubItem key={child.title} className="relative">
                                             <SidebarMenuSubButton
                                                 asChild
                                                 className={cn(
-                                                    "transition-colors",
-                                                    isActive(child.href) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                                    // Base styles
+                                                    "group relative flex items-center gap-3 px-3 py-2 rounded-md",
+                                                    "transition-all duration-200 ease-out",
+                                                    "text-xs font-medium",
+                                                    // Hover
+                                                    "hover:bg-sidebar-accent/40 dark:hover:bg-sidebar-accent/30",
+                                                    // Active
+                                                    isActive(child.href) && cn(
+                                                        "bg-blue-50 dark:bg-blue-900/20",
+                                                        "text-blue-600 dark:text-blue-400",
+                                                        "font-semibold"
+                                                    ),
+                                                    !isActive(child.href) && "text-sidebar-foreground/70 dark:text-sidebar-foreground/60"
                                                 )}
                                                 data-active={isActive(child.href)}
                                             >
                                                 <Link
                                                     href={child.href}
-                                                    className="flex items-center gap-3"
+                                                    className="flex items-center gap-3 w-full"
                                                 >
                                                     {child.icon && (
                                                         <child.icon className={cn(
-                                                            "h-3.5 w-3.5 transition-colors",
-                                                            isActive(child.href) ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/60"
+                                                            "h-3.5 w-3.5 flex-shrink-0",
+                                                            isActive(child.href) ? "text-blue-600 dark:text-blue-400" : "text-sidebar-foreground/50 dark:text-sidebar-foreground/40"
                                                         )} />
                                                     )}
-                                                    <span>{child.title}</span>
+                                                    {!child.icon && (
+                                                        <div className={cn(
+                                                            "h-2 w-2 rounded-full flex-shrink-0",
+                                                            isActive(child.href) ? "bg-blue-600 dark:bg-blue-400" : "bg-sidebar-foreground/30 dark:bg-sidebar-foreground/20"
+                                                        )} />
+                                                    )}
+                                                    <span className="truncate">{child.title}</span>
                                                 </Link>
                                             </SidebarMenuSubButton>
                                         </SidebarMenuSubItem>

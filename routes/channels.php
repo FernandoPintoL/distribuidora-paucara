@@ -2,17 +2,122 @@
 
 use App\Models\Proforma;
 use App\Models\Entrega;
-use App\Models\Chofer;
+use App\Models\Ruta;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Auth;
+
+/*
+|--------------------------------------------------------------------------
+| Broadcast Channels - SSOT + WebSocket Architecture
+|--------------------------------------------------------------------------
+|
+| Canales de broadcasting para notificaciones en tiempo real
+|
+| TIPOS:
+| 1. public.* - Acceso público (sin autenticación)
+| 2. private.* - Requiere autenticación + autorización
+| 3. presence.* - Canales con información de presencia
+|
+| PATRÓN:
+| Service emite Event → Listener hace broadcast → Cliente recibe
+*/
+
+// ══════════════════════════════════════════════════════════════════
+// CANALES DE USUARIO (Por defecto de Laravel)
+// ══════════════════════════════════════════════════════════════════
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-// ==========================================
-// 📦 CANALES PARA LOGÍSTICA
-// ==========================================
+// ══════════════════════════════════════════════════════════════════
+// CANALES PÚBLICOS - Sin autenticación requerida
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * public.ventas.created - Nuevas ventas creadas
+ */
+Broadcast::channel('public.ventas.created', function () {
+    return true;
+});
+
+/**
+ * public.proformas.created - Nuevas proformas creadas
+ */
+Broadcast::channel('public.proformas.created', function () {
+    return true;
+});
+
+/**
+ * public.entregas.assigned - Entregas asignadas
+ */
+Broadcast::channel('public.entregas.assigned', function () {
+    return true;
+});
+
+/**
+ * public.rutas.planned - Rutas planificadas
+ */
+Broadcast::channel('public.rutas.planned', function () {
+    return true;
+});
+
+/**
+ * public.tracking.active - Tracking de entregas en vivo
+ */
+Broadcast::channel('public.tracking.active', function () {
+    return true;
+});
+
+// ══════════════════════════════════════════════════════════════════
+// CANALES PRIVADOS - Requiere autenticación + autorización
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * private.user.{userId} - Notificaciones de usuario
+ */
+Broadcast::channel('private.user.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
+});
+
+/**
+ * private.org.{orgId} - Notificaciones de organización
+ */
+Broadcast::channel('private.org.{orgId}', function ($user, $orgId) {
+    // TODO: Validar que pertenece a esa organización
+    return Auth::check();
+});
+
+/**
+ * private.chofer.{choferId} - Entregas asignadas al chofer
+ */
+Broadcast::channel('private.chofer.{choferId}', function ($user, $choferId) {
+    return (int) $user->id === (int) $choferId ||
+           $user->hasRole(['supervisor', 'admin']);
+});
+
+/**
+ * private.ruta.{rutaId} - Detalles de ruta
+ */
+Broadcast::channel('private.ruta.{rutaId}', function ($user, $rutaId) {
+    $ruta = Ruta::find($rutaId);
+    if (!$ruta) return false;
+
+    return (int) $user->id === (int) $ruta->chofer_id ||
+           $user->hasRole(['supervisor', 'admin']);
+});
+
+/**
+ * private.cliente.{clienteId} - Entregas del cliente
+ */
+Broadcast::channel('private.cliente.{clienteId}', function ($user, $clienteId) {
+    return $user->cliente_id === (int) $clienteId ||
+           $user->hasRole(['supervisor', 'admin', 'vendedor']);
+});
+
+// ══════════════════════════════════════════════════════════════════
+// CANALES LEGADOS - Mantener compatibilidad
+// ══════════════════════════════════════════════════════════════════
 
 /**
  * Canal para cliente: seguimiento de pedido

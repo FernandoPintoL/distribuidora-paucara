@@ -28,7 +28,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'ventas.detalles.index', 'ventas.detalles.store', 'ventas.detalles.update', 'ventas.detalles.destroy',
             'ventas.verificar-stock', 'ventas.stock.bajo', 'ventas.stock.producto', 'ventas.stock.verificar', 'ventas.stock.resumen',
 
-            // Proformas
+            // proformas
             'proformas.index', 'proformas.create', 'proformas.store', 'proformas.show', 'proformas.edit', 'proformas.update',
             'proformas.aprobar', 'proformas.rechazar', 'proformas.convertir-venta',
 

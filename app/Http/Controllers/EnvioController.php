@@ -579,14 +579,10 @@ class EnvioController extends Controller
                 'total_activos' => Vehiculo::where('activo', true)->count(),
             ],
 
-            // Métricas de Proformas (si existe la tabla)
+            // Métricas de proformas (si existe la tabla)
             'proformas'       => [
-                'pendientes' => Proforma::where('estado', 'PENDIENTE')
-                    ->where('canal_origen', 'APP_EXTERNA')
-                    ->count(),
-                'aprobadas'  => Proforma::where('estado', 'APROBADA')
-                    ->where('canal_origen', 'APP_EXTERNA')
-                    ->count(),
+                'pendientes' => Proforma::where('estado', 'PENDIENTE')->count(), // Count ALL, not just APP_EXTERNA
+                'aprobadas'  => Proforma::where('estado', 'APROBADA')->count(), // Count ALL, not just APP_EXTERNA
             ],
 
             // Métricas de Performance

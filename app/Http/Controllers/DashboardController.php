@@ -3,29 +3,65 @@
 namespace App\Http\Controllers;
 
 use App\Services\DashboardService;
+use App\Services\DashboardWidgetsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     public function __construct(
-        private DashboardService $dashboardService
+        private DashboardService $dashboardService,
+        private DashboardWidgetsService $widgetsService
     ) {}
 
     /**
-     * Mostrar el dashboard principal
+     * Mostrar el dashboard principal dinámico
+     * Renderiza solo los widgets permitidos según roles/permisos del usuario
+     * Con compatibilidad backward para el dashboard anterior
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
         $periodo = $request->get('periodo', 'mes_actual');
 
-        $metricas = $this->dashboardService->getMainMetrics($periodo);
-        $graficoVentas = $this->dashboardService->getGraficoVentas($periodo);
-        $productosMasVendidos = $this->dashboardService->getProductosMasVendidos(10, $periodo);
-        $alertasStock = $this->dashboardService->getAlertasStock();
-        $ventasPorCanal = $this->dashboardService->getVentasPorCanal($periodo);
+        // Obtener estructura de widgets para el usuario actual
+        $modulosPermitidos = $this->widgetsService->getModulosPermitidos($user);
+        $widgetsAMostrar = $this->widgetsService->getWidgetsAMostrar($user);
+
+        // Si no hay módulos permitidos, retornar datos generales (fallback)
+        if (empty($modulosPermitidos)) {
+            $modulosPermitidos = ['general'];
+        }
+
+        // Obtener solo los datos necesarios para los módulos permitidos
+        $datosModulos = $this->dashboardService->getDataForAllowedModules($modulosPermitidos, $periodo);
+
+        // Para compatibilidad con el dashboard anterior
+        $datosGenerales = $datosModulos['general'] ?? [];
+
+        // Siempre obtener métricas completas para compatibilidad backward
+        // Esto asegura que el dashboard antiguo siempre tenga datos
+        $allMetrics = $this->dashboardService->getMainMetrics($periodo);
+
+        // Preparar todos los datos con fallback
+        $metricas = isset($datosGenerales['metricas_principales'])
+            ? array_merge($allMetrics, $datosGenerales['metricas_principales'])
+            : $allMetrics;
+
+        $graficoVentas = $datosGenerales['grafico_ventas'] ?? $this->dashboardService->getGraficoVentas($periodo);
+        $productosMasVendidos = $datosGenerales['productos_mas_vendidos'] ?? $this->dashboardService->getProductosMasVendidos(10);
+        $alertasStock = $datosGenerales['alertas_stock'] ?? $this->dashboardService->getAlertasStock();
+        $ventasPorCanal = $datosGenerales['ventas_por_canal'] ?? $this->dashboardService->getVentasPorCanal($periodo);
 
         return Inertia::render('dashboard', [
+            // Datos por módulo (nuevo sistema)
+            'datosModulos' => $datosModulos,
+            'modulosPermitidos' => $modulosPermitidos,
+            'widgetsAMostrar' => $widgetsAMostrar,
+
+            // Datos compatibilidad backward (antiguo sistema - dashboard.tsx actual)
+            // Garantizados para nunca ser null
             'metricas' => $metricas,
             'graficoVentas' => $graficoVentas,
             'productosMasVendidos' => $productosMasVendidos,

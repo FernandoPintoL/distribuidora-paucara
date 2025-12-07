@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
  * Servicio para manejar notificaciones persistentes en la base de datos
  *
  * Este servicio es genérico y puede ser usado por cualquier tipo de notificación
- * (Proformas, Envíos, Pagos, etc.)
+ * (proformas, Envíos, Pagos, etc.)
  */
 class DatabaseNotificationService
 {
