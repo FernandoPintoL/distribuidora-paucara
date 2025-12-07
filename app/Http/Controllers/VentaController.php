@@ -33,7 +33,7 @@ use Inertia\Response as InertiaResponse;
  * ANTES: 200+ líneas de lógica en Controller
  * DESPUÉS: 50+ líneas de orquestación HTTP
  */
-class VentaControllerRefactored extends Controller
+class VentaController extends Controller
 {
     use ApiInertiaUnifiedResponse;
 

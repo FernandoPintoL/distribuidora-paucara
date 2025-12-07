@@ -29,7 +29,7 @@ use Inertia\Response as InertiaResponse;
  * ✗ Cambios de estado
  * ✗ Asignación de recursos
  */
-class RutaControllerRefactored extends Controller
+class RutaController extends Controller
 {
     use ApiInertiaUnifiedResponse;
 

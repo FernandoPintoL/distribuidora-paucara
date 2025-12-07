@@ -30,7 +30,7 @@ use Inertia\Response as InertiaResponse;
  * ✗ Lógica de negocio (eso es ProformaService)
  * ✗ Acceso directo a DB
  */
-class ProformaControllerRefactored extends Controller
+class ProformaController extends Controller
 {
     use ApiInertiaUnifiedResponse;
 

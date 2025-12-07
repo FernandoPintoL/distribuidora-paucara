@@ -27,7 +27,7 @@ use Inertia\Response as InertiaResponse;
  * ✗ Asignación de recursos
  * ✗ Confirmación de entregas
  */
-class EntregaControllerRefactored extends Controller
+class EntregaController extends Controller
 {
     use ApiInertiaUnifiedResponse;
 

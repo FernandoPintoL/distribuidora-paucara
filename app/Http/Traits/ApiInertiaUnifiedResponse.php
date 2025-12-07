@@ -246,7 +246,7 @@ trait ApiInertiaUnifiedResponse
     /**
      * ¿Es una petición API/JSON?
      */
-    protected function isApiRequest(): bool
+    protected function isApiRequest(?Request $request = null): bool
     {
         return request()->wantsJson() || request()->is('api/*');
     }
@@ -254,7 +254,7 @@ trait ApiInertiaUnifiedResponse
     /**
      * ¿Es una petición de Inertia (Web)?
      */
-    protected function isInertiaRequest(): bool
+    protected function isInertiaRequest(?Request $request = null): bool
     {
         return request()->header('X-Inertia') === 'true';
     }
@@ -262,7 +262,7 @@ trait ApiInertiaUnifiedResponse
     /**
      * ¿Es una petición de modal?
      */
-    protected function isModalRequest(): bool
+    protected function isModalRequest(?Request $request = null): bool
     {
         return request()->header('X-Modal-Request') === 'true' ||
                request()->has('modal');

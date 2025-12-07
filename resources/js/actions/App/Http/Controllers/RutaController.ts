@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\RutaController::index
- * @see app/Http/Controllers/RutaController.php:30
+ * @see app/Http/Controllers/RutaController.php:48
  * @route '/rutas'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::index
- * @see app/Http/Controllers/RutaController.php:30
+ * @see app/Http/Controllers/RutaController.php:48
  * @route '/rutas'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\RutaController::index
- * @see app/Http/Controllers/RutaController.php:30
+ * @see app/Http/Controllers/RutaController.php:48
  * @route '/rutas'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\RutaController::index
- * @see app/Http/Controllers/RutaController.php:30
+ * @see app/Http/Controllers/RutaController.php:48
  * @route '/rutas'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\RutaController::index
- * @see app/Http/Controllers/RutaController.php:30
+ * @see app/Http/Controllers/RutaController.php:48
  * @route '/rutas'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\RutaController::index
- * @see app/Http/Controllers/RutaController.php:30
+ * @see app/Http/Controllers/RutaController.php:48
  * @route '/rutas'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\RutaController::index
- * @see app/Http/Controllers/RutaController.php:30
+ * @see app/Http/Controllers/RutaController.php:48
  * @route '/rutas'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\RutaController::create
- * @see app/Http/Controllers/RutaController.php:210
+ * @see app/Http/Controllers/RutaController.php:78
  * @route '/rutas/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::create
- * @see app/Http/Controllers/RutaController.php:210
+ * @see app/Http/Controllers/RutaController.php:78
  * @route '/rutas/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\RutaController::create
- * @see app/Http/Controllers/RutaController.php:210
+ * @see app/Http/Controllers/RutaController.php:78
  * @route '/rutas/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\RutaController::create
- * @see app/Http/Controllers/RutaController.php:210
+ * @see app/Http/Controllers/RutaController.php:78
  * @route '/rutas/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\RutaController::create
- * @see app/Http/Controllers/RutaController.php:210
+ * @see app/Http/Controllers/RutaController.php:78
  * @route '/rutas/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\RutaController::create
- * @see app/Http/Controllers/RutaController.php:210
+ * @see app/Http/Controllers/RutaController.php:78
  * @route '/rutas/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\RutaController::create
- * @see app/Http/Controllers/RutaController.php:210
+ * @see app/Http/Controllers/RutaController.php:78
  * @route '/rutas/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\RutaController::store
- * @see app/Http/Controllers/RutaController.php:227
+ * @see app/Http/Controllers/RutaController.php:104
  * @route '/rutas'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::store
- * @see app/Http/Controllers/RutaController.php:227
+ * @see app/Http/Controllers/RutaController.php:104
  * @route '/rutas'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\RutaController::store
- * @see app/Http/Controllers/RutaController.php:227
+ * @see app/Http/Controllers/RutaController.php:104
  * @route '/rutas'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\RutaController::store
- * @see app/Http/Controllers/RutaController.php:227
+ * @see app/Http/Controllers/RutaController.php:104
  * @route '/rutas'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\RutaController::store
- * @see app/Http/Controllers/RutaController.php:227
+ * @see app/Http/Controllers/RutaController.php:104
  * @route '/rutas'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +212,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\RutaController::planificar
- * @see app/Http/Controllers/RutaController.php:78
+ * @see app/Http/Controllers/RutaController.php:173
  * @route '/rutas/planificar'
  */
 export const planificar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -227,7 +227,7 @@ planificar.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::planificar
- * @see app/Http/Controllers/RutaController.php:78
+ * @see app/Http/Controllers/RutaController.php:173
  * @route '/rutas/planificar'
  */
 planificar.url = (options?: RouteQueryOptions) => {
@@ -236,7 +236,7 @@ planificar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\RutaController::planificar
- * @see app/Http/Controllers/RutaController.php:78
+ * @see app/Http/Controllers/RutaController.php:173
  * @route '/rutas/planificar'
  */
 planificar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -246,7 +246,7 @@ planificar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\RutaController::planificar
- * @see app/Http/Controllers/RutaController.php:78
+ * @see app/Http/Controllers/RutaController.php:173
  * @route '/rutas/planificar'
  */
     const planificarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -256,7 +256,7 @@ planificar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\RutaController::planificar
- * @see app/Http/Controllers/RutaController.php:78
+ * @see app/Http/Controllers/RutaController.php:173
  * @route '/rutas/planificar'
  */
         planificarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -267,10 +267,10 @@ planificar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     planificar.form = planificarForm
 /**
 * @see \App\Http\Controllers\RutaController::show
- * @see app/Http/Controllers/RutaController.php:103
+ * @see app/Http/Controllers/RutaController.php:140
  * @route '/rutas/{ruta}'
  */
-export const show = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -282,17 +282,14 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::show
- * @see app/Http/Controllers/RutaController.php:103
+ * @see app/Http/Controllers/RutaController.php:140
  * @route '/rutas/{ruta}'
  */
-show.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+show.url = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { ruta: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { ruta: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -303,9 +300,7 @@ show.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: numb
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        ruta: typeof args.ruta === 'object'
-                ? args.ruta.id
-                : args.ruta,
+                        ruta: args.ruta,
                 }
 
     return show.definition.url
@@ -315,48 +310,48 @@ show.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: numb
 
 /**
 * @see \App\Http\Controllers\RutaController::show
- * @see app/Http/Controllers/RutaController.php:103
+ * @see app/Http/Controllers/RutaController.php:140
  * @route '/rutas/{ruta}'
  */
-show.get = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
 /**
 * @see \App\Http\Controllers\RutaController::show
- * @see app/Http/Controllers/RutaController.php:103
+ * @see app/Http/Controllers/RutaController.php:140
  * @route '/rutas/{ruta}'
  */
-show.head = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
 
     /**
 * @see \App\Http\Controllers\RutaController::show
- * @see app/Http/Controllers/RutaController.php:103
+ * @see app/Http/Controllers/RutaController.php:140
  * @route '/rutas/{ruta}'
  */
-    const showForm = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
 
             /**
 * @see \App\Http\Controllers\RutaController::show
- * @see app/Http/Controllers/RutaController.php:103
+ * @see app/Http/Controllers/RutaController.php:140
  * @route '/rutas/{ruta}'
  */
-        showForm.get = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
             /**
 * @see \App\Http\Controllers\RutaController::show
- * @see app/Http/Controllers/RutaController.php:103
+ * @see app/Http/Controllers/RutaController.php:140
  * @route '/rutas/{ruta}'
  */
-        showForm.head = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -369,10 +364,10 @@ show.head = (args: { ruta: number | { id: number } } | [ruta: number | { id: num
     show.form = showForm
 /**
 * @see \App\Http\Controllers\RutaController::iniciar
- * @see app/Http/Controllers/RutaController.php:124
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/iniciar'
  */
-export const iniciar = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const iniciar = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: iniciar.url(args, options),
     method: 'post',
 })
@@ -384,17 +379,14 @@ iniciar.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::iniciar
- * @see app/Http/Controllers/RutaController.php:124
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/iniciar'
  */
-iniciar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+iniciar.url = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { ruta: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { ruta: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -405,9 +397,7 @@ iniciar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: n
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        ruta: typeof args.ruta === 'object'
-                ? args.ruta.id
-                : args.ruta,
+                        ruta: args.ruta,
                 }
 
     return iniciar.definition.url
@@ -417,30 +407,30 @@ iniciar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: n
 
 /**
 * @see \App\Http\Controllers\RutaController::iniciar
- * @see app/Http/Controllers/RutaController.php:124
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/iniciar'
  */
-iniciar.post = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+iniciar.post = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: iniciar.url(args, options),
     method: 'post',
 })
 
     /**
 * @see \App\Http\Controllers\RutaController::iniciar
- * @see app/Http/Controllers/RutaController.php:124
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/iniciar'
  */
-    const iniciarForm = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const iniciarForm = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: iniciar.url(args, options),
         method: 'post',
     })
 
             /**
 * @see \App\Http\Controllers\RutaController::iniciar
- * @see app/Http/Controllers/RutaController.php:124
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/iniciar'
  */
-        iniciarForm.post = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        iniciarForm.post = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: iniciar.url(args, options),
             method: 'post',
         })
@@ -448,10 +438,10 @@ iniciar.post = (args: { ruta: number | { id: number } } | [ruta: number | { id: 
     iniciar.form = iniciarForm
 /**
 * @see \App\Http\Controllers\RutaController::completar
- * @see app/Http/Controllers/RutaController.php:138
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/completar'
  */
-export const completar = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const completar = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: completar.url(args, options),
     method: 'post',
 })
@@ -463,17 +453,14 @@ completar.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::completar
- * @see app/Http/Controllers/RutaController.php:138
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/completar'
  */
-completar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+completar.url = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { ruta: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { ruta: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -484,9 +471,7 @@ completar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id:
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        ruta: typeof args.ruta === 'object'
-                ? args.ruta.id
-                : args.ruta,
+                        ruta: args.ruta,
                 }
 
     return completar.definition.url
@@ -496,30 +481,30 @@ completar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id:
 
 /**
 * @see \App\Http\Controllers\RutaController::completar
- * @see app/Http/Controllers/RutaController.php:138
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/completar'
  */
-completar.post = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+completar.post = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: completar.url(args, options),
     method: 'post',
 })
 
     /**
 * @see \App\Http\Controllers\RutaController::completar
- * @see app/Http/Controllers/RutaController.php:138
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/completar'
  */
-    const completarForm = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const completarForm = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: completar.url(args, options),
         method: 'post',
     })
 
             /**
 * @see \App\Http\Controllers\RutaController::completar
- * @see app/Http/Controllers/RutaController.php:138
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/completar'
  */
-        completarForm.post = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        completarForm.post = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: completar.url(args, options),
             method: 'post',
         })
@@ -527,10 +512,10 @@ completar.post = (args: { ruta: number | { id: number } } | [ruta: number | { id
     completar.form = completarForm
 /**
 * @see \App\Http\Controllers\RutaController::cancelar
- * @see app/Http/Controllers/RutaController.php:186
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/cancelar'
  */
-export const cancelar = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const cancelar = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancelar.url(args, options),
     method: 'post',
 })
@@ -542,17 +527,14 @@ cancelar.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::cancelar
- * @see app/Http/Controllers/RutaController.php:186
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/cancelar'
  */
-cancelar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+cancelar.url = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { ruta: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { ruta: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -563,9 +545,7 @@ cancelar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        ruta: typeof args.ruta === 'object'
-                ? args.ruta.id
-                : args.ruta,
+                        ruta: args.ruta,
                 }
 
     return cancelar.definition.url
@@ -575,30 +555,30 @@ cancelar.url = (args: { ruta: number | { id: number } } | [ruta: number | { id: 
 
 /**
 * @see \App\Http\Controllers\RutaController::cancelar
- * @see app/Http/Controllers/RutaController.php:186
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/cancelar'
  */
-cancelar.post = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+cancelar.post = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancelar.url(args, options),
     method: 'post',
 })
 
     /**
 * @see \App\Http\Controllers\RutaController::cancelar
- * @see app/Http/Controllers/RutaController.php:186
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/cancelar'
  */
-    const cancelarForm = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const cancelarForm = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: cancelar.url(args, options),
         method: 'post',
     })
 
             /**
 * @see \App\Http\Controllers\RutaController::cancelar
- * @see app/Http/Controllers/RutaController.php:186
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/{ruta}/cancelar'
  */
-        cancelarForm.post = (args: { ruta: number | { id: number } } | [ruta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        cancelarForm.post = (args: { ruta: string | number } | [ruta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: cancelar.url(args, options),
             method: 'post',
         })
@@ -606,10 +586,10 @@ cancelar.post = (args: { ruta: number | { id: number } } | [ruta: number | { id:
     cancelar.form = cancelarForm
 /**
 * @see \App\Http\Controllers\RutaController::registrarEntrega
- * @see app/Http/Controllers/RutaController.php:152
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/detalles/{detalle}/registrar-entrega'
  */
-export const registrarEntrega = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const registrarEntrega = (args: { detalle: string | number } | [detalle: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: registrarEntrega.url(args, options),
     method: 'post',
 })
@@ -621,17 +601,14 @@ registrarEntrega.definition = {
 
 /**
 * @see \App\Http\Controllers\RutaController::registrarEntrega
- * @see app/Http/Controllers/RutaController.php:152
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/detalles/{detalle}/registrar-entrega'
  */
-registrarEntrega.url = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+registrarEntrega.url = (args: { detalle: string | number } | [detalle: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { detalle: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { detalle: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -642,9 +619,7 @@ registrarEntrega.url = (args: { detalle: number | { id: number } } | [detalle: n
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        detalle: typeof args.detalle === 'object'
-                ? args.detalle.id
-                : args.detalle,
+                        detalle: args.detalle,
                 }
 
     return registrarEntrega.definition.url
@@ -654,30 +629,30 @@ registrarEntrega.url = (args: { detalle: number | { id: number } } | [detalle: n
 
 /**
 * @see \App\Http\Controllers\RutaController::registrarEntrega
- * @see app/Http/Controllers/RutaController.php:152
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/detalles/{detalle}/registrar-entrega'
  */
-registrarEntrega.post = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+registrarEntrega.post = (args: { detalle: string | number } | [detalle: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: registrarEntrega.url(args, options),
     method: 'post',
 })
 
     /**
 * @see \App\Http\Controllers\RutaController::registrarEntrega
- * @see app/Http/Controllers/RutaController.php:152
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/detalles/{detalle}/registrar-entrega'
  */
-    const registrarEntregaForm = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const registrarEntregaForm = (args: { detalle: string | number } | [detalle: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: registrarEntrega.url(args, options),
         method: 'post',
     })
 
             /**
 * @see \App\Http\Controllers\RutaController::registrarEntrega
- * @see app/Http/Controllers/RutaController.php:152
+ * @see app/Http/Controllers/RutaController.php:0
  * @route '/rutas/detalles/{detalle}/registrar-entrega'
  */
-        registrarEntregaForm.post = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        registrarEntregaForm.post = (args: { detalle: string | number } | [detalle: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: registrarEntrega.url(args, options),
             method: 'post',
         })
