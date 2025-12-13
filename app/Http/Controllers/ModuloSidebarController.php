@@ -272,4 +272,95 @@ class ModuloSidebarController extends Controller
 
         return response()->json($permisos);
     }
+
+    /**
+     * Obtener matriz de acceso rol-módulo
+     * Devuelve qué roles tienen acceso a qué módulos
+     */
+    public function getMatrizAcceso()
+    {
+        // Obtener todos los roles
+        $roles = \Spatie\Permission\Models\Role::all()
+            ->sortBy('name')
+            ->values();
+
+        // Obtener todos los módulos principales (no submódulos)
+        $modulos = ModuloSidebar::where('activo', true)
+            ->whereNull('modulo_padre_id')
+            ->orderBy('orden')
+            ->with('submodulos')
+            ->get();
+
+        // Construir la matriz de acceso
+        $matriz = [];
+
+        foreach ($modulos as $modulo) {
+            $moduloData = [
+                'id' => $modulo->id,
+                'titulo' => $modulo->titulo,
+                'ruta' => $modulo->ruta,
+                'categoria' => $modulo->categoria,
+                'permisos_requeridos' => $modulo->permisos ?? [],
+                'roles_acceso' => [],
+                'submodulos' => [],
+            ];
+
+            // Verificar acceso de cada rol a este módulo
+            foreach ($roles as $role) {
+                $tieneAcceso = $this->rolTieneAccesoAlModulo($role, $modulo);
+                if ($tieneAcceso) {
+                    $moduloData['roles_acceso'][] = $role->name;
+                }
+            }
+
+            // Procesar submódulos
+            foreach ($modulo->submodulos as $submodulo) {
+                $submoduloData = [
+                    'id' => $submodulo->id,
+                    'titulo' => $submodulo->titulo,
+                    'ruta' => $submodulo->ruta,
+                    'permisos_requeridos' => $submodulo->permisos ?? [],
+                    'roles_acceso' => [],
+                ];
+
+                foreach ($roles as $role) {
+                    $tieneAcceso = $this->rolTieneAccesoAlModulo($role, $submodulo);
+                    if ($tieneAcceso) {
+                        $submoduloData['roles_acceso'][] = $role->name;
+                    }
+                }
+
+                $moduloData['submodulos'][] = $submoduloData;
+            }
+
+            $matriz[] = $moduloData;
+        }
+
+        return response()->json([
+            'roles' => $roles->pluck('name')->toArray(),
+            'modulos' => $matriz,
+        ]);
+    }
+
+    /**
+     * Verificar si un rol tiene acceso a un módulo
+     */
+    private function rolTieneAccesoAlModulo($role, $modulo)
+    {
+        $permisosRequeridos = $modulo->permisos ?? [];
+
+        // Si no hay permisos requeridos, todos tienen acceso
+        if (empty($permisosRequeridos)) {
+            return true;
+        }
+
+        // Verificar si el rol tiene al menos uno de los permisos requeridos
+        foreach ($permisosRequeridos as $permiso) {
+            if ($role->hasPermissionTo($permiso)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

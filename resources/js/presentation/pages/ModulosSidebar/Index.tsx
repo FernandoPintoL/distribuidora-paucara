@@ -11,6 +11,7 @@ import { Label } from '@/presentation/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { PermisosMultiSelect } from '@/presentation/components/forms/permisos-multi-select';
+import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
 
 interface ModuloSidebar {
     id: number;
@@ -373,6 +374,9 @@ export default function Index({ modulos }: Props) {
                         </Table>
                     </CardContent>
                 </Card>
+
+                {/* Matriz de Acceso */}
+                <MatrizAccesoRol />
 
                 {/* Modal de Edición */}
                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
