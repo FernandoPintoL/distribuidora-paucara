@@ -14,8 +14,7 @@ import { LayoutList, Grid3x3, List } from 'lucide-react';
 // Domain imports
 import { ModuloSidebar, FiltrosModulo, VistaActual } from '@/domain/modulos/types';
 import { useFiltrarModulos, useExtraerDatos, useModulosPadre } from '@/domain/modulos/hooks';
-// Services imports
-import { modulosApi } from '@/services/modulos-api';
+import { modulosService } from '@/domain/modulos/services';
 // Component imports
 import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
 import { ModulosFiltros } from '@/presentation/components/modulos-filtros';
@@ -91,20 +90,20 @@ export default function Index({ modulos }: Props) {
 
     const toggleActivo = async (modulo: ModuloSidebar) => {
         try {
-            await modulosApi.toggleActivo(modulo.id);
+            await modulosService.alternarEstadoModulo(modulo);
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al cambiar el estado del módulo');
+            alert(error instanceof Error ? error.message : 'Error al cambiar el estado del módulo');
         }
     };
 
     const handleGuardarOrden = async (orden: Array<{ id: number; orden: number }>) => {
         setGuardandoOrden(true);
         try {
-            await modulosApi.guardarOrden(orden);
+            await modulosService.guardarOrdenModulos(orden);
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al guardar el orden de los módulos');
+            alert(error instanceof Error ? error.message : 'Error al guardar el orden de los módulos');
         } finally {
             setGuardandoOrden(false);
         }

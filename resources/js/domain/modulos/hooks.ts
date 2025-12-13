@@ -2,6 +2,19 @@ import { useMemo } from 'react';
 import { ModuloSidebar, FiltrosModulo } from './types';
 
 /**
+ * CAPA DE LÓGICA DE NEGOCIO - Hooks de Transformación de Datos
+ *
+ * Estos hooks encapsulan la lógica de transformación y filtrado de datos.
+ * Son funciones puras que no tienen efectos secundarios ni llamadas a API.
+ *
+ * Utilizan useMemo para optimizar el rendimiento y evitar recálculos innecesarios.
+ *
+ * NOTA: Estos hooks se diferencian de los servicios en que:
+ * - Hooks: Lógica pura de transformación de datos (sin side effects)
+ * - Servicios: Lógica de negocio con efectos secundarios (llamadas a API)
+ */
+
+/**
  * Hook para filtrar módulos según criterios especificados
  * @param modulos - Array de módulos a filtrar
  * @param filtros - Criterios de filtrado
