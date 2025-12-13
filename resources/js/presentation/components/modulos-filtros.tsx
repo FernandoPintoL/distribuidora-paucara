@@ -178,12 +178,11 @@ export function ModulosFiltros({
                                 <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">
                                     Categoría
                                 </label>
-                                <Select value={filtros.categoria} onValueChange={handleCategoriaChange}>
+                                <Select value={filtros.categoria || ""} onValueChange={handleCategoriaChange}>
                                     <SelectTrigger className="h-9 text-sm">
                                         <SelectValue placeholder="Todas" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todas</SelectItem>
                                         {categorias.map(cat => (
                                             <SelectItem key={cat} value={cat}>
                                                 {cat}
@@ -200,12 +199,11 @@ export function ModulosFiltros({
                                 <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">
                                     Rol Requerido
                                 </label>
-                                <Select value={filtros.rolRequerido} onValueChange={handleRolChange}>
+                                <Select value={filtros.rolRequerido || ""} onValueChange={handleRolChange}>
                                     <SelectTrigger className="h-9 text-sm">
                                         <SelectValue placeholder="Ninguno" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Ninguno</SelectItem>
                                         {rolesDisponibles.map(rol => (
                                             <SelectItem key={rol} value={rol}>
                                                 {rol}
