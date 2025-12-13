@@ -118,6 +118,39 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
         ->middleware('permission:permissions.index');
 
     // ==========================================
+    // 🎯 FASE 2: GESTIÓN DE CAPACIDADES
+    // ==========================================
+    Route::prefix('capacidades')->group(function () {
+        // Obtener todas las capacidades con sus permisos
+        Route::get('/', [\App\Http\Controllers\PermissionController::class, 'getCapabilities'])
+            ->middleware('permission:permissions.index');
+
+        // Obtener plantillas predefinidas
+        Route::get('/plantillas', [\App\Http\Controllers\PermissionController::class, 'getCapabilityTemplates'])
+            ->middleware('permission:permissions.index');
+
+        // Capacidades de usuario
+        Route::get('/usuario/{user}', [\App\Http\Controllers\PermissionController::class, 'getUserCapabilities'])
+            ->middleware('permission:permissions.index');
+        Route::post('/usuario/{user}/asignar', [\App\Http\Controllers\PermissionController::class, 'assignCapabilityToUser'])
+            ->middleware('permission:usuarios.assign-permission');
+        Route::post('/usuario/{user}/remover', [\App\Http\Controllers\PermissionController::class, 'removeCapabilityFromUser'])
+            ->middleware('permission:usuarios.remove-permission');
+        Route::post('/usuario/{user}/aplicar-plantilla', [\App\Http\Controllers\PermissionController::class, 'applyTemplateToUser'])
+            ->middleware('permission:usuarios.assign-permission');
+
+        // Capacidades de rol
+        Route::get('/rol/{role}', [\App\Http\Controllers\PermissionController::class, 'getRoleCapabilities'])
+            ->middleware('permission:permissions.index');
+        Route::post('/rol/{role}/asignar', [\App\Http\Controllers\PermissionController::class, 'assignCapabilityToRole'])
+            ->middleware('permission:roles.assign-permission');
+        Route::post('/rol/{role}/remover', [\App\Http\Controllers\PermissionController::class, 'removeCapabilityFromRole'])
+            ->middleware('permission:roles.remove-permission');
+        Route::post('/rol/{role}/aplicar-plantilla', [\App\Http\Controllers\PermissionController::class, 'applyTemplateToRole'])
+            ->middleware('permission:roles.assign-permission');
+    });
+
+    // ==========================================
     // 🔔 GESTIÓN DE NOTIFICACIONES
     // ==========================================
     Route::prefix('notificaciones')->group(function () {

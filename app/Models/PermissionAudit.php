@@ -24,12 +24,15 @@ class PermissionAudit extends Model
         'user_agent',
     ];
 
-    protected $casts = [
-        'permisos_anteriores' => 'array',
-        'permisos_nuevos' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'permisos_anteriores' => 'array',
+            'permisos_nuevos' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     /**
      * Relación con el usuario que realizó el cambio

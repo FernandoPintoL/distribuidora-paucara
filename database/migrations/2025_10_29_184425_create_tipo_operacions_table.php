@@ -44,6 +44,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tipo_operacions');
+        Schema::dropIfExists('tipo_operaciones');
     }
 };

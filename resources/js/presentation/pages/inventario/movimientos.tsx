@@ -21,8 +21,8 @@ import type {
     MovimientoUnificado,
     FiltrosMovimientos as IFiltrosMovimientos,
     EstadisticasMovimientos
-} from '@/types/inventario';
-import { CONFIGURACION_MOVIMIENTOS } from '@/types/inventario';
+} from '@/domain/entities/movimientos-inventario';
+import { CONFIGURACION_MOVIMIENTOS } from '@/presentation/config/inventory.config';
 
 interface TipoAjuste {
     id: number;

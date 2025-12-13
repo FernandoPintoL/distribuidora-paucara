@@ -15,10 +15,13 @@ class ImagenProducto extends Model
         'producto_id', 'url', 'es_principal', 'orden',
     ];
 
-    protected $casts = [
-        'es_principal' => 'boolean',
-        'orden' => 'integer',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'es_principal' => 'boolean',
+            'orden' => 'integer',
+        ];
+    }
 
     public function producto()
     {

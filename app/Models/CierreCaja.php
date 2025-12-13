@@ -22,12 +22,15 @@ class CierreCaja extends Model
         'observaciones',
     ];
 
-    protected $casts = [
-        'fecha' => 'datetime',
-        'monto_esperado' => 'decimal:2',
-        'monto_real' => 'decimal:2',
-        'diferencia' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha' => 'datetime',
+            'monto_esperado' => 'decimal:2',
+            'monto_real' => 'decimal:2',
+            'diferencia' => 'decimal:2',
+        ];
+    }
 
     // Relaciones
     public function caja()

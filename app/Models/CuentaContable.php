@@ -19,10 +19,13 @@ class CuentaContable extends Model
         'activa',
     ];
 
-    protected $casts = [
-        'acepta_movimiento' => 'boolean',
-        'activa' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'acepta_movimiento' => 'boolean',
+            'activa' => 'boolean',
+        ];
+    }
 
     /**
      * Cuentas hijas

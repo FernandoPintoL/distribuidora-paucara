@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Ruta;
 use App\Models\RutaDetalle;
-use App\Services\RutaService;
+use App\Services\Logistica\RutaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;

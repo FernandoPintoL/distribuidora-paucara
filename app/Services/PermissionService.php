@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Capability;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -275,5 +276,192 @@ class PermissionService
         }
 
         return $query->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    /**
+     * ============================================
+     * FASE 1: NUEVOS MÉTODOS PARA CAPACIDADES
+     * ============================================
+     */
+
+    /**
+     * ✅ NUEVO: Obtener todas las capacidades con sus permisos
+     * Usado para mostrar UI organizada por CAPACIDADES (no por módulos)
+     */
+    public function getCapabilitiesWithPermissions()
+    {
+        return Capability::orderBy('order')
+            ->get()
+            ->map(function ($capability) {
+                $permissions = $capability->permissions()->get();
+                return [
+                    'id' => $capability->id,
+                    'name' => $capability->name,
+                    'label' => $capability->label,
+                    'description' => $capability->description,
+                    'icon' => $capability->icon,
+                    'permissions_count' => $permissions->count(),
+                    'permissions' => $permissions
+                        ->map(fn($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'label' => str_replace('.', ' → ', $p->name),
+                        ])
+                        ->values()
+                ];
+            });
+    }
+
+    /**
+     * ✅ NUEVO: Obtener capacidades para mostrar en UI
+     * Incluyendo información sobre qué capacidades tienen usuarios/roles
+     */
+    public function getCapabilitiesForUI()
+    {
+        return $this->getCapabilitiesWithPermissions();
+    }
+
+    /**
+     * ✅ NUEVO: Obtener capacidades de un usuario
+     * Retorna la lista de capacidades que tiene un usuario basado en sus permisos
+     */
+    public function getUserCapabilities(User $user)
+    {
+        $userPermissions = $user->getAllPermissions()->pluck('name')->toArray();
+
+        return Capability::get()
+            ->map(function ($capability) use ($userPermissions) {
+                $capPermissions = $capability->permissions()
+                    ->pluck('name')
+                    ->toArray();
+
+                $hasAllPermissions = count($capPermissions) > 0
+                    && count(array_intersect($capPermissions, $userPermissions)) === count($capPermissions);
+                $hasPartialPermissions = count(array_intersect($capPermissions, $userPermissions)) > 0;
+
+                return [
+                    'name' => $capability->name,
+                    'label' => $capability->label,
+                    'icon' => $capability->icon,
+                    'has_full' => $hasAllPermissions,
+                    'has_partial' => $hasPartialPermissions,
+                    'permissions_count' => count($capPermissions),
+                    'user_permissions_count' => count(array_intersect($capPermissions, $userPermissions)),
+                ];
+            });
+    }
+
+    /**
+     * ✅ NUEVO: Obtener capacidades de un rol
+     * Retorna la lista de capacidades que tiene un rol
+     */
+    public function getRoleCapabilities(Role $role)
+    {
+        $rolePermissions = $role->permissions()->pluck('name')->toArray();
+
+        return Capability::get()
+            ->map(function ($capability) use ($rolePermissions) {
+                $capPermissions = $capability->permissions()
+                    ->pluck('name')
+                    ->toArray();
+
+                $hasAllPermissions = count($capPermissions) > 0
+                    && count(array_intersect($capPermissions, $rolePermissions)) === count($capPermissions);
+                $hasPartialPermissions = count(array_intersect($capPermissions, $rolePermissions)) > 0;
+
+                return [
+                    'name' => $capability->name,
+                    'label' => $capability->label,
+                    'icon' => $capability->icon,
+                    'has_full' => $hasAllPermissions,
+                    'has_partial' => $hasPartialPermissions,
+                    'permissions_count' => count($capPermissions),
+                    'role_permissions_count' => count(array_intersect($capPermissions, $rolePermissions)),
+                ];
+            });
+    }
+
+    /**
+     * ✅ NUEVO: Asignar capacidad completa a un usuario
+     * Asigna TODOS los permisos de una capacidad a un usuario
+     */
+    public function assignCapabilityToUser(User $user, string $capabilityName)
+    {
+        $capability = Capability::where('name', $capabilityName)->first();
+        if (!$capability) {
+            return false;
+        }
+
+        $permissions = $capability->permissions()
+            ->pluck('name')
+            ->toArray();
+
+        $permissionIds = Permission::whereIn('name', $permissions)
+            ->pluck('id')
+            ->toArray();
+
+        $this->assignPermissionsToUser($user, $permissionIds);
+        return true;
+    }
+
+    /**
+     * ✅ NUEVO: Asignar capacidad completa a un rol
+     * Asigna TODOS los permisos de una capacidad a un rol
+     */
+    public function assignCapabilityToRole(Role $role, string $capabilityName)
+    {
+        $capability = Capability::where('name', $capabilityName)->first();
+        if (!$capability) {
+            return false;
+        }
+
+        $permissions = $capability->permissions()
+            ->pluck('name')
+            ->toArray();
+
+        $permissionIds = Permission::whereIn('name', $permissions)
+            ->pluck('id')
+            ->toArray();
+
+        $this->assignPermissionsToRole($role, $permissionIds);
+        return true;
+    }
+
+    /**
+     * ✅ NUEVO: Remover capacidad de un usuario
+     * Remueve TODOS los permisos de una capacidad de un usuario
+     */
+    public function removeCapabilityFromUser(User $user, string $capabilityName)
+    {
+        $capability = Capability::where('name', $capabilityName)->first();
+        if (!$capability) {
+            return false;
+        }
+
+        $permissions = $capability->permissions()
+            ->pluck('name')
+            ->toArray();
+
+        $user->revokePermissionTo($permissions);
+        return true;
+    }
+
+    /**
+     * ✅ NUEVO: Remover capacidad de un rol
+     * Remueve TODOS los permisos de una capacidad de un rol
+     */
+    public function removeCapabilityFromRole(Role $role, string $capabilityName)
+    {
+        $capability = Capability::where('name', $capabilityName)->first();
+        if (!$capability) {
+            return false;
+        }
+
+        $permissions = $capability->permissions()
+            ->pluck('name')
+            ->toArray();
+
+        $role->revokePermissionTo($permissions);
+        return true;
     }
 }

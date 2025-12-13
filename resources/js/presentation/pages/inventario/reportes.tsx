@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { DashboardMetricas } from '@/presentation/components/Inventario/DashboardMetricas';
 import { GraficosTendencias } from '@/presentation/components/Inventario/GraficosTendencias';
-import type { EstadisticasMovimientos } from '@/types/inventario';
+import type { EstadisticasMovimientos } from '@/domain/entities/movimientos-inventario';
 
 interface Almacen {
     id: number;

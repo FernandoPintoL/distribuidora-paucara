@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\EnvioController::rechazar
- * @see app/Http/Controllers/EnvioController.php:302
+ * @see app/Http/Controllers/EnvioController.php:303
  * @route '/api/app/envios/{envio}/rechazar'
  */
 export const rechazar = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -16,7 +16,7 @@ rechazar.definition = {
 
 /**
 * @see \App\Http\Controllers\EnvioController::rechazar
- * @see app/Http/Controllers/EnvioController.php:302
+ * @see app/Http/Controllers/EnvioController.php:303
  * @route '/api/app/envios/{envio}/rechazar'
  */
 rechazar.url = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ rechazar.url = (args: { envio: number | { id: number } } | [envio: number | { id
 
 /**
 * @see \App\Http\Controllers\EnvioController::rechazar
- * @see app/Http/Controllers/EnvioController.php:302
+ * @see app/Http/Controllers/EnvioController.php:303
  * @route '/api/app/envios/{envio}/rechazar'
  */
 rechazar.put = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -59,7 +59,7 @@ rechazar.put = (args: { envio: number | { id: number } } | [envio: number | { id
 
     /**
 * @see \App\Http\Controllers\EnvioController::rechazar
- * @see app/Http/Controllers/EnvioController.php:302
+ * @see app/Http/Controllers/EnvioController.php:303
  * @route '/api/app/envios/{envio}/rechazar'
  */
     const rechazarForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -74,7 +74,7 @@ rechazar.put = (args: { envio: number | { id: number } } | [envio: number | { id
 
             /**
 * @see \App\Http\Controllers\EnvioController::rechazar
- * @see app/Http/Controllers/EnvioController.php:302
+ * @see app/Http/Controllers/EnvioController.php:303
  * @route '/api/app/envios/{envio}/rechazar'
  */
         rechazarForm.put = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

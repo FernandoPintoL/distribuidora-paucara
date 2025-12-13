@@ -1,7 +1,7 @@
 // Pages: Tipos de Ajuste de Inventario index page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { tipoAjusteInventarioConfig } from '@/config/tipoAjusteInventario.config';
+import { tipoAjusteInventarioConfig } from '@/config/modules/tipoAjusteInventario.config';
 import tipoAjusteInventarioService from '@/infrastructure/services/tipoAjusteInventario.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { TipoAjusteInventario, TipoAjusteInventarioFormData } from '@/domain/entities/tipos-ajuste-inventario';

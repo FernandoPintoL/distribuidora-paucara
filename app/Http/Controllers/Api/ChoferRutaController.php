@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Ruta;
 use App\Models\RutaDetalle;
-use App\Services\RutaAsignacionService;
+use App\Services\Logistica\RutaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Exception;
@@ -18,7 +18,7 @@ class ChoferRutaController extends Controller
 {
     protected $rutaService;
 
-    public function __construct(RutaAsignacionService $rutaService)
+    public function __construct(RutaService $rutaService)
     {
         $this->rutaService = $rutaService;
         $this->middleware('auth:sanctum,web');

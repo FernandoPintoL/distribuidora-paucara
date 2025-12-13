@@ -6,12 +6,13 @@ import { useAuth } from '@/application/hooks/use-auth';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
-import {
-    Almacen,
-    ProductoInventario,
-    TipoMerma,
-    TIPOS_MERMA
-} from '@/types/inventario';
+import type {
+    TipoMerma
+} from '@/domain/entities/mermas-inventario';
+import type { Almacen } from '@/domain/entities/almacenes';
+import { TIPOS_MERMA } from '@/presentation/config/inventory.config';
+
+// ProductoInventario not needed - using Producto from productos.ts instead
 import { useTipoMermas } from '@/stores/useTipoMermas';
 import { TipoMermaCrudModal } from '@/presentation/components/Inventario/TipoMermaCrudModal';
 import { EstadoMermaCrudModal } from '@/presentation/components/Inventario/EstadoMermaCrudModal';

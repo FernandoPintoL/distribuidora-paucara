@@ -3,17 +3,27 @@
 namespace App\Providers;
 
 use App\Models\Cliente;
+use App\Models\Venta;
 use App\Policies\ClientePolicy;
+use App\Policies\VentaPolicy;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
     /**
-     * Mapeo de Models a Policies
+     * ============================================
+     * FASE 4: MAPEO DE MODELOS A POLÍTICAS ABAC
+     * ============================================
+     *
+     * Mapeo de Models a Policies con control ABAC
+     * (Attribute-Based Access Control)
      */
     protected $policies = [
         Cliente::class => ClientePolicy::class,
+        Venta::class => VentaPolicy::class,
+        // Pedido::class => PedidoPolicy::class,    // Descomentar cuando exista modelo
+        // Inventario::class => InventarioPolicy::class, // Descomentar cuando exista modelo
     ];
 
     /**

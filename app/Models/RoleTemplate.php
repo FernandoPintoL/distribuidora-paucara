@@ -15,11 +15,14 @@ class RoleTemplate extends Model
         'updated_by',
     ];
 
-    protected $casts = [
-        'permisos' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'permisos' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     /**
      * Relación: Usuario que creó la plantilla

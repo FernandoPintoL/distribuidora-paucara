@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\TipoPagoController::index
- * @see app/Http/Controllers/TipoPagoController.php:13
+ * @see app/Http/Controllers/TipoPagoController.php:53
  * @route '/tipos-pago'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::index
- * @see app/Http/Controllers/TipoPagoController.php:13
+ * @see app/Http/Controllers/TipoPagoController.php:53
  * @route '/tipos-pago'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::index
- * @see app/Http/Controllers/TipoPagoController.php:13
+ * @see app/Http/Controllers/TipoPagoController.php:53
  * @route '/tipos-pago'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\TipoPagoController::index
- * @see app/Http/Controllers/TipoPagoController.php:13
+ * @see app/Http/Controllers/TipoPagoController.php:53
  * @route '/tipos-pago'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\TipoPagoController::index
- * @see app/Http/Controllers/TipoPagoController.php:13
+ * @see app/Http/Controllers/TipoPagoController.php:53
  * @route '/tipos-pago'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\TipoPagoController::index
- * @see app/Http/Controllers/TipoPagoController.php:13
+ * @see app/Http/Controllers/TipoPagoController.php:53
  * @route '/tipos-pago'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\TipoPagoController::index
- * @see app/Http/Controllers/TipoPagoController.php:13
+ * @see app/Http/Controllers/TipoPagoController.php:53
  * @route '/tipos-pago'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\TipoPagoController::create
- * @see app/Http/Controllers/TipoPagoController.php:35
+ * @see app/Http/Controllers/TipoPagoController.php:162
  * @route '/tipos-pago/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::create
- * @see app/Http/Controllers/TipoPagoController.php:35
+ * @see app/Http/Controllers/TipoPagoController.php:162
  * @route '/tipos-pago/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::create
- * @see app/Http/Controllers/TipoPagoController.php:35
+ * @see app/Http/Controllers/TipoPagoController.php:162
  * @route '/tipos-pago/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\TipoPagoController::create
- * @see app/Http/Controllers/TipoPagoController.php:35
+ * @see app/Http/Controllers/TipoPagoController.php:162
  * @route '/tipos-pago/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\TipoPagoController::create
- * @see app/Http/Controllers/TipoPagoController.php:35
+ * @see app/Http/Controllers/TipoPagoController.php:162
  * @route '/tipos-pago/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\TipoPagoController::create
- * @see app/Http/Controllers/TipoPagoController.php:35
+ * @see app/Http/Controllers/TipoPagoController.php:162
  * @route '/tipos-pago/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\TipoPagoController::create
- * @see app/Http/Controllers/TipoPagoController.php:35
+ * @see app/Http/Controllers/TipoPagoController.php:162
  * @route '/tipos-pago/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\TipoPagoController::store
- * @see app/Http/Controllers/TipoPagoController.php:42
+ * @see app/Http/Controllers/TipoPagoController.php:177
  * @route '/tipos-pago'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::store
- * @see app/Http/Controllers/TipoPagoController.php:42
+ * @see app/Http/Controllers/TipoPagoController.php:177
  * @route '/tipos-pago'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::store
- * @see app/Http/Controllers/TipoPagoController.php:42
+ * @see app/Http/Controllers/TipoPagoController.php:177
  * @route '/tipos-pago'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\TipoPagoController::store
- * @see app/Http/Controllers/TipoPagoController.php:42
+ * @see app/Http/Controllers/TipoPagoController.php:177
  * @route '/tipos-pago'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\TipoPagoController::store
- * @see app/Http/Controllers/TipoPagoController.php:42
+ * @see app/Http/Controllers/TipoPagoController.php:177
  * @route '/tipos-pago'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -309,10 +309,10 @@ show.head = (args: { tipoPago: string | number } | [tipoPago: string | number ] 
     show.form = showForm
 /**
 * @see \App\Http\Controllers\TipoPagoController::edit
- * @see app/Http/Controllers/TipoPagoController.php:54
+ * @see app/Http/Controllers/TipoPagoController.php:203
  * @route '/tipos-pago/{tipoPago}/edit'
  */
-export const edit = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const edit = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
@@ -324,17 +324,14 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::edit
- * @see app/Http/Controllers/TipoPagoController.php:54
+ * @see app/Http/Controllers/TipoPagoController.php:203
  * @route '/tipos-pago/{tipoPago}/edit'
  */
-edit.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+edit.url = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { tipoPago: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { tipoPago: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -345,9 +342,7 @@ edit.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        tipoPago: typeof args.tipoPago === 'object'
-                ? args.tipoPago.id
-                : args.tipoPago,
+                        tipoPago: args.tipoPago,
                 }
 
     return edit.definition.url
@@ -357,48 +352,48 @@ edit.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { 
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::edit
- * @see app/Http/Controllers/TipoPagoController.php:54
+ * @see app/Http/Controllers/TipoPagoController.php:203
  * @route '/tipos-pago/{tipoPago}/edit'
  */
-edit.get = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+edit.get = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
 /**
 * @see \App\Http\Controllers\TipoPagoController::edit
- * @see app/Http/Controllers/TipoPagoController.php:54
+ * @see app/Http/Controllers/TipoPagoController.php:203
  * @route '/tipos-pago/{tipoPago}/edit'
  */
-edit.head = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+edit.head = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: edit.url(args, options),
     method: 'head',
 })
 
     /**
 * @see \App\Http\Controllers\TipoPagoController::edit
- * @see app/Http/Controllers/TipoPagoController.php:54
+ * @see app/Http/Controllers/TipoPagoController.php:203
  * @route '/tipos-pago/{tipoPago}/edit'
  */
-    const editForm = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const editForm = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: edit.url(args, options),
         method: 'get',
     })
 
             /**
 * @see \App\Http\Controllers\TipoPagoController::edit
- * @see app/Http/Controllers/TipoPagoController.php:54
+ * @see app/Http/Controllers/TipoPagoController.php:203
  * @route '/tipos-pago/{tipoPago}/edit'
  */
-        editForm.get = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.get = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, options),
             method: 'get',
         })
             /**
 * @see \App\Http\Controllers\TipoPagoController::edit
- * @see app/Http/Controllers/TipoPagoController.php:54
+ * @see app/Http/Controllers/TipoPagoController.php:203
  * @route '/tipos-pago/{tipoPago}/edit'
  */
-        editForm.head = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.head = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -411,10 +406,10 @@ edit.head = (args: { tipoPago: number | { id: number } } | [tipoPago: number | {
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:61
+ * @see app/Http/Controllers/TipoPagoController.php:222
  * @route '/tipos-pago/{tipoPago}'
  */
-export const update = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -426,17 +421,14 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:61
+ * @see app/Http/Controllers/TipoPagoController.php:222
  * @route '/tipos-pago/{tipoPago}'
  */
-update.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { tipoPago: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { tipoPago: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -447,9 +439,7 @@ update.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number | 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        tipoPago: typeof args.tipoPago === 'object'
-                ? args.tipoPago.id
-                : args.tipoPago,
+                        tipoPago: args.tipoPago,
                 }
 
     return update.definition.url
@@ -459,29 +449,29 @@ update.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number | 
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:61
+ * @see app/Http/Controllers/TipoPagoController.php:222
  * @route '/tipos-pago/{tipoPago}'
  */
-update.put = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:61
+ * @see app/Http/Controllers/TipoPagoController.php:222
  * @route '/tipos-pago/{tipoPago}'
  */
-update.patch = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+update.patch = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
     method: 'patch',
 })
 
     /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:61
+ * @see app/Http/Controllers/TipoPagoController.php:222
  * @route '/tipos-pago/{tipoPago}'
  */
-    const updateForm = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -493,10 +483,10 @@ update.patch = (args: { tipoPago: number | { id: number } } | [tipoPago: number 
 
             /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:61
+ * @see app/Http/Controllers/TipoPagoController.php:222
  * @route '/tipos-pago/{tipoPago}'
  */
-        updateForm.put = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -507,10 +497,10 @@ update.patch = (args: { tipoPago: number | { id: number } } | [tipoPago: number 
         })
             /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:61
+ * @see app/Http/Controllers/TipoPagoController.php:222
  * @route '/tipos-pago/{tipoPago}'
  */
-        updateForm.patch = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.patch = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PATCH',
@@ -523,10 +513,10 @@ update.patch = (args: { tipoPago: number | { id: number } } | [tipoPago: number 
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\TipoPagoController::destroy
- * @see app/Http/Controllers/TipoPagoController.php:73
+ * @see app/Http/Controllers/TipoPagoController.php:244
  * @route '/tipos-pago/{tipoPago}'
  */
-export const destroy = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -538,17 +528,14 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::destroy
- * @see app/Http/Controllers/TipoPagoController.php:73
+ * @see app/Http/Controllers/TipoPagoController.php:244
  * @route '/tipos-pago/{tipoPago}'
  */
-destroy.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { tipoPago: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { tipoPago: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -559,9 +546,7 @@ destroy.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number |
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        tipoPago: typeof args.tipoPago === 'object'
-                ? args.tipoPago.id
-                : args.tipoPago,
+                        tipoPago: args.tipoPago,
                 }
 
     return destroy.definition.url
@@ -571,20 +556,20 @@ destroy.url = (args: { tipoPago: number | { id: number } } | [tipoPago: number |
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::destroy
- * @see app/Http/Controllers/TipoPagoController.php:73
+ * @see app/Http/Controllers/TipoPagoController.php:244
  * @route '/tipos-pago/{tipoPago}'
  */
-destroy.delete = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
 
     /**
 * @see \App\Http\Controllers\TipoPagoController::destroy
- * @see app/Http/Controllers/TipoPagoController.php:73
+ * @see app/Http/Controllers/TipoPagoController.php:244
  * @route '/tipos-pago/{tipoPago}'
  */
-    const destroyForm = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const destroyForm = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: destroy.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -596,10 +581,10 @@ destroy.delete = (args: { tipoPago: number | { id: number } } | [tipoPago: numbe
 
             /**
 * @see \App\Http\Controllers\TipoPagoController::destroy
- * @see app/Http/Controllers/TipoPagoController.php:73
+ * @see app/Http/Controllers/TipoPagoController.php:244
  * @route '/tipos-pago/{tipoPago}'
  */
-        destroyForm.delete = (args: { tipoPago: number | { id: number } } | [tipoPago: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        destroyForm.delete = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: destroy.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',

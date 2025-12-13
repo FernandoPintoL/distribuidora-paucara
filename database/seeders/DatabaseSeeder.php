@@ -16,6 +16,15 @@ class DatabaseSeeder extends Seeder
         $this->call(AlmacenesUbicacionSeeder::class);
         // Seed roles and permissions FIRST
         $this->call(RolesAndPermissionsSeeder::class);
+
+        // NUEVO: Permisos específicos del Sidebar
+        $this->call(SidebarPermissionsSeeder::class);
+
+        // COMENTADO: Mapeo de Capacidades a Permisos reales
+        // Nota: Este seeder crea roles duplicados (preventista, chofer, cajero, etc.)
+        // Usamos solo RolesAndPermissionsSeeder para roles y el sistema de Capabilities para UI
+        // $this->call(CapabilityToRolePermissionsSeeder::class);
+
         $this->call(CajaSeeder::class);
         // $this->call(ClienteTestSeeder::class);
         $this->call(ClientesConUsuariosSeeder::class);

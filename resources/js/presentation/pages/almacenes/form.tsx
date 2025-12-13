@@ -1,6 +1,6 @@
 // Pages: Almacenes form page using generic components
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { almacenesConfig } from '@/config/almacenes.config';
+import { almacenesConfig } from '@/config/modules/almacenes.config';
 import type { Almacen, AlmacenFormData } from '@/domain/entities/almacenes';
 import AppLayout from '@/layouts/app-layout';
 import almacenesService from '@/infrastructure/services/almacenes.service';

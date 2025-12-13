@@ -1,7 +1,7 @@
 <?php
 // routes/roles.php
 
-use App\Http\Controllers\RolController;
+use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -14,11 +14,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('roles/compare', fn() => Inertia::render('roles/compare'))->name('roles.compare.page');
 
     // Ruta adicional para crear funcionalidad (trait) para un rol existente
-    Route::post('roles/{role}/crear-funcionalidad', [RolController::class, 'crearFuncionalidad'])
+    Route::post('roles/{role}/crear-funcionalidad', [RoleController::class, 'crearFuncionalidad'])
         ->name('roles.crear-funcionalidad')
         ->middleware('permission:roles.edit');
 
     // Rutas de gestión de roles (esto va AL FINAL para no interferir con rutas estáticas)
-    Route::resource('roles', RolController::class);
+    Route::resource('roles', RoleController::class);
 
 });

@@ -1,5 +1,79 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
+ * @route '/roles/{role}/crear-funcionalidad'
+ */
+export const crearFuncionalidad = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearFuncionalidad.url(args, options),
+    method: 'post',
+})
+
+crearFuncionalidad.definition = {
+    methods: ["post"],
+    url: '/roles/{role}/crear-funcionalidad',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
+ * @route '/roles/{role}/crear-funcionalidad'
+ */
+crearFuncionalidad.url = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { role: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    role: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        role: args.role,
+                }
+
+    return crearFuncionalidad.definition.url
+            .replace('{role}', parsedArgs.role.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
+ * @route '/roles/{role}/crear-funcionalidad'
+ */
+crearFuncionalidad.post = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: crearFuncionalidad.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
+ * @route '/roles/{role}/crear-funcionalidad'
+ */
+    const crearFuncionalidadForm = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearFuncionalidad.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
+ * @route '/roles/{role}/crear-funcionalidad'
+ */
+        crearFuncionalidadForm.post = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearFuncionalidad.url(args, options),
+            method: 'post',
+        })
+    
+    crearFuncionalidad.form = crearFuncionalidadForm
+/**
 * @see \App\Http\Controllers\RoleController::index
  * @see app/Http/Controllers/RoleController.php:22
  * @route '/roles'
@@ -1309,6 +1383,6 @@ getPermissionsGrouped.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
     
     getPermissionsGrouped.form = getPermissionsGroupedForm
-const RoleController = { index, create, store, show, edit, update, destroy, assignPermission, removePermission, getTemplates, createTemplate, applyTemplate, copyFromRole, compareRoles, getAudit, getPermissionsGrouped }
+const RoleController = { crearFuncionalidad, index, create, store, show, edit, update, destroy, assignPermission, removePermission, getTemplates, createTemplate, applyTemplate, copyFromRole, compareRoles, getAudit, getPermissionsGrouped }
 
 export default RoleController

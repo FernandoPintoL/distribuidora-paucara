@@ -21,12 +21,15 @@ class CuentaPorCobrar extends Model
         'estado',
     ];
 
-    protected $casts = [
-        'monto_original' => 'decimal:2',
-        'saldo_pendiente' => 'decimal:2',
-        'fecha_vencimiento' => 'date',
-        'dias_vencido' => 'integer',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'monto_original' => 'decimal:2',
+            'saldo_pendiente' => 'decimal:2',
+            'fecha_vencimiento' => 'date',
+            'dias_vencido' => 'integer',
+        ];
+    }
 
     // Relaciones
     public function venta()

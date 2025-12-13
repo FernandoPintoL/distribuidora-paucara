@@ -4,10 +4,8 @@ import { Head, usePage, router } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useAuth } from '@/application/hooks/use-auth';
 import { Button } from '@/presentation/components/ui/button';
-import {
-    TransferenciaInventario,
-    ESTADOS_TRANSFERENCIA
-} from '@/types/inventario';
+import type { TransferenciaInventario } from '@/domain/entities/transferencias-inventario';
+import { ESTADOS_TRANSFERENCIA } from '@/presentation/config/inventory.config';
 import EstadoBadge from '@/presentation/components/Inventario/EstadoBadge';
 import {
     Package,

@@ -17,9 +17,12 @@ class EstadoMerma extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+        ];
+    }
 
     public function movimientosInventario()
     {

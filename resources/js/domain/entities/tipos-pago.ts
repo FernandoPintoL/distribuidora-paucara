@@ -6,10 +6,12 @@ export interface TipoPago extends BaseEntity {
   id: Id;
   codigo: string;
   nombre: string;
+  activo: boolean;
 }
 
 export interface TipoPagoFormData extends BaseFormData {
   id?: Id;
   codigo: string;
   nombre: string;
+  activo?: boolean;
 }

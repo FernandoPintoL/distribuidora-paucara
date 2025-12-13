@@ -11,7 +11,7 @@ use App\Models\VentaDetalle;
 use App\Services\Stock\StockService;
 use App\Services\Traits\LogsOperations;
 use App\Services\Traits\ManagesTransactions;
-use Illuminate\Pagination\Paginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -225,7 +225,7 @@ class VentaService
      * @param int $perPage
      * @param array $filtros Puede incluir: estado, cliente_id, fecha_desde, fecha_hasta
      */
-    public function listar(int $perPage = 15, array $filtros = []): Paginator
+    public function listar(int $perPage = 15, array $filtros = []): LengthAwarePaginator
     {
         return $this->read(function () use ($perPage, $filtros) {
             $query = Venta::with(['cliente', 'detalles'])

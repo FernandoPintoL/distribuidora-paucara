@@ -203,10 +203,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Todas las acciones (aprobar, rechazar, convertir) van a /api/proformas/*
     Route::prefix('proformas')->name('proformas.')->group(function () {
         // Vista: Lista de proformas (usa ApiProformaController::index)
-        Route::get('/', [\App\Http\Controllers\Api\ApiProformaController::class, 'indexInertia'])->name('index');
+        Route::get('/', [\App\Http\Controllers\ProformaController::class, 'index'])->name('index');
 
         // Vista: Detalle de proforma (usa ApiProformaController::show)
-        Route::get('/{proforma}', [\App\Http\Controllers\Api\ApiProformaController::class, 'showInertia'])->name('show');
+        Route::get('/{proforma}', [\App\Http\Controllers\ProformaController::class, 'show'])->name('show');
 
         // NOTA: Las acciones POST usan las rutas API (definidas en routes/api.php):
         // - POST /api/proformas/{id}/aprobar → ApiProformaController::aprobar()

@@ -19,11 +19,14 @@ class VentanaEntregaCliente extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'activo' => 'boolean',
-        'hora_inicio' => 'datetime:H:i',
-        'hora_fin' => 'datetime:H:i',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+            'hora_inicio' => 'datetime:H:i',
+            'hora_fin' => 'datetime:H:i',
+        ];
+    }
 
     public function cliente()
     {

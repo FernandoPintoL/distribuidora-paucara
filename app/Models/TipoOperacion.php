@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TipoOperacion extends Model
 {
+    use HasFactory, HasActiveScope;
     protected $table = 'tipo_operaciones';
 
     protected $fillable = [
@@ -19,22 +22,20 @@ class TipoOperacion extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'requiere_proveedor' => 'boolean',
-        'requiere_cliente' => 'boolean',
-        'activo' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'requiere_proveedor' => 'boolean',
+            'requiere_cliente' => 'boolean',
+            'activo' => 'boolean',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     /**
      * Scopes
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
-
     public function scopeEntrada($query)
     {
         return $query->where('direccion', 'entrada');

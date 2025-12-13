@@ -47,15 +47,18 @@ class MovimientoInventario extends Model
         'deleted_at',
     ];
 
-    protected $casts = [
-        'cantidad'           => 'integer',
-        'cantidad_anterior'  => 'integer',
-        'cantidad_posterior' => 'integer',
-        'fecha'              => 'datetime',
-        'created_at'         => 'datetime',
-        'updated_at'         => 'datetime',
-        'deleted_at'         => 'datetime', // ✓ Para SoftDeletes
-    ];
+    protected function casts(): array
+    {
+        return [
+            'cantidad'           => 'integer',
+            'cantidad_anterior'  => 'integer',
+            'cantidad_posterior' => 'integer',
+            'fecha'              => 'datetime',
+            'created_at'         => 'datetime',
+            'updated_at'         => 'datetime',
+            'deleted_at'         => 'datetime', // ✓ Para SoftDeletes
+        ];
+    }
 
     // Constantes para tipos de movimiento
     const TIPO_ENTRADA_AJUSTE = 'ENTRADA_AJUSTE';
@@ -84,7 +87,7 @@ class MovimientoInventario extends Model
      */
     public function tipoAjusteInventario(): BelongsTo
     {
-        return $this->belongsTo(TipoAjustInventario::class, 'tipo_ajuste_inventario_id');
+        return $this->belongsTo(TipoAjusteInventario::class, 'tipo_ajuste_inventario_id');
     }
 
     public function tipoMerma(): BelongsTo
@@ -336,7 +339,7 @@ class MovimientoInventario extends Model
         $tipos = [];
 
         // Tipos de ajuste de inventario
-        $tiposAjuste = TipoAjustInventario::where('activo', true)
+        $tiposAjuste = TipoAjusteInventario::where('activo', true)
             ->orderBy('label')
             ->get(['clave', 'label', 'descripcion', 'color', 'bg_color', 'text_color']);
 

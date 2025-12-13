@@ -31,16 +31,19 @@ class DetalleConteoFisico extends Model
         'motivo_diferencia'
     ];
 
-    protected $casts = [
-        'fecha_vencimiento' => 'date',
-        'cantidad_sistema' => 'decimal:4',
-        'cantidad_contada' => 'decimal:4',
-        'diferencia' => 'decimal:4',
-        'valor_unitario' => 'decimal:4',
-        'valor_diferencia' => 'decimal:2',
-        'fecha_conteo' => 'datetime',
-        'requiere_reconteo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_vencimiento' => 'date',
+            'cantidad_sistema' => 'decimal:4',
+            'cantidad_contada' => 'decimal:4',
+            'diferencia' => 'decimal:4',
+            'valor_unitario' => 'decimal:4',
+            'valor_diferencia' => 'decimal:2',
+            'fecha_conteo' => 'datetime',
+            'requiere_reconteo' => 'boolean',
+        ];
+    }
 
     // Estados del item
     const ESTADO_PENDIENTE = 'pendiente';

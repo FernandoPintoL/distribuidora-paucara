@@ -1,12 +1,13 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Almacen extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'almacenes';
 
@@ -20,10 +21,13 @@ class Almacen extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'activo'                      => 'boolean',
-        'requiere_transporte_externo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo'                      => 'boolean',
+            'requiere_transporte_externo' => 'boolean',
+        ];
+    }
 
     public function stockProductos()
     {

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ConfiguracionGanancia extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'configuracion_ganancias';
 
@@ -22,14 +23,17 @@ class ConfiguracionGanancia extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'margen_minimo' => 'decimal:2',
-        'margen_maximo' => 'decimal:2',
-        'porcentaje_ganancia_esperado' => 'decimal:2',
-        'precio_base_referencia' => 'decimal:2',
-        'calcular_automatico' => 'boolean',
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'margen_minimo' => 'decimal:2',
+            'margen_maximo' => 'decimal:2',
+            'porcentaje_ganancia_esperado' => 'decimal:2',
+            'precio_base_referencia' => 'decimal:2',
+            'calcular_automatico' => 'boolean',
+            'activo' => 'boolean',
+        ];
+    }
 
     public function producto()
     {
@@ -134,14 +138,6 @@ class ConfiguracionGanancia extends Model
     public function scopeAutomaticas($query)
     {
         return $query->where('calcular_automatico', true);
-    }
-
-    /**
-     * Scope para obtener configuraciones activas
-     */
-    public function scopeActivas($query)
-    {
-        return $query->where('activo', true);
     }
 
     /**

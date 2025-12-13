@@ -21,11 +21,14 @@ class DetalleTransferenciaInventario extends Model
         'observaciones',
     ];
 
-    protected $casts = [
-        'cantidad' => 'integer',
-        'cantidad_recibida' => 'integer',
-        'fecha_vencimiento' => 'date',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'cantidad' => 'integer',
+            'cantidad_recibida' => 'integer',
+            'fecha_vencimiento' => 'date',
+        ];
+    }
 
     public function transferencia()
     {

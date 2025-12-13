@@ -23,13 +23,16 @@ class Notification extends Model
     /**
      * Atributos que deben ser castados
      */
-    protected $casts = [
-        'data' => 'json',
-        'read' => 'boolean',
-        'read_at' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'data' => 'json',
+            'read' => 'boolean',
+            'read_at' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     /**
      * Relación: Una notificación pertenece a un usuario

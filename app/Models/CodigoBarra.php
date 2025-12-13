@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CodigoBarra extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'codigos_barra';
 
@@ -20,10 +22,13 @@ class CodigoBarra extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'es_principal' => 'boolean',
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'es_principal' => 'boolean',
+            'activo' => 'boolean',
+        ];
+    }
 
     /**
      * Relación con el producto
@@ -36,10 +41,6 @@ class CodigoBarra extends Model
     /**
      * Scope para códigos activos
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     /**
      * Scope para código principal

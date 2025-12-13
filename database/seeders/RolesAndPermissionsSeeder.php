@@ -2,6 +2,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Capability;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -12,6 +13,11 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         // Reset cached roles and permissions
         app()['cache.store']->forget('spatie.permission.cache');
+
+        // ============================================
+        // FASE 1: DEFINIR CAPACIDADES Y SUS PERMISOS
+        // ============================================
+        $capabilities = $this->defineCapabilities();
 
         // Define permissions grouped by domain
         $permissions = [
@@ -96,9 +102,14 @@ class RolesAndPermissionsSeeder extends Seeder
             // Admin específicos
             'admin.config', 'admin.system', 'admin.image-backup.manage',
         ];
+
+        // Crear permisos y asignarles capacidades
         foreach ($permissions as $name) {
             Permission::findOrCreate($name);
         }
+
+        // Asignar capacidades a los permisos
+        $this->assignCapabilitiesToPermissions($capabilities);
 
         // Create roles - Jerarquía clara
         // Nivel 1: Super Admin (acceso total + gestión de admins)
@@ -211,8 +222,20 @@ class RolesAndPermissionsSeeder extends Seeder
         $gerente->syncPermissions($gerentePerms);
 
         $cajeroPerms = [
-            'cajas.index', 'cajas.abrir', 'cajas.cerrar', 'cajas.estado', 'cajas.movimientos',
+            // === GESTIÓN DE CAJAS ===
+            'cajas.index', 'cajas.show', 'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones',
+            'cajas.create', 'cajas.store',
+
+            // === GESTIÓN DE VENTAS ===
             'ventas.index', 'ventas.create', 'ventas.store', 'ventas.show',
+            'ventas.edit', 'ventas.update',
+
+            // === GESTIÓN COMPLETA DE PROFORMAS ===
+            'proformas.index', 'proformas.create', 'proformas.store', 'proformas.show',
+            'proformas.edit', 'proformas.update', 'proformas.aprobar', 'proformas.rechazar',
+            'proformas.convertir-venta',
+
+            // === GESTIÓN DE CLIENTES ===
             'clientes.manage',
         ];
         $cajero->syncPermissions($cajeroPerms);
@@ -231,9 +254,24 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Nuevos roles - Asignar permisos específicos
         $choferPerms = [
+            // === LOGÍSTICA Y ENVÍOS (VIEW) ===
             'envios.index', 'envios.show',
             'logistica.dashboard', 'logistica.envios.seguimiento',
-            'empleados.show',  // Para ver su propio perfil
+
+            // === OPERACIONES DE ENTREGA ===
+            'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
+
+            // === GESTIÓN DE CAJA PROPIA ===
+            'cajas.index', 'cajas.show', 'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones',
+
+            // === REGISTRO DE PAGOS ===
+            'ventas.index', 'ventas.show',
+
+            // === ACCESO A CLIENTES ===
+            'clientes.manage',
+
+            // === PERFIL PROPIO ===
+            'empleados.show',
             // NOTA: Si necesita crear clientes, asignarle el rol "Gestor de Clientes" además
         ];
         $chofer->syncPermissions($choferPerms);
@@ -307,7 +345,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'logistica.dashboard', 'logistica.envios.seguimiento',
 
             // Cajas
-            'cajas.index', 'cajas.abrir', 'cajas.cerrar', 'cajas.estado', 'cajas.movimientos',
+            'cajas.index', 'cajas.show', 'cajas.create', 'cajas.store', 'cajas.edit', 'cajas.update',
+            'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones',
 
             // Contabilidad
             'contabilidad.manage', 'contabilidad.asientos.index', 'contabilidad.asientos.show',
@@ -409,6 +448,245 @@ class RolesAndPermissionsSeeder extends Seeder
         $firstUser = User::query()->orderBy('id')->first();
         if ($firstUser !== null && ! $firstUser->hasRole('Super Admin')) {
             $firstUser->assignRole('Super Admin');
+        }
+    }
+
+    /**
+     * ============================================
+     * FASE 1: DEFINIR CAPACIDADES
+     * Organiza permisos por CAPACIDADES (funcionalidades)
+     * ============================================
+     *
+     * Las capacidades agrupan permisos relacionados
+     * Ejemplo: Capacidad "Ventas" contiene todos los permisos de ventas
+     */
+    private function defineCapabilities(): array
+    {
+        $capabilities = [
+            // Capacidad: Gestión de Ventas
+            'ventas' => [
+                'name' => 'ventas',
+                'label' => 'Vender (Crear proformas y ventas)',
+                'description' => 'Capacidad para crear, editar y gestionar ventas y proformas',
+                'icon' => '💰',
+                'permissions' => [
+                    'ventas.index', 'ventas.create', 'ventas.store', 'ventas.show', 'ventas.edit', 'ventas.update', 'ventas.destroy',
+                    'ventas.detalles.index', 'ventas.detalles.store', 'ventas.detalles.update', 'ventas.detalles.destroy',
+                    'ventas.verificar-stock', 'ventas.stock.bajo', 'ventas.stock.producto', 'ventas.stock.verificar', 'ventas.stock.resumen',
+                    'proformas.index', 'proformas.create', 'proformas.store', 'proformas.show', 'proformas.edit', 'proformas.update',
+                    'proformas.aprobar', 'proformas.rechazar', 'proformas.convertir-venta',
+                ]
+            ],
+
+            // Capacidad: Gestión de Compras
+            'compras' => [
+                'name' => 'compras',
+                'label' => 'Comprar (Gestionar compras a proveedores)',
+                'description' => 'Capacidad para crear y gestionar órdenes de compra',
+                'icon' => '📦',
+                'permissions' => [
+                    'compras.index', 'compras.create', 'compras.store', 'compras.show', 'compras.edit', 'compras.update', 'compras.destroy',
+                    'compras.detalles.index', 'compras.detalles.store', 'compras.detalles.update', 'compras.detalles.destroy',
+                    'compras.cuentas-por-pagar.index', 'compras.cuentas-por-pagar.show', 'compras.cuentas-por-pagar.actualizar-estado', 'compras.cuentas-por-pagar.export',
+                    'compras.pagos.index', 'compras.pagos.create', 'compras.pagos.store', 'compras.pagos.show', 'compras.pagos.destroy', 'compras.pagos.export',
+                    'compras.lotes-vencimientos.index', 'compras.lotes-vencimientos.export', 'compras.lotes-vencimientos.actualizar-estado', 'compras.lotes-vencimientos.actualizar-cantidad',
+                    'compras.reportes.index', 'compras.reportes.export', 'compras.reportes.export-pdf',
+                ]
+            ],
+
+            // Capacidad: Gestión de Clientes (CRUD de la entidad Cliente)
+            'clientes' => [
+                'name' => 'clientes',
+                'label' => 'Gestionar Clientes (Crear/editar datos maestros)',
+                'description' => 'Capacidad para administrar información de clientes, direcciones, ventanas de entrega',
+                'icon' => '👥',
+                'permissions' => [
+                    'clientes.manage',
+                    'clientes.direcciones.index', 'clientes.direcciones.create', 'clientes.direcciones.store',
+                    'clientes.direcciones.edit', 'clientes.direcciones.update', 'clientes.direcciones.destroy',
+                    'clientes.ventanas-entrega.index', 'clientes.ventanas-entrega.create', 'clientes.ventanas-entrega.store',
+                    'clientes.ventanas-entrega.edit', 'clientes.ventanas-entrega.update', 'clientes.ventanas-entrega.destroy',
+                    'clientes.fotos.index', 'clientes.fotos.store', 'clientes.fotos.destroy',
+                    'clientes.cuentas-por-cobrar.index', 'clientes.cuentas-por-cobrar.view',
+                ]
+            ],
+
+            // Capacidad: Gestión de Inventario
+            'inventario' => [
+                'name' => 'inventario',
+                'label' => 'Gestionar Inventario (Stock, ajustes, transferencias)',
+                'description' => 'Capacidad para controlar stock, hacer ajustes, transferencias y ver mermas',
+                'icon' => '📊',
+                'permissions' => [
+                    'inventario.dashboard', 'inventario.stock-bajo', 'inventario.proximos-vencer', 'inventario.vencidos', 'inventario.movimientos',
+                    'inventario.ajuste.form', 'inventario.ajuste.procesar', 'inventario.api.buscar-productos', 'inventario.api.stock-producto',
+                    'inventario.reportes', 'inventario.mermas.index', 'inventario.mermas.registrar', 'inventario.mermas.store', 'inventario.mermas.show',
+                    'inventario.mermas.aprobar', 'inventario.mermas.rechazar',
+                    'inventario.transferencias.index', 'inventario.transferencias.crear', 'inventario.transferencias.ver', 'inventario.transferencias.edit',
+                    'inventario.transferencias.enviar', 'inventario.transferencias.recibir', 'inventario.transferencias.cancelar',
+                    'inventario.tipos-ajuste.manage', 'inventario.tipos-ajuste.index', 'inventario.tipos-ajuste.create', 'inventario.tipos-ajuste.store', 'inventario.tipos-ajuste.edit', 'inventario.tipos-ajuste.update', 'inventario.tipos-ajuste.destroy',
+                    'inventario.vehiculos.manage', 'inventario.vehiculos.index', 'inventario.vehiculos.create', 'inventario.vehiculos.store', 'inventario.vehiculos.ver', 'inventario.vehiculos.edit', 'inventario.vehiculos.update', 'inventario.vehiculos.destroy',
+                ]
+            ],
+
+            // Capacidad: Gestión de Envíos y Logística
+            'logistica' => [
+                'name' => 'logistica',
+                'label' => 'Gestionar Envíos (Programar, entregar, seguimiento)',
+                'description' => 'Capacidad para gestionar envíos, asignar choferes y seguimiento de entregas',
+                'icon' => '🚚',
+                'permissions' => [
+                    'envios.index', 'envios.create', 'envios.store', 'envios.show', 'envios.edit', 'envios.update', 'envios.destroy',
+                    'envios.programar', 'envios.cancelar', 'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
+                    'envios.choferes-disponibles', 'envios.vehiculos-disponibles',
+                    'logistica.dashboard', 'logistica.envios.seguimiento',
+                ]
+            ],
+
+            // Capacidad: Gestión de Cajas/Cobranza
+            'cajas' => [
+                'name' => 'cajas',
+                'label' => 'Gestionar Cajas (Cobros, aperturas, cierres)',
+                'description' => 'Capacidad para operar cajas, registrar cobros y transacciones',
+                'icon' => '💳',
+                'permissions' => [
+                    'cajas.index', 'cajas.create', 'cajas.store', 'cajas.show', 'cajas.edit', 'cajas.update',
+                    'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones',
+                ]
+            ],
+
+            // Capacidad: Reportes y Analytics
+            'reportes' => [
+                'name' => 'reportes',
+                'label' => 'Ver Reportes (Ventas, inventario, ganancias)',
+                'description' => 'Capacidad para acceder a reportes y análisis de datos',
+                'icon' => '📈',
+                'permissions' => [
+                    'reportes.precios.index', 'reportes.precios.export', 'reportes.ganancias.index', 'reportes.ganancias.export',
+                    'reportes.inventario.stock-actual', 'reportes.inventario.vencimientos', 'reportes.inventario.rotacion',
+                    'reportes.inventario.movimientos', 'reportes.inventario.export',
+                ]
+            ],
+
+            // Capacidad: Contabilidad
+            'contabilidad' => [
+                'name' => 'contabilidad',
+                'label' => 'Gestionar Contabilidad (Asientos, libros, balance)',
+                'description' => 'Capacidad para registro contable y reportes financieros',
+                'icon' => '📚',
+                'permissions' => [
+                    'contabilidad.manage', 'contabilidad.asientos.index', 'contabilidad.asientos.show',
+                    'contabilidad.reportes.libro-mayor', 'contabilidad.reportes.balance-comprobacion',
+                ]
+            ],
+
+            // Capacidad: Gestión de Usuarios y Roles
+            'admin_usuarios' => [
+                'name' => 'admin_usuarios',
+                'label' => 'Administrar Usuarios (CRUD, asignar roles)',
+                'description' => 'Capacidad para crear, editar usuarios y asignar roles',
+                'icon' => '👤',
+                'permissions' => [
+                    'usuarios.index', 'usuarios.create', 'usuarios.store', 'usuarios.show', 'usuarios.edit', 'usuarios.update', 'usuarios.destroy',
+                    'usuarios.assign-role', 'usuarios.remove-role', 'usuarios.assign-permission', 'usuarios.remove-permission',
+                ]
+            ],
+
+            // Capacidad: Administración de Roles y Permisos
+            'admin_roles' => [
+                'name' => 'admin_roles',
+                'label' => 'Administrar Roles (CRUD, permisos)',
+                'description' => 'Capacidad para crear, editar y asignar permisos a roles',
+                'icon' => '🔑',
+                'permissions' => [
+                    'roles.index', 'roles.create', 'roles.store', 'roles.show', 'roles.edit', 'roles.update', 'roles.destroy',
+                    'roles.assign-permission', 'roles.remove-permission',
+                    'permissions.index', 'permissions.create', 'permissions.store', 'permissions.show', 'permissions.edit', 'permissions.update', 'permissions.destroy',
+                ]
+            ],
+
+            // Capacidad: Gestión de Maestros (Datos referencia)
+            'maestros' => [
+                'name' => 'maestros',
+                'label' => 'Gestionar Maestros (Categorías, marcas, proveedores)',
+                'description' => 'Capacidad para editar datos maestros del sistema',
+                'icon' => '⚙️',
+                'permissions' => [
+                    'categorias.manage', 'marcas.manage', 'almacenes.manage', 'proveedores.manage', 'productos.manage',
+                    'unidades.manage', 'tipos-precio.manage', 'tipos-pago.manage', 'monedas.manage', 'localidades.manage',
+                ]
+            ],
+
+            // Capacidad: Configuración del Sistema
+            'admin_config' => [
+                'name' => 'admin_config',
+                'label' => 'Configurar Sistema (Configuración global)',
+                'description' => 'Capacidad para cambiar configuraciones del sistema',
+                'icon' => '⚙️',
+                'permissions' => [
+                    'modulos-sidebar.index', 'modulos-sidebar.create', 'modulos-sidebar.store', 'modulos-sidebar.show', 'modulos-sidebar.edit',
+                    'modulos-sidebar.update', 'modulos-sidebar.destroy', 'modulos-sidebar.actualizar-orden', 'modulos-sidebar.toggle-activo',
+                    'configuracion-global.index', 'configuracion-global.store', 'configuracion-global.show', 'configuracion-global.update',
+                    'configuracion-global.reset', 'configuracion-global.ganancias', 'configuracion-global.ganancias.update',
+                    'admin.config',
+                ]
+            ],
+
+            // Capacidad: Administración Crítica del Sistema (solo Super Admin)
+            'admin_system' => [
+                'name' => 'admin_system',
+                'label' => 'Admin del Sistema (Crítico - Solo Super Admin)',
+                'description' => 'Capacidad para cambios críticos del sistema',
+                'icon' => '🛡️',
+                'permissions' => [
+                    'admin.system', 'admin.image-backup.manage',
+                ]
+            ],
+
+            // Capacidad: Gestión de Empleados
+            'empleados' => [
+                'name' => 'empleados',
+                'label' => 'Gestionar Empleados (CRUD)',
+                'description' => 'Capacidad para crear, editar y administrar empleados',
+                'icon' => '👨‍💼',
+                'permissions' => [
+                    'empleados.index', 'empleados.create', 'empleados.store', 'empleados.show', 'empleados.edit', 'empleados.update', 'empleados.destroy',
+                    'empleados.toggle-estado', 'empleados.toggle-acceso-sistema',
+                ]
+            ],
+        ];
+
+        // Crear/actualizar Capabilities en BD
+        foreach ($capabilities as $capName => $capData) {
+            Capability::updateOrCreate(
+                ['name' => $capName],
+                [
+                    'label' => $capData['label'],
+                    'description' => $capData['description'],
+                    'icon' => $capData['icon'] ?? null,
+                ]
+            );
+        }
+
+        return $capabilities;
+    }
+
+    /**
+     * Asignar capacidades a los permisos individuales
+     */
+    private function assignCapabilitiesToPermissions(array $capabilities): void
+    {
+        foreach ($capabilities as $capName => $capData) {
+            $capability = Capability::where('name', $capName)->first();
+
+            if ($capability) {
+                foreach ($capData['permissions'] as $permissionName) {
+                    $permission = Permission::where('name', $permissionName)->first();
+                    if ($permission) {
+                        $permission->update(['capability' => $capName]);
+                    }
+                }
+            }
         }
     }
 }

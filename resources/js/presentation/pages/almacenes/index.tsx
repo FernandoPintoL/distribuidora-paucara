@@ -1,7 +1,10 @@
-// Pages: Almacenes index page using generic components
+/**
+ * Pages: Almacenes index page - MIGRACIÓN A GenericContainer
+ */
+
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { almacenesConfig } from '@/config/almacenes.config';
+import { almacenesConfig } from '@/config/modules/almacenes.config';
 import almacenesService from '@/infrastructure/services/almacenes.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Almacen, AlmacenFormData } from '@/domain/entities/almacenes';

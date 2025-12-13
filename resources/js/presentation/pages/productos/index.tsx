@@ -1,7 +1,7 @@
 // Pages: Productos index page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { productosConfig } from '@/config/productos.config';
+import { productosConfig } from '@/config/modules/productos.config';
 import productosService from '@/infrastructure/services/productos.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Producto, ProductoFormData } from '@/domain/entities/productos';

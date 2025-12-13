@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('target_name'); // Nombre del usuario o rol para auditoría
 
             // Detalles del cambio
-            $table->enum('action', ['crear', 'editar', 'eliminar', 'restaurar'])->index();
+            $table->enum('action', ['crear', 'editar', 'eliminar', 'restaurar']);
             $table->json('permisos_anteriores')->nullable(); // Permisos previos (JSON)
             $table->json('permisos_nuevos')->nullable(); // Permisos posteriores (JSON)
             $table->text('descripcion')->nullable(); // Descripción adicional

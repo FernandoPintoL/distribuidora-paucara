@@ -42,7 +42,7 @@ Componentes reutilizables para la interfaz de usuario.
 ### 1. Importar componentes y hooks
 
 ```tsx
-import { ExportButtons, useExport } from '@/components/Export';
+import { ExportButtons, useExport } from '@/presentation/components/Export';
 import { compraToExportData, getDefaultCompraExportOptions } from '@/lib/export-helpers';
 ```
 
@@ -98,7 +98,7 @@ const handleExportPDF = async () => {
 
 ```tsx
 // En pages/compras/show.tsx
-import { ExportButtons, PrintableContent } from '@/components/Export';
+import { ExportButtons, PrintableContent } from '@/presentation/components/Export';
 import { compraToExportData, getDefaultCompraExportOptions } from '@/lib/export-helpers';
 
 const exportData = compraToExportData(compra);

@@ -2,10 +2,10 @@
 
 ## 📋 **SearchSelect System - Componentes Creados**
 
-### 1. **SearchSelect** (`/components/ui/search-select.tsx`)
+### 1. **SearchSelect** (`/presentation/components/ui/search-select.tsx`)
 Componente base con búsqueda local y todas las funcionalidades modernas.
 
-### 2. **AsyncSearchSelect** (`/components/ui/async-search-select.tsx`)  
+### 2. **AsyncSearchSelect** (`/presentation/components/ui/async-search-select.tsx`)
 Extensión para búsqueda en servidor (para grandes volúmenes de datos).
 
 ### 3. **useSearchSelect & useEntitySelect** (`/hooks/use-search-select.ts`)
@@ -17,7 +17,7 @@ Hooks para manejar la lógica de búsqueda y transformación de datos.
 
 ### **Uso Básico (Como en el formulario de productos)**
 ```tsx
-import SearchSelect from '@/components/ui/search-select';
+import SearchSelect from '@/presentation/components/ui/search-select';
 import { useEntitySelect } from '@/hooks/use-search-select';
 
 // En tu componente
@@ -54,7 +54,7 @@ const categoriasSelect = useEntitySelect(categorias);
 
 ### **Uso con Búsqueda en Servidor**
 ```tsx
-import AsyncSearchSelect from '@/components/ui/async-search-select';
+import AsyncSearchSelect from '@/presentation/components/ui/async-search-select';
 
 <AsyncSearchSelect
   label="Cliente"
@@ -92,7 +92,7 @@ import AsyncSearchSelect from '@/components/ui/async-search-select';
 
 ### **2. Para nuevos formularios**
 ```tsx
-import SearchSelect from '@/components/ui/search-select';
+import SearchSelect from '@/presentation/components/ui/search-select';
 import { useEntitySelect } from '@/hooks/use-search-select';
 
 function NuevoFormulario({ proveedores, categorias }) {

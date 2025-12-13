@@ -12,6 +12,8 @@ use App\Models\Almacen;
 use App\Models\Cliente;
 use App\Models\Moneda;
 use App\Models\Producto;
+use App\Models\User;
+use App\Models\Venta;
 use App\Services\Venta\VentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -54,7 +56,7 @@ class VentaController extends Controller
      * - Web: GET /ventas (Inertia)
      * - API: GET /api/ventas (JSON)
      */
-    public function index(Request $request): JsonResponse|InertiaResponse
+    public function index(Request $request): JsonResponse|InertiaResponse|RedirectResponse
     {
         try {
             // Extraer filtros del request
@@ -72,14 +74,15 @@ class VentaController extends Controller
             );
 
             // Responder según cliente
-            return $this->respondPaginated(
-                $ventasPaginadas,
-                'Ventas/Index',
-                [
-                    'filtros' => $filtros,
-                    'clientes' => Cliente::activo()->get(['id', 'nombre']),
-                ]
-            );
+            return Inertia::render('ventas/index', [
+                'ventas' => $ventasPaginadas,
+                'filtros' => $filtros,
+                'estadisticas' => null, // TODO: Implementar estadísticas completas cuando sea necesario
+                'datosParaFiltros' => [
+                    'clientes' => Cliente::activos()->select('id', 'nombre')->get(),
+                    'monedas' => Moneda::activos()->select('id', 'codigo', 'nombre')->get(),
+                ],
+            ]);
 
         } catch (\Exception $e) {
             return $this->respondError('Error al obtener ventas: ' . $e->getMessage());
@@ -91,11 +94,11 @@ class VentaController extends Controller
      */
     public function create(): InertiaResponse
     {
-        return Inertia::render('Ventas/Create', [
-            'clientes' => Cliente::activo()->select('id', 'nombre', 'nit')->get(),
-            'productos' => Producto::activo()->select('id', 'nombre', 'codigo_barras')->get(),
-            'almacenes' => Almacen::activo()->select('id', 'nombre')->get(),
-            'monedas' => Moneda::activo()->select('id', 'codigo', 'nombre', 'simbolo')->get(),
+        return Inertia::render('ventas/create', [
+            'clientes' => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+            'productos' => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
+            'almacenes' => Almacen::activos()->select('id', 'nombre')->get(),
+            'monedas' => Moneda::activos()->select('id', 'codigo', 'nombre', 'simbolo')->get(),
         ]);
     }
 
@@ -167,7 +170,7 @@ class VentaController extends Controller
 
             return $this->respondShow(
                 data: $ventaDTO,
-                inertiaComponent: 'Ventas/Show',
+                inertiaComponent: 'ventas/show',
             );
 
         } catch (\Exception $e) {
@@ -183,10 +186,10 @@ class VentaController extends Controller
         try {
             $ventaDTO = $this->ventaService->obtener($id);
 
-            return Inertia::render('Ventas/Edit', [
+            return Inertia::render('ventas/edit', [
                 'venta' => $ventaDTO->toArray(),
-                'clientes' => Cliente::activo()->select('id', 'nombre')->get(),
-                'productos' => Producto::activo()->select('id', 'nombre')->get(),
+                'clientes' => Cliente::activos()->select('id', 'nombre')->get(),
+                'productos' => Producto::activos()->select('id', 'nombre')->get(),
             ]);
 
         } catch (\Exception $e) {
@@ -310,6 +313,124 @@ class VentaController extends Controller
 
         } catch (\Exception $e) {
             return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener productos con stock bajo
+     *
+     * GET /ventas/stock/bajo
+     */
+    public function productosStockBajo(): JsonResponse
+    {
+        try {
+            $stockBajo = Producto::activos()
+                ->whereRaw('(SELECT SUM(cantidad) FROM stock_productos WHERE producto_id = productos.id) <= stock_minimo')
+                ->with(['stock', 'categoria', 'marca'])
+                ->get()
+                ->map(fn($p) => [
+                    'id' => $p->id,
+                    'nombre' => $p->nombre,
+                    'sku' => $p->sku,
+                    'stock_actual' => $p->stock->sum('cantidad') ?? 0,
+                    'stock_minimo' => $p->stock_minimo,
+                    'categoria' => $p->categoria?->nombre ?? 'Sin categoría',
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $stockBajo,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener productos con stock bajo: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener stock de un producto específico
+     *
+     * GET /ventas/stock/producto/{producto}
+     */
+    public function obtenerStockProducto(Producto $producto): JsonResponse
+    {
+        try {
+            $stockPorAlmacen = $producto->stock()
+                ->with('almacen')
+                ->get()
+                ->map(fn($s) => [
+                    'almacen_id' => $s->almacen_id,
+                    'almacen_nombre' => $s->almacen?->nombre ?? 'Desconocido',
+                    'cantidad' => $s->cantidad,
+                ])
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'producto_id' => $producto->id,
+                    'nombre' => $producto->nombre,
+                    'stock_total' => $producto->stock->sum('cantidad') ?? 0,
+                    'stock_minimo' => $producto->stock_minimo,
+                    'stock_maximo' => $producto->stock_maximo,
+                    'por_almacen' => $stockPorAlmacen,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener stock del producto: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar stock disponible
+     *
+     * POST /ventas/stock/verificar
+     */
+    public function verificarStock(Request $request): JsonResponse
+    {
+        try {
+            $detalles = $request->input('detalles', []);
+            $almacenId = $request->input('almacen_id');
+
+            $verificacion = [];
+            foreach ($detalles as $detalle) {
+                $producto = Producto::find($detalle['producto_id']);
+                if (!$producto) {
+                    $verificacion[] = [
+                        'producto_id' => $detalle['producto_id'],
+                        'disponible' => false,
+                        'razon' => 'Producto no encontrado',
+                    ];
+                    continue;
+                }
+
+                $stockDisponible = $producto->stock()
+                    ->when($almacenId, fn($q) => $q->where('almacen_id', $almacenId))
+                    ->sum('cantidad') ?? 0;
+
+                $verificacion[] = [
+                    'producto_id' => $detalle['producto_id'],
+                    'nombre' => $producto->nombre,
+                    'cantidad_solicitada' => $detalle['cantidad'],
+                    'stock_disponible' => $stockDisponible,
+                    'disponible' => $stockDisponible >= $detalle['cantidad'],
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $verificacion,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al verificar stock: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

@@ -1,7 +1,15 @@
-// Pages: Marcas index page using generic components
+/**
+ * Pages: Marcas index page - MIGRACIÓN A GenericContainer
+ *
+ * CAMBIOS REALIZADOS:
+ * - Migrado a GenericContainer (más completo y moderno)
+ * - Config actualizado a ModuleConfig
+ * - Paginación, filtros modernos, vista cards integrados
+ */
+
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { marcasConfig } from '@/config/marcas.config';
+import { marcasConfig } from '@/config/modules/marcas.config';
 import marcasService from '@/infrastructure/services/marcas.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Marca, MarcaFormData } from '@/domain/entities/marcas';

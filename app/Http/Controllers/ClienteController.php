@@ -2,7 +2,10 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
-use App\Http\Traits\UnifiedResponseTrait;
+use App\Http\Requests\ChangeClienteCredentialsRequest;
+use App\Http\Requests\StoreClienteRequest;
+use App\Http\Requests\UpdateClienteRequest;
+use App\Http\Traits\ApiInertiaUnifiedResponse;
 use App\Models\Cliente as ClienteModel;
 use App\Models\Localidad;
 use App\Models\User;
@@ -15,7 +18,7 @@ use Illuminate\Validation\Rule;
 
 class ClienteController extends Controller
 {
-    use UnifiedResponseTrait;
+    use ApiInertiaUnifiedResponse;
 
     /**
      * Método privado para construir la query de clientes con filtros comunes
@@ -195,98 +198,15 @@ class ClienteController extends Controller
         }
     }
 
-    public function store(Request $request)
+    public function store(StoreClienteRequest $request)
     {
         // ✅ Autorizar: Solo roles que pueden crear clientes
         $this->authorize('create', ClienteModel::class);
 
-        // Preparar datos convirtiendo valores booleanos para API
-        $data = $request->all();
-        if ($this->isApiRequest()) {
-            if (isset($data['activo'])) {
-                $data['activo'] = $this->convertToBoolean($data['activo']);
-            }
-            if (isset($data['crear_usuario'])) {
-                $data['crear_usuario'] = $this->convertToBoolean($data['crear_usuario']);
-            }
-            if (isset($data['direcciones']) && is_array($data['direcciones'])) {
-                foreach ($data['direcciones'] as &$direccion) {
-                    if (isset($direccion['es_principal'])) {
-                        $direccion['es_principal'] = $this->convertToBoolean($direccion['es_principal']);
-                    }
-                }
-            }
-            $request->merge($data);
-        }
-
-        // Filtrar direcciones vacías o incompletas antes de validar
-        if (isset($data['direcciones']) && is_array($data['direcciones'])) {
-            $data['direcciones'] = array_filter($data['direcciones'], function ($direccion) {
-                // Solo mantener direcciones que tengan al menos dirección, latitud o longitud
-                return !empty($direccion['direccion']) ||
-                       !empty($direccion['latitud']) || !empty($direccion['longitud']);
-            });
-
-            // Reindexar el array para evitar índices no consecutivos
-            $data['direcciones'] = array_values($data['direcciones']);
-
-            // Si el array quedó vacío, eliminarlo completamente
-            if (empty($data['direcciones'])) {
-                unset($data['direcciones']);
-            }
-
-            $request->merge($data);
-        }
-
-        // Validaciones base
-        $validated = $request->validate([
-            'nombre'                         => 'required|string|max:255',
-            'razon_social'                   => 'nullable|string|max:255',
-            'nit'                            => 'nullable|string|max:50',
-            'email'                          => 'nullable|email|max:255',
-            'telefono'                       => 'nullable|string|max:20',
-            'limite_credito'                 => 'nullable|numeric|min:0',
-            'localidad_id'                   => 'nullable|exists:localidades,id',
-            'activo'                         => 'nullable|boolean',
-            'observaciones'                  => 'nullable|string',
-            'crear_usuario'                  => 'nullable|boolean',
-            'password'                       => 'required_if:crear_usuario,true|nullable|string|min:8',
-            // Campos de imagen (opcionales)
-            'foto_perfil'                    => 'nullable|sometimes|image|mimes:jpeg,jpg,png,gif|max:5120',
-            'ci_anverso'                     => 'nullable|sometimes|image|mimes:jpeg,jpg,png,gif|max:5120',
-            'ci_reverso'                     => 'nullable|sometimes|image|mimes:jpeg,jpg,png,gif|max:5120',
-            // Direcciones
-            'direcciones'                    => 'nullable|array',
-            'direcciones.*.direccion'        => 'required_with:direcciones|string|max:500',
-            'direcciones.*.latitud'          => 'required_with:direcciones|numeric|between:-90,90',
-            'direcciones.*.longitud'         => 'required_with:direcciones|numeric|between:-180,180',
-            'direcciones.*.observaciones'    => 'nullable|string|max:1000',
-            'direcciones.*.es_principal'     => 'nullable|boolean',
-            'direcciones.*.activa'           => 'nullable|boolean',
-            // Ventanas de entrega (solo API)
-            'ventanas_entrega'               => 'nullable|array',
-            'ventanas_entrega.*.dia_semana'  => 'required_with:ventanas_entrega|integer|between:0,6',
-            'ventanas_entrega.*.hora_inicio' => 'required_with:ventanas_entrega|date_format:H:i',
-            'ventanas_entrega.*.hora_fin'    => 'required_with:ventanas_entrega|date_format:H:i',
-            'ventanas_entrega.*.activo'      => 'nullable|boolean',
-            // Categorías (solo API)
-            'categorias_ids'                 => 'nullable|array',
-            'categorias_ids.*'               => 'integer|exists:categorias_cliente,id',
-        ]);
-
-        // Validaciones adicionales si se va a crear usuario
-        if ($request->crear_usuario) {
-            $request->validate([
-                'telefono' => ['required', 'string', 'max:20', 'unique:clientes,telefono'],
-                'email'    => ['nullable', 'email', 'max:255', 'unique:users,email'],
-            ]);
-        } else {
-            $request->validate([
-                'telefono' => ['nullable', 'string', 'max:20', 'unique:clientes,telefono'],
-            ]);
-        }
-
         try {
+            // Data ya validado por StoreClienteRequest
+            $data = $request->validated();
+
             // Determinar si se deben manejar direcciones
             $handleDirecciones = $this->isApiRequest() || $request->has('direcciones');
 
@@ -341,100 +261,13 @@ class ClienteController extends Controller
         }
     }
 
-    public function update(Request $request, ClienteModel $cliente)
+    public function update(UpdateClienteRequest $request, ClienteModel $cliente)
     {
         // ✅ Autorizar: Solo roles que pueden editar este cliente
         $this->authorize('update', $cliente);
 
-        // Preparar datos convirtiendo valores booleanos para API
-        $data = $request->all();
-        if ($this->isApiRequest()) {
-            if (isset($data['activo'])) {
-                $data['activo'] = $this->convertToBoolean($data['activo']);
-            }
-            if (isset($data['crear_usuario'])) {
-                $data['crear_usuario'] = $this->convertToBoolean($data['crear_usuario']);
-            }
-            if (isset($data['direcciones']) && is_array($data['direcciones'])) {
-                foreach ($data['direcciones'] as &$direccion) {
-                    if (isset($direccion['es_principal'])) {
-                        $direccion['es_principal'] = $this->convertToBoolean($direccion['es_principal']);
-                    }
-                }
-            }
-            $request->merge($data);
-        }
-
-        // Filtrar direcciones vacías o incompletas antes de validar
-        if (isset($data['direcciones']) && is_array($data['direcciones'])) {
-            $data['direcciones'] = array_filter($data['direcciones'], function ($direccion) {
-                // Solo mantener direcciones que tengan al menos dirección, latitud o longitud
-                return !empty($direccion['direccion']) ||
-                       !empty($direccion['latitud']) || !empty($direccion['longitud']);
-            });
-
-            // Reindexar el array para evitar índices no consecutivos
-            $data['direcciones'] = array_values($data['direcciones']);
-
-            // Si el array quedó vacío, eliminarlo completamente
-            if (empty($data['direcciones'])) {
-                unset($data['direcciones']);
-            }
-
-            $request->merge($data);
-        }
-
-        // Validaciones base
-        $validated = $request->validate([
-            'crear_usuario'                  => 'nullable|boolean',
-            'nombre'                         => 'sometimes|required|string|max:255',
-            'razon_social'                   => 'nullable|string|max:255',
-            'nit'                            => 'nullable|string|max:50',
-            'email'                          => 'nullable|email|max:255',
-            'telefono'                       => 'nullable|string|max:20',
-            'limite_credito'                 => 'nullable|numeric|min:0',
-            'localidad_id'                   => 'nullable|exists:localidades,id',
-            'activo'                         => 'nullable|boolean',
-            'observaciones'                  => 'nullable|string',
-            // Archivos de imagen (opcionales)
-            'foto_perfil'                    => 'nullable|sometimes|image|mimes:jpeg,jpg,png,gif|max:5120',
-            'ci_anverso'                     => 'nullable|sometimes|image|mimes:jpeg,jpg,png,gif|max:5120',
-            'ci_reverso'                     => 'nullable|sometimes|image|mimes:jpeg,jpg,png,gif|max:5120',
-            // Direcciones opcionales
-            'direcciones'                    => 'nullable|array',
-            'direcciones.*.direccion'        => 'required_with:direcciones|string|max:500',
-            'direcciones.*.latitud'          => 'required_with:direcciones|numeric|between:-90,90',
-            'direcciones.*.longitud'         => 'required_with:direcciones|numeric|between:-180,180',
-            'direcciones.*.observaciones'    => 'nullable|string|max:1000',
-            'direcciones.*.es_principal'     => 'nullable|boolean',
-            'direcciones.*.activa'           => 'nullable|boolean',
-            // Ventanas de entrega preferidas (opcional)
-            'ventanas_entrega'               => 'nullable|array',
-            'ventanas_entrega.*.dia_semana'  => 'required_with:ventanas_entrega|integer|between:0,6',
-            'ventanas_entrega.*.hora_inicio' => 'required_with:ventanas_entrega|date_format:H:i',
-            'ventanas_entrega.*.hora_fin'    => 'required_with:ventanas_entrega|date_format:H:i',
-            'ventanas_entrega.*.activo'      => 'nullable|boolean',
-            // Categorías del cliente (opcional)
-            'categorias_ids'                 => 'nullable|array',
-            'categorias_ids.*'               => 'integer|exists:categorias_cliente,id',
-        ]);
-
-        // Validaciones adicionales si se va a crear usuario
-        if ($request->crear_usuario) {
-            $request->validate([
-                'telefono' => ['required', 'string', 'max:20', Rule::unique('clientes')->ignore($cliente->id)],
-                'email'    => [
-                    'nullable',
-                    'email',
-                    'max:255',
-                    $cliente->user_id ? Rule::unique('users')->ignore($cliente->user_id) : 'unique:users,email',
-                ],
-            ]);
-        } else {
-            $request->validate([
-                'telefono' => ['nullable', 'string', 'max:20', Rule::unique('clientes')->ignore($cliente->id)],
-            ]);
-        }
+        // Data already validated and prepared by UpdateClienteRequest
+        $data = $request->validated();
 
         try {
             $user = null;
@@ -844,37 +677,23 @@ class ClienteController extends Controller
     /**
      * Permite a un cliente cambiar su usernick y contraseña
      */
-    public function cambiarCredenciales(Request $request): JsonResponse
+    public function cambiarCredenciales(ChangeClienteCredentialsRequest $request): JsonResponse
     {
         /** @var User $user */
         $user = Auth::user();
 
-        $request->validate([
-            'usernick'        => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password_actual' => ['required', 'string'],
-            'password_nueva'  => ['required', 'string', 'min:8'],
-            'email'           => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-        ]);
-
-        // Verificar que el usuario sea un cliente
-        if (! $user || ! $user->esCliente()) {
-            return ApiResponse::error('Solo los clientes pueden cambiar sus credenciales desde este endpoint', 403);
-        }
-
-        // Verificar contraseña actual
-        if (! Hash::check($request->password_actual, $user->password)) {
-            return ApiResponse::error('La contraseña actual es incorrecta', 422);
-        }
+        // Data already validated by ChangeClienteCredentialsRequest
+        $validated = $request->validated();
 
         // Preparar datos para actualizar
         $userUpdates = [
-            'usernick' => $request->usernick,
-            'password' => Hash::make($request->password_nueva),
+            'usernick' => $validated['usernick'],
+            'password' => Hash::make($validated['password_nueva']),
         ];
 
         // Agregar email solo si se proporciona
         if ($request->filled('email')) {
-            $userUpdates['email']             = $request->email;
+            $userUpdates['email']             = $validated['email'];
             $userUpdates['email_verified_at'] = now();
         } elseif ($request->has('email') && $request->email === null) {
             // Si se envía email como null, quitar el email

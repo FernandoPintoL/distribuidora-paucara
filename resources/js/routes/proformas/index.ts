@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::index
- * @see app/Http/Controllers/Api/ApiProformaController.php:1876
+* @see \App\Http\Controllers\ProformaController::index
+ * @see app/Http/Controllers/ProformaController.php:48
  * @route '/proformas'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -15,8 +15,8 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::index
- * @see app/Http/Controllers/Api/ApiProformaController.php:1876
+* @see \App\Http\Controllers\ProformaController::index
+ * @see app/Http/Controllers/ProformaController.php:48
  * @route '/proformas'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -24,8 +24,8 @@ index.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::index
- * @see app/Http/Controllers/Api/ApiProformaController.php:1876
+* @see \App\Http\Controllers\ProformaController::index
+ * @see app/Http/Controllers/ProformaController.php:48
  * @route '/proformas'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -33,8 +33,8 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::index
- * @see app/Http/Controllers/Api/ApiProformaController.php:1876
+* @see \App\Http\Controllers\ProformaController::index
+ * @see app/Http/Controllers/ProformaController.php:48
  * @route '/proformas'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -43,8 +43,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
-* @see \App\Http\Controllers\Api\ApiProformaController::index
- * @see app/Http/Controllers/Api/ApiProformaController.php:1876
+* @see \App\Http\Controllers\ProformaController::index
+ * @see app/Http/Controllers/ProformaController.php:48
  * @route '/proformas'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -53,8 +53,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
-* @see \App\Http\Controllers\Api\ApiProformaController::index
- * @see app/Http/Controllers/Api/ApiProformaController.php:1876
+* @see \App\Http\Controllers\ProformaController::index
+ * @see app/Http/Controllers/ProformaController.php:48
  * @route '/proformas'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -62,8 +62,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
-* @see \App\Http\Controllers\Api\ApiProformaController::index
- * @see app/Http/Controllers/Api/ApiProformaController.php:1876
+* @see \App\Http\Controllers\ProformaController::index
+ * @see app/Http/Controllers/ProformaController.php:48
  * @route '/proformas'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -78,11 +78,11 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     index.form = indexForm
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::show
- * @see app/Http/Controllers/Api/ApiProformaController.php:1949
+* @see \App\Http\Controllers\ProformaController::show
+ * @see app/Http/Controllers/ProformaController.php:129
  * @route '/proformas/{proforma}'
  */
-export const show = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -93,18 +93,15 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::show
- * @see app/Http/Controllers/Api/ApiProformaController.php:1949
+* @see \App\Http\Controllers\ProformaController::show
+ * @see app/Http/Controllers/ProformaController.php:129
  * @route '/proformas/{proforma}'
  */
-show.url = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+show.url = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { proforma: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { proforma: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -115,9 +112,7 @@ show.url = (args: { proforma: number | { id: number } } | [proforma: number | { 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        proforma: typeof args.proforma === 'object'
-                ? args.proforma.id
-                : args.proforma,
+                        proforma: args.proforma,
                 }
 
     return show.definition.url
@@ -126,49 +121,49 @@ show.url = (args: { proforma: number | { id: number } } | [proforma: number | { 
 }
 
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::show
- * @see app/Http/Controllers/Api/ApiProformaController.php:1949
+* @see \App\Http\Controllers\ProformaController::show
+ * @see app/Http/Controllers/ProformaController.php:129
  * @route '/proformas/{proforma}'
  */
-show.get = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
 /**
-* @see \App\Http\Controllers\Api\ApiProformaController::show
- * @see app/Http/Controllers/Api/ApiProformaController.php:1949
+* @see \App\Http\Controllers\ProformaController::show
+ * @see app/Http/Controllers/ProformaController.php:129
  * @route '/proformas/{proforma}'
  */
-show.head = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
 
     /**
-* @see \App\Http\Controllers\Api\ApiProformaController::show
- * @see app/Http/Controllers/Api/ApiProformaController.php:1949
+* @see \App\Http\Controllers\ProformaController::show
+ * @see app/Http/Controllers/ProformaController.php:129
  * @route '/proformas/{proforma}'
  */
-    const showForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
 
             /**
-* @see \App\Http\Controllers\Api\ApiProformaController::show
- * @see app/Http/Controllers/Api/ApiProformaController.php:1949
+* @see \App\Http\Controllers\ProformaController::show
+ * @see app/Http/Controllers/ProformaController.php:129
  * @route '/proformas/{proforma}'
  */
-        showForm.get = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
             /**
-* @see \App\Http\Controllers\Api\ApiProformaController::show
- * @see app/Http/Controllers/Api/ApiProformaController.php:1949
+* @see \App\Http\Controllers\ProformaController::show
+ * @see app/Http/Controllers/ProformaController.php:129
  * @route '/proformas/{proforma}'
  */
-        showForm.head = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { proforma: string | number } | [proforma: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',

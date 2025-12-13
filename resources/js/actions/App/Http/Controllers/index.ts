@@ -17,7 +17,6 @@ import CategoriaClienteController from './CategoriaClienteController'
 import ProveedorController from './ProveedorController'
 import ImageBackupController from './ImageBackupController'
 import DashboardController from './DashboardController'
-import RolController from './RolController'
 import RoleController from './RoleController'
 import CategoriaController from './CategoriaController'
 import MarcaController from './MarcaController'
@@ -35,6 +34,7 @@ import LoteVencimientoController from './LoteVencimientoController'
 import ReporteComprasController from './ReporteComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
+import ProformaController from './ProformaController'
 import CajaController from './CajaController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import VehiculoController from './VehiculoController'
@@ -71,7 +71,6 @@ CategoriaClienteController,
 ProveedorController,
 ImageBackupController,
 DashboardController,
-RolController,
 RoleController,
 CategoriaController,
 MarcaController,
@@ -89,6 +88,7 @@ LoteVencimientoController,
 ReporteComprasController,
 DetalleCompraController,
 DetalleVentaController,
+ProformaController,
 CajaController,
 TipoAjusteInventarioController,
 VehiculoController,

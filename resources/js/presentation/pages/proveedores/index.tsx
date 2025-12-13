@@ -1,7 +1,7 @@
 // Pages: Proveedores index page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { proveedoresConfig } from '@/config/proveedores.config';
+import { proveedoresConfig } from '@/config/modules/proveedores.config';
 import proveedoresService from '@/infrastructure/services/proveedores.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Proveedor, ProveedorFormData } from '@/domain/entities/proveedores';

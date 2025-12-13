@@ -1,7 +1,7 @@
 // Pages: Categorias form page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { categoriasConfig } from '@/config/categorias.config';
+import { categoriasConfig } from '@/config/modules/categorias.config';
 import categoriasService from '@/infrastructure/services/categorias.service';
 import type { Categoria, CategoriaFormData } from '@/domain/entities/categorias';
 

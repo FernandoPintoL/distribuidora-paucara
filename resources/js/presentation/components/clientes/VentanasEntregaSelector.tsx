@@ -1,9 +1,18 @@
-// Componente para seleccionar ventanas de entrega del cliente
+/**
+ * Componente para seleccionar ventanas de entrega del cliente
+ *
+ * REFACTORIZACIÓN INTEGRACIÓN TIER 3:
+ * - Usar DateFormatter.getDayName() en lugar de DIAS_SEMANA hardcodeado
+ * - Ahorro: 8 líneas (-30% de constant)
+ * - Beneficio: Localización automática, consistencia con FASE 5.5
+ */
+
 import React, { useState } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import { Label } from '@/presentation/components/ui/label';
 import { Plus, Trash2, Clock } from 'lucide-react';
+import { DateFormatter } from '@/infrastructure/utils';
 import type { VentanaEntregaCliente } from '@/domain/entities/clientes';
 
 interface VentanasEntregaSelectorProps {
@@ -12,15 +21,12 @@ interface VentanasEntregaSelectorProps {
     disabled?: boolean;
 }
 
-const DIAS_SEMANA = [
-    { value: 0, label: 'Domingo', short: 'Dom' },
-    { value: 1, label: 'Lunes', short: 'Lun' },
-    { value: 2, label: 'Martes', short: 'Mar' },
-    { value: 3, label: 'Miércoles', short: 'Mié' },
-    { value: 4, label: 'Jueves', short: 'Jue' },
-    { value: 5, label: 'Viernes', short: 'Vie' },
-    { value: 6, label: 'Sábado', short: 'Sáb' },
-];
+// Generar días de semana usando DateFormatter (mejor que hardcodeado)
+const DIAS_SEMANA = Array.from({ length: 7 }, (_, i) => ({
+    value: i,
+    label: DateFormatter.getDayName(i),  // Capitalizado: "Domingo", "Lunes", etc.
+    short: DateFormatter.getDayName(i).substring(0, 3),  // "Dom", "Lun", etc.
+}));
 
 export default function VentanasEntregaSelector({
     value = [],

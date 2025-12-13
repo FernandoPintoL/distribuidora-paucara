@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TipoDocumento extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'tipos_documento';
 
@@ -23,12 +24,15 @@ class TipoDocumento extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'genera_inventario' => 'boolean',
-        'requiere_autorizacion' => 'boolean',
-        'siguiente_numero' => 'integer',
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'genera_inventario' => 'boolean',
+            'requiere_autorizacion' => 'boolean',
+            'siguiente_numero' => 'integer',
+            'activo' => 'boolean',
+        ];
+    }
 
     /**
      * Relación con ventas
@@ -49,10 +53,6 @@ class TipoDocumento extends Model
     /**
      * Scope para tipos de documento activos
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     /**
      * Obtener el siguiente número para auto-numeración

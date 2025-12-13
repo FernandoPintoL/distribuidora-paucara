@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ConteoFisico extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode;
 
     protected $table = 'conteos_fisicos';
 
@@ -34,18 +35,21 @@ class ConteoFisico extends Model
         'ajustes_aplicados'
     ];
 
-    protected $casts = [
-        'fecha_programada' => 'date',
-        'fecha_inicio' => 'datetime',
-        'fecha_finalizacion' => 'datetime',
-        'fecha_aprobacion' => 'datetime',
-        'filtros' => 'array',
-        'total_productos_esperados' => 'decimal:0',
-        'total_productos_contados' => 'decimal:0',
-        'total_diferencias' => 'decimal:0',
-        'valor_diferencias' => 'decimal:2',
-        'ajustes_aplicados' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_programada' => 'date',
+            'fecha_inicio' => 'datetime',
+            'fecha_finalizacion' => 'datetime',
+            'fecha_aprobacion' => 'datetime',
+            'filtros' => 'array',
+            'total_productos_esperados' => 'decimal:0',
+            'total_productos_contados' => 'decimal:0',
+            'total_diferencias' => 'decimal:0',
+            'valor_diferencias' => 'decimal:2',
+            'ajustes_aplicados' => 'boolean',
+        ];
+    }
 
     // Estados
     const ESTADO_PLANIFICADO = 'planificado';
@@ -244,13 +248,13 @@ class ConteoFisico extends Model
         return abs($this->valor_diferencias) > $umbral;
     }
 
-    // Métodos estáticos
+    /**
+     * Generar código de conteo físico
+     * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
+     */
     public static function generarCodigo(): string
     {
-        $year = date('Y');
-        $ultimo = self::whereYear('created_at', $year)->count() + 1;
-
-        return "CF-{$year}-" . str_pad($ultimo, 3, '0', STR_PAD_LEFT);
+        return static::generateSequentialCode('CF', 'codigo', true, 'Y', 6);
     }
 
     public static function programarConteosCiclicos($almacenId, $frecuenciaDias = 30)

@@ -23,10 +23,13 @@ class MovimientoCaja extends Model
         'tipo_operacion_id',
     ];
 
-    protected $casts = [
-        'fecha' => 'datetime',
-        'monto' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha' => 'datetime',
+            'monto' => 'decimal:2',
+        ];
+    }
 
     // Relaciones
     public function caja()

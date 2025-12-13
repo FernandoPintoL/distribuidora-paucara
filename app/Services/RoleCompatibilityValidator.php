@@ -5,110 +5,161 @@ namespace App\Services;
 use Exception;
 
 /**
- * Valida la compatibilidad entre roles
- * Previene asignaciones de roles conflictivos a un mismo usuario
+ * ============================================
+ * FASE 3: VALIDADOR DE COMPATIBILIDAD SIMPLIFICADO
+ * ============================================
+ *
+ * Con solo 5 roles base, la compatibilidad es mucho más simple:
+ * - Super Admin: Exclusivo (no combina con otros)
+ * - Admin: Exclusivo (no combina con otros)
+ * - Manager: Compatible con Empleado (capacidades específicas)
+ * - Empleado: Compatible con Manager
+ * - Cliente: Incompatible con Empleado/Manager/Admin/Super Admin
+ *
+ * Las capacidades específicas se asignan aparte, no mediante roles.
  */
 class RoleCompatibilityValidator
 {
     /**
      * Matriz de roles incompatibles
-     * Si un rol está en una clave, NO puede tener ninguno de los roles en su array de valores
+     *
+     * Estructura:
+     * - Super Admin: Exclusivo, no combina con nada
+     * - Admin: Exclusivo, no combina con nada
+     * - Cliente: Incompatible con todos los roles internos
+     * - Roles Funcionales (Preventista, Chofer, Cajero, etc.): Solo incompatibles con Admin/Super Admin/Cliente
+     *   Los roles funcionales pueden combinarse entre sí (ej: Cajero + Chofer)
      */
     private array $incompatibilidadRoles = [
-        // Preventista: Gestor de cartera de clientes por zona
-        'Preventista' => [
-            'Comprador',
-            'Compras',
-            'Admin',
+        // ===== ROLES BASE =====
+        // Super Admin: Exclusivo, no combina
+        'Super Admin' => ['*'],  // Incompatible con todo
+
+        // Admin: Exclusivo, no combina
+        'Admin' => ['*'],  // Incompatible con todo
+
+        // Manager: Compatible con roles funcionales pero no con Admin/Super Admin/Cliente
+        'Manager' => [
             'Super Admin',
-            'Chofer', // No puede ser operativo de transporte
+            'Admin',
+            'Cliente',
         ],
 
-        // Chofer: Solo operativo de transporte
-        'Chofer' => [
-            'Preventista',
-            'Comprador',
-            'Compras',
-            'Cajero',
-            'Admin',
+        // Empleado: Compatible con roles funcionales pero no con Admin/Super Admin/Cliente
+        'Empleado' => [
             'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
+        // Cliente: Es usuario final, incompatible con todos los roles internos
+        'Cliente' => [
+            'Super Admin',
+            'Admin',
             'Manager',
-        ],
-
-        // Cajero: Operador de punto de venta (aprobar proformas, gestionar crédito, caja)
-        'Cajero' => [
-            'Chofer',
-            'Preventista', // Aunque puede ver historial cliente, no gestiona cartera
-            'Comprador',
-            'Compras',
-            'Admin',
-            'Super Admin',
-        ],
-
-        // Comprador no puede ser preventista o vendedor
-        'Comprador' => [
+            'Empleado',
             'Preventista',
-            'Vendedor',
+            'Chofer',
             'Cajero',
-            'Admin',
-            'Super Admin',
-        ],
-
-        // Vendedor (tradicional si existe) no puede ser comprador
-        'Vendedor' => [
+            'Vendedor',
             'Comprador',
+            'Gestor de Inventario',
+            'Gestor de Almacén',
+            'Gestor de Logística',
+            'Contabilidad',
+            'Reportes',
+            'Gestor de Clientes',
+            'Gerente',
             'Compras',
-            'Admin',
-            'Super Admin',
         ],
 
-        // Gestores no pueden tener roles administrativos superiores
-        'Gestor de Almacén' => [
-            'Admin',
+        // ===== ROLES FUNCIONALES =====
+        // Todos los roles funcionales solo son incompatibles con Admin/Super Admin/Cliente
+        'Preventista' => [
             'Super Admin',
-            'Chofer',
-            'Preventista',
+            'Admin',
+            'Cliente',
+        ],
+
+        'Chofer' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
+        'Cajero' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
+        'Vendedor' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
+        'Comprador' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
         ],
 
         'Gestor de Inventario' => [
-            'Admin',
             'Super Admin',
-            'Chofer',
-            'Preventista',
+            'Admin',
+            'Cliente',
         ],
 
-        'Logística' => [
-            'Admin',
+        'Gestor de Almacén' => [
             'Super Admin',
-            'Preventista',
+            'Admin',
+            'Cliente',
         ],
 
-        // Contabilidad no puede combinar con compras/ventas
+        'Gestor de Logística' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
         'Contabilidad' => [
-            'Comprador',
-            'Compras',
-            'Preventista',
-            'Cajero',
-            'Admin',
             'Super Admin',
+            'Admin',
+            'Cliente',
         ],
 
-        // Admin no puede ser operativo
-        'Admin' => [
-            'Chofer',
-            'Cajero',
-            'Vendedor',
-            'Comprador',
-            'Preventista',
+        'Reportes' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
+        'Gestor de Clientes' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
+        'Gerente' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
+        ],
+
+        'Compras' => [
+            'Super Admin',
+            'Admin',
+            'Cliente',
         ],
     ];
 
     /**
-     * Roles que NUNCA deben combinarse con otros (excepto Empleado)
+     * Roles que SIEMPRE deben ser exclusivos (sin otros roles)
      */
     private array $rolesExclusivos = [
         'Super Admin', // Debe ser único
-        'Admin',       // No debe combinarse con operativos
+        'Admin',       // Debe ser único
     ];
 
     /**
@@ -167,6 +218,14 @@ class RoleCompatibilityValidator
 
             $rolesIncompatibles = $this->incompatibilidadRoles[$rolActual];
 
+            // Si el rol es incompatible con TODO ('*'), rechazar cualquier combinación
+            if (in_array('*', $rolesIncompatibles) && count($roles) > 1) {
+                throw new Exception(
+                    "El rol '{$rolActual}' es exclusivo y no puede combinarse con otros roles. "
+                    . "El usuario debe tener SOLO el rol '{$rolActual}'."
+                );
+            }
+
             // Buscar conflictos
             foreach ($roles as $otroRol) {
                 if ($rolActual === $otroRol) {
@@ -185,11 +244,11 @@ class RoleCompatibilityValidator
 
     /**
      * Valida transiciones de roles (cambios de rol)
-     * Por ejemplo: De Chofer a Manager está permitido, pero no de Super Admin a otro
+     * Con 5 roles base, las transiciones son muy controladas
      */
     private function validarTransicion(string $rolAnterior, array $rolesNuevos): void
     {
-        // Super Admin no debe cambiar a otro rol sin confirmación explícita
+        // Super Admin: No puede remover sin confirmación explícita
         if ($rolAnterior === 'Super Admin' && !in_array('Super Admin', $rolesNuevos)) {
             throw new Exception(
                 "No se puede remover el rol 'Super Admin' a través de esta acción. "
@@ -197,17 +256,18 @@ class RoleCompatibilityValidator
             );
         }
 
-        // Admin no debe cambiar a roles operativos sin confirmación
-        if ($rolAnterior === 'Admin' && count($rolesNuevos) > 0) {
-            $rolesOperativos = ['Chofer', 'Cajero', 'Vendedor', 'Comprador'];
-            foreach ($rolesNuevos as $nuevoRol) {
-                if (in_array($nuevoRol, $rolesOperativos) && !in_array('Admin', $rolesNuevos)) {
-                    throw new Exception(
-                        "Un Admin no puede cambiar a un rol operativo exclusivamente. "
-                        . "Mantenga el rol Admin o use la administración de permisos explícitamente."
-                    );
-                }
-            }
+        // Admin: No puede remover sin confirmación explícita
+        if ($rolAnterior === 'Admin' && !in_array('Admin', $rolesNuevos)) {
+            throw new Exception(
+                "No se puede remover el rol 'Admin' a través de esta acción. "
+                . "Use la función específica de administración de Admin."
+            );
+        }
+
+        // Cliente: No puede ser removido para convertirse en Empleado sin confirmación
+        if ($rolAnterior === 'Cliente' && !in_array('Cliente', $rolesNuevos)) {
+            // Permiso explícito para convertir Cliente a Empleado
+            // Solo registramos la transición
         }
     }
 

@@ -21,9 +21,13 @@ foreach ($localidades as $loc) {
         [
             'nombre' => $loc->nombre,
             'descripcion' => 'Zona para ' . $loc->nombre,
-            'estado' => 'activo',
+            'activa' => true,
         ]
     );
+
+    // Agregar a tabla pivot (sin eliminar otras localidades)
+    $zona->localidades()->syncWithoutDetaching([$loc->id]);
+
     echo "  ✅ Zona creada/actualizada: ID {$zona->id} = {$loc->nombre}\n";
 }
 

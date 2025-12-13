@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -148,5 +149,64 @@ class User extends Authenticatable
 
         $validator = new \App\Services\RoleCompatibilityValidator();
         return $validator->obtenerCompatibles($rolActual, $rolesDisponibles);
+    }
+
+    /**
+     * ============================================
+     * FASE 4: Relaciones ABAC (Atributos)
+     * ============================================
+     */
+
+    /**
+     * Atributos del usuario (zona, departamento, sucursal, etc.)
+     */
+    public function attributes(): HasMany
+    {
+        return $this->hasMany(UserAttribute::class);
+    }
+
+    /**
+     * Obtener atributo primario de un tipo
+     */
+    public function getAttributo(string $type): ?UserAttribute
+    {
+        return $this->attributes()
+            ->where('attribute_type', $type)
+            ->where('is_primary', true)
+            ->where(function ($query) {
+                $now = now();
+                $query->where(function ($q) use ($now) {
+                    $q->whereNull('valid_from')->orWhere('valid_from', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('valid_until')->orWhere('valid_until', '>=', $now);
+                });
+            })
+            ->first();
+    }
+
+    /**
+     * Obtener todos los atributos vigentes agrupados por tipo
+     */
+    public function getAttributos(): array
+    {
+        $attrs = $this->attributes()
+            ->where(function ($query) {
+                $now = now();
+                $query->where(function ($q) use ($now) {
+                    $q->whereNull('valid_from')->orWhere('valid_from', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('valid_until')->orWhere('valid_until', '>=', $now);
+                });
+            })
+            ->get()
+            ->groupBy('attribute_type');
+
+        $result = [];
+        foreach ($attrs as $type => $attributes) {
+            $result[$type] = $attributes->pluck('attribute_value')->toArray();
+        }
+        return $result;
     }
 }

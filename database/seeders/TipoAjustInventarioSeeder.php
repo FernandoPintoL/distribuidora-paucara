@@ -45,7 +45,7 @@ class TipoAjustInventarioSeeder extends Seeder
             ],
         ];
         foreach ($tipos as $tipo) {
-            \App\Models\TipoAjustInventario::updateOrCreate([
+            \App\Models\TipoAjusteInventario::updateOrCreate([
                 'clave' => $tipo['clave'],
             ], $tipo);
         }

@@ -1,7 +1,7 @@
 import React from 'react';
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { vehiculosConfig } from '@/config/vehiculos.config';
+import { vehiculosConfig } from '@/config/modules/vehiculos.config';
 import vehiculosService from '@/infrastructure/services/vehiculos.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Vehiculo, VehiculoFormData } from '@/domain/entities/vehiculos';

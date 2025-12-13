@@ -11,17 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tipos_ajuste_inventario', function (Blueprint $table) {
-            $table->id();
-            $table->string('clave')->unique();
-            $table->string('label');
-            $table->text('descripcion')->nullable();
-            $table->string('color')->nullable();
-            $table->string('bg_color')->nullable();
-            $table->string('text_color')->nullable();
-            $table->boolean('activo')->default(true);
-            $table->timestamps();
-        });
+        // Si la tabla ya existe, no hacer nada
+        if (!Schema::hasTable('tipos_ajuste_inventario')) {
+            Schema::create('tipos_ajuste_inventario', function (Blueprint $table) {
+                $table->id();
+                $table->string('clave')->unique();
+                $table->string('label');
+                $table->text('descripcion')->nullable();
+                $table->string('color')->nullable();
+                $table->string('bg_color')->nullable();
+                $table->string('text_color')->nullable();
+                $table->boolean('activo')->default(true);
+                $table->timestamps();
+            });
+        }
     }
 
     /**

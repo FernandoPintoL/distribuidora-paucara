@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Moneda extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'monedas';
 
@@ -20,18 +21,16 @@ class Moneda extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'tasa_cambio' => 'decimal:6',
-        'es_moneda_base' => 'boolean',
-        'activo' => 'boolean',
-    ];
-
-    // Scopes
-    public function scopeActivas($query)
+    protected function casts(): array
     {
-        return $query->where('activo', true);
+        return [
+            'tasa_cambio' => 'decimal:6',
+            'es_moneda_base' => 'boolean',
+            'activo' => 'boolean',
+        ];
     }
 
+    // Scopes
     public function scopeMonedaBase($query)
     {
         return $query->where('es_moneda_base', true);

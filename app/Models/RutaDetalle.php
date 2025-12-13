@@ -28,12 +28,15 @@ class RutaDetalle extends Model
         'intentos_entrega',
     ];
 
-    protected $casts = [
-        'latitud' => 'decimal:8',
-        'longitud' => 'decimal:8',
-        'hora_entrega_estimada' => 'datetime',
-        'hora_entrega_real' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'latitud' => 'decimal:8',
+            'longitud' => 'decimal:8',
+            'hora_entrega_estimada' => 'datetime',
+            'hora_entrega_real' => 'datetime',
+        ];
+    }
 
     /**
      * Ruta a la que pertenece

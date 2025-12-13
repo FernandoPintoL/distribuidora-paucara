@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class TransferenciaInventario extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode;
 
     protected $fillable = [
         'numero',
@@ -27,11 +28,14 @@ class TransferenciaInventario extends Model
         'total_cantidad',
     ];
 
-    protected $casts = [
-        'fecha'           => 'datetime',
-        'fecha_envio'     => 'datetime',
-        'fecha_recepcion' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha'           => 'datetime',
+            'fecha_envio'     => 'datetime',
+            'fecha_recepcion' => 'datetime',
+        ];
+    }
 
     // Estados de transferencia
     const ESTADO_BORRADOR = 'BORRADOR';
@@ -231,12 +235,11 @@ class TransferenciaInventario extends Model
 
     /**
      * Generar número de transferencia
+     * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
      */
     public static function generarNumero(): string
     {
-        $ultimo = self::whereDate('created_at', today())->count();
-
-        return 'TRANS-' . today()->format('Ymd') . '-' . str_pad($ultimo + 1, 4, '0', STR_PAD_LEFT);
+        return static::generateSequentialCode('TRANS', 'numero', true, 'Ymd', 6);
     }
 
     /**

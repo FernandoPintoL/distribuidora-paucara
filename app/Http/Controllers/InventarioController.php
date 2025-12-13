@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Requests\CreateMovimientoRequest;
 use App\Http\Requests\StoreAjusteInventarioRequest;
 use App\Http\Requests\StoreMermaRequest;
 use App\Http\Requests\StoreTransferenciaInventarioRequest;
@@ -13,7 +14,7 @@ use App\Models\EstadoMerma;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
-use App\Models\TipoAjustInventario;
+use App\Models\TipoAjusteInventario;
 use App\Models\TipoMerma;
 use App\Models\TipoOperacion;
 use App\Models\TransferenciaInventario;
@@ -378,7 +379,7 @@ class InventarioController extends Controller
             });
 
         $tipo_mermas              = TipoMerma::all();
-        $tipos_ajueste_inventario = TipoAjustInventario::where('activo', true)
+        $tipos_ajueste_inventario = TipoAjusteInventario::where('activo', true)
             ->select('id', 'clave', 'label')
             ->orderBy('label')
             ->get();
@@ -570,14 +571,10 @@ class InventarioController extends Controller
     /**
      * API: Crear movimiento manual de inventario
      */
-    public function crearMovimiento(Request $request): JsonResponse
+    public function crearMovimiento(CreateMovimientoRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'stock_producto_id' => ['required', 'exists:stock_productos,id'],
-            'cantidad'          => ['required', 'integer', 'not_in:0'],
-            'tipo'              => ['required', 'in:entrada_ajuste,salida_ajuste'],
-            'observacion'       => ['required', 'string', 'max:500'],
-        ]);
+        // Data already validated by CreateMovimientoRequest
+        $data = $request->validated();
 
         try {
             $stockProducto = StockProducto::findOrFail($data['stock_producto_id']);
@@ -1262,7 +1259,7 @@ class InventarioController extends Controller
     public function ajusteMasivoForm(Request $request): Response
     {
         $almacenes      = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'activo']);
-        $tiposAjuste    = TipoAjustInventario::where('activo', true)->get();
+        $tiposAjuste    = TipoAjusteInventario::where('activo', true)->get();
         $tiposMerma     = TipoMerma::where('activo', true)->get();
         $tiposOperacion = TipoOperacion::where('activo', true)->get();
         $productos      = Producto::all(['id', 'sku', 'nombre'])->take(1000);

@@ -22,10 +22,13 @@ class TipoMerma extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'requiere_aprobacion' => 'boolean',
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'requiere_aprobacion' => 'boolean',
+            'activo' => 'boolean',
+        ];
+    }
 
     public function movimientosInventario()
     {

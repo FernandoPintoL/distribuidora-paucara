@@ -50,6 +50,39 @@ class ProformaService
     ) {}
 
     /**
+     * Listar proformas con filtros
+     */
+    public function listar(int $perPage = 15, array $filtros = [])
+    {
+        $query = Proforma::query();
+
+        // Filtrar por estado
+        if (!empty($filtros['estado'])) {
+            $query->where('estado', $filtros['estado']);
+        }
+
+        // Filtrar por cliente
+        if (!empty($filtros['cliente_id'])) {
+            $query->where('cliente_id', $filtros['cliente_id']);
+        }
+
+        // Buscar por número o cliente
+        if (!empty($filtros['q'])) {
+            $search = $filtros['q'];
+            $query->where(function ($q) use ($search) {
+                $q->where('numero', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', function ($q) use ($search) {
+                      $q->where('nombre', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        return $query->with(['cliente', 'detalles'])
+                    ->latest()
+                    ->paginate($perPage);
+    }
+
+    /**
      * Crear una proforma
      *
      * FLUJO:

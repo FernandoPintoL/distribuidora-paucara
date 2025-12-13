@@ -25,15 +25,18 @@ class UbicacionTracking extends Model
         'evento',
     ];
 
-    protected $casts = [
-        'latitud' => 'decimal:7',
-        'longitud' => 'decimal:7',
-        'altitud' => 'decimal:2',
-        'precision' => 'decimal:2',
-        'velocidad' => 'decimal:2',
-        'rumbo' => 'decimal:2',
-        'timestamp' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'latitud' => 'decimal:7',
+            'longitud' => 'decimal:7',
+            'altitud' => 'decimal:2',
+            'precision' => 'decimal:2',
+            'velocidad' => 'decimal:2',
+            'rumbo' => 'decimal:2',
+            'timestamp' => 'datetime',
+        ];
+    }
 
     /**
      * Relaciones

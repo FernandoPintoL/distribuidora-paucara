@@ -1,12 +1,13 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PrecioProducto extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'precios_producto';
 
@@ -25,15 +26,18 @@ class PrecioProducto extends Model
         'motivo_cambio',
     ];
 
-    protected $casts = [
-        'precio'              => 'decimal:2',
-        'fecha_inicio'        => 'date',
-        'fecha_fin'           => 'date',
-        'activo'              => 'boolean',
-        'margen_ganancia'     => 'decimal:2',
-        'porcentaje_ganancia' => 'decimal:2',
-        'es_precio_base'      => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'precio'              => 'decimal:2',
+            'fecha_inicio'        => 'date',
+            'fecha_fin'           => 'date',
+            'activo'              => 'boolean',
+            'margen_ganancia'     => 'decimal:2',
+            'porcentaje_ganancia' => 'decimal:2',
+            'es_precio_base'      => 'boolean',
+        ];
+    }
 
     /**
      * Relaciones
@@ -81,10 +85,6 @@ class PrecioProducto extends Model
         return $query->whereNull('tipo_precio_id'); // No encontrado
     }
 
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     public function scopePrecioBase($query)
     {

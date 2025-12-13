@@ -5,6 +5,7 @@ use App\Http\Requests\ActualizarUbicacionRequest;
 use App\Http\Requests\CancelarEnvioRequest;
 use App\Http\Requests\ConfirmarEntregaRequest;
 use App\Http\Requests\ProgramarEnvioRequest;
+use App\Http\Requests\RechazarEntregaRequest;
 use App\Http\Requests\StoreEnvioRequest;
 use App\Models\Envio;
 use App\Models\Proforma;
@@ -299,18 +300,10 @@ class EnvioController extends Controller
     }
 
     // ✅ NUEVO: Rechazar entrega (chofer/cliente reporte problema)
-    public function rechazarEntrega(Envio $envio, Request $request)
+    public function rechazarEntrega(Envio $envio, RechazarEntregaRequest $request)
     {
-        $request->validate([
-            'tipo_rechazo'     => 'required|in:cliente_ausente,tienda_cerrada,otro_problema',
-            'motivo_detallado' => 'nullable|string|max:500',
-            'fotos'            => 'nullable|array|max:5',
-            'fotos.*'          => 'image|max:5120', // 5MB cada foto
-        ]);
-
-        if (! $envio->puedeRechazarEntrega()) {
-            return back()->withErrors(['error' => 'Este envío no puede rechazarse en este momento']);
-        }
+        // Data already validated by RechazarEntregaRequest
+        $data = $request->validated();
 
         DB::beginTransaction();
         try {

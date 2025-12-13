@@ -128,6 +128,53 @@ class RutaService
     }
 
     /**
+     * Planificar rutas diarias - Adapter para CLI y API controllers
+     *
+     * Retorna estructura esperada por PlanificarRutasDiarias command y RutaApiController
+     *
+     * @param \DateTime $fecha
+     * @return array ['exitoso' => bool, 'error' => string|null, 'rutas_creadas' => int, 'rutas' => array, 'mensaje' => string]
+     */
+    public function planificarRutasDiarias(\DateTime $fecha): array
+    {
+        try {
+            $rutas = $this->planificar($fecha);
+
+            $rutasFormateadas = array_map(function ($ruta) {
+                return [
+                    'codigo' => $ruta->codigo ?? $ruta->numero ?? "RTA-" . $ruta->id,
+                    'localidad' => $ruta->zona?->nombre ?? 'N/A',
+                    'paradas' => $ruta->cantidad_entregas ?? 0,
+                    'distancia_km' => $ruta->distancia_km ?? 0,
+                    'chofer' => $ruta->chofer?->user?->name ?? 'Sin asignar',
+                    'vehiculo' => $ruta->vehiculo?->placa ?? 'Sin asignar',
+                ];
+            }, $rutas);
+
+            return [
+                'exitoso' => true,
+                'error' => null,
+                'rutas_creadas' => count($rutas),
+                'rutas' => $rutasFormateadas,
+                'mensaje' => $rutas ? 'Rutas planificadas exitosamente' : 'Sin entregas para planificar',
+            ];
+        } catch (\Exception $e) {
+            $this->logError('Error en planificarRutasDiarias', [
+                'fecha' => $fecha->toDateString(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'exitoso' => false,
+                'error' => $e->getMessage(),
+                'rutas_creadas' => 0,
+                'rutas' => [],
+                'mensaje' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Crear una ruta manualmente
      */
     public function crear(CrearRutaDTO $dto): RutaResponseDTO
@@ -308,6 +355,96 @@ class RutaService
                 $estadoNuevo
             );
         }
+    }
+
+    /**
+     * Registrar una entrega en una ruta
+     *
+     * @param RutaDetalle $detalle
+     * @param array $datos (estado, razon, etc)
+     * @return bool
+     */
+    public function registrarEntrega(RutaDetalle $detalle, array $datos): bool
+    {
+        if (!isset($datos['estado']) || !in_array($datos['estado'], ['entregado', 'no_entregado', 'reprogramado'])) {
+            throw new \Exception('Estado de entrega inválido');
+        }
+
+        if ($datos['estado'] === 'entregado') {
+            return $detalle->marcarEntregado($datos);
+        } elseif ($datos['estado'] === 'no_entregado') {
+            return $detalle->marcarNoEntregado($datos['razon'] ?? 'Sin especificar');
+        } elseif ($datos['estado'] === 'reprogramado') {
+            return $detalle->reprogramar($datos['razon'] ?? 'Reprogramado');
+        }
+
+        return false;
+    }
+
+    /**
+     * Obtener estadísticas de una ruta
+     */
+    public function obtenerEstadisticas(Ruta $ruta): array
+    {
+        $progreso = $ruta->obtenerProgreso();
+
+        return array_merge($progreso, [
+            'estado' => $ruta->estado,
+            'chofer' => $ruta->chofer?->user?->name,
+            'zona' => $ruta->zona?->nombre,
+            'distancia_km' => $ruta->distancia_km,
+            'hora_salida' => $ruta->hora_salida,
+            'hora_llegada' => $ruta->hora_llegada,
+            'tiempo_real_minutos' => $ruta->tiempo_real_minutos,
+        ]);
+    }
+
+    /**
+     * Validar que una ruta puede ser iniciada
+     */
+    public function validarInicio(Ruta $ruta): array
+    {
+        $errores = [];
+
+        if ($ruta->estado !== 'PLANIFICADA' && $ruta->estado !== 'planificada') {
+            $errores[] = "La ruta debe estar en estado planificada";
+        }
+
+        if ($ruta->detalles()->count() === 0) {
+            $errores[] = "La ruta no tiene entregas asignadas";
+        }
+
+        if (!$ruta->chofer || !$ruta->chofer->licencia_vigente) {
+            $errores[] = "El chofer no tiene licencia vigente";
+        }
+
+        return $errores;
+    }
+
+    /**
+     * Iniciar una ruta
+     */
+    public function iniciarRuta(Ruta $ruta): bool
+    {
+        $errores = $this->validarInicio($ruta);
+
+        if (!empty($errores)) {
+            throw new \Exception(implode(', ', $errores));
+        }
+
+        return $this->cambiarEstado($ruta->id, 'EN_PROCESO')->id > 0;
+    }
+
+    /**
+     * Completar una ruta
+     */
+    public function completarRuta(Ruta $ruta): bool
+    {
+        if ($ruta->estado !== 'EN_PROCESO' && $ruta->estado !== 'en_progreso') {
+            throw new \Exception('Solo se pueden completar rutas en progreso');
+        }
+
+        return $this->cambiarEstado($ruta->id, 'COMPLETADA')->id > 0;
     }
 
     /**

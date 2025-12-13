@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -8,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Vehiculo extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $fillable = [
         'placa',
@@ -23,12 +24,15 @@ class Vehiculo extends Model
         'observaciones',
     ];
 
-    protected $casts = [
-        'anho'              => 'integer',
-        'capacidad_kg'      => 'decimal:2',
-        'capacidad_volumen' => 'decimal:2',
-        'activo'            => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'anho'              => 'integer',
+            'capacidad_kg'      => 'decimal:2',
+            'capacidad_volumen' => 'decimal:2',
+            'activo'            => 'boolean',
+        ];
+    }
 
     // Estados del vehículo
     const DISPONIBLE = 'DISPONIBLE';
@@ -53,10 +57,6 @@ class Vehiculo extends Model
     /**
      * Vehículos activos
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     /**
      * Vehículos disponibles

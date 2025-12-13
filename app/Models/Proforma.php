@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Proforma extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode;
 
     protected $fillable = [
         'numero',
@@ -42,22 +43,25 @@ class Proforma extends Model
         'comentario_coordinacion',
     ];
 
-    protected $casts = [
-        'fecha' => 'date',
-        'fecha_vencimiento' => 'date',
-        'fecha_aprobacion' => 'datetime',
-        'subtotal' => 'decimal:2',
-        'descuento' => 'decimal:2',
-        'impuesto' => 'decimal:2',
-        'total' => 'decimal:2',
-        // Solicitud de entrega del cliente
-        'fecha_entrega_solicitada' => 'date',
-        'hora_entrega_solicitada' => 'datetime:H:i',
-        // Confirmación de entrega del vendedor
-        'fecha_entrega_confirmada' => 'date',
-        'hora_entrega_confirmada' => 'datetime:H:i',
-        'coordinacion_completada' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha' => 'date',
+            'fecha_vencimiento' => 'date',
+            'fecha_aprobacion' => 'datetime',
+            'subtotal' => 'decimal:2',
+            'descuento' => 'decimal:2',
+            'impuesto' => 'decimal:2',
+            'total' => 'decimal:2',
+            // Solicitud de entrega del cliente
+            'fecha_entrega_solicitada' => 'date',
+            'hora_entrega_solicitada' => 'datetime:H:i',
+            // Confirmación de entrega del vendedor
+            'fecha_entrega_confirmada' => 'date',
+            'hora_entrega_confirmada' => 'datetime:H:i',
+            'coordinacion_completada' => 'boolean',
+        ];
+    }
 
     // Estados de la proforma
     const PENDIENTE = 'PENDIENTE';
@@ -167,14 +171,15 @@ class Proforma extends Model
         return $this->canal_origen === self::CANAL_APP_EXTERNA;
     }
 
-    // Generar número de proforma
+    /**
+     * Generar número de proforma con protección contra race conditions
+     * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
+     * Formato: PRO + FECHA + SECUENCIAL
+     * Ejemplo: PRO20250000001
+     */
     public static function generarNumeroProforma(): string
     {
-        $fecha = now()->format('Ymd');
-        $ultimo = self::whereDate('created_at', now()->toDateString())
-            ->count() + 1;
-
-        return "PRO-{$fecha}-".str_pad($ultimo, 4, '0', STR_PAD_LEFT);
+        return static::generateSequentialCode('PRO', 'numero', true, 'Ymd', 6);
     }
 
     // Scopes

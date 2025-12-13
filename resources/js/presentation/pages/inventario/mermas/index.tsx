@@ -5,13 +5,13 @@ import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useAuth } from '@/application/hooks/use-auth';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
-import {
+import type {
     MermaInventario,
     FiltrosMermas,
-    Almacen,
     TipoMerma,
     EstadoMerma
-} from '@/types/inventario';
+} from '@/domain/entities/mermas-inventario';
+import type { Almacen } from '@/domain/entities/almacenes';
 import { useTipoMermas } from '@/stores/useTipoMermas';
 import { useEstadoMermas } from '@/stores/useEstadoMermas';
 import { TipoMermaCrudModal } from '@/presentation/components/Inventario/TipoMermaCrudModal';

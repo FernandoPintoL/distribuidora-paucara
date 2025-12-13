@@ -60,8 +60,8 @@ class ProformaController extends Controller
 
             return $this->respondPaginated(
                 $proformasPaginadas,
-                'Proformas/Index',
-                ['filtros' => $filtros]
+                'proformas/Index',
+                ['proformas' => $proformasPaginadas, 'filtros' => $filtros]
             );
 
         } catch (\Exception $e) {
@@ -74,10 +74,10 @@ class ProformaController extends Controller
      */
     public function create(): InertiaResponse
     {
-        return Inertia::render('Proformas/Create', [
-            'clientes' => Cliente::activo()->select('id', 'nombre', 'nit')->get(),
-            'productos' => Producto::activo()->select('id', 'nombre', 'codigo_barras')->get(),
-            'almacenes' => Almacen::activo()->select('id', 'nombre')->get(),
+        return Inertia::render('proformas/create', [
+            'clientes' => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+            'productos' => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
+            'almacenes' => Almacen::activos()->select('id', 'nombre')->get(),
         ]);
     }
 
@@ -126,14 +126,14 @@ class ProformaController extends Controller
     /**
      * Mostrar detalle de proforma
      */
-    public function show(int $id): JsonResponse|InertiaResponse
+    public function show(string $id): JsonResponse|InertiaResponse|RedirectResponse
     {
         try {
-            $proformaDTO = $this->proformaService->obtener($id);
+            $proformaDTO = $this->proformaService->obtener((int)$id);
 
             return $this->respondShow(
                 data: $proformaDTO,
-                inertiaComponent: 'Proformas/Show',
+                inertiaComponent: 'proformas/Show',
             );
 
         } catch (\Exception $e) {
@@ -148,10 +148,10 @@ class ProformaController extends Controller
      *
      * Mantiene la reserva de stock (no la consume)
      */
-    public function aprobar(int $id): JsonResponse|RedirectResponse
+    public function aprobar(string $id): JsonResponse|RedirectResponse
     {
         try {
-            $proformaDTO = $this->proformaService->aprobar($id);
+            $proformaDTO = $this->proformaService->aprobar((int)$id);
 
             return $this->respondSuccess(
                 data: $proformaDTO,
@@ -174,12 +174,12 @@ class ProformaController extends Controller
      *
      * Libera la reserva de stock
      */
-    public function rechazar(int $id): JsonResponse|RedirectResponse
+    public function rechazar(string $id): JsonResponse|RedirectResponse
     {
         try {
             $motivo = request()->input('motivo', '');
 
-            $proformaDTO = $this->proformaService->rechazar($id, $motivo);
+            $proformaDTO = $this->proformaService->rechazar((int)$id, $motivo);
 
             return $this->respondSuccess(
                 data: $proformaDTO,
@@ -202,10 +202,10 @@ class ProformaController extends Controller
      * 2. Adentro: VentaService::crear() consume reserva
      * 3. Retorna VentaResponseDTO
      */
-    public function convertirAVenta(int $id): JsonResponse|RedirectResponse
+    public function convertirAVenta(string $id): JsonResponse|RedirectResponse
     {
         try {
-            $ventaDTO = $this->proformaService->convertirAVenta($id);
+            $ventaDTO = $this->proformaService->convertirAVenta((int)$id);
 
             return $this->respondSuccess(
                 data: $ventaDTO,
@@ -226,7 +226,7 @@ class ProformaController extends Controller
      *
      * POST /proformas/{id}/extender
      */
-    public function extenderValidez(int $id): JsonResponse|RedirectResponse
+    public function extenderValidez(string $id): JsonResponse|RedirectResponse
     {
         try {
             $dias = (int) request()->input('dias', 15);
@@ -235,7 +235,7 @@ class ProformaController extends Controller
                 throw new \InvalidArgumentException('Días debe ser mayor a 0');
             }
 
-            $proformaDTO = $this->proformaService->extenderValidez($id, $dias);
+            $proformaDTO = $this->proformaService->extenderValidez((int)$id, $dias);
 
             return $this->respondSuccess(
                 data: $proformaDTO,

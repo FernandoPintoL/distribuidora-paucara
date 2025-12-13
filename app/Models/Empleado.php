@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use App\Models\Traits\ChoferTrait;
+use App\Models\Traits\HasActiveScope;
 use App\Models\Traits\RolesFuncionalesTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Empleado extends Model
 {
-    use HasFactory, ChoferTrait, RolesFuncionalesTrait;
+    use HasFactory, ChoferTrait, RolesFuncionalesTrait, HasActiveScope;
 
     protected $fillable = [
         'user_id',
@@ -148,14 +149,6 @@ class Empleado extends Model
         }
 
         return \Carbon\Carbon::parse($this->fecha_ingreso)->diffInMonths(now()) < 3;
-    }
-
-    /**
-     * Scope para empleados activos
-     */
-    public function scopeActivos($query)
-    {
-        return $query->where('estado', 'activo');
     }
 
     /**

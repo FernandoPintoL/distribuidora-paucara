@@ -20,12 +20,15 @@ class RoleAudit extends Model
         'usuarios_afectados',
     ];
 
-    protected $casts = [
-        'antes' => 'array',
-        'despues' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'antes' => 'array',
+            'despues' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     /**
      * Relación: El rol que fue modificado

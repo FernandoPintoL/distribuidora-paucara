@@ -6,13 +6,13 @@ use App\Models\ReservaStock;
 use App\Models\Producto;
 use App\Models\Almacen;
 use App\Models\StockProducto;
-use App\Http\Traits\UnifiedResponseTrait;
+use App\Http\Traits\ApiInertiaUnifiedResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReservaStockController extends Controller
 {
-    use UnifiedResponseTrait;
+    use ApiInertiaUnifiedResponse;
 
     public function index(Request $request)
     {

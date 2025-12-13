@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Impuesto extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $fillable = [
         'codigo',
@@ -24,14 +25,17 @@ class Impuesto extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'porcentaje' => 'decimal:2',
-        'monto_fijo' => 'decimal:2',
-        'incluido_en_precio' => 'boolean',
-        'aplica_ventas' => 'boolean',
-        'aplica_compras' => 'boolean',
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'porcentaje' => 'decimal:2',
+            'monto_fijo' => 'decimal:2',
+            'incluido_en_precio' => 'boolean',
+            'aplica_ventas' => 'boolean',
+            'aplica_compras' => 'boolean',
+            'activo' => 'boolean',
+        ];
+    }
 
     /**
      * Relación many-to-many con ventas
@@ -46,10 +50,6 @@ class Impuesto extends Model
     /**
      * Scope para impuestos activos
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     /**
      * Scope para impuestos que aplican a ventas

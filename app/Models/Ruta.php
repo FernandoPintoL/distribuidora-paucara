@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Carbon\Carbon;
 
 class Ruta extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, GeneratesSequentialCode, SoftDeletes;
 
     protected $fillable = [
         'codigo',
@@ -32,13 +33,16 @@ class Ruta extends Model
         'creado_por',
     ];
 
-    protected $casts = [
-        'fecha_ruta' => 'date',
-        'hora_salida' => 'datetime',
-        'hora_llegada' => 'datetime',
-        'distancia_km' => 'decimal:2',
-        'ruta_gps' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_ruta' => 'date',
+            'hora_salida' => 'datetime',
+            'hora_llegada' => 'datetime',
+            'distancia_km' => 'decimal:2',
+            'ruta_gps' => 'array',
+        ];
+    }
 
     /**
      * Localidad de la ruta
@@ -114,17 +118,11 @@ class Ruta extends Model
 
     /**
      * Generar código de ruta automáticamente
+     * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
      */
-    public static function generarCodigo(Zona $zona): string
+    public static function generarCodigo(Zona $zona = null): string
     {
-        $fecha = Carbon::now()->format('Ymd');
-        $zonaCode = strtoupper(substr($zona->codigo ?? 'ZN', 0, 2));
-
-        $count = static::whereDate('fecha_ruta', today())
-            ->where('zona_id', $zona->id)
-            ->count();
-
-        return "RUTA-{$fecha}-{$zonaCode}-" . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        return static::generateSequentialCode('RTA', 'numero', true, 'Ymd', 6);
     }
 
     /**

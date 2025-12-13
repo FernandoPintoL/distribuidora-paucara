@@ -23,8 +23,8 @@ import {
     TrendingDown
 } from 'lucide-react';
 import { router } from '@inertiajs/react';
-import type { MovimientoUnificado } from '@/types/inventario';
-import { CONFIGURACION_MOVIMIENTOS } from '@/types/inventario';
+import type { MovimientoUnificado } from '@/domain/entities/movimientos-inventario';
+import { CONFIGURACION_MOVIMIENTOS } from '@/presentation/config/inventory.config';
 
 interface MovimientoCardProps {
     movimiento: MovimientoUnificado;

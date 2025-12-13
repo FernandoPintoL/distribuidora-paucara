@@ -20,9 +20,12 @@ class FotoLugarCliente extends Model
         'fecha_captura',
     ];
 
-    protected $casts = [
-        'fecha_captura' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_captura' => 'datetime',
+        ];
+    }
 
     /**
      * Obtiene el cliente asociado a esta foto.

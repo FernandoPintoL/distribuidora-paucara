@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 class ModuloSidebar extends Model
 {
     /** @use HasFactory<\Database\Factories\ModuloSidebarFactory> */
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'modulos_sidebar';
 
@@ -60,10 +61,6 @@ class ModuloSidebar extends Model
     /**
      * Scope para obtener solo módulos activos
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     /**
      * Scope para obtener solo módulos principales (no submódulos)

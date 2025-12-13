@@ -2,6 +2,8 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Requests\StoreProductoRequest;
+use App\Http\Requests\UpdateProductoRequest;
 use App\Models\Almacen;
 use App\Models\Categoria;
 use App\Models\CodigoBarra;
@@ -224,77 +226,10 @@ class ProductoController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreProductoRequest $request): RedirectResponse
     {
-        $tiposPrecios = TipoPrecio::activos()->pluck('id')->toArray();
-
-        // Manejo simplificado y robusto de códigos
-        $requestData = $request->all();
-
-        // Procesar códigos de manera más simple
-        if (isset($requestData['codigos'])) {
-            $codigosLimpios = [];
-
-            // Si no es array, convertir a array
-            if (! is_array($requestData['codigos'])) {
-                $requestData['codigos'] = [];
-            }
-
-            foreach ($requestData['codigos'] as $item) {
-                $codigoString = '';
-
-                // Extraer string del código independientemente del formato
-                if (is_string($item)) {
-                    $codigoString = trim($item);
-                } elseif (is_array($item)) {
-                    // Si es array, buscar la clave 'codigo' o tomar el primer valor válido
-                    if (isset($item['codigo']) && is_string($item['codigo'])) {
-                        $codigoString = trim($item['codigo']);
-                    } elseif (! empty($item)) {
-                        // Tomar el primer valor que sea string
-                        foreach ($item as $value) {
-                            if (is_string($value) && ! empty(trim($value))) {
-                                $codigoString = trim($value);
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    // Si es otro tipo, intentar convertir a string
-                    $codigoString = (string) $item;
-                }
-
-                // Solo agregar si no está vacío
-                if (! empty($codigoString)) {
-                    $codigosLimpios[] = $codigoString;
-                }
-            }
-
-            $requestData['codigos'] = $codigosLimpios;
-        }
-
-        $data = $request->merge($requestData)->validate([
-            'nombre'                   => ['required', 'string', 'max:255'],
-            'descripcion'              => ['nullable', 'string'],
-            'peso'                     => ['nullable', 'numeric', 'min:0'],
-            'unidad_medida_id'         => ['nullable', 'exists:unidades_medida,id'],
-            'numero'                   => ['nullable', 'string', 'max:255'],
-            'fecha_vencimiento'        => ['nullable', 'date'],
-            'categoria_id'             => ['nullable', 'exists:categorias,id'],
-            'marca_id'                 => ['nullable', 'exists:marcas,id'],
-            'proveedor_id'             => ['nullable', 'exists:proveedores,id'],
-            'stock_minimo'             => ['nullable', 'integer', 'min:0'],
-            'stock_maximo'             => ['nullable', 'integer', 'min:0'],
-            'precios'                  => ['nullable', 'array'],
-            'precios.*.monto'          => ['required_with:precios.*', 'numeric', 'min:0'],
-            'precios.*.tipo_precio_id' => ['sometimes', 'integer', 'in:' . implode(',', $tiposPrecios)],
-            'codigos'                  => ['nullable', 'array'],
-            'codigos.*'                => ['string', 'max:255'],
-            'perfil'                   => ['nullable', 'file', 'image', 'max:4096'],
-            'galeria'                  => ['nullable', 'array'],
-            'galeria.*'                => ['file', 'image', 'max:4096'],
-            'activo'                   => ['nullable', 'boolean'],
-        ]);
+        // Data already validated and prepared by StoreProductoRequest
+        $data = $request->validated();
 
         $producto = null;
 
@@ -306,18 +241,6 @@ class ProductoController extends Controller
                     // Asegurarse de que el código sea un string y no esté vacío
                     if (is_string($codigo) && ! empty(trim($codigo))) {
                         $codigosValidos[] = trim($codigo);
-                    }
-                }
-            }
-
-            // También verificar si hay códigos en el request directamente (fallback)
-            if (empty($codigosValidos) && $request->has('codigos')) {
-                $requestCodigos = $request->get('codigos');
-                if (is_array($requestCodigos)) {
-                    foreach ($requestCodigos as $codigo) {
-                        if (is_string($codigo) && ! empty(trim($codigo))) {
-                            $codigosValidos[] = trim($codigo);
-                        }
                     }
                 }
             }
@@ -580,36 +503,10 @@ class ProductoController extends Controller
         ]);
     }
 
-    public function update(Request $request, Producto $producto): RedirectResponse
+    public function update(UpdateProductoRequest $request, Producto $producto): RedirectResponse
     {
-        $tiposPrecios = TipoPrecio::activos()->pluck('id')->toArray();
-
-        $data = $request->validate([
-            'nombre'                   => ['required', 'string', 'max:255'],
-            'sku'                      => ['nullable', 'string', 'max:20', 'unique:productos,sku,' . $producto->id],
-            'descripcion'              => ['nullable', 'string'],
-            'peso'                     => ['nullable', 'numeric', 'min:0'],
-            'unidad_medida_id'         => ['nullable', 'exists:unidades_medida,id'],
-            'numero'                   => ['nullable', 'string', 'max:255'],
-            'fecha_vencimiento'        => ['nullable', 'date'],
-            'categoria_id'             => ['nullable', 'exists:categorias,id'],
-            'marca_id'                 => ['nullable', 'exists:marcas,id'],
-            'proveedor_id'             => ['nullable', 'exists:proveedores,id'],
-            'stock_minimo'             => ['nullable', 'integer', 'min:0'],
-            'stock_maximo'             => ['nullable', 'integer', 'min:0'],
-            'precios'                  => ['nullable', 'array'],
-            'precios.*.monto'          => ['required_with:precios.*', 'numeric', 'min:0'],
-            'precios.*.tipo_precio_id' => ['sometimes', 'integer', 'in:' . implode(',', $tiposPrecios)],
-            'codigos'                  => ['nullable', 'array'],
-            'codigos.*'                => ['nullable', 'string', 'max:255'],
-            'perfil'                   => ['nullable', 'file', 'image', 'max:4096'],
-            'galeria'                  => ['nullable', 'array'],
-            'galeria.*'                => ['file', 'image', 'max:4096'],
-            'galeria_eliminar'         => ['sometimes', 'array'],
-            'galeria_eliminar.*'       => ['integer', 'exists:imagenes_productos,id'],
-            'remove_perfil'            => ['sometimes', 'boolean'],
-            'activo'                   => ['nullable', 'boolean'],
-        ]);
+        // Data already validated and prepared by UpdateProductoRequest
+        $data = $request->validated();
 
         DB::transaction(function () use ($data, $request, $producto) {
             $producto->update([

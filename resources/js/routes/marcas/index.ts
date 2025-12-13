@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\MarcaController::index
- * @see app/Http/Controllers/MarcaController.php:13
+ * @see app/Http/Controllers/MarcaController.php:130
  * @route '/marcas'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\MarcaController::index
- * @see app/Http/Controllers/MarcaController.php:13
+ * @see app/Http/Controllers/MarcaController.php:130
  * @route '/marcas'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\MarcaController::index
- * @see app/Http/Controllers/MarcaController.php:13
+ * @see app/Http/Controllers/MarcaController.php:130
  * @route '/marcas'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\MarcaController::index
- * @see app/Http/Controllers/MarcaController.php:13
+ * @see app/Http/Controllers/MarcaController.php:130
  * @route '/marcas'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\MarcaController::index
- * @see app/Http/Controllers/MarcaController.php:13
+ * @see app/Http/Controllers/MarcaController.php:130
  * @route '/marcas'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\MarcaController::index
- * @see app/Http/Controllers/MarcaController.php:13
+ * @see app/Http/Controllers/MarcaController.php:130
  * @route '/marcas'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\MarcaController::index
- * @see app/Http/Controllers/MarcaController.php:13
+ * @see app/Http/Controllers/MarcaController.php:130
  * @route '/marcas'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\MarcaController::create
- * @see app/Http/Controllers/MarcaController.php:31
+ * @see app/Http/Controllers/MarcaController.php:162
  * @route '/marcas/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\MarcaController::create
- * @see app/Http/Controllers/MarcaController.php:31
+ * @see app/Http/Controllers/MarcaController.php:162
  * @route '/marcas/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\MarcaController::create
- * @see app/Http/Controllers/MarcaController.php:31
+ * @see app/Http/Controllers/MarcaController.php:162
  * @route '/marcas/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\MarcaController::create
- * @see app/Http/Controllers/MarcaController.php:31
+ * @see app/Http/Controllers/MarcaController.php:162
  * @route '/marcas/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\MarcaController::create
- * @see app/Http/Controllers/MarcaController.php:31
+ * @see app/Http/Controllers/MarcaController.php:162
  * @route '/marcas/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\MarcaController::create
- * @see app/Http/Controllers/MarcaController.php:31
+ * @see app/Http/Controllers/MarcaController.php:162
  * @route '/marcas/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\MarcaController::create
- * @see app/Http/Controllers/MarcaController.php:31
+ * @see app/Http/Controllers/MarcaController.php:162
  * @route '/marcas/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\MarcaController::store
- * @see app/Http/Controllers/MarcaController.php:38
+ * @see app/Http/Controllers/MarcaController.php:177
  * @route '/marcas'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\MarcaController::store
- * @see app/Http/Controllers/MarcaController.php:38
+ * @see app/Http/Controllers/MarcaController.php:177
  * @route '/marcas'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\MarcaController::store
- * @see app/Http/Controllers/MarcaController.php:38
+ * @see app/Http/Controllers/MarcaController.php:177
  * @route '/marcas'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\MarcaController::store
- * @see app/Http/Controllers/MarcaController.php:38
+ * @see app/Http/Controllers/MarcaController.php:177
  * @route '/marcas'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\MarcaController::store
- * @see app/Http/Controllers/MarcaController.php:38
+ * @see app/Http/Controllers/MarcaController.php:177
  * @route '/marcas'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -309,10 +309,10 @@ show.head = (args: { marca: string | number } | [marca: string | number ] | stri
     show.form = showForm
 /**
 * @see \App\Http\Controllers\MarcaController::edit
- * @see app/Http/Controllers/MarcaController.php:51
+ * @see app/Http/Controllers/MarcaController.php:203
  * @route '/marcas/{marca}/edit'
  */
-export const edit = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const edit = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
@@ -324,17 +324,14 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\MarcaController::edit
- * @see app/Http/Controllers/MarcaController.php:51
+ * @see app/Http/Controllers/MarcaController.php:203
  * @route '/marcas/{marca}/edit'
  */
-edit.url = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+edit.url = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { marca: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { marca: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -345,9 +342,7 @@ edit.url = (args: { marca: number | { id: number } } | [marca: number | { id: nu
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        marca: typeof args.marca === 'object'
-                ? args.marca.id
-                : args.marca,
+                        marca: args.marca,
                 }
 
     return edit.definition.url
@@ -357,48 +352,48 @@ edit.url = (args: { marca: number | { id: number } } | [marca: number | { id: nu
 
 /**
 * @see \App\Http\Controllers\MarcaController::edit
- * @see app/Http/Controllers/MarcaController.php:51
+ * @see app/Http/Controllers/MarcaController.php:203
  * @route '/marcas/{marca}/edit'
  */
-edit.get = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+edit.get = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
 /**
 * @see \App\Http\Controllers\MarcaController::edit
- * @see app/Http/Controllers/MarcaController.php:51
+ * @see app/Http/Controllers/MarcaController.php:203
  * @route '/marcas/{marca}/edit'
  */
-edit.head = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+edit.head = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: edit.url(args, options),
     method: 'head',
 })
 
     /**
 * @see \App\Http\Controllers\MarcaController::edit
- * @see app/Http/Controllers/MarcaController.php:51
+ * @see app/Http/Controllers/MarcaController.php:203
  * @route '/marcas/{marca}/edit'
  */
-    const editForm = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const editForm = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: edit.url(args, options),
         method: 'get',
     })
 
             /**
 * @see \App\Http\Controllers\MarcaController::edit
- * @see app/Http/Controllers/MarcaController.php:51
+ * @see app/Http/Controllers/MarcaController.php:203
  * @route '/marcas/{marca}/edit'
  */
-        editForm.get = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.get = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, options),
             method: 'get',
         })
             /**
 * @see \App\Http\Controllers\MarcaController::edit
- * @see app/Http/Controllers/MarcaController.php:51
+ * @see app/Http/Controllers/MarcaController.php:203
  * @route '/marcas/{marca}/edit'
  */
-        editForm.head = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.head = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -411,10 +406,10 @@ edit.head = (args: { marca: number | { id: number } } | [marca: number | { id: n
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\MarcaController::update
- * @see app/Http/Controllers/MarcaController.php:58
+ * @see app/Http/Controllers/MarcaController.php:222
  * @route '/marcas/{marca}'
  */
-export const update = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -426,17 +421,14 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\MarcaController::update
- * @see app/Http/Controllers/MarcaController.php:58
+ * @see app/Http/Controllers/MarcaController.php:222
  * @route '/marcas/{marca}'
  */
-update.url = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { marca: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { marca: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -447,9 +439,7 @@ update.url = (args: { marca: number | { id: number } } | [marca: number | { id: 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        marca: typeof args.marca === 'object'
-                ? args.marca.id
-                : args.marca,
+                        marca: args.marca,
                 }
 
     return update.definition.url
@@ -459,29 +449,29 @@ update.url = (args: { marca: number | { id: number } } | [marca: number | { id: 
 
 /**
 * @see \App\Http\Controllers\MarcaController::update
- * @see app/Http/Controllers/MarcaController.php:58
+ * @see app/Http/Controllers/MarcaController.php:222
  * @route '/marcas/{marca}'
  */
-update.put = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
 /**
 * @see \App\Http\Controllers\MarcaController::update
- * @see app/Http/Controllers/MarcaController.php:58
+ * @see app/Http/Controllers/MarcaController.php:222
  * @route '/marcas/{marca}'
  */
-update.patch = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+update.patch = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
     method: 'patch',
 })
 
     /**
 * @see \App\Http\Controllers\MarcaController::update
- * @see app/Http/Controllers/MarcaController.php:58
+ * @see app/Http/Controllers/MarcaController.php:222
  * @route '/marcas/{marca}'
  */
-    const updateForm = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -493,10 +483,10 @@ update.patch = (args: { marca: number | { id: number } } | [marca: number | { id
 
             /**
 * @see \App\Http\Controllers\MarcaController::update
- * @see app/Http/Controllers/MarcaController.php:58
+ * @see app/Http/Controllers/MarcaController.php:222
  * @route '/marcas/{marca}'
  */
-        updateForm.put = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -507,10 +497,10 @@ update.patch = (args: { marca: number | { id: number } } | [marca: number | { id
         })
             /**
 * @see \App\Http\Controllers\MarcaController::update
- * @see app/Http/Controllers/MarcaController.php:58
+ * @see app/Http/Controllers/MarcaController.php:222
  * @route '/marcas/{marca}'
  */
-        updateForm.patch = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.patch = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PATCH',
@@ -523,10 +513,10 @@ update.patch = (args: { marca: number | { id: number } } | [marca: number | { id
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\MarcaController::destroy
- * @see app/Http/Controllers/MarcaController.php:70
+ * @see app/Http/Controllers/MarcaController.php:244
  * @route '/marcas/{marca}'
  */
-export const destroy = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -538,17 +528,14 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\MarcaController::destroy
- * @see app/Http/Controllers/MarcaController.php:70
+ * @see app/Http/Controllers/MarcaController.php:244
  * @route '/marcas/{marca}'
  */
-destroy.url = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { marca: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { marca: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -559,9 +546,7 @@ destroy.url = (args: { marca: number | { id: number } } | [marca: number | { id:
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        marca: typeof args.marca === 'object'
-                ? args.marca.id
-                : args.marca,
+                        marca: args.marca,
                 }
 
     return destroy.definition.url
@@ -571,20 +556,20 @@ destroy.url = (args: { marca: number | { id: number } } | [marca: number | { id:
 
 /**
 * @see \App\Http\Controllers\MarcaController::destroy
- * @see app/Http/Controllers/MarcaController.php:70
+ * @see app/Http/Controllers/MarcaController.php:244
  * @route '/marcas/{marca}'
  */
-destroy.delete = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
 
     /**
 * @see \App\Http\Controllers\MarcaController::destroy
- * @see app/Http/Controllers/MarcaController.php:70
+ * @see app/Http/Controllers/MarcaController.php:244
  * @route '/marcas/{marca}'
  */
-    const destroyForm = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const destroyForm = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: destroy.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -596,10 +581,10 @@ destroy.delete = (args: { marca: number | { id: number } } | [marca: number | { 
 
             /**
 * @see \App\Http\Controllers\MarcaController::destroy
- * @see app/Http/Controllers/MarcaController.php:70
+ * @see app/Http/Controllers/MarcaController.php:244
  * @route '/marcas/{marca}'
  */
-        destroyForm.delete = (args: { marca: number | { id: number } } | [marca: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        destroyForm.delete = (args: { marca: string | number } | [marca: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: destroy.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',

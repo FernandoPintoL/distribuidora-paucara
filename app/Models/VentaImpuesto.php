@@ -20,11 +20,14 @@ class VentaImpuesto extends Model
         'porcentaje_aplicado',
     ];
 
-    protected $casts = [
-        'base_imponible' => 'decimal:2',
-        'monto_impuesto' => 'decimal:2',
-        'porcentaje_aplicado' => 'decimal:4',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'base_imponible' => 'decimal:2',
+            'monto_impuesto' => 'decimal:2',
+            'porcentaje_aplicado' => 'decimal:4',
+        ];
+    }
 
     /**
      * Relación con venta

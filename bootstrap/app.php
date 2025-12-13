@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckUserActive;
+use App\Http\Middleware\CheckUserAttributes;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             CheckUserActive::class,
+            CheckUserAttributes::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
@@ -39,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(append: [
             CheckUserActive::class,
+            CheckUserAttributes::class,
         ]);
 
         // Excluir rutas del middleware CSRF para testing

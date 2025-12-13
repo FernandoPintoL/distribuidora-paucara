@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Caja extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $fillable = [
         'nombre',
@@ -16,10 +17,13 @@ class Caja extends Model
         'activa',
     ];
 
-    protected $casts = [
-        'monto_inicial_dia' => 'decimal:2',
-        'activa' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'monto_inicial_dia' => 'decimal:2',
+            'activa' => 'boolean',
+        ];
+    }
 
     // Relaciones
     public function movimientos()
@@ -35,12 +39,6 @@ class Caja extends Model
     public function cierres()
     {
         return $this->hasMany(CierreCaja::class);
-    }
-
-    // Scopes
-    public function scopeActivas($query)
-    {
-        return $query->where('activa', true);
     }
 
     // Métodos de negocio

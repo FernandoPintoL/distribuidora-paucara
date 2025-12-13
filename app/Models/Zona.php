@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Zona extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasActiveScope, SoftDeletes;
 
     protected $fillable = [
         'nombre',
@@ -24,13 +26,16 @@ class Zona extends Model
         'preventista_id',
     ];
 
-    protected $casts = [
-        'localidades' => 'array', // JSON a array
-        'latitud_centro' => 'decimal:8',
-        'longitud_centro' => 'decimal:8',
-        'activa' => 'boolean',
-        'tiempo_estimado_entrega' => 'integer',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'localidades' => 'array', // JSON a array
+            'latitud_centro' => 'decimal:8',
+            'longitud_centro' => 'decimal:8',
+            'activa' => 'boolean',
+            'tiempo_estimado_entrega' => 'integer',
+        ];
+    }
 
     /**
      * Preventista responsable de la zona
@@ -58,27 +63,47 @@ class Zona extends Model
     }
 
     /**
-     * Scope para zonas activas
+     * Localidades asociadas a esta zona (relación many-to-many)
      */
-    public function scopeActivas($query)
+    public function localidades(): BelongsToMany
     {
-        return $query->where('activa', true);
+        return $this->belongsToMany(Localidad::class, 'localidad_zona')
+                    ->withTimestamps();
     }
 
     /**
+     * DEPRECATED: Usar relación localidades() en su lugar
+     * Mantener por compatibilidad con código existente
      * Obtener localidades como array
      */
     public function getLocalidadesAttribute($value)
     {
-        return $value ? json_decode($value, true) : [];
+        // Si hay datos en JSON, retornarlos (legacy)
+        if ($value) {
+            return json_decode($value, true);
+        }
+
+        // Sino, obtener desde relación (nuevo comportamiento)
+        if ($this->relationLoaded('localidades')) {
+            return $this->localidades()->pluck('localidades.id')->toArray();
+        }
+
+        return [];
     }
 
     /**
+     * DEPRECATED: Usar sync() en relación localidades()
      * Convertir localidades a JSON al guardar
      */
     public function setLocalidadesAttribute($value)
     {
+        // Mantener para backward compatibility
         $this->attributes['localidades'] = is_array($value) ? json_encode($value) : $value;
+
+        // También sincronizar con tabla pivot
+        if (is_array($value) && $this->exists) {
+            $this->syncLocalidadesFromArray($value);
+        }
     }
 
     /**
@@ -95,5 +120,46 @@ class Zona extends Model
     public function tienePreventista(): bool
     {
         return $this->preventista_id !== null;
+    }
+
+    /**
+     * Sincronizar localidades desde array (helper para transición)
+     */
+    protected function syncLocalidadesFromArray(array $localidadesData): void
+    {
+        $localidadIds = [];
+
+        foreach ($localidadesData as $data) {
+            if (is_numeric($data)) {
+                $localidadIds[] = $data;
+            } elseif (is_string($data)) {
+                $localidad = Localidad::where('nombre', $data)
+                                   ->orWhere('codigo', $data)
+                                   ->first();
+                if ($localidad) {
+                    $localidadIds[] = $localidad->id;
+                }
+            } elseif (is_array($data) && isset($data['id'])) {
+                $localidadIds[] = $data['id'];
+            }
+        }
+
+        $this->localidades()->sync($localidadIds);
+    }
+
+    /**
+     * Obtener IDs de localidades (nuevo método preferido)
+     */
+    public function getLocalidadesIds(): array
+    {
+        return $this->localidades()->pluck('localidades.id')->toArray();
+    }
+
+    /**
+     * Verificar si zona tiene una localidad específica
+     */
+    public function tieneLocalidad(int $localidadId): bool
+    {
+        return $this->localidades()->where('localidades.id', $localidadId)->exists();
     }
 }

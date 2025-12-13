@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Services\RutaService;
+use App\Services\Logistica\RutaService;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
 
 /**
  * Comando para planificar rutas diarias
+ * Usa Logistica\RutaService como única fuente de verdad (Fase 1 Refactoring)
  *
  * Ejecutar manualmente:
  *   php artisan rutas:planificar-diaria

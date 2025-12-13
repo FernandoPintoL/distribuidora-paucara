@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 trait BaseCrudTrait
 {
-    use UnifiedResponseTrait;
+    use ApiInertiaUnifiedResponse;
 
     /**
      * Configuración por defecto para el CRUD

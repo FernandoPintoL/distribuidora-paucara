@@ -8,8 +8,11 @@ use App\Models\MovimientoCaja;
 use App\Models\Producto;
 use App\Models\Proforma;
 use App\Models\StockProducto;
+use App\Models\User;
 use App\Models\Venta;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardService
@@ -496,5 +499,302 @@ class DashboardService
             'inicio_anterior' => $inicioAnterior,
             'fin_anterior' => $finAnterior,
         ];
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // WIDGETS & MÓDULOS - Consolidado de DashboardWidgetsService
+    // ══════════════════════════════════════════════════════════
+
+    protected array $config;
+
+    /**
+     * Obtener configuración de widgets (lazy-loaded)
+     */
+    private function getWidgetsConfig(): array
+    {
+        if (isset($this->config)) {
+            return $this->config;
+        }
+
+        return $this->config = config('dashboard-widgets') ?? $this->getDefaultWidgetsConfig();
+    }
+
+    /**
+     * Configuración por defecto de widgets
+     */
+    private function getDefaultWidgetsConfig(): array
+    {
+        return [
+            'role_modules' => [
+                'super_admin' => ['general', 'compras', 'logistica', 'inventario', 'contabilidad'],
+                'admin' => ['general', 'compras', 'logistica', 'inventario', 'contabilidad'],
+                'comprador' => ['general', 'compras'],
+                'preventista' => ['general', 'preventista'],
+                'chofer' => ['general', 'chofer'],
+                'logistica' => ['general', 'logistica'],
+                'gestor_almacen' => ['general', 'almacen', 'inventario'],
+                'vendedor' => ['general', 'vendedor'],
+                'cajero' => ['general', 'vendedor'],
+                'contabilidad' => ['general', 'contabilidad'],
+            ],
+            'modules' => [
+                'general' => [
+                    'required_permissions' => [],
+                    'widgets' => ['metricas_principales', 'metricas_secundarias', 'grafico_ventas'],
+                ],
+                'preventista' => [
+                    'required_permissions' => ['preventista.manage'],
+                    'widgets' => ['mis_clientes', 'comisiones', 'proformas_pendientes'],
+                ],
+                'compras' => [
+                    'required_permissions' => ['compras.manage'],
+                    'widgets' => ['metricas_compras'],
+                ],
+                'logistica' => [
+                    'required_permissions' => ['logistica.manage'],
+                    'widgets' => ['metricas_logistica'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Obtener módulos permitidos para el usuario
+     */
+    public function getModulosPermitidos(User $user = null): array
+    {
+        $user = $user ?? Auth::user();
+
+        if (!$user) {
+            return [];
+        }
+
+        return Cache::remember(
+            "dashboard_modulos_usuario_{$user->id}",
+            now()->addHours(1),
+            function () use ($user) {
+                $config = $this->getWidgetsConfig();
+                $roleNames = $user->getRoleNames()->toArray();
+                $modulosPermitidos = [];
+
+                foreach ($roleNames as $roleName) {
+                    $roleModules = $config['role_modules'][$roleName] ?? [];
+                    $modulosPermitidos = array_merge($modulosPermitidos, $roleModules);
+                }
+
+                $modulosPermitidos = array_unique($modulosPermitidos);
+
+                return array_filter($modulosPermitidos, function ($modulo) use ($user) {
+                    return $this->usuarioTienePermisoModulo($user, $modulo);
+                });
+            }
+        );
+    }
+
+    /**
+     * Verificar si usuario tiene permisos para un módulo
+     */
+    public function usuarioTienePermisoModulo(User $user, string $modulo): bool
+    {
+        $config = $this->getWidgetsConfig();
+
+        if (!isset($config['modules'][$modulo])) {
+            return false;
+        }
+
+        $moduloConfig = $config['modules'][$modulo];
+        $permisosRequeridos = $moduloConfig['required_permissions'] ?? [];
+
+        if (empty($permisosRequeridos)) {
+            return true;
+        }
+
+        foreach ($permisosRequeridos as $permiso) {
+            if ($user->can($permiso)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Obtener widgets a mostrar
+     */
+    public function getWidgetsAMostrar(User $user = null): array
+    {
+        $user = $user ?? Auth::user();
+        $modulosPermitidos = $this->getModulosPermitidos($user);
+        $config = $this->getWidgetsConfig();
+        $widgetsAMostrar = [];
+
+        foreach ($modulosPermitidos as $modulo) {
+            if (!isset($config['modules'][$modulo])) {
+                continue;
+            }
+
+            $widgets = $config['modules'][$modulo]['widgets'] ?? [];
+            $widgetsAMostrar[$modulo] = $widgets;
+        }
+
+        return $widgetsAMostrar;
+    }
+
+    /**
+     * Obtener widgets en lista plana
+     */
+    public function getWidgetsPlanos(User $user = null): array
+    {
+        $widgets = $this->getWidgetsAMostrar($user);
+        $planos = [];
+
+        foreach ($widgets as $modulo => $widgetsDelModulo) {
+            $planos = array_merge($planos, $widgetsDelModulo);
+        }
+
+        return array_unique($planos);
+    }
+
+    /**
+     * Obtener estructura completa del dashboard
+     */
+    public function getDashboardStructure(User $user = null): array
+    {
+        $user = $user ?? Auth::user();
+
+        return [
+            'modulos_permitidos' => $this->getModulosPermitidos($user),
+            'widgets_por_modulo' => $this->getWidgetsAMostrar($user),
+            'widgets_planos' => $this->getWidgetsPlanos($user),
+            'roles_usuario' => $user->getRoleNames()->toArray(),
+            'permisos_usuario' => $user->getAllPermissions()->pluck('name')->toArray(),
+            'dashboard_route' => $this->getDashboardRoute($user),
+        ];
+    }
+
+    /**
+     * Limpiar caché de usuario
+     */
+    public function limpiarCacheUsuario(User $user): void
+    {
+        Cache::forget("dashboard_modulos_usuario_{$user->id}");
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // ROUTER - Consolidado de DashboardRouterService
+    // ══════════════════════════════════════════════════════════
+
+    protected array $roleRoutes = [
+        'super_admin' => '/admin/dashboard',
+        'admin' => '/admin/dashboard',
+        'comprador' => '/compras/dashboard',
+        'preventista' => '/preventista/dashboard',
+        'chofer' => '/chofer/dashboard',
+        'logistica' => '/logistica/dashboard',
+        'gestor_almacen' => '/almacen/dashboard',
+        'vendedor' => '/vendedor/dashboard',
+        'cajero' => '/vendedor/dashboard',
+        'contabilidad' => '/contabilidad/dashboard',
+    ];
+
+    /**
+     * Obtener ruta del dashboard para el usuario
+     */
+    public function getDashboardRoute(User $user = null): string
+    {
+        $user = $user ?? Auth::user();
+
+        if (!$user) {
+            return '/dashboard';
+        }
+
+        $roles = $user->getRoleNames()->toArray();
+
+        if (empty($roles)) {
+            return '/dashboard';
+        }
+
+        $prioridad = [
+            'super_admin' => 100,
+            'admin' => 99,
+            'comprador' => 50,
+            'logistica' => 48,
+            'gestor_almacen' => 47,
+            'contabilidad' => 46,
+            'preventista' => 45,
+            'vendedor' => 40,
+            'cajero' => 40,
+            'chofer' => 30,
+        ];
+
+        $rolPrincipal = null;
+        $maxPrioridad = -1;
+
+        foreach ($roles as $rol) {
+            $rolNormalizado = strtolower($rol);
+            $p = $prioridad[$rolNormalizado] ?? 0;
+            if ($p > $maxPrioridad) {
+                $maxPrioridad = $p;
+                $rolPrincipal = $rolNormalizado;
+            }
+        }
+
+        return $this->roleRoutes[$rolPrincipal] ?? '/dashboard';
+    }
+
+    /**
+     * Obtener nombre del dashboard
+     */
+    public function getDashboardName(User $user = null): string
+    {
+        $ruta = $this->getDashboardRoute($user);
+        $partes = explode('/', trim($ruta, '/'));
+        return $partes[0] ?? 'dashboard';
+    }
+
+    /**
+     * Obtener información de redirección
+     */
+    public function getRedirectInfo(User $user = null): array
+    {
+        $user = $user ?? Auth::user();
+        $ruta = $this->getDashboardRoute($user);
+        $nombre = $this->getDashboardName($user);
+
+        return [
+            'usuario_id' => $user->id ?? null,
+            'usuario_email' => $user->email ?? null,
+            'roles' => $user->getRoleNames()->toArray() ?? [],
+            'dashboard_url' => $ruta,
+            'dashboard_nombre' => $nombre,
+        ];
+    }
+
+    /**
+     * Verificar si necesita redirección
+     */
+    public function needsRedirect(User $user = null): bool
+    {
+        $user = $user ?? Auth::user();
+        $routeActual = request()->path();
+        $routeCorrecta = trim($this->getDashboardRoute($user), '/');
+
+        return $routeActual !== $routeCorrecta;
+    }
+
+    /**
+     * Actualizar mapeo de rol
+     */
+    public function updateRoleRoute(string $rol, string $ruta): void
+    {
+        $this->roleRoutes[$rol] = $ruta;
+    }
+
+    /**
+     * Obtener todos los mapeos de roles
+     */
+    public function getAllRoleRoutes(): array
+    {
+        return $this->roleRoutes;
     }
 }

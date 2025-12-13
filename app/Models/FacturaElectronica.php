@@ -37,17 +37,20 @@ class FacturaElectronica extends Model
         'venta_id',
     ];
 
-    protected $casts = [
-        'fecha_emision' => 'date',
-        'hora_emision' => 'datetime:H:i:s',
-        'monto_total' => 'decimal:2',
-        'monto_total_sujeto_iva' => 'decimal:2',
-        'monto_total_moneda_extranjera' => 'decimal:2',
-        'tipo_cambio' => 'decimal:4',
-        'codigo_moneda' => 'integer',
-        'fecha_envio_sin' => 'datetime',
-        'fecha_procesamiento_sin' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_emision' => 'date',
+            'hora_emision' => 'datetime:H:i:s',
+            'monto_total' => 'decimal:2',
+            'monto_total_sujeto_iva' => 'decimal:2',
+            'monto_total_moneda_extranjera' => 'decimal:2',
+            'tipo_cambio' => 'decimal:4',
+            'codigo_moneda' => 'integer',
+            'fecha_envio_sin' => 'datetime',
+            'fecha_procesamiento_sin' => 'datetime',
+        ];
+    }
 
     /**
      * Relación con venta

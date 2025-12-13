@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TipoPrecio extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'tipos_precio';
 
@@ -25,15 +26,18 @@ class TipoPrecio extends Model
         'configuracion',
     ];
 
-    protected $casts = [
-        'es_ganancia' => 'boolean',
-        'es_precio_base' => 'boolean',
-        'activo' => 'boolean',
-        'es_sistema' => 'boolean',
-        'configuracion' => 'array',
-        'orden' => 'integer',
-        'porcentaje_ganancia' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'es_ganancia' => 'boolean',
+            'es_precio_base' => 'boolean',
+            'activo' => 'boolean',
+            'es_sistema' => 'boolean',
+            'configuracion' => 'array',
+            'orden' => 'integer',
+            'porcentaje_ganancia' => 'decimal:2',
+        ];
+    }
 
     /**
      * Relaciones
@@ -51,10 +55,6 @@ class TipoPrecio extends Model
     /**
      * Scopes
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     public function scopeOrdenados($query)
     {

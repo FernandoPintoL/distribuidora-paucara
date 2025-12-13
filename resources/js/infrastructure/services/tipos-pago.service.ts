@@ -34,20 +34,7 @@ export class TiposPagoService extends GenericService<TipoPago, TipoPagoFormData>
     return Controllers.TipoPagoController.destroy(Number(id)).url;
   }
 
-  // Override validation for specific fields
-  validateData(data: TipoPagoFormData): string[] {
-    const errors = super.validateData(data);
-
-    if (!data.codigo || String(data.codigo).trim().length === 0) {
-      errors.push('El código es requerido');
-    }
-
-    if (data.codigo && String(data.codigo).length > 255) {
-      errors.push('El código no puede tener más de 255 caracteres');
-    }
-
-    return errors;
-  }
+  // Validación de códigos únicos delegada al backend (SimpleCrudController)
 }
 
 const tiposPagoService = new TiposPagoService();

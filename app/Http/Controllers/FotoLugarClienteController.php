@@ -2,7 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
-use App\Http\Traits\UnifiedResponseTrait;
+use App\Http\Traits\ApiInertiaUnifiedResponse;
 use App\Models\Cliente;
 use App\Models\FotoLugarCliente;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 
 class FotoLugarClienteController extends Controller
 {
-    use UnifiedResponseTrait;
+    use ApiInertiaUnifiedResponse;
 
     /**
      * Mostrar todas las fotos de un cliente

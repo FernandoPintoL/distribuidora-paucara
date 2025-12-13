@@ -11,7 +11,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ProveedorController extends Controller
 {
-    use Traits\ApiInertiaResponseTrait;
 
     public function index(Request $request): InertiaResponse
     {

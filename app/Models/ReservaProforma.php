@@ -22,12 +22,15 @@ class ReservaProforma extends Model
         'estado',
     ];
 
-    protected $casts = [
-        'fecha_reserva' => 'datetime',
-        'fecha_expiracion' => 'datetime',
-        'cantidad_reservada' => 'integer',
-        'deleted_at' => 'datetime', // ✓ Para SoftDeletes
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_reserva' => 'datetime',
+            'fecha_expiracion' => 'datetime',
+            'cantidad_reservada' => 'integer',
+            'deleted_at' => 'datetime', // ✓ Para SoftDeletes
+        ];
+    }
 
     // Estados de reserva
     const ACTIVA = 'ACTIVA';

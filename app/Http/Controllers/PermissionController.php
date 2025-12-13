@@ -79,7 +79,6 @@ class PermissionController extends Controller
 
         $permisosActuales = $role->permissions()->pluck('id')->toArray();
         $todosLosPermisos = $this->permissionService->getPermissionsForUI();
-
         return Inertia::render('admin/permisos/rol', [
             'rol' => $role,
             'permisosActuales' => $permisosActuales,
@@ -334,5 +333,278 @@ class PermissionController extends Controller
                 'message' => 'Error en asignación en lote: ' . $e->getMessage(),
             ], 400);
         }
+    }
+
+    /**
+     * ============================================
+     * FASE 2: ENDPOINTS DE CAPACIDADES
+     * ============================================
+     */
+
+    /**
+     * ✅ API: Obtener todas las capacidades con sus permisos
+     */
+    public function getCapabilities()
+    {
+        $this->authorize('permissions.index');
+
+        $capabilities = $this->permissionService->getCapabilitiesWithPermissions();
+
+        return response()->json([
+            'success' => true,
+            'data' => $capabilities,
+            'total' => count($capabilities),
+        ]);
+    }
+
+    /**
+     * ✅ API: Obtener capacidades de un usuario
+     */
+    public function getUserCapabilities(User $user)
+    {
+        $this->authorize('permissions.index');
+
+        $capabilities = $this->permissionService->getUserCapabilities($user);
+
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'capabilities' => $capabilities,
+        ]);
+    }
+
+    /**
+     * ✅ API: Obtener capacidades de un rol
+     */
+    public function getRoleCapabilities(Role $role)
+    {
+        $this->authorize('permissions.index');
+
+        $capabilities = $this->permissionService->getRoleCapabilities($role);
+
+        return response()->json([
+            'success' => true,
+            'role' => [
+                'id' => $role->id,
+                'name' => $role->name,
+            ],
+            'capabilities' => $capabilities,
+        ]);
+    }
+
+    /**
+     * ✅ API: Asignar capacidad a un usuario
+     */
+    public function assignCapabilityToUser(Request $request, User $user)
+    {
+        $this->authorize('usuarios.assign-permission');
+
+        $validated = $request->validate([
+            'capability' => 'required|string|exists:capabilities,name',
+        ]);
+
+        $success = $this->permissionService->assignCapabilityToUser($user, $validated['capability']);
+
+        if (!$success) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Capacidad no encontrada',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Capacidad '{$validated['capability']}' asignada a {$user->name}",
+            'capabilities' => $this->permissionService->getUserCapabilities($user),
+        ]);
+    }
+
+    /**
+     * ✅ API: Asignar capacidad a un rol
+     */
+    public function assignCapabilityToRole(Request $request, Role $role)
+    {
+        $this->authorize('roles.assign-permission');
+
+        $validated = $request->validate([
+            'capability' => 'required|string|exists:capabilities,name',
+        ]);
+
+        $success = $this->permissionService->assignCapabilityToRole($role, $validated['capability']);
+
+        if (!$success) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Capacidad no encontrada',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Capacidad '{$validated['capability']}' asignada al rol {$role->name}",
+            'capabilities' => $this->permissionService->getRoleCapabilities($role),
+        ]);
+    }
+
+    /**
+     * ✅ API: Remover capacidad de un usuario
+     */
+    public function removeCapabilityFromUser(Request $request, User $user)
+    {
+        $this->authorize('usuarios.remove-permission');
+
+        $validated = $request->validate([
+            'capability' => 'required|string|exists:capabilities,name',
+        ]);
+
+        $success = $this->permissionService->removeCapabilityFromUser($user, $validated['capability']);
+
+        if (!$success) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Capacidad no encontrada',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Capacidad '{$validated['capability']}' removida de {$user->name}",
+            'capabilities' => $this->permissionService->getUserCapabilities($user),
+        ]);
+    }
+
+    /**
+     * ✅ API: Remover capacidad de un rol
+     */
+    public function removeCapabilityFromRole(Request $request, Role $role)
+    {
+        $this->authorize('roles.remove-permission');
+
+        $validated = $request->validate([
+            'capability' => 'required|string|exists:capabilities,name',
+        ]);
+
+        $success = $this->permissionService->removeCapabilityFromRole($role, $validated['capability']);
+
+        if (!$success) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Capacidad no encontrada',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Capacidad '{$validated['capability']}' removida del rol {$role->name}",
+            'capabilities' => $this->permissionService->getRoleCapabilities($role),
+        ]);
+    }
+
+    /**
+     * ✅ API: Obtener todas las plantillas de capacidades
+     */
+    public function getCapabilityTemplates()
+    {
+        $this->authorize('permissions.index');
+
+        $templates = \App\Models\CapabilityTemplate::where('is_active', true)
+            ->orderBy('order')
+            ->get()
+            ->map(function ($template) {
+                $perms = $template->getPermissions();
+                return [
+                    'id' => $template->id,
+                    'name' => $template->name,
+                    'label' => $template->label,
+                    'description' => $template->description,
+                    'capabilities' => $template->capabilities,
+                    'capabilities_count' => count($template->capabilities ?? []),
+                    'permissions_count' => $perms->count(),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $templates,
+            'total' => $templates->count(),
+        ]);
+    }
+
+    /**
+     * ✅ API: Aplicar plantilla a un usuario
+     */
+    public function applyTemplateToUser(Request $request, User $user)
+    {
+        $this->authorize('usuarios.assign-permission');
+
+        $validated = $request->validate([
+            'template' => 'required|string|exists:capability_templates,name',
+            'mode' => 'required|in:replace,add', // replace: reemplaza, add: agrega
+        ]);
+
+        $template = \App\Models\CapabilityTemplate::where('name', $validated['template'])->first();
+        if (!$template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Plantilla no encontrada',
+            ], 404);
+        }
+
+        if ($validated['mode'] === 'replace') {
+            // Remover todos los permisos
+            $user->syncPermissions([]);
+        }
+
+        // Asignar capacidades de la plantilla
+        foreach ($template->capabilities as $capability) {
+            $this->permissionService->assignCapabilityToUser($user, $capability);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Plantilla '{$template->label}' aplicada a {$user->name}",
+            'capabilities' => $this->permissionService->getUserCapabilities($user),
+        ]);
+    }
+
+    /**
+     * ✅ API: Aplicar plantilla a un rol
+     */
+    public function applyTemplateToRole(Request $request, Role $role)
+    {
+        $this->authorize('roles.assign-permission');
+
+        $validated = $request->validate([
+            'template' => 'required|string|exists:capability_templates,name',
+            'mode' => 'required|in:replace,add',
+        ]);
+
+        $template = \App\Models\CapabilityTemplate::where('name', $validated['template'])->first();
+        if (!$template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Plantilla no encontrada',
+            ], 404);
+        }
+
+        if ($validated['mode'] === 'replace') {
+            // Remover todos los permisos
+            $role->syncPermissions([]);
+        }
+
+        // Asignar capacidades de la plantilla
+        foreach ($template->capabilities as $capability) {
+            $this->permissionService->assignCapabilityToRole($role, $capability);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Plantilla '{$template->label}' aplicada al rol {$role->name}",
+            'capabilities' => $this->permissionService->getRoleCapabilities($role),
+        ]);
     }
 }

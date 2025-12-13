@@ -6,11 +6,10 @@ import { useAuth } from '@/application/hooks/use-auth';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
-import {
-    TransferenciaInventario,
-    Almacen,
-    ProductoInventario
-} from '@/types/inventario';
+import type {
+    TransferenciaInventario
+} from '@/domain/entities/transferencias-inventario';
+import type { Almacen } from '@/domain/entities/almacenes';
 import {
     Search,
     Package,

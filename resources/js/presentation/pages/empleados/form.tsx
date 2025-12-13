@@ -2,7 +2,7 @@
 // Refactored to use 3-layer architecture
 import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { empleadosConfig } from '@/config/empleados.config';
+import { empleadosConfig } from '@/config/modules/empleados.config';
 import { empleadosService } from '@/infrastructure/services/empleados.service';
 // Removed unused import
 import type { Empleado, EmpleadoFormData } from '@/domain/entities/empleados';

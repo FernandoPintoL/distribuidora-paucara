@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -8,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Chofer extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
     protected $table = "choferes_legacy";
 
     protected $fillable = [
@@ -20,10 +21,13 @@ class Chofer extends Model
         'observaciones',
     ];
 
-    protected $casts = [
-        'fecha_vencimiento_licencia' => 'date',
-        'activo'                     => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_vencimiento_licencia' => 'date',
+            'activo'                     => 'boolean',
+        ];
+    }
 
     /**
      * Usuario asociado al chofer
@@ -61,8 +65,4 @@ class Chofer extends Model
     /**
      * Choferes activos
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 }

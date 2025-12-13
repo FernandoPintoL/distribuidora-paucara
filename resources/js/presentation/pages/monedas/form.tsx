@@ -1,7 +1,7 @@
 // Pages: Monedas form page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericForm from '@/presentation/components/generic/generic-form';
-import { monedasConfig } from '@/config/monedas.config';
+import { monedasConfig } from '@/config/modules/monedas.config';
 import monedasService from '@/infrastructure/services/monedas.service';
 import type { Moneda, MonedaFormData } from '@/domain/entities/monedas';
 

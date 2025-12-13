@@ -17,10 +17,13 @@ class Marca extends Model
         'nombre', 'descripcion', 'activo', 'fecha_creacion',
     ];
 
-    protected $casts = [
-        'activo' => 'boolean',
-        'fecha_creacion' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+            'fecha_creacion' => 'datetime',
+        ];
+    }
 
     public function productos()
     {

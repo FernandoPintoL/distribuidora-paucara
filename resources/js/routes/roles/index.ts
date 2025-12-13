@@ -1,10 +1,10 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
-* @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:189
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
  * @route '/roles/{role}/crear-funcionalidad'
  */
-export const crearFuncionalidad = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const crearFuncionalidad = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: crearFuncionalidad.url(args, options),
     method: 'post',
 })
@@ -15,18 +15,15 @@ crearFuncionalidad.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:189
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
  * @route '/roles/{role}/crear-funcionalidad'
  */
-crearFuncionalidad.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+crearFuncionalidad.url = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { role: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { role: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -37,9 +34,7 @@ crearFuncionalidad.url = (args: { role: number | { id: number } } | [role: numbe
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        role: typeof args.role === 'object'
-                ? args.role.id
-                : args.role,
+                        role: args.role,
                 }
 
     return crearFuncionalidad.definition.url
@@ -48,31 +43,31 @@ crearFuncionalidad.url = (args: { role: number | { id: number } } | [role: numbe
 }
 
 /**
-* @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:189
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
  * @route '/roles/{role}/crear-funcionalidad'
  */
-crearFuncionalidad.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+crearFuncionalidad.post = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: crearFuncionalidad.url(args, options),
     method: 'post',
 })
 
     /**
-* @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:189
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
  * @route '/roles/{role}/crear-funcionalidad'
  */
-    const crearFuncionalidadForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const crearFuncionalidadForm = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: crearFuncionalidad.url(args, options),
         method: 'post',
     })
 
             /**
-* @see \App\Http\Controllers\RolController::crearFuncionalidad
- * @see app/Http/Controllers/RolController.php:189
+* @see \App\Http\Controllers\RoleController::crearFuncionalidad
+ * @see app/Http/Controllers/RoleController.php:0
  * @route '/roles/{role}/crear-funcionalidad'
  */
-        crearFuncionalidadForm.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        crearFuncionalidadForm.post = (args: { role: string | number } | [role: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: crearFuncionalidad.url(args, options),
             method: 'post',
         })

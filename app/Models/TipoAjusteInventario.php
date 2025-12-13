@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TipoAjusteInventario extends Model
 {
     /** @use HasFactory<\Database\Factories\TipoAjusteInventarioFactory> */
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'tipos_ajuste_inventario';
 
@@ -32,10 +33,6 @@ class TipoAjusteInventario extends Model
     /**
      * Scope para obtener solo tipos activos
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     /**
      * Scope para ordenar por orden

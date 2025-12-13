@@ -71,6 +71,7 @@ class ZonaController extends Controller
             'codigo' => 'nullable|string|unique:zonas,codigo',
             'descripcion' => 'nullable|string',
             'localidades' => 'nullable|array',
+            'localidades.*' => 'exists:localidades,id',
             'latitud_centro' => 'nullable|numeric|between:-90,90',
             'longitud_centro' => 'nullable|numeric|between:-180,180',
             'tiempo_estimado_entrega' => 'nullable|integer|min:0',
@@ -90,6 +91,11 @@ class ZonaController extends Controller
             'activa' => $request->activa ?? true,
         ]);
 
+        // Sincronizar con tabla pivot
+        if ($request->has('localidades') && is_array($request->localidades)) {
+            $zona->localidades()->sync($request->localidades);
+        }
+
         return redirect()->route('zonas.show', $zona)
             ->with('success', 'Zona creada correctamente.');
     }
@@ -99,7 +105,7 @@ class ZonaController extends Controller
      */
     public function show(Zona $zona)
     {
-        $zona->load(['preventista.user', 'rutas', 'clientes']);
+        $zona->load(['preventista.user', 'rutas', 'clientes', 'localidades']);
 
         $estadisticas = [
             'total_clientes' => $zona->cantidadClientes(),
@@ -108,6 +114,7 @@ class ZonaController extends Controller
                 ->whereDate('fecha_ruta', today())
                 ->where('estado', 'completada')
                 ->count(),
+            'total_localidades' => $zona->localidades()->count(),
         ];
 
         return Inertia::render('zonas/show', [
@@ -142,6 +149,7 @@ class ZonaController extends Controller
             'codigo' => 'nullable|string|unique:zonas,codigo,' . $zona->id,
             'descripcion' => 'nullable|string',
             'localidades' => 'nullable|array',
+            'localidades.*' => 'exists:localidades,id',
             'latitud_centro' => 'nullable|numeric|between:-90,90',
             'longitud_centro' => 'nullable|numeric|between:-180,180',
             'tiempo_estimado_entrega' => 'nullable|integer|min:0',
@@ -160,6 +168,11 @@ class ZonaController extends Controller
             'preventista_id' => $request->preventista_id,
             'activa' => $request->activa,
         ]);
+
+        // Sincronizar con tabla pivot
+        if ($request->has('localidades') && is_array($request->localidades)) {
+            $zona->localidades()->sync($request->localidades);
+        }
 
         return back()->with('success', 'Zona actualizada correctamente.');
     }
@@ -195,11 +208,19 @@ class ZonaController extends Controller
 
     /**
      * API: Obtener localidades de una zona
+     * ACTUALIZADO: Usar relación en lugar de JSON
      */
     public function localidades(Zona $zona)
     {
+        // Retornar desde relación con datos completos
+        $localidades = $zona->localidades()
+            ->select(['id', 'nombre', 'codigo', 'activo'])
+            ->get();
+
         return response()->json([
-            'localidades' => $zona->localidades,
+            'localidades' => $localidades,
+            // Backward compatibility: también retornar IDs
+            'localidades_ids' => $localidades->pluck('id'),
         ]);
     }
 
@@ -247,5 +268,44 @@ class ZonaController extends Controller
                 ->count(),
             'preventista' => $zona->preventista?->user?->name,
         ]);
+    }
+
+    /**
+     * API: Obtener zonas que contienen una localidad
+     */
+    public function zonasPorLocalidad(Request $request)
+    {
+        $request->validate([
+            'localidad_id' => 'required|exists:localidades,id',
+        ]);
+
+        $zonas = Zona::whereHas('localidades', function ($query) use ($request) {
+            $query->where('localidades.id', $request->localidad_id);
+        })
+        ->with(['preventista.user', 'localidades'])
+        ->where('activa', true)
+        ->get();
+
+        return response()->json($zonas);
+    }
+
+    /**
+     * API: Filtrar zonas por múltiples localidades
+     */
+    public function filtrarPorLocalidades(Request $request)
+    {
+        $request->validate([
+            'localidades' => 'required|array',
+            'localidades.*' => 'exists:localidades,id',
+        ]);
+
+        $zonas = Zona::whereHas('localidades', function ($query) use ($request) {
+            $query->whereIn('localidades.id', $request->localidades);
+        })
+        ->with(['preventista.user', 'localidades'])
+        ->where('activa', true)
+        ->get();
+
+        return response()->json($zonas);
     }
 }

@@ -28,13 +28,16 @@ class Entrega extends Model
         'fecha_firma_entrega',
     ];
 
-    protected $casts = [
-        'fecha_asignacion' => 'datetime',
-        'fecha_inicio' => 'datetime',
-        'fecha_llegada' => 'datetime',
-        'fecha_entrega' => 'datetime',
-        'fecha_firma_entrega' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_asignacion' => 'datetime',
+            'fecha_inicio' => 'datetime',
+            'fecha_llegada' => 'datetime',
+            'fecha_entrega' => 'datetime',
+            'fecha_firma_entrega' => 'datetime',
+        ];
+    }
 
     // Estados de la entrega
     const ESTADO_ASIGNADA = 'ASIGNADA';

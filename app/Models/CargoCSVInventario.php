@@ -26,14 +26,17 @@ class CargoCSVInventario extends Model
         'motivo_reversion',
     ];
 
-    protected $casts = [
-        'datos_json' => 'array',
-        'errores_json' => 'array',
-        'cambios_json' => 'array',
-        'fecha_reversion' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'datos_json' => 'array',
+            'errores_json' => 'array',
+            'cambios_json' => 'array',
+            'fecha_reversion' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     /**
      * Usuario que realizó la carga

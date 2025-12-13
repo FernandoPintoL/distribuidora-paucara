@@ -30,12 +30,15 @@ class ReservaStock extends Model
         'liberado_por'
     ];
 
-    protected $casts = [
-        'cantidad_reservada' => 'decimal:4',
-        'cantidad_utilizada' => 'decimal:4',
-        'fecha_vencimiento' => 'datetime',
-        'fecha_liberacion' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'cantidad_reservada' => 'decimal:4',
+            'cantidad_utilizada' => 'decimal:4',
+            'fecha_vencimiento' => 'datetime',
+            'fecha_liberacion' => 'datetime',
+        ];
+    }
 
     // Estados de reserva
     const ESTADO_ACTIVA = 'activa';

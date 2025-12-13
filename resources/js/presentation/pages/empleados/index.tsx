@@ -2,7 +2,7 @@
 // Refactored to use 3-layer architecture
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { empleadosConfig } from '@/config/empleados.config';
+import { empleadosConfig } from '@/config/modules/empleados.config';
 import { empleadosService } from '@/infrastructure/services/empleados.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Empleado, EmpleadoFormData } from '@/domain/entities/empleados';

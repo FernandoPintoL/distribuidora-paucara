@@ -1,7 +1,7 @@
 // Pages: Proveedores form page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { proveedoresConfig } from '@/config/proveedores.config';
+import { proveedoresConfig } from '@/config/modules/proveedores.config';
 import proveedoresService from '@/infrastructure/services/proveedores.service';
 import type { Proveedor, ProveedorFormData } from '@/domain/entities/proveedores';
 

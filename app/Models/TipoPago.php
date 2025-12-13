@@ -16,9 +16,12 @@ class TipoPago extends Model
         'codigo', 'nombre', 'activo',
     ];
 
-    protected $casts = [
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+        ];
+    }
 
     // Relaciones
     public function pagos()

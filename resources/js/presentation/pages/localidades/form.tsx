@@ -1,7 +1,7 @@
 // Pages: Localidades form page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { localidadesConfig } from '@/config/localidades.config';
+import { localidadesConfig } from '@/config/modules/localidades.config';
 import localidadesService from '@/infrastructure/services/localidades.service';
 import type { Localidad, LocalidadFormData } from '@/domain/entities/localidades';
 

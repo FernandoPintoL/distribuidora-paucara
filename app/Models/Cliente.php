@@ -1,12 +1,14 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Cliente extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode, HasActiveScope;
 
     public $timestamps = false;
 
@@ -30,11 +32,14 @@ class Cliente extends Model
         'usuario_creacion_id',
     ];
 
-    protected $casts = [
-        'activo'         => 'boolean',
-        'fecha_registro' => 'datetime',
-        'limite_credito' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo'         => 'boolean',
+            'fecha_registro' => 'datetime',
+            'limite_credito' => 'decimal:2',
+        ];
+    }
 
     public function localidad()
     {

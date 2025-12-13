@@ -5,13 +5,13 @@ import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useAuth } from '@/application/hooks/use-auth';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
-import {
+import type {
     TransferenciaInventario,
     FiltrosTransferencias,
-    Almacen,
-    ESTADOS_TRANSFERENCIA,
     EstadoTransferencia
-} from '@/types/inventario';
+} from '@/domain/entities/transferencias-inventario';
+import type { Almacen } from '@/domain/entities/almacenes';
+import { ESTADOS_TRANSFERENCIA } from '@/presentation/config/inventory.config';
 import EstadoBadge from '@/presentation/components/Inventario/EstadoBadge';
 import { Plus, Filter, Eye, Send, Package, X, Edit } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';

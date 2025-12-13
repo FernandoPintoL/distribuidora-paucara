@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\PermissionController::getStructure
- * @see app/Http/Controllers/PermissionController.php:114
+ * @see app/Http/Controllers/PermissionController.php:113
  * @route '/api/permisos/estructura'
  */
 export const getStructure = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ getStructure.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getStructure
- * @see app/Http/Controllers/PermissionController.php:114
+ * @see app/Http/Controllers/PermissionController.php:113
  * @route '/api/permisos/estructura'
  */
 getStructure.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ getStructure.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getStructure
- * @see app/Http/Controllers/PermissionController.php:114
+ * @see app/Http/Controllers/PermissionController.php:113
  * @route '/api/permisos/estructura'
  */
 getStructure.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ getStructure.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\PermissionController::getStructure
- * @see app/Http/Controllers/PermissionController.php:114
+ * @see app/Http/Controllers/PermissionController.php:113
  * @route '/api/permisos/estructura'
  */
 getStructure.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ getStructure.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\PermissionController::getStructure
- * @see app/Http/Controllers/PermissionController.php:114
+ * @see app/Http/Controllers/PermissionController.php:113
  * @route '/api/permisos/estructura'
  */
     const getStructureForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ getStructure.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\PermissionController::getStructure
- * @see app/Http/Controllers/PermissionController.php:114
+ * @see app/Http/Controllers/PermissionController.php:113
  * @route '/api/permisos/estructura'
  */
         getStructureForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ getStructure.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\PermissionController::getStructure
- * @see app/Http/Controllers/PermissionController.php:114
+ * @see app/Http/Controllers/PermissionController.php:113
  * @route '/api/permisos/estructura'
  */
         getStructureForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ getStructure.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     getStructure.form = getStructureForm
 /**
 * @see \App\Http\Controllers\PermissionController::getGrouped
- * @see app/Http/Controllers/PermissionController.php:128
+ * @see app/Http/Controllers/PermissionController.php:127
  * @route '/api/permisos/agrupados'
  */
 export const getGrouped = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ getGrouped.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getGrouped
- * @see app/Http/Controllers/PermissionController.php:128
+ * @see app/Http/Controllers/PermissionController.php:127
  * @route '/api/permisos/agrupados'
  */
 getGrouped.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ getGrouped.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getGrouped
- * @see app/Http/Controllers/PermissionController.php:128
+ * @see app/Http/Controllers/PermissionController.php:127
  * @route '/api/permisos/agrupados'
  */
 getGrouped.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ getGrouped.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\PermissionController::getGrouped
- * @see app/Http/Controllers/PermissionController.php:128
+ * @see app/Http/Controllers/PermissionController.php:127
  * @route '/api/permisos/agrupados'
  */
 getGrouped.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ getGrouped.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\PermissionController::getGrouped
- * @see app/Http/Controllers/PermissionController.php:128
+ * @see app/Http/Controllers/PermissionController.php:127
  * @route '/api/permisos/agrupados'
  */
     const getGroupedForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ getGrouped.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\PermissionController::getGrouped
- * @see app/Http/Controllers/PermissionController.php:128
+ * @see app/Http/Controllers/PermissionController.php:127
  * @route '/api/permisos/agrupados'
  */
         getGroupedForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ getGrouped.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\PermissionController::getGrouped
- * @see app/Http/Controllers/PermissionController.php:128
+ * @see app/Http/Controllers/PermissionController.php:127
  * @route '/api/permisos/agrupados'
  */
         getGroupedForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -761,7 +761,7 @@ export const editarRol = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/api/permisos/rol/{role}'
  */
 const actualizarRol0513cf81727e06dde4c0694f8d2c26e4 = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -776,7 +776,7 @@ actualizarRol0513cf81727e06dde4c0694f8d2c26e4.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/api/permisos/rol/{role}'
  */
 actualizarRol0513cf81727e06dde4c0694f8d2c26e4.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -809,7 +809,7 @@ actualizarRol0513cf81727e06dde4c0694f8d2c26e4.url = (args: { role: number | { id
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/api/permisos/rol/{role}'
  */
 actualizarRol0513cf81727e06dde4c0694f8d2c26e4.patch = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -819,7 +819,7 @@ actualizarRol0513cf81727e06dde4c0694f8d2c26e4.patch = (args: { role: number | { 
 
     /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/api/permisos/rol/{role}'
  */
     const actualizarRol0513cf81727e06dde4c0694f8d2c26e4Form = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -834,7 +834,7 @@ actualizarRol0513cf81727e06dde4c0694f8d2c26e4.patch = (args: { role: number | { 
 
             /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/api/permisos/rol/{role}'
  */
         actualizarRol0513cf81727e06dde4c0694f8d2c26e4Form.patch = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -850,7 +850,7 @@ actualizarRol0513cf81727e06dde4c0694f8d2c26e4.patch = (args: { role: number | { 
     actualizarRol0513cf81727e06dde4c0694f8d2c26e4.form = actualizarRol0513cf81727e06dde4c0694f8d2c26e4Form
     /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
 const actualizarRola5f96a26c816b3f35c56c27b29edf11f = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -865,7 +865,7 @@ actualizarRola5f96a26c816b3f35c56c27b29edf11f.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
 actualizarRola5f96a26c816b3f35c56c27b29edf11f.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -898,7 +898,7 @@ actualizarRola5f96a26c816b3f35c56c27b29edf11f.url = (args: { role: number | { id
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
 actualizarRola5f96a26c816b3f35c56c27b29edf11f.patch = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -908,7 +908,7 @@ actualizarRola5f96a26c816b3f35c56c27b29edf11f.patch = (args: { role: number | { 
 
     /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
     const actualizarRola5f96a26c816b3f35c56c27b29edf11fForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -923,7 +923,7 @@ actualizarRola5f96a26c816b3f35c56c27b29edf11f.patch = (args: { role: number | { 
 
             /**
 * @see \App\Http\Controllers\PermissionController::actualizarRol
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
         actualizarRola5f96a26c816b3f35c56c27b29edf11fForm.patch = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -945,7 +945,7 @@ export const actualizarRol = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getUsuarios
- * @see app/Http/Controllers/PermissionController.php:142
+ * @see app/Http/Controllers/PermissionController.php:141
  * @route '/api/usuarios'
  */
 export const getUsuarios = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -960,7 +960,7 @@ getUsuarios.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getUsuarios
- * @see app/Http/Controllers/PermissionController.php:142
+ * @see app/Http/Controllers/PermissionController.php:141
  * @route '/api/usuarios'
  */
 getUsuarios.url = (options?: RouteQueryOptions) => {
@@ -969,7 +969,7 @@ getUsuarios.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getUsuarios
- * @see app/Http/Controllers/PermissionController.php:142
+ * @see app/Http/Controllers/PermissionController.php:141
  * @route '/api/usuarios'
  */
 getUsuarios.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -978,7 +978,7 @@ getUsuarios.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\PermissionController::getUsuarios
- * @see app/Http/Controllers/PermissionController.php:142
+ * @see app/Http/Controllers/PermissionController.php:141
  * @route '/api/usuarios'
  */
 getUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -988,7 +988,7 @@ getUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\PermissionController::getUsuarios
- * @see app/Http/Controllers/PermissionController.php:142
+ * @see app/Http/Controllers/PermissionController.php:141
  * @route '/api/usuarios'
  */
     const getUsuariosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -998,7 +998,7 @@ getUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\PermissionController::getUsuarios
- * @see app/Http/Controllers/PermissionController.php:142
+ * @see app/Http/Controllers/PermissionController.php:141
  * @route '/api/usuarios'
  */
         getUsuariosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1007,7 +1007,7 @@ getUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\PermissionController::getUsuarios
- * @see app/Http/Controllers/PermissionController.php:142
+ * @see app/Http/Controllers/PermissionController.php:141
  * @route '/api/usuarios'
  */
         getUsuariosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1023,7 +1023,7 @@ getUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     getUsuarios.form = getUsuariosForm
 /**
 * @see \App\Http\Controllers\PermissionController::getRoles
- * @see app/Http/Controllers/PermissionController.php:184
+ * @see app/Http/Controllers/PermissionController.php:183
  * @route '/api/roles'
  */
 export const getRoles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1038,7 +1038,7 @@ getRoles.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getRoles
- * @see app/Http/Controllers/PermissionController.php:184
+ * @see app/Http/Controllers/PermissionController.php:183
  * @route '/api/roles'
  */
 getRoles.url = (options?: RouteQueryOptions) => {
@@ -1047,7 +1047,7 @@ getRoles.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getRoles
- * @see app/Http/Controllers/PermissionController.php:184
+ * @see app/Http/Controllers/PermissionController.php:183
  * @route '/api/roles'
  */
 getRoles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1056,7 +1056,7 @@ getRoles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\PermissionController::getRoles
- * @see app/Http/Controllers/PermissionController.php:184
+ * @see app/Http/Controllers/PermissionController.php:183
  * @route '/api/roles'
  */
 getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1066,7 +1066,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\PermissionController::getRoles
- * @see app/Http/Controllers/PermissionController.php:184
+ * @see app/Http/Controllers/PermissionController.php:183
  * @route '/api/roles'
  */
     const getRolesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1076,7 +1076,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\PermissionController::getRoles
- * @see app/Http/Controllers/PermissionController.php:184
+ * @see app/Http/Controllers/PermissionController.php:183
  * @route '/api/roles'
  */
         getRolesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1085,7 +1085,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\PermissionController::getRoles
- * @see app/Http/Controllers/PermissionController.php:184
+ * @see app/Http/Controllers/PermissionController.php:183
  * @route '/api/roles'
  */
         getRolesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1101,7 +1101,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     getRoles.form = getRolesForm
 /**
 * @see \App\Http\Controllers\PermissionController::getHistorial
- * @see app/Http/Controllers/PermissionController.php:224
+ * @see app/Http/Controllers/PermissionController.php:223
  * @route '/api/permisos/historial'
  */
 export const getHistorial = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1116,7 +1116,7 @@ getHistorial.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getHistorial
- * @see app/Http/Controllers/PermissionController.php:224
+ * @see app/Http/Controllers/PermissionController.php:223
  * @route '/api/permisos/historial'
  */
 getHistorial.url = (options?: RouteQueryOptions) => {
@@ -1125,7 +1125,7 @@ getHistorial.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PermissionController::getHistorial
- * @see app/Http/Controllers/PermissionController.php:224
+ * @see app/Http/Controllers/PermissionController.php:223
  * @route '/api/permisos/historial'
  */
 getHistorial.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1134,7 +1134,7 @@ getHistorial.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\PermissionController::getHistorial
- * @see app/Http/Controllers/PermissionController.php:224
+ * @see app/Http/Controllers/PermissionController.php:223
  * @route '/api/permisos/historial'
  */
 getHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1144,7 +1144,7 @@ getHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\PermissionController::getHistorial
- * @see app/Http/Controllers/PermissionController.php:224
+ * @see app/Http/Controllers/PermissionController.php:223
  * @route '/api/permisos/historial'
  */
     const getHistorialForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1154,7 +1154,7 @@ getHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\PermissionController::getHistorial
- * @see app/Http/Controllers/PermissionController.php:224
+ * @see app/Http/Controllers/PermissionController.php:223
  * @route '/api/permisos/historial'
  */
         getHistorialForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1163,7 +1163,7 @@ getHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\PermissionController::getHistorial
- * @see app/Http/Controllers/PermissionController.php:224
+ * @see app/Http/Controllers/PermissionController.php:223
  * @route '/api/permisos/historial'
  */
         getHistorialForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1179,7 +1179,7 @@ getHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     getHistorial.form = getHistorialForm
 /**
 * @see \App\Http\Controllers\PermissionController::bulkEdit
- * @see app/Http/Controllers/PermissionController.php:280
+ * @see app/Http/Controllers/PermissionController.php:279
  * @route '/api/permisos/bulk-edit'
  */
 export const bulkEdit = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1194,7 +1194,7 @@ bulkEdit.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::bulkEdit
- * @see app/Http/Controllers/PermissionController.php:280
+ * @see app/Http/Controllers/PermissionController.php:279
  * @route '/api/permisos/bulk-edit'
  */
 bulkEdit.url = (options?: RouteQueryOptions) => {
@@ -1203,7 +1203,7 @@ bulkEdit.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PermissionController::bulkEdit
- * @see app/Http/Controllers/PermissionController.php:280
+ * @see app/Http/Controllers/PermissionController.php:279
  * @route '/api/permisos/bulk-edit'
  */
 bulkEdit.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1213,7 +1213,7 @@ bulkEdit.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\PermissionController::bulkEdit
- * @see app/Http/Controllers/PermissionController.php:280
+ * @see app/Http/Controllers/PermissionController.php:279
  * @route '/api/permisos/bulk-edit'
  */
     const bulkEditForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1223,7 +1223,7 @@ bulkEdit.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\PermissionController::bulkEdit
- * @see app/Http/Controllers/PermissionController.php:280
+ * @see app/Http/Controllers/PermissionController.php:279
  * @route '/api/permisos/bulk-edit'
  */
         bulkEditForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1232,6 +1232,840 @@ bulkEdit.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
         })
     
     bulkEdit.form = bulkEditForm
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilities
+ * @see app/Http/Controllers/PermissionController.php:347
+ * @route '/api/capacidades'
+ */
+export const getCapabilities = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getCapabilities.url(options),
+    method: 'get',
+})
+
+getCapabilities.definition = {
+    methods: ["get","head"],
+    url: '/api/capacidades',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilities
+ * @see app/Http/Controllers/PermissionController.php:347
+ * @route '/api/capacidades'
+ */
+getCapabilities.url = (options?: RouteQueryOptions) => {
+    return getCapabilities.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilities
+ * @see app/Http/Controllers/PermissionController.php:347
+ * @route '/api/capacidades'
+ */
+getCapabilities.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getCapabilities.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilities
+ * @see app/Http/Controllers/PermissionController.php:347
+ * @route '/api/capacidades'
+ */
+getCapabilities.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: getCapabilities.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::getCapabilities
+ * @see app/Http/Controllers/PermissionController.php:347
+ * @route '/api/capacidades'
+ */
+    const getCapabilitiesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getCapabilities.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::getCapabilities
+ * @see app/Http/Controllers/PermissionController.php:347
+ * @route '/api/capacidades'
+ */
+        getCapabilitiesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getCapabilities.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\PermissionController::getCapabilities
+ * @see app/Http/Controllers/PermissionController.php:347
+ * @route '/api/capacidades'
+ */
+        getCapabilitiesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getCapabilities.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getCapabilities.form = getCapabilitiesForm
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilityTemplates
+ * @see app/Http/Controllers/PermissionController.php:510
+ * @route '/api/capacidades/plantillas'
+ */
+export const getCapabilityTemplates = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getCapabilityTemplates.url(options),
+    method: 'get',
+})
+
+getCapabilityTemplates.definition = {
+    methods: ["get","head"],
+    url: '/api/capacidades/plantillas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilityTemplates
+ * @see app/Http/Controllers/PermissionController.php:510
+ * @route '/api/capacidades/plantillas'
+ */
+getCapabilityTemplates.url = (options?: RouteQueryOptions) => {
+    return getCapabilityTemplates.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilityTemplates
+ * @see app/Http/Controllers/PermissionController.php:510
+ * @route '/api/capacidades/plantillas'
+ */
+getCapabilityTemplates.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getCapabilityTemplates.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\PermissionController::getCapabilityTemplates
+ * @see app/Http/Controllers/PermissionController.php:510
+ * @route '/api/capacidades/plantillas'
+ */
+getCapabilityTemplates.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: getCapabilityTemplates.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::getCapabilityTemplates
+ * @see app/Http/Controllers/PermissionController.php:510
+ * @route '/api/capacidades/plantillas'
+ */
+    const getCapabilityTemplatesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getCapabilityTemplates.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::getCapabilityTemplates
+ * @see app/Http/Controllers/PermissionController.php:510
+ * @route '/api/capacidades/plantillas'
+ */
+        getCapabilityTemplatesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getCapabilityTemplates.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\PermissionController::getCapabilityTemplates
+ * @see app/Http/Controllers/PermissionController.php:510
+ * @route '/api/capacidades/plantillas'
+ */
+        getCapabilityTemplatesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getCapabilityTemplates.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getCapabilityTemplates.form = getCapabilityTemplatesForm
+/**
+* @see \App\Http\Controllers\PermissionController::getUserCapabilities
+ * @see app/Http/Controllers/PermissionController.php:363
+ * @route '/api/capacidades/usuario/{user}'
+ */
+export const getUserCapabilities = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getUserCapabilities.url(args, options),
+    method: 'get',
+})
+
+getUserCapabilities.definition = {
+    methods: ["get","head"],
+    url: '/api/capacidades/usuario/{user}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::getUserCapabilities
+ * @see app/Http/Controllers/PermissionController.php:363
+ * @route '/api/capacidades/usuario/{user}'
+ */
+getUserCapabilities.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return getUserCapabilities.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::getUserCapabilities
+ * @see app/Http/Controllers/PermissionController.php:363
+ * @route '/api/capacidades/usuario/{user}'
+ */
+getUserCapabilities.get = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getUserCapabilities.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\PermissionController::getUserCapabilities
+ * @see app/Http/Controllers/PermissionController.php:363
+ * @route '/api/capacidades/usuario/{user}'
+ */
+getUserCapabilities.head = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: getUserCapabilities.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::getUserCapabilities
+ * @see app/Http/Controllers/PermissionController.php:363
+ * @route '/api/capacidades/usuario/{user}'
+ */
+    const getUserCapabilitiesForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getUserCapabilities.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::getUserCapabilities
+ * @see app/Http/Controllers/PermissionController.php:363
+ * @route '/api/capacidades/usuario/{user}'
+ */
+        getUserCapabilitiesForm.get = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getUserCapabilities.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\PermissionController::getUserCapabilities
+ * @see app/Http/Controllers/PermissionController.php:363
+ * @route '/api/capacidades/usuario/{user}'
+ */
+        getUserCapabilitiesForm.head = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getUserCapabilities.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getUserCapabilities.form = getUserCapabilitiesForm
+/**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToUser
+ * @see app/Http/Controllers/PermissionController.php:402
+ * @route '/api/capacidades/usuario/{user}/asignar'
+ */
+export const assignCapabilityToUser = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: assignCapabilityToUser.url(args, options),
+    method: 'post',
+})
+
+assignCapabilityToUser.definition = {
+    methods: ["post"],
+    url: '/api/capacidades/usuario/{user}/asignar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToUser
+ * @see app/Http/Controllers/PermissionController.php:402
+ * @route '/api/capacidades/usuario/{user}/asignar'
+ */
+assignCapabilityToUser.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return assignCapabilityToUser.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToUser
+ * @see app/Http/Controllers/PermissionController.php:402
+ * @route '/api/capacidades/usuario/{user}/asignar'
+ */
+assignCapabilityToUser.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: assignCapabilityToUser.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToUser
+ * @see app/Http/Controllers/PermissionController.php:402
+ * @route '/api/capacidades/usuario/{user}/asignar'
+ */
+    const assignCapabilityToUserForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: assignCapabilityToUser.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToUser
+ * @see app/Http/Controllers/PermissionController.php:402
+ * @route '/api/capacidades/usuario/{user}/asignar'
+ */
+        assignCapabilityToUserForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: assignCapabilityToUser.url(args, options),
+            method: 'post',
+        })
+    
+    assignCapabilityToUser.form = assignCapabilityToUserForm
+/**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromUser
+ * @see app/Http/Controllers/PermissionController.php:456
+ * @route '/api/capacidades/usuario/{user}/remover'
+ */
+export const removeCapabilityFromUser = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: removeCapabilityFromUser.url(args, options),
+    method: 'post',
+})
+
+removeCapabilityFromUser.definition = {
+    methods: ["post"],
+    url: '/api/capacidades/usuario/{user}/remover',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromUser
+ * @see app/Http/Controllers/PermissionController.php:456
+ * @route '/api/capacidades/usuario/{user}/remover'
+ */
+removeCapabilityFromUser.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return removeCapabilityFromUser.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromUser
+ * @see app/Http/Controllers/PermissionController.php:456
+ * @route '/api/capacidades/usuario/{user}/remover'
+ */
+removeCapabilityFromUser.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: removeCapabilityFromUser.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromUser
+ * @see app/Http/Controllers/PermissionController.php:456
+ * @route '/api/capacidades/usuario/{user}/remover'
+ */
+    const removeCapabilityFromUserForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: removeCapabilityFromUser.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromUser
+ * @see app/Http/Controllers/PermissionController.php:456
+ * @route '/api/capacidades/usuario/{user}/remover'
+ */
+        removeCapabilityFromUserForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: removeCapabilityFromUser.url(args, options),
+            method: 'post',
+        })
+    
+    removeCapabilityFromUser.form = removeCapabilityFromUserForm
+/**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToUser
+ * @see app/Http/Controllers/PermissionController.php:540
+ * @route '/api/capacidades/usuario/{user}/aplicar-plantilla'
+ */
+export const applyTemplateToUser = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: applyTemplateToUser.url(args, options),
+    method: 'post',
+})
+
+applyTemplateToUser.definition = {
+    methods: ["post"],
+    url: '/api/capacidades/usuario/{user}/aplicar-plantilla',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToUser
+ * @see app/Http/Controllers/PermissionController.php:540
+ * @route '/api/capacidades/usuario/{user}/aplicar-plantilla'
+ */
+applyTemplateToUser.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { user: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { user: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    user: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        user: typeof args.user === 'object'
+                ? args.user.id
+                : args.user,
+                }
+
+    return applyTemplateToUser.definition.url
+            .replace('{user}', parsedArgs.user.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToUser
+ * @see app/Http/Controllers/PermissionController.php:540
+ * @route '/api/capacidades/usuario/{user}/aplicar-plantilla'
+ */
+applyTemplateToUser.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: applyTemplateToUser.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToUser
+ * @see app/Http/Controllers/PermissionController.php:540
+ * @route '/api/capacidades/usuario/{user}/aplicar-plantilla'
+ */
+    const applyTemplateToUserForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: applyTemplateToUser.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToUser
+ * @see app/Http/Controllers/PermissionController.php:540
+ * @route '/api/capacidades/usuario/{user}/aplicar-plantilla'
+ */
+        applyTemplateToUserForm.post = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: applyTemplateToUser.url(args, options),
+            method: 'post',
+        })
+    
+    applyTemplateToUser.form = applyTemplateToUserForm
+/**
+* @see \App\Http\Controllers\PermissionController::getRoleCapabilities
+ * @see app/Http/Controllers/PermissionController.php:383
+ * @route '/api/capacidades/rol/{role}'
+ */
+export const getRoleCapabilities = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getRoleCapabilities.url(args, options),
+    method: 'get',
+})
+
+getRoleCapabilities.definition = {
+    methods: ["get","head"],
+    url: '/api/capacidades/rol/{role}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::getRoleCapabilities
+ * @see app/Http/Controllers/PermissionController.php:383
+ * @route '/api/capacidades/rol/{role}'
+ */
+getRoleCapabilities.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { role: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { role: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    role: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        role: typeof args.role === 'object'
+                ? args.role.id
+                : args.role,
+                }
+
+    return getRoleCapabilities.definition.url
+            .replace('{role}', parsedArgs.role.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::getRoleCapabilities
+ * @see app/Http/Controllers/PermissionController.php:383
+ * @route '/api/capacidades/rol/{role}'
+ */
+getRoleCapabilities.get = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getRoleCapabilities.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\PermissionController::getRoleCapabilities
+ * @see app/Http/Controllers/PermissionController.php:383
+ * @route '/api/capacidades/rol/{role}'
+ */
+getRoleCapabilities.head = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: getRoleCapabilities.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::getRoleCapabilities
+ * @see app/Http/Controllers/PermissionController.php:383
+ * @route '/api/capacidades/rol/{role}'
+ */
+    const getRoleCapabilitiesForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getRoleCapabilities.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::getRoleCapabilities
+ * @see app/Http/Controllers/PermissionController.php:383
+ * @route '/api/capacidades/rol/{role}'
+ */
+        getRoleCapabilitiesForm.get = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getRoleCapabilities.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\PermissionController::getRoleCapabilities
+ * @see app/Http/Controllers/PermissionController.php:383
+ * @route '/api/capacidades/rol/{role}'
+ */
+        getRoleCapabilitiesForm.head = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getRoleCapabilities.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getRoleCapabilities.form = getRoleCapabilitiesForm
+/**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToRole
+ * @see app/Http/Controllers/PermissionController.php:429
+ * @route '/api/capacidades/rol/{role}/asignar'
+ */
+export const assignCapabilityToRole = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: assignCapabilityToRole.url(args, options),
+    method: 'post',
+})
+
+assignCapabilityToRole.definition = {
+    methods: ["post"],
+    url: '/api/capacidades/rol/{role}/asignar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToRole
+ * @see app/Http/Controllers/PermissionController.php:429
+ * @route '/api/capacidades/rol/{role}/asignar'
+ */
+assignCapabilityToRole.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { role: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { role: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    role: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        role: typeof args.role === 'object'
+                ? args.role.id
+                : args.role,
+                }
+
+    return assignCapabilityToRole.definition.url
+            .replace('{role}', parsedArgs.role.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToRole
+ * @see app/Http/Controllers/PermissionController.php:429
+ * @route '/api/capacidades/rol/{role}/asignar'
+ */
+assignCapabilityToRole.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: assignCapabilityToRole.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToRole
+ * @see app/Http/Controllers/PermissionController.php:429
+ * @route '/api/capacidades/rol/{role}/asignar'
+ */
+    const assignCapabilityToRoleForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: assignCapabilityToRole.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::assignCapabilityToRole
+ * @see app/Http/Controllers/PermissionController.php:429
+ * @route '/api/capacidades/rol/{role}/asignar'
+ */
+        assignCapabilityToRoleForm.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: assignCapabilityToRole.url(args, options),
+            method: 'post',
+        })
+    
+    assignCapabilityToRole.form = assignCapabilityToRoleForm
+/**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromRole
+ * @see app/Http/Controllers/PermissionController.php:483
+ * @route '/api/capacidades/rol/{role}/remover'
+ */
+export const removeCapabilityFromRole = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: removeCapabilityFromRole.url(args, options),
+    method: 'post',
+})
+
+removeCapabilityFromRole.definition = {
+    methods: ["post"],
+    url: '/api/capacidades/rol/{role}/remover',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromRole
+ * @see app/Http/Controllers/PermissionController.php:483
+ * @route '/api/capacidades/rol/{role}/remover'
+ */
+removeCapabilityFromRole.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { role: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { role: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    role: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        role: typeof args.role === 'object'
+                ? args.role.id
+                : args.role,
+                }
+
+    return removeCapabilityFromRole.definition.url
+            .replace('{role}', parsedArgs.role.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromRole
+ * @see app/Http/Controllers/PermissionController.php:483
+ * @route '/api/capacidades/rol/{role}/remover'
+ */
+removeCapabilityFromRole.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: removeCapabilityFromRole.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromRole
+ * @see app/Http/Controllers/PermissionController.php:483
+ * @route '/api/capacidades/rol/{role}/remover'
+ */
+    const removeCapabilityFromRoleForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: removeCapabilityFromRole.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::removeCapabilityFromRole
+ * @see app/Http/Controllers/PermissionController.php:483
+ * @route '/api/capacidades/rol/{role}/remover'
+ */
+        removeCapabilityFromRoleForm.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: removeCapabilityFromRole.url(args, options),
+            method: 'post',
+        })
+    
+    removeCapabilityFromRole.form = removeCapabilityFromRoleForm
+/**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToRole
+ * @see app/Http/Controllers/PermissionController.php:577
+ * @route '/api/capacidades/rol/{role}/aplicar-plantilla'
+ */
+export const applyTemplateToRole = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: applyTemplateToRole.url(args, options),
+    method: 'post',
+})
+
+applyTemplateToRole.definition = {
+    methods: ["post"],
+    url: '/api/capacidades/rol/{role}/aplicar-plantilla',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToRole
+ * @see app/Http/Controllers/PermissionController.php:577
+ * @route '/api/capacidades/rol/{role}/aplicar-plantilla'
+ */
+applyTemplateToRole.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { role: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { role: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    role: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        role: typeof args.role === 'object'
+                ? args.role.id
+                : args.role,
+                }
+
+    return applyTemplateToRole.definition.url
+            .replace('{role}', parsedArgs.role.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToRole
+ * @see app/Http/Controllers/PermissionController.php:577
+ * @route '/api/capacidades/rol/{role}/aplicar-plantilla'
+ */
+applyTemplateToRole.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: applyTemplateToRole.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToRole
+ * @see app/Http/Controllers/PermissionController.php:577
+ * @route '/api/capacidades/rol/{role}/aplicar-plantilla'
+ */
+    const applyTemplateToRoleForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: applyTemplateToRole.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\PermissionController::applyTemplateToRole
+ * @see app/Http/Controllers/PermissionController.php:577
+ * @route '/api/capacidades/rol/{role}/aplicar-plantilla'
+ */
+        applyTemplateToRoleForm.post = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: applyTemplateToRole.url(args, options),
+            method: 'post',
+        })
+    
+    applyTemplateToRole.form = applyTemplateToRoleForm
 /**
 * @see \App\Http\Controllers\PermissionController::index
  * @see app/Http/Controllers/PermissionController.php:23
@@ -1310,6 +2144,6 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     index.form = indexForm
-const PermissionController = { getStructure, getGrouped, editarUsuario, actualizarUsuario, editarRol, actualizarRol, getUsuarios, getRoles, getHistorial, bulkEdit, index }
+const PermissionController = { getStructure, getGrouped, editarUsuario, actualizarUsuario, editarRol, actualizarRol, getUsuarios, getRoles, getHistorial, bulkEdit, getCapabilities, getCapabilityTemplates, getUserCapabilities, assignCapabilityToUser, removeCapabilityFromUser, applyTemplateToUser, getRoleCapabilities, assignCapabilityToRole, removeCapabilityFromRole, applyTemplateToRole, index }
 
 export default PermissionController

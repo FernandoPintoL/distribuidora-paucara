@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ProveedorController::buscar
- * @see app/Http/Controllers/ProveedorController.php:67
+ * @see app/Http/Controllers/ProveedorController.php:66
  * @route '/api/proveedores/buscar'
  */
 export const buscar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ buscar.definition = {
 
 /**
 * @see \App\Http\Controllers\ProveedorController::buscar
- * @see app/Http/Controllers/ProveedorController.php:67
+ * @see app/Http/Controllers/ProveedorController.php:66
  * @route '/api/proveedores/buscar'
  */
 buscar.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ buscar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ProveedorController::buscar
- * @see app/Http/Controllers/ProveedorController.php:67
+ * @see app/Http/Controllers/ProveedorController.php:66
  * @route '/api/proveedores/buscar'
  */
 buscar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ buscar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ProveedorController::buscar
- * @see app/Http/Controllers/ProveedorController.php:67
+ * @see app/Http/Controllers/ProveedorController.php:66
  * @route '/api/proveedores/buscar'
  */
 buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ProveedorController::buscar
- * @see app/Http/Controllers/ProveedorController.php:67
+ * @see app/Http/Controllers/ProveedorController.php:66
  * @route '/api/proveedores/buscar'
  */
     const buscarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ProveedorController::buscar
- * @see app/Http/Controllers/ProveedorController.php:67
+ * @see app/Http/Controllers/ProveedorController.php:66
  * @route '/api/proveedores/buscar'
  */
         buscarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ProveedorController::buscar
- * @see app/Http/Controllers/ProveedorController.php:67
+ * @see app/Http/Controllers/ProveedorController.php:66
  * @route '/api/proveedores/buscar'
  */
         buscarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

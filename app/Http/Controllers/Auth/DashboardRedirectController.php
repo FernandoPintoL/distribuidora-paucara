@@ -3,21 +3,21 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Services\DashboardRouterService;
+use App\Services\DashboardService;
 use Illuminate\Support\Facades\Auth;
 
 /**
  * Controlador de redirección post-login
  *
  * RESPONSABILIDAD ÚNICA: Redirigir al usuario a su dashboard correcto
- * Basado 100% en las decisiones del backend (DashboardRouterService)
+ * Basado 100% en las decisiones del backend (DashboardService)
  *
  * El frontend NO tiene lógica de negocios
  */
 class DashboardRedirectController extends Controller
 {
     public function __construct(
-        private DashboardRouterService $routerService
+        private DashboardService $dashboardService
     ) {}
 
     /**
@@ -43,10 +43,10 @@ class DashboardRedirectController extends Controller
 
         // Obtener la ruta correcta desde el backend
         // EL BACKEND DECIDE, NO EL FRONTEND
-        $dashboardUrl = $this->routerService->getDashboardRoute($user);
+        $dashboardUrl = $this->dashboardService->getDashboardRoute($user);
 
         // Log para debugging
-        \Log::info('Dashboard redirect', $this->routerService->getRedirectInfo($user));
+        \Log::info('Dashboard redirect', $this->dashboardService->getRedirectInfo($user));
 
         return redirect()->to($dashboardUrl);
     }
@@ -69,8 +69,8 @@ class DashboardRedirectController extends Controller
 
         return response()->json([
             'success' => true,
-            'redirect_url' => $this->routerService->getDashboardRoute($user),
-            'dashboard_name' => $this->routerService->getDashboardName($user),
+            'redirect_url' => $this->dashboardService->getDashboardRoute($user),
+            'dashboard_name' => $this->dashboardService->getDashboardName($user),
         ]);
     }
 }

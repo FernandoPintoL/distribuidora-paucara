@@ -267,4 +267,210 @@ trait ApiInertiaUnifiedResponse
         return request()->header('X-Modal-Request') === 'true' ||
                request()->has('modal');
     }
+
+    // ══════════════════════════════════════════════════════════
+    // ALIASES - Para compatibilidad con código legacy
+    // ══════════════════════════════════════════════════════════
+
+    /**
+     * Respuesta exitosa (alias de respondSuccess)
+     */
+    protected function successResponse(
+        string $message = 'Operación exitosa',
+        mixed $data = null,
+        ?string $redirectRoute = null,
+        array $redirectParams = [],
+        int $statusCode = 200
+    ): JsonResponse|RedirectResponse|InertiaResponse {
+        return $this->respondSuccess($data, $message, $redirectRoute, $statusCode);
+    }
+
+    /**
+     * Respuesta de error (alias de respondError)
+     */
+    protected function errorResponse(
+        string $message = 'Ha ocurrido un error',
+        mixed $errors = null,
+        ?string $redirectRoute = null,
+        array $redirectParams = [],
+        int $statusCode = 422
+    ): JsonResponse|RedirectResponse {
+        return $this->respondError($message, $errors ?? [], $statusCode);
+    }
+
+    /**
+     * Respuesta de validación
+     */
+    protected function validationErrorResponse(
+        array $errors,
+        string $message = 'Errores de validación'
+    ): JsonResponse|RedirectResponse {
+        return $this->respondError($message, $errors, 422);
+    }
+
+    /**
+     * Respuesta para mostrar datos
+     */
+    protected function dataResponse(
+        string $component,
+        array $data = [],
+        ?string $title = null
+    ): JsonResponse|InertiaResponse {
+        if ($this->isApiRequest()) {
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ]);
+        }
+
+        $response = Inertia::render($component, $data);
+        if ($title) {
+            $response = $response->with('title', $title);
+        }
+        return $response;
+    }
+
+    /**
+     * Respuesta para recursos
+     */
+    protected function resourceResponse(
+        mixed $resource,
+        string $message,
+        ?string $redirectRoute = null,
+        array $redirectParams = [],
+        int $statusCode = 200
+    ): JsonResponse|RedirectResponse {
+        return $this->respondSuccess($resource, $message, $redirectRoute, $statusCode);
+    }
+
+    /**
+     * Respuesta para eliminación (alias de respondDeleted)
+     */
+    protected function deleteResponse(
+        string $message = 'Elemento eliminado exitosamente',
+        ?string $redirectRoute = null,
+        array $redirectParams = []
+    ): JsonResponse|RedirectResponse {
+        return $this->respondDeleted($message, $redirectRoute);
+    }
+
+    /**
+     * Respuesta 404 (alias de respondNotFound)
+     */
+    protected function notFoundResponse(
+        string $message = 'Recurso no encontrado'
+    ): JsonResponse|RedirectResponse {
+        return $this->respondNotFound($message);
+    }
+
+    /**
+     * Respuesta 403 (alias de respondForbidden)
+     */
+    protected function forbiddenResponse(
+        string $message = 'No tienes permisos para realizar esta acción'
+    ): JsonResponse {
+        return $this->respondForbidden($message);
+    }
+
+    /**
+     * Respuesta paginada
+     */
+    protected function paginatedResponse(
+        mixed $paginatedData,
+        ?string $component = null,
+        string $dataKey = 'data',
+        array $additionalData = []
+    ): JsonResponse|InertiaResponse {
+        if ($this->isApiRequest()) {
+            return response()->json([
+                'success' => true,
+                'data' => $paginatedData->items(),
+                'pagination' => [
+                    'current_page' => $paginatedData->currentPage(),
+                    'last_page' => $paginatedData->lastPage(),
+                    'per_page' => $paginatedData->perPage(),
+                    'total' => $paginatedData->total(),
+                    'from' => $paginatedData->firstItem(),
+                    'to' => $paginatedData->lastItem(),
+                ],
+                'links' => [
+                    'first' => $paginatedData->url(1),
+                    'last' => $paginatedData->url($paginatedData->lastPage()),
+                    'prev' => $paginatedData->previousPageUrl(),
+                    'next' => $paginatedData->nextPageUrl(),
+                ]
+            ]);
+        }
+
+        if (!$component) {
+            throw new \InvalidArgumentException('Component name required for Inertia response');
+        }
+
+        return Inertia::render($component, array_merge([
+            $dataKey => $paginatedData,
+        ], $additionalData));
+    }
+
+    /**
+     * Manejo unificado de excepciones
+     */
+    protected function handleException(
+        \Exception $e,
+        string $operation = 'operación',
+        ?string $redirectRoute = null
+    ): JsonResponse|RedirectResponse {
+        \Illuminate\Support\Facades\Log::error("Error en {$operation}: " . $e->getMessage(), [
+            'exception' => $e,
+            'user_id' => \Illuminate\Support\Facades\Auth::id(),
+            'request' => request()->all()
+        ]);
+
+        $message = config('app.debug')
+            ? $e->getMessage()
+            : "Error al realizar {$operation}";
+
+        return $this->respondError($message, [], 500);
+    }
+
+    /**
+     * Respuesta modal
+     */
+    protected function modalResponse(array $data, ?string $message = null): JsonResponse
+    {
+        $response = [
+            'success' => true,
+            'data' => $data,
+        ];
+
+        if ($message) {
+            $response['message'] = $message;
+        }
+
+        return response()->json($response, 200, [
+            'X-Inertia-Location' => false,
+        ]);
+    }
+
+    /**
+     * Respuesta genérica que detecta automáticamente el tipo
+     */
+    protected function respondWith(
+        Request $request = null,
+        array $data = [],
+        ?string $successMessage = null,
+        ?string $redirectRoute = null,
+        array $redirectParams = []
+    ): JsonResponse|RedirectResponse|InertiaResponse {
+        $request = $request ?? request();
+
+        if ($this->isApiRequest()) {
+            return $this->respondSuccess($data, $successMessage ?? 'Success');
+        }
+
+        if ($this->isModalRequest($request)) {
+            return $this->modalResponse($data, $successMessage);
+        }
+
+        return $this->respondSuccess($data, $successMessage, $redirectRoute);
+    }
 }

@@ -25,14 +25,17 @@ class StockProducto extends Model
         'fecha_vencimiento',
     ];
 
-    protected $casts = [
-        'cantidad' => 'integer',
-        'cantidad_reservada' => 'integer',
-        'cantidad_disponible' => 'integer',
-        'fecha_actualizacion' => 'datetime',
-        'fecha_vencimiento' => 'date',
-        'deleted_at' => 'datetime', // ✓ Para SoftDeletes
-    ];
+    protected function casts(): array
+    {
+        return [
+            'cantidad' => 'integer',
+            'cantidad_reservada' => 'integer',
+            'cantidad_disponible' => 'integer',
+            'fecha_actualizacion' => 'datetime',
+            'fecha_vencimiento' => 'date',
+            'deleted_at' => 'datetime', // ✓ Para SoftDeletes
+        ];
+    }
 
     /**
      * Nombre del campo deleted_at para soft deletes

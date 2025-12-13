@@ -18,11 +18,14 @@ class SeguimientoEnvio extends Model
         'user_id',
     ];
 
-    protected $casts = [
-        'fecha_hora' => 'datetime',
-        'coordenadas_lat' => 'decimal:8',
-        'coordenadas_lng' => 'decimal:8',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_hora' => 'datetime',
+            'coordenadas_lat' => 'decimal:8',
+            'coordenadas_lng' => 'decimal:8',
+        ];
+    }
 
     // Relaciones
     public function envio(): BelongsTo

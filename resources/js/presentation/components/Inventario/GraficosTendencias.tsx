@@ -11,7 +11,7 @@ import {
     Calendar,
     Download
 } from 'lucide-react';
-import type { EstadisticasMovimientos } from '@/types/inventario';
+import type { EstadisticasMovimientos } from '@/domain/entities/movimientos-inventario';
 
 interface GraficosTendenciasProps {
     estadisticas: EstadisticasMovimientos;

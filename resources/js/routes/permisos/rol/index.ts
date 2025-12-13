@@ -103,7 +103,7 @@ editar.head = (args: { role: number | { id: number } } | [role: number | { id: n
     editar.form = editarForm
 /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
 export const actualizar = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -118,7 +118,7 @@ actualizar.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
 actualizar.url = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -151,7 +151,7 @@ actualizar.url = (args: { role: number | { id: number } } | [role: number | { id
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
 actualizar.patch = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -161,7 +161,7 @@ actualizar.patch = (args: { role: number | { id: number } } | [role: number | { 
 
     /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
     const actualizarForm = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -176,7 +176,7 @@ actualizar.patch = (args: { role: number | { id: number } } | [role: number | { 
 
             /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:93
+ * @see app/Http/Controllers/PermissionController.php:92
  * @route '/permisos/rol/{role}'
  */
         actualizarForm.patch = (args: { role: number | { id: number } } | [role: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

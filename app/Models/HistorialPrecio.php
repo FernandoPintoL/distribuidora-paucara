@@ -22,12 +22,15 @@ class HistorialPrecio extends Model
         'porcentaje_cambio',
     ];
 
-    protected $casts = [
-        'valor_anterior' => 'decimal:2',
-        'valor_nuevo' => 'decimal:2',
-        'fecha_cambio' => 'datetime',
-        'porcentaje_cambio' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'valor_anterior' => 'decimal:2',
+            'valor_nuevo' => 'decimal:2',
+            'fecha_cambio' => 'datetime',
+            'porcentaje_cambio' => 'decimal:2',
+        ];
+    }
 
     public function precioProducto()
     {

@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
 use App\Services\StockService;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class Venta extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode;
 
     protected $fillable = [
         'numero',
@@ -34,14 +35,17 @@ class Venta extends Model
         'estado_logistico',
     ];
 
-    protected $casts = [
-        'fecha'          => 'date',
-        'subtotal'       => 'decimal:2',
-        'descuento'      => 'decimal:2',
-        'impuesto'       => 'decimal:2',
-        'total'          => 'decimal:2',
-        'requiere_envio' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha'          => 'date',
+            'subtotal'       => 'decimal:2',
+            'descuento'      => 'decimal:2',
+            'impuesto'       => 'decimal:2',
+            'total'          => 'decimal:2',
+            'requiere_envio' => 'boolean',
+        ];
+    }
 
     protected static function booted()
     {
@@ -186,64 +190,14 @@ class Venta extends Model
 
     /**
      * Generar número automático para la venta con protección contra race conditions
-     * Formato: VEN + FECHA_ACTUAL + SECUENCIAL (4 dígitos)
      *
-     * IMPORTANTE: Usa lockForUpdate() para prevenir duplicados en concurrencia alta
+     * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
+     * Formato: VEN + FECHA_ACTUAL + SECUENCIAL (6 dígitos)
+     * Ejemplo: VEN20250000001
      */
     public static function generarNumero(): string
     {
-        $fecha = now()->format('Ymd');
-        $maxIntentos = 5;
-        $intento = 0;
-
-        while ($intento < $maxIntentos) {
-            try {
-                // BLOQUEO PESIMISTA: Previene que dos procesos lean el mismo número
-                $ultimaVenta = self::where('numero', 'like', "VEN{$fecha}%")
-                    ->orderBy('numero', 'desc')
-                    ->lockForUpdate()  // ← BLOQUEO CRÍTICO
-                    ->first();
-
-                if ($ultimaVenta) {
-                    $numeroSecuencial = intval(substr($ultimaVenta->numero, -4)) + 1;
-                } else {
-                    $numeroSecuencial = 1;
-                }
-
-                $numero = 'VEN' . $fecha . str_pad($numeroSecuencial, 4, '0', STR_PAD_LEFT);
-
-                Log::info('Número de venta generado', [
-                    'numero' => $numero,
-                    'intento' => $intento + 1,
-                ]);
-
-                return $numero;
-
-            } catch (\Illuminate\Database\QueryException $e) {
-                // Detectar deadlock o lock wait timeout
-                if ($e->getCode() == '40001' || stripos($e->getMessage(), 'deadlock') !== false) {
-                    $intento++;
-                    if ($intento >= $maxIntentos) {
-                        Log::error('Deadlock generando número de venta después de múltiples intentos', [
-                            'intentos' => $intento,
-                            'error' => $e->getMessage(),
-                        ]);
-                        throw $e;
-                    }
-
-                    // Backoff exponencial
-                    usleep(100000 * $intento); // 100ms, 200ms, 300ms, etc.
-                    continue;
-                }
-
-                // Otro tipo de error - no reintentar
-                throw $e;
-            }
-        }
-
-        // Fallback: generar con timestamp si fallan todos los intentos
-        Log::warning('Generando número de venta con fallback (timestamp)');
-        return 'VEN' . $fecha . now()->format('His');
+        return static::generateSequentialCode('VEN', 'numero', true, 'Ymd', 6);
     }
 
     /**

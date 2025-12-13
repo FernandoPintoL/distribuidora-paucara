@@ -1,7 +1,7 @@
 // Pages: Unidades form page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { unidadesConfig } from '@/config/unidades.config';
+import { unidadesConfig } from '@/config/modules/unidades.config';
 import unidadesService from '@/infrastructure/services/unidades.service';
 import type { UnidadMedida, UnidadMedidaFormData } from '@/domain/entities/unidades';
 

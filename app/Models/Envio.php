@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Envio extends Model
 {
+    use GeneratesSequentialCode;
     protected $fillable = [
         'numero_envio',
         'venta_id',
@@ -32,15 +34,18 @@ class Envio extends Model
         'estado_entrega', // EXITOSA, RECHAZADA, CLIENTE_AUSENTE, TIENDA_CERRADA, OTRO_PROBLEMA
     ];
 
-    protected $casts = [
-        'fecha_programada' => 'datetime',
-        'fecha_salida' => 'datetime',
-        'fecha_entrega' => 'datetime',
-        'fecha_intento_entrega' => 'datetime',
-        'coordenadas_lat' => 'decimal:8',
-        'coordenadas_lng' => 'decimal:8',
-        'fotos_rechazo' => 'array', // JSON array de URLs de fotos
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_programada' => 'datetime',
+            'fecha_salida' => 'datetime',
+            'fecha_entrega' => 'datetime',
+            'fecha_intento_entrega' => 'datetime',
+            'coordenadas_lat' => 'decimal:8',
+            'coordenadas_lng' => 'decimal:8',
+            'fotos_rechazo' => 'array', // JSON array de URLs de fotos
+        ];
+    }
 
     // Estados del envío
     const PROGRAMADO = 'PROGRAMADO';
@@ -170,14 +175,13 @@ class Envio extends Model
         return $this->estado === self::ENTREGADO;
     }
 
-    // Generar número de envío
+    /**
+     * Generar número de envío con protección contra race conditions
+     * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
+     */
     public static function generarNumeroEnvio(): string
     {
-        $fecha = now()->format('Ymd');
-        $ultimo = self::whereDate('created_at', now()->toDateString())
-            ->count() + 1;
-
-        return "ENV-{$fecha}-".str_pad($ultimo, 4, '0', STR_PAD_LEFT);
+        return static::generateSequentialCode('ENV', 'numero_envio', true, 'Ymd', 6);
     }
 
     // Agregar seguimiento

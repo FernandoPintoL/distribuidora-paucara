@@ -5,7 +5,7 @@ use App\Models\Almacen;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
-use App\Models\TipoAjustInventario;
+use App\Models\TipoAjusteInventario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -46,7 +46,7 @@ class InventarioInicialController extends Controller
             ->get();
 
         // Obtener el tipo de ajuste INVENTARIO_INICIAL
-        $tipoInventarioInicial = TipoAjustInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
+        $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
 
         return Inertia::render('inventario/inventario-inicial', [
             'productos'             => $productos,
@@ -71,7 +71,7 @@ class InventarioInicialController extends Controller
         ]);
 
         // Obtener el tipo de ajuste INVENTARIO_INICIAL
-        $tipoInventarioInicial = TipoAjustInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
+        $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
 
         $resultados = [
             'exitosos'     => 0,
@@ -187,7 +187,7 @@ class InventarioInicialController extends Controller
      */
     private function tieneInventarioInicial(int $productoId): bool
     {
-        $tipoInventarioInicial = TipoAjustInventario::where('clave', 'INVENTARIO_INICIAL')->first();
+        $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->first();
 
         if (! $tipoInventarioInicial) {
             return false;

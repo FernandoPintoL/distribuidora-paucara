@@ -21,8 +21,8 @@ import {
     ArrowRight,
     Calendar
 } from 'lucide-react';
-import type { EstadisticasMovimientos } from '@/types/inventario';
-import { CONFIGURACION_MOVIMIENTOS } from '@/types/inventario';
+import type { EstadisticasMovimientos } from '@/domain/entities/movimientos-inventario';
+import { CONFIGURACION_MOVIMIENTOS } from '@/presentation/config/inventory.config';
 
 interface DashboardMetricasProps {
     estadisticas: EstadisticasMovimientos;

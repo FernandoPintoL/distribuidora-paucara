@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\DashboardService;
-use App\Services\DashboardWidgetsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -11,8 +10,7 @@ use Inertia\Inertia;
 class DashboardController extends Controller
 {
     public function __construct(
-        private DashboardService $dashboardService,
-        private DashboardWidgetsService $widgetsService
+        private DashboardService $dashboardService
     ) {}
 
     /**
@@ -26,8 +24,8 @@ class DashboardController extends Controller
         $periodo = $request->get('periodo', 'mes_actual');
 
         // Obtener estructura de widgets para el usuario actual
-        $modulosPermitidos = $this->widgetsService->getModulosPermitidos($user);
-        $widgetsAMostrar = $this->widgetsService->getWidgetsAMostrar($user);
+        $modulosPermitidos = $this->dashboardService->getModulosPermitidos($user);
+        $widgetsAMostrar = $this->dashboardService->getWidgetsAMostrar($user);
 
         // Si no hay módulos permitidos, retornar datos generales (fallback)
         if (empty($modulosPermitidos)) {

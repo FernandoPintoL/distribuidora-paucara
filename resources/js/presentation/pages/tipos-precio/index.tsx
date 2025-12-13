@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { tiposPrecioConfig } from '@/config/tipos-precio.config';
+import { tiposPrecioConfig } from '@/config/modules/tipos-precio.config';
 import tiposPrecioService from '@/infrastructure/services/tipos-precio.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { TipoPrecio, TipoPrecioFormData } from '@/domain/entities/tipos-precio';

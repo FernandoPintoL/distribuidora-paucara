@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode, HasActiveScope;
 
     protected $table = 'productos';
 
@@ -29,14 +31,17 @@ class Producto extends Model
         'proveedor_id',
     ];
 
-    protected $casts = [
-        'peso' => 'float',
-        'stock_minimo' => 'integer',
-        'stock_maximo' => 'integer',
-        'activo' => 'boolean',
-        'es_alquilable' => 'boolean',
-        'fecha_creacion' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'peso' => 'float',
+            'stock_minimo' => 'integer',
+            'stock_maximo' => 'integer',
+            'activo' => 'boolean',
+            'es_alquilable' => 'boolean',
+            'fecha_creacion' => 'datetime',
+        ];
+    }
 
     public function categoria()
     {
@@ -674,10 +679,6 @@ class Producto extends Model
      * Scope: Productos activos
      * Uso: Producto::activo()->get()
      */
-    public function scopeActivo($query)
-    {
-        return $query->where('activo', true);
-    }
 
     /**
      * Scope: Productos inactivos

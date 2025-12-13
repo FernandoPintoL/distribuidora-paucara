@@ -25,9 +25,12 @@ class EstadoDocumento extends Model
         'activo',
     ];
 
-    protected $casts = [
-        'activo' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+        ];
+    }
 
     // Relaciones
     public function compras()

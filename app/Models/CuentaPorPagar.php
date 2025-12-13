@@ -18,11 +18,14 @@ class CuentaPorPagar extends Model
         'observaciones',
     ];
 
-    protected $casts = [
-        'fecha_vencimiento' => 'date',
-        'monto_original' => 'decimal:2',
-        'saldo_pendiente' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha_vencimiento' => 'date',
+            'monto_original' => 'decimal:2',
+            'saldo_pendiente' => 'decimal:2',
+        ];
+    }
 
     // Relaciones
     public function compra()

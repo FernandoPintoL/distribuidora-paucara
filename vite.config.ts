@@ -25,7 +25,7 @@ export default defineConfig({
         react(),
         tailwindcss(),
         // En producción, usar wayfinder con manejo de errores tolerante
-        isProduction 
+        isProduction
             ? {
                 name: 'wayfinder-safe',
                 apply: 'build',
@@ -33,20 +33,20 @@ export default defineConfig({
                 resolveId: () => null,
                 load: () => null,
                 transform: () => null,
-              }
+            }
             : wayfinder({
                 formVariants: true,
-              }),
+            }),
     ],
-    server: {
-        host: "192.168.1.23",
+    /* server: {
+        host: "10.210.173.22",
         port: 5173,
         strictPort: false,
         cors: true,
         hmr: {
             port: 5174,
         },
-    },
+    }, */
     esbuild: {
         jsx: 'automatic',
     },

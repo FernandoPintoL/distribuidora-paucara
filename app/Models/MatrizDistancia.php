@@ -19,11 +19,14 @@ class MatrizDistancia extends Model
         'fecha_actualizacion'
     ];
 
-    protected $casts = [
-        'distancia_km' => 'float',
-        'tiempo_minutos' => 'integer',
-        'fecha_actualizacion' => 'datetime'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'distancia_km' => 'float',
+            'tiempo_minutos' => 'integer',
+            'fecha_actualizacion' => 'datetime'
+        ];
+    }
 
     /**
      * Obtener distancia cacheada entre dos puntos

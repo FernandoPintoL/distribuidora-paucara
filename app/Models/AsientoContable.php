@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AsientoContable extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode;
 
     protected $fillable = [
         'numero',
@@ -27,11 +28,14 @@ class AsientoContable extends Model
         'usuario_id',
     ];
 
-    protected $casts = [
-        'fecha' => 'date',
-        'total_debe' => 'decimal:2',
-        'total_haber' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha' => 'date',
+            'total_debe' => 'decimal:2',
+            'total_haber' => 'decimal:2',
+        ];
+    }
 
     /**
      * Relación polimórfica con el documento origen (Venta, Compra, etc.)
@@ -71,22 +75,11 @@ class AsientoContable extends Model
 
     /**
      * Generar número secuencial del asiento
+     * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
      */
     public static function generarNumero(): string
     {
-        $year = now()->year;
-        $ultimoAsiento = static::where('numero', 'like', "ASI-{$year}-%")
-            ->orderBy('numero', 'desc')
-            ->first();
-
-        if ($ultimoAsiento) {
-            $ultimoNumero = (int) substr($ultimoAsiento->numero, -6);
-            $nuevoNumero = $ultimoNumero + 1;
-        } else {
-            $nuevoNumero = 1;
-        }
-
-        return sprintf('ASI-%d-%06d', $year, $nuevoNumero);
+        return static::generateSequentialCode('ASI', 'numero', true, 'Y', 6);
     }
 
     /**

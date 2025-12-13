@@ -21,11 +21,14 @@ class EntregaEstadoHistorial extends Model
         'metadata',
     ];
 
-    protected $casts = [
-        'metadata' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'metadata' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     public $timestamps = true;
 

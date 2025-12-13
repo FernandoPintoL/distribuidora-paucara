@@ -1,12 +1,13 @@
 <?php
 namespace App\Models;
 
+use App\Models\Traits\GeneratesSequentialCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Proveedor extends Model
 {
-    use HasFactory;
+    use HasFactory, GeneratesSequentialCode;
 
     public $timestamps = false;
 
@@ -17,12 +18,15 @@ class Proveedor extends Model
         'foto_perfil', 'ci_anverso', 'ci_reverso', 'codigo_proveedor', 'latitud', 'longitud',
     ];
 
-    protected $casts = [
-        'activo'         => 'boolean',
-        'fecha_registro' => 'datetime',
-        'latitud'        => 'decimal:8',
-        'longitud'       => 'decimal:8',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo'         => 'boolean',
+            'fecha_registro' => 'datetime',
+            'latitud'        => 'decimal:8',
+            'longitud'       => 'decimal:8',
+        ];
+    }
 
     protected static function boot()
     {

@@ -92,7 +92,7 @@ export default function RolEdit({ rol, permisosActuales, todosLosPermisos }: Rol
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Editar Permisos de Rol</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Editar Permisos de Roles</h1>
             <p className="mt-2 text-gray-600">
               Gestiona los permisos para el rol <span className="font-semibold">{rol.display_name || rol.name}</span>
             </p>

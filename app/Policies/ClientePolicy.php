@@ -2,107 +2,94 @@
 
 namespace App\Policies;
 
-use App\Models\Cliente;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use App\Models\Cliente;
+use App\Services\AbacService;
 
+/**
+ * ============================================
+ * FASE 4: POLÍTICAS CON ABAC
+ * ClientePolicy - Control de acceso a Clientes
+ * ============================================
+ *
+ * Ejemplifica cómo usar ABAC para autorización.
+ * Un usuario solo puede ver clientes de su zona de venta.
+ */
 class ClientePolicy
 {
-    /**
-     * REGLA FUNDAMENTAL:
-     * - Rol "Gestor de Clientes": Empleado que CREA/EDITA clientes (NO es un cliente)
-     * - Rol "Preventista": Empleado de prevención con gestión completa de clientes
-     * - Rol "Vendedor": Empleado de ventas que puede crear/editar clientes
-     * - Rol "Cliente": Usuario FINAL que accede como cliente (solo su perfil)
-     * - Admin/Manager/Super Admin: Acceso total
-     */
+    protected AbacService $abacService;
 
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    public function __construct(AbacService $abacService)
     {
-        // Gestores de clientes, admins, managers, vendedores y preventistas pueden ver todos
-        if ($user->hasAnyRole(['Gestor de Clientes', 'Admin', 'Manager', 'Super Admin', 'Vendedor', 'Preventista'])) {
-            return true;
-        }
-        return false;
+        $this->abacService = $abacService;
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Super Admin puede hacer cualquier cosa
+     */
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->hasRole('Super Admin')) {
+            return true;
+        }
+        return null;
+    }
+
+    /**
+     * Ver un cliente individual
+     * Requiere que el cliente esté en la zona del usuario
      */
     public function view(User $user, Cliente $cliente): bool
     {
-        // Gestores pueden ver cualquier cliente
-        if ($user->hasAnyRole(['Gestor de Clientes', 'Admin', 'Manager', 'Super Admin', 'Vendedor', 'Preventista'])) {
+        // Cliente puede ver sus propios datos
+        if ($user->cliente && $user->cliente->id === $cliente->id) {
             return true;
         }
 
-        // Cliente solo puede ver su propio perfil
-        if ($user->hasRole('Cliente') && $cliente->user_id === $user->id) {
-            return true;
-        }
-
-        return false;
+        // Verificar atributo zona
+        return $this->abacService->puedeAcceder($user, 'cliente', $cliente->zona_id ?? $cliente->zona);
     }
 
     /**
-     * Determine whether the user can create models.
+     * Listar clientes
+     * Devuelve solo clientes de la zona del usuario
+     */
+    public function viewAny(User $user): bool
+    {
+        // Todos los empleados pueden listar clientes
+        return $user->esEmpleado();
+    }
+
+    /**
+     * Crear cliente
+     * Solo managers y admins pueden crear
      */
     public function create(User $user): bool
     {
-        // Solo gestores de clientes, vendedores, preventistas, choferes, cajeros y admins pueden crear clientes
-        return $user->hasAnyRole(['Gestor de Clientes', 'Vendedor', 'Chofer', 'Cajero', 'Preventista', 'Admin', 'Manager', 'Super Admin']);
+        return $user->hasRole(['Admin', 'Manager']);
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Editar cliente
+     * Debe estar en la misma zona que el usuario
      */
     public function update(User $user, Cliente $cliente): bool
     {
-        // Gestores pueden editar cualquier cliente
-        if ($user->hasAnyRole(['Gestor de Clientes', 'Admin', 'Manager', 'Super Admin', 'Preventista'])) {
+        // Admins y managers siempre pueden
+        if ($user->hasRole(['Admin', 'Manager'])) {
             return true;
         }
 
-        // Vendedores, choferes y cajeros pueden editar clientes que crearon
-        if ($user->hasAnyRole(['Vendedor', 'Chofer', 'Cajero'])) {
-            return true; // Podrías restrictar a clientes que creó agregando: && $cliente->usuario_creacion_id === $user->id
-        }
-
-        // Cliente solo puede editar su propio perfil
-        if ($user->hasRole('Cliente') && $cliente->user_id === $user->id) {
-            return true;
-        }
-
-        return false;
+        // Vendedores solo pueden editar de su zona
+        return $this->abacService->puedeAcceder($user, 'cliente', $cliente->zona_id ?? $cliente->zona);
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Eliminar cliente
+     * Solo Admin
      */
     public function delete(User $user, Cliente $cliente): bool
     {
-        // Solo admins y managers pueden eliminar clientes
-        return $user->hasAnyRole(['Admin', 'Manager', 'Super Admin']);
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Cliente $cliente): bool
-    {
-        // Solo admins y managers pueden restaurar clientes
-        return $user->hasAnyRole(['Admin', 'Manager', 'Super Admin']);
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Cliente $cliente): bool
-    {
-        // Solo super admin puede eliminar permanentemente
-        return $user->hasRole('Super Admin');
+        return $user->hasRole('Admin');
     }
 }

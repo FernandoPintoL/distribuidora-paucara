@@ -17,10 +17,13 @@ class DetalleAsientoContable extends Model
         'orden',
     ];
 
-    protected $casts = [
-        'debe' => 'decimal:2',
-        'haber' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'debe' => 'decimal:2',
+            'haber' => 'decimal:2',
+        ];
+    }
 
     /**
      * Asiento contable al que pertenece este detalle

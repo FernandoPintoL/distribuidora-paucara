@@ -20,11 +20,14 @@ class LoteVencimiento extends Model
         "observaciones",
     ];
 
-    protected $casts = [
-        "fecha_vencimiento" => "date",
-        "cantidad_inicial"  => "integer",
-        "cantidad_actual"   => "integer",
-    ];
+    protected function casts(): array
+    {
+        return [
+            "fecha_vencimiento" => "date",
+            "cantidad_inicial"  => "integer",
+            "cantidad_actual"   => "integer",
+        ];
+    }
 
     public function detalleCompra()
     {

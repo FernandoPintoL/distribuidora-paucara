@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, CheckCircle, XCircle, Calendar, MapPin, AlertTriangle, FileText } from 'lucide-react';
 import { useAuth } from '@/application/hooks/use-auth';
 import { NotificationService } from '@/infrastructure/services/notification.service';
-import { TIPOS_MERMA, ESTADOS_MERMA, type MermaInventario } from '@/types/inventario';
+import type { MermaInventario } from '@/domain/entities/mermas-inventario';
+import { TIPOS_MERMA, ESTADOS_MERMA } from '@/presentation/config/inventory.config';
 
 // Componente EstadoBadge simple para mermas
 const EstadoBadge = ({ estado }: { estado: string }) => {

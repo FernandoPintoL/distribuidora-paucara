@@ -1,5 +1,20 @@
-// Data Layer: Clientes service
-import { GenericService } from '@/infrastructure/services/generic.service';
+/**
+ * ClientesService - Data Layer mejorado con ExtendableService
+ *
+ * MEJORAS FASE 5.4:
+ * - Extiende ExtendableService para hooks de validación
+ * - Registra hooks para pre-procesamiento (trim, normalize)
+ * - Usa FormValidator para validadores composables
+ * - SIN ROMPER: componentes, configuración, especialidades
+ *
+ * Preservado intacto:
+ * - URL builders (indexUrl, createUrl, editUrl, etc.)
+ * - loadLocalidadOptions() para cargar localidades
+ * - Validación de email + NIT + nombre
+ */
+
+import { ExtendableService } from '@/infrastructure/services/extendable.service';
+import { FormValidator, Validators } from '@/infrastructure/services/form-validator';
 import type { Filters, Id } from '@/domain/entities/shared';
 import type { Cliente, ClienteFormData } from '@/domain/entities/clientes';
 import type { Localidad } from '@/domain/entities/localidades';
@@ -17,11 +32,59 @@ function buildQuery(params?: { query?: Filters }) {
   return str ? `?${str}` : '';
 }
 
-export class ClientesService extends GenericService<Cliente, ClienteFormData> {
+export class ClientesService extends ExtendableService<Cliente, ClienteFormData> {
+  private validator: FormValidator<ClienteFormData>;
+
   constructor() {
     super('clientes');
+
+    // 1️⃣ Configurar validadores composables
+    this.validator = new FormValidator<ClienteFormData>()
+      .addRule('nombre', Validators.required('Nombre es requerido'))
+      .addRule('nombre', Validators.maxLength(255, 'Nombre no puede exceder 255 caracteres'))
+      .addRule('email', Validators.email('Formato de email no válido'))
+      .addRule('nit', Validators.custom((value) => {
+        if (value && String(value).length > 255) {
+          return 'NIT no puede exceder 255 caracteres';
+        }
+        return null;
+      }))
+      .addRule('localidad_id', Validators.required('Localidad es requerida'));
+
+    // 2️⃣ Hook: Pre-procesamiento antes de validación (trim, normalize)
+    this.onBeforeValidate((data) => {
+      // Trim espacios en blanco
+      if (data.nombre) data.nombre = data.nombre.trim();
+      if (data.razon_social) data.razon_social = data.razon_social.trim();
+
+      // Normalizar email (trim + lowercase)
+      if (data.email) {
+        data.email = data.email.trim().toLowerCase();
+      }
+
+      // Trim NIT
+      if (data.nit) data.nit = data.nit.trim();
+
+      // Trim teléfono
+      if (data.telefono) data.telefono = data.telefono.trim();
+
+      return data;
+    });
+
+    // 3️⃣ Hook: Post-validación para logging
+    this.onAfterValidate((data, errors) => {
+      if (errors.length === 0) {
+        console.log('✅ Cliente validado:', data.nombre);
+      } else {
+        console.warn('⚠️ Errores de validación en cliente:', errors);
+      }
+      return errors;
+    });
   }
 
+  // ============================================
+  // URL Builders (SIN CAMBIOS - Preservado)
+  // ============================================
   indexUrl(params?: { query?: Filters }) {
     return `/clientes${buildQuery(params)}`;
   }
@@ -46,7 +109,10 @@ export class ClientesService extends GenericService<Cliente, ClienteFormData> {
     return `/clientes/${id}`;
   }
 
-  // Método para cargar opciones de localidades
+  // ============================================
+  // Método especial: Cargar opciones de localidades
+  // (SIN CAMBIOS - Preservado exacto)
+  // ============================================
   async loadLocalidadOptions() {
     try {
       const localidades = await localidadesService.getActiveLocalidades();
@@ -60,18 +126,11 @@ export class ClientesService extends GenericService<Cliente, ClienteFormData> {
     }
   }
 
-  validateData(data: ClienteFormData): string[] {
-    const errors = super.validateData(data);
-
-    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      errors.push('El formato del email no es válido');
-    }
-
-    if (data.nit && String(data.nit).length > 255) {
-      errors.push('El NIT no puede exceder 255 caracteres');
-    }
-
-    return errors;
+  // ============================================
+  // Validación: Usa FormValidator composable
+  // ============================================
+  async validateData(data: ClienteFormData): Promise<string[]> {
+    return await this.validator.validateAsync(data);
   }
 }
 

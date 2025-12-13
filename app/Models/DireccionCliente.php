@@ -14,12 +14,15 @@ class DireccionCliente extends Model
         'cliente_id', 'localidad_id', 'direccion', 'latitud', 'longitud', 'es_principal', 'activa', 'observaciones',
     ];
 
-    protected $casts = [
-        'latitud'      => 'float',
-        'longitud'     => 'float',
-        'es_principal' => 'boolean',
-        'activa'       => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'latitud'      => 'float',
+            'longitud'     => 'float',
+            'es_principal' => 'boolean',
+            'activa'       => 'boolean',
+        ];
+    }
 
     public function cliente()
     {

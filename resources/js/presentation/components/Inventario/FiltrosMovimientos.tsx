@@ -7,7 +7,7 @@ import SearchSelect from '@/presentation/components/ui/search-select';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Calendar, Filter, X, Search } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/presentation/components/ui/collapsible';
-import type { FiltrosMovimientos as IFiltrosMovimientos } from '@/types/inventario';
+import type { FiltrosMovimientos as IFiltrosMovimientos } from '@/domain/entities/movimientos-inventario';
 
 interface TipoAjuste {
     id: number;

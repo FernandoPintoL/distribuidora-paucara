@@ -1,7 +1,7 @@
 // Pages: Marcas form page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { marcasConfig } from '@/config/marcas.config';
+import { marcasConfig } from '@/config/modules/marcas.config';
 import marcasService from '@/infrastructure/services/marcas.service';
 import type { Marca, MarcaFormData } from '@/domain/entities/marcas';
 

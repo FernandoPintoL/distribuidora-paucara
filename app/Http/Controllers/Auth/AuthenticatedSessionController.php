@@ -40,7 +40,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->put('sanctum_token', $token);
 
         // ✅ CAMBIO IMPORTANTE: Redirigir a dashboard-redirect en lugar de dashboard
-        // El backend (DashboardRouterService) decidirá a qué dashboard debe ir el usuario
+        // El backend (DashboardService) decidirá a qué dashboard debe ir el usuario
         // basado en sus roles. El frontend NO tiene lógica de negocios.
         return redirect()->intended(route('dashboard-redirect', absolute: false));
     }

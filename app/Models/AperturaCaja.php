@@ -19,10 +19,13 @@ class AperturaCaja extends Model
         'observaciones',
     ];
 
-    protected $casts = [
-        'fecha' => 'datetime',
-        'monto_apertura' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fecha' => 'datetime',
+            'monto_apertura' => 'decimal:2',
+        ];
+    }
 
     // Relaciones
     public function caja()

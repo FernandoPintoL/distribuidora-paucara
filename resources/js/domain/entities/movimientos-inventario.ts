@@ -185,3 +185,164 @@ export const CATEGORIAS_MOVIMIENTO = {
         icon: '🔄'
     }
 } as const;
+
+// ===================================================================
+// === SISTEMA UNIFICADO DE MOVIMIENTOS (MovimientoUnificado) ===
+// ===================================================================
+
+export type TipoMovimientoUnificado =
+    | 'ENTRADA'      // Compras, devoluciones de clientes
+    | 'SALIDA'       // Ventas, devoluciones a proveedores
+    | 'AJUSTE'       // Ajustes manuales de inventario
+    | 'TRANSFERENCIA' // Transferencias entre almacenes
+    | 'MERMA'        // Pérdidas, deterioros, vencimientos
+    | 'PRODUCCION'   // Entrada por producción (futuro)
+    | 'DEVOLUCION';  // Devoluciones internas (futuro)
+
+export type SubtipoMovimiento =
+    // Subtipos para ENTRADA
+    | 'COMPRA'
+    | 'DEVOLUCION_CLIENTE'
+    | 'AJUSTE_POSITIVO'
+    // Subtipos para SALIDA
+    | 'VENTA'
+    | 'DEVOLUCION_PROVEEDOR'
+    | 'AJUSTE_NEGATIVO'
+    // Subtipos para TRANSFERENCIA
+    | 'TRANSFERENCIA_SALIDA'
+    | 'TRANSFERENCIA_ENTRADA'
+    // Subtipos para MERMA
+    | 'MERMA_VENCIMIENTO'
+    | 'MERMA_DETERIORO'
+    | 'MERMA_ROBO'
+    | 'MERMA_PERDIDA'
+    | 'MERMA_DANO'
+    | 'MERMA_OTROS';
+
+export interface MovimientoUnificado extends BaseEntity {
+    id: Id;
+    tipo: TipoMovimientoUnificado;
+    tipo_ajuste_id?: Id;
+    subtipo: SubtipoMovimiento;
+    numero_documento?: string | null;
+    fecha: string;
+    hora: string;
+
+    // Referencias a documentos origen
+    referencia_id?: Id;
+    referencia_tipo?: 'transferencia' | 'merma' | 'compra' | 'venta' | 'ajuste';
+    numero_referencia?: string | null;
+
+    // Información del producto y stock
+    producto_id: Id;
+    producto: Producto;
+    almacen_id: Id;
+    almacen: Almacen;
+    cantidad: number;
+    cantidad_anterior: number;
+    cantidad_nueva: number;
+
+    // Información financiera
+    costo_unitario?: number | null;
+    costo_total?: number | null;
+    precio_venta?: number | null;
+    valor_total?: number | null;
+
+    // Información adicional
+    lote?: string | null;
+    fecha_vencimiento?: string | null;
+    motivo: string;
+    observaciones?: string | null;
+
+    // Usuario responsable
+    usuario_id: Id;
+    usuario: {
+        id: Id;
+        name: string;
+        email?: string;
+    };
+
+    // Información de transferencias
+    almacen_origen_id?: Id;
+    almacen_origen?: Almacen;
+    almacen_destino_id?: Id;
+    almacen_destino?: Almacen;
+
+    // Estado y aprobaciones
+    estado?: 'PENDIENTE' | 'PROCESADO' | 'CANCELADO' | 'APROBADO' | 'RECHAZADO';
+    requiere_aprobacion?: boolean;
+    aprobado_por_id?: Id;
+    aprobado_por?: {
+        id: Id;
+        name: string;
+    };
+    fecha_aprobacion?: string | null;
+}
+
+export type EstadoMovimiento = 'PENDIENTE' | 'PROCESADO' | 'CANCELADO' | 'APROBADO' | 'RECHAZADO';
+
+export interface FiltrosMovimientos {
+    // Filtros básicos
+    tipo?: TipoMovimientoUnificado;
+    tipos?: TipoMovimientoUnificado[];
+    tipo_ajuste_id?: Id;
+    subtipo?: SubtipoMovimiento;
+    subtipos?: SubtipoMovimiento[];
+
+    // Filtros de ubicación
+    almacen_id?: Id;
+    almacenes?: Id[];
+    almacen_origen_id?: Id;
+    almacen_destino_id?: Id;
+
+    // Filtros de producto y usuario
+    producto_id?: Id;
+    productos?: Id[];
+    usuario_id?: Id;
+    usuarios?: Id[];
+
+    // Filtros de estado y tiempo
+    estado?: EstadoMovimiento;
+    estados?: EstadoMovimiento[];
+    fecha_desde?: string;
+    fecha_hasta?: string;
+
+    // Filtros de búsqueda
+    search?: string;
+    busqueda?: string;
+    numero_referencia?: string;
+    lote?: string;
+
+    // Filtros de cantidad y valor
+    cantidad_min?: number;
+    cantidad_max?: number;
+    valor_min?: number;
+    valor_max?: number;
+
+    // Filtros booleanos
+    requiere_aprobacion?: boolean;
+    solo_pendientes?: boolean;
+    solo_mermas?: boolean;
+}
+
+export interface EstadisticasMovimientos {
+    total_movimientos: number;
+    total_entradas: number;
+    total_salidas: number;
+    total_transferencias: number;
+    total_mermas: number;
+    total_ajustes: number;
+    valor_total_entradas: number;
+    valor_total_salidas: number;
+    valor_total_mermas: number;
+    productos_afectados: number;
+    almacenes_activos: number;
+    movimientos_pendientes: number;
+    tendencia_semanal: {
+        fecha: string;
+        entradas: number;
+        salidas: number;
+        transferencias: number;
+        mermas: number;
+    }[];
+}

@@ -37,24 +37,27 @@ class AnalisisAbc extends Model
         'recomendaciones'
     ];
 
-    protected $casts = [
-        'periodo_ano' => 'integer',
-        'periodo_mes' => 'integer',
-        'ventas_cantidad' => 'decimal:4',
-        'ventas_valor' => 'decimal:2',
-        'stock_promedio' => 'decimal:4',
-        'costo_promedio' => 'decimal:4',
-        'rotacion_inventario' => 'decimal:2',
-        'dias_cobertura' => 'integer',
-        'porcentaje_ventas_cantidad' => 'decimal:2',
-        'porcentaje_ventas_valor' => 'decimal:2',
-        'porcentaje_acumulado_valor' => 'decimal:2',
-        'ranking_ventas' => 'integer',
-        'producto_activo' => 'boolean',
-        'tiene_movimientos' => 'boolean',
-        'ultima_venta' => 'date',
-        'ultima_compra' => 'date',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'periodo_ano' => 'integer',
+            'periodo_mes' => 'integer',
+            'ventas_cantidad' => 'decimal:4',
+            'ventas_valor' => 'decimal:2',
+            'stock_promedio' => 'decimal:4',
+            'costo_promedio' => 'decimal:4',
+            'rotacion_inventario' => 'decimal:2',
+            'dias_cobertura' => 'integer',
+            'porcentaje_ventas_cantidad' => 'decimal:2',
+            'porcentaje_ventas_valor' => 'decimal:2',
+            'porcentaje_acumulado_valor' => 'decimal:2',
+            'ranking_ventas' => 'integer',
+            'producto_activo' => 'boolean',
+            'tiene_movimientos' => 'boolean',
+            'ultima_venta' => 'date',
+            'ultima_compra' => 'date',
+        ];
+    }
 
     // Clasificaciones ABC
     const CLASIFICACION_A = 'A'; // Alto valor - 80% de las ventas

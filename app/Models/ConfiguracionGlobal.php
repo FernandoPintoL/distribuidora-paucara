@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class ConfiguracionGlobal extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActiveScope;
 
     protected $table = 'configuracion_global';
 
@@ -25,20 +26,19 @@ class ConfiguracionGlobal extends Model
         'metadatos',
     ];
 
-    protected $casts = [
-        'activo' => 'boolean',
-        'es_sistema' => 'boolean',
-        'valor_numerico' => 'decimal:2',
-        'metadatos' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+            'es_sistema' => 'boolean',
+            'valor_numerico' => 'decimal:2',
+            'metadatos' => 'array',
+        ];
+    }
 
     /**
      * Scopes
      */
-    public function scopeActivos($query)
-    {
-        return $query->where('activo', true);
-    }
 
     public function scopePorCategoria($query, string $categoria)
     {

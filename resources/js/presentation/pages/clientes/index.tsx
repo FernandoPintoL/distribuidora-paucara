@@ -1,7 +1,7 @@
 // Pages: Clientes index page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericContainer from '@/presentation/components/generic/generic-container';
-import { clientesConfig } from '@/config/clientes.config';
+import { clientesConfig } from '@/config/modules/clientes.config';
 import { clientesService } from '@/infrastructure/services/clientes.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Cliente, ClienteFormData } from '@/domain/entities/clientes';

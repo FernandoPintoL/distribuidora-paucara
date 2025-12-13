@@ -70,7 +70,7 @@ export default function VentasIndex() {
                 </div>
 
                 {/* Estadísticas */}
-                {estadisticas && (
+                {estadisticas && estadisticas.total_ventas !== undefined && (
                     <EstadisticasVentasComponent estadisticas={estadisticas} />
                 )}
 

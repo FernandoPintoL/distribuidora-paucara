@@ -23,11 +23,14 @@ class Pago extends Model
         'moneda_id',
     ];
 
-    protected $casts = [
-        'monto'      => 'decimal:2',
-        'fecha'      => 'datetime',
-        'fecha_pago' => 'date',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'monto'      => 'decimal:2',
+            'fecha'      => 'datetime',
+            'fecha_pago' => 'date',
+        ];
+    }
 
     // Relaciones
     public function cuentaPorPagar()
