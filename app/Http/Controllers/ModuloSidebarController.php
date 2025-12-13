@@ -363,4 +363,78 @@ class ModuloSidebarController extends Controller
 
         return false;
     }
+
+    /**
+     * Vista previa del sidebar para un rol específico
+     */
+    public function previewPorRol($rolName)
+    {
+        $role = \Spatie\Permission\Models\Role::where('name', $rolName)->first();
+
+        if (!$role) {
+            return response()->json(['error' => 'Rol no encontrado'], 404);
+        }
+
+        // Obtener módulos activos para el dashboard
+        $modulos = ModuloSidebar::where('activo', true)
+            ->where('visible_dashboard', true)
+            ->with(['submodulos' => function ($query) {
+                $query->where('activo', true)
+                    ->where('visible_dashboard', true)
+                    ->orderBy('orden');
+            }])
+            ->whereNull('modulo_padre_id')
+            ->orderBy('orden')
+            ->get()
+            ->filter(function ($modulo) use ($role) {
+                return $this->rolTieneAccesoAlModulo($role, $modulo);
+            })
+            ->map(function ($modulo) use ($role) {
+                $navItem = $modulo->toNavItem();
+
+                // Filtrar submódulos por permisos del rol
+                if (isset($navItem['children']) && is_array($navItem['children'])) {
+                    $navItem['children'] = collect($navItem['children'])
+                        ->filter(function ($child) use ($role) {
+                            // Encontrar el módulo original para verificar permisos
+                            $submodulo = ModuloSidebar::find($child['id'] ?? null);
+                            if (!$submodulo) return false;
+                            return $this->rolTieneAccesoAlModulo($role, $submodulo);
+                        })
+                        ->values()
+                        ->toArray();
+                }
+
+                return $navItem;
+            })
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'rol' => [
+                'name' => $role->name,
+                'display_name' => $role->display_order ?? $role->name,
+            ],
+            'modulos' => $modulos,
+            'total_modulos' => count($modulos),
+        ]);
+    }
+
+    /**
+     * Obtener lista de todos los roles para selector
+     */
+    public function obtenerRoles()
+    {
+        $roles = \Spatie\Permission\Models\Role::orderBy('name')
+            ->get(['id', 'name'])
+            ->map(function ($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'label' => ucfirst(str_replace('-', ' ', $role->name)),
+                ];
+            });
+
+        return response()->json($roles);
+    }
 }

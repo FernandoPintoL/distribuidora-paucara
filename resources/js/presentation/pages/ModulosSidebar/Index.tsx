@@ -15,6 +15,7 @@ import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
 import { ModulosFiltros, type FiltrosModulo } from '@/presentation/components/modulos-filtros';
 import { ModulosVistaAgrupada } from '@/presentation/components/modulos-vista-agrupada';
 import { ModulosListaArrastrables } from '@/presentation/components/modulos-lista-arrastrables';
+import { SidebarPreview } from '@/presentation/components/sidebar-preview';
 import { LayoutList, Grid3x3, List } from 'lucide-react';
 
 interface ModuloSidebar {
@@ -577,6 +578,9 @@ export default function Index({ modulos }: Props) {
 
                 {/* Matriz de Acceso */}
                 <MatrizAccesoRol />
+
+                {/* Vista Previa del Sidebar */}
+                <SidebarPreview modulosTotales={modulos.length} />
 
                 {/* Modal de Edición */}
                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

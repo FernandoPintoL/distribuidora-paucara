@@ -89,6 +89,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('api/modulos-sidebar', [\App\Http\Controllers\ModuloSidebarController::class, 'obtenerParaSidebar'])->name('api.modulos-sidebar');
     Route::get('api/modulos-sidebar/permisos/disponibles', [\App\Http\Controllers\ModuloSidebarController::class, 'getPermisosDisponibles'])->middleware('auth')->name('api.modulos-sidebar.permisos');
     Route::get('api/modulos-sidebar/matriz-acceso', [\App\Http\Controllers\ModuloSidebarController::class, 'getMatrizAcceso'])->middleware('auth')->name('api.modulos-sidebar.matriz-acceso');
+    Route::get('api/modulos-sidebar/roles', [\App\Http\Controllers\ModuloSidebarController::class, 'obtenerRoles'])->middleware('auth')->name('api.modulos-sidebar.roles');
+    Route::get('api/modulos-sidebar/preview/{rolName}', [\App\Http\Controllers\ModuloSidebarController::class, 'previewPorRol'])->middleware('auth')->name('api.modulos-sidebar.preview');
     Route::post('modulos-sidebar/actualizar-orden', [\App\Http\Controllers\ModuloSidebarController::class, 'actualizarOrden'])->middleware('permission:admin.config')->name('modulos-sidebar.actualizar-orden');
     Route::patch('modulos-sidebar/{moduloSidebar}/toggle-activo', [\App\Http\Controllers\ModuloSidebarController::class, 'toggleActivo'])->middleware('permission:admin.config')->name('modulos-sidebar.toggle-activo');
 
