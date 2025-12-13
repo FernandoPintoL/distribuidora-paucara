@@ -694,6 +694,337 @@ destroy.delete = (args: { moduloSidebar: number | { id: number } } | [moduloSide
     
     destroy.form = destroyForm
 /**
+* @see \App\Http\Controllers\ModuloSidebarController::getPermisosDisponibles
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+export const getPermisosDisponibles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getPermisosDisponibles.url(options),
+    method: 'get',
+})
+
+getPermisosDisponibles.definition = {
+    methods: ["get","head"],
+    url: '/api/modulos-sidebar/permisos/disponibles',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::getPermisosDisponibles
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+getPermisosDisponibles.url = (options?: RouteQueryOptions) => {
+    return getPermisosDisponibles.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::getPermisosDisponibles
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+getPermisosDisponibles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getPermisosDisponibles.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::getPermisosDisponibles
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+getPermisosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: getPermisosDisponibles.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::getPermisosDisponibles
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+    const getPermisosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getPermisosDisponibles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::getPermisosDisponibles
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+        getPermisosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getPermisosDisponibles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::getPermisosDisponibles
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+        getPermisosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getPermisosDisponibles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getPermisosDisponibles.form = getPermisosDisponiblesForm
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::getMatrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+export const getMatrizAcceso = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getMatrizAcceso.url(options),
+    method: 'get',
+})
+
+getMatrizAcceso.definition = {
+    methods: ["get","head"],
+    url: '/api/modulos-sidebar/matriz-acceso',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::getMatrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+getMatrizAcceso.url = (options?: RouteQueryOptions) => {
+    return getMatrizAcceso.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::getMatrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+getMatrizAcceso.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: getMatrizAcceso.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::getMatrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+getMatrizAcceso.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: getMatrizAcceso.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::getMatrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+    const getMatrizAccesoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: getMatrizAcceso.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::getMatrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+        getMatrizAccesoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getMatrizAcceso.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::getMatrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+        getMatrizAccesoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: getMatrizAcceso.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    getMatrizAcceso.form = getMatrizAccesoForm
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+export const obtenerRoles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerRoles.url(options),
+    method: 'get',
+})
+
+obtenerRoles.definition = {
+    methods: ["get","head"],
+    url: '/api/modulos-sidebar/roles',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+obtenerRoles.url = (options?: RouteQueryOptions) => {
+    return obtenerRoles.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+obtenerRoles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerRoles.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+obtenerRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerRoles.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+    const obtenerRolesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerRoles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+        obtenerRolesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerRoles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+        obtenerRolesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerRoles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerRoles.form = obtenerRolesForm
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+export const previewPorRol = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: previewPorRol.url(args, options),
+    method: 'get',
+})
+
+previewPorRol.definition = {
+    methods: ["get","head"],
+    url: '/api/modulos-sidebar/preview/{rolName}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+previewPorRol.url = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { rolName: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    rolName: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        rolName: args.rolName,
+                }
+
+    return previewPorRol.definition.url
+            .replace('{rolName}', parsedArgs.rolName.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+previewPorRol.get = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: previewPorRol.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+previewPorRol.head = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: previewPorRol.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+    const previewPorRolForm = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: previewPorRol.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+        previewPorRolForm.get = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: previewPorRol.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+        previewPorRolForm.head = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: previewPorRol.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    previewPorRol.form = previewPorRolForm
+/**
 * @see \App\Http\Controllers\ModuloSidebarController::actualizarOrden
  * @see app/Http/Controllers/ModuloSidebarController.php:190
  * @route '/modulos-sidebar/actualizar-orden'
@@ -837,6 +1168,6 @@ toggleActivo.patch = (args: { moduloSidebar: number | { id: number } } | [modulo
         })
     
     toggleActivo.form = toggleActivoForm
-const ModuloSidebarController = { obtenerParaSidebar, index, create, store, show, edit, update, destroy, actualizarOrden, toggleActivo }
+const ModuloSidebarController = { obtenerParaSidebar, index, create, store, show, edit, update, destroy, getPermisosDisponibles, getMatrizAcceso, obtenerRoles, previewPorRol, actualizarOrden, toggleActivo }
 
 export default ModuloSidebarController

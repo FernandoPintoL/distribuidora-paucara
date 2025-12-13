@@ -9,6 +9,9 @@ interface AuthLayoutProps {
 }
 
 export default function AuthSimpleLayout({ children, title, description }: PropsWithChildren<AuthLayoutProps>) {
+    const logoSvg = import.meta.env.VITE_LOGO_SVG || '/logo.svg';
+    const logoAlt = import.meta.env.VITE_LOGO_ALT || 'Distribuidora Paucara';
+
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
             <div className="w-full max-w-sm">
@@ -17,7 +20,7 @@ export default function AuthSimpleLayout({ children, title, description }: Props
                         <Link href={home()} className="flex flex-col items-center gap-2 font-medium">
                             <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-md">
                                 {/*<AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />*/}
-                                <img src="/logo.svg" alt="Distribuidora Paucara" className="h-12 w-auto" />
+                                <img src={logoSvg} alt={logoAlt} className="h-12 w-auto" />
                             </div>
                             <span className="sr-only">{title}</span>
                         </Link>

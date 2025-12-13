@@ -79,7 +79,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     dashboard.form = dashboardForm
 /**
- * @see routes/web.php:295
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-asignadas'
  */
 export const entregasAsignadas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -93,7 +93,7 @@ entregasAsignadas.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:295
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-asignadas'
  */
 entregasAsignadas.url = (options?: RouteQueryOptions) => {
@@ -101,7 +101,7 @@ entregasAsignadas.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:295
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-asignadas'
  */
 entregasAsignadas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -109,7 +109,7 @@ entregasAsignadas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =>
     method: 'get',
 })
 /**
- * @see routes/web.php:295
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-asignadas'
  */
 entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -118,7 +118,7 @@ entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
 })
 
     /**
- * @see routes/web.php:295
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-asignadas'
  */
     const entregasAsignadasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -127,7 +127,7 @@ entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     })
 
             /**
- * @see routes/web.php:295
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-asignadas'
  */
         entregasAsignadasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -135,7 +135,7 @@ entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
             method: 'get',
         })
             /**
- * @see routes/web.php:295
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-asignadas'
  */
         entregasAsignadasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -150,7 +150,7 @@ entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     
     entregasAsignadas.form = entregasAsignadasForm
 /**
- * @see routes/web.php:296
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-en-transito'
  */
 export const entregasEnTransito = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -164,7 +164,7 @@ entregasEnTransito.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:296
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-en-transito'
  */
 entregasEnTransito.url = (options?: RouteQueryOptions) => {
@@ -172,7 +172,7 @@ entregasEnTransito.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:296
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-en-transito'
  */
 entregasEnTransito.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -180,7 +180,7 @@ entregasEnTransito.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =
     method: 'get',
 })
 /**
- * @see routes/web.php:296
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-en-transito'
  */
 entregasEnTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -189,7 +189,7 @@ entregasEnTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
 })
 
     /**
- * @see routes/web.php:296
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-en-transito'
  */
     const entregasEnTransitoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -198,7 +198,7 @@ entregasEnTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
     })
 
             /**
- * @see routes/web.php:296
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-en-transito'
  */
         entregasEnTransitoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -206,7 +206,7 @@ entregasEnTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
             method: 'get',
         })
             /**
- * @see routes/web.php:296
+ * @see [serialized-closure]:2
  * @route '/logistica/entregas-en-transito'
  */
         entregasEnTransitoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -221,7 +221,7 @@ entregasEnTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
     
     entregasEnTransito.form = entregasEnTransitoForm
 /**
- * @see routes/web.php:297
+ * @see [serialized-closure]:2
  * @route '/logistica/proformas-pendientes'
  */
 export const proformasPendientes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -235,7 +235,7 @@ proformasPendientes.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:297
+ * @see [serialized-closure]:2
  * @route '/logistica/proformas-pendientes'
  */
 proformasPendientes.url = (options?: RouteQueryOptions) => {
@@ -243,7 +243,7 @@ proformasPendientes.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:297
+ * @see [serialized-closure]:2
  * @route '/logistica/proformas-pendientes'
  */
 proformasPendientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -251,7 +251,7 @@ proformasPendientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
     method: 'get',
 })
 /**
- * @see routes/web.php:297
+ * @see [serialized-closure]:2
  * @route '/logistica/proformas-pendientes'
  */
 proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -260,7 +260,7 @@ proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 })
 
     /**
- * @see routes/web.php:297
+ * @see [serialized-closure]:2
  * @route '/logistica/proformas-pendientes'
  */
     const proformasPendientesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -269,7 +269,7 @@ proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     })
 
             /**
- * @see routes/web.php:297
+ * @see [serialized-closure]:2
  * @route '/logistica/proformas-pendientes'
  */
         proformasPendientesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -277,7 +277,7 @@ proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'
             method: 'get',
         })
             /**
- * @see routes/web.php:297
+ * @see [serialized-closure]:2
  * @route '/logistica/proformas-pendientes'
  */
         proformasPendientesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

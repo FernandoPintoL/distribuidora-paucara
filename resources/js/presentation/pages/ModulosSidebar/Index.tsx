@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
@@ -10,42 +10,23 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
-import { PermisosMultiSelect } from '@/presentation/components/forms/permisos-multi-select';
+import { LayoutList, Grid3x3, List } from 'lucide-react';
+// Domain imports
+import { ModuloSidebar, FiltrosModulo, VistaActual } from '@/domain/modulos/types';
+import { useFiltrarModulos, useExtraerDatos, useModulosPadre } from '@/domain/modulos/hooks';
+// Services imports
+import { modulosApi } from '@/services/modulos-api';
+// Component imports
 import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
-import { ModulosFiltros, type FiltrosModulo } from '@/presentation/components/modulos-filtros';
+import { ModulosFiltros } from '@/presentation/components/modulos-filtros';
 import { ModulosVistaAgrupada } from '@/presentation/components/modulos-vista-agrupada';
 import { ModulosListaArrastrables } from '@/presentation/components/modulos-lista-arrastrables';
 import { SidebarPreview } from '@/presentation/components/sidebar-preview';
-import { LayoutList, Grid3x3, List } from 'lucide-react';
-
-interface ModuloSidebar {
-    id: number;
-    titulo: string;
-    ruta: string;
-    icono?: string;
-    descripcion?: string;
-    orden: number;
-    activo: boolean;
-    es_submenu: boolean;
-    modulo_padre_id?: number;
-    categoria?: string;
-    submodulos_count: number;
-    padre?: {
-        id: number;
-        titulo: string;
-    };
-}
+import { ModuloForm } from './ModuloForm';
 
 interface Props {
     modulos: ModuloSidebar[];
 }
-
-const iconosDisponibles = [
-    'Package', 'Boxes', 'Users', 'Truck', 'Wallet', 'CreditCard',
-    'ShoppingCart', 'TrendingUp', 'BarChart3', 'Settings',
-    'FolderTree', 'Tags', 'Ruler', 'DollarSign', 'Building2',
-    'ClipboardList', 'Home', 'FileText', 'Calculator'
-];
 
 export default function Index({ modulos }: Props) {
     const [selectedModulo, setSelectedModulo] = useState<ModuloSidebar | null>(null);
@@ -58,7 +39,7 @@ export default function Index({ modulos }: Props) {
         categoria: '',
         rolRequerido: '',
     });
-    const [vistaActual, setVistaActual] = useState<'tabla' | 'agrupada' | 'lista'>('tabla');
+    const [vistaActual, setVistaActual] = useState<VistaActual>('tabla');
     const [guardandoOrden, setGuardandoOrden] = useState(false);
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
@@ -108,42 +89,19 @@ export default function Index({ modulos }: Props) {
         }
     };
 
-    const toggleActivo = (modulo: ModuloSidebar) => {
-        fetch(`/modulos-sidebar/${modulo.id}/toggle-activo`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-            },
-        })
-            .then(() => {
-                window.location.reload();
-            })
-            .catch(() => {
-                alert('Error al cambiar el estado del módulo');
-            });
+    const toggleActivo = async (modulo: ModuloSidebar) => {
+        try {
+            await modulosApi.toggleActivo(modulo.id);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al cambiar el estado del módulo');
+        }
     };
 
     const handleGuardarOrden = async (orden: Array<{ id: number; orden: number }>) => {
         setGuardandoOrden(true);
         try {
-            const response = await fetch('/modulos-sidebar/actualizar-orden', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({ modulos: orden }),
-            });
-
-            if (!response.ok) throw new Error('Error al guardar orden');
-
-            // Actualizar el estado local
-            const modulosActualizados = modulos.map(m => {
-                const nuevoOrden = orden.find(o => o.id === m.id);
-                return nuevoOrden ? { ...m, orden: nuevoOrden.orden } : m;
-            });
-            window.location.reload();
+            await modulosApi.guardarOrden(orden);
         } catch (error) {
             console.error('Error:', error);
             alert('Error al guardar el orden de los módulos');
@@ -170,80 +128,16 @@ export default function Index({ modulos }: Props) {
         setIsEditModalOpen(true);
     };
 
-    const modulosPadre = modulos.filter(m => !m.es_submenu);
-
-    // Obtener categorías únicas
-    const categorias = Array.from(
-        new Set(modulos.filter(m => m.categoria).map(m => m.categoria))
-    ).sort();
-
-    // Obtener roles únicos de los permisos de módulos
-    const rolesDisponibles = Array.from(
-        new Set(
-            modulos
-                .flatMap(m => m.permisos || [])
-                .filter(p => typeof p === 'string')
-        )
-    ).sort();
-
-    // Lógica de filtrado
-    const modulosFiltrados = useMemo(() => {
-        return modulos.filter(modulo => {
-            // Filtro por búsqueda (título o ruta)
-            if (filtros.busqueda) {
-                const busquedaLower = filtros.busqueda.toLowerCase();
-                if (
-                    !modulo.titulo.toLowerCase().includes(busquedaLower) &&
-                    !modulo.ruta.toLowerCase().includes(busquedaLower)
-                ) {
-                    return false;
-                }
-            }
-
-            // Filtro por tipo
-            if (filtros.tipo !== 'todos') {
-                if (filtros.tipo === 'principal' && modulo.es_submenu) {
-                    return false;
-                }
-                if (filtros.tipo === 'submenu' && !modulo.es_submenu) {
-                    return false;
-                }
-            }
-
-            // Filtro por estado
-            if (filtros.estado !== 'todos') {
-                if (filtros.estado === 'activo' && !modulo.activo) {
-                    return false;
-                }
-                if (filtros.estado === 'inactivo' && modulo.activo) {
-                    return false;
-                }
-            }
-
-            // Filtro por categoría
-            if (filtros.categoria) {
-                if (modulo.categoria !== filtros.categoria) {
-                    return false;
-                }
-            }
-
-            // Filtro por rol requerido
-            if (filtros.rolRequerido) {
-                const permisos = Array.isArray(modulo.permisos) ? modulo.permisos : [];
-                if (!permisos.includes(filtros.rolRequerido)) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-    }, [modulos, filtros]);
+    // Custom hooks para lógica de negocio
+    const modulosPadre = useModulosPadre(modulos);
+    const { categorias, rolesDisponibles } = useExtraerDatos(modulos);
+    const modulosFiltrados = useFiltrarModulos(modulos, filtros);
 
     return (
         <AppLayout>
             <Head title="Gestión de Módulos del Sidebar" />
 
-            <div className="space-y-6">
+            <div className="space-y-6 p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -268,128 +162,16 @@ export default function Index({ modulos }: Props) {
                                     Ingresa los datos del nuevo módulo del sidebar
                                 </DialogDescription>
                             </DialogHeader>
-
-                            <form onSubmit={handleCreate} className="space-y-4">
-                                <div>
-                                    <Label htmlFor="titulo">Título</Label>
-                                    <Input
-                                        id="titulo"
-                                        value={data.titulo}
-                                        onChange={(e) => setData('titulo', e.target.value)}
-                                        required
-                                    />
-                                    {errors.titulo && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.titulo}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="ruta">Ruta</Label>
-                                    <Input
-                                        id="ruta"
-                                        value={data.ruta}
-                                        onChange={(e) => setData('ruta', e.target.value)}
-                                        placeholder="/example"
-                                        required
-                                    />
-                                    {errors.ruta && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.ruta}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="icono">Ícono</Label>
-                                    <Select onValueChange={(value) => setData('icono', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar ícono" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {iconosDisponibles.map((icono) => (
-                                                <SelectItem key={icono} value={icono}>
-                                                    {icono}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="categoria">Categoría</Label>
-                                    <Input
-                                        id="categoria"
-                                        value={data.categoria}
-                                        onChange={(e) => setData('categoria', e.target.value)}
-                                        placeholder="Inventario, Comercial, etc."
-                                    />
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="permisos">Permisos Requeridos</Label>
-                                    <PermisosMultiSelect
-                                        value={data.permisos}
-                                        onChange={(permisos) => setData('permisos', permisos)}
-                                        placeholder="Selecciona los permisos que pueden acceder a este módulo"
-                                        error={errors.permisos}
-                                    />
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        Si dejas esto vacío, el módulo será visible para todos los usuarios.
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="orden">Orden</Label>
-                                    <Input
-                                        id="orden"
-                                        type="number"
-                                        value={data.orden}
-                                        onChange={(e) => setData('orden', parseInt(e.target.value) || 1)}
-                                        min="1"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        id="es_submenu"
-                                        type="checkbox"
-                                        checked={data.es_submenu}
-                                        onChange={(e) => setData('es_submenu', e.target.checked)}
-                                        className="rounded border-gray-300"
-                                    />
-                                    <Label htmlFor="es_submenu">Es submódulo</Label>
-                                </div>
-
-                                {data.es_submenu && (
-                                    <div>
-                                        <Label htmlFor="modulo_padre_id">Módulo Padre</Label>
-                                        <Select onValueChange={(value) => setData('modulo_padre_id', value)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar módulo padre" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {modulosPadre.map((modulo) => (
-                                                    <SelectItem key={modulo.id} value={modulo.id.toString()}>
-                                                        {modulo.titulo}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end space-x-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => setIsCreateModalOpen(false)}
-                                    >
-                                        Cancelar
-                                    </Button>
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Creando...' : 'Crear'}
-                                    </Button>
-                                </div>
-                            </form>
+                            <ModuloForm
+                                data={data}
+                                errors={errors}
+                                processing={processing}
+                                onSubmit={handleCreate}
+                                onChange={setData}
+                                onCancel={() => setIsCreateModalOpen(false)}
+                                submitLabel="Crear"
+                                modulosPadre={modulosPadre}
+                            />
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -591,91 +373,16 @@ export default function Index({ modulos }: Props) {
                                 Modifica los datos del módulo seleccionado
                             </DialogDescription>
                         </DialogHeader>
-
-                        <form onSubmit={handleEdit} className="space-y-4">
-                            <div>
-                                <Label htmlFor="edit_titulo">Título</Label>
-                                <Input
-                                    id="edit_titulo"
-                                    value={data.titulo}
-                                    onChange={(e) => setData('titulo', e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="edit_ruta">Ruta</Label>
-                                <Input
-                                    id="edit_ruta"
-                                    value={data.ruta}
-                                    onChange={(e) => setData('ruta', e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="edit_icono">Ícono</Label>
-                                <Select value={data.icono} onValueChange={(value) => setData('icono', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar ícono" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {iconosDisponibles.map((icono) => (
-                                            <SelectItem key={icono} value={icono}>
-                                                {icono}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="edit_categoria">Categoría</Label>
-                                <Input
-                                    id="edit_categoria"
-                                    value={data.categoria}
-                                    onChange={(e) => setData('categoria', e.target.value)}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="edit_permisos">Permisos Requeridos</Label>
-                                <PermisosMultiSelect
-                                    value={data.permisos}
-                                    onChange={(permisos) => setData('permisos', permisos)}
-                                    placeholder="Selecciona los permisos que pueden acceder a este módulo"
-                                    error={errors.permisos}
-                                />
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Si dejas esto vacío, el módulo será visible para todos los usuarios.
-                                </p>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="edit_orden">Orden</Label>
-                                <Input
-                                    id="edit_orden"
-                                    type="number"
-                                    value={data.orden}
-                                    onChange={(e) => setData('orden', parseInt(e.target.value) || 1)}
-                                    min="1"
-                                    required
-                                />
-                            </div>
-
-                            <div className="flex justify-end space-x-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setIsEditModalOpen(false)}
-                                >
-                                    Cancelar
-                                </Button>
-                                <Button type="submit" disabled={processing}>
-                                    {processing ? 'Actualizando...' : 'Actualizar'}
-                                </Button>
-                            </div>
-                        </form>
+                        <ModuloForm
+                            data={data}
+                            errors={errors}
+                            processing={processing}
+                            onSubmit={handleEdit}
+                            onChange={setData}
+                            onCancel={() => setIsEditModalOpen(false)}
+                            submitLabel="Actualizar"
+                            modulosPadre={modulosPadre}
+                        />
                     </DialogContent>
                 </Dialog>
             </div>

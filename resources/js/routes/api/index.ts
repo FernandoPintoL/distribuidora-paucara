@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import modulosSidebar from './modulos-sidebar'
 import proformas from './proformas'
 import ventas from './ventas'
 import envios from './envios'
