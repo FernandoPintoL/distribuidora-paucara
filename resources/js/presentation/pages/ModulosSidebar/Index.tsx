@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { PermisosMultiSelect } from '@/presentation/components/forms/permisos-multi-select';
 import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
+import { ModulosFiltros, type FiltrosModulo } from '@/presentation/components/modulos-filtros';
 
 interface ModuloSidebar {
     id: number;
@@ -46,6 +47,13 @@ export default function Index({ modulos }: Props) {
     const [selectedModulo, setSelectedModulo] = useState<ModuloSidebar | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [filtros, setFiltros] = useState<FiltrosModulo>({
+        busqueda: '',
+        tipo: 'todos',
+        estado: 'todos',
+        categoria: '',
+        rolRequerido: '',
+    });
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         titulo: '',
@@ -129,6 +137,73 @@ export default function Index({ modulos }: Props) {
     };
 
     const modulosPadre = modulos.filter(m => !m.es_submenu);
+
+    // Obtener categorías únicas
+    const categorias = Array.from(
+        new Set(modulos.filter(m => m.categoria).map(m => m.categoria))
+    ).sort();
+
+    // Obtener roles únicos de los permisos de módulos
+    const rolesDisponibles = Array.from(
+        new Set(
+            modulos
+                .flatMap(m => m.permisos || [])
+                .filter(p => typeof p === 'string')
+        )
+    ).sort();
+
+    // Lógica de filtrado
+    const modulosFiltrados = useMemo(() => {
+        return modulos.filter(modulo => {
+            // Filtro por búsqueda (título o ruta)
+            if (filtros.busqueda) {
+                const busquedaLower = filtros.busqueda.toLowerCase();
+                if (
+                    !modulo.titulo.toLowerCase().includes(busquedaLower) &&
+                    !modulo.ruta.toLowerCase().includes(busquedaLower)
+                ) {
+                    return false;
+                }
+            }
+
+            // Filtro por tipo
+            if (filtros.tipo !== 'todos') {
+                if (filtros.tipo === 'principal' && modulo.es_submenu) {
+                    return false;
+                }
+                if (filtros.tipo === 'submenu' && !modulo.es_submenu) {
+                    return false;
+                }
+            }
+
+            // Filtro por estado
+            if (filtros.estado !== 'todos') {
+                if (filtros.estado === 'activo' && !modulo.activo) {
+                    return false;
+                }
+                if (filtros.estado === 'inactivo' && modulo.activo) {
+                    return false;
+                }
+            }
+
+            // Filtro por categoría
+            if (filtros.categoria) {
+                if (modulo.categoria !== filtros.categoria) {
+                    return false;
+                }
+            }
+
+            // Filtro por rol requerido
+            if (filtros.rolRequerido) {
+                const permisos = Array.isArray(modulo.permisos) ? modulo.permisos : [];
+                if (!permisos.includes(filtros.rolRequerido)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }, [modulos, filtros]);
 
     return (
         <AppLayout>
@@ -292,7 +367,16 @@ export default function Index({ modulos }: Props) {
                             Total de módulos: {modulos.length}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
+                        <ModulosFiltros
+                            categorias={categorias}
+                            rolesDisponibles={rolesDisponibles}
+                            filtros={filtros}
+                            onChange={setFiltros}
+                            totalResultados={modulosFiltrados.length}
+                            totalModulos={modulos.length}
+                        />
+
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -306,7 +390,7 @@ export default function Index({ modulos }: Props) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {modulos.map((modulo) => (
+                                {modulosFiltrados.map((modulo) => (
                                     <TableRow key={modulo.id}>
                                         <TableCell className="font-medium">
                                             {modulo.es_submenu && modulo.padre && (
@@ -372,6 +456,32 @@ export default function Index({ modulos }: Props) {
                                 ))}
                             </TableBody>
                         </Table>
+
+                        {modulosFiltrados.length === 0 && (
+                            <div className="py-8 text-center">
+                                <p className="text-gray-500 dark:text-gray-400 mb-2">
+                                    {modulos.length === 0
+                                        ? 'No hay módulos registrados'
+                                        : 'No se encontraron módulos que coincidan con los filtros'}
+                                </p>
+                                {modulos.length > 0 && (
+                                    <button
+                                        onClick={() =>
+                                            setFiltros({
+                                                busqueda: '',
+                                                tipo: 'todos',
+                                                estado: 'todos',
+                                                categoria: '',
+                                                rolRequerido: '',
+                                            })
+                                        }
+                                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                                    >
+                                        Limpiar todos los filtros
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
