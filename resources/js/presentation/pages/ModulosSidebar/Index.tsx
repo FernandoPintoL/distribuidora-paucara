@@ -10,6 +10,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { PermisosMultiSelect } from '@/presentation/components/forms/permisos-multi-select';
 
 interface ModuloSidebar {
     id: number;
@@ -56,6 +57,7 @@ export default function Index({ modulos }: Props) {
         modulo_padre_id: '',
         categoria: '',
         visible_dashboard: true,
+        permisos: [] as string[],
     });
 
     const handleCreate = (e: React.FormEvent) => {
@@ -120,6 +122,7 @@ export default function Index({ modulos }: Props) {
             modulo_padre_id: modulo.modulo_padre_id?.toString() || '',
             categoria: modulo.categoria || '',
             visible_dashboard: true,
+            permisos: Array.isArray(modulo.permisos) ? modulo.permisos : [],
         });
         setIsEditModalOpen(true);
     };
@@ -208,6 +211,19 @@ export default function Index({ modulos }: Props) {
                                         onChange={(e) => setData('categoria', e.target.value)}
                                         placeholder="Inventario, Comercial, etc."
                                     />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="permisos">Permisos Requeridos</Label>
+                                    <PermisosMultiSelect
+                                        value={data.permisos}
+                                        onChange={(permisos) => setData('permisos', permisos)}
+                                        placeholder="Selecciona los permisos que pueden acceder a este módulo"
+                                        error={errors.permisos}
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Si dejas esto vacío, el módulo será visible para todos los usuarios.
+                                    </p>
                                 </div>
 
                                 <div>
@@ -412,6 +428,19 @@ export default function Index({ modulos }: Props) {
                                     value={data.categoria}
                                     onChange={(e) => setData('categoria', e.target.value)}
                                 />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="edit_permisos">Permisos Requeridos</Label>
+                                <PermisosMultiSelect
+                                    value={data.permisos}
+                                    onChange={(permisos) => setData('permisos', permisos)}
+                                    placeholder="Selecciona los permisos que pueden acceder a este módulo"
+                                    error={errors.permisos}
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Si dejas esto vacío, el módulo será visible para todos los usuarios.
+                                </p>
                             </div>
 
                             <div>

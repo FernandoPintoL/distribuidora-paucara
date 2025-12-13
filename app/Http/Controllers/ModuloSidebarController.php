@@ -253,4 +253,23 @@ class ModuloSidebarController extends Controller
 
         return response()->json($modulos);
     }
+
+    /**
+     * Obtener permisos disponibles para asignar a módulos
+     */
+    public function getPermisosDisponibles()
+    {
+        $permisos = \Spatie\Permission\Models\Permission::all()
+            ->sortBy('name')
+            ->map(function ($permission) {
+                return [
+                    'id' => $permission->id,
+                    'value' => $permission->name,
+                    'label' => $permission->name,
+                ];
+            })
+            ->values();
+
+        return response()->json($permisos);
+    }
 }
