@@ -13,6 +13,8 @@ import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { PermisosMultiSelect } from '@/presentation/components/forms/permisos-multi-select';
 import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
 import { ModulosFiltros, type FiltrosModulo } from '@/presentation/components/modulos-filtros';
+import { ModulosVistaAgrupada } from '@/presentation/components/modulos-vista-agrupada';
+import { LayoutList, Grid3x3 } from 'lucide-react';
 
 interface ModuloSidebar {
     id: number;
@@ -54,6 +56,7 @@ export default function Index({ modulos }: Props) {
         categoria: '',
         rolRequerido: '',
     });
+    const [vistaActual, setVistaActual] = useState<'tabla' | 'agrupada'>('tabla');
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         titulo: '',
@@ -361,11 +364,31 @@ export default function Index({ modulos }: Props) {
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Módulos Registrados</CardTitle>
-                        <CardDescription>
-                            Total de módulos: {modulos.length}
-                        </CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Módulos Registrados</CardTitle>
+                            <CardDescription>
+                                Total de módulos: {modulos.length}
+                            </CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant={vistaActual === 'tabla' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setVistaActual('tabla')}
+                                title="Vista de tabla"
+                            >
+                                <LayoutList className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant={vistaActual === 'agrupada' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setVistaActual('agrupada')}
+                                title="Vista agrupada por categoría"
+                            >
+                                <Grid3x3 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <ModulosFiltros
@@ -377,20 +400,22 @@ export default function Index({ modulos }: Props) {
                             totalModulos={modulos.length}
                         />
 
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Título</TableHead>
-                                    <TableHead>Ruta</TableHead>
-                                    <TableHead>Tipo</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead>Orden</TableHead>
-                                    <TableHead>Categoría</TableHead>
-                                    <TableHead>Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {modulosFiltrados.map((modulo) => (
+                        {/* Vista Tabla */}
+                        {vistaActual === 'tabla' && (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Título</TableHead>
+                                        <TableHead>Ruta</TableHead>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                        <TableHead>Orden</TableHead>
+                                        <TableHead>Categoría</TableHead>
+                                        <TableHead>Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {modulosFiltrados.map((modulo) => (
                                     <TableRow key={modulo.id}>
                                         <TableCell className="font-medium">
                                             {modulo.es_submenu && modulo.padre && (
@@ -453,10 +478,24 @@ export default function Index({ modulos }: Props) {
                                             </div>
                                         </TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
 
+                        {/* Vista Agrupada por Categoría */}
+                        {vistaActual === 'agrupada' && (
+                            <ModulosVistaAgrupada
+                                modulos={modulosFiltrados}
+                                categorias={categorias}
+                                onEdit={openEditModal}
+                                onDelete={handleDelete}
+                                onToggleActivo={toggleActivo}
+                                procesando={processing}
+                            />
+                        )}
+
+                        {/* Mensaje cuando no hay resultados */}
                         {modulosFiltrados.length === 0 && (
                             <div className="py-8 text-center">
                                 <p className="text-gray-500 dark:text-gray-400 mb-2">
