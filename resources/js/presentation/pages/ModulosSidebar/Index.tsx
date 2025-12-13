@@ -14,7 +14,8 @@ import { PermisosMultiSelect } from '@/presentation/components/forms/permisos-mu
 import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
 import { ModulosFiltros, type FiltrosModulo } from '@/presentation/components/modulos-filtros';
 import { ModulosVistaAgrupada } from '@/presentation/components/modulos-vista-agrupada';
-import { LayoutList, Grid3x3 } from 'lucide-react';
+import { ModulosListaArrastrables } from '@/presentation/components/modulos-lista-arrastrables';
+import { LayoutList, Grid3x3, List } from 'lucide-react';
 
 interface ModuloSidebar {
     id: number;
@@ -56,7 +57,8 @@ export default function Index({ modulos }: Props) {
         categoria: '',
         rolRequerido: '',
     });
-    const [vistaActual, setVistaActual] = useState<'tabla' | 'agrupada'>('tabla');
+    const [vistaActual, setVistaActual] = useState<'tabla' | 'agrupada' | 'lista'>('tabla');
+    const [guardandoOrden, setGuardandoOrden] = useState(false);
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         titulo: '',
@@ -119,6 +121,34 @@ export default function Index({ modulos }: Props) {
             .catch(() => {
                 alert('Error al cambiar el estado del módulo');
             });
+    };
+
+    const handleGuardarOrden = async (orden: Array<{ id: number; orden: number }>) => {
+        setGuardandoOrden(true);
+        try {
+            const response = await fetch('/modulos-sidebar/actualizar-orden', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ modulos: orden }),
+            });
+
+            if (!response.ok) throw new Error('Error al guardar orden');
+
+            // Actualizar el estado local
+            const modulosActualizados = modulos.map(m => {
+                const nuevoOrden = orden.find(o => o.id === m.id);
+                return nuevoOrden ? { ...m, orden: nuevoOrden.orden } : m;
+            });
+            window.location.reload();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al guardar el orden de los módulos');
+        } finally {
+            setGuardandoOrden(false);
+        }
     };
 
     const openEditModal = (modulo: ModuloSidebar) => {
@@ -388,6 +418,14 @@ export default function Index({ modulos }: Props) {
                             >
                                 <Grid3x3 className="h-4 w-4" />
                             </Button>
+                            <Button
+                                variant={vistaActual === 'lista' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setVistaActual('lista')}
+                                title="Vista lista con arrastrable para reordenar"
+                            >
+                                <List className="h-4 w-4" />
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -492,6 +530,19 @@ export default function Index({ modulos }: Props) {
                                 onDelete={handleDelete}
                                 onToggleActivo={toggleActivo}
                                 procesando={processing}
+                            />
+                        )}
+
+                        {/* Vista Lista Arrastrables */}
+                        {vistaActual === 'lista' && (
+                            <ModulosListaArrastrables
+                                modulos={modulosFiltrados}
+                                onEdit={openEditModal}
+                                onDelete={handleDelete}
+                                onToggleActivo={toggleActivo}
+                                onReordenar={handleGuardarOrden}
+                                procesando={processing}
+                                guardando={guardandoOrden}
                             />
                         )}
 
