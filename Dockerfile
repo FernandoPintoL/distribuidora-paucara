@@ -1,10 +1,9 @@
 # Build stage - compile PHP and Node dependencies
-FROM php:8.4-cli as builder
+FROM php:8.4-cli-bookworm as builder
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     autoconf \
-    composer \
     nodejs \
     npm \
     libxml2-dev \
@@ -14,8 +13,12 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libonig-dev \
     zlib1g-dev \
-    git && \
-    rm -rf /var/lib/apt/lists/*
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer directly
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install \
