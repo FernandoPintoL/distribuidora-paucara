@@ -21,8 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Composer directly
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-install \
+RUN docker-php-ext-install \
     pdo \
     pdo_pgsql \
     mbstring \
@@ -30,8 +29,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     dom \
     session \
     fileinfo \
-    zip \
-    gd
+    zip
 
 WORKDIR /app
 
@@ -58,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
-RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo zip gd
+RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo zip
 
 WORKDIR /app
 
