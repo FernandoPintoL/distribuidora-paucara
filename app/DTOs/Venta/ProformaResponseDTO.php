@@ -27,6 +27,8 @@ class ProformaResponseDTO extends BaseDTO
         public string $canal = 'PRESENCIAL',
         public ?string $fecha_entrega_solicitada = null,
         public ?string $hora_entrega_solicitada = null,
+        public ?string $fecha_entrega_confirmada = null,
+        public ?string $hora_entrega_confirmada = null,
         public array $detalles = [],
         public string $created_at = '',
         public string $updated_at = '',
@@ -61,6 +63,8 @@ class ProformaResponseDTO extends BaseDTO
             canal: $model->canal ?? 'PRESENCIAL',
             fecha_entrega_solicitada: $model->fecha_entrega_solicitada?->toDateString(),
             hora_entrega_solicitada: $model->hora_entrega_solicitada,
+            fecha_entrega_confirmada: $model->fecha_entrega_confirmada?->toDateString(),
+            hora_entrega_confirmada: $model->hora_entrega_confirmada,
             detalles: $model->detalles->map(fn($det) => [
                 'id' => $det->id,
                 'producto_id' => $det->producto_id,
