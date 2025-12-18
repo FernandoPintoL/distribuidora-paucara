@@ -4,6 +4,7 @@ FROM php:8.4-cli-bookworm as builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     autoconf \
+    pkg-config \
     nodejs \
     npm \
     libxml2-dev \
