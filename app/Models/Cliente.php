@@ -30,6 +30,10 @@ class Cliente extends Model
         'codigo_cliente',
         'user_id',
         'usuario_creacion_id',
+        'preventista_id',           // ← NUEVO
+        'usuario_actualizacion_id', // ← NUEVO
+        'fecha_creacion',           // ← NUEVO
+        'fecha_actualizacion',      // ← NUEVO
     ];
 
     protected function casts(): array
@@ -89,6 +93,46 @@ class Cliente extends Model
     public function usuarioCreacion()
     {
         return $this->belongsTo(User::class, 'usuario_creacion_id');
+    }
+
+    /**
+     * ✅ NUEVO: Preventista que gestiona este cliente
+     */
+    public function preventista()
+    {
+        return $this->belongsTo(Empleado::class, 'preventista_id');
+    }
+
+    /**
+     * ✅ NUEVO: Usuario que actualizó el cliente
+     */
+    public function usuarioActualizacion()
+    {
+        return $this->belongsTo(User::class, 'usuario_actualizacion_id');
+    }
+
+    /**
+     * ✅ NUEVO: Auditoría de cambios
+     */
+    public function auditLogs()
+    {
+        return $this->hasMany(ClienteAudit::class);
+    }
+
+    /**
+     * ✅ NUEVO: Método para registrar cambios manualmente
+     */
+    public function registrarCambio(string $accion, array $cambios, ?string $motivo = null)
+    {
+        ClienteAudit::create([
+            'cliente_id' => $this->id,
+            'preventista_id' => auth()->user()?->empleado?->id,
+            'usuario_id' => auth()->user()?->id,
+            'accion' => $accion,
+            'cambios' => $cambios,
+            'motivo' => $motivo,
+            'ip_address' => request()?->ip() ?? '127.0.0.1',
+        ]);
     }
 
     protected static function boot()
