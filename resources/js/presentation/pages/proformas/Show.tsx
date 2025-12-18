@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react'
+import { Head } from '@inertiajs/react'
 import { useState } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
@@ -33,150 +33,82 @@ import {
 } from '@/presentation/components/ui/alert-dialog'
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
-import { ArrowLeft, FileText, Package, Calendar, Clock, MapPin, AlertCircle, Check, X } from 'lucide-react'
+import { Input } from '@/presentation/components/ui/input'
+import { FileText, Package, Calendar, Clock, MapPin, AlertCircle, Check, X, Save, ChevronUp, ChevronDown, ShoppingCart } from 'lucide-react'
 import MapView from '@/presentation/components/maps/MapView'
 
-interface Cliente {
-    id: number
-    nombre: string
-    email?: string
-    telefono?: string
-    direccion?: string
-}
+// DOMAIN LAYER: Importar tipos desde domain
+import type { Proforma } from '@/domain/entities/proformas'
+import { getEstadoBadge } from '@/domain/entities/proformas'
 
-interface Usuario {
-    id: number
-    name: string
-}
-
-interface Marca {
-    id: number
-    nombre: string
-}
-
-interface Categoria {
-    id: number
-    nombre: string
-}
-
-interface Producto {
-    id: number
-    nombre: string
-    codigo?: string
-    precio_venta: number
-    marca: Marca
-    categoria: Categoria
-}
-
-interface DetalleProforma {
-    id: number
-    cantidad: number
-    precio_unitario: number
-    descuento: number
-    subtotal: number
-    producto: Producto
-}
-
-interface Direccion {
-    id: number
-    direccion: string
-    latitud?: number
-    longitud?: number
-    observaciones?: string
-}
-
-interface Proforma {
-    id: number
-    numero: string
-    fecha: string
-    subtotal: number
-    descuento: number
-    impuesto: number
-    total: number
-    observaciones?: string
-    estado: string
-    cliente: Cliente
-    usuarioCreador?: Usuario
-    detalles: DetalleProforma[]
-    created_at: string
-    updated_at: string
-    // Campos de entrega
-    fecha_entrega_solicitada?: string
-    hora_entrega_solicitada?: string
-    direccion_entrega_solicitada_id?: number
-    direccion_solicitada?: Direccion // snake_case como viene del backend
-    fecha_entrega_confirmada?: string
-    hora_entrega_confirmada?: string
-    direccion_entrega_confirmada_id?: number
-    direccion_confirmada?: Direccion // snake_case como viene del backend
-    coordinacion_completada?: boolean
-    comentario_coordinacion?: string
-}
+// APPLICATION LAYER: Importar hook de lógica de negocio
+import { useProformaActions, type CoordinacionData } from '@/application/hooks/use-proforma-actions'
 
 interface Props {
-    proforma: Proforma
+    item: Proforma
 }
 
-const getEstadoBadge = (estado: string) => {
-    const estados: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-        'PENDIENTE': { label: 'Pendiente', variant: 'default' },
-        'APROBADA': { label: 'Aprobada', variant: 'default' },
-        'RECHAZADA': { label: 'Rechazada', variant: 'destructive' },
-        'CONVERTIDA': { label: 'Convertida', variant: 'default' },
-        'VENCIDA': { label: 'Vencida', variant: 'destructive' },
-    }
-
-    return estados[estado] || { label: 'Desconocido', variant: 'secondary' as const }
-}
-
-export default function ProformasShow({ proforma }: Props) {
+export default function ProformasShow({ item: proforma }: Props) {
+    // DOMAIN LAYER: Utilidades del dominio
     const estado = getEstadoBadge(proforma.estado)
-    const { errors } = usePage().props as any
+
+    // APPLICATION LAYER: Lógica de negocio desde hook
+    const {
+        isSubmitting,
+        isConverting,
+        isGuardandoCoordinacion,
+        puedeAprobar,
+        puedeRechazar,
+        puedeConvertir,
+        aprobar,
+        rechazar,
+        convertirAVenta,
+        guardarCoordinacion,
+    } = useProformaActions(proforma)
+
+    // PRESENTATION LAYER: Estados locales solo de UI
     const [showAprobarDialog, setShowAprobarDialog] = useState(false)
     const [showRechazarDialog, setShowRechazarDialog] = useState(false)
+    const [showConvertirDialog, setShowConvertirDialog] = useState(false)
     const [motivoRechazo, setMotivoRechazo] = useState('')
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [showCoordinacionForm, setShowCoordinacionForm] = useState(true)
 
+    // Estado del formulario de coordinación
+    const [coordinacion, setCoordinacion] = useState<CoordinacionData>({
+        fecha_entrega_confirmada: proforma.fecha_entrega_confirmada || proforma.fecha_entrega_solicitada || '',
+        hora_entrega_confirmada: proforma.hora_entrega_confirmada || proforma.hora_entrega_solicitada || '',
+        comentario_coordinacion: proforma.comentario_coordinacion || '',
+        notas_llamada: '',
+        // Control de intentos
+        numero_intentos_contacto: proforma.numero_intentos_contacto || 0,
+        resultado_ultimo_intento: proforma.resultado_ultimo_intento || '',
+        // Datos de entrega realizada
+        entregado_en: proforma.entregado_en || '',
+        entregado_a: proforma.entregado_a || '',
+        observaciones_entrega: proforma.observaciones_entrega || '',
+    })
+
+    // PRESENTATION LAYER: Handlers simples que delegan al hook
     const handleAprobar = () => {
-        setIsSubmitting(true)
-        router.post(
-            route('proformas.aprobar', proforma.id),
-            {},
-            {
-                onSuccess: () => {
-                    setShowAprobarDialog(false)
-                    setIsSubmitting(false)
-                },
-                onError: () => {
-                    setIsSubmitting(false)
-                },
-            }
-        )
+        aprobar()
+        setShowAprobarDialog(false)
     }
 
     const handleRechazar = () => {
-        if (!motivoRechazo.trim()) {
-            return
-        }
-        setIsSubmitting(true)
-        router.post(
-            route('proformas.rechazar', proforma.id),
-            { motivo: motivoRechazo },
-            {
-                onSuccess: () => {
-                    setShowRechazarDialog(false)
-                    setMotivoRechazo('')
-                    setIsSubmitting(false)
-                },
-                onError: () => {
-                    setIsSubmitting(false)
-                },
-            }
-        )
+        rechazar(motivoRechazo)
+        setShowRechazarDialog(false)
+        setMotivoRechazo('')
     }
 
-    const puedeAprobar = proforma.estado === 'PENDIENTE'
-    const puedeRechazar = proforma.estado === 'PENDIENTE'
+    const handleConvertir = () => {
+        convertirAVenta()
+        setShowConvertirDialog(false)
+    }
+
+    const handleGuardarCoordinacion = () => {
+        guardarCoordinacion(coordinacion)
+        setShowCoordinacionForm(false)
+    }
 
     return (
         <AppLayout>
@@ -222,6 +154,16 @@ export default function ProformasShow({ proforma }: Props) {
                             </Button>
                         )}
 
+                        {puedeConvertir && (
+                            <Button
+                                onClick={() => setShowConvertirDialog(true)}
+                                className="bg-purple-600 hover:bg-purple-700"
+                            >
+                                <ShoppingCart className="mr-2 h-4 w-4" />
+                                Convertir a Venta
+                            </Button>
+                        )}
+
                         <Button variant="outline">
                             <FileText className="mr-2 h-4 w-4" />
                             Imprimir
@@ -257,12 +199,14 @@ export default function ProformasShow({ proforma }: Props) {
                                                 <TableCell>
                                                     <div>
                                                         <div className="font-medium">
-                                                            {detalle.producto.nombre}
+                                                            {detalle.producto?.nombre || 'Producto sin datos'}
                                                         </div>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            {detalle.producto.categoria.nombre} - {detalle.producto.marca.nombre}
-                                                        </div>
-                                                        {detalle.producto.codigo && (
+                                                        {detalle.producto && (
+                                                            <div className="text-sm text-muted-foreground">
+                                                                {detalle.producto.categoria?.nombre || 'Sin categoría'} - {detalle.producto.marca?.nombre || 'Sin marca'}
+                                                            </div>
+                                                        )}
+                                                        {detalle.producto?.codigo && (
                                                             <div className="text-xs text-muted-foreground">
                                                                 Código: {detalle.producto.codigo}
                                                             </div>
@@ -418,7 +362,316 @@ export default function ProformasShow({ proforma }: Props) {
                                             )}
                                         </div>
                                     )}
+
+                                    {/* Entrega Realizada */}
+                                    {proforma.entregado_en && (
+                                        <div className="border-l-4 border-purple-500 pl-4 py-2">
+                                            <h4 className="font-semibold text-sm mb-3">Entrega Realizada</h4>
+                                            <div className="grid md:grid-cols-3 gap-4 text-sm space-y-3">
+                                                <div>
+                                                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                                        <Calendar className="h-4 w-4" />
+                                                        <span>Fecha y Hora</span>
+                                                    </div>
+                                                    <p className="font-medium">
+                                                        {new Date(proforma.entregado_en).toLocaleDateString('es-ES')} a las {new Date(proforma.entregado_en).toLocaleTimeString('es-ES')}
+                                                    </p>
+                                                </div>
+
+                                                {proforma.entregado_a && (
+                                                    <div>
+                                                        <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                                            <MapPin className="h-4 w-4" />
+                                                            <span>Entregado a</span>
+                                                        </div>
+                                                        <p className="font-medium">
+                                                            {proforma.entregado_a}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {proforma.numero_intentos_contacto !== undefined && (
+                                                    <div>
+                                                        <div className="text-xs font-medium text-muted-foreground mb-1">Intentos de Contacto</div>
+                                                        <p className="font-medium">
+                                                            {proforma.numero_intentos_contacto}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {proforma.resultado_ultimo_intento && (
+                                                <div className="mt-3 p-2 bg-purple-50 dark:bg-purple-950 rounded text-sm">
+                                                    <p className="text-xs font-medium mb-1">Resultado Último Intento:</p>
+                                                    <p className="font-medium">{proforma.resultado_ultimo_intento}</p>
+                                                </div>
+                                            )}
+
+                                            {proforma.observaciones_entrega && (
+                                                <div className="mt-3 p-3 bg-muted/50 rounded">
+                                                    <p className="text-xs font-medium mb-1">Observaciones de Entrega:</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {proforma.observaciones_entrega}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Coordinación de Entrega */}
+                        {puedeAprobar && (
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowCoordinacionForm(!showCoordinacionForm)}>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <MapPin className="h-5 w-5" />
+                                            Coordinación de Entrega
+                                        </CardTitle>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setShowCoordinacionForm(!showCoordinacionForm)
+                                            }}
+                                        >
+                                            {showCoordinacionForm ? (
+                                                <ChevronUp className="h-4 w-4" />
+                                            ) : (
+                                                <ChevronDown className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                {showCoordinacionForm && (
+                                    <CardContent className="space-y-4">
+                                        <div className="grid md:grid-cols-2 gap-4">
+                                            {/* Fecha de entrega confirmada */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="fecha_confirmada">
+                                                    Fecha de Entrega Confirmada
+                                                </Label>
+                                                <Input
+                                                    id="fecha_confirmada"
+                                                    type="date"
+                                                    value={coordinacion.fecha_entrega_confirmada}
+                                                    onChange={(e) =>
+                                                        setCoordinacion({
+                                                            ...coordinacion,
+                                                            fecha_entrega_confirmada: e.target.value,
+                                                        })
+                                                    }
+                                                    disabled={isGuardandoCoordinacion}
+                                                />
+                                            </div>
+
+                                            {/* Hora de entrega confirmada */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="hora_confirmada">
+                                                    Hora de Entrega Confirmada
+                                                </Label>
+                                                <Input
+                                                    id="hora_confirmada"
+                                                    type="time"
+                                                    value={coordinacion.hora_entrega_confirmada}
+                                                    onChange={(e) =>
+                                                        setCoordinacion({
+                                                            ...coordinacion,
+                                                            hora_entrega_confirmada: e.target.value,
+                                                        })
+                                                    }
+                                                    disabled={isGuardandoCoordinacion}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Comentario de coordinación */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="comentario">
+                                                Comentario de Coordinación
+                                            </Label>
+                                            <Textarea
+                                                id="comentario"
+                                                placeholder="Notas sobre la coordinación con el cliente..."
+                                                value={coordinacion.comentario_coordinacion}
+                                                onChange={(e) =>
+                                                    setCoordinacion({
+                                                        ...coordinacion,
+                                                        comentario_coordinacion: e.target.value,
+                                                    })
+                                                }
+                                                disabled={isGuardandoCoordinacion}
+                                                rows={3}
+                                                className="resize-none"
+                                            />
+                                        </div>
+
+                                        {/* Notas de llamada */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="notas_llamada">
+                                                Notas de Llamada
+                                            </Label>
+                                            <Textarea
+                                                id="notas_llamada"
+                                                placeholder="Registra las notas de las llamadas realizadas con el cliente..."
+                                                value={coordinacion.notas_llamada}
+                                                onChange={(e) =>
+                                                    setCoordinacion({
+                                                        ...coordinacion,
+                                                        notas_llamada: e.target.value,
+                                                    })
+                                                }
+                                                disabled={isGuardandoCoordinacion}
+                                                rows={3}
+                                                className="resize-none"
+                                            />
+                                        </div>
+
+                                        <Separator className="my-4" />
+
+                                        {/* Control de Intentos de Contacto */}
+                                        <div className="space-y-4">
+                                            <h4 className="font-semibold text-sm">Control de Intentos de Contacto</h4>
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="numero_intentos">
+                                                        Número de Intentos
+                                                    </Label>
+                                                    <Input
+                                                        id="numero_intentos"
+                                                        type="number"
+                                                        min="0"
+                                                        value={coordinacion.numero_intentos_contacto}
+                                                        onChange={(e) =>
+                                                            setCoordinacion({
+                                                                ...coordinacion,
+                                                                numero_intentos_contacto: parseInt(e.target.value) || 0,
+                                                            })
+                                                        }
+                                                        disabled={isGuardandoCoordinacion}
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="resultado_intento">
+                                                        Resultado del Último Intento
+                                                    </Label>
+                                                    <select
+                                                        id="resultado_intento"
+                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        value={coordinacion.resultado_ultimo_intento}
+                                                        onChange={(e) =>
+                                                            setCoordinacion({
+                                                                ...coordinacion,
+                                                                resultado_ultimo_intento: e.target.value,
+                                                            })
+                                                        }
+                                                        disabled={isGuardandoCoordinacion}
+                                                    >
+                                                        <option value="">Seleccionar resultado...</option>
+                                                        <option value="Aceptado">Aceptado</option>
+                                                        <option value="No contactado">No contactado</option>
+                                                        <option value="Rechazado">Rechazado</option>
+                                                        <option value="Reagendar">Reagendar</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <Separator className="my-4" />
+
+                                        {/* Datos de Entrega Realizada */}
+                                        <div className="space-y-4">
+                                            <h4 className="font-semibold text-sm">Datos de Entrega Realizada</h4>
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="entregado_en">
+                                                        Fecha y Hora de Entrega
+                                                    </Label>
+                                                    <Input
+                                                        id="entregado_en"
+                                                        type="datetime-local"
+                                                        value={coordinacion.entregado_en}
+                                                        onChange={(e) =>
+                                                            setCoordinacion({
+                                                                ...coordinacion,
+                                                                entregado_en: e.target.value,
+                                                            })
+                                                        }
+                                                        disabled={isGuardandoCoordinacion}
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="entregado_a">
+                                                        Entregado a (Nombre)
+                                                    </Label>
+                                                    <Input
+                                                        id="entregado_a"
+                                                        type="text"
+                                                        placeholder="Nombre de quién recibió"
+                                                        value={coordinacion.entregado_a}
+                                                        onChange={(e) =>
+                                                            setCoordinacion({
+                                                                ...coordinacion,
+                                                                entregado_a: e.target.value,
+                                                            })
+                                                        }
+                                                        disabled={isGuardandoCoordinacion}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="observaciones_entrega">
+                                                    Observaciones de la Entrega
+                                                </Label>
+                                                <Textarea
+                                                    id="observaciones_entrega"
+                                                    placeholder="Observaciones sobre cómo fue la entrega, incidencias, etc..."
+                                                    value={coordinacion.observaciones_entrega}
+                                                    onChange={(e) =>
+                                                        setCoordinacion({
+                                                            ...coordinacion,
+                                                            observaciones_entrega: e.target.value,
+                                                        })
+                                                    }
+                                                    disabled={isGuardandoCoordinacion}
+                                                    rows={3}
+                                                    className="resize-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Botones de acción */}
+                                        <div className="flex gap-2 justify-end pt-4">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setShowCoordinacionForm(false)}
+                                                disabled={isGuardandoCoordinacion}
+                                            >
+                                                Cancelar
+                                            </Button>
+                                            <Button
+                                                onClick={handleGuardarCoordinacion}
+                                                disabled={isGuardandoCoordinacion}
+                                                className="bg-blue-600 hover:bg-blue-700"
+                                            >
+                                                {isGuardandoCoordinacion ? (
+                                                    <>Guardando...</>
+                                                ) : (
+                                                    <>
+                                                        <Save className="mr-2 h-4 w-4" />
+                                                        Guardar Coordinación
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                )}
                             </Card>
                         )}
                     </div>
@@ -624,9 +877,6 @@ export default function ProformasShow({ proforma }: Props) {
                                 rows={4}
                                 className="resize-none"
                             />
-                            {errors?.motivo && (
-                                <p className="text-sm text-destructive">{errors.motivo}</p>
-                            )}
                             <p className="text-xs text-muted-foreground">
                                 {motivoRechazo.length}/500 caracteres
                             </p>
@@ -653,6 +903,37 @@ export default function ProformasShow({ proforma }: Props) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Diálogo de confirmación para convertir a venta */}
+            <AlertDialog open={showConvertirDialog} onOpenChange={setShowConvertirDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Convertir Proforma a Venta</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ¿Estás seguro de que deseas convertir la proforma {proforma.numero} a una venta?
+                            <div className="mt-3 space-y-2 text-sm text-foreground">
+                                <p>Esta acción:</p>
+                                <ul className="list-disc list-inside space-y-1 ml-2">
+                                    <li>Crearán una nueva venta con los detalles de esta proforma</li>
+                                    <li>Consumirán el stock reservado de los productos</li>
+                                    <li>Generarán los números de serie correspondientes</li>
+                                    <li>Marcarán esta proforma como CONVERTIDA</li>
+                                </ul>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isConverting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConvertir}
+                            disabled={isConverting}
+                            className="bg-purple-600 hover:bg-purple-700"
+                        >
+                            {isConverting ? 'Convirtiendo...' : 'Convertir a Venta'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </AppLayout>
     )
 }
