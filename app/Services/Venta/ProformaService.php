@@ -309,7 +309,11 @@ class ProformaService
      */
     public function obtener(int $proformaId): ProformaResponseDTO
     {
-        $proforma = Proforma::with(['detalles', 'cliente'])->findOrFail($proformaId);
+        $proforma = Proforma::with([
+            'detalles.producto.categoria',
+            'detalles.producto.marca',
+            'cliente'
+        ])->findOrFail($proformaId);
 
         return ProformaResponseDTO::fromModel($proforma);
     }
