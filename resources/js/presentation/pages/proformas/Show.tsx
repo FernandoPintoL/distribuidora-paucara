@@ -215,13 +215,13 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                 </TableCell>
                                                 <TableCell>{detalle.cantidad}</TableCell>
                                                 <TableCell>
-                                                    Bs. {detalle.precio_unitario.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                    Bs. {(detalle.precio_unitario ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
                                                 <TableCell>
-                                                    Bs. {detalle.descuento.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                    Bs. {(detalle.descuento ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    Bs. {detalle.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                    Bs. {(detalle.subtotal ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
