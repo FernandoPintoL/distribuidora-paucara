@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-turbo-dev \
     libfreetype6-dev \
-    postgresql-dev \
+    libpq-dev \
     libonig-dev \
     zlib1g-dev \
     git && \
