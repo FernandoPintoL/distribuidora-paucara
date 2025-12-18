@@ -29,7 +29,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     dom \
     session \
     fileinfo \
-    tokenizer \
     zip \
     gd
 
@@ -58,7 +57,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
-RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo tokenizer zip gd
+RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo zip gd
 
 WORKDIR /app
 
