@@ -2,6 +2,8 @@
 FROM php:8.4-cli-alpine as builder
 
 RUN apk add --no-cache \
+    build-base \
+    autoconf \
     composer \
     nodejs \
     npm \
@@ -10,7 +12,9 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     freetype-dev \
     postgresql-dev \
-    oniguruma-dev
+    oniguruma-dev \
+    libcurl-dev \
+    zlib-dev
 
 RUN docker-php-ext-install \
     pdo \
@@ -21,7 +25,6 @@ RUN docker-php-ext-install \
     session \
     fileinfo \
     tokenizer \
-    curl \
     zip \
     gd
 
@@ -42,6 +45,8 @@ RUN DB_CONNECTION=sqlite \
 FROM php:8.4-fpm-alpine
 
 RUN apk add --no-cache \
+    build-base \
+    autoconf \
     nginx \
     supervisor \
     postgresql-client \
@@ -52,7 +57,9 @@ RUN apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
-    oniguruma-dev
+    oniguruma-dev \
+    libcurl-dev \
+    zlib-dev
 
 RUN docker-php-ext-install \
     pdo \
@@ -63,12 +70,11 @@ RUN docker-php-ext-install \
     session \
     fileinfo \
     tokenizer \
-    curl \
     zip \
     gd
 
 # Remove dev dependencies to reduce image size
-RUN apk del --no-cache postgresql-dev libxml2-dev libpng-dev libjpeg-turbo-dev freetype-dev oniguruma-dev
+RUN apk del --no-cache build-base autoconf postgresql-dev libxml2-dev libpng-dev libjpeg-turbo-dev freetype-dev oniguruma-dev zlib-dev
 
 WORKDIR /app
 
