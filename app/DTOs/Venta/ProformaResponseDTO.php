@@ -15,14 +15,18 @@ class ProformaResponseDTO extends BaseDTO
         public string $numero,
         public int $cliente_id,
         public string $cliente_nombre,
+        public array $cliente,
         public string $estado,
         public string $fecha,
         public string $fecha_vencimiento,
         public float $subtotal,
+        public float $descuento,
         public float $impuesto,
         public float $total,
         public ?string $observaciones = null,
         public string $canal = 'PRESENCIAL',
+        public ?string $fecha_entrega_solicitada = null,
+        public ?string $hora_entrega_solicitada = null,
         public array $detalles = [],
         public string $created_at = '',
         public string $updated_at = '',
@@ -31,22 +35,33 @@ class ProformaResponseDTO extends BaseDTO
     /**
      * Factory: Crear desde Model
      */
-    public static function fromModel(Proforma $proforma): self
+    public static function fromModel($model): static
     {
+        /** @var Proforma $model */
         return new self(
-            id: $proforma->id,
-            numero: $proforma->numero,
-            cliente_id: $proforma->cliente_id,
-            cliente_nombre: $proforma->cliente->nombre ?? 'N/A',
-            estado: $proforma->estado,
-            fecha: $proforma->fecha->toDateString(),
-            fecha_vencimiento: $proforma->fecha_vencimiento->toDateString(),
-            subtotal: (float) $proforma->subtotal,
-            impuesto: (float) $proforma->impuesto,
-            total: (float) $proforma->total,
-            observaciones: $proforma->observaciones,
-            canal: $proforma->canal ?? 'PRESENCIAL',
-            detalles: $proforma->detalles->map(fn($det) => [
+            id: $model->id,
+            numero: $model->numero,
+            cliente_id: $model->cliente_id,
+            cliente_nombre: $model->cliente->nombre ?? 'N/A',
+            cliente: [
+                'id' => $model->cliente->id,
+                'nombre' => $model->cliente->nombre,
+                'email' => $model->cliente->email ?? null,
+                'telefono' => $model->cliente->telefono ?? null,
+                'direccion' => $model->cliente->direccion ?? null,
+            ],
+            estado: $model->estado,
+            fecha: $model->fecha->toDateString(),
+            fecha_vencimiento: $model->fecha_vencimiento->toDateString(),
+            subtotal: (float) $model->subtotal,
+            descuento: (float) $model->descuento,
+            impuesto: (float) $model->impuesto,
+            total: (float) $model->total,
+            observaciones: $model->observaciones,
+            canal: $model->canal ?? 'PRESENCIAL',
+            fecha_entrega_solicitada: $model->fecha_entrega_solicitada?->toDateString(),
+            hora_entrega_solicitada: $model->hora_entrega_solicitada,
+            detalles: $model->detalles->map(fn($det) => [
                 'id' => $det->id,
                 'producto_id' => $det->producto_id,
                 'producto_nombre' => $det->producto->nombre ?? 'N/A',
@@ -54,8 +69,8 @@ class ProformaResponseDTO extends BaseDTO
                 'precio_unitario' => (float) $det->precio_unitario,
                 'subtotal' => (float) $det->subtotal,
             ])->toArray(),
-            created_at: $proforma->created_at->toIso8601String(),
-            updated_at: $proforma->updated_at->toIso8601String(),
+            created_at: $model->created_at->toIso8601String(),
+            updated_at: $model->updated_at->toIso8601String(),
         );
     }
 }
