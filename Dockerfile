@@ -47,34 +47,21 @@ RUN DB_CONNECTION=sqlite \
 FROM php:8.4-fpm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    autoconf \
     nginx \
     supervisor \
     postgresql-client \
-    postgresql-server-dev-all \
     curl \
     bash \
-    libxml2-dev \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    libonig-dev \
-    libcurl4-openssl-dev \
-    zlib1g-dev \
+    libxml2 \
+    libpng16 \
+    libjpeg62-turbo \
+    libfreetype6 \
+    libonig5 \
+    zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install \
-    pdo \
-    pdo_pgsql \
-    mbstring \
-    xml \
-    dom \
-    session \
-    fileinfo \
-    tokenizer \
-    zip \
-    gd
+COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924 /usr/local/lib/php/extensions/no-debug-non-zts-20240924
+COPY --from=builder /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
 
 WORKDIR /app
 
