@@ -7,6 +7,7 @@ import { NavigationMenu, NavigationMenuItem, NavigationMenuList, navigationMenuT
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/presentation/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/presentation/components/ui/tooltip';
 import { UserMenuContent } from '@/presentation/components/user-menu-content';
+import AppearanceToggleDropdown from '@/presentation/components/appearance-dropdown';
 import ProformaNotificationPanel from '@/presentation/components/proforma-notification-panel';
 import { useInitials } from '@/presentation/hooks/use-initials';
 import { cn } from '@/lib/utils';
@@ -133,6 +134,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             </Button>
                             {/* ✅ Panel de notificaciones de proformas */}
                             <ProformaNotificationPanel />
+                            {/* ✅ Toggle de tema (Light/Dark/System) */}
+                            <AppearanceToggleDropdown />
                             <div className="hidden lg:flex">
                                 {rightNavItems.map((item) => (
                                     <TooltipProvider key={item.title} delayDuration={0}>
