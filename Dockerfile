@@ -9,7 +9,8 @@ RUN apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
-    postgresql-dev
+    postgresql-dev \
+    oniguruma-dev
 
 RUN docker-php-ext-install \
     pdo \
@@ -50,7 +51,8 @@ RUN apk add --no-cache \
     libxml2-dev \
     libpng-dev \
     libjpeg-turbo-dev \
-    freetype-dev
+    freetype-dev \
+    oniguruma-dev
 
 RUN docker-php-ext-install \
     pdo \
@@ -66,7 +68,7 @@ RUN docker-php-ext-install \
     gd
 
 # Remove dev dependencies to reduce image size
-RUN apk del --no-cache postgresql-dev libxml2-dev libpng-dev libjpeg-turbo-dev freetype-dev
+RUN apk del --no-cache postgresql-dev libxml2-dev libpng-dev libjpeg-turbo-dev freetype-dev oniguruma-dev
 
 WORKDIR /app
 
