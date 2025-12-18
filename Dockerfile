@@ -1,7 +1,7 @@
 # Build stage - compile PHP and Node dependencies
 FROM php:8.4-cli as builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     build-essential \
     autoconf \
     composer \
@@ -9,16 +9,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     npm \
     libxml2-dev \
     libpng-dev \
-    libjpeg62-turbo-dev \
+    libjpeg-turbo-dev \
     libfreetype6-dev \
-    postgresql-server-dev-all \
+    postgresql-dev \
     libonig-dev \
-    libcurl4-openssl-dev \
     zlib1g-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+    git && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
+    docker-php-ext-install \
     pdo \
     pdo_pgsql \
     mbstring \
@@ -51,17 +51,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor \
     postgresql-client \
     curl \
-    bash \
-    libxml2 \
-    libpng16 \
-    libjpeg62-turbo \
-    libfreetype6 \
-    libonig5 \
-    zlib1g \
-    && rm -rf /var/lib/apt/lists/*
+    bash && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924 /usr/local/lib/php/extensions/no-debug-non-zts-20240924
-COPY --from=builder /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
+COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
+RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo tokenizer zip gd
 
 WORKDIR /app
 
