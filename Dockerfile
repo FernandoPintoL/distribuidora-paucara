@@ -9,9 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     npm \
     libxml2-dev \
     libpng-dev \
-    libjpeg-turbo-dev \
+    libjpeg62-turbo-dev \
     libfreetype6-dev \
-    postgresql-dev \
+    postgresql-server-dev-all \
     libonig-dev \
     libcurl4-openssl-dev \
     zlib1g-dev \
@@ -52,16 +52,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     postgresql-client \
-    postgresql-dev \
+    postgresql-server-dev-all \
     curl \
     bash \
     libxml2-dev \
     libpng-dev \
-    libjpeg-turbo-dev \
+    libjpeg62-turbo-dev \
     libfreetype6-dev \
     libonig-dev \
     libcurl4-openssl-dev \
-    zlib1g-dev
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-install \
     pdo \
@@ -74,9 +75,6 @@ RUN docker-php-ext-install \
     tokenizer \
     zip \
     gd
-
-# Clean up apt cache to reduce image size
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
