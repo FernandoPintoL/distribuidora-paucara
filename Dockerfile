@@ -7,9 +7,6 @@ RUN apk add --no-cache \
     nodejs \
     npm \
     libxml2-dev \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    libfreetype-dev \
     postgresql-dev \
     oniguruma-dev \
     zlib-dev \
@@ -18,7 +15,8 @@ RUN apk add --no-cache \
 # Install Composer directly
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN docker-php-ext-install \
+RUN docker-php-ext-configure pdo_pgsql && \
+    docker-php-ext-install \
     pdo \
     pdo_pgsql \
     mbstring \
@@ -49,7 +47,11 @@ RUN apk add --no-cache \
     supervisor \
     postgresql-client \
     curl \
-    bash
+    bash \
+    libpq \
+    libzip \
+    oniguruma \
+    libxml2
 
 COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
 RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo zip
