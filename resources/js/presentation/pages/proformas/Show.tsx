@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Button } from '@/presentation/components/ui/button'
@@ -88,6 +88,21 @@ export default function ProformasShow({ item: proforma }: Props) {
         observaciones_entrega: proforma.observaciones_entrega || '',
     })
 
+    // Sincronizar datos de coordinación cuando la proforma cambia
+    useEffect(() => {
+        setCoordinacion({
+            fecha_entrega_confirmada: proforma.fecha_entrega_confirmada || proforma.fecha_entrega_solicitada || '',
+            hora_entrega_confirmada: proforma.hora_entrega_confirmada || proforma.hora_entrega_solicitada || '',
+            comentario_coordinacion: proforma.comentario_coordinacion || '',
+            notas_llamada: '',
+            numero_intentos_contacto: proforma.numero_intentos_contacto || 0,
+            resultado_ultimo_intento: proforma.resultado_ultimo_intento || '',
+            entregado_en: proforma.entregado_en || '',
+            entregado_a: proforma.entregado_a || '',
+            observaciones_entrega: proforma.observaciones_entrega || '',
+        })
+    }, [proforma.id])
+
     // PRESENTATION LAYER: Handlers simples que delegan al hook
     const handleAprobar = () => {
         aprobar()
@@ -137,7 +152,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                             <Button
                                 variant="default"
                                 onClick={() => setShowAprobarDialog(true)}
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-green-600 hover:bg-green-700 text-white"
                             >
                                 <Check className="mr-2 h-4 w-4" />
                                 Aprobar
@@ -189,7 +204,6 @@ export default function ProformasShow({ item: proforma }: Props) {
                                             <TableHead>Producto</TableHead>
                                             <TableHead>Cantidad</TableHead>
                                             <TableHead>Precio Unit.</TableHead>
-                                            <TableHead>Descuento</TableHead>
                                             <TableHead className="text-right">Subtotal</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -216,9 +230,6 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                 <TableCell>{detalle.cantidad}</TableCell>
                                                 <TableCell>
                                                     Bs. {(detalle.precio_unitario ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell>
-                                                    Bs. {(detalle.descuento ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     Bs. {(detalle.subtotal ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
