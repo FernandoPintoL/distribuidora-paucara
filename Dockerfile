@@ -1,7 +1,27 @@
 # Build stage - compile PHP and Node dependencies
 FROM php:8.4-cli-alpine as builder
 
-RUN apk add --no-cache composer nodejs npm
+RUN apk add --no-cache \
+    composer \
+    nodejs \
+    npm \
+    libxml2-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev
+
+RUN docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    mbstring \
+    xml \
+    dom \
+    session \
+    fileinfo \
+    tokenizer \
+    curl \
+    zip \
+    gd
 
 WORKDIR /app
 
@@ -24,13 +44,24 @@ RUN apk add --no-cache \
     supervisor \
     postgresql-client \
     curl \
-    bash
+    bash \
+    libxml2-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev
 
 RUN docker-php-ext-install \
     pdo \
     pdo_pgsql \
     mbstring \
-    xml
+    xml \
+    dom \
+    session \
+    fileinfo \
+    tokenizer \
+    curl \
+    zip \
+    gd
 
 WORKDIR /app
 
