@@ -62,9 +62,9 @@ class ProformaResponseDTO extends BaseDTO
             observaciones: $model->observaciones,
             canal: $model->canal ?? 'PRESENCIAL',
             fecha_entrega_solicitada: $model->fecha_entrega_solicitada?->toDateString(),
-            hora_entrega_solicitada: $model->hora_entrega_solicitada,
+            hora_entrega_solicitada: $this->extractTimeFromField($model->hora_entrega_solicitada),
             fecha_entrega_confirmada: $model->fecha_entrega_confirmada?->toDateString(),
-            hora_entrega_confirmada: $model->hora_entrega_confirmada,
+            hora_entrega_confirmada: $this->extractTimeFromField($model->hora_entrega_confirmada),
             detalles: $model->detalles->map(fn($det) => [
                 'id' => $det->id,
                 'producto_id' => $det->producto_id,
@@ -76,5 +76,36 @@ class ProformaResponseDTO extends BaseDTO
             created_at: $model->created_at->toIso8601String(),
             updated_at: $model->updated_at->toIso8601String(),
         );
+    }
+
+    /**
+     * Extraer la hora en formato HH:mm de un campo que puede ser:
+     * - Null
+     * - Una hora simple (HH:mm:ss)
+     * - Un timestamp completo (YYYY-MM-DD HH:mm:ss)
+     * - Un objeto Carbon
+     */
+    private function extractTimeFromField($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // Si es una cadena de texto
+        if (is_string($value)) {
+            // Si contiene espacio, es un timestamp completo (YYYY-MM-DD HH:mm:ss)
+            if (str_contains($value, ' ')) {
+                return substr($value, 11, 5); // Extrae HH:mm
+            }
+            // Si no contiene espacio, es una hora simple (HH:mm:ss)
+            return substr($value, 0, 5); // Extrae HH:mm
+        }
+
+        // Si es un objeto Carbon o DateTime
+        if (method_exists($value, 'format')) {
+            return $value->format('H:i');
+        }
+
+        return null;
     }
 }
