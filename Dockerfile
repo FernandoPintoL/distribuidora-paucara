@@ -1,8 +1,8 @@
 # Build stage - compile PHP and Node dependencies
-FROM php:8.4-cli-alpine as builder
+FROM php:8.4-cli as builder
 
-RUN apk add --no-cache \
-    build-base \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     autoconf \
     composer \
     nodejs \
@@ -10,11 +10,13 @@ RUN apk add --no-cache \
     libxml2-dev \
     libpng-dev \
     libjpeg-turbo-dev \
-    freetype-dev \
+    libfreetype6-dev \
     postgresql-dev \
-    oniguruma-dev \
-    curl-dev \
-    zlib-dev
+    libonig-dev \
+    libcurl4-openssl-dev \
+    zlib1g-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-install \
     pdo \
@@ -42,10 +44,10 @@ RUN DB_CONNECTION=sqlite \
     npm run build
 
 # Production stage
-FROM php:8.4-fpm-alpine
+FROM php:8.4-fpm
 
-RUN apk add --no-cache \
-    build-base \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     autoconf \
     nginx \
     supervisor \
@@ -56,10 +58,10 @@ RUN apk add --no-cache \
     libxml2-dev \
     libpng-dev \
     libjpeg-turbo-dev \
-    freetype-dev \
-    oniguruma-dev \
-    curl-dev \
-    zlib-dev
+    libfreetype6-dev \
+    libonig-dev \
+    libcurl4-openssl-dev \
+    zlib1g-dev
 
 RUN docker-php-ext-install \
     pdo \
@@ -73,8 +75,8 @@ RUN docker-php-ext-install \
     zip \
     gd
 
-# Remove dev dependencies to reduce image size
-RUN apk del --no-cache build-base autoconf postgresql-dev libxml2-dev libpng-dev libjpeg-turbo-dev freetype-dev oniguruma-dev curl-dev zlib-dev
+# Clean up apt cache to reduce image size
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\TrackingController::obtenerUbicaciones
  * @see app/Http/Controllers/Api/TrackingController.php:16
@@ -61,6 +61,41 @@ obtenerUbicaciones.head = (args: { id: string | number } | [id: string | number 
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\TrackingController::obtenerUbicaciones
+ * @see app/Http/Controllers/Api/TrackingController.php:16
+ * @route '/api/tracking/entregas/{id}/ubicaciones'
+ */
+    const obtenerUbicacionesForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerUbicaciones.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\TrackingController::obtenerUbicaciones
+ * @see app/Http/Controllers/Api/TrackingController.php:16
+ * @route '/api/tracking/entregas/{id}/ubicaciones'
+ */
+        obtenerUbicacionesForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerUbicaciones.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\TrackingController::obtenerUbicaciones
+ * @see app/Http/Controllers/Api/TrackingController.php:16
+ * @route '/api/tracking/entregas/{id}/ubicaciones'
+ */
+        obtenerUbicacionesForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerUbicaciones.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerUbicaciones.form = obtenerUbicacionesForm
 /**
 * @see \App\Http\Controllers\Api\TrackingController::ultimaUbicacion
  * @see app/Http/Controllers/Api/TrackingController.php:67
@@ -123,6 +158,41 @@ ultimaUbicacion.head = (args: { id: string | number } | [id: string | number ] |
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\TrackingController::ultimaUbicacion
+ * @see app/Http/Controllers/Api/TrackingController.php:67
+ * @route '/api/tracking/entregas/{id}/ultima-ubicacion'
+ */
+    const ultimaUbicacionForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: ultimaUbicacion.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\TrackingController::ultimaUbicacion
+ * @see app/Http/Controllers/Api/TrackingController.php:67
+ * @route '/api/tracking/entregas/{id}/ultima-ubicacion'
+ */
+        ultimaUbicacionForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: ultimaUbicacion.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\TrackingController::ultimaUbicacion
+ * @see app/Http/Controllers/Api/TrackingController.php:67
+ * @route '/api/tracking/entregas/{id}/ultima-ubicacion'
+ */
+        ultimaUbicacionForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: ultimaUbicacion.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    ultimaUbicacion.form = ultimaUbicacionForm
 /**
 * @see \App\Http\Controllers\Api\TrackingController::calcularETA
  * @see app/Http/Controllers/Api/TrackingController.php:119
@@ -175,6 +245,28 @@ calcularETA.post = (args: { id: string | number } | [id: string | number ] | str
     url: calcularETA.url(args, options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Api\TrackingController::calcularETA
+ * @see app/Http/Controllers/Api/TrackingController.php:119
+ * @route '/api/tracking/entregas/{id}/calcular-eta'
+ */
+    const calcularETAForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: calcularETA.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\TrackingController::calcularETA
+ * @see app/Http/Controllers/Api/TrackingController.php:119
+ * @route '/api/tracking/entregas/{id}/calcular-eta'
+ */
+        calcularETAForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: calcularETA.url(args, options),
+            method: 'post',
+        })
+    
+    calcularETA.form = calcularETAForm
 const TrackingController = { obtenerUbicaciones, ultimaUbicacion, calcularETA }
 
 export default TrackingController

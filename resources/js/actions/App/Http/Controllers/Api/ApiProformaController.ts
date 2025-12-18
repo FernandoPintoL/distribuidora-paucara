@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::index
  * @see app/Http/Controllers/Api/ApiProformaController.php:230
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::index
+ * @see app/Http/Controllers/Api/ApiProformaController.php:230
+ * @route '/api/proformas'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::index
+ * @see app/Http/Controllers/Api/ApiProformaController.php:230
+ * @route '/api/proformas'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::index
+ * @see app/Http/Controllers/Api/ApiProformaController.php:230
+ * @route '/api/proformas'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::stats
  * @see app/Http/Controllers/Api/ApiProformaController.php:406
@@ -85,6 +120,41 @@ stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::stats
+ * @see app/Http/Controllers/Api/ApiProformaController.php:406
+ * @route '/api/proformas/estadisticas'
+ */
+    const statsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: stats.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::stats
+ * @see app/Http/Controllers/Api/ApiProformaController.php:406
+ * @route '/api/proformas/estadisticas'
+ */
+        statsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: stats.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::stats
+ * @see app/Http/Controllers/Api/ApiProformaController.php:406
+ * @route '/api/proformas/estadisticas'
+ */
+        statsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: stats.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    stats.form = statsForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::store
  * @see app/Http/Controllers/Api/ApiProformaController.php:22
@@ -119,6 +189,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::store
+ * @see app/Http/Controllers/Api/ApiProformaController.php:22
+ * @route '/api/proformas'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::store
+ * @see app/Http/Controllers/Api/ApiProformaController.php:22
+ * @route '/api/proformas'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::show
  * @see app/Http/Controllers/Api/ApiProformaController.php:196
@@ -186,6 +277,41 @@ show.head = (args: { proforma: number | { id: number } } | [proforma: number | {
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::show
+ * @see app/Http/Controllers/Api/ApiProformaController.php:196
+ * @route '/api/proformas/{proforma}'
+ */
+    const showForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::show
+ * @see app/Http/Controllers/Api/ApiProformaController.php:196
+ * @route '/api/proformas/{proforma}'
+ */
+        showForm.get = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::show
+ * @see app/Http/Controllers/Api/ApiProformaController.php:196
+ * @route '/api/proformas/{proforma}'
+ */
+        showForm.head = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show.form = showForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::aprobar
  * @see app/Http/Controllers/Api/ApiProformaController.php:593
@@ -244,6 +370,27 @@ aprobar.post = (args: { proforma: number | { id: number } } | [proforma: number 
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::aprobar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:593
+ * @route '/api/proformas/{proforma}/aprobar'
+ */
+    const aprobarForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: aprobar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::aprobar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:593
+ * @route '/api/proformas/{proforma}/aprobar'
+ */
+        aprobarForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: aprobar.url(args, options),
+            method: 'post',
+        })
+    
+    aprobar.form = aprobarForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::rechazar
  * @see app/Http/Controllers/Api/ApiProformaController.php:700
@@ -302,6 +449,27 @@ rechazar.post = (args: { proforma: number | { id: number } } | [proforma: number
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::rechazar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:700
+ * @route '/api/proformas/{proforma}/rechazar'
+ */
+    const rechazarForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: rechazar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::rechazar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:700
+ * @route '/api/proformas/{proforma}/rechazar'
+ */
+        rechazarForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: rechazar.url(args, options),
+            method: 'post',
+        })
+    
+    rechazar.form = rechazarForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
  * @see app/Http/Controllers/Api/ApiProformaController.php:1716
@@ -360,6 +528,27 @@ convertirAVenta.post = (args: { proforma: number | { id: number } } | [proforma:
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1716
+ * @route '/api/proformas/{proforma}/convertir-venta'
+ */
+    const convertirAVentaForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: convertirAVenta.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::convertirAVenta
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1716
+ * @route '/api/proformas/{proforma}/convertir-venta'
+ */
+        convertirAVentaForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: convertirAVenta.url(args, options),
+            method: 'post',
+        })
+    
+    convertirAVenta.form = convertirAVentaForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
  * @see app/Http/Controllers/Api/ApiProformaController.php:1529
@@ -418,6 +607,27 @@ confirmarProforma.post = (args: { proforma: number | { id: number } } | [proform
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1529
+ * @route '/api/proformas/{proforma}/confirmar'
+ */
+    const confirmarProformaForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmarProforma.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmarProforma
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1529
+ * @route '/api/proformas/{proforma}/confirmar'
+ */
+        confirmarProformaForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmarProforma.url(args, options),
+            method: 'post',
+        })
+    
+    confirmarProforma.form = confirmarProformaForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::extenderVencimiento
  * @see app/Http/Controllers/Api/ApiProformaController.php:843
@@ -476,6 +686,27 @@ extenderVencimiento.post = (args: { proforma: number | { id: number } } | [profo
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::extenderVencimiento
+ * @see app/Http/Controllers/Api/ApiProformaController.php:843
+ * @route '/api/proformas/{proforma}/extender-vencimiento'
+ */
+    const extenderVencimientoForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: extenderVencimiento.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::extenderVencimiento
+ * @see app/Http/Controllers/Api/ApiProformaController.php:843
+ * @route '/api/proformas/{proforma}/extender-vencimiento'
+ */
+        extenderVencimientoForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: extenderVencimiento.url(args, options),
+            method: 'post',
+        })
+    
+    extenderVencimiento.form = extenderVencimientoForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::coordinarEntrega
  * @see app/Http/Controllers/Api/ApiProformaController.php:740
@@ -534,6 +765,27 @@ coordinarEntrega.post = (args: { proforma: number | { id: number } } | [proforma
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::coordinarEntrega
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
+ * @route '/api/proformas/{proforma}/coordinar'
+ */
+    const coordinarEntregaForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: coordinarEntrega.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::coordinarEntrega
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
+ * @route '/api/proformas/{proforma}/coordinar'
+ */
+        coordinarEntregaForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: coordinarEntrega.url(args, options),
+            method: 'post',
+        })
+    
+    coordinarEntrega.form = coordinarEntregaForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::verificarEstado
  * @see app/Http/Controllers/Api/ApiProformaController.php:537
@@ -601,6 +853,41 @@ verificarEstado.head = (args: { proforma: number | { id: number } } | [proforma:
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarEstado
+ * @see app/Http/Controllers/Api/ApiProformaController.php:537
+ * @route '/api/proformas/{proforma}/estado'
+ */
+    const verificarEstadoForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: verificarEstado.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarEstado
+ * @see app/Http/Controllers/Api/ApiProformaController.php:537
+ * @route '/api/proformas/{proforma}/estado'
+ */
+        verificarEstadoForm.get = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: verificarEstado.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarEstado
+ * @see app/Http/Controllers/Api/ApiProformaController.php:537
+ * @route '/api/proformas/{proforma}/estado'
+ */
+        verificarEstadoForm.head = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: verificarEstado.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    verificarEstado.form = verificarEstadoForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::verificarReservas
  * @see app/Http/Controllers/Api/ApiProformaController.php:939
@@ -668,6 +955,41 @@ verificarReservas.head = (args: { proforma: number | { id: number } } | [proform
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarReservas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:939
+ * @route '/api/proformas/{proforma}/reservas'
+ */
+    const verificarReservasForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: verificarReservas.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarReservas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:939
+ * @route '/api/proformas/{proforma}/reservas'
+ */
+        verificarReservasForm.get = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: verificarReservas.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarReservas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:939
+ * @route '/api/proformas/{proforma}/reservas'
+ */
+        verificarReservasForm.head = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: verificarReservas.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    verificarReservas.form = verificarReservasForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::extenderReservas
  * @see app/Http/Controllers/Api/ApiProformaController.php:966
@@ -726,6 +1048,27 @@ extenderReservas.post = (args: { proforma: number | { id: number } } | [proforma
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::extenderReservas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:966
+ * @route '/api/proformas/{proforma}/extender-reservas'
+ */
+    const extenderReservasForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: extenderReservas.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::extenderReservas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:966
+ * @route '/api/proformas/{proforma}/extender-reservas'
+ */
+        extenderReservasForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: extenderReservas.url(args, options),
+            method: 'post',
+        })
+    
+    extenderReservas.form = extenderReservasForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::verificarStock
  * @see app/Http/Controllers/Api/ApiProformaController.php:888
@@ -760,6 +1103,27 @@ verificarStock.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => 
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarStock
+ * @see app/Http/Controllers/Api/ApiProformaController.php:888
+ * @route '/api/proformas/verificar-stock'
+ */
+    const verificarStockForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: verificarStock.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::verificarStock
+ * @see app/Http/Controllers/Api/ApiProformaController.php:888
+ * @route '/api/proformas/verificar-stock'
+ */
+        verificarStockForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: verificarStock.url(options),
+            method: 'post',
+        })
+    
+    verificarStock.form = verificarStockForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerProductosDisponibles
  * @see app/Http/Controllers/Api/ApiProformaController.php:554
@@ -803,6 +1167,41 @@ obtenerProductosDisponibles.head = (options?: RouteQueryOptions): RouteDefinitio
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerProductosDisponibles
+ * @see app/Http/Controllers/Api/ApiProformaController.php:554
+ * @route '/api/proformas/productos-disponibles'
+ */
+    const obtenerProductosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerProductosDisponibles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerProductosDisponibles
+ * @see app/Http/Controllers/Api/ApiProformaController.php:554
+ * @route '/api/proformas/productos-disponibles'
+ */
+        obtenerProductosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerProductosDisponibles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerProductosDisponibles
+ * @see app/Http/Controllers/Api/ApiProformaController.php:554
+ * @route '/api/proformas/productos-disponibles'
+ */
+        obtenerProductosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerProductosDisponibles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerProductosDisponibles.form = obtenerProductosDisponiblesForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
  * @see app/Http/Controllers/Api/ApiProformaController.php:1011
@@ -837,6 +1236,27 @@ crearPedidoDesdeApp.post = (options?: RouteQueryOptions): RouteDefinition<'post'
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1011
+ * @route '/api/app/pedidos'
+ */
+    const crearPedidoDesdeAppForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: crearPedidoDesdeApp.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::crearPedidoDesdeApp
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1011
+ * @route '/api/app/pedidos'
+ */
+        crearPedidoDesdeAppForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: crearPedidoDesdeApp.url(options),
+            method: 'post',
+        })
+    
+    crearPedidoDesdeApp.form = crearPedidoDesdeAppForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
  * @see app/Http/Controllers/Api/ApiProformaController.php:1267
@@ -899,6 +1319,41 @@ obtenerDetallePedido.head = (args: { id: string | number } | [id: string | numbe
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1267
+ * @route '/api/app/pedidos/{id}'
+ */
+    const obtenerDetallePedidoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerDetallePedido.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1267
+ * @route '/api/app/pedidos/{id}'
+ */
+        obtenerDetallePedidoForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDetallePedido.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerDetallePedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1267
+ * @route '/api/app/pedidos/{id}'
+ */
+        obtenerDetallePedidoForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDetallePedido.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerDetallePedido.form = obtenerDetallePedidoForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
  * @see app/Http/Controllers/Api/ApiProformaController.php:1394
@@ -961,6 +1416,41 @@ obtenerEstadoPedido.head = (args: { id: string | number } | [id: string | number
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1394
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+    const obtenerEstadoPedidoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerEstadoPedido.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1394
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+        obtenerEstadoPedidoForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerEstadoPedido.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerEstadoPedido
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1394
+ * @route '/api/app/pedidos/{id}/estado'
+ */
+        obtenerEstadoPedidoForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerEstadoPedido.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerEstadoPedido.form = obtenerEstadoPedidoForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
  * @see app/Http/Controllers/Api/ApiProformaController.php:1868
@@ -1022,6 +1512,42 @@ obtenerUltimoCarrito.head = (args: { usuarioId: string | number } | [usuarioId: 
     url: obtenerUltimoCarrito.url(args, options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1868
+ * @route '/api/carritos/usuario/{usuarioId}/ultimo'
+ */
+    const obtenerUltimoCarritoForm = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerUltimoCarrito.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1868
+ * @route '/api/carritos/usuario/{usuarioId}/ultimo'
+ */
+        obtenerUltimoCarritoForm.get = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerUltimoCarrito.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1868
+ * @route '/api/carritos/usuario/{usuarioId}/ultimo'
+ */
+        obtenerUltimoCarritoForm.head = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerUltimoCarrito.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerUltimoCarrito.form = obtenerUltimoCarritoForm
 const ApiProformaController = { index, stats, store, show, aprobar, rechazar, convertirAVenta, confirmarProforma, extenderVencimiento, coordinarEntrega, verificarEstado, verificarReservas, extenderReservas, verificarStock, obtenerProductosDisponibles, crearPedidoDesdeApp, obtenerDetallePedido, obtenerEstadoPedido, obtenerUltimoCarrito }
 
 export default ApiProformaController

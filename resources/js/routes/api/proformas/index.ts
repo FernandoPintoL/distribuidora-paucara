@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmar
  * @see app/Http/Controllers/Api/ApiProformaController.php:1529
@@ -57,6 +57,27 @@ confirmar.post = (args: { proforma: number | { id: number } } | [proforma: numbe
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1529
+ * @route '/api/proformas/{proforma}/confirmar'
+ */
+    const confirmarForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::confirmar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:1529
+ * @route '/api/proformas/{proforma}/confirmar'
+ */
+        confirmarForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmar.url(args, options),
+            method: 'post',
+        })
+    
+    confirmar.form = confirmarForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::coordinar
  * @see app/Http/Controllers/Api/ApiProformaController.php:740
@@ -114,6 +135,28 @@ coordinar.post = (args: { proforma: number | { id: number } } | [proforma: numbe
     url: coordinar.url(args, options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::coordinar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
+ * @route '/api/proformas/{proforma}/coordinar'
+ */
+    const coordinarForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: coordinar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::coordinar
+ * @see app/Http/Controllers/Api/ApiProformaController.php:740
+ * @route '/api/proformas/{proforma}/coordinar'
+ */
+        coordinarForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: coordinar.url(args, options),
+            method: 'post',
+        })
+    
+    coordinar.form = coordinarForm
 const proformas = {
     confirmar,
 coordinar,

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 import matrizAcceso from './matriz-acceso'
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::permisos
@@ -43,6 +43,41 @@ permisos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::permisos
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+    const permisosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: permisos.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::permisos
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+        permisosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: permisos.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::permisos
+ * @see app/Http/Controllers/ModuloSidebarController.php:260
+ * @route '/api/modulos-sidebar/permisos/disponibles'
+ */
+        permisosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: permisos.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    permisos.form = permisosForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::matrizAcceso
  * @see app/Http/Controllers/ModuloSidebarController.php:280
@@ -86,6 +121,41 @@ matrizAcceso.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::matrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+    const matrizAccesoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: matrizAcceso.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::matrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+        matrizAccesoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: matrizAcceso.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::matrizAcceso
+ * @see app/Http/Controllers/ModuloSidebarController.php:280
+ * @route '/api/modulos-sidebar/matriz-acceso'
+ */
+        matrizAccesoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: matrizAcceso.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    matrizAcceso.form = matrizAccesoForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::roles
  * @see app/Http/Controllers/ModuloSidebarController.php:426
@@ -129,6 +199,41 @@ roles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::roles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+    const rolesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: roles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::roles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+        rolesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: roles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::roles
+ * @see app/Http/Controllers/ModuloSidebarController.php:426
+ * @route '/api/modulos-sidebar/roles'
+ */
+        rolesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: roles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    roles.form = rolesForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::preview
  * @see app/Http/Controllers/ModuloSidebarController.php:370
@@ -191,6 +296,41 @@ preview.head = (args: { rolName: string | number } | [rolName: string | number ]
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::preview
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+    const previewForm = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: preview.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::preview
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+        previewForm.get = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: preview.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::preview
+ * @see app/Http/Controllers/ModuloSidebarController.php:370
+ * @route '/api/modulos-sidebar/preview/{rolName}'
+ */
+        previewForm.head = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: preview.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    preview.form = previewForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::historial
  * @see app/Http/Controllers/ModuloSidebarController.php:498
@@ -233,6 +373,42 @@ historial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: historial.url(options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::historial
+ * @see app/Http/Controllers/ModuloSidebarController.php:498
+ * @route '/api/modulos-sidebar/historial'
+ */
+    const historialForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: historial.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::historial
+ * @see app/Http/Controllers/ModuloSidebarController.php:498
+ * @route '/api/modulos-sidebar/historial'
+ */
+        historialForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: historial.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::historial
+ * @see app/Http/Controllers/ModuloSidebarController.php:498
+ * @route '/api/modulos-sidebar/historial'
+ */
+        historialForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: historial.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    historial.form = historialForm
 const modulosSidebar = {
     permisos,
 matrizAcceso,

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\EnvioController::vehiculosDisponibles
  * @see app/Http/Controllers/EnvioController.php:414
@@ -42,6 +42,41 @@ vehiculosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::vehiculosDisponibles
+ * @see app/Http/Controllers/EnvioController.php:414
+ * @route '/envios/api/vehiculos-disponibles'
+ */
+    const vehiculosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: vehiculosDisponibles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::vehiculosDisponibles
+ * @see app/Http/Controllers/EnvioController.php:414
+ * @route '/envios/api/vehiculos-disponibles'
+ */
+        vehiculosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: vehiculosDisponibles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::vehiculosDisponibles
+ * @see app/Http/Controllers/EnvioController.php:414
+ * @route '/envios/api/vehiculos-disponibles'
+ */
+        vehiculosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: vehiculosDisponibles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    vehiculosDisponibles.form = vehiculosDisponiblesForm
 /**
 * @see \App\Http\Controllers\EnvioController::choferesDisponibles
  * @see app/Http/Controllers/EnvioController.php:431
@@ -85,6 +120,41 @@ choferesDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::choferesDisponibles
+ * @see app/Http/Controllers/EnvioController.php:431
+ * @route '/envios/api/choferes-disponibles'
+ */
+    const choferesDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: choferesDisponibles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::choferesDisponibles
+ * @see app/Http/Controllers/EnvioController.php:431
+ * @route '/envios/api/choferes-disponibles'
+ */
+        choferesDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: choferesDisponibles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::choferesDisponibles
+ * @see app/Http/Controllers/EnvioController.php:431
+ * @route '/envios/api/choferes-disponibles'
+ */
+        choferesDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: choferesDisponibles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    choferesDisponibles.form = choferesDisponiblesForm
 /**
 * @see \App\Http\Controllers\EnvioController::exportPdf
  * @see app/Http/Controllers/EnvioController.php:856
@@ -128,6 +198,41 @@ exportPdf.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::exportPdf
+ * @see app/Http/Controllers/EnvioController.php:856
+ * @route '/envios/export/pdf'
+ */
+    const exportPdfForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportPdf.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::exportPdf
+ * @see app/Http/Controllers/EnvioController.php:856
+ * @route '/envios/export/pdf'
+ */
+        exportPdfForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportPdf.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::exportPdf
+ * @see app/Http/Controllers/EnvioController.php:856
+ * @route '/envios/export/pdf'
+ */
+        exportPdfForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportPdf.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportPdf.form = exportPdfForm
 /**
 * @see \App\Http\Controllers\EnvioController::exportExcel
  * @see app/Http/Controllers/EnvioController.php:871
@@ -171,6 +276,41 @@ exportExcel.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::exportExcel
+ * @see app/Http/Controllers/EnvioController.php:871
+ * @route '/envios/export/excel'
+ */
+    const exportExcelForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportExcel.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::exportExcel
+ * @see app/Http/Controllers/EnvioController.php:871
+ * @route '/envios/export/excel'
+ */
+        exportExcelForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportExcel.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::exportExcel
+ * @see app/Http/Controllers/EnvioController.php:871
+ * @route '/envios/export/excel'
+ */
+        exportExcelForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportExcel.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportExcel.form = exportExcelForm
 /**
 * @see \App\Http\Controllers\EnvioController::exportRechazadas
  * @see app/Http/Controllers/EnvioController.php:883
@@ -214,6 +354,41 @@ exportRechazadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::exportRechazadas
+ * @see app/Http/Controllers/EnvioController.php:883
+ * @route '/envios/export/rechazadas'
+ */
+    const exportRechazadasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportRechazadas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::exportRechazadas
+ * @see app/Http/Controllers/EnvioController.php:883
+ * @route '/envios/export/rechazadas'
+ */
+        exportRechazadasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportRechazadas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::exportRechazadas
+ * @see app/Http/Controllers/EnvioController.php:883
+ * @route '/envios/export/rechazadas'
+ */
+        exportRechazadasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportRechazadas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportRechazadas.form = exportRechazadasForm
 /**
 * @see \App\Http\Controllers\EnvioController::index
  * @see app/Http/Controllers/EnvioController.php:27
@@ -257,6 +432,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::index
+ * @see app/Http/Controllers/EnvioController.php:27
+ * @route '/envios'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::index
+ * @see app/Http/Controllers/EnvioController.php:27
+ * @route '/envios'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::index
+ * @see app/Http/Controllers/EnvioController.php:27
+ * @route '/envios'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\EnvioController::create
  * @see app/Http/Controllers/EnvioController.php:73
@@ -300,6 +510,41 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::create
+ * @see app/Http/Controllers/EnvioController.php:73
+ * @route '/envios/create'
+ */
+    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: create.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::create
+ * @see app/Http/Controllers/EnvioController.php:73
+ * @route '/envios/create'
+ */
+        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::create
+ * @see app/Http/Controllers/EnvioController.php:73
+ * @route '/envios/create'
+ */
+        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    create.form = createForm
 /**
 * @see \App\Http\Controllers\EnvioController::store
  * @see app/Http/Controllers/EnvioController.php:103
@@ -334,6 +579,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::store
+ * @see app/Http/Controllers/EnvioController.php:103
+ * @route '/envios'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::store
+ * @see app/Http/Controllers/EnvioController.php:103
+ * @route '/envios'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\EnvioController::programar
  * @see app/Http/Controllers/EnvioController.php:148
@@ -392,6 +658,27 @@ programar.post = (args: { venta: number | { id: number } } | [venta: number | { 
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::programar
+ * @see app/Http/Controllers/EnvioController.php:148
+ * @route '/envios/ventas/{venta}/programar'
+ */
+    const programarForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: programar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::programar
+ * @see app/Http/Controllers/EnvioController.php:148
+ * @route '/envios/ventas/{venta}/programar'
+ */
+        programarForm.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: programar.url(args, options),
+            method: 'post',
+        })
+    
+    programar.form = programarForm
 /**
 * @see \App\Http\Controllers\EnvioController::iniciarPreparacion
  * @see app/Http/Controllers/EnvioController.php:197
@@ -450,6 +737,27 @@ iniciarPreparacion.post = (args: { envio: number | { id: number } } | [envio: nu
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::iniciarPreparacion
+ * @see app/Http/Controllers/EnvioController.php:197
+ * @route '/envios/{envio}/iniciar-preparacion'
+ */
+    const iniciarPreparacionForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: iniciarPreparacion.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::iniciarPreparacion
+ * @see app/Http/Controllers/EnvioController.php:197
+ * @route '/envios/{envio}/iniciar-preparacion'
+ */
+        iniciarPreparacionForm.post = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: iniciarPreparacion.url(args, options),
+            method: 'post',
+        })
+    
+    iniciarPreparacion.form = iniciarPreparacionForm
 /**
 * @see \App\Http\Controllers\EnvioController::confirmarSalida
  * @see app/Http/Controllers/EnvioController.php:233
@@ -508,6 +816,27 @@ confirmarSalida.post = (args: { envio: number | { id: number } } | [envio: numbe
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::confirmarSalida
+ * @see app/Http/Controllers/EnvioController.php:233
+ * @route '/envios/{envio}/confirmar-salida'
+ */
+    const confirmarSalidaForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmarSalida.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::confirmarSalida
+ * @see app/Http/Controllers/EnvioController.php:233
+ * @route '/envios/{envio}/confirmar-salida'
+ */
+        confirmarSalidaForm.post = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmarSalida.url(args, options),
+            method: 'post',
+        })
+    
+    confirmarSalida.form = confirmarSalidaForm
 /**
 * @see \App\Http\Controllers\EnvioController::confirmarEntrega
  * @see app/Http/Controllers/EnvioController.php:257
@@ -566,6 +895,27 @@ confirmarEntrega.post = (args: { envio: number | { id: number } } | [envio: numb
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::confirmarEntrega
+ * @see app/Http/Controllers/EnvioController.php:257
+ * @route '/envios/{envio}/confirmar-entrega'
+ */
+    const confirmarEntregaForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmarEntrega.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::confirmarEntrega
+ * @see app/Http/Controllers/EnvioController.php:257
+ * @route '/envios/{envio}/confirmar-entrega'
+ */
+        confirmarEntregaForm.post = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmarEntrega.url(args, options),
+            method: 'post',
+        })
+    
+    confirmarEntrega.form = confirmarEntregaForm
 /**
 * @see \App\Http\Controllers\EnvioController::cancelar
  * @see app/Http/Controllers/EnvioController.php:380
@@ -624,6 +974,27 @@ cancelar.post = (args: { envio: number | { id: number } } | [envio: number | { i
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\EnvioController::cancelar
+ * @see app/Http/Controllers/EnvioController.php:380
+ * @route '/envios/{envio}/cancelar'
+ */
+    const cancelarForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: cancelar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::cancelar
+ * @see app/Http/Controllers/EnvioController.php:380
+ * @route '/envios/{envio}/cancelar'
+ */
+        cancelarForm.post = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: cancelar.url(args, options),
+            method: 'post',
+        })
+    
+    cancelar.form = cancelarForm
 /**
 * @see \App\Http\Controllers\EnvioController::show
  * @see app/Http/Controllers/EnvioController.php:133
@@ -690,6 +1061,42 @@ show.head = (args: { envio: number | { id: number } } | [envio: number | { id: n
     url: show.url(args, options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\EnvioController::show
+ * @see app/Http/Controllers/EnvioController.php:133
+ * @route '/envios/{envio}'
+ */
+    const showForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EnvioController::show
+ * @see app/Http/Controllers/EnvioController.php:133
+ * @route '/envios/{envio}'
+ */
+        showForm.get = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EnvioController::show
+ * @see app/Http/Controllers/EnvioController.php:133
+ * @route '/envios/{envio}'
+ */
+        showForm.head = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show.form = showForm
 const envios = {
     vehiculosDisponibles,
 choferesDisponibles,
