@@ -90,6 +90,8 @@ export default function ProformasShow({ item: proforma }: Props) {
 
     // Sincronizar datos de coordinación cuando la proforma cambia
     useEffect(() => {
+        console.log('📦 Datos de Proforma desde Backend:', proforma)
+
         setCoordinacion({
             fecha_entrega_confirmada: proforma.fecha_entrega_confirmada || proforma.fecha_entrega_solicitada || '',
             hora_entrega_confirmada: proforma.hora_entrega_confirmada || proforma.hora_entrega_solicitada || '',
