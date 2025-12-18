@@ -10,7 +10,7 @@ import InputSearch from '@/presentation/components/ui/input-search';
 import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select';
 import { useClienteSearch } from '@/infrastructure/hooks/use-api-search';
 import ModalCrearCliente from '@/presentation/components/ui/modal-crear-cliente';
-import ProductosTable from '@/presentation/components/ProductosTable';
+import ProductosTable, { DetalleProducto } from '@/presentation/components/ProductosTable';
 
 // Importar servicios adicionales
 import { NotificationService } from '@/infrastructure/services/notification.service';
@@ -20,7 +20,6 @@ import type {
     Producto,
     Moneda,
     EstadoDocumento,
-    VentaFormData,
     DetalleVentaFormData,
     Venta
 } from '@/domain/entities/ventas';
@@ -30,11 +29,6 @@ import type { Cliente } from '@/domain/entities/clientes';
 
 import ventasService from '@/infrastructure/services/ventas.service';
 import { formatCurrency } from '@/lib/utils';
-
-// Interfaz para detalles con producto embebido (solo para la UI)
-interface DetalleVentaConProducto extends DetalleVentaFormData {
-    producto?: Producto;
-}
 
 interface PageProps extends InertiaPageProps {
     clientes: Cliente[];
@@ -87,7 +81,7 @@ export default function VentaForm() {
         { value: 'APP_EXTERNA', label: 'App Externa', description: 'Venta desde aplicación externa' }
     ], []);
 
-    const [detallesWithProducts, setDetallesWithProducts] = useState<DetalleVentaConProducto[]>([]);
+    const [detallesWithProducts, setDetallesWithProducts] = useState<DetalleProducto[]>([]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [stockValido, setStockValido] = useState(true);
 
@@ -102,7 +96,7 @@ export default function VentaForm() {
     const [showCreateClienteModal, setShowCreateClienteModal] = useState(false);
     const [clienteSearchQuery, setClienteSearchQuery] = useState('');
 
-    const { data, setData, processing, errors } = useForm<VentaFormData>({
+    const { data, setData, processing, errors } = useForm({
         numero: venta?.numero || '', // Solo para edición, se genera automáticamente para nuevas ventas
         fecha: venta?.fecha || new Date().toISOString().split('T')[0],
         subtotal: venta?.subtotal || 0,
@@ -119,15 +113,7 @@ export default function VentaForm() {
         tipo_documento_id: venta?.tipo_documento_id || 3, // REC por defecto
         requiere_envio: venta?.requiere_envio || false,
         canal_origen: venta?.canal_origen || 'PRESENCIAL',
-        estado_logistico: venta?.estado_logistico || undefined,
-        detalles: venta?.detalles?.map((d) => ({
-            id: d.id,
-            producto_id: d.producto_id,
-            cantidad: d.cantidad,
-            precio_unitario: d.precio_unitario,
-            descuento: d.descuento || 0,
-            subtotal: d.subtotal
-        })) || []
+        estado_logistico: venta?.estado_logistico || undefined
     });
 
     // Inicializar detalles con productos
@@ -207,7 +193,7 @@ export default function VentaForm() {
             return;
         }
 
-        const newDetail: DetalleVentaConProducto = {
+        const newDetail: DetalleProducto = {
             producto_id: producto.id,
             cantidad: 1,
             precio_unitario: producto.precio_venta || 0,
@@ -218,16 +204,6 @@ export default function VentaForm() {
 
         const newDetalles = [...detallesWithProducts, newDetail];
         setDetallesWithProducts(newDetalles);
-
-        // Actualizar data form
-        setData('detalles', newDetalles.map(d => ({
-            id: d.id,
-            producto_id: d.producto_id,
-            cantidad: d.cantidad,
-            precio_unitario: d.precio_unitario,
-            descuento: d.descuento,
-            subtotal: d.subtotal
-        })));
 
         calculateTotals(newDetalles);
     };
@@ -248,16 +224,6 @@ export default function VentaForm() {
 
         setDetallesWithProducts(updatedDetalles);
 
-        // Actualizar data form
-        setData('detalles', updatedDetalles.map(d => ({
-            id: d.id,
-            producto_id: d.producto_id,
-            cantidad: d.cantidad,
-            precio_unitario: d.precio_unitario,
-            descuento: d.descuento,
-            subtotal: d.subtotal
-        })));
-
         calculateTotals(updatedDetalles);
     };
 
@@ -265,23 +231,12 @@ export default function VentaForm() {
         const updatedDetalles = detallesWithProducts.filter((_, i) => i !== index);
         setDetallesWithProducts(updatedDetalles);
 
-        // Actualizar data form
-        setData('detalles', updatedDetalles.map(d => ({
-            id: d.id,
-            producto_id: d.producto_id,
-            cantidad: d.cantidad,
-            precio_unitario: d.precio_unitario,
-            descuento: d.descuento,
-            subtotal: d.subtotal
-        })));
-
         calculateTotals(updatedDetalles);
     };
 
-    const calculateTotals = (detalles: DetalleVentaConProducto[]) => {
+    const calculateTotals = (detalles: DetalleProducto[]) => {
         const subtotal = detalles.reduce((sum, detalle) => sum + detalle.subtotal, 0);
         const descuentoGeneral = data.descuento || 0;
-        const impuesto = data.impuesto || 0;
         // Por ahora no se suma impuesto al total
         const total = subtotal - descuentoGeneral;
 
@@ -302,7 +257,18 @@ export default function VentaForm() {
         }
 
         // Validar usando el servicio
-        const validationErrors = await ventasService.validateData(data);
+        const dataToValidate = {
+            ...data,
+            detalles: detallesWithProducts.map(d => ({
+                id: d.id,
+                producto_id: d.producto_id,
+                cantidad: d.cantidad,
+                precio_unitario: d.precio_unitario,
+                descuento: d.descuento,
+                subtotal: d.subtotal
+            }))
+        };
+        const validationErrors = await ventasService.validateData(dataToValidate);
         if (validationErrors.length > 0) {
             validationErrors.forEach(error => NotificationService.error(error));
             return;
@@ -317,7 +283,7 @@ export default function VentaForm() {
 
         const submitData = {
             ...data,
-            detalles: data.detalles.map(d => ({
+            detalles: detallesWithProducts.map(d => ({
                 id: d.id,
                 producto_id: d.producto_id,
                 cantidad: d.cantidad,
@@ -456,7 +422,7 @@ export default function VentaForm() {
                                     placeholder="Seleccionar tipo de pago"
                                     value={data.tipo_pago_id || ''}
                                     options={tiposPagoOptions}
-                                    onChange={(value) => setData('tipo_pago_id', value ? Number(value) : undefined)}
+                                    onChange={(value) => setData('tipo_pago_id', value ? Number(value) : 0)}
                                     required
                                     error={errors.tipo_pago_id}
                                     searchPlaceholder="Buscar tipo de pago..."
@@ -469,7 +435,7 @@ export default function VentaForm() {
                                     placeholder="Seleccionar tipo de documento"
                                     value={data.tipo_documento_id || ''}
                                     options={tiposDocumentoOptions}
-                                    onChange={(value) => setData('tipo_documento_id', value ? Number(value) : undefined)}
+                                    onChange={(value) => setData('tipo_documento_id', value ? Number(value) : 0)}
                                     required
                                     error={errors.tipo_documento_id}
                                     searchPlaceholder="Buscar tipo de documento..."
@@ -483,7 +449,7 @@ export default function VentaForm() {
                                     placeholder="Seleccionar canal de origen"
                                     value={data.canal_origen || 'PRESENCIAL'}
                                     options={canalOrigenOptions}
-                                    onChange={(value) => setData('canal_origen', value as any)}
+                                    onChange={(value: string | number) => setData('canal_origen', value as 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL')}
                                     required
                                     error={errors.canal_origen}
                                     searchPlaceholder="Buscar canal..."
@@ -498,7 +464,7 @@ export default function VentaForm() {
                                     <input
                                         type="checkbox"
                                         checked={data.requiere_envio || false}
-                                        onChange={(e: any) => setData('requiere_envio', e.target.checked)}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('requiere_envio', e.target.checked)}
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                     />
                                     <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">

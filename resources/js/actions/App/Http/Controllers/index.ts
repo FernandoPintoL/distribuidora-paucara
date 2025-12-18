@@ -16,6 +16,7 @@ import LocalidadController from './LocalidadController'
 import CategoriaClienteController from './CategoriaClienteController'
 import ProveedorController from './ProveedorController'
 import ImageBackupController from './ImageBackupController'
+import AuditoriaCajaController from './AuditoriaCajaController'
 import DashboardController from './DashboardController'
 import RoleController from './RoleController'
 import CategoriaController from './CategoriaController'
@@ -70,6 +71,7 @@ LocalidadController,
 CategoriaClienteController,
 ProveedorController,
 ImageBackupController,
+AuditoriaCajaController,
 DashboardController,
 RoleController,
 CategoriaController,

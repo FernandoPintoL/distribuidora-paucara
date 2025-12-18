@@ -1,6 +1,7 @@
 // Domain: Productos
 import type { Id } from './shared';
 import type { BaseEntity, BaseFormData } from './generic';
+import type { TipoPrecio } from './tipos-precio';
 
 export interface Precio {
   id?: number;
@@ -36,6 +37,7 @@ export interface Producto extends BaseEntity {
   id: Id;
   nombre: string;
   sku?: string | null;
+  codigo?: string | null; // Código del producto (usado en vista de proformas)
   descripcion?: string | null;
   peso?: number | null;
   unidad_medida_id?: Id;
@@ -53,8 +55,8 @@ export interface Producto extends BaseEntity {
   stock_total?: number; // Total consolidado de stock
 
   // Relaciones
-  categoria?: { id: Id; nombre: string };
-  marca?: { id: Id; nombre: string };
+  categoria: { id: Id; nombre: string }; // ✅ OBLIGATORIO - Todo producto debe tener categoría
+  marca: { id: Id; nombre: string }; // ✅ OBLIGATORIO - Todo producto debe tener marca
   proveedor?: { id: Id; nombre: string; razon_social?: string };
   unidad?: { id: Id; codigo: string; nombre: string };
 
@@ -78,15 +80,24 @@ export interface ProductoFormData extends BaseFormData {
   categoria_id?: Id | '';
   marca_id?: Id | '';
   proveedor_id?: Id | '';
-  proveedor?: { id: number; nombre: string; razon_social?: string } | null;
   stock_minimo?: number | null;
   stock_maximo?: number | null;
   activo?: boolean;
-  perfil?: Imagen | undefined;
-  galeria?: Imagen[] | undefined;
   precios: Precio[];
   codigos: CodigoBarra[];
   almacenes?: StockAlmacen[];
+}
+
+// ✅ PageProps para el formulario de producto
+export interface ProductoFormPageProps {
+  producto?: Producto | null;
+  categorias: Array<{ id: number; nombre: string }>;
+  marcas: Array<{ id: number; nombre: string }>;
+  proveedores: Array<{ id: number; nombre: string; razon_social?: string }>;
+  unidades: Array<{ id: number; codigo: string; nombre: string }>;
+  tipos_precio: TipoPrecio[];
+  configuraciones_ganancias?: { porcentaje_interes_general?: number; tipo_precio_ganancia_id?: number };
+  historial_precios?: HistorialPrecio[];
 }
 
 export interface HistorialPrecio {

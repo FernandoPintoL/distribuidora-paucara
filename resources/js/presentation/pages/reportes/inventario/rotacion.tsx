@@ -1,4 +1,3 @@
-import React from 'react';
 import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
@@ -23,67 +22,8 @@ import { Label } from '@/presentation/components/ui/label';
 import { Form } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { TrendingUp, TrendingDown, Package, RotateCcw } from 'lucide-react';
-
-// Interfaces TypeScript
-interface Producto {
-    id: number;
-    nombre: string;
-}
-
-interface RotacionItem {
-    producto_id: number;
-    total_salidas: number;
-    cantidad_vendida: number;
-    stock_promedio: number;
-    indice_rotacion: number;
-    producto: Producto;
-}
-
-interface Estadisticas {
-    productos_con_movimiento: number;
-    productos_sin_movimiento: number;
-    rotacion_promedio: number;
-}
-
-interface Almacen {
-    id: number;
-    nombre: string;
-}
-
-interface Categoria {
-    id: number;
-    nombre: string;
-}
-
-interface Filtros {
-    fecha_inicio?: string;
-    fecha_fin?: string;
-    almacen_id?: string;
-    categoria_id?: string;
-}
-
-interface PaginationLink {
-    url: string | null;
-    label: string;
-    active: boolean;
-}
-
-interface PaginatedData {
-    data: RotacionItem[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: PaginationLink[];
-}
-
-interface Props {
-    rotacion: PaginatedData;
-    estadisticas: Estadisticas;
-    filtros: Filtros;
-    almacenes: Almacen[];
-    categorias: Categoria[];
-}
+import type { RotacionPageProps } from '@/domain/entities/reportes';
+import { formatNumber, formatDecimal, getRotacionBadge } from '@/lib/inventario.utils';
 
 export default function RotacionInventario({
     rotacion,
@@ -91,30 +31,14 @@ export default function RotacionInventario({
     filtros,
     almacenes,
     categorias,
-}: Props) {
-    const obtenerBadgeRotacion = (indice: number) => {
-        if (indice >= 6) {
-            return <Badge variant="destructive" className="bg-green-100 text-green-800">Alta</Badge>;
-        } else if (indice >= 3) {
-            return <Badge variant="default" className="bg-yellow-100 text-yellow-800">Media</Badge>;
-        } else {
-            return <Badge variant="secondary" className="bg-red-100 text-red-800">Baja</Badge>;
-        }
-    };
-
-    const formatearNumero = (numero: number) => {
-        return new Intl.NumberFormat('es-BO').format(numero);
-    };
-
-    const formatearDecimal = (numero: number) => {
-        return new Intl.NumberFormat('es-BO', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(numero);
-    };
+}: RotacionPageProps) {
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: 'Reportes', href: '#' },
+            { title: 'Rotación', href: '#' }
+        ]}>
             <Head title="Reporte de Rotación de Inventario" />
 
             <div className="space-y-6 p-4">
@@ -222,7 +146,7 @@ export default function RotacionInventario({
                                         Productos con Movimiento
                                     </p>
                                     <p className="text-2xl font-bold text-green-600">
-                                        {formatearNumero(estadisticas.productos_con_movimiento)}
+                                        {formatNumber(estadisticas.productos_con_movimiento)}
                                     </p>
                                 </div>
                                 <TrendingUp className="h-8 w-8 text-green-500" />
@@ -238,7 +162,7 @@ export default function RotacionInventario({
                                         Productos sin Movimiento
                                     </p>
                                     <p className="text-2xl font-bold text-red-600">
-                                        {formatearNumero(estadisticas.productos_sin_movimiento)}
+                                        {formatNumber(estadisticas.productos_sin_movimiento)}
                                     </p>
                                 </div>
                                 <TrendingDown className="h-8 w-8 text-red-500" />
@@ -254,7 +178,7 @@ export default function RotacionInventario({
                                         Rotación Promedio
                                     </p>
                                     <p className="text-2xl font-bold text-blue-600">
-                                        {formatearDecimal(estadisticas.rotacion_promedio)}
+                                        {formatDecimal(estadisticas.rotacion_promedio)}
                                     </p>
                                 </div>
                                 <Package className="h-8 w-8 text-blue-500" />
@@ -269,7 +193,7 @@ export default function RotacionInventario({
                         <CardTitle className="flex items-center justify-between">
                             <span>Rotación de Productos</span>
                             <Badge variant="outline">
-                                {formatearNumero(rotacion.total)} productos
+                                {formatNumber(rotacion.total)} productos
                             </Badge>
                         </CardTitle>
                     </CardHeader>
@@ -288,28 +212,33 @@ export default function RotacionInventario({
                                 </TableHeader>
                                 <TableBody>
                                     {rotacion.data.length > 0 ? (
-                                        rotacion.data.map((item) => (
-                                            <TableRow key={item.producto_id}>
-                                                <TableCell className="font-medium">
-                                                    {item.producto?.nombre || 'Producto no encontrado'}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {formatearNumero(item.total_salidas)}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {formatearNumero(item.cantidad_vendida)}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {formatearDecimal(item.stock_promedio)}
-                                                </TableCell>
-                                                <TableCell className="text-center font-semibold">
-                                                    {formatearDecimal(item.indice_rotacion)}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {obtenerBadgeRotacion(item.indice_rotacion)}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
+                                        rotacion.data.map((item) => {
+                                            const badgeInfo = getRotacionBadge(item.indice_rotacion);
+                                            return (
+                                                <TableRow key={item.producto_id}>
+                                                    <TableCell className="font-medium">
+                                                        {item.producto?.nombre || 'Producto no encontrado'}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {formatNumber(item.total_salidas)}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {formatNumber(item.cantidad_vendida)}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {formatDecimal(item.stock_promedio)}
+                                                    </TableCell>
+                                                    <TableCell className="text-center font-semibold">
+                                                        {formatDecimal(item.indice_rotacion)}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge className={badgeInfo.badge}>
+                                                            {badgeInfo.label}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center py-8">
@@ -332,7 +261,7 @@ export default function RotacionInventario({
                                 <div className="text-sm text-gray-500">
                                     Mostrando {((rotacion.current_page - 1) * rotacion.per_page) + 1} a{' '}
                                     {Math.min(rotacion.current_page * rotacion.per_page, rotacion.total)} de{' '}
-                                    {formatearNumero(rotacion.total)} resultados
+                                    {formatNumber(rotacion.total)} resultados
                                 </div>
                                 <div className="flex gap-2">
                                     {rotacion.links.map((link, index) => {

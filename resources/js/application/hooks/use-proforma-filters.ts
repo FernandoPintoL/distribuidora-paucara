@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { router } from '@inertiajs/react';
+import FilterService from '@/infrastructure/services/filter.service';
 
 interface ProformaFilterState {
     searchProforma: string;
@@ -51,12 +51,8 @@ export function useProformaFilters(initialPaginationInfo: any) {
             to: Math.min(page * prev.per_page, prev.total),
         }));
 
-        router.get('/logistica/dashboard', params, {
-            preserveState: true,
-            preserveScroll: true,
-            only: ['proformasRecientes'],
-            replace: true,
-        });
+        // Use FilterService for navigation (proper service layer abstraction)
+        FilterService.navigateProformaFilters(params);
     }, [filtroEstadoProforma, searchProforma, soloVencidas]);
 
     // Aplicar filtros con debounce

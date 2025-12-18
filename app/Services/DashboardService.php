@@ -708,6 +708,11 @@ class DashboardService
             return '/dashboard';
         }
 
+        // ✅ NUEVO: Verificar acceso a plataforma web
+        if (!$user->can_access_web) {
+            abort(403, 'No tienes acceso a la plataforma web (admin)');
+        }
+
         $roles = $user->getRoleNames()->toArray();
 
         if (empty($roles)) {

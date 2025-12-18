@@ -1,61 +1,16 @@
 import { Link, router, usePage, Head } from '@inertiajs/react'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Badge } from '@/presentation/components/ui/badge'
 import { Button } from '@/presentation/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
-import toast from 'react-hot-toast'
 import { Trash2, Pencil, Plus, Search } from 'lucide-react'
 import Can from '@/presentation/components/auth/Can'
 import { type BreadcrumbItem } from '@/types'
-
-interface User {
-    id: number
-    name: string
-    usernick: string
-    email: string
-    created_at: string
-    roles: Array<{
-        id: number
-        name: string
-    }>
-}
-
-interface Role {
-    id: number
-    name: string
-}
-
-interface PaginationLink {
-    url: string | null
-    label: string
-    active: boolean
-}
-
-interface PaginationMeta {
-    current_page: number
-    from: number
-    last_page: number
-    per_page: number
-    to: number
-    total: number
-}
-
-interface PageProps {
-    users: {
-        data: User[]
-        links: PaginationLink[]
-        meta: PaginationMeta
-    }
-    roles: Role[]
-    filters: {
-        search?: string
-        role?: string
-    }
-    [key: string]: unknown
-}
+import { NotificationService } from '@/infrastructure/services/notification.service'
+import type { Usuario, UsersIndexPageProps } from '@/domain/entities/usuarios'
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -65,11 +20,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 export default function Index() {
-    const { users, roles, filters } = usePage<PageProps>().props
+    const { users, roles, filters } = usePage<UsersIndexPageProps>().props
     const [searchTerm, setSearchTerm] = useState(filters.search || '')
     const [selectedRole, setSelectedRole] = useState(filters.role || '')
 
-    const handleSearch = (e: React.FormEvent) => {
+    const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         router.get('/usuarios', {
             search: searchTerm,
@@ -80,14 +35,14 @@ export default function Index() {
         })
     }
 
-    const handleDelete = (user: User) => {
+    const handleDelete = (user: Usuario) => {
         if (confirm(`¿Estás seguro de que quieres eliminar al usuario ${user.name}?`)) {
             router.delete(`/usuarios/${user.id}`, {
                 onSuccess: () => {
-                    toast.success('Usuario eliminado exitosamente.')
+                    NotificationService.success('Usuario eliminado exitosamente.')
                 },
                 onError: () => {
-                    toast.error('Ocurrió un error al eliminar el usuario.')
+                    NotificationService.error('Ocurrió un error al eliminar el usuario.')
                 }
             })
         }
@@ -289,8 +244,8 @@ export default function Index() {
                                                 }}
                                                 disabled={!link.url}
                                                 className={`px-3 py-2 text-sm ${link.active
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
                                                     } rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50`}
                                                 dangerouslySetInnerHTML={{ __html: link.label }}
                                             />

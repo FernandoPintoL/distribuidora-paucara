@@ -1,4 +1,3 @@
-import React from 'react';
 import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
@@ -23,120 +22,22 @@ import { Label } from '@/presentation/components/ui/label';
 import { Form } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { AlertTriangle, Clock, Package, TrendingDown } from 'lucide-react';
-
-// Interfaces TypeScript
-interface Producto {
-    id: number;
-    nombre: string;
-    categoria?: {
-        id: number;
-        nombre: string;
-    };
-}
-
-interface Almacen {
-    id: number;
-    nombre: string;
-}
-
-interface ProductoVencimiento {
-    id: number;
-    cantidad: number;
-    fecha_vencimiento: string;
-    producto: Producto;
-    almacen: Almacen;
-}
-
-interface Estadisticas {
-    productos_vencidos: number;
-    productos_proximos_vencer: number;
-    valor_productos_vencidos: number;
-}
-
-interface Filtros {
-    almacen_id?: string;
-    dias_anticipacion?: number;
-    solo_vencidos?: boolean;
-}
-
-interface PaginationLink {
-    url: string | null;
-    label: string;
-    active: boolean;
-}
-
-interface PaginatedData {
-    data: ProductoVencimiento[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: PaginationLink[];
-}
-
-interface Props {
-    productos: PaginatedData;
-    estadisticas: Estadisticas;
-    filtros: Filtros;
-    almacenes: Almacen[];
-}
+import type { VencimientosPageProps } from '@/domain/entities/reportes';
+import { formatNumber, formatCurrency, formatDateOnly, getVencimientoStatus } from '@/lib/inventario.utils';
 
 export default function VencimientosInventario({
     productos,
     estadisticas,
     filtros,
     almacenes,
-}: Props) {
-    const obtenerEstadoVencimiento = (fechaVencimiento: string) => {
-        const hoy = new Date();
-        const fechaVenc = new Date(fechaVencimiento);
-        const diasDiferencia = Math.ceil((fechaVenc.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
-
-        if (diasDiferencia < 0) {
-            return {
-                estado: 'VENCIDO',
-                color: 'destructive',
-                className: 'bg-red-100 text-red-800',
-                dias: Math.abs(diasDiferencia)
-            };
-        } else if (diasDiferencia <= 30) {
-            return {
-                estado: 'PRÓXIMO A VENCER',
-                color: 'default',
-                className: 'bg-yellow-100 text-yellow-800',
-                dias: diasDiferencia
-            };
-        } else {
-            return {
-                estado: 'VIGENTE',
-                color: 'secondary',
-                className: 'bg-green-100 text-green-800',
-                dias: diasDiferencia
-            };
-        }
-    };
-
-    const formatearFecha = (fecha: string) => {
-        return new Date(fecha).toLocaleDateString('es-BO', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        });
-    };
-
-    const formatearNumero = (numero: number) => {
-        return new Intl.NumberFormat('es-BO').format(numero);
-    };
-
-    const formatearMoneda = (cantidad: number) => {
-        return new Intl.NumberFormat('es-BO', {
-            style: 'currency',
-            currency: 'BOB',
-        }).format(cantidad);
-    };
+}: VencimientosPageProps) {
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: 'Reportes', href: '#' },
+            { title: 'Vencimientos', href: '#' }
+        ]}>
             <Head title="Reporte de Vencimientos de Inventario" />
 
             <div className="space-y-6 p-4">
@@ -235,7 +136,7 @@ export default function VencimientosInventario({
                                         Productos Vencidos
                                     </p>
                                     <p className="text-2xl font-bold text-red-600">
-                                        {formatearNumero(estadisticas.productos_vencidos)}
+                                        {formatNumber(estadisticas.productos_vencidos)}
                                     </p>
                                 </div>
                                 <AlertTriangle className="h-8 w-8 text-red-500" />
@@ -251,7 +152,7 @@ export default function VencimientosInventario({
                                         Próximos a Vencer
                                     </p>
                                     <p className="text-2xl font-bold text-yellow-600">
-                                        {formatearNumero(estadisticas.productos_proximos_vencer)}
+                                        {formatNumber(estadisticas.productos_proximos_vencer)}
                                     </p>
                                 </div>
                                 <Clock className="h-8 w-8 text-yellow-500" />
@@ -267,7 +168,7 @@ export default function VencimientosInventario({
                                         Valor Productos Vencidos
                                     </p>
                                     <p className="text-2xl font-bold text-red-600">
-                                        {formatearMoneda(estadisticas.valor_productos_vencidos)}
+                                        {formatCurrency(estadisticas.valor_productos_vencidos)}
                                     </p>
                                 </div>
                                 <TrendingDown className="h-8 w-8 text-red-500" />
@@ -282,7 +183,7 @@ export default function VencimientosInventario({
                         <CardTitle className="flex items-center justify-between">
                             <span>Productos con Fechas de Vencimiento</span>
                             <Badge variant="outline">
-                                {formatearNumero(productos.total)} productos
+                                {formatNumber(productos.total)} productos
                             </Badge>
                         </CardTitle>
                     </CardHeader>
@@ -303,7 +204,7 @@ export default function VencimientosInventario({
                                 <TableBody>
                                     {productos.data.length > 0 ? (
                                         productos.data.map((item) => {
-                                            const estadoVenc = obtenerEstadoVencimiento(item.fecha_vencimiento);
+                                            const estadoVenc = getVencimientoStatus(item.fecha_vencimiento);
 
                                             return (
                                                 <TableRow key={item.id}>
@@ -317,10 +218,10 @@ export default function VencimientosInventario({
                                                         {item.almacen.nombre}
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        {formatearNumero(item.cantidad)}
+                                                        {formatNumber(item.cantidad)}
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        {formatearFecha(item.fecha_vencimiento)}
+                                                        {formatDateOnly(item.fecha_vencimiento)}
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         {estadoVenc.estado === 'VENCIDO'
@@ -332,7 +233,7 @@ export default function VencimientosInventario({
                                                         <Badge
                                                             className={estadoVenc.className}
                                                         >
-                                                            {estadoVenc.estado}
+                                                            {estadoVenc.label}
                                                         </Badge>
                                                     </TableCell>
                                                 </TableRow>
@@ -360,7 +261,7 @@ export default function VencimientosInventario({
                                 <div className="text-sm text-gray-500">
                                     Mostrando {((productos.current_page - 1) * productos.per_page) + 1} a{' '}
                                     {Math.min(productos.current_page * productos.per_page, productos.total)} de{' '}
-                                    {formatearNumero(productos.total)} resultados
+                                    {formatNumber(productos.total)} resultados
                                 </div>
                                 <div className="flex gap-2">
                                     {productos.links.map((link, index) => {

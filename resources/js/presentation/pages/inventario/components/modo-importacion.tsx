@@ -3,26 +3,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import NotificationService from '@/infrastructure/services/notification.service';
 import { useState, useRef } from 'react';
-
-interface Producto {
-    id: number;
-    nombre: string;
-    sku?: string | null;
-}
-
-interface Almacen {
-    id: number;
-    nombre: string;
-}
-
-interface InventarioItem {
-    producto_id: number | '';
-    almacen_id: number | '';
-    cantidad: number | '';
-    lote?: string;
-    fecha_vencimiento?: string;
-    observaciones?: string;
-}
+import type { Producto, Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
 
 interface RowError {
     row: number;

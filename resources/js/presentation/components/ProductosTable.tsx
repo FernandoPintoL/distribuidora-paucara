@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import BarcodeScannerComponent from 'react-qr-barcode-scanner';
+import type { Producto } from '@/domain/entities/ventas';
 
 // Tipos para el componente - más genéricos para compatibilidad
 export interface DetalleProducto {
@@ -21,16 +22,6 @@ export interface DetalleProducto {
         precio_venta?: number;
         precio_compra?: number;
     };
-}
-
-interface Producto {
-    id: number | string;
-    nombre: string;
-    codigo?: string;
-    codigo_barras?: string;
-    codigos_barras?: string[]; // Array con todos los códigos de barra relacionados
-    precio_venta?: number;
-    precio_compra?: number;
 }
 
 interface ProductosTableProps {

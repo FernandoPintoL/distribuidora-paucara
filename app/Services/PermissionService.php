@@ -29,7 +29,11 @@ class PermissionService
                     return [
                         'id' => $permission->id,
                         'name' => $permission->name,
+                        'description' => $permission->description ?? '',
                         'label' => str_replace('.', ' → ', $permission->name),
+                        'guard_name' => $permission->guard_name,
+                        'roles_count' => $permission->roles()->count(),
+                        'users_count' => 0, // Will be calculated if needed
                     ];
                 })->values(),
             ];

@@ -1,26 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
+import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
-import { Select } from '@/presentation/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
+import SearchSelect from '@/presentation/components/ui/search-select';
 import { toast } from 'react-toastify';
 import {
     Truck,
     User,
     Package,
     Clock,
-    MapPin,
     ChevronRight,
     Plus,
     Filter,
     X,
-    AlertCircle
 } from 'lucide-react';
 import logisticaService, { type Entrega, type FiltrosEntregas } from '@/infrastructure/services/logistica.service';
+import type { Id } from '@/domain/entities/shared';
 
 interface Props {
     entregas?: Entrega[];
@@ -31,38 +30,41 @@ interface Props {
 }
 
 interface AsignacionFormData {
-    chofer_id: number;
-    vehiculo_id: number;
+    chofer_id: Id;
+    vehiculo_id: Id;
 }
 
-export default function EntregasAsignadas({ entregas: initialEntregas = [], estadisticas = {} }: Props) {
+interface Vehiculo {
+    id: Id;
+    placa: string;
+    marca: string;
+    modelo: string;
+    estado?: string;
+}
+
+interface Chofer {
+    id: Id;
+    nombre: string;
+    email: string;
+}
+
+export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Props) {
     const [entregas, setEntregas] = useState<Entrega[]>(initialEntregas);
     const [loading, setLoading] = useState(false);
     const [filtros, setFiltros] = useState<FiltrosEntregas>({});
     const [showFilters, setShowFilters] = useState(false);
     const [mostraAsignacionModal, setMostrarAsignacionModal] = useState(false);
     const [entregaSeleccionada, setEntregaSeleccionada] = useState<Entrega | null>(null);
-    const [vehículos, setVehículos] = useState<Array<{ id: number; placa: string; marca: string; modelo: string }>>([]);
-    const [choferes, setChoferes] = useState<Array<{ id: number; nombre: string; email: string }>>([]);
+    const [vehículos, setVehículos] = useState<Vehiculo[]>([]);
+    const [choferes, setChoferes] = useState<Chofer[]>([]);
     const [datosAsignacion, setDatosAsignacion] = useState<AsignacionFormData>({
         chofer_id: 0,
         vehiculo_id: 0,
     });
-    const [asignandoId, setAsignandoId] = useState<number | null>(null);
+    const [asignandoId, setAsignandoId] = useState<Id | null>(null);
 
     // Cargar entregas
-    useEffect(() => {
-        cargarEntregas();
-    }, [filtros]);
-
-    // Cargar vehículos y choferes al abrir modal
-    useEffect(() => {
-        if (mostraAsignacionModal) {
-            cargarVehiculosYChoferes();
-        }
-    }, [mostraAsignacionModal]);
-
-    const cargarEntregas = async () => {
+    const cargarEntregas = useCallback(async () => {
         setLoading(true);
         try {
             const resultado = await logisticaService.obtenerEntregasAsignadas(1, filtros);
@@ -73,7 +75,18 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [], esta
         } finally {
             setLoading(false);
         }
-    };
+    }, [filtros]);
+
+    useEffect(() => {
+        cargarEntregas();
+    }, [cargarEntregas]);
+
+    // Cargar vehículos y choferes al abrir modal
+    useEffect(() => {
+        if (mostraAsignacionModal) {
+            cargarVehiculosYChoferes();
+        }
+    }, [mostraAsignacionModal]);
 
     const cargarVehiculosYChoferes = async () => {
         try {
@@ -85,6 +98,7 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [], esta
             setChoferes(choferesData);
         } catch (error) {
             toast.error('Error al cargar opciones de asignación');
+            console.log(error);
         }
     };
 
@@ -190,16 +204,18 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [], esta
                             <CardContent className="pt-6">
                                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium mb-2 block">Estado</label>
-                                        <Select
+                                        <SearchSelect
+                                            label="Estado"
+                                            placeholder="Todos los estados"
                                             value={filtros.estado || ''}
-                                            onChange={(e) => handleFiltroChange('estado', e.target.value)}
-                                        >
-                                            <option value="">Todos</option>
-                                            <option value="ASIGNADA">Asignada</option>
-                                            <option value="EN_CAMINO">En Camino</option>
-                                            <option value="LLEGO">Llegó</option>
-                                        </Select>
+                                            options={[
+                                                { value: '', label: 'Todos' },
+                                                { value: 'ASIGNADA', label: 'Asignada' },
+                                                { value: 'EN_CAMINO', label: 'En Camino' },
+                                                { value: 'LLEGO', label: 'Llegó' },
+                                            ]}
+                                            onChange={(value) => handleFiltroChange('estado', value as string)}
+                                        />
                                     </div>
 
                                     <div>
@@ -337,42 +353,36 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [], esta
 
                     <div className="space-y-4">
                         {/* Seleccionar Chofer */}
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">Chofer</label>
-                            <Select
-                                value={datosAsignacion.chofer_id.toString()}
-                                onChange={(e) => setDatosAsignacion({
-                                    ...datosAsignacion,
-                                    chofer_id: parseInt(e.target.value),
-                                })}
-                            >
-                                <option value="0">Seleccionar chofer...</option>
-                                {choferes.map((chofer) => (
-                                    <option key={chofer.id} value={chofer.id}>
-                                        {chofer.nombre} ({chofer.email})
-                                    </option>
-                                ))}
-                            </Select>
-                        </div>
+                        <SearchSelect
+                            label="Chofer"
+                            placeholder="Buscar chofer..."
+                            value={datosAsignacion.chofer_id}
+                            options={choferes.map((chofer) => ({
+                                value: chofer.id,
+                                label: chofer.nombre,
+                                description: chofer.email,
+                            }))}
+                            onChange={(value) => setDatosAsignacion({
+                                ...datosAsignacion,
+                                chofer_id: value,
+                            })}
+                        />
 
                         {/* Seleccionar Vehículo */}
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">Vehículo</label>
-                            <Select
-                                value={datosAsignacion.vehiculo_id.toString()}
-                                onChange={(e) => setDatosAsignacion({
-                                    ...datosAsignacion,
-                                    vehiculo_id: parseInt(e.target.value),
-                                })}
-                            >
-                                <option value="0">Seleccionar vehículo...</option>
-                                {vehículos.map((vehiculo) => (
-                                    <option key={vehiculo.id} value={vehiculo.id}>
-                                        {vehiculo.placa} ({vehiculo.marca} {vehiculo.modelo})
-                                    </option>
-                                ))}
-                            </Select>
-                        </div>
+                        <SearchSelect
+                            label="Vehículo"
+                            placeholder="Buscar vehículo..."
+                            value={datosAsignacion.vehiculo_id}
+                            options={vehículos.map((vehiculo) => ({
+                                value: vehiculo.id,
+                                label: vehiculo.placa,
+                                description: `${vehiculo.marca} ${vehiculo.modelo}`,
+                            }))}
+                            onChange={(value) => setDatosAsignacion({
+                                ...datosAsignacion,
+                                vehiculo_id: value,
+                            })}
+                        />
                     </div>
 
                     <DialogFooter className="gap-2">

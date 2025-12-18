@@ -9,6 +9,13 @@
  * import { formatCurrency } from '@/infrastructure/utils/number-helper';
  */
 
+// Import classes para crear aliases
+import { FilterBuilder } from '@/infrastructure/utils/filter-builder';
+import { TableHelper } from '@/infrastructure/utils/table-helper';
+import { DateFormatter } from '@/infrastructure/utils/date-formatter';
+import { StringHelper } from '@/infrastructure/utils/string-helper';
+import { NumberHelper } from '@/infrastructure/utils/number-helper';
+
 // Export FilterBuilder y helpers
 export { FilterBuilder, createFilters } from '@/infrastructure/utils/filter-builder';
 export type { FilterCondition } from '@/infrastructure/utils/filter-builder';

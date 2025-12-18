@@ -1,17 +1,15 @@
 <?php
-
 namespace Tests\Integration\SSOT;
 
 use App\DTOs\Venta\CrearVentaDTO;
+use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
 use App\Models\User;
 use App\Models\Venta;
-use App\Models\MovimientoInventario;
-use App\Services\Venta\VentaService;
 use App\Services\Stock\StockService;
+use App\Services\Venta\VentaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 use Tests\Traits\ValidatesSSAT;
 
@@ -55,11 +53,11 @@ class SSATValidationTest extends TestCase
         $this->ventaService = app(VentaService::class);
         $this->stockService = app(StockService::class);
 
-        $this->usuario = User::factory()->create();
+        $this->usuario  = User::factory()->create();
         $this->producto = Producto::factory()->create();
-        $this->stock = StockProducto::factory()->create([
-            'producto_id' => $this->producto->id,
-            'cantidad' => 1000,
+        $this->stock    = StockProducto::factory()->create([
+            'producto_id'        => $this->producto->id,
+            'cantidad'           => 1000,
             'cantidad_reservada' => 0,
         ]);
     }
@@ -129,7 +127,7 @@ class SSATValidationTest extends TestCase
             // Error esperado
         }
 
-        $countAfter = StockProducto::where('producto_id' => $this->producto->id)
+        $countAfter = StockProducto::where('producto_id', $this->producto->id)
             ->sum('cantidad');
 
         // Assert
@@ -162,7 +160,7 @@ class SSATValidationTest extends TestCase
         }
 
         // Assert
-        $stock = StockProducto::where('producto_id' => $this->producto->id)->first();
+        $stock = StockProducto::where('producto_id', $this->producto->id)->first();
         $this->assertGreaterThanOrEqual(0, $stock->cantidad);
     }
 
@@ -193,11 +191,11 @@ class SSATValidationTest extends TestCase
             detalles: [
                 ['producto_id' => $this->producto->id, 'cantidad' => 10, 'precio_unitario' => 1000, 'descuento_unitario' => 100],
             ],
-            descuento_general: 100,
+            // descuento_general: 100,
         );
 
         $resultado = $this->ventaService->crear($dto);
-        $venta = Venta::find($resultado->id);
+        $venta     = Venta::find($resultado->id);
 
         // Calcular total esperado
         $totalEsperado = 0;
@@ -238,7 +236,7 @@ class SSATValidationTest extends TestCase
             descuento_general: 0,
         );
 
-        // Act
+                                                         // Act
         $resultado1 = $this->ventaService->crear($dto1); // Debe ser exitoso
         $this->assertNotNull($resultado1->id);
 
@@ -259,8 +257,8 @@ class SSATValidationTest extends TestCase
         // Stock con 50 unidades
         $stock = StockProducto::factory()->create([
             'producto_id' => $this->producto->id,
-            'cantidad' => 50,
-            'version' => 1, // Simulado
+            'cantidad'    => 50,
+            'version'     => 1, // Simulado
         ]);
 
         // Usuario 1: Consumir 30
@@ -287,7 +285,7 @@ class SSATValidationTest extends TestCase
         $r2 = $this->ventaService->crear($dto2);
         $this->assertNotNull($r2);
         $this->assertEquals(-5, $stock->fresh()->cantidad); // ERROR!
-        // O debería lanzar excepción si hay validación...
+                                                            // O debería lanzar excepción si hay validación...
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -376,7 +374,7 @@ class SSATValidationTest extends TestCase
             [
                 // Verificar convergencia
                 function () {
-                    $stock = StockProducto::where('producto_id', $this->producto->id)->first();
+                    $stock      = StockProducto::where('producto_id', $this->producto->id)->first();
                     $disponible = $stock->cantidad - $stock->cantidad_reservada;
                     return $disponible === 900; // 1000 - 100
                 },
@@ -405,7 +403,7 @@ class SSATValidationTest extends TestCase
 
         $venta = Venta::factory()->create([
             'usuario_id' => $this->usuario->id,
-            'estado' => 'PENDIENTE',
+            'estado'     => 'PENDIENTE',
         ]);
 
         // PENDIENTE → APROBADA ✓
@@ -425,7 +423,7 @@ class SSATValidationTest extends TestCase
 
         $venta = Venta::factory()->create([
             'usuario_id' => $this->usuario->id,
-            'estado' => 'PENDIENTE',
+            'estado'     => 'PENDIENTE',
         ]);
 
         // PENDIENTE → RECHAZADA
@@ -453,7 +451,7 @@ class SSATValidationTest extends TestCase
         );
 
         // Primera creación
-        $resultado1 = $this->ventaService->crear($dto);
+        $resultado1  = $this->ventaService->crear($dto);
         $countAfter1 = Venta::count();
 
         // Segunda creación (sin cambios)

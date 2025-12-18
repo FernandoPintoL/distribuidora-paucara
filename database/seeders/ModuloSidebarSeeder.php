@@ -434,7 +434,7 @@ class ModuloSidebarSeeder extends Seeder
         $submenuAdministracion = [
             ['titulo' => 'Usuarios', 'ruta' => '/usuarios', 'icono' => 'Users', 'orden' => 1, 'permisos' => ['usuarios.index']],
             ['titulo' => 'Roles', 'ruta' => '/roles', 'icono' => 'Shield', 'orden' => 2, 'permisos' => ['roles.index']],
-            ['titulo' => 'Permisos', 'ruta' => '/permissions', 'icono' => 'Key', 'orden' => 3, 'permisos' => ['permissions.index']],
+            ['titulo' => 'Permisos', 'ruta' => '/permisos', 'icono' => 'Key', 'orden' => 3, 'permisos' => ['permissions.index']],
             ['titulo' => 'Backup de Imágenes', 'ruta' => '/admin/image-backup', 'icono' => 'HardDrive', 'orden' => 4, 'permisos' => ['admin.image-backup.manage']],
             // ['titulo' => 'Módulos Sidebar', 'ruta' => '/modulos-sidebar', 'icono' => 'Layout', 'orden' => 5],
             // ['titulo' => 'Configuración Global', 'ruta' => '/configuracion-global', 'icono' => 'Cog', 'orden' => 6, 'permisos' => ['configuracion-global.index']],

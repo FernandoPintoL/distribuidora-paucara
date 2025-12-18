@@ -205,18 +205,50 @@ class ProformaController extends Controller
     public function convertirAVenta(string $id): JsonResponse|RedirectResponse
     {
         try {
+            \Log::info('🔄 [ProformaController::convertirAVenta] Iniciando conversión de proforma', [
+                'proforma_id' => $id,
+                'timestamp' => now()->toIso8601String(),
+            ]);
+
             $ventaDTO = $this->proformaService->convertirAVenta((int)$id);
 
-            return $this->respondSuccess(
-                data: $ventaDTO,
-                message: 'Proforma convertida a venta exitosamente',
-                redirectTo: route('ventas.show', $ventaDTO->id),
-            );
+            \Log::info('✅ [ProformaController::convertirAVenta] Conversión exitosa', [
+                'proforma_id' => $id,
+                'venta_id' => $ventaDTO->id,
+                'venta_numero' => $ventaDTO->numero,
+                'timestamp' => now()->toIso8601String(),
+            ]);
+
+            // Retornar respuesta con redirección
+            // El frontend manejará la redirección después de recibir la respuesta exitosa
+            return response()->json([
+                'success' => true,
+                'message' => 'Proforma convertida a venta exitosamente',
+                'data' => $ventaDTO->toArray(),
+                'redirect_to' => route('ventas.show', $ventaDTO->id),
+            ], 200, [
+                'X-Inertia' => true,
+                'X-Inertia-Version' => \Illuminate\Support\Facades\Session::token(),
+            ]);
 
         } catch (EstadoInvalidoException $e) {
+            \Log::warning('⚠️ [ProformaController::convertirAVenta] Estado inválido', [
+                'proforma_id' => $id,
+                'error' => $e->getMessage(),
+                'timestamp' => now()->toIso8601String(),
+            ]);
             return $this->respondError($e->getMessage(), statusCode: 422);
 
         } catch (\Exception $e) {
+            \Log::error('❌ [ProformaController::convertirAVenta] Error general', [
+                'proforma_id' => $id,
+                'error' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toIso8601String(),
+            ]);
             return $this->respondError($e->getMessage());
         }
     }

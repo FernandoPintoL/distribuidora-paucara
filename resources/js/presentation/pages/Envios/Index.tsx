@@ -1,60 +1,23 @@
 import { Head, Link } from '@inertiajs/react';
+import type { PageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/components/ui/table';
 import { Eye, Truck, User, Plus } from 'lucide-react';
+import type { Envio } from '@/domain/entities/envios';
+import type { Pagination } from '@/domain/entities/shared';
+import { getEstadoBadgeVariant, getEstadoLabel, formatearFecha } from '@/lib/envios.utils';
+import { useEnvios } from '@/application/hooks/use-envios';
 
-interface Envio {
-    id: number;
-    numero_envio: string;
-    estado: string;
-    fecha_programada: string;
-    fecha_salida?: string;
-    fecha_entrega?: string;
-    direccion_entrega: string;
-    venta: {
-        numero: string;
-        cliente: {
-            nombre: string;
-        };
-    };
-    vehiculo?: {
-        placa: string;
-        marca: string;
-        modelo: string;
-    };
-    chofer?: {
-        name: string;
-    };
-}
-
-interface Pagination<T> {
-    data: T[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-}
-
-interface Props {
+interface Props extends PageProps {
     envios: Pagination<Envio>;
 }
 
 export default function EnviosIndex({ envios }: Props) {
-    const getEstadoBadge = (estado: string) => {
-        const variants: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
-            'PROGRAMADO': 'secondary',
-            'EN_PREPARACION': 'default',
-            'EN_RUTA': 'default',
-            'EN_TRANSITO': 'default',
-            'ENTREGADO': 'default',
-            'FALLIDO': 'destructive'
-        };
-
-        return <Badge variant={variants[estado] || 'default'}>{estado}</Badge>;
-    };
+    // ✅ Hook de aplicación para manejo de acciones
+    const { handleVerEnvio, handlePaginaAnterior, handlePaginaSiguiente } = useEnvios();
 
     return (
         <AppLayout>
@@ -113,10 +76,12 @@ export default function EnviosIndex({ envios }: Props) {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {getEstadoBadge(envio.estado)}
+                                                    <Badge variant={getEstadoBadgeVariant(envio.estado)}>
+                                                        {getEstadoLabel(envio.estado)}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {new Date(envio.fecha_programada).toLocaleDateString()}
+                                                    {formatearFecha(envio.fecha_programada)}
                                                 </TableCell>
                                                 <TableCell>
                                                     {envio.vehiculo ? (
@@ -148,7 +113,7 @@ export default function EnviosIndex({ envios }: Props) {
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            onClick={() => window.open(`/envios/${envio.id}`, '_blank')}
+                                                            onClick={() => handleVerEnvio(envio.id)}
                                                         >
                                                             <Eye className="h-4 w-4 mr-1" />
                                                             Ver
@@ -172,7 +137,7 @@ export default function EnviosIndex({ envios }: Props) {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => window.location.href = `?page=${envios.current_page - 1}`}
+                                                    onClick={() => handlePaginaAnterior(envios.current_page)}
                                                 >
                                                     Anterior
                                                 </Button>
@@ -181,7 +146,7 @@ export default function EnviosIndex({ envios }: Props) {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => window.location.href = `?page=${envios.current_page + 1}`}
+                                                    onClick={() => handlePaginaSiguiente(envios.current_page)}
                                                 >
                                                     Siguiente
                                                 </Button>

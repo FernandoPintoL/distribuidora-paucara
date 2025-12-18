@@ -34,7 +34,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function PreventistaDashboard({
     datosPrventista,
-    periodo = 'mes_actual',
     titulo = 'Dashboard Preventista',
     descripcion = 'Resumen de clientes, ventas y comisiones',
 }: PreventistaDashboardProps) {

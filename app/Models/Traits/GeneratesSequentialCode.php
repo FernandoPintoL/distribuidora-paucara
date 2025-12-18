@@ -70,10 +70,12 @@ trait GeneratesSequentialCode
 
                 $secuencial = 1;
                 if ($ultimo) {
-                    $parts = explode('-', $ultimo->{$column});
-                    if (count($parts) >= 2) {
-                        $secuencial = (int) $parts[count($parts) - 1] + 1;
-                    }
+                    // El número tiene formato: PREFIX + DATE + SECUENCIAL
+                    // Ej: VEN20251218000001
+                    // Extraer los últimos `padding` dígitos
+                    $numeroAnterior = $ultimo->{$column};
+                    $ultimosDigitos = substr($numeroAnterior, -$padding);
+                    $secuencial = (int) $ultimosDigitos + 1;
                 }
 
                 $numeroGenerado = $prefix . $date . str_pad($secuencial, $padding, '0', STR_PAD_LEFT);

@@ -48,6 +48,19 @@ class CuentaContableSeeder extends Seeder
                 'activa' => true,
             ],
 
+            // CUENTAS POR COBRAR (Simplificadas para asientos contables)
+            [
+                'codigo' => '1205',
+                'nombre' => 'Cuentas por Cobrar',
+                'descripcion' => 'Cuentas por cobrar a clientes',
+                'tipo' => 'activo',
+                'naturaleza' => 'deudora',
+                'codigo_padre' => null,
+                'nivel' => 1,
+                'acepta_movimiento' => true,
+                'activa' => true,
+            ],
+
             // PASIVOS
             [
                 'codigo' => '2.1.03.001',
@@ -92,6 +105,17 @@ class CuentaContableSeeder extends Seeder
                 'naturaleza' => 'acreedora',
                 'codigo_padre' => null,
                 'nivel' => 4,
+                'acepta_movimiento' => true,
+                'activa' => true,
+            ],
+            [
+                'codigo' => '4105',
+                'nombre' => 'Ingresos por Venta',
+                'descripcion' => 'Ingresos generados por la venta de productos',
+                'tipo' => 'ingreso',
+                'naturaleza' => 'acreedora',
+                'codigo_padre' => null,
+                'nivel' => 1,
                 'acepta_movimiento' => true,
                 'activa' => true,
             ],

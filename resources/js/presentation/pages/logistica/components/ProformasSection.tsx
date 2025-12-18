@@ -6,17 +6,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-
-interface ProformaAppExterna {
-    id: number;
-    numero: string;
-    cliente_nombre: string;
-    total: number;
-    estado: string;
-    fecha: string;
-    fecha_vencimiento?: string;
-    usuario_creador_nombre: string;
-}
+import type { ProformaAppExterna } from '@/domain/entities/logistica';
 
 interface ProformasSectionProps {
     proformas: ProformaAppExterna[];
@@ -29,7 +19,6 @@ interface ProformasSectionProps {
     setSoloVencidas: (value: boolean) => void;
     cambiarPagina: (page: number) => void;
     onVerProforma: (proforma: ProformaAppExterna) => void;
-    onGestionarProforma: (proforma: ProformaAppExterna) => void;
     getEstadoBadge: (estado: string, proforma: ProformaAppExterna) => any;
     estaVencida: (proforma: ProformaAppExterna) => boolean;
 }
@@ -45,7 +34,6 @@ export function ProformasSection({
     setSoloVencidas,
     cambiarPagina,
     onVerProforma,
-    onGestionarProforma,
     getEstadoBadge,
     estaVencida,
 }: ProformasSectionProps) {
@@ -149,16 +137,6 @@ export function ProformasSection({
                                             >
                                                 <Eye className="h-4 w-4" />
                                             </Button>
-                                            {proforma.estado === 'PENDIENTE' && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="default"
-                                                    className="bg-blue-600 hover:bg-blue-700"
-                                                    onClick={() => onGestionarProforma(proforma)}
-                                                >
-                                                    Gestionar
-                                                </Button>
-                                            )}
                                         </div>
                                     </td>
                                 </tr>

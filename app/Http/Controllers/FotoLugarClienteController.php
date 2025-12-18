@@ -19,6 +19,9 @@ class FotoLugarClienteController extends Controller
     public function index(Request $request, Cliente $cliente)
     {
         try {
+            // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden ver las fotos
+            $this->authorize('view', $cliente);
+
             $fotos = $cliente->fotosLugar()
                 ->when($request->has('direccion_id'), function ($query) use ($request) {
                     return $query->where('direccion_cliente_id', $request->direccion_id);
@@ -45,6 +48,9 @@ class FotoLugarClienteController extends Controller
     public function create(Cliente $cliente)
     {
         try {
+            // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden crear fotos
+            $this->authorize('update', $cliente);
+
             $direcciones = $cliente->direcciones()->where('activa', true)->get();
 
             return $this->dataResponse('clientes.fotos.form', [
@@ -62,13 +68,15 @@ class FotoLugarClienteController extends Controller
      */
     public function store(Request $request, Cliente $cliente)
     {
-        $validated = $request->validate([
-            'foto'                 => 'required|image|max:10240', // Max 10MB
-            'descripcion'          => 'nullable|string|max:255',
-            'direccion_cliente_id' => 'nullable|exists:direcciones_cliente,id',
-        ]);
-
         try {
+            // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden guardar fotos
+            $this->authorize('update', $cliente);
+
+            $validated = $request->validate([
+                'foto'                 => 'required|image|max:10240', // Max 10MB
+                'descripcion'          => 'nullable|string|max:255',
+                'direccion_cliente_id' => 'nullable|exists:direcciones_cliente,id',
+            ]);
             // Generar ruta dinámica para la imagen
             $folderPath = 'clientes/' . $cliente->id . '/fotos_lugar';
 
@@ -106,6 +114,9 @@ class FotoLugarClienteController extends Controller
     public function show(Cliente $cliente, FotoLugarCliente $foto)
     {
         try {
+            // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden ver las fotos
+            $this->authorize('view', $cliente);
+
             // Validar que la foto pertenezca al cliente
             if ($foto->cliente_id !== $cliente->id) {
                 return $this->errorResponse('La foto no pertenece a este cliente');
@@ -130,6 +141,9 @@ class FotoLugarClienteController extends Controller
     public function edit(Cliente $cliente, FotoLugarCliente $foto)
     {
         try {
+            // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden editar fotos
+            $this->authorize('update', $cliente);
+
             // Validar que la foto pertenezca al cliente
             if ($foto->cliente_id !== $cliente->id) {
                 return $this->errorResponse('La foto no pertenece a este cliente');
@@ -152,18 +166,20 @@ class FotoLugarClienteController extends Controller
      */
     public function update(Request $request, Cliente $cliente, FotoLugarCliente $foto)
     {
-        // Validar que la foto pertenezca al cliente
-        if ($foto->cliente_id !== $cliente->id) {
-            return $this->errorResponse('La foto no pertenece a este cliente');
-        }
-
-        $validated = $request->validate([
-            'foto'                 => 'nullable|image|max:10240', // Max 10MB
-            'descripcion'          => 'nullable|string|max:255',
-            'direccion_cliente_id' => 'nullable|exists:direcciones_cliente,id',
-        ]);
-
         try {
+            // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden actualizar fotos
+            $this->authorize('update', $cliente);
+
+            // Validar que la foto pertenezca al cliente
+            if ($foto->cliente_id !== $cliente->id) {
+                return $this->errorResponse('La foto no pertenece a este cliente');
+            }
+
+            $validated = $request->validate([
+                'foto'                 => 'nullable|image|max:10240', // Max 10MB
+                'descripcion'          => 'nullable|string|max:255',
+                'direccion_cliente_id' => 'nullable|exists:direcciones_cliente,id',
+            ]);
             $updates = [
                 'descripcion'          => $request->descripcion,
                 'direccion_cliente_id' => $request->direccion_cliente_id,
@@ -203,12 +219,14 @@ class FotoLugarClienteController extends Controller
      */
     public function destroy(Cliente $cliente, FotoLugarCliente $foto)
     {
-        // Validar que la foto pertenezca al cliente
-        if ($foto->cliente_id !== $cliente->id) {
-            return $this->errorResponse('La foto no pertenece a este cliente');
-        }
-
         try {
+            // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden eliminar fotos
+            $this->authorize('update', $cliente);
+
+            // Validar que la foto pertenezca al cliente
+            if ($foto->cliente_id !== $cliente->id) {
+                return $this->errorResponse('La foto no pertenece a este cliente');
+            }
             // Eliminar el archivo físico
             if ($foto->url) {
                 Storage::disk('public')->delete($foto->url);

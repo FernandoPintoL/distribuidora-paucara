@@ -437,4 +437,165 @@ class ModuloSidebarController extends Controller
 
         return response()->json($roles);
     }
+
+    /**
+     * Aplicar cambios en lote a la matriz de acceso (rol-módulo)
+     * Soporta agregar, reemplazar o eliminar permisos
+     */
+    public function bulkUpdateMatrizAcceso(Request $request)
+    {
+        $validated = $request->validate([
+            'cambios' => 'required|array|min:1',
+            'cambios.*.rol_id' => 'required|integer',
+            'cambios.*.rol_nombre' => 'required|string',
+            'cambios.*.modulo_id' => 'required|integer|exists:modulos_sidebar,id',
+            'cambios.*.modulo_titulo' => 'required|string',
+            'cambios.*.permisos' => 'required|array',
+            'cambios.*.accion' => 'required|in:agregar,eliminar,reemplazar',
+        ]);
+
+        $cambios = $validated['cambios'];
+        $cambiosAplicados = 0;
+
+        try {
+            foreach ($cambios as $cambio) {
+                $modulo = ModuloSidebar::findOrFail($cambio['modulo_id']);
+                $permisosActuales = $modulo->permisos ?? [];
+                $nuevosPermisos = $permisosActuales;
+
+                switch ($cambio['accion']) {
+                    case 'reemplazar':
+                        $nuevosPermisos = $cambio['permisos'];
+                        break;
+                    case 'agregar':
+                        $nuevosPermisos = array_unique(array_merge($permisosActuales, $cambio['permisos']));
+                        break;
+                    case 'eliminar':
+                        $nuevosPermisos = array_values(array_diff($permisosActuales, $cambio['permisos']));
+                        break;
+                }
+
+                $modulo->update(['permisos' => $nuevosPermisos]);
+                $cambiosAplicados++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Cambios aplicados a {$cambiosAplicados} combinaciones rol-módulo",
+                'cambios_aplicados' => $cambiosAplicados,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al aplicar los cambios: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener historial de cambios (auditoría) de módulos
+     */
+    public function obtenerHistorial(Request $request)
+    {
+        $query = \App\Models\ModuloAudit::with(['modulo', 'usuario']);
+
+        // Filtrar por módulo si se proporciona
+        if ($request->has('modulo_id')) {
+            $query->where('modulo_id', $request->input('modulo_id'));
+        }
+
+        // Filtrar por acción
+        if ($request->has('accion') && $request->input('accion') !== 'todos') {
+            $query->where('accion', $request->input('accion'));
+        }
+
+        // Filtrar por rango de fechas
+        if ($request->has('desde')) {
+            $query->where('created_at', '>=', $request->input('desde'));
+        }
+
+        if ($request->has('hasta')) {
+            $query->where('created_at', '<=', $request->input('hasta'));
+        }
+
+        $cambios = $query->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get()
+            ->map(function ($audit) {
+                return [
+                    'id' => $audit->id,
+                    'modulo_id' => $audit->modulo_id,
+                    'modulo_titulo' => $audit->modulo?->titulo ?? 'N/A',
+                    'usuario_id' => $audit->usuario_id,
+                    'usuario_nombre' => $audit->usuario?->name ?? 'Sistema',
+                    'accion' => $audit->accion,
+                    'datos_anteriores' => $audit->datos_anteriores,
+                    'datos_nuevos' => $audit->datos_nuevos,
+                    'fecha' => $audit->created_at->toIso8601String(),
+                ];
+            });
+
+        return response()->json([
+            'cambios' => $cambios,
+            'total' => $cambios->count(),
+        ]);
+    }
+
+    /**
+     * Aplicar operaciones en lote a múltiples módulos
+     * Soporta: cambiar estado, cambiar categoría, cambiar visibilidad en dashboard
+     */
+    public function bulkUpdate(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'required|integer|exists:modulos_sidebar,id',
+            'operacion' => 'required|array',
+            'operacion.tipo' => 'required|in:estado,categoria,visible_dashboard',
+        ]);
+
+        $ids = $validated['ids'];
+        $operacion = $validated['operacion'];
+        $cambiosAplicados = 0;
+
+        try {
+            foreach ($ids as $id) {
+                $modulo = ModuloSidebar::findOrFail($id);
+
+                switch ($operacion['tipo']) {
+                    case 'estado':
+                        $modulo->update([
+                            'activo' => $operacion['valor'] ?? false,
+                        ]);
+                        $cambiosAplicados++;
+                        break;
+
+                    case 'categoria':
+                        $modulo->update([
+                            'categoria' => $operacion['valor'] ?? null,
+                        ]);
+                        $cambiosAplicados++;
+                        break;
+
+                    case 'visible_dashboard':
+                        $modulo->update([
+                            'visible_dashboard' => $operacion['valor'] ?? false,
+                        ]);
+                        $cambiosAplicados++;
+                        break;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Cambios aplicados a {$cambiosAplicados} módulos",
+                'cambios_aplicados' => $cambiosAplicados,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al aplicar los cambios: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

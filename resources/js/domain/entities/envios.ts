@@ -14,8 +14,43 @@ export type EstadoEnvio =
     | 'PROGRAMADO'      // Envio::PROGRAMADO - Envío programado
     | 'EN_PREPARACION'  // Envio::EN_PREPARACION - Stock reducido, en preparación
     | 'EN_RUTA'         // Envio::EN_RUTA - Vehículo en camino
+    | 'EN_TRANSITO'     // Envio::EN_TRANSITO - En tránsito
     | 'ENTREGADO'       // Envio::ENTREGADO - Entrega confirmada
-    | 'CANCELADO';      // Envio::CANCELADO - Envío cancelado
+    | 'CANCELADO'       // Envio::CANCELADO - Envío cancelado
+    | 'FALLIDO';        // Envio::FALLIDO - Entrega fallida
+
+/**
+ * Interfaces para relaciones de Envio
+ * Definidas aquí para evitar dependencias circulares
+ */
+export interface ClienteEnvio {
+    id: Id;
+    nombre: string;
+    email?: string;
+    telefono?: string;
+}
+
+export interface VentaEnvio {
+    id: Id;
+    numero: string;
+    cliente: ClienteEnvio;
+    total?: number;
+}
+
+export interface VehiculoEnvio {
+    id: Id;
+    placa: string;
+    marca: string;
+    modelo: string;
+    estado?: string;
+}
+
+export interface ChoferEnvio {
+    id: Id;
+    name: string;
+    email?: string;
+    telefono?: string;
+}
 
 /**
  * Configuración visual y descripción de cada estado de envío
@@ -80,9 +115,9 @@ export interface Envio extends BaseEntity {
     receptor_documento?: string;
 
     // Relaciones
-    venta?: unknown; // Evitar dependencias circulares con Venta
-    vehiculo?: unknown;
-    chofer?: unknown;
+    venta: VentaEnvio;
+    vehiculo?: VehiculoEnvio;
+    chofer?: ChoferEnvio;
     seguimientos?: SeguimientoEnvio[];
 
     // Timestamps
@@ -137,4 +172,40 @@ export interface CancelarEnvioFormData extends BaseFormData {
 export interface ActualizarUbicacionFormData extends BaseFormData {
     latitud: number;
     longitud: number;
+}
+
+/**
+ * Interfaces expandidas para crear/editar envíos
+ * Incluyen relaciones completas para el formulario
+ */
+export interface VentaConDetalles {
+    id: Id;
+    numero_venta: string;
+    total: number;
+    fecha_venta: string;
+    cliente: ClienteEnvio;
+    detalles: Array<{
+        id: Id;
+        cantidad: number;
+        precio_unitario: number;
+        producto: {
+            id: Id;
+            nombre: string;
+            codigo: string;
+        };
+    }>;
+}
+
+export interface VehiculoCompleto extends VehiculoEnvio {
+    capacidad_carga: number;
+}
+
+/**
+ * Props para página de crear envío
+ */
+export interface EnviosCreatePageProps {
+    ventas: VentaConDetalles[];
+    vehiculos: VehiculoCompleto[];
+    choferes: ChoferEnvio[];
+    ventaPreseleccionada?: Id;
 }

@@ -1,6 +1,8 @@
 // Domain: MovimientosInventario
 import type { Id } from './shared';
 import type { BaseEntity, BaseFormData } from './generic';
+import type { Producto } from './productos';
+import type { Almacen } from './almacenes';
 
 export interface MovimientoInventario extends BaseEntity {
     id: Id;
@@ -36,24 +38,6 @@ export interface StockProducto {
     almacen?: Almacen;
 }
 
-export interface Producto {
-    id: Id;
-    nombre: string;
-    descripcion?: string | null;
-    codigo_barras?: string | null;
-    activo: boolean;
-    categoria_id?: Id;
-
-    // Relaciones
-    categoria?: Categoria;
-}
-
-export interface Almacen {
-    id: Id;
-    nombre: string;
-    direccion?: string | null;
-    activo: boolean;
-}
 
 export interface Categoria {
     id: Id;
@@ -346,3 +330,6 @@ export interface EstadisticasMovimientos {
         mermas: number;
     }[];
 }
+
+// Alias para compatibilidad
+export type MovimientosStats = EstadisticasMovimientos;

@@ -10,19 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/compone
 import { useEntitySelect } from '@/presentation/hooks/use-search-select';
 import NotificationService from '@/infrastructure/services/notification.service';
 import productosService from '@/infrastructure/services/productos.service';
-import type { Producto, ProductoFormData, Precio, Imagen, CodigoBarra } from '@/domain/entities/productos';
-import type { TipoPrecio } from '@/domain/entities/tipos-precio';
-
-interface ProductoFormPageProps {
-  producto?: Producto | null;
-  categorias: { id: number; nombre: string }[];
-  marcas: { id: number; nombre: string }[];
-  proveedores: { id: number; nombre: string; razon_social?: string }[];
-  unidades: { id: number; codigo: string; nombre: string }[];
-  tipos_precio: TipoPrecio[];
-  configuraciones_ganancias?: { porcentaje_interes_general?: number; tipo_precio_ganancia_id?: number };
-  historial_precios?: import('@/domain/entities/productos').HistorialPrecio[];
-}
+import type { ProductoFormData, Precio, Imagen, CodigoBarra, ProductoFormPageProps } from '@/domain/entities/productos';
+import type { Id } from '@/domain/entities/shared';
 
 // Estado del formulario tipado para evitar 'any' implícitos
 // Usamos el tipo original de ProductoFormData
@@ -43,8 +32,6 @@ const initialProductoData: ProductoFormData = {
   activo: true,
   stock_minimo: 0,
   stock_maximo: 50,
-  perfil: undefined,
-  galeria: [],
   precios: [
     { monto: 0, tipo_precio_id: 1 },
     { monto: 0, tipo_precio_id: 2 },
@@ -52,7 +39,7 @@ const initialProductoData: ProductoFormData = {
   codigos: [{ codigo: '' }],
 };
 
-export default function ProductoForm({ producto, categorias, marcas, proveedores, unidades, tipos_precio, configuraciones_ganancias, historial_precios }: ProductoFormPageProps) {
+export default function ProductoForm({ producto, categorias, marcas, unidades, tipos_precio, configuraciones_ganancias, historial_precios }: ProductoFormPageProps) {
   // 🔍 LOGS PARA DEBUG
   console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
   console.log('👤 Proveedor en producto:', producto?.proveedor);
@@ -64,16 +51,17 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
   const porcentajeInteres = Number(configuraciones_ganancias?.porcentaje_interes_general ?? 0);
   // Estado para controlar el tab activo (siempre inicia en "datos")
   const [activeTab, setActiveTab] = useState<string>('datos');
+
+  // ✅ Estado separado para imágenes (no van en useForm por ser objetos complejos)
+  const [perfilState, setPerfilState] = useState<Imagen | undefined>(producto?.perfil ?? undefined);
+  const [galeriaState, setGaleriaState] = useState<Imagen[]>(producto?.galeria ?? []);
+
   const DRAFT_KEY = 'producto_form_draft_v1';
 
   // Configurar hooks de búsqueda para cada entidad
   const categoriasSelect = useEntitySelect(categorias);
   const marcasSelect = useEntitySelect(marcas);
-  // ⚠️ Los proveedores se buscan por API en Step1DatosProducto (no se precarga aquí)
-  const proveedoresSelect = useEntitySelect([], {
-    searchFields: ['nombre', 'razon_social'],
-    descriptionField: 'razon_social'
-  });
+
   const unidadesSelect = useEntitySelect(unidades, {
     searchFields: ['nombre', 'codigo'],
     descriptionField: 'codigo'
@@ -91,19 +79,15 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
       categoria_id: producto.categoria_id ? Number(producto.categoria_id) : '',
       marca_id: producto.marca_id ? Number(producto.marca_id) : '',
       proveedor_id: producto.proveedor_id ? Number(producto.proveedor_id) : '',
-      proveedor: producto.proveedor ?? null,
       activo: producto.activo ?? true,
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
-      perfil: producto.perfil ?? null,
-      galeria: producto.galeria ?? [],
       precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
       codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
     } : initialProductoData
   );
 
   console.log('💾 useForm data inicializada:', data);
-  console.log('👤 Proveedor en data del useForm:', data.proveedor);
   console.log('🆔 proveedor_id en data del useForm:', data.proveedor_id);
 
   // Autosave: restaurar borrador en carga inicial (solo creación)
@@ -208,12 +192,12 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
       stock_maximo: data.stock_maximo ?? '',
     }).forEach(([k, v]) => formData.append(k, String(v ?? '')));
 
-    // Imágenes
-    if (data.perfil && data.perfil.file) {
-      formData.append('perfil', data.perfil.file);
+    // Imágenes (desde estado separado)
+    if (perfilState && perfilState.file) {
+      formData.append('perfil', perfilState.file);
     }
-    if (data.galeria) {
-      data.galeria.forEach((img: Imagen, i: number) => {
+    if (galeriaState && galeriaState.length > 0) {
+      galeriaState.forEach((img: Imagen, i: number) => {
         if (img.file) {
           formData.append(`galeria[${i}]`, img.file);
         }
@@ -243,7 +227,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
       // No enviamos nada, el backend se encargará
     }
 
-    let savingToast: string | undefined;
+    let savingToast: Id | undefined;
     const options = {
       forceFormData: true,
       onStart: () => {
@@ -342,15 +326,15 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
   };
 
   const setPerfil = (file: File | undefined) => {
-    setData('perfil', file ? { file } : undefined);
+    setPerfilState(file ? { file } : undefined);
   };
 
   const addGaleria = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const imgs = Array.from(files).map(f => ({ file: f } as Imagen));
-    const nuevaGaleria = [...(data.galeria ?? []), ...imgs];
-    setData('galeria', nuevaGaleria);
+    const nuevaGaleria = [...galeriaState, ...imgs];
+    setGaleriaState(nuevaGaleria);
   };
 
   const removeGaleria = async (i: number) => {
@@ -363,8 +347,8 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
     );
 
     if (confirmed) {
-      const galeriaFiltrada = (data.galeria ?? []).filter((_: unknown, idx: number) => idx !== i);
-      setData('galeria', galeriaFiltrada);
+      const galeriaFiltrada = galeriaState.filter((_: unknown, idx: number) => idx !== i);
+      setGaleriaState(galeriaFiltrada);
     }
   };
 
@@ -433,7 +417,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
           </CardHeader>
 
           <CardContent>
-            <Tabs defaultValue="datos" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs defaultValue="datos" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
                 <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
@@ -477,7 +461,7 @@ export default function ProductoForm({ producto, categorias, marcas, proveedores
 
                 <TabsContent value="imagenes" className="space-y-6 mt-6">
                   <Step4Imagenes
-                    data={{ perfil: data.perfil ?? undefined, galeria: data.galeria ?? [] }}
+                    data={{ perfil: perfilState ?? undefined, galeria: galeriaState ?? [] }}
                     setPerfil={setPerfil}
                     addGaleria={addGaleria}
                     removeGaleria={removeGaleria}

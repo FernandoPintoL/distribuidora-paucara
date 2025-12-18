@@ -3,8 +3,9 @@ import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogClose, Dialog
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
-import { useTipoMermas, TipoMermaApi } from '@/stores/useTipoMermas';
-import { TipoMermaService } from '@/infrastructure/services/tipoMermaService';
+import { useTipoMermas } from '@/stores/useTipoMermas';
+import tipoMermaService from '@/infrastructure/services/tipoMerma.service';
+import type { TipoMerma } from '@/domain/entities/tipo-merma';
 import { Plus, Edit, Trash2, X, AlertCircle, Loader2 } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import { TipoMermaFormModal } from './TipoMermaFormModal';
@@ -13,7 +14,7 @@ export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOp
     const { tipos, fetchTipos } = useTipoMermas();
     const [loading, setLoading] = useState(false);
     const [formModalOpen, setFormModalOpen] = useState(false);
-    const [editingTipo, setEditingTipo] = useState<TipoMermaApi | null>(null);
+    const [editingTipo, setEditingTipo] = useState<TipoMerma | null>(null);
 
     useEffect(() => {
         if (open) {
@@ -23,7 +24,7 @@ export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOp
         }
     }, [open, fetchTipos]);
 
-    const handleEdit = (tipo: TipoMermaApi) => {
+    const handleEdit = (tipo: TipoMerma) => {
         setEditingTipo(tipo);
         setFormModalOpen(true);
     };
@@ -33,7 +34,7 @@ export function TipoMermaCrudModal({ open, onOpenChange }: { open: boolean; onOp
 
         setLoading(true);
         try {
-            await TipoMermaService.remove(id);
+            await tipoMermaService.remove(id);
             NotificationService.success('Tipo de merma eliminado exitosamente');
             await fetchTipos();
         } catch {

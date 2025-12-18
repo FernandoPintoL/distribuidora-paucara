@@ -1,29 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
-import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from '@inertiajs/react';
 import { formatDate } from '@/lib/utils';
 
-interface Envio {
-    id: number;
-    numero_seguimiento: string;
-    cliente_nombre: string;
-    estado: string;
-    fecha_programada: string;
-    direccion_entrega: string;
-}
+// DOMAIN LAYER: Importar tipos desde domain
+import type { EnvioLogistica } from '@/domain/entities/logistica';
 
 interface EnviosSectionProps {
-    envios: Envio[];
+    envios: EnvioLogistica[];
     enviosPaginationInfo: any;
     searchEnvio: string;
     setSearchEnvio: (value: string) => void;
     filtroEstadoEnvio: string;
     setFiltroEstadoEnvio: (value: string) => void;
     cambiarPaginaEnvio: (page: number) => void;
-    onVerEnvio: (envio: Envio) => void;
+    onVerEnvio: (envio: EnvioLogistica) => void;
     getEstadoBadge: (estado: string) => any;
 }
 

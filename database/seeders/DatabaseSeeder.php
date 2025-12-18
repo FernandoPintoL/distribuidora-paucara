@@ -75,5 +75,8 @@ class DatabaseSeeder extends Seeder
 
         // Crear usuario chofer de prueba
         $this->call(ChoferTestSeeder::class);
+
+        // ✅ NUEVO: Validar y crear datos críticos que puedan faltar
+        $this->call(ValidateAndCreateRequiredDataSeeder::class);
     }
 }

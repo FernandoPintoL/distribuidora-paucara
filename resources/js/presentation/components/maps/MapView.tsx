@@ -1,7 +1,8 @@
 // Componente de visualización de mapa (solo lectura) - Usando @react-google-maps/api
 import React, { useState, useCallback } from 'react';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Satellite, Map } from 'lucide-react';
+import { Button } from '@/presentation/components/ui/button';
 
 interface MapViewProps {
     latitude: number;
@@ -17,7 +18,7 @@ const mapContainerStyle = {
     height: '100%'
 };
 
-const mapOptions: google.maps.MapOptions = {
+const getMapOptions = (mapType: string): google.maps.MapOptions => ({
     disableDefaultUI: true,
     clickableIcons: false,
     gestureHandling: 'cooperative',
@@ -25,6 +26,7 @@ const mapOptions: google.maps.MapOptions = {
     mapTypeControl: false,
     streetViewControl: false,
     fullscreenControl: true,
+    mapTypeId: mapType as google.maps.MapTypeId,
     styles: [
         {
             featureType: "poi",
@@ -32,7 +34,7 @@ const mapOptions: google.maps.MapOptions = {
             stylers: [{ visibility: "off" }]
         }
     ]
-};
+});
 
 export default function MapView({
     latitude,
@@ -43,6 +45,7 @@ export default function MapView({
 }: MapViewProps) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     const [map, setMap] = useState<google.maps.Map | null>(null);
+    const [mapType, setMapType] = useState<string>('roadmap');
 
     // Usar useLoadScript hook en lugar de LoadScript component
     const { isLoaded, loadError } = useLoadScript({
@@ -95,7 +98,7 @@ export default function MapView({
                 mapContainerStyle={mapContainerStyle}
                 center={center}
                 zoom={zoom}
-                options={mapOptions}
+                options={getMapOptions(mapType)}
                 onLoad={onLoad}
                 onUnmount={onUnmount}
             >
@@ -104,6 +107,28 @@ export default function MapView({
                     title={markerTitle}
                 />
             </GoogleMap>
+
+            {/* Controles de tipo de mapa */}
+            <div className="absolute top-2 right-2 flex gap-1 z-10">
+                <Button
+                    size="sm"
+                    variant={mapType === 'roadmap' ? 'default' : 'outline'}
+                    onClick={() => setMapType('roadmap')}
+                    className="h-8 px-2"
+                    title="Vista de carretera"
+                >
+                    <Map className="h-4 w-4" />
+                </Button>
+                <Button
+                    size="sm"
+                    variant={mapType === 'satellite' ? 'default' : 'outline'}
+                    onClick={() => setMapType('satellite')}
+                    className="h-8 px-2"
+                    title="Vista satélite"
+                >
+                    <Satellite className="h-4 w-4" />
+                </Button>
+            </div>
         </div>
     );
 }

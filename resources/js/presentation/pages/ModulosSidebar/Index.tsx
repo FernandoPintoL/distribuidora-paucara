@@ -6,9 +6,6 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/presentation/components/ui/dialog';
-import { Input } from '@/presentation/components/ui/input';
-import { Label } from '@/presentation/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { LayoutList, Grid3x3, List } from 'lucide-react';
 // Domain imports
@@ -236,68 +233,68 @@ export default function Index({ modulos }: Props) {
                                 </TableHeader>
                                 <TableBody>
                                     {modulosFiltrados.map((modulo) => (
-                                    <TableRow key={modulo.id}>
-                                        <TableCell className="font-medium">
-                                            {modulo.es_submenu && modulo.padre && (
-                                                <span className="text-gray-500 mr-2">
-                                                    └
-                                                </span>
-                                            )}
-                                            {modulo.titulo}
-                                        </TableCell>
-                                        <TableCell className="text-sm text-gray-600">
-                                            {modulo.ruta}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={modulo.es_submenu ? "secondary" : "default"}>
-                                                {modulo.es_submenu ? 'Submódulo' : 'Principal'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => toggleActivo(modulo)}
-                                            >
-                                                {modulo.activo ? (
-                                                    <>
-                                                        <Eye className="h-4 w-4 mr-1" />
-                                                        <Badge className="bg-green-100 text-green-800">Activo</Badge>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <EyeOff className="h-4 w-4 mr-1" />
-                                                        <Badge variant="secondary">Inactivo</Badge>
-                                                    </>
+                                        <TableRow key={modulo.id}>
+                                            <TableCell className="font-medium">
+                                                {modulo.es_submenu && modulo.padre && (
+                                                    <span className="text-gray-500 mr-2">
+                                                        └
+                                                    </span>
                                                 )}
-                                            </Button>
-                                        </TableCell>
-                                        <TableCell>{modulo.orden}</TableCell>
-                                        <TableCell>
-                                            {modulo.categoria && (
-                                                <Badge variant="outline">{modulo.categoria}</Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center space-x-2">
+                                                {modulo.titulo}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-gray-600">
+                                                {modulo.ruta}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={modulo.es_submenu ? "secondary" : "default"}>
+                                                    {modulo.es_submenu ? 'Submódulo' : 'Principal'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => openEditModal(modulo)}
+                                                    onClick={() => toggleActivo(modulo)}
                                                 >
-                                                    <Edit className="h-4 w-4" />
+                                                    {modulo.activo ? (
+                                                        <>
+                                                            <Eye className="h-4 w-4 mr-1" />
+                                                            <Badge className="bg-green-100 text-green-800">Activo</Badge>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <EyeOff className="h-4 w-4 mr-1" />
+                                                            <Badge variant="secondary">Inactivo</Badge>
+                                                        </>
+                                                    )}
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(modulo)}
-                                                    className="text-red-600 hover:text-red-700"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                            </TableCell>
+                                            <TableCell>{modulo.orden}</TableCell>
+                                            <TableCell>
+                                                {modulo.categoria && (
+                                                    <Badge variant="outline">{modulo.categoria}</Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center space-x-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => openEditModal(modulo)}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(modulo)}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>

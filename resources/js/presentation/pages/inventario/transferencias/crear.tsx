@@ -6,50 +6,19 @@ import { Button } from '@/presentation/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Label } from '@/presentation/components/ui/label';
 import { Textarea } from '@/presentation/components/ui/textarea';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import { Input } from '@/presentation/components/ui/input';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Trash2, Plus, Package } from 'lucide-react';
 import NotificationService from '@/infrastructure/services/notification.service';
-
-interface Almacen {
-    id: number;
-    nombre: string;
-    direccion?: string;
-    ubicacion_fisica?: string;
-    requiere_transporte_externo?: boolean;
-}
-
-interface Vehiculo {
-    id: number;
-    placa: string;
-    marca?: string;
-    modelo?: string;
-}
-
-interface Chofer {
-    id: number;
-    licencia: string;
-    user: {
-        name: string;
-    };
-}
-
-interface Producto {
-    id: number;
-    nombre: string;
-    codigo: string;
-    stock_disponible?: number;
-    stock_por_almacen?: { [almacenId: string]: number };
-}
-
-interface DetalleTransferencia {
-    producto_id: number;
-    cantidad: number;
-    lote?: string;
-    fecha_vencimiento?: string;
-}
+import transferenciasService from '@/infrastructure/services/transferencias.service';
+import type {
+    Almacen,
+    Vehiculo,
+    Chofer,
+    Producto,
+    DetalleTransferencia,
+} from '@/domain/entities/transferencias';
 
 interface CrearTransferenciaProps extends PageProps {
     almacenes: Almacen[];
@@ -121,14 +90,29 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
     }));
 
     const agregarProducto = () => {
+        // Validaciones previas básicas
         if (!productoSeleccionado || !cantidadProducto || parseInt(cantidadProducto) <= 0) {
             NotificationService.warning('Debe seleccionar un producto y una cantidad válida');
             return;
         }
 
-        const producto = productos.find(p => p.id === parseInt(productoSeleccionado));
-        if (!producto) {
-            NotificationService.error('Producto no encontrado');
+        // Crear detalle provisional
+        const nuevoDetalle: DetalleTransferencia = {
+            producto_id: parseInt(productoSeleccionado),
+            cantidad: parseInt(cantidadProducto),
+            lote: loteProducto || undefined,
+            fecha_vencimiento: fechaVencimiento || undefined,
+        };
+
+        // Validar con el service
+        const erroresDetalle = transferenciasService.validarDetalleTransferencia(
+            nuevoDetalle,
+            productos,
+            data.almacen_origen_id as string
+        );
+
+        if (erroresDetalle.length > 0) {
+            erroresDetalle.forEach(error => NotificationService.error(error));
             return;
         }
 
@@ -139,43 +123,15 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
             return;
         }
 
-        // Validar lote max 50 caracteres
-        if (loteProducto && loteProducto.length > 50) {
-            NotificationService.error('El lote no puede exceder 50 caracteres');
-            return;
-        }
-
-        // Validar fecha vencimiento no sea pasada
-        if (fechaVencimiento) {
-            const fechaIngresada = new Date(fechaVencimiento);
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-            if (fechaIngresada < hoy) {
-                NotificationService.error('La fecha de vencimiento no puede ser una fecha pasada');
-                return;
-            }
-        }
-
-        // Validar stock disponible en almacén origen
-        if (data.almacen_origen_id) {
-            const stockEnOrigen = producto.stock_por_almacen?.[data.almacen_origen_id] || 0;
-            if (parseInt(cantidadProducto) > stockEnOrigen) {
-                NotificationService.error(`Stock insuficiente. Disponible en almacén origen: ${stockEnOrigen} unidades`);
-                return;
-            }
-        }
-
-        const nuevoDetalle: DetalleTransferencia = {
-            producto_id: parseInt(productoSeleccionado),
-            cantidad: parseInt(cantidadProducto),
-            lote: loteProducto || undefined,
-            fecha_vencimiento: fechaVencimiento || undefined,
-        };
-
+        // Agregar el detalle
         setData('detalles', [...data.detalles, nuevoDetalle]);
 
         // Mostrar notificación de éxito
-        NotificationService.success(`✅ ${producto.nombre} agregado a la transferencia`);
+        const nombreProducto = transferenciasService.obtenerNombreProducto(
+            parseInt(productoSeleccionado),
+            productos
+        );
+        NotificationService.success(`✅ ${nombreProducto} agregado a la transferencia`);
 
         // Limpiar formulario
         setProductoSeleccionado('');
@@ -190,24 +146,14 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validaciones adicionales
-        if (data.detalles.length === 0) {
-            NotificationService.warning('Debe agregar al menos un producto para transferir');
-            return;
-        }
+        // Validar datos completos con el service
+        const validationErrors = transferenciasService.validateData(
+            data,
+            { almacenes, productos }
+        );
 
-        if (!data.almacen_origen_id || !data.almacen_destino_id) {
-            NotificationService.warning('Debe seleccionar almacén origen y destino');
-            return;
-        }
-
-        if (data.almacen_origen_id === data.almacen_destino_id) {
-            NotificationService.warning('Los almacenes de origen y destino deben ser diferentes');
-            return;
-        }
-
-        if (data.observaciones && data.observaciones.length > 500) {
-            NotificationService.warning('Las observaciones no pueden exceder 500 caracteres');
+        if (validationErrors.length > 0) {
+            validationErrors.forEach(error => NotificationService.error(error));
             return;
         }
 
@@ -216,30 +162,11 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
 
         post('/inventario/transferencias/crear', {
             onSuccess: () => {
-                // Notificación de éxito será manejada por el mensaje flash en la redirección
                 NotificationService.dismiss(loadingToast);
             },
             onError: (errors) => {
                 NotificationService.dismiss(loadingToast);
-
-                // Obtener el primer error o mensaje general
-                let errorMessage: string;
-
-                if (typeof errors === 'string') {
-                    errorMessage = errors;
-                } else if (errors && typeof errors === 'object') {
-                    // Buscar mensaje en diferentes propiedades comunes
-                    const errorObj = errors as Record<string, unknown>;
-                    errorMessage = String(
-                        errorObj.error ||
-                        errorObj.message ||
-                        Object.values(errorObj)[0] ||
-                        'Error al crear la transferencia'
-                    );
-                } else {
-                    errorMessage = 'Error al crear la transferencia';
-                }
-
+                const errorMessage = transferenciasService.extractErrorMessage(errors);
                 NotificationService.error(`❌ ${errorMessage}`);
             }
         });
@@ -249,34 +176,9 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
     const totalCantidad = data.detalles.reduce((sum, detalle) => sum + detalle.cantidad, 0);
 
     // Determinar si es una transferencia física (requiere transporte)
-    const esTransferenciaFisica = () => {
-        if (!data.almacen_origen_id || !data.almacen_destino_id) return false;
-
-        const almacenOrigen = almacenes.find(a => a.id === parseInt(data.almacen_origen_id));
-        const almacenDestino = almacenes.find(a => a.id === parseInt(data.almacen_destino_id));
-
-        if (!almacenOrigen || !almacenDestino) return false;
-
-        // Si cualquiera de los almacenes está marcado como requiere transporte externo
-        if (almacenOrigen.requiere_transporte_externo || almacenDestino.requiere_transporte_externo) {
-            return true;
-        }
-
-        // Si tienen ubicaciones físicas diferentes (no están en el mismo lugar)
-        if (almacenOrigen.ubicacion_fisica && almacenDestino.ubicacion_fisica) {
-            return almacenOrigen.ubicacion_fisica !== almacenDestino.ubicacion_fisica;
-        }
-
-        // Si uno tiene ubicación física definida y el otro no, asumir que requiere transporte
-        if (almacenOrigen.ubicacion_fisica || almacenDestino.ubicacion_fisica) {
-            return true;
-        }
-
-        // Si ambos no tienen ubicación física definida, usar lógica por defecto (almacenes diferentes)
-        return almacenOrigen.id !== almacenDestino.id;
-    };
-
-    const requiereTransporte = esTransferenciaFisica();
+    const almacenOrigen = almacenes.find(a => a.id === parseInt(data.almacen_origen_id as string));
+    const almacenDestino = almacenes.find(a => a.id === parseInt(data.almacen_destino_id as string));
+    const requiereTransporte = transferenciasService.esTransferenciaFisica(almacenOrigen, almacenDestino);
 
     // Limpiar campos de transporte si no se requiere
     React.useEffect(() => {
@@ -338,7 +240,7 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
                                 </div>
 
                                 {/* Mostrar información contextual de la transferencia */}
-                                {data.almacen_origen_id && data.almacen_destino_id && (
+                                {almacenOrigen && almacenDestino && (
                                     <>
                                         {requiereTransporte ? (
                                             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
@@ -346,15 +248,12 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
                                                     <strong>🚛 Transferencia Física</strong><br />
                                                     Esta transferencia requiere transporte entre ubicaciones diferentes.
                                                     {(() => {
-                                                        const origen = almacenes.find(a => a.id === parseInt(data.almacen_origen_id));
-                                                        const destino = almacenes.find(a => a.id === parseInt(data.almacen_destino_id));
-
-                                                        if (origen?.requiere_transporte_externo || destino?.requiere_transporte_externo) {
+                                                        if (almacenOrigen?.requiere_transporte_externo || almacenDestino?.requiere_transporte_externo) {
                                                             return <span className="block mt-1 font-medium">⚠️ Almacén con transporte externo requerido</span>;
                                                         }
 
-                                                        if (origen?.ubicacion_fisica && destino?.ubicacion_fisica && origen.ubicacion_fisica !== destino.ubicacion_fisica) {
-                                                            return <span className="block mt-1">📍 {origen.ubicacion_fisica} → {destino.ubicacion_fisica}</span>;
+                                                        if (almacenOrigen?.ubicacion_fisica && almacenDestino?.ubicacion_fisica && almacenOrigen.ubicacion_fisica !== almacenDestino.ubicacion_fisica) {
+                                                            return <span className="block mt-1">📍 {almacenOrigen.ubicacion_fisica} → {almacenDestino.ubicacion_fisica}</span>;
                                                         }
 
                                                         return <span className="block mt-1">🏢 Transferencia entre almacenes diferentes</span>;
@@ -367,11 +266,8 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
                                                     <strong>📦 Transferencia Interna</strong><br />
                                                     Movimiento interno en la misma ubicación física.
                                                     {(() => {
-                                                        const origen = almacenes.find(a => a.id === parseInt(data.almacen_origen_id));
-                                                        const destino = almacenes.find(a => a.id === parseInt(data.almacen_destino_id));
-
-                                                        if (origen?.ubicacion_fisica && destino?.ubicacion_fisica) {
-                                                            return <span className="block mt-1">📍 Misma ubicación: {origen.ubicacion_fisica}</span>;
+                                                        if (almacenOrigen?.ubicacion_fisica && almacenDestino?.ubicacion_fisica) {
+                                                            return <span className="block mt-1">📍 Misma ubicación: {almacenOrigen.ubicacion_fisica}</span>;
                                                         }
 
                                                         return <span className="block mt-1">🏢 Sin transporte requerido</span>;
@@ -462,43 +358,34 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
                                     )}
                                 </div>
 
-                                {data.almacen_origen_id && data.almacen_destino_id && (
+                                {almacenOrigen && almacenDestino && (
                                     <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                                         <p className="text-sm text-blue-800 dark:text-blue-200">
                                             <strong>Transferencia:</strong><br />
-                                            {(() => {
-                                                const origen = almacenes.find(a => a.id === parseInt(data.almacen_origen_id));
-                                                const destino = almacenes.find(a => a.id === parseInt(data.almacen_destino_id));
+                                            <span className="block">📦 De: {almacenOrigen?.nombre}</span>
+                                            {almacenOrigen?.ubicacion_fisica && (
+                                                <span className="block text-xs ml-4">📍 {almacenOrigen.ubicacion_fisica}</span>
+                                            )}
+                                            <span className="block mt-1">📦 A: {almacenDestino?.nombre}</span>
+                                            {almacenDestino?.ubicacion_fisica && (
+                                                <span className="block text-xs ml-4">📍 {almacenDestino.ubicacion_fisica}</span>
+                                            )}
 
-                                                return (
-                                                    <>
-                                                        <span className="block">📦 De: {origen?.nombre}</span>
-                                                        {origen?.ubicacion_fisica && (
-                                                            <span className="block text-xs ml-4">📍 {origen.ubicacion_fisica}</span>
-                                                        )}
-                                                        <span className="block mt-1">📦 A: {destino?.nombre}</span>
-                                                        {destino?.ubicacion_fisica && (
-                                                            <span className="block text-xs ml-4">📍 {destino.ubicacion_fisica}</span>
-                                                        )}
-
-                                                        {requiereTransporte && (
-                                                            <>
-                                                                <br />
-                                                                <span className="block font-medium">🚛 Transporte:</span>
-                                                                {data.vehiculo_id && (
-                                                                    <span className="block ml-4">• Vehículo: {vehiculos.find(v => v.id === parseInt(data.vehiculo_id))?.placa}</span>
-                                                                )}
-                                                                {data.chofer_id && (
-                                                                    <span className="block ml-4">• Chofer: {choferes.find(c => c.id === parseInt(data.chofer_id))?.user.name}</span>
-                                                                )}
-                                                                {!data.vehiculo_id && !data.chofer_id && (
-                                                                    <span className="block ml-4 text-amber-600 dark:text-amber-400">• Sin asignar</span>
-                                                                )}
-                                                            </>
-                                                        )}
-                                                    </>
-                                                );
-                                            })()}
+                                            {requiereTransporte && (
+                                                <>
+                                                    <br />
+                                                    <span className="block font-medium">🚛 Transporte:</span>
+                                                    {data.vehiculo_id && (
+                                                        <span className="block ml-4">• Vehículo: {vehiculos.find(v => v.id === parseInt(data.vehiculo_id))?.placa}</span>
+                                                    )}
+                                                    {data.chofer_id && (
+                                                        <span className="block ml-4">• Chofer: {choferes.find(c => c.id === parseInt(data.chofer_id))?.user.name}</span>
+                                                    )}
+                                                    {!data.vehiculo_id && !data.chofer_id && (
+                                                        <span className="block ml-4 text-amber-600 dark:text-amber-400">• Sin asignar</span>
+                                                    )}
+                                                </>
+                                            )}
                                         </p>
                                     </div>
                                 )}

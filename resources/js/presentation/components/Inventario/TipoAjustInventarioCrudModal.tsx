@@ -3,19 +3,20 @@ import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogClose, Dialog
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { useTipoAjustInventario } from '@/stores/useTipoAjustInventario';
-import { TipoAjustInventarioService, TipoAjustInventarioApi } from '@/infrastructure/services/tipoAjustInventarioService';
+import tipoAjusteInventarioService from '@/infrastructure/services/tipoAjusteInventario.service';
+import type { TipoAjusteInventario } from '@/domain/entities/tipos-ajuste-inventario';
 
 export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     const { tipos, fetchTipos, loading, error } = useTipoAjustInventario();
-    const [editing, setEditing] = useState<TipoAjustInventarioApi | null>(null);
-    const [form, setForm] = useState<Partial<TipoAjustInventarioApi>>({});
+    const [editing, setEditing] = useState<TipoAjusteInventario | null>(null);
+    const [form, setForm] = useState<Partial<TipoAjusteInventario>>({});
     const [localLoading, setLocalLoading] = useState(false);
 
     useEffect(() => {
         if (open) fetchTipos();
     }, [open, fetchTipos]);
 
-    const handleEdit = (tipo: TipoAjustInventarioApi) => {
+    const handleEdit = (tipo: TipoAjusteInventario) => {
         setEditing(tipo);
         setForm(tipo);
     };
@@ -23,7 +24,7 @@ export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boo
     const handleDelete = async (id: number) => {
         if (!confirm('¿Eliminar tipo de ajuste?')) return;
         setLocalLoading(true);
-        await TipoAjustInventarioService.remove(id);
+        await tipoAjusteInventarioService.remove(id);
         await fetchTipos();
         setLocalLoading(false);
     };
@@ -32,9 +33,9 @@ export function TipoAjustInventarioCrudModal({ open, onOpenChange }: { open: boo
         e.preventDefault();
         setLocalLoading(true);
         if (editing) {
-            await TipoAjustInventarioService.update(editing.id, form);
+            await tipoAjusteInventarioService.update(editing.id, form);
         } else {
-            await TipoAjustInventarioService.create(form);
+            await tipoAjusteInventarioService.create(form);
         }
         setEditing(null);
         setForm({});

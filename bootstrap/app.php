@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\CheckCajaAbierta;
+use App\Http\Middleware\CheckPlatformAccess;
 use App\Http\Middleware\CheckUserActive;
 use App\Http\Middleware\CheckUserAttributes;
 use App\Http\Middleware\HandleAppearance;
@@ -54,6 +56,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'caja.abierta' => CheckCajaAbierta::class,
+            'platform' => CheckPlatformAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

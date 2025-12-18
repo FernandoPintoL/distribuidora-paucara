@@ -46,6 +46,26 @@ export interface Producto extends BaseEntity {
 
 // =============== ENTIDADES PRINCIPALES ===============
 
+export interface Pago extends BaseEntity {
+    id: Id;
+    monto: number;
+    fecha: string;
+    numero_comprobante?: string;
+    observaciones?: string;
+    tipo_pago: {
+        id: Id;
+        nombre: string;
+    };
+}
+
+export interface CuentaPorCobrar extends BaseEntity {
+    id: Id;
+    monto: number;
+    saldo: number;
+    fecha_vencimiento?: string;
+    estado: string;
+}
+
 export interface DetalleVenta extends BaseEntity {
     id: Id;
     venta_id: Id;
@@ -87,6 +107,8 @@ export interface Venta extends BaseEntity {
     proforma?: Proforma;
     envio?: Envio;
     detalles?: DetalleVenta[];
+    pagos?: Pago[];
+    cuenta_por_cobrar?: CuentaPorCobrar;
 
     // Timestamps
     created_at: string;
@@ -249,4 +271,22 @@ export interface VentaEvents {
     onDetalleAdded: (detalle: DetalleVenta) => void;
     onDetalleUpdated: (detalle: DetalleVenta) => void;
     onDetalleRemoved: (detalleId: Id) => void;
+}
+
+// =============== PAGE PROPS ===============
+
+export interface DetalleVentaShow extends DetalleVenta {
+    producto: Producto; // Obligatorio en show
+}
+
+export interface VentaShow extends Venta {
+    cliente: Cliente; // Obligatorio en show
+    usuario: Usuario; // Obligatorio en show
+    estado_documento: EstadoDocumento; // Obligatorio en show
+    moneda: Moneda; // Obligatorio en show
+    detalles: DetalleVentaShow[]; // Obligatorio en show con productos completos
+}
+
+export interface VentaShowPageProps {
+    venta: VentaShow;
 }

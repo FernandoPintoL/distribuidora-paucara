@@ -32,9 +32,9 @@ class LogisticaController extends Controller
             'rutas' => $rutasStats,
         ];
 
-        // proformas recientes de app externa con paginación y filtros
-        $query = Proforma::with(['cliente', 'usuarioCreador', 'direccionSolicitada'])
-            ->where('canal_origen', 'APP_EXTERNA');
+        // proformas recientes con paginación y filtros
+        // Mostrar TODAS las proformas, no solo APP_EXTERNA
+        $query = Proforma::with(['cliente', 'usuarioCreador', 'direccionSolicitada']);
 
         // Aplicar filtros desde query params
         if (request()->has('estado') && request('estado') !== 'TODOS') {

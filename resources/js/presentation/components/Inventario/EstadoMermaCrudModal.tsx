@@ -3,8 +3,9 @@ import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogClose, Dialog
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
-import { useEstadoMermas, EstadoMermaApi } from '@/stores/useEstadoMermas';
-import { EstadoMermaService } from '@/infrastructure/services/estadoMermaService';
+import { useEstadoMermas } from '@/stores/useEstadoMermas';
+import estadoMermaService from '@/infrastructure/services/estadoMerma.service';
+import type { EstadoMerma } from '@/domain/entities/estado-merma';
 import { Plus, Edit, Trash2, X, AlertCircle, Loader2 } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import { EstadoMermaFormModal } from './EstadoMermaFormModal';
@@ -13,7 +14,7 @@ export function EstadoMermaCrudModal({ open, onOpenChange }: { open: boolean; on
     const { estados, fetchEstados } = useEstadoMermas();
     const [loading, setLoading] = useState(false);
     const [formModalOpen, setFormModalOpen] = useState(false);
-    const [editingEstado, setEditingEstado] = useState<EstadoMermaApi | null>(null);
+    const [editingEstado, setEditingEstado] = useState<EstadoMerma | null>(null);
 
     useEffect(() => {
         if (open) {
@@ -23,7 +24,7 @@ export function EstadoMermaCrudModal({ open, onOpenChange }: { open: boolean; on
         }
     }, [open, fetchEstados]);
 
-    const handleEdit = (estado: EstadoMermaApi) => {
+    const handleEdit = (estado: EstadoMerma) => {
         setEditingEstado(estado);
         setFormModalOpen(true);
     };
@@ -33,7 +34,7 @@ export function EstadoMermaCrudModal({ open, onOpenChange }: { open: boolean; on
 
         setLoading(true);
         try {
-            await EstadoMermaService.remove(id);
+            await estadoMermaService.remove(id);
             NotificationService.success('Estado de merma eliminado exitosamente');
             await fetchEstados();
         } catch {

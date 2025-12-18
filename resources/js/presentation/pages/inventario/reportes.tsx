@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
@@ -19,16 +19,8 @@ import {
 import { DashboardMetricas } from '@/presentation/components/Inventario/DashboardMetricas';
 import { GraficosTendencias } from '@/presentation/components/Inventario/GraficosTendencias';
 import type { EstadisticasMovimientos } from '@/domain/entities/movimientos-inventario';
-
-interface Almacen {
-    id: number;
-    nombre: string;
-}
-
-interface Categoria {
-    id: number;
-    nombre: string;
-}
+import type { Almacen } from '@/domain/entities/almacenes';
+import type { Categoria } from '@/domain/entities/categorias';
 
 interface PageProps extends InertiaPageProps {
     almacenes: Almacen[];

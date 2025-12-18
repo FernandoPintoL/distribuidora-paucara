@@ -15,74 +15,13 @@ import {
 } from '@/presentation/components/ui/table'
 import { Search, Eye, CheckCircle, XCircle, FileText } from 'lucide-react'
 
-interface Cliente {
-    id: number
-    nombre: string
-    email?: string
-}
-
-interface Usuario {
-    id: number
-    name: string
-}
-
-interface Producto {
-    id: number
-    nombre: string
-    precio_venta: number
-}
-
-interface DetalleProforma {
-    id: number
-    cantidad: number
-    precio_unitario: number
-    subtotal: number
-    producto: Producto
-}
-
-interface Proforma {
-    id: number
-    numero: string
-    fecha: string
-    subtotal: number
-    descuento: number
-    impuesto: number
-    total: number
-    observaciones?: string
-    estado: string
-    cliente: Cliente
-    usuarioCreador?: Usuario
-    detalles: DetalleProforma[]
-    created_at: string
-}
-
-interface ProformasData {
-    data: Proforma[]
-    links: Array<{ url: string | null; label: string; active: boolean }>
-    meta: {
-        current_page: number
-        from: number
-        last_page: number
-        per_page: number
-        to: number
-        total: number
-    }
-}
+// DOMAIN LAYER: Importar tipos desde domain
+import type { Proforma } from '@/domain/entities/proformas'
+import { getEstadoBadge } from '@/domain/entities/proformas'
+import type { Pagination, Id } from '@/domain/entities/shared'
 
 interface Props {
-    proformas: ProformasData
-}
-
-const getEstadoBadge = (estado: string) => {
-    const estados = {
-        'PENDIENTE': { label: 'Pendiente', variant: 'default' as const },
-        'APROBADA': { label: 'Aprobada', variant: 'default' as const },
-        'RECHAZADA': { label: 'Rechazada', variant: 'destructive' as const },
-        'CONVERTIDA': { label: 'Convertida', variant: 'default' as const },
-        'VENCIDA': { label: 'Vencida', variant: 'destructive' as const },
-    }
-
-    return estados[estado as keyof typeof estados] || { label: 'Desconocido', variant: 'secondary' as const }
+    proformas: Pagination<Proforma>
 }
 
 export default function ProformasIndex({ proformas }: Props) {
@@ -98,17 +37,15 @@ export default function ProformasIndex({ proformas }: Props) {
         setSearch(value)
     }
 
-    const handleView = (id: number) => {
+    const handleView = (id: Id) => {
         router.visit(`/proformas/${id}`)
     }
 
-    const handleAction = async (action: string, id: number) => {
+    const handleAction = (action: string, id: Id) => {
         setIsLoading(true)
-        try {
-            await router.post(`/proformas/${id}/${action}`)
-        } finally {
-            setIsLoading(false)
-        }
+        router.post(`/proformas/${id}/${action}`, {}, {
+            onFinish: () => setIsLoading(false),
+        })
     }
 
     return (
@@ -253,13 +190,13 @@ export default function ProformasIndex({ proformas }: Props) {
                 </Card>
 
                 {/* Pagination */}
-                {proformas.meta && proformas.meta.last_page > 1 && (
+                {proformas.last_page > 1 && (
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-muted-foreground">
-                            Mostrando {proformas.meta.from} a {proformas.meta.to} de {proformas.meta.total} resultados
+                            Mostrando {proformas.from} a {proformas.to} de {proformas.total} resultados
                         </div>
                         <div className="flex gap-2">
-                            {proformas.links.map((link, index) => {
+                            {proformas.links?.map((link, index) => {
                                 if (!link.url) return null
 
                                 return (

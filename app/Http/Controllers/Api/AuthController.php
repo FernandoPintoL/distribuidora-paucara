@@ -39,6 +39,13 @@ class AuthController extends Controller
             ]);
         }
 
+        // ✅ NUEVO: Verificar acceso a plataforma móvil
+        if (! $user->can_access_mobile) {
+            throw ValidationException::withMessages([
+                'login' => ['No tienes acceso a la aplicación móvil. Contacta al administrador.'],
+            ]);
+        }
+
         // Revocar tokens anteriores (opcional)
         $user->tokens()->delete();
 
@@ -64,6 +71,11 @@ class AuthController extends Controller
             'token' => $token,
             'roles' => $user->getRoleNames()->toArray(),
             'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            // ✅ NUEVO: Permisos de acceso a plataformas
+            'platform_access' => [
+                'can_access_web' => $user->can_access_web,
+                'can_access_mobile' => $user->can_access_mobile,
+            ],
             // ✅ NUEVO: TTL para caché en app móvil
             'cache_ttl' => 24 * 60 * 60, // 24 horas en segundos
             'permissions_updated_at' => now()->timestamp,
@@ -93,6 +105,12 @@ class AuthController extends Controller
         // Asignar rol por defecto (cliente)
         $user->assignRole('cliente');
 
+        // ✅ NUEVO: Los nuevos Clientes solo tienen acceso a móvil
+        $user->update([
+            'can_access_web' => false,
+            'can_access_mobile' => true,
+        ]);
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
@@ -107,6 +125,11 @@ class AuthController extends Controller
             'token' => $token,
             'roles' => $user->getRoleNames()->toArray(),
             'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            // ✅ NUEVO: Permisos de acceso a plataformas
+            'platform_access' => [
+                'can_access_web' => $user->can_access_web,
+                'can_access_mobile' => $user->can_access_mobile,
+            ],
             // ✅ NUEVO: TTL para caché en app móvil
             'cache_ttl' => 24 * 60 * 60,
             'permissions_updated_at' => now()->timestamp,

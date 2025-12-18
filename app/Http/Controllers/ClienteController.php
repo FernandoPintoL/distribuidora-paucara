@@ -13,8 +13,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class ClienteController extends Controller
 {
@@ -138,20 +138,20 @@ class ClienteController extends Controller
             });
 
             // 🔍 DEBUG: Log para ver qué datos se están enviando
-            \Log::info('🔍 DEBUG CLIENTES INDEX', [
+            Log::info('🔍 DEBUG CLIENTES INDEX', [
                 'is_api_request' => $this->isApiRequest(),
                 'total_clientes' => $clientes->total(),
                 'primer_cliente' => $clientes->first() ? [
-                    'id' => $clientes->first()->id,
-                    'nombre' => $clientes->first()->nombre,
-                    'localidad_id' => $clientes->first()->localidad_id,
+                    'id'                => $clientes->first()->id,
+                    'nombre'            => $clientes->first()->nombre,
+                    'localidad_id'      => $clientes->first()->localidad_id,
                     'localidad_cargada' => $clientes->first()->relationLoaded('localidad'),
-                    'localidad_data' => $clientes->first()->localidad ? [
-                        'id' => $clientes->first()->localidad->id,
+                    'localidad_data'    => $clientes->first()->localidad ? [
+                        'id'     => $clientes->first()->localidad->id,
                         'nombre' => $clientes->first()->localidad->nombre,
                         'codigo' => $clientes->first()->localidad->codigo,
                     ] : null,
-                    'toArray' => $clientes->first()->toArray(),
+                    'toArray'           => $clientes->first()->toArray(),
                 ] : null,
             ]);
 
@@ -211,7 +211,7 @@ class ClienteController extends Controller
             $handleDirecciones = $this->isApiRequest() || $request->has('direcciones');
 
             // Usar el método compartido para crear el cliente
-            $cliente = $this->handleClientCreation($request, $data, false, $handleDirecciones, !$this->isApiRequest());
+            $cliente = $this->handleClientCreation($request, $data, false, $handleDirecciones, ! $this->isApiRequest());
 
             // Guardar ventanas de entrega (tanto para web como API)
             $this->syncVentanasEntrega($cliente, isset($data['ventanas_entrega']) ? (array) $data['ventanas_entrega'] : null);
@@ -425,22 +425,40 @@ class ClienteController extends Controller
     // ================================
 
     /**
-     * API: Mostrar cliente específico
+     * API: Mostrar cliente específico con TODAS sus relaciones
+     * Endpoint: GET /api/clientes/{id}
+     * Retorna: Cliente completo con direcciones, categorías, ventanas de entrega, etc.
      */
     public function showApi(ClienteModel $cliente): JsonResponse
     {
         // ✅ Autorizar: Solo roles que pueden ver este cliente
         $this->authorize('view', $cliente);
 
+        // Cargar TODAS las relaciones del cliente de una sola vez
         $cliente->load([
-            'user',
+            'user' => function ($query) {
+                $query->select('id', 'name', 'email', 'usernick', 'activo');
+            },
             'direcciones',
             'localidad',
-            'categorias',
-            'ventanasEntrega',
+            'categorias' => function ($query) {
+                $query->select('categorias_cliente.id', 'categorias_cliente.clave', 'categorias_cliente.nombre', 'categorias_cliente.descripcion', 'categorias_cliente.activo');
+            },
+            'ventanasEntrega' => function ($query) {
+                $query->select('ventanas_entrega_cliente.id', 'ventanas_entrega_cliente.cliente_id', 'ventanas_entrega_cliente.dia_semana', 'ventanas_entrega_cliente.hora_inicio', 'ventanas_entrega_cliente.hora_fin', 'ventanas_entrega_cliente.activo')
+                    ->orderBy('dia_semana');
+            },
             'cuentasPorCobrar' => function ($query) {
                 $query->where('saldo_pendiente', '>', 0)->orderByDesc('fecha_vencimiento');
             },
+        ]);
+
+        \Log::info('📡 API: Cliente cargado completamente', [
+            'cliente_id' => $cliente->id,
+            'nombre' => $cliente->nombre,
+            'categorias_count' => $cliente->categorias->count(),
+            'ventanas_count' => $cliente->ventanasEntrega->count(),
+            'direcciones_count' => $cliente->direcciones->count(),
         ]);
 
         return ApiResponse::success($cliente);
@@ -456,7 +474,7 @@ class ClienteController extends Controller
         $user = Auth::user();
 
         // Si no está autenticado, retornar error
-        if (!$user) {
+        if (! $user) {
             return ApiResponse::error('No autenticado', 401);
         }
 
@@ -464,7 +482,7 @@ class ClienteController extends Controller
         if ($user->hasRole('Cliente')) {
             $cliente = $user->cliente;
 
-            if (!$cliente) {
+            if (! $cliente) {
                 return ApiResponse::error('El usuario no tiene un cliente vinculado', 404);
             }
 
@@ -533,6 +551,10 @@ class ClienteController extends Controller
             $user->assignRole('Cliente');
         }
 
+        // ✅ NUEVO: Obtener el preventista (empleado) asociado al usuario autenticado
+        $preventista = Auth::user()?->empleado;
+        $preventistaId = $preventista?->id;
+
         $cliente = ClienteModel::create([
             'user_id'             => $user ? $user->id : null,
             'nombre'              => $data['nombre'],
@@ -546,6 +568,8 @@ class ClienteController extends Controller
             'activo'              => $data['activo'] ?? true,
             'fecha_registro'      => now(),
             'usuario_creacion_id' => $usuarioCreacionId,
+            'preventista_id'      => $preventistaId,      // ✅ NUEVO
+            'estado'              => 'prospecto',         // ✅ NUEVO
         ]);
 
         // Crear direcciones si se proporcionaron y se deben manejar
@@ -598,7 +622,7 @@ class ClienteController extends Controller
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = strtolower($q);
-        $clientes = ClienteModel::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
+        $clientes    = ClienteModel::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
             ->where('activo', true)
             ->where(function ($query) use ($searchLower) {
                 $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
@@ -617,6 +641,9 @@ class ClienteController extends Controller
      */
     public function saldoCuentasPorCobrar(ClienteModel $cliente): JsonResponse
     {
+        // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden ver el saldo
+        $this->authorize('view', $cliente);
+
         $cuentas = $cliente->cuentasPorCobrar()
             ->where('saldo_pendiente', '>', 0)
             ->orderByDesc('fecha_vencimiento')
@@ -642,6 +669,9 @@ class ClienteController extends Controller
      */
     public function historialVentas(ClienteModel $cliente, Request $request): JsonResponse
     {
+        // ✅ Autorizar: Solo el Preventista del cliente o Admin pueden ver el historial
+        $this->authorize('view', $cliente);
+
         $perPage     = $request->integer('per_page', 10);
         $fechaInicio = $request->date('fecha_inicio');
         $fechaFin    = $request->date('fecha_fin');

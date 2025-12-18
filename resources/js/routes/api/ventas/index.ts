@@ -1,7 +1,7 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\VentaController::registrarPago
- * @see app/Http/Controllers/VentaController.php:294
+ * @see app/Http/Controllers/VentaController.php:331
  * @route '/api/app/ventas/{venta}/pagos'
  */
 export const registrarPago = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ registrarPago.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::registrarPago
- * @see app/Http/Controllers/VentaController.php:294
+ * @see app/Http/Controllers/VentaController.php:331
  * @route '/api/app/ventas/{venta}/pagos'
  */
 registrarPago.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ registrarPago.url = (args: { venta: string | number } | [venta: string | number 
 
 /**
 * @see \App\Http\Controllers\VentaController::registrarPago
- * @see app/Http/Controllers/VentaController.php:294
+ * @see app/Http/Controllers/VentaController.php:331
  * @route '/api/app/ventas/{venta}/pagos'
  */
 registrarPago.post = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -52,30 +52,9 @@ registrarPago.post = (args: { venta: string | number } | [venta: string | number
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\VentaController::registrarPago
- * @see app/Http/Controllers/VentaController.php:294
- * @route '/api/app/ventas/{venta}/pagos'
- */
-    const registrarPagoForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: registrarPago.url(args, options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::registrarPago
- * @see app/Http/Controllers/VentaController.php:294
- * @route '/api/app/ventas/{venta}/pagos'
- */
-        registrarPagoForm.post = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: registrarPago.url(args, options),
-            method: 'post',
-        })
-    
-    registrarPago.form = registrarPagoForm
 /**
 * @see \App\Http\Controllers\VentaController::index
- * @see app/Http/Controllers/VentaController.php:59
+ * @see app/Http/Controllers/VentaController.php:62
  * @route '/api/ventas'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -90,7 +69,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::index
- * @see app/Http/Controllers/VentaController.php:59
+ * @see app/Http/Controllers/VentaController.php:62
  * @route '/api/ventas'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -99,7 +78,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\VentaController::index
- * @see app/Http/Controllers/VentaController.php:59
+ * @see app/Http/Controllers/VentaController.php:62
  * @route '/api/ventas'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -108,7 +87,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\VentaController::index
- * @see app/Http/Controllers/VentaController.php:59
+ * @see app/Http/Controllers/VentaController.php:62
  * @route '/api/ventas'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -116,44 +95,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\VentaController::index
- * @see app/Http/Controllers/VentaController.php:59
- * @route '/api/ventas'
- */
-    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: index.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::index
- * @see app/Http/Controllers/VentaController.php:59
- * @route '/api/ventas'
- */
-        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\VentaController::index
- * @see app/Http/Controllers/VentaController.php:59
- * @route '/api/ventas'
- */
-        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    index.form = indexForm
 /**
 * @see \App\Http\Controllers\VentaController::store
- * @see app/Http/Controllers/VentaController.php:114
+ * @see app/Http/Controllers/VentaController.php:117
  * @route '/api/ventas'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -168,7 +112,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::store
- * @see app/Http/Controllers/VentaController.php:114
+ * @see app/Http/Controllers/VentaController.php:117
  * @route '/api/ventas'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -177,7 +121,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\VentaController::store
- * @see app/Http/Controllers/VentaController.php:114
+ * @see app/Http/Controllers/VentaController.php:117
  * @route '/api/ventas'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -185,30 +129,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\VentaController::store
- * @see app/Http/Controllers/VentaController.php:114
- * @route '/api/ventas'
- */
-    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: store.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::store
- * @see app/Http/Controllers/VentaController.php:114
- * @route '/api/ventas'
- */
-        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: store.url(options),
-            method: 'post',
-        })
-    
-    store.form = storeForm
 /**
 * @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:166
+ * @see app/Http/Controllers/VentaController.php:172
  * @route '/api/ventas/{venta}'
  */
 export const show = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -223,7 +146,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:166
+ * @see app/Http/Controllers/VentaController.php:172
  * @route '/api/ventas/{venta}'
  */
 show.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -251,7 +174,7 @@ show.url = (args: { venta: string | number } | [venta: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:166
+ * @see app/Http/Controllers/VentaController.php:172
  * @route '/api/ventas/{venta}'
  */
 show.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -260,7 +183,7 @@ show.get = (args: { venta: string | number } | [venta: string | number ] | strin
 })
 /**
 * @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:166
+ * @see app/Http/Controllers/VentaController.php:172
  * @route '/api/ventas/{venta}'
  */
 show.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -268,44 +191,9 @@ show.head = (args: { venta: string | number } | [venta: string | number ] | stri
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:166
- * @route '/api/ventas/{venta}'
- */
-    const showForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:166
- * @route '/api/ventas/{venta}'
- */
-        showForm.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:166
- * @route '/api/ventas/{venta}'
- */
-        showForm.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show.form = showForm
 /**
 * @see \App\Http\Controllers\VentaController::update
- * @see app/Http/Controllers/VentaController.php:203
+ * @see app/Http/Controllers/VentaController.php:228
  * @route '/api/ventas/{venta}'
  */
 export const update = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -320,7 +208,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::update
- * @see app/Http/Controllers/VentaController.php:203
+ * @see app/Http/Controllers/VentaController.php:228
  * @route '/api/ventas/{venta}'
  */
 update.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -348,7 +236,7 @@ update.url = (args: { venta: string | number } | [venta: string | number ] | str
 
 /**
 * @see \App\Http\Controllers\VentaController::update
- * @see app/Http/Controllers/VentaController.php:203
+ * @see app/Http/Controllers/VentaController.php:228
  * @route '/api/ventas/{venta}'
  */
 update.put = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -357,7 +245,7 @@ update.put = (args: { venta: string | number } | [venta: string | number ] | str
 })
 /**
 * @see \App\Http\Controllers\VentaController::update
- * @see app/Http/Controllers/VentaController.php:203
+ * @see app/Http/Controllers/VentaController.php:228
  * @route '/api/ventas/{venta}'
  */
 update.patch = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -365,54 +253,9 @@ update.patch = (args: { venta: string | number } | [venta: string | number ] | s
     method: 'patch',
 })
 
-    /**
-* @see \App\Http\Controllers\VentaController::update
- * @see app/Http/Controllers/VentaController.php:203
- * @route '/api/ventas/{venta}'
- */
-    const updateForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: update.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'PUT',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::update
- * @see app/Http/Controllers/VentaController.php:203
- * @route '/api/ventas/{venta}'
- */
-        updateForm.put = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PUT',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-            /**
-* @see \App\Http\Controllers\VentaController::update
- * @see app/Http/Controllers/VentaController.php:203
- * @route '/api/ventas/{venta}'
- */
-        updateForm.patch = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PATCH',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    update.form = updateForm
 /**
 * @see \App\Http\Controllers\VentaController::destroy
- * @see app/Http/Controllers/VentaController.php:224
+ * @see app/Http/Controllers/VentaController.php:261
  * @route '/api/ventas/{venta}'
  */
 export const destroy = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -427,7 +270,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::destroy
- * @see app/Http/Controllers/VentaController.php:224
+ * @see app/Http/Controllers/VentaController.php:261
  * @route '/api/ventas/{venta}'
  */
 destroy.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -455,45 +298,13 @@ destroy.url = (args: { venta: string | number } | [venta: string | number ] | st
 
 /**
 * @see \App\Http\Controllers\VentaController::destroy
- * @see app/Http/Controllers/VentaController.php:224
+ * @see app/Http/Controllers/VentaController.php:261
  * @route '/api/ventas/{venta}'
  */
 destroy.delete = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
-
-    /**
-* @see \App\Http\Controllers\VentaController::destroy
- * @see app/Http/Controllers/VentaController.php:224
- * @route '/api/ventas/{venta}'
- */
-    const destroyForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: destroy.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'DELETE',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::destroy
- * @see app/Http/Controllers/VentaController.php:224
- * @route '/api/ventas/{venta}'
- */
-        destroyForm.delete = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: destroy.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'DELETE',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    destroy.form = destroyForm
 const ventas = {
     registrarPago,
 index,

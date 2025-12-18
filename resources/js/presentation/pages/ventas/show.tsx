@@ -2,97 +2,17 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { formatCurrency } from '@/lib/utils';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
-import VentaStockSummary from '@/presentation/components/ventas/venta-stock-summary';
-
-interface Cliente {
-    id: number;
-    nombre: string;
-    nit?: string;
-    telefono?: string;
-    email?: string;
-}
-
-interface Usuario {
-    id: number;
-    name: string;
-    email: string;
-}
-
-interface EstadoDocumento {
-    id: number;
-    nombre: string;
-    color?: string;
-}
-
-interface Moneda {
-    id: number;
-    codigo: string;
-    nombre: string;
-    simbolo?: string;
-}
-
-interface Producto {
-    id: number;
-    nombre: string;
-    codigo?: string;
-    descripcion?: string;
-}
-
-interface DetalleVenta {
-    id: number;
-    producto: Producto;
-    cantidad: number;
-    precio_unitario: number;
-    descuento: number;
-    subtotal: number;
-}
-
-interface Pago {
-    id: number;
-    monto: number;
-    fecha: string;
-    numero_comprobante?: string;
-    observaciones?: string;
-    tipo_pago: {
-        id: number;
-        nombre: string;
-    };
-}
-
-interface CuentaPorCobrar {
-    id: number;
-    monto: number;
-    saldo: number;
-    fecha_vencimiento?: string;
-    estado: string;
-}
-
-interface Venta {
-    id: number;
-    numero: string;
-    fecha: string;
-    subtotal: number;
-    descuento: number;
-    impuesto: number;
-    total: number;
-    observaciones?: string;
-    cliente: Cliente;
-    usuario: Usuario;
-    estado_documento: EstadoDocumento;
-    moneda: Moneda;
-    detalles: DetalleVenta[];
-    pagos?: Pago[];
-    cuenta_por_cobrar?: CuentaPorCobrar;
-    created_at: string;
-    updated_at: string;
-}
+import { User } from 'lucide-react';
+import { useState } from 'react';
+import type { VentaShow, EstadoDocumento } from '@/domain/entities/ventas';
 
 interface PageProps extends InertiaPageProps {
-    venta: Venta;
+    venta: VentaShow;
 }
 
 export default function VentaShow() {
     const { venta } = usePage<PageProps>().props;
+    const [imagenCargada, setImagenCargada] = useState(true);
 
     const getEstadoColor = (estado: EstadoDocumento) => {
         switch (estado.nombre.toLowerCase()) {
@@ -130,27 +50,32 @@ export default function VentaShow() {
         ]}>
             <Head title={`Venta ${venta.numero}`} />
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 p-6">
                 <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
                     Venta {venta.numero}
                 </h1>
                 <div className="flex space-x-3">
-                    <Link
-                        href={`/ventas/${venta.id}/edit`}
-                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors"
-                    >
-                        Editar
-                    </Link>
-                    <Link
-                        href="/ventas"
-                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors"
-                    >
-                        Volver
-                    </Link>
+                    {/* Botón Editar - Solo visible si la venta está PENDIENTE */}
+                    {venta.estado_documento?.codigo === 'PENDIENTE' ? (
+                        <Link
+                            href={`/ventas/${venta.id}/edit`}
+                            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors"
+                        >
+                            Editar
+                        </Link>
+                    ) : (
+                        <button
+                            disabled
+                            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 border border-transparent rounded-md cursor-not-allowed dark:bg-gray-700 dark:text-gray-400"
+                            title={`No se puede editar una venta en estado ${venta.estado_documento?.nombre}`}
+                        >
+                            Editar
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
                 {/* Información principal */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Información de la venta */}
@@ -254,9 +179,6 @@ export default function VentaShow() {
                                             Precio unit.
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Descuento
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Subtotal
                                         </th>
                                     </tr>
@@ -279,9 +201,6 @@ export default function VentaShow() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                                 {formatCurrency(detalle.precio_unitario, venta.moneda.codigo)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                                {detalle.descuento > 0 ? formatCurrency(detalle.descuento, venta.moneda.codigo) : '-'}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                                 {formatCurrency(detalle.subtotal, venta.moneda.codigo)}
@@ -344,6 +263,22 @@ export default function VentaShow() {
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                             Cliente
                         </h3>
+
+                        {/* Foto de perfil o icono */}
+                        <div className="mb-4 flex justify-center">
+                            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gray-200 dark:border-zinc-700 shadow-md flex items-center justify-center bg-gray-100 dark:bg-zinc-800">
+                                {venta.cliente.foto_perfil && typeof venta.cliente.foto_perfil === 'string' && imagenCargada ? (
+                                    <img
+                                        src={venta.cliente.foto_perfil as string}
+                                        alt={venta.cliente.nombre}
+                                        className="w-full h-full object-cover"
+                                        onError={() => setImagenCargada(false)}
+                                    />
+                                ) : (
+                                    <User className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                                )}
+                            </div>
+                        </div>
 
                         <div className="space-y-3">
                             <div>
@@ -413,16 +348,6 @@ export default function VentaShow() {
                                 </div>
                             )}
 
-                            {/* Impuesto oculto - por ahora no se requiere */}
-                            {false && venta.impuesto > 0 && (
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Impuesto</span>
-                                    <span className="text-sm text-gray-900 dark:text-white">
-                                        {formatCurrency(venta.impuesto, venta.moneda.codigo)}
-                                    </span>
-                                </div>
-                            )}
-
                             <div className="border-t border-gray-200 dark:border-zinc-700 pt-3">
                                 <div className="flex justify-between">
                                     <span className="text-base font-medium text-gray-900 dark:text-white">Total</span>
@@ -474,8 +399,6 @@ export default function VentaShow() {
                         </div>
                     )}
 
-                    {/* Resumen de Stock */}
-                    <VentaStockSummary ventaId={venta.id} />
                 </div>
             </div>
         </AppLayout>

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services\Stock;
 
 use App\DTOs\Stock\ValidacionStockDTO;
@@ -11,7 +10,6 @@ use App\Services\Traits\ManagesTransactions;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 /**
  * StockService - ÚNICA FUENTE DE VERDAD para operaciones de stock
@@ -44,38 +42,38 @@ class StockService
      */
     public function validarDisponible(
         array $productos,
-        int $almacenId = 1
+        int $almacenId = 2
     ): ValidacionStockDTO {
         $resultados = [];
-        $errores = [];
+        $errores    = [];
 
         foreach ($productos as $item) {
-            $productoId = $item['producto_id'] ?? $item['id'];
+            $productoId         = $item['producto_id'] ?? $item['id'];
             $cantidadSolicitada = $item['cantidad'];
 
             // Validar que el producto exista y esté activo
             $producto = Producto::find($productoId);
 
-            if (!$producto) {
-                $errores[] = "Producto ID {$productoId}: No encontrado";
+            if (! $producto) {
+                $errores[]    = "Producto ID {$productoId}: No encontrado";
                 $resultados[] = [
-                    'producto_id' => $productoId,
+                    'producto_id'         => $productoId,
                     'cantidad_solicitada' => $cantidadSolicitada,
-                    'stock_disponible' => 0,
-                    'suficiente' => false,
-                    'error' => 'Producto no encontrado',
+                    'stock_disponible'    => 0,
+                    'suficiente'          => false,
+                    'error'               => 'Producto no encontrado',
                 ];
                 continue;
             }
 
-            if (!$producto->activo) {
-                $errores[] = "Producto '{$producto->nombre}': Desactivado";
+            if (! $producto->activo) {
+                $errores[]    = "Producto '{$producto->nombre}': Desactivado";
                 $resultados[] = [
-                    'producto_id' => $productoId,
+                    'producto_id'         => $productoId,
                     'cantidad_solicitada' => $cantidadSolicitada,
-                    'stock_disponible' => 0,
-                    'suficiente' => false,
-                    'error' => 'Producto desactivado',
+                    'stock_disponible'    => 0,
+                    'suficiente'          => false,
+                    'error'               => 'Producto desactivado',
                 ];
                 continue;
             }
@@ -85,16 +83,16 @@ class StockService
             $suficiente = $stockDisponible >= $cantidadSolicitada;
 
             $resultado = [
-                'producto_id' => $productoId,
-                'producto_nombre' => $producto->nombre,
+                'producto_id'         => $productoId,
+                'producto_nombre'     => $producto->nombre,
                 'cantidad_solicitada' => $cantidadSolicitada,
-                'stock_disponible' => $stockDisponible,
-                'suficiente' => $suficiente,
+                'stock_disponible'    => $stockDisponible,
+                'suficiente'          => $suficiente,
             ];
 
-            if (!$suficiente) {
+            if (! $suficiente) {
                 $errores[] = "Producto '{$producto->nombre}': Stock insuficiente. " .
-                             "Disponible: {$stockDisponible}, Solicitado: {$cantidadSolicitada}";
+                    "Disponible: {$stockDisponible}, Solicitado: {$cantidadSolicitada}";
             }
 
             $resultados[] = $resultado;
@@ -140,7 +138,7 @@ class StockService
 
         try {
             foreach ($productos as $item) {
-                $productoId = $item['producto_id'] ?? $item['id'];
+                $productoId        = $item['producto_id'] ?? $item['id'];
                 $cantidadNecesaria = $item['cantidad'];
 
                 // Obtener stock con LOCK pesimista (FIFO)
@@ -164,7 +162,9 @@ class StockService
                 $cantidadRestante = $cantidadNecesaria;
 
                 foreach ($stocks as $stock) {
-                    if ($cantidadRestante <= 0) break;
+                    if ($cantidadRestante <= 0) {
+                        break;
+                    }
 
                     $cantidadTomar = min($cantidadRestante, $stock->cantidad_disponible);
 
@@ -174,14 +174,14 @@ class StockService
 
                     // Registrar movimiento
                     $movimiento = MovimientoInventario::create([
-                        'stock_producto_id' => $stock->id,
-                        'cantidad' => -$cantidadTomar,
-                        'cantidad_anterior' => $stock->cantidad + $cantidadTomar,
+                        'stock_producto_id'  => $stock->id,
+                        'cantidad'           => -$cantidadTomar,
+                        'cantidad_anterior'  => $stock->cantidad + $cantidadTomar,
                         'cantidad_posterior' => $stock->cantidad,
-                        'tipo' => MovimientoInventario::TIPO_SALIDA_VENTA,
-                        'numero_documento' => $referencia,
-                        'fecha' => now(),
-                        'user_id' => Auth::id(),
+                        'tipo'               => MovimientoInventario::TIPO_SALIDA_VENTA,
+                        'numero_documento'   => $referencia,
+                        'fecha'              => now(),
+                        'user_id'            => Auth::id(),
                     ]);
 
                     $movimientos[] = $movimiento;
@@ -190,7 +190,7 @@ class StockService
             }
 
             $this->logSuccess('Stock consumido por venta', [
-                'referencia' => $referencia,
+                'referencia'  => $referencia,
                 'movimientos' => count($movimientos),
             ]);
 
@@ -199,7 +199,7 @@ class StockService
         } catch (Exception $e) {
             $this->logError('Error al consumir stock', [
                 'referencia' => $referencia,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ], $e);
 
             throw $e;
@@ -221,16 +221,16 @@ class StockService
         try {
             foreach ($productos as $item) {
                 $productoId = $item['producto_id'] ?? $item['id'];
-                $cantidad = $item['cantidad'];
+                $cantidad   = $item['cantidad'];
 
                 // Buscar o crear stock
                 $stock = StockProducto::firstOrCreate(
                     [
                         'producto_id' => $productoId,
-                        'almacen_id' => $almacenId,
+                        'almacen_id'  => $almacenId,
                     ],
                     [
-                        'cantidad' => 0,
+                        'cantidad'            => 0,
                         'cantidad_disponible' => 0,
                     ]
                 );
@@ -241,21 +241,21 @@ class StockService
 
                 // Registrar movimiento
                 $movimiento = MovimientoInventario::create([
-                    'stock_producto_id' => $stock->id,
-                    'cantidad' => $cantidad,
-                    'cantidad_anterior' => $stock->cantidad - $cantidad,
+                    'stock_producto_id'  => $stock->id,
+                    'cantidad'           => $cantidad,
+                    'cantidad_anterior'  => $stock->cantidad - $cantidad,
                     'cantidad_posterior' => $stock->cantidad,
-                    'tipo' => MovimientoInventario::TIPO_ENTRADA_DEVOLUCION,
-                    'numero_documento' => $referencia,
-                    'fecha' => now(),
-                    'user_id' => Auth::id(),
+                    'tipo'               => MovimientoInventario::TIPO_ENTRADA_DEVOLUCION,
+                    'numero_documento'   => $referencia,
+                    'fecha'              => now(),
+                    'user_id'            => Auth::id(),
                 ]);
 
                 $movimientos[] = $movimiento;
             }
 
             $this->logSuccess('Stock devuelto', [
-                'referencia' => $referencia,
+                'referencia'  => $referencia,
                 'movimientos' => count($movimientos),
             ]);
 
@@ -284,22 +284,22 @@ class StockService
 
         try {
             foreach ($productos as $item) {
-                $productoId = $item['producto_id'] ?? $item['id'];
-                $cantidad = $item['cantidad'];
-                $lote = $item['lote'] ?? null;
+                $productoId       = $item['producto_id'] ?? $item['id'];
+                $cantidad         = $item['cantidad'];
+                $lote             = $item['lote'] ?? null;
                 $fechaVencimiento = $item['fecha_vencimiento'] ?? null;
 
                 // Buscar o crear
                 $stock = StockProducto::firstOrCreate(
                     [
                         'producto_id' => $productoId,
-                        'almacen_id' => $almacenId,
-                        'lote' => $lote,
+                        'almacen_id'  => $almacenId,
+                        'lote'        => $lote,
                     ],
                     [
-                        'cantidad' => 0,
+                        'cantidad'            => 0,
                         'cantidad_disponible' => 0,
-                        'fecha_vencimiento' => $fechaVencimiento,
+                        'fecha_vencimiento'   => $fechaVencimiento,
                     ]
                 );
 
@@ -309,21 +309,21 @@ class StockService
 
                 // Registrar movimiento
                 $movimiento = MovimientoInventario::create([
-                    'stock_producto_id' => $stock->id,
-                    'cantidad' => $cantidad,
-                    'cantidad_anterior' => $stock->cantidad - $cantidad,
+                    'stock_producto_id'  => $stock->id,
+                    'cantidad'           => $cantidad,
+                    'cantidad_anterior'  => $stock->cantidad - $cantidad,
                     'cantidad_posterior' => $stock->cantidad,
-                    'tipo' => MovimientoInventario::TIPO_ENTRADA_COMPRA,
-                    'numero_documento' => $referencia,
-                    'fecha' => now(),
-                    'user_id' => Auth::id(),
+                    'tipo'               => MovimientoInventario::TIPO_ENTRADA_COMPRA,
+                    'numero_documento'   => $referencia,
+                    'fecha'              => now(),
+                    'user_id'            => Auth::id(),
                 ]);
 
                 $movimientos[] = $movimiento;
             }
 
             $this->logSuccess('Stock recibido por compra', [
-                'referencia' => $referencia,
+                'referencia'  => $referencia,
                 'movimientos' => count($movimientos),
             ]);
 

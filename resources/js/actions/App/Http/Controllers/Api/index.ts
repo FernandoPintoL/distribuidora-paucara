@@ -6,6 +6,7 @@ import NotificationController from './NotificationController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
+import TipoOperacionController from './TipoOperacionController'
 import RutaApiController from './RutaApiController'
 import EntregaController from './EntregaController'
 import TrackingController from './TrackingController'
@@ -19,6 +20,7 @@ NotificationController,
 TipoMermaController,
 EstadoMermaController,
 ApiProformaController,
+TipoOperacionController,
 RutaApiController,
 EntregaController,
 TrackingController,

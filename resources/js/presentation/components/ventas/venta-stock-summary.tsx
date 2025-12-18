@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Package, TrendingDown, TrendingUp, AlertTriangle, Eye } from 'lucide-react';
 import stockService, { ResumenStock } from '@/infrastructure/services/stock.service';
 import { formatCurrency } from '@/lib/utils';
+import type { Id } from '@/domain/entities/shared';
 
 interface VentaStockSummaryProps {
-    ventaId: number;
+    ventaId: Id;
     className?: string;
 }
 
@@ -29,7 +30,9 @@ export default function VentaStockSummary({ ventaId, className = '' }: VentaStoc
     }, [ventaId]);
 
     useEffect(() => {
-        cargarResumenStock();
+        // Comentado: endpoint /ventas/{id}/stock/resumen no implementado
+        // cargarResumenStock();
+        setLoading(false);
     }, [cargarResumenStock]);
 
     if (loading) {

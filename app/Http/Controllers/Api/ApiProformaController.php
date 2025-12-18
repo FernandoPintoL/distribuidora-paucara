@@ -731,6 +731,113 @@ class ApiProformaController extends Controller
     }
 
     /**
+     * Guardar coordinación de entrega de una proforma
+     *
+     * Endpoint para confirmar/actualizar los detalles de coordinación de entrega
+     * sin necesidad de aprobar la proforma. Los datos se guardan para referencia
+     * durante el proceso de aprobación.
+     */
+    public function coordinarEntrega(Proforma $proforma, Request $request)
+    {
+        $request->validate([
+            // Campos existentes
+            'fecha_entrega_confirmada' => 'nullable|date|after_or_equal:today',
+            'hora_entrega_confirmada' => 'nullable|date_format:H:i',
+            'direccion_entrega_confirmada_id' => 'nullable|exists:direcciones_cliente,id',
+            'comentario_coordinacion' => 'nullable|string|max:1000',
+            'notas_llamada' => 'nullable|string|max:500',
+
+            // Nuevos campos de control de intentos
+            'numero_intentos_contacto' => 'nullable|integer|min:0|max:255',
+            'resultado_ultimo_intento' => 'nullable|string|in:Aceptado,No contactado,Rechazado,Reagendar',
+
+            // Nuevos campos de entrega realizada
+            'entregado_en' => 'nullable|date_format:Y-m-d\TH:i',
+            'entregado_a' => 'nullable|string|max:255',
+            'observaciones_entrega' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            // Validar que si se proporciona dirección confirmada, pertenece al cliente
+            if ($request->filled('direccion_entrega_confirmada_id')) {
+                $direccion = \App\Models\DireccionCliente::findOrFail($request->direccion_entrega_confirmada_id);
+                if ($direccion->cliente_id !== $proforma->cliente_id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La dirección seleccionada no pertenece al cliente de la proforma',
+                    ], 422);
+                }
+            }
+
+            // Combinar comentario de coordinación y notas de llamada
+            $comentarioFinal = $request->comentario_coordinacion ?? '';
+            if ($request->filled('notas_llamada')) {
+                $comentarioFinal = $comentarioFinal
+                    ? "{$comentarioFinal}\n\nNotas de llamada: {$request->notas_llamada}"
+                    : "Notas de llamada: {$request->notas_llamada}";
+            }
+
+            // Preparar datos a actualizar
+            $datosActualizar = [
+                'fecha_entrega_confirmada' => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_confirmada,
+                'hora_entrega_confirmada' => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_confirmada,
+                'direccion_entrega_confirmada_id' => $request->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_confirmada_id,
+                'comentario_coordinacion' => $comentarioFinal ?: $proforma->comentario_coordinacion,
+                'coordinacion_completada' => true,
+
+                // Nuevos campos de control
+                'coordinacion_actualizada_en' => now(),
+                'coordinacion_actualizada_por_id' => auth()->id(),
+                'numero_intentos_contacto' => $request->numero_intentos_contacto ?? $proforma->numero_intentos_contacto ?? 0,
+                'resultado_ultimo_intento' => $request->resultado_ultimo_intento ?? $proforma->resultado_ultimo_intento,
+                'entregado_en' => $request->entregado_en ?? $proforma->entregado_en,
+                'entregado_a' => $request->entregado_a ?? $proforma->entregado_a,
+                'observaciones_entrega' => $request->observaciones_entrega ?? $proforma->observaciones_entrega,
+            ];
+
+            // Actualizar proforma con todos los datos
+            $proforma->update($datosActualizar);
+
+            // Disparar evento de coordinación actualizada
+            event(new \App\Events\ProformaCoordinacionActualizada($proforma, auth()->id()));
+
+            // Log de coordinación actualizada
+            \Log::info('Coordinación de proforma actualizada', [
+                'proforma_id' => $proforma->id,
+                'proforma_numero' => $proforma->numero,
+                'usuario_id' => auth()->id(),
+                'datos_actualizados' => array_keys($datosActualizar),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Coordinación guardada exitosamente',
+                'data' => $proforma->fresh([
+                    'cliente',
+                    'usuarioCreador',
+                    'coordinacionActualizadaPor',
+                    'direccionSolicitada',
+                    'direccionConfirmada',
+                ]),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ Error al guardar coordinación de proforma', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'proforma_id' => $proforma->id,
+                'usuario_id' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar la coordinación: '.$e->getMessage(),
+                'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
+            ], 500);
+        }
+    }
+
+    /**
      * Extender fecha de vencimiento de una proforma
      */
     public function extenderVencimiento(Proforma $proforma, Request $request)
@@ -1777,9 +1884,9 @@ class ApiProformaController extends Controller
             if (!$cliente) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cliente no encontrado',
+                    'message' => 'Usuario no tiene un cliente asociado',
                     'data' => null,
-                ], 404);
+                ], 200);
             }
 
             // Obtener la proforma más reciente en estado PENDIENTE
@@ -1797,9 +1904,9 @@ class ApiProformaController extends Controller
             if (!$proforma) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No hay carrito guardado',
+                    'message' => 'No hay carrito guardado para este usuario',
                     'data' => null,
-                ], 404);
+                ], 200);
             }
 
             return response()->json([

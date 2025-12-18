@@ -1,5 +1,8 @@
-export interface Moneda {
-  id: number;
+import type { BaseEntity, BaseFormData } from './generic';
+import type { Id } from './shared';
+
+export interface Moneda extends BaseEntity {
+  id: Id;
   nombre: string;
   codigo: string;
   simbolo: string;
@@ -10,7 +13,7 @@ export interface Moneda {
   updated_at?: string;
 }
 
-export interface MonedaFormData {
+export interface MonedaFormData extends BaseFormData {
   nombre: string;
   codigo: string;
   simbolo: string;

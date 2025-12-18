@@ -34,7 +34,7 @@ import {
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
-import { FileText, Package, Calendar, Clock, MapPin, AlertCircle, Check, X, Save, ChevronUp, ChevronDown, ShoppingCart } from 'lucide-react'
+import { FileText, Package, Calendar, Clock, MapPin, AlertCircle, Check, X, ChevronUp, ChevronDown, ShoppingCart } from 'lucide-react'
 import MapView from '@/presentation/components/maps/MapView'
 
 // DOMAIN LAYER: Importar tipos desde domain
@@ -63,7 +63,6 @@ export default function ProformasShow({ item: proforma }: Props) {
         aprobar,
         rechazar,
         convertirAVenta,
-        guardarCoordinacion,
     } = useProformaActions(proforma)
 
     // PRESENTATION LAYER: Estados locales solo de UI
@@ -73,10 +72,48 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [motivoRechazo, setMotivoRechazo] = useState('')
     const [showCoordinacionForm, setShowCoordinacionForm] = useState(true)
 
+    // Función helper para calcular fecha/hora por defecto (DEBE estar aquí para usarla en useState)
+    const defaultDelivery = (() => {
+        // Si ya hay fecha confirmada, usarla
+        if (proforma.fecha_entrega_confirmada) {
+            return {
+                fecha: proforma.fecha_entrega_confirmada,
+                hora: proforma.hora_entrega_confirmada || '09:00'
+            }
+        }
+
+        // Si hay fecha solicitada, usar día siguiente
+        if (proforma.fecha_entrega_solicitada) {
+            const fechaSolicitada = new Date(proforma.fecha_entrega_solicitada)
+            const fechaSiguiente = new Date(fechaSolicitada)
+            fechaSiguiente.setDate(fechaSiguiente.getDate() + 1)
+
+            // Convertir a formato YYYY-MM-DD
+            const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
+            const horaDefault = proforma.hora_entrega_solicitada || '09:00'
+
+            return {
+                fecha: fechaFormato,
+                hora: horaDefault
+            }
+        }
+
+        // Si no hay nada, usar hoy + 1 día a las 09:00
+        const hoy = new Date()
+        const manana = new Date(hoy)
+        manana.setDate(manana.getDate() + 1)
+        const fechaFormato = manana.toISOString().split('T')[0]
+
+        return {
+            fecha: fechaFormato,
+            hora: '09:00'
+        }
+    })()
+
     // Estado del formulario de coordinación
     const [coordinacion, setCoordinacion] = useState<CoordinacionData>({
-        fecha_entrega_confirmada: proforma.fecha_entrega_confirmada || proforma.fecha_entrega_solicitada || '',
-        hora_entrega_confirmada: proforma.hora_entrega_confirmada || proforma.hora_entrega_solicitada || '',
+        fecha_entrega_confirmada: defaultDelivery.fecha,
+        hora_entrega_confirmada: defaultDelivery.hora,
         comentario_coordinacion: proforma.comentario_coordinacion || '',
         notas_llamada: '',
         // Control de intentos
@@ -92,9 +129,42 @@ export default function ProformasShow({ item: proforma }: Props) {
     useEffect(() => {
         console.log('📦 Datos de Proforma desde Backend:', proforma)
 
+        // Calcular fecha/hora por defecto cuando cambia la proforma
+        const defaultDeliveryEffect = (() => {
+            if (proforma.fecha_entrega_confirmada) {
+                return {
+                    fecha: proforma.fecha_entrega_confirmada,
+                    hora: proforma.hora_entrega_confirmada || '09:00'
+                }
+            }
+
+            if (proforma.fecha_entrega_solicitada) {
+                const fechaSolicitada = new Date(proforma.fecha_entrega_solicitada)
+                const fechaSiguiente = new Date(fechaSolicitada)
+                fechaSiguiente.setDate(fechaSiguiente.getDate() + 1)
+                const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
+                const horaDefault = proforma.hora_entrega_solicitada || '09:00'
+
+                return {
+                    fecha: fechaFormato,
+                    hora: horaDefault
+                }
+            }
+
+            const hoy = new Date()
+            const manana = new Date(hoy)
+            manana.setDate(manana.getDate() + 1)
+            const fechaFormato = manana.toISOString().split('T')[0]
+
+            return {
+                fecha: fechaFormato,
+                hora: '09:00'
+            }
+        })()
+
         setCoordinacion({
-            fecha_entrega_confirmada: proforma.fecha_entrega_confirmada || proforma.fecha_entrega_solicitada || '',
-            hora_entrega_confirmada: proforma.hora_entrega_confirmada || proforma.hora_entrega_solicitada || '',
+            fecha_entrega_confirmada: defaultDeliveryEffect.fecha,
+            hora_entrega_confirmada: defaultDeliveryEffect.hora,
             comentario_coordinacion: proforma.comentario_coordinacion || '',
             notas_llamada: '',
             numero_intentos_contacto: proforma.numero_intentos_contacto || 0,
@@ -107,12 +177,12 @@ export default function ProformasShow({ item: proforma }: Props) {
 
     // PRESENTATION LAYER: Handlers simples que delegan al hook
     const handleAprobar = () => {
-        aprobar()
+        aprobar(coordinacion)
         setShowAprobarDialog(false)
     }
 
     const handleRechazar = () => {
-        rechazar(motivoRechazo)
+        rechazar(motivoRechazo, coordinacion)
         setShowRechazarDialog(false)
         setMotivoRechazo('')
     }
@@ -120,11 +190,6 @@ export default function ProformasShow({ item: proforma }: Props) {
     const handleConvertir = () => {
         convertirAVenta()
         setShowConvertirDialog(false)
-    }
-
-    const handleGuardarCoordinacion = () => {
-        guardarCoordinacion(coordinacion)
-        setShowCoordinacionForm(false)
     }
 
     return (
@@ -174,7 +239,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                         {puedeConvertir && (
                             <Button
                                 onClick={() => setShowConvertirDialog(true)}
-                                className="bg-purple-600 hover:bg-purple-700"
+                                className="bg-purple-600 hover:bg-purple-700 text-white"
                             >
                                 <ShoppingCart className="mr-2 h-4 w-4" />
                                 Convertir a Venta
@@ -434,8 +499,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                             </Card>
                         )}
 
-                        {/* Coordinación de Entrega */}
-                        {puedeAprobar && (
+                        {/* Coordinación de Entrega - Mostrar cuando está PENDIENTE */}
+                        {proforma.estado === 'PENDIENTE' && (
                             <Card>
                                 <CardHeader>
                                     <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowCoordinacionForm(!showCoordinacionForm)}>
@@ -594,95 +659,73 @@ export default function ProformasShow({ item: proforma }: Props) {
                                             </div>
                                         </div>
 
-                                        <Separator className="my-4" />
+                                        {/* Datos de Entrega Realizada - Solo mostrar si ya se entregó */}
+                                        {coordinacion.entregado_en && (
+                                            <>
+                                                <Separator className="my-4" />
+                                                <div className="space-y-4">
+                                                    <h4 className="font-semibold text-sm">Datos de Entrega Realizada</h4>
+                                                    <div className="grid md:grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="entregado_en">
+                                                                Fecha y Hora de Entrega
+                                                            </Label>
+                                                            <Input
+                                                                id="entregado_en"
+                                                                type="datetime-local"
+                                                                value={coordinacion.entregado_en}
+                                                                onChange={(e) =>
+                                                                    setCoordinacion({
+                                                                        ...coordinacion,
+                                                                        entregado_en: e.target.value,
+                                                                    })
+                                                                }
+                                                                disabled={isGuardandoCoordinacion}
+                                                            />
+                                                        </div>
 
-                                        {/* Datos de Entrega Realizada */}
-                                        <div className="space-y-4">
-                                            <h4 className="font-semibold text-sm">Datos de Entrega Realizada</h4>
-                                            <div className="grid md:grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="entregado_en">
-                                                        Fecha y Hora de Entrega
-                                                    </Label>
-                                                    <Input
-                                                        id="entregado_en"
-                                                        type="datetime-local"
-                                                        value={coordinacion.entregado_en}
-                                                        onChange={(e) =>
-                                                            setCoordinacion({
-                                                                ...coordinacion,
-                                                                entregado_en: e.target.value,
-                                                            })
-                                                        }
-                                                        disabled={isGuardandoCoordinacion}
-                                                    />
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="entregado_a">
+                                                                Entregado a (Nombre)
+                                                            </Label>
+                                                            <Input
+                                                                id="entregado_a"
+                                                                type="text"
+                                                                placeholder="Nombre de quién recibió"
+                                                                value={coordinacion.entregado_a}
+                                                                onChange={(e) =>
+                                                                    setCoordinacion({
+                                                                        ...coordinacion,
+                                                                        entregado_a: e.target.value,
+                                                                    })
+                                                                }
+                                                                disabled={isGuardandoCoordinacion}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="observaciones_entrega">
+                                                            Observaciones de la Entrega
+                                                        </Label>
+                                                        <Textarea
+                                                            id="observaciones_entrega"
+                                                            placeholder="Observaciones sobre cómo fue la entrega, incidencias, etc..."
+                                                            value={coordinacion.observaciones_entrega}
+                                                            onChange={(e) =>
+                                                                setCoordinacion({
+                                                                    ...coordinacion,
+                                                                    observaciones_entrega: e.target.value,
+                                                                })
+                                                            }
+                                                            disabled={isGuardandoCoordinacion}
+                                                            rows={3}
+                                                            className="resize-none"
+                                                        />
+                                                    </div>
                                                 </div>
-
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="entregado_a">
-                                                        Entregado a (Nombre)
-                                                    </Label>
-                                                    <Input
-                                                        id="entregado_a"
-                                                        type="text"
-                                                        placeholder="Nombre de quién recibió"
-                                                        value={coordinacion.entregado_a}
-                                                        onChange={(e) =>
-                                                            setCoordinacion({
-                                                                ...coordinacion,
-                                                                entregado_a: e.target.value,
-                                                            })
-                                                        }
-                                                        disabled={isGuardandoCoordinacion}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="observaciones_entrega">
-                                                    Observaciones de la Entrega
-                                                </Label>
-                                                <Textarea
-                                                    id="observaciones_entrega"
-                                                    placeholder="Observaciones sobre cómo fue la entrega, incidencias, etc..."
-                                                    value={coordinacion.observaciones_entrega}
-                                                    onChange={(e) =>
-                                                        setCoordinacion({
-                                                            ...coordinacion,
-                                                            observaciones_entrega: e.target.value,
-                                                        })
-                                                    }
-                                                    disabled={isGuardandoCoordinacion}
-                                                    rows={3}
-                                                    className="resize-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Botones de acción */}
-                                        <div className="flex gap-2 justify-end pt-4">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => setShowCoordinacionForm(false)}
-                                                disabled={isGuardandoCoordinacion}
-                                            >
-                                                Cancelar
-                                            </Button>
-                                            <Button
-                                                onClick={handleGuardarCoordinacion}
-                                                disabled={isGuardandoCoordinacion}
-                                                className="bg-blue-600 hover:bg-blue-700"
-                                            >
-                                                {isGuardandoCoordinacion ? (
-                                                    <>Guardando...</>
-                                                ) : (
-                                                    <>
-                                                        <Save className="mr-2 h-4 w-4" />
-                                                        Guardar Coordinación
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
+                                            </>
+                                        )}
                                     </CardContent>
                                 )}
                             </Card>
@@ -924,23 +967,23 @@ export default function ProformasShow({ item: proforma }: Props) {
                         <AlertDialogTitle>Convertir Proforma a Venta</AlertDialogTitle>
                         <AlertDialogDescription>
                             ¿Estás seguro de que deseas convertir la proforma {proforma.numero} a una venta?
-                            <div className="mt-3 space-y-2 text-sm text-foreground">
-                                <p>Esta acción:</p>
-                                <ul className="list-disc list-inside space-y-1 ml-2">
-                                    <li>Crearán una nueva venta con los detalles de esta proforma</li>
-                                    <li>Consumirán el stock reservado de los productos</li>
-                                    <li>Generarán los números de serie correspondientes</li>
-                                    <li>Marcarán esta proforma como CONVERTIDA</li>
-                                </ul>
-                            </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <div className="space-y-3 text-sm text-foreground px-6">
+                        <p>Esta acción:</p>
+                        <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>Crearán una nueva venta con los detalles de esta proforma</li>
+                            <li>Consumirán el stock reservado de los productos</li>
+                            <li>Generarán los números de serie correspondientes</li>
+                            <li>Marcarán esta proforma como CONVERTIDA</li>
+                        </ul>
+                    </div>
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={isConverting}>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleConvertir}
                             disabled={isConverting}
-                            className="bg-purple-600 hover:bg-purple-700"
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
                         >
                             {isConverting ? 'Convirtiendo...' : 'Convertir a Venta'}
                         </AlertDialogAction>

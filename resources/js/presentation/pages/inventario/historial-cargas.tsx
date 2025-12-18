@@ -1,6 +1,3 @@
-import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
-import axios from 'axios';
 import HistorialCargasCSV from '@/presentation/components/Inventario/HistorialCargasCSV';
 
 export default function HistorialCargasPage() {

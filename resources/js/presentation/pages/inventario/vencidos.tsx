@@ -1,10 +1,10 @@
-import React from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useAuth } from '@/application/hooks/use-auth';
 
-interface StockProducto {
+// ✅ Interfaz específica para productos vencidos
+interface ProductoVencido {
     id: number;
     producto: {
         id: number;
@@ -23,7 +23,7 @@ interface StockProducto {
 }
 
 interface PageProps extends InertiaPageProps {
-    productos: StockProducto[];
+    productos: ProductoVencido[];
 }
 
 const breadcrumbs = [

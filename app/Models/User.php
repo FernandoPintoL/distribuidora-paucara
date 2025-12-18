@@ -27,6 +27,8 @@ class User extends Authenticatable
         'email',
         'password',
         'activo',
+        'can_access_web',
+        'can_access_mobile',
     ];
 
     /**
@@ -50,6 +52,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'activo' => 'boolean',
+            'can_access_web' => 'boolean',
+            'can_access_mobile' => 'boolean',
         ];
     }
 
@@ -75,6 +79,14 @@ class User extends Authenticatable
     public function cliente(): HasOne
     {
         return $this->hasOne(Cliente::class);
+    }
+
+    /**
+     * Relación con envios asignados al chofer (usuario)
+     */
+    public function envios(): HasMany
+    {
+        return $this->hasMany(Envio::class, 'chofer_id');
     }
 
     /**
@@ -208,5 +220,27 @@ class User extends Authenticatable
             $result[$type] = $attributes->pluck('attribute_value')->toArray();
         }
         return $result;
+    }
+
+    /**
+     * ============================================
+     * FASE 5: Control de Acceso por Plataforma
+     * ============================================
+     */
+
+    /**
+     * Verificar si el usuario puede acceder a la plataforma web
+     */
+    public function canAccessWeb(): bool
+    {
+        return $this->can_access_web ?? true;
+    }
+
+    /**
+     * Verificar si el usuario puede acceder a la aplicación móvil
+     */
+    public function canAccessMobile(): bool
+    {
+        return $this->can_access_mobile ?? true;
     }
 }

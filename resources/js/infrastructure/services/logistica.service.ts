@@ -5,45 +5,19 @@ import { router } from '@inertiajs/react';
 import axios from 'axios';
 import type { Filters, Id } from '@/domain/entities/shared';
 import type { BaseService } from '@/domain/entities/generic';
+import type {
+    EntregaLogistica,
+    ProformaAppExterna,
+    ProformaFilterParams,
+    EnvioFilterParams,
+    AprobarProformaData,
+    RechazarProformaData,
+} from '@/domain/entities/logistica';
 import NotificationService from '@/infrastructure/services/notification.service';
 
-export interface Entrega {
-    id: number;
-    proforma_id: number;
-    chofer_id?: number;
-    vehiculo_id?: number;
-    estado: 'ASIGNADA' | 'EN_CAMINO' | 'LLEGO' | 'ENTREGADO' | 'NOVEDAD' | 'CANCELADA';
-    fecha_asignacion?: string;
-    fecha_inicio?: string;
-    fecha_entrega?: string;
-    observaciones?: string;
-}
-
-export interface Proforma {
-    id: number;
-    numero: string;
-    cliente_nombre: string;
-    total: number;
-    estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
-    canal_origen: string;
-    fecha: string;
-    usuario_creador_nombre: string;
-    // Solicitud del cliente
-    fecha_entrega_solicitada?: string;
-    hora_entrega_solicitada?: string;
-    direccion_entrega_solicitada_id?: number;
-    direccionSolicitada?: any;
-    // Confirmación del vendedor
-    fecha_entrega_confirmada?: string;
-    hora_entrega_confirmada?: string;
-    direccion_entrega_confirmada_id?: number;
-    direccionConfirmada?: any;
-    // Auditoría
-    coordinacion_completada?: boolean;
-    comentario_coordinacion?: string;
-    // Cliente relacionado
-    cliente?: any;
-}
+// Aliases for backward compatibility
+export type Entrega = EntregaLogistica;
+export type Proforma = ProformaAppExterna;
 
 export interface FiltrosEntregas extends Filters {
     estado?: string;
@@ -71,19 +45,105 @@ export interface ActualizarEstadoEntregaData {
     motivo?: string;
 }
 
-export interface AprobarProformaData {
-    comentario?: string;
-    fecha_entrega_confirmada?: string;
-    hora_entrega_confirmada?: string;
-    direccion_entrega_confirmada_id?: number;
-    comentario_coordinacion?: string;
+
+/**
+ * Normalized API Response Format
+ *
+ * All list/paginated responses should follow this structure:
+ * {
+ *   data: T[],
+ *   total: number,
+ *   per_page: number,
+ *   current_page: number
+ * }
+ *
+ * All action responses should follow this structure:
+ * {
+ *   success: boolean,
+ *   message: string,
+ *   data?: any
+ * }
+ */
+export interface PaginatedResponse<T> {
+    data: T[];
+    total: number;
+    per_page: number;
+    current_page: number;
+    last_page?: number;
+    from?: number;
+    to?: number;
 }
 
-export interface RechazarProformaData {
-    comentario: string;  // Motivo obligatorio
+export interface ActionResponse<T = any> {
+    success: boolean;
+    message: string;
+    data?: T;
 }
 
 export class LogisticaService implements BaseService<Entrega, AsignarEntregaData> {
+    /**
+     * Normalize paginated API responses to consistent format
+     *
+     * Handles multiple response formats:
+     * 1. Direct pagination: { data, total, per_page, current_page }
+     * 2. Success wrapper: { success, data, meta }
+     * 3. Legacy format: any other format
+     */
+    private static normalizePaginatedResponse<T>(response: any, currentPage: number = 1): PaginatedResponse<T> {
+        // Format 1: Already normalized
+        if (response.data && Array.isArray(response.data) && response.total !== undefined) {
+            return {
+                data: response.data,
+                total: response.total,
+                per_page: response.per_page || 15,
+                current_page: response.current_page || currentPage,
+                last_page: response.last_page,
+                from: response.from,
+                to: response.to,
+            };
+        }
+
+        // Format 2: Success wrapper with meta
+        if (response.success && response.data && Array.isArray(response.data)) {
+            return {
+                data: response.data,
+                total: response.meta?.total || response.data.length,
+                per_page: response.meta?.per_page || 15,
+                current_page: response.meta?.current_page || currentPage,
+                last_page: response.meta?.last_page,
+                from: response.meta?.from,
+                to: response.meta?.to,
+            };
+        }
+
+        // Format 3: Fallback
+        return {
+            data: Array.isArray(response) ? response : response.data || [],
+            total: response.total || 0,
+            per_page: response.per_page || 15,
+            current_page: currentPage,
+        };
+    }
+
+    /**
+     * Normalize action API responses to consistent format
+     */
+    private static normalizeActionResponse<T = any>(response: any): ActionResponse<T> {
+        if (typeof response === 'object' && response.success !== undefined) {
+            return {
+                success: response.success,
+                message: response.message || (response.success ? 'Operación exitosa' : 'Error'),
+                data: response.data,
+            };
+        }
+
+        return {
+            success: true,
+            message: 'Operación completada',
+            data: response,
+        };
+    }
+
     // BaseService implementations
     indexUrl(params?: { query?: Filters }): string {
         const baseUrl = '/api/encargado/entregas/asignadas';
@@ -206,13 +266,9 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
 
     /**
      * Obtener entregas asignadas (API call)
+     * Normaliza la respuesta a formato estándar de paginación
      */
-    async obtenerEntregasAsignadas(page: number = 1, filters?: FiltrosEntregas): Promise<{
-        data: Entrega[];
-        total: number;
-        per_page: number;
-        current_page: number;
-    }> {
+    async obtenerEntregasAsignadas(page: number = 1, filters?: FiltrosEntregas): Promise<PaginatedResponse<Entrega>> {
         try {
             const params = new URLSearchParams();
             params.append('page', page.toString());
@@ -235,7 +291,8 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
                 throw new Error('Error al obtener entregas asignadas');
             }
 
-            return await response.json();
+            const result = await response.json();
+            return LogisticaService.normalizePaginatedResponse<Entrega>(result, page);
         } catch (error) {
             console.error('Error obteniendo entregas asignadas:', error);
             NotificationService.error('Error al obtener entregas');
@@ -245,13 +302,9 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
 
     /**
      * Obtener entregas en tránsito (API call)
+     * Normaliza la respuesta a formato estándar de paginación
      */
-    async obtenerEntregasEnTransito(page: number = 1, filters?: FiltrosEntregas): Promise<{
-        data: Entrega[];
-        total: number;
-        per_page: number;
-        current_page: number;
-    }> {
+    async obtenerEntregasEnTransito(page: number = 1, filters?: FiltrosEntregas): Promise<PaginatedResponse<Entrega>> {
         try {
             const params = new URLSearchParams();
             params.append('page', page.toString());
@@ -274,7 +327,8 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
                 throw new Error('Error al obtener entregas en tránsito');
             }
 
-            return await response.json();
+            const result = await response.json();
+            return LogisticaService.normalizePaginatedResponse<Entrega>(result, page);
         } catch (error) {
             console.error('Error obteniendo entregas en tránsito:', error);
             NotificationService.error('Error al obtener entregas');
@@ -293,13 +347,10 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
      * - Cliente: Solo sus proformas
      * - Preventista: Solo las que él creó
      * - Logística/Admin/Cajero: Todas las proformas
+     *
+     * Normaliza la respuesta a formato estándar de paginación
      */
-    async obtenerProformasPendientes(page: number = 1, filters?: FiltrosProformas): Promise<{
-        data: Proforma[];
-        total: number;
-        per_page: number;
-        current_page: number;
-    }> {
+    async obtenerProformasPendientes(page: number = 1, filters?: FiltrosProformas): Promise<PaginatedResponse<Proforma>> {
         try {
             const params = new URLSearchParams();
             params.append('page', page.toString());
@@ -326,23 +377,8 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
 
             const result = await response.json();
 
-            // El endpoint /api/proformas retorna { success: true, data: [], meta: {} }
-            // Normalizar la respuesta para compatibilidad
-            if (result.success && result.data) {
-                return {
-                    data: result.data,
-                    total: result.meta?.total || result.data.length,
-                    per_page: result.meta?.per_page || 15,
-                    current_page: result.meta?.current_page || page,
-                };
-            }
-
-            return {
-                data: [],
-                total: 0,
-                per_page: 15,
-                current_page: page,
-            };
+            // Normalizar respuesta a formato consistente
+            return LogisticaService.normalizePaginatedResponse<Proforma>(result, page);
         } catch (error) {
             console.error('Error obteniendo proformas pendientes:', error);
             NotificationService.error('Error al obtener proformas');
@@ -485,6 +521,35 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
 
     /**
      * Obtener estadísticas del dashboard de logística
+     *
+     * Endpoint: /api/logistica/dashboard/stats
+     * Retorna estadísticas completas del módulo de logística
+     */
+    async obtenerDashboardStats(): Promise<any> {
+        try {
+            const response = await fetch('/api/logistica/dashboard/stats', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error('Error obteniendo estadísticas del dashboard');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error obteniendo estadísticas del dashboard:', error);
+            NotificationService.error('Error al obtener estadísticas del dashboard');
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener estadísticas básicas de entregas
+     * (método legacy, mantener por compatibilidad)
      */
     async obtenerEstadisticas(): Promise<{
         entregas_asignadas: number;
@@ -663,6 +728,79 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
         }
 
         return errors;
+    }
+
+    /**
+     * Marcar llegada a destino para una entrega
+     * Requiere coordenadas GPS del destino
+     */
+    async marcarLlegada(entregaId: Id, data: {
+        latitud: number;
+        longitud: number;
+    }): Promise<ActionResponse<Entrega>> {
+        try {
+            const response = await axios.post(
+                `/api/encargado/entregas/${entregaId}/marcar-llegada`,
+                data
+            );
+            NotificationService.success('Llegada marcada correctamente');
+            return response.data;
+        } catch (error: any) {
+            console.error('Error marcando llegada:', error);
+            const message = error.response?.data?.message || 'Error al marcar llegada';
+            NotificationService.error(message);
+            throw error;
+        }
+    }
+
+    /**
+     * Confirmar entrega con firma digital y fotos
+     */
+    async confirmarEntrega(entregaId: Id, data: {
+        firma_digital?: string; // Base64
+        fotos?: string[]; // Array de base64
+        observaciones?: string;
+    }): Promise<ActionResponse<Entrega>> {
+        try {
+            const response = await axios.post(
+                `/api/encargado/entregas/${entregaId}/confirmar-entrega`,
+                data
+            );
+            NotificationService.success('Entrega confirmada exitosamente');
+            return response.data;
+        } catch (error: any) {
+            console.error('Error confirmando entrega:', error);
+            const message = error.response?.data?.message || 'Error al confirmar entrega';
+            NotificationService.error(message);
+            throw error;
+        }
+    }
+
+    /**
+     * Reportar novedad en una entrega
+     */
+    async reportarNovedad(entregaId: Id, data: {
+        motivo: string;
+        descripcion?: string;
+        foto?: string; // Base64
+    }): Promise<ActionResponse<Entrega>> {
+        try {
+            if (!data.motivo || data.motivo.trim() === '') {
+                throw new Error('El motivo de novedad es obligatorio');
+            }
+
+            const response = await axios.post(
+                `/api/encargado/entregas/${entregaId}/reportar-novedad`,
+                data
+            );
+            NotificationService.success('Novedad reportada correctamente');
+            return response.data;
+        } catch (error: any) {
+            console.error('Error reportando novedad:', error);
+            const message = error.response?.data?.message || 'Error al reportar novedad';
+            NotificationService.error(message);
+            throw error;
+        }
     }
 }
 

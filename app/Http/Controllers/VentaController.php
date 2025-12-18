@@ -47,6 +47,9 @@ class VentaController extends Controller
         $this->middleware('permission:ventas.store')->only('store', 'create');
         $this->middleware('permission:ventas.update')->only('update', 'edit');
         $this->middleware('permission:ventas.destroy')->only('destroy');
+
+        // ✅ Validar que el usuario tiene caja abierta ANTES de crear ventas
+        $this->middleware('caja.abierta')->only(['store']);
     }
 
     /**
@@ -119,8 +122,11 @@ class VentaController extends Controller
             // 2. Crear DTO desde Request
             $dto = CrearVentaDTO::fromRequest($request);
 
+            // ✅ 2.5 Obtener caja_id del middleware
+            $cajaId = $request->attributes->get('caja_id');
+
             // 3. Delegar al Service (ÚNICA lógica de negocio)
-            $ventaDTO = $this->ventaService->crear($dto);
+            $ventaDTO = $this->ventaService->crear($dto, $cajaId);
 
             // 4. Responder según cliente
             return $this->respondSuccess(
@@ -168,10 +174,18 @@ class VentaController extends Controller
         try {
             $ventaDTO = $this->ventaService->obtener($id);
 
-            return $this->respondShow(
-                data: $ventaDTO,
-                inertiaComponent: 'ventas/show',
-            );
+            // Si es API, retornar JSON
+            if ($this->isApiRequest()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $ventaDTO->toArray(),
+                ]);
+            }
+
+            // Si es web (Inertia), renderizar con el prop correcto
+            return \Inertia\Inertia::render('ventas/show', [
+                'venta' => $ventaDTO->toArray(),
+            ]);
 
         } catch (\Exception $e) {
             return $this->respondNotFound('Venta no encontrada');
@@ -180,11 +194,18 @@ class VentaController extends Controller
 
     /**
      * Mostrar formulario de edición
+     *
+     * ✅ Solo se pueden editar ventas en estado PENDIENTE
      */
-    public function edit(int $id): InertiaResponse
+    public function edit(int $id): InertiaResponse|RedirectResponse
     {
         try {
             $ventaDTO = $this->ventaService->obtener($id);
+
+            // Validar que la venta está en estado PENDIENTE
+            if ($ventaDTO->estado !== 'PENDIENTE') {
+                return back()->with('error', 'Solo se pueden editar ventas en estado PENDIENTE');
+            }
 
             return Inertia::render('ventas/edit', [
                 'venta' => $ventaDTO->toArray(),
@@ -199,20 +220,36 @@ class VentaController extends Controller
 
     /**
      * Actualizar venta (solo si está en estado PENDIENTE)
+     *
+     * ✅ Validaciones:
+     * - Solo se pueden editar ventas en estado PENDIENTE
+     * - No se pueden cambiar si ya fueron aprobadas/generadas
      */
     public function update(StoreVentaRequest $request, int $id): JsonResponse|RedirectResponse
     {
         try {
-            // TODO: Implementar UpdateVentaService si es necesario
-            // Por ahora, solo informar que solo se pueden editar ventas PENDIENTE
+            $ventaActual = Venta::findOrFail($id);
+
+            // Validar que la venta está en estado PENDIENTE
+            if ($ventaActual->estado !== 'PENDIENTE') {
+                return $this->respondError(
+                    message: "No se puede editar una venta en estado {$ventaActual->estado}. Solo se pueden editar ventas PENDIENTE.",
+                    statusCode: 422,
+                );
+            }
+
+            // TODO: Implementar UpdateVentaService para actualizar los detalles
+            // Por ahora, retornar error hasta que se implemente
 
             return $this->respondError(
-                message: 'Actualización de ventas no soportada aún',
+                message: 'Actualización de ventas no soportada aún (en desarrollo)',
                 statusCode: 422,
             );
 
         } catch (DomainException $e) {
             return $this->respondError($e->getMessage());
+        } catch (\Exception $e) {
+            return $this->respondError('Error al actualizar venta');
         }
     }
 

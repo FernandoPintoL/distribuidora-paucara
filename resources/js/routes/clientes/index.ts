@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../wayfinder'
 import fotos from './fotos'
 /**
 * @see \App\Http\Controllers\ClienteController::index
@@ -43,41 +43,6 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ClienteController::index
- * @see app/Http/Controllers/ClienteController.php:100
- * @route '/clientes'
- */
-    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: index.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ClienteController::index
- * @see app/Http/Controllers/ClienteController.php:100
- * @route '/clientes'
- */
-        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ClienteController::index
- * @see app/Http/Controllers/ClienteController.php:100
- * @route '/clientes'
- */
-        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    index.form = indexForm
 /**
 * @see \App\Http\Controllers\ClienteController::create
  * @see app/Http/Controllers/ClienteController.php:181
@@ -121,41 +86,6 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ClienteController::create
- * @see app/Http/Controllers/ClienteController.php:181
- * @route '/clientes/create'
- */
-    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: create.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ClienteController::create
- * @see app/Http/Controllers/ClienteController.php:181
- * @route '/clientes/create'
- */
-        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ClienteController::create
- * @see app/Http/Controllers/ClienteController.php:181
- * @route '/clientes/create'
- */
-        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    create.form = createForm
 /**
 * @see \App\Http\Controllers\ClienteController::store
  * @see app/Http/Controllers/ClienteController.php:201
@@ -190,27 +120,6 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\ClienteController::store
- * @see app/Http/Controllers/ClienteController.php:201
- * @route '/clientes'
- */
-    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: store.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ClienteController::store
- * @see app/Http/Controllers/ClienteController.php:201
- * @route '/clientes'
- */
-        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: store.url(options),
-            method: 'post',
-        })
-    
-    store.form = storeForm
 /**
 * @see \App\Http\Controllers\ClienteController::show
  * @see app/Http/Controllers/ClienteController.php:0
@@ -273,41 +182,6 @@ show.head = (args: { cliente: string | number } | [cliente: string | number ] | 
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ClienteController::show
- * @see app/Http/Controllers/ClienteController.php:0
- * @route '/clientes/{cliente}'
- */
-    const showForm = (args: { cliente: string | number } | [cliente: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ClienteController::show
- * @see app/Http/Controllers/ClienteController.php:0
- * @route '/clientes/{cliente}'
- */
-        showForm.get = (args: { cliente: string | number } | [cliente: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ClienteController::show
- * @see app/Http/Controllers/ClienteController.php:0
- * @route '/clientes/{cliente}'
- */
-        showForm.head = (args: { cliente: string | number } | [cliente: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show.form = showForm
 /**
 * @see \App\Http\Controllers\ClienteController::edit
  * @see app/Http/Controllers/ClienteController.php:246
@@ -375,41 +249,6 @@ edit.head = (args: { cliente: number | { id: number } } | [cliente: number | { i
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ClienteController::edit
- * @see app/Http/Controllers/ClienteController.php:246
- * @route '/clientes/{cliente}/edit'
- */
-    const editForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: edit.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ClienteController::edit
- * @see app/Http/Controllers/ClienteController.php:246
- * @route '/clientes/{cliente}/edit'
- */
-        editForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ClienteController::edit
- * @see app/Http/Controllers/ClienteController.php:246
- * @route '/clientes/{cliente}/edit'
- */
-        editForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    edit.form = editForm
 /**
 * @see \App\Http\Controllers\ClienteController::update
  * @see app/Http/Controllers/ClienteController.php:264
@@ -477,51 +316,6 @@ update.patch = (args: { cliente: number | { id: number } } | [cliente: number | 
     method: 'patch',
 })
 
-    /**
-* @see \App\Http\Controllers\ClienteController::update
- * @see app/Http/Controllers/ClienteController.php:264
- * @route '/clientes/{cliente}'
- */
-    const updateForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: update.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'PUT',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ClienteController::update
- * @see app/Http/Controllers/ClienteController.php:264
- * @route '/clientes/{cliente}'
- */
-        updateForm.put = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PUT',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-            /**
-* @see \App\Http\Controllers\ClienteController::update
- * @see app/Http/Controllers/ClienteController.php:264
- * @route '/clientes/{cliente}'
- */
-        updateForm.patch = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PATCH',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    update.form = updateForm
 /**
 * @see \App\Http\Controllers\ClienteController::destroy
  * @see app/Http/Controllers/ClienteController.php:386
@@ -579,38 +373,6 @@ destroy.delete = (args: { cliente: number | { id: number } } | [cliente: number 
     url: destroy.url(args, options),
     method: 'delete',
 })
-
-    /**
-* @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:386
- * @route '/clientes/{cliente}'
- */
-    const destroyForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: destroy.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'DELETE',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:386
- * @route '/clientes/{cliente}'
- */
-        destroyForm.delete = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: destroy.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'DELETE',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    destroy.form = destroyForm
 const clientes = {
     index,
 create,

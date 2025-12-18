@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TipoAjusteInventarioController;
 use App\Http\Controllers\Api\TipoMermaController;
+use App\Http\Controllers\Api\TipoOperacionController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\AsientoContableController;
 use App\Http\Controllers\CategoriaClienteController;
@@ -45,7 +46,8 @@ Route::get('/tipo-operaciones', function () {
 });
 
 // Procesar ajustes masivos (requiere autenticación)
-Route::middleware(['auth:sanctum,web'])->group(function () {
+// ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma
+Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::post('/inventario/ajustes-masivos', [InventarioController::class, 'importarAjustesMasivos']);
 
     // Historial de cargas CSV
@@ -72,7 +74,8 @@ Route::middleware(['auth'])->get('/dashboard-redirect', [App\Http\Controllers\Au
 // ==========================================
 // 📱 RUTAS PARA APP EXTERNA (Flutter)
 // ==========================================
-Route::middleware(['auth:sanctum,web'])->group(function () {
+// ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma
+Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // Rutas de autenticación protegidas
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -212,6 +215,7 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
     Route::post('/proformas/{proforma}/convertir-venta', [ApiProformaController::class, 'convertirAVenta']);
     Route::post('/proformas/{proforma}/confirmar', [ApiProformaController::class, 'confirmarProforma'])->name('api.proformas.confirmar');
     Route::post('/proformas/{proforma}/extender-vencimiento', [ApiProformaController::class, 'extenderVencimiento']);
+    Route::post('/proformas/{proforma}/coordinar', [ApiProformaController::class, 'coordinarEntrega'])->name('api.proformas.coordinar');
 
     // Estado y verificaciones
     Route::get('/proformas/{proforma}/estado', [ApiProformaController::class, 'verificarEstado']);
@@ -254,7 +258,8 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
 // ==========================================
 // 📊 RUTAS PARA DASHBOARD DE LOGÍSTICA
 // ==========================================
-Route::middleware(['auth:sanctum,web'])->group(function () {
+// ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma
+Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // Estadísticas del dashboard
     Route::get('/logistica/dashboard/stats', [EnvioController::class, 'dashboardStats']);
 
@@ -294,6 +299,12 @@ Route::group(['prefix' => 'inventario'], function () {
     Route::get('movimientos', [InventarioController::class, 'movimientosApi']);
     Route::post('movimientos', [InventarioController::class, 'crearMovimiento']);
 
+    // ✅ NUEVO: Tipos de Operación para ajustes masivos
+    Route::get('tipos-operacion', [TipoOperacionController::class, 'index']);
+    Route::get('tipos-operacion/{tipoOperacion}', [TipoOperacionController::class, 'show']);
+    Route::get('tipos-operacion/por-direccion/{direccion}', [TipoOperacionController::class, 'porDireccion']);
+    Route::get('tipos-operacion/con-requisitos', [TipoOperacionController::class, 'conRequisitos']);
+
     // Reportes
     Route::group(['prefix' => 'reportes'], function () {
         Route::get('estadisticas', [ReporteInventarioApiController::class, 'estadisticasGenerales']);
@@ -307,7 +318,7 @@ Route::group(['prefix' => 'inventario'], function () {
 });
 
 // Rutas API para localidades
-Route::middleware(['auth:sanctum,web'])->group(function () {
+Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // Rutas API para productos
     Route::group(['prefix' => 'productos'], function () {
         Route::get('/', [ProductoController::class, 'indexApi']);
@@ -375,7 +386,7 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
 // ==========================================
 
 // RUTAS - Planificación y gestión
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'platform'])->group(function () {
     Route::prefix('rutas')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\RutaApiController::class, 'index']);
         Route::post('/planificar', [\App\Http\Controllers\Api\RutaApiController::class, 'planificar']);
@@ -387,8 +398,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 // CHOFER - Entregas y tracking
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'platform'])->group(function () {
     Route::prefix('chofer')->group(function () {
+        // Nuevo endpoint que combina entregas + envios
+        Route::get('/trabajos', [EntregaController::class, 'misTrabjos']);
+
+        // Endpoints legacy (mantener para compatibilidad)
         Route::get('/entregas', [EntregaController::class, 'entregasAsignadas']);
         Route::get('/entregas/{id}', [EntregaController::class, 'showEntrega']);
         Route::post('/entregas/{id}/iniciar-ruta', [EntregaController::class, 'iniciarRuta']);
@@ -452,7 +467,7 @@ Route::group(['prefix' => 'proveedores'], function () {
 // ==========================================
 // 🖼️ RUTAS API PARA BACKUP DE IMÁGENES
 // ==========================================
-Route::middleware(['auth:sanctum,web'])->group(function () {
+Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::prefix('image-backup')->group(function () {
         // ========== BACKUPS COMPLETOS ==========
         // Crear backup (completo o selectivo)
@@ -466,12 +481,6 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
 
         // Descargar un backup (DEBE ser antes que /{backupName})
         Route::get('/{backupName}/download', [ImageBackupController::class, 'downloadBackup']);
-
-        // Obtener información de un backup específico (GET)
-        Route::get('/{backupName}', [ImageBackupController::class, 'getBackupInfo']);
-
-        // Eliminar un backup (DELETE)
-        Route::delete('/{backupName}', [ImageBackupController::class, 'deleteBackup']);
 
         // ========== BACKUPS POR CARPETA ==========
         // Obtener tamaños de carpetas
@@ -508,5 +517,17 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
 
         // Cancelar upload
         Route::post('/chunked/cancel', [ImageBackupController::class, 'cancelChunkedUpload']);
+
+        // ========== RUTAS CON PARÁMETROS (DEBEN IR AL FINAL) ==========
+        // Obtener información de un backup específico (GET)
+        Route::get('/{backupName}', [ImageBackupController::class, 'getBackupInfo']);
+
+        // Eliminar un backup (DELETE)
+        Route::delete('/{backupName}', [ImageBackupController::class, 'deleteBackup']);
     });
+});
+
+// ✅ Rutas API de auditoría de cajas (Sprint 4)
+Route::middleware(['auth', 'permission:admin.auditoria'])->prefix('cajas/auditoria')->group(function () {
+    Route::get('/estadisticas', [\App\Http\Controllers\AuditoriaCajaController::class, 'estadisticas'])->name('api.cajas.auditoria.estadisticas');
 });

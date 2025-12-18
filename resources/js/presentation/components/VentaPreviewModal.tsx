@@ -6,7 +6,6 @@ import type {
     Cliente,
     Moneda,
     EstadoDocumento,
-    VentaFormData,
     Producto
 } from '@/domain/entities/ventas';
 import type { Id } from '@/domain/entities/shared';
@@ -20,11 +19,31 @@ interface DetalleVentaConProducto {
     producto?: Producto;
 }
 
+interface VentaPreviewData {
+    numero: string;
+    fecha: string;
+    subtotal: number;
+    descuento: number;
+    impuesto: number;
+    total: number;
+    observaciones?: string;
+    cliente_id: Id;
+    usuario_id: number;
+    estado_documento_id: Id;
+    moneda_id: Id;
+    proforma_id?: Id;
+    tipo_pago_id?: Id;
+    tipo_documento_id?: Id;
+    requiere_envio?: boolean;
+    canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
+    estado_logistico?: 'PENDIENTE_ENVIO' | 'PREPARANDO' | 'ENVIADO' | 'ENTREGADO';
+}
+
 interface VentaPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    data: VentaFormData;
+    data: VentaPreviewData;
     detallesWithProducts: DetalleVentaConProducto[];
     cliente: Cliente | undefined;
     moneda: Moneda | undefined;

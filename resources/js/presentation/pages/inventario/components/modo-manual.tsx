@@ -5,32 +5,7 @@ import { Label } from '@/presentation/components/ui/label';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import NotificationService from '@/infrastructure/services/notification.service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
-
-interface Producto {
-    id: number;
-    nombre: string;
-    sku?: string | null;
-    categoria?: string;
-    marca?: string;
-    unidad?: string;
-    stock_minimo?: number;
-    tiene_inventario_inicial: boolean;
-}
-
-interface Almacen {
-    id: number;
-    nombre: string;
-    ubicacion?: string;
-}
-
-interface InventarioItem {
-    producto_id: number | '';
-    almacen_id: number | '';
-    cantidad: number | '';
-    lote?: string;
-    fecha_vencimiento?: string;
-    observaciones?: string;
-}
+import type { Producto, Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
 
 interface ModoManualProps {
     items: InventarioItem[];

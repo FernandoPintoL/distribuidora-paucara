@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/components/ui/tabs';
-import { toast } from 'react-toastify';
 
 // Hooks
 import { useProformaFilters } from '@/application/hooks/use-proforma-filters';
@@ -17,67 +16,14 @@ import { ProformasSection } from './components/ProformasSection';
 import { EnviosSection } from './components/EnviosSection';
 import { ProformaUnifiedModal } from './components/modals/ProformaUnifiedModal';
 
-// Servicios
-import logisticaService from '@/infrastructure/services/logistica.service';
-
-// Tipos
-interface ProformaAppExterna {
-    id: number;
-    numero: string;
-    cliente_nombre: string;
-    total: number;
-    estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA' | 'VENCIDA';
-    fecha: string;
-    fecha_vencimiento?: string;
-    usuario_creador_nombre: string;
-    fecha_entrega_solicitada?: string;
-    hora_entrega_solicitada?: string;
-    direccion_entrega_solicitada_id?: number;
-}
-
-interface Envio {
-    id: number;
-    numero_seguimiento: string;
-    cliente_nombre: string;
-    estado: 'PROGRAMADO' | 'EN_PREPARACION' | 'EN_RUTA' | 'ENTREGADO' | 'CANCELADO';
-    fecha_programada: string;
-    fecha_salida?: string;
-    fecha_entrega?: string;
-    direccion_entrega: string;
-}
-
-interface DashboardStats {
-    proformas_pendientes: number;
-    envios_programados: number;
-    envios_en_transito: number;
-    envios_entregados_hoy: number;
-}
-
-interface PaginatedProformas {
-    data: ProformaAppExterna[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    from: number;
-    to: number;
-}
-
-interface PaginatedEnvios {
-    data: Envio[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    from: number;
-    to: number;
-}
-
-interface Props {
-    estadisticas: DashboardStats;
-    proformasRecientes: PaginatedProformas;
-    enviosActivos: PaginatedEnvios | Envio[];
-}
+// Domain entities (centralized type definitions)
+import type {
+    ProformaAppExterna,
+    EnvioLogistica,
+    DashboardLogisticaStats,
+    PaginatedEnvios,
+    DashboardLogisticaProps,
+} from '@/domain/entities/logistica';
 
 const MOTIVOS_RECHAZO = [
     { value: 'cliente_cancelo', label: 'Cliente canceló el pedido' },
@@ -88,17 +34,17 @@ const MOTIVOS_RECHAZO = [
     { value: 'otro', label: 'Otro motivo (especificar abajo)' },
 ];
 
-export default function LogisticaDashboard({ estadisticas, proformasRecientes, enviosActivos }: Props) {
+export default function LogisticaDashboard({ estadisticas, proformasRecientes, enviosActivos }: DashboardLogisticaProps) {
     // Estados principales
-    const [stats] = useState<DashboardStats>(estadisticas);
+    const [stats] = useState<DashboardLogisticaStats>(estadisticas);
     const [proformas, setProformas] = useState<ProformaAppExterna[]>(proformasRecientes.data);
 
     // Helper: detectar si enviosActivos es paginado
-    const isEnviosPaginated = (envios: any): envios is PaginatedEnvios => {
-        return envios && typeof envios === 'object' && 'data' in envios && Array.isArray(envios.data);
+    const isEnviosPaginated = (envios: PaginatedEnvios | EnvioLogistica[]): envios is PaginatedEnvios => {
+        return Array.isArray(envios) === false && 'data' in envios;
     };
 
-    const [envios, setEnvios] = useState<Envio[]>(
+    const [envios] = useState<EnvioLogistica[]>(
         isEnviosPaginated(enviosActivos) ? enviosActivos.data : enviosActivos
     );
 
@@ -107,13 +53,13 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
     const envioFilters = useEnvioFilters(
         isEnviosPaginated(enviosActivos)
             ? {
-                  current_page: enviosActivos.current_page,
-                  last_page: enviosActivos.last_page,
-                  per_page: enviosActivos.per_page,
-                  total: enviosActivos.total,
-                  from: enviosActivos.from,
-                  to: enviosActivos.to,
-              }
+                current_page: enviosActivos.current_page,
+                last_page: enviosActivos.last_page,
+                per_page: enviosActivos.per_page,
+                total: enviosActivos.total,
+                from: enviosActivos.from,
+                to: enviosActivos.to,
+            }
             : { current_page: 1, last_page: 1, per_page: 15, total: envios.length, from: 1, to: envios.length }
     );
 
@@ -130,7 +76,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
 
     const {
         stats: proformaStats,
-        loading: loadingStats,
     } = useProformaStats({
         autoRefresh: true,
         refreshInterval: 30,
@@ -145,12 +90,12 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
         motivoRechazoSeleccionado,
         motivoRechazoCustom,
         notasLlamada,
+        cargandoDetalles,
         setTabActiva,
         setDatosConfirmacion,
         setMotivoRechazoSeleccionado,
         setMotivoRechazoCustom,
         setNotasLlamada,
-        abrirModal,
         cerrarModal,
         aprobarProforma,
         rechazarProforma,
@@ -167,6 +112,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
             from: proformasRecientes.from,
             to: proformasRecientes.to,
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [proformasRecientes]);
 
     // Filtrar envios localmente
@@ -180,20 +126,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
     };
 
     // Badge de estado
-    const getEstadoBadge = (estado: string, proforma?: ProformaAppExterna) => {
-        const variants: Record<string, any> = {
-            'PENDIENTE': 'secondary',
-            'APROBADA': 'default',
-            'RECHAZADA': 'destructive',
-            'CONVERTIDA': 'outline',
-            'VENCIDA': 'outline',
-            'PROGRAMADO': 'secondary',
-            'EN_PREPARACION': 'default',
-            'EN_RUTA': 'default',
-            'ENTREGADO': 'default',
-            'CANCELADO': 'destructive'
-        };
-
+    const getEstadoBadge = (estado: string) => {
         const emojis: Record<string, string> = {
             'PENDIENTE': '🟡',
             'APROBADA': '🟢',
@@ -203,12 +136,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
         };
 
         const emoji = emojis[estado] || '';
-
-        // Para envios, devolver solo el badge
-        if (!['PENDIENTE', 'APROBADA', 'RECHAZADA', 'CONVERTIDA', 'VENCIDA'].includes(estado)) {
-            return `${emoji} ${estado}`;
-        }
-
         return `${emoji} ${estado}`;
     };
 
@@ -218,7 +145,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
     };
 
     // Ver envio
-    const handleVerEnvio = (envio: Envio) => {
+    const handleVerEnvio = (envio: EnvioLogistica) => {
         window.location.href = `/logistica/seguimiento/${envio.id}`;
     };
 
@@ -273,7 +200,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                             setSoloVencidas={proformaFilters.setSoloVencidas}
                             cambiarPagina={proformaFilters.cambiarPagina}
                             onVerProforma={handleVerProforma}
-                            onGestionarProforma={abrirModal}
                             getEstadoBadge={getEstadoBadge}
                             estaVencida={estaVencida}
                         />
@@ -295,9 +221,10 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, e
                     setMotivoRechazoCustom={setMotivoRechazoCustom}
                     notasLlamada={notasLlamada}
                     setNotasLlamada={setNotasLlamada}
-                    onAprobar={() => aprobarProforma(MOTIVOS_RECHAZO)}
+                    onAprobar={() => aprobarProforma()}
                     onRechazar={() => rechazarProforma(MOTIVOS_RECHAZO)}
                     isProcessing={false}
+                    cargandoDetalles={cargandoDetalles}
                 />
             </div>
         </AppLayout>

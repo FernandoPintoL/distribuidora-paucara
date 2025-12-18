@@ -26,6 +26,9 @@ class CompraController extends Controller
         $this->middleware('permission:compras.store')->only('store');
         $this->middleware('permission:compras.update')->only('update');
         $this->middleware('permission:compras.destroy')->only('destroy');
+
+        // ✅ Validar que el usuario tiene caja abierta ANTES de crear compras
+        $this->middleware('caja.abierta')->only(['store']);
     }
 
     public function index(Request $request)
@@ -284,6 +287,7 @@ class CompraController extends Controller
     public function store(StoreCompraRequest $request)
     {
         $data = $request->validated();
+        $cajaId = $request->attributes->get('caja_id');  // ✅ Del middleware
 
         try {
             DB::beginTransaction();
@@ -304,6 +308,9 @@ class CompraController extends Controller
                     $this->registrarEntradaInventario($detalleCompra, $compra);
                 }
             }
+
+            // ✅ Registrar movimiento de caja si es CONTADO
+            $this->registrarMovimientoCaja($compra, $cajaId);
 
             DB::commit();
 
@@ -741,5 +748,55 @@ class CompraController extends Controller
 
         // Si después de todos los intentos no se generó, usar timestamp como fallback
         return sprintf('COMP%s-%s', $fecha, substr(microtime(true) * 10000, -6));
+    }
+
+    /**
+     * Registrar movimiento de caja para compra
+     *
+     * ✅ MEJORADO: Registra movimiento de caja solo si la compra es CONTADO
+     * Si es CRÉDITO, el movimiento se registrará al pagar
+     *
+     * @param Compra $compra
+     * @param int $cajaId ID de caja del middleware
+     */
+    private function registrarMovimientoCaja(Compra $compra, ?int $cajaId = null): void
+    {
+        try {
+            // Solo registrar movimiento para compras al CONTADO
+            $tipoPago = $compra->tipoPago;
+            if (!$tipoPago || strtoupper($tipoPago->codigo) !== 'CONTADO') {
+                // Es a CRÉDITO - no crear movimiento ahora
+                Log::info("Compra {$compra->numero} a crédito - movimiento de caja se registrará al pagar");
+                return;
+            }
+
+            if (!$cajaId) {
+                Log::warning("No se especificó cajaId para registrar movimiento de compra {$compra->numero}");
+                return;
+            }
+
+            // Obtener tipo de operación para compra
+            $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'COMPRA')->first();
+
+            if (!$tipoOperacion) {
+                Log::warning('No existe tipo de operación COMPRA para movimiento de caja');
+                return;
+            }
+
+            // Crear movimiento de caja (EGRESO para compra)
+            \App\Models\MovimientoCaja::create([
+                'caja_id' => $cajaId,
+                'tipo_operacion_id' => $tipoOperacion->id,
+                'numero_documento' => $compra->numero,
+                'descripcion' => "Compra #{$compra->numero} - Proveedor: {$compra->proveedor?->nombre}",
+                'monto' => -$compra->total, // Negativo para egreso
+                'fecha' => $compra->fecha,
+                'user_id' => Auth::id(),
+            ]);
+
+            Log::info("Movimiento de caja generado para compra {$compra->numero}");
+        } catch (\Exception $e) {
+            Log::error("Error registrando movimiento de caja para compra {$compra->numero}: " . $e->getMessage());
+        }
     }
 }

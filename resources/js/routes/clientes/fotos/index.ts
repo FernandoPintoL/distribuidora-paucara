@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::index
  * @see app/Http/Controllers/FotoLugarClienteController.php:19
@@ -66,44 +66,9 @@ index.head = (args: { cliente: number | { id: number } } | [cliente: number | { 
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\FotoLugarClienteController::index
- * @see app/Http/Controllers/FotoLugarClienteController.php:19
- * @route '/clientes/{cliente}/fotos'
- */
-    const indexForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: index.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::index
- * @see app/Http/Controllers/FotoLugarClienteController.php:19
- * @route '/clientes/{cliente}/fotos'
- */
-        indexForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::index
- * @see app/Http/Controllers/FotoLugarClienteController.php:19
- * @route '/clientes/{cliente}/fotos'
- */
-        indexForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    index.form = indexForm
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::create
- * @see app/Http/Controllers/FotoLugarClienteController.php:45
+ * @see app/Http/Controllers/FotoLugarClienteController.php:48
  * @route '/clientes/{cliente}/fotos/create'
  */
 export const create = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -118,7 +83,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::create
- * @see app/Http/Controllers/FotoLugarClienteController.php:45
+ * @see app/Http/Controllers/FotoLugarClienteController.php:48
  * @route '/clientes/{cliente}/fotos/create'
  */
 create.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -151,7 +116,7 @@ create.url = (args: { cliente: number | { id: number } } | [cliente: number | { 
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::create
- * @see app/Http/Controllers/FotoLugarClienteController.php:45
+ * @see app/Http/Controllers/FotoLugarClienteController.php:48
  * @route '/clientes/{cliente}/fotos/create'
  */
 create.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -160,7 +125,7 @@ create.get = (args: { cliente: number | { id: number } } | [cliente: number | { 
 })
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::create
- * @see app/Http/Controllers/FotoLugarClienteController.php:45
+ * @see app/Http/Controllers/FotoLugarClienteController.php:48
  * @route '/clientes/{cliente}/fotos/create'
  */
 create.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -168,44 +133,9 @@ create.head = (args: { cliente: number | { id: number } } | [cliente: number | {
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\FotoLugarClienteController::create
- * @see app/Http/Controllers/FotoLugarClienteController.php:45
- * @route '/clientes/{cliente}/fotos/create'
- */
-    const createForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: create.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::create
- * @see app/Http/Controllers/FotoLugarClienteController.php:45
- * @route '/clientes/{cliente}/fotos/create'
- */
-        createForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::create
- * @see app/Http/Controllers/FotoLugarClienteController.php:45
- * @route '/clientes/{cliente}/fotos/create'
- */
-        createForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    create.form = createForm
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::store
- * @see app/Http/Controllers/FotoLugarClienteController.php:63
+ * @see app/Http/Controllers/FotoLugarClienteController.php:69
  * @route '/clientes/{cliente}/fotos'
  */
 export const store = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -220,7 +150,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::store
- * @see app/Http/Controllers/FotoLugarClienteController.php:63
+ * @see app/Http/Controllers/FotoLugarClienteController.php:69
  * @route '/clientes/{cliente}/fotos'
  */
 store.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -253,7 +183,7 @@ store.url = (args: { cliente: number | { id: number } } | [cliente: number | { i
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::store
- * @see app/Http/Controllers/FotoLugarClienteController.php:63
+ * @see app/Http/Controllers/FotoLugarClienteController.php:69
  * @route '/clientes/{cliente}/fotos'
  */
 store.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -261,30 +191,9 @@ store.post = (args: { cliente: number | { id: number } } | [cliente: number | { 
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\FotoLugarClienteController::store
- * @see app/Http/Controllers/FotoLugarClienteController.php:63
- * @route '/clientes/{cliente}/fotos'
- */
-    const storeForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: store.url(args, options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::store
- * @see app/Http/Controllers/FotoLugarClienteController.php:63
- * @route '/clientes/{cliente}/fotos'
- */
-        storeForm.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: store.url(args, options),
-            method: 'post',
-        })
-    
-    store.form = storeForm
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::show
- * @see app/Http/Controllers/FotoLugarClienteController.php:106
+ * @see app/Http/Controllers/FotoLugarClienteController.php:114
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 export const show = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -299,7 +208,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::show
- * @see app/Http/Controllers/FotoLugarClienteController.php:106
+ * @see app/Http/Controllers/FotoLugarClienteController.php:114
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 show.url = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -329,7 +238,7 @@ show.url = (args: { cliente: number | { id: number }, foto: number | { id: numbe
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::show
- * @see app/Http/Controllers/FotoLugarClienteController.php:106
+ * @see app/Http/Controllers/FotoLugarClienteController.php:114
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 show.get = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -338,7 +247,7 @@ show.get = (args: { cliente: number | { id: number }, foto: number | { id: numbe
 })
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::show
- * @see app/Http/Controllers/FotoLugarClienteController.php:106
+ * @see app/Http/Controllers/FotoLugarClienteController.php:114
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 show.head = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -346,44 +255,9 @@ show.head = (args: { cliente: number | { id: number }, foto: number | { id: numb
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\FotoLugarClienteController::show
- * @see app/Http/Controllers/FotoLugarClienteController.php:106
- * @route '/clientes/{cliente}/fotos/{foto}'
- */
-    const showForm = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::show
- * @see app/Http/Controllers/FotoLugarClienteController.php:106
- * @route '/clientes/{cliente}/fotos/{foto}'
- */
-        showForm.get = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::show
- * @see app/Http/Controllers/FotoLugarClienteController.php:106
- * @route '/clientes/{cliente}/fotos/{foto}'
- */
-        showForm.head = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show.form = showForm
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::edit
- * @see app/Http/Controllers/FotoLugarClienteController.php:130
+ * @see app/Http/Controllers/FotoLugarClienteController.php:141
  * @route '/clientes/{cliente}/fotos/{foto}/edit'
  */
 export const edit = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -398,7 +272,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::edit
- * @see app/Http/Controllers/FotoLugarClienteController.php:130
+ * @see app/Http/Controllers/FotoLugarClienteController.php:141
  * @route '/clientes/{cliente}/fotos/{foto}/edit'
  */
 edit.url = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -428,7 +302,7 @@ edit.url = (args: { cliente: number | { id: number }, foto: number | { id: numbe
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::edit
- * @see app/Http/Controllers/FotoLugarClienteController.php:130
+ * @see app/Http/Controllers/FotoLugarClienteController.php:141
  * @route '/clientes/{cliente}/fotos/{foto}/edit'
  */
 edit.get = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -437,7 +311,7 @@ edit.get = (args: { cliente: number | { id: number }, foto: number | { id: numbe
 })
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::edit
- * @see app/Http/Controllers/FotoLugarClienteController.php:130
+ * @see app/Http/Controllers/FotoLugarClienteController.php:141
  * @route '/clientes/{cliente}/fotos/{foto}/edit'
  */
 edit.head = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -445,44 +319,9 @@ edit.head = (args: { cliente: number | { id: number }, foto: number | { id: numb
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\FotoLugarClienteController::edit
- * @see app/Http/Controllers/FotoLugarClienteController.php:130
- * @route '/clientes/{cliente}/fotos/{foto}/edit'
- */
-    const editForm = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: edit.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::edit
- * @see app/Http/Controllers/FotoLugarClienteController.php:130
- * @route '/clientes/{cliente}/fotos/{foto}/edit'
- */
-        editForm.get = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::edit
- * @see app/Http/Controllers/FotoLugarClienteController.php:130
- * @route '/clientes/{cliente}/fotos/{foto}/edit'
- */
-        editForm.head = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    edit.form = editForm
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::update
- * @see app/Http/Controllers/FotoLugarClienteController.php:153
+ * @see app/Http/Controllers/FotoLugarClienteController.php:167
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 export const update = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -497,7 +336,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::update
- * @see app/Http/Controllers/FotoLugarClienteController.php:153
+ * @see app/Http/Controllers/FotoLugarClienteController.php:167
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 update.url = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -527,7 +366,7 @@ update.url = (args: { cliente: number | { id: number }, foto: number | { id: num
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::update
- * @see app/Http/Controllers/FotoLugarClienteController.php:153
+ * @see app/Http/Controllers/FotoLugarClienteController.php:167
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 update.put = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -535,40 +374,9 @@ update.put = (args: { cliente: number | { id: number }, foto: number | { id: num
     method: 'put',
 })
 
-    /**
-* @see \App\Http\Controllers\FotoLugarClienteController::update
- * @see app/Http/Controllers/FotoLugarClienteController.php:153
- * @route '/clientes/{cliente}/fotos/{foto}'
- */
-    const updateForm = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: update.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'PUT',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::update
- * @see app/Http/Controllers/FotoLugarClienteController.php:153
- * @route '/clientes/{cliente}/fotos/{foto}'
- */
-        updateForm.put = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PUT',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    update.form = updateForm
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::destroy
- * @see app/Http/Controllers/FotoLugarClienteController.php:204
+ * @see app/Http/Controllers/FotoLugarClienteController.php:220
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 export const destroy = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -583,7 +391,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::destroy
- * @see app/Http/Controllers/FotoLugarClienteController.php:204
+ * @see app/Http/Controllers/FotoLugarClienteController.php:220
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 destroy.url = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -613,45 +421,13 @@ destroy.url = (args: { cliente: number | { id: number }, foto: number | { id: nu
 
 /**
 * @see \App\Http\Controllers\FotoLugarClienteController::destroy
- * @see app/Http/Controllers/FotoLugarClienteController.php:204
+ * @see app/Http/Controllers/FotoLugarClienteController.php:220
  * @route '/clientes/{cliente}/fotos/{foto}'
  */
 destroy.delete = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
-
-    /**
-* @see \App\Http\Controllers\FotoLugarClienteController::destroy
- * @see app/Http/Controllers/FotoLugarClienteController.php:204
- * @route '/clientes/{cliente}/fotos/{foto}'
- */
-    const destroyForm = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: destroy.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'DELETE',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\FotoLugarClienteController::destroy
- * @see app/Http/Controllers/FotoLugarClienteController.php:204
- * @route '/clientes/{cliente}/fotos/{foto}'
- */
-        destroyForm.delete = (args: { cliente: number | { id: number }, foto: number | { id: number } } | [cliente: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: destroy.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'DELETE',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    destroy.form = destroyForm
 const fotos = {
     index,
 create,

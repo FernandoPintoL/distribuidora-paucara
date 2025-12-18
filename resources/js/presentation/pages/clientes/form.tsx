@@ -3,12 +3,7 @@ import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
 import { clientesConfig } from '@/config/modules/clientes.config';
 import { clientesService } from '@/infrastructure/services/clientes.service';
-import type { Cliente, ClienteFormData } from '@/domain/entities/clientes';
-
-interface ClientesFormProps {
-  cliente?: Cliente | null;
-  localidades?: Array<{ id: number; nombre: string; codigo: string }>;
-}
+import type { Cliente, ClienteFormData, ClientesFormPageProps } from '@/domain/entities/clientes';
 
 const initialClienteData: ClienteFormData = {
   nombre: '',
@@ -27,7 +22,7 @@ const initialClienteData: ClienteFormData = {
   ventanas_entrega: [],
 };
 
-export default function ClientesForm({ cliente, localidades }: ClientesFormProps) {
+export default function ClientesForm({ cliente, localidades }: ClientesFormPageProps) {
   const isEditing = !!cliente;
 
   return (

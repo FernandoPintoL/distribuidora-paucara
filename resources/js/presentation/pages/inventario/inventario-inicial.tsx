@@ -10,48 +10,20 @@ import ModoManual from './components/modo-manual';
 import ModoTabla from './components/modo-tabla';
 import ModoImportacion from './components/modo-importacion';
 import { store as storeInventarioInicial } from '@/routes/inventario/inicial';
+import { Producto } from '@/domain/entities/productos';
+import { TipoAjusteInventario } from '@/domain/entities/tipos-ajuste-inventario';
+import { InventarioItem } from '@/domain/entities/inventario-inicial';
+import { Almacen } from '@/domain/entities/almacenes';
 
-interface Producto {
-    id: number;
-    nombre: string;
-    sku?: string | null;
-    categoria?: string;
-    marca?: string;
-    unidad?: string;
-    stock_minimo?: number;
-    tiene_inventario_inicial: boolean;
-}
-
-interface Almacen {
-    id: number;
-    nombre: string;
-    ubicacion?: string;
-}
-
-interface TipoAjuste {
-    id: number;
-    clave: string;
-    label: string;
-    descripcion: string;
-}
-
-interface InventarioItem {
-    producto_id: number | '';
-    almacen_id: number | '';
-    cantidad: number | '';
-    lote?: string;
-    fecha_vencimiento?: string;
-    observaciones?: string;
-}
 
 interface Props {
     productos: Producto[];
     almacenes: Almacen[];
-    tipoInventarioInicial: TipoAjuste;
+    tipoInventarioInicial: TipoAjusteInventario;
 }
 
 export default function InventarioInicial({ productos, almacenes, tipoInventarioInicial }: Props) {
-    const { data, setData, post, processing, errors } = useForm<{ items: InventarioItem[] }>({
+    const { data, setData, post, processing } = useForm<{ items: InventarioItem[] }>({
         items: []
     });
 
@@ -76,7 +48,7 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
         setData('items', newItems);
     };
 
-    const actualizarItem = (index: number, field: keyof InventarioItem, value: any) => {
+    const actualizarItem = (index: number, field: keyof InventarioItem, value: unknown) => {
         const newItems = [...data.items];
         newItems[index] = { ...newItems[index], [field]: value };
         setData('items', newItems);
@@ -117,11 +89,11 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
 
             // Confirmar antes de guardar
             const confirmado = await NotificationService.confirm(
-                `¿Confirmar carga de ${data.items.length} items de inventario inicial?`,
+                'Esta acción registrará el inventario inicial en los almacenes seleccionados.',
                 {
+                    title: `¿Confirmar carga de ${data.items.length} items?`,
                     confirmText: 'Sí, cargar inventario',
-                    cancelText: 'Cancelar',
-                    description: 'Esta acción registrará el inventario inicial en los almacenes seleccionados.'
+                    cancelText: 'Cancelar'
                 }
             );
 
@@ -133,7 +105,7 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                     NotificationService.success('Inventario inicial cargado exitosamente');
                     setData('items', []);
                 },
-                onError: (errorsResponse: any) => {
+                onError: (errorsResponse: unknown) => {
                     console.error('Errores del backend:', errorsResponse);
 
                     // Manejar diferentes tipos de errores
@@ -145,7 +117,7 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                             });
                         } else {
                             // Si es un objeto
-                            Object.entries(errorsResponse).forEach(([key, value]: [string, any]) => {
+                            Object.entries(errorsResponse).forEach(([key, value]: [string, unknown]) => {
                                 const errorMsg = Array.isArray(value) ? value[0] : String(value);
                                 NotificationService.error(errorMsg);
                             });

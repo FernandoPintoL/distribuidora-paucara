@@ -158,7 +158,7 @@ export default function AdminDashboard({
     const ventasPorCanalData = {
         labels: Object.keys(safeVentasPorCanal),
         datasets: [{
-            data: Object.values(safeVentasPorCanal).map((canal: any) => canal.monto),
+            data: Object.values(safeVentasPorCanal).map((canal: { total: number; monto: number }) => canal.monto),
             backgroundColor: [
                 'rgba(59, 130, 246, 0.8)',
                 'rgba(16, 185, 129, 0.8)',

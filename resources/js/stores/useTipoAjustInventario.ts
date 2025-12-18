@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
-import { TipoAjustInventarioService, TipoAjustInventarioApi } from '@/infrastructure/services/tipoAjustInventarioService';
+import tipoAjusteInventarioService from '@/infrastructure/services/tipoAjusteInventario.service';
+import type { TipoAjusteInventario } from '@/domain/entities/tipos-ajuste-inventario';
 
 export function useTipoAjustInventario() {
-    const [tipos, setTipos] = useState<TipoAjustInventarioApi[]>([]);
+    const [tipos, setTipos] = useState<TipoAjusteInventario[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -10,7 +11,7 @@ export function useTipoAjustInventario() {
         setLoading(true);
         setError(null);
         try {
-            const data = await TipoAjustInventarioService.getAll();
+            const data = await tipoAjusteInventarioService.getAll();
             setTipos(data);
         } catch (err) {
             setError('Error al cargar los tipos de ajuste');

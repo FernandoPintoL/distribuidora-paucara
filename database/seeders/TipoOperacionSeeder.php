@@ -66,7 +66,10 @@ class TipoOperacionSeeder extends Seeder
         ];
 
         foreach ($tiposOperacion as $tipo) {
-            TipoOperacion::create($tipo);
+            TipoOperacion::firstOrCreate(
+                ['clave' => $tipo['clave']],
+                $tipo
+            );
         }
     }
 }

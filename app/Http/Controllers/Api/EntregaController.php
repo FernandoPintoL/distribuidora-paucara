@@ -3,11 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\UbicacionActualizada;
+use App\Events\MarcarLlegadaConfirmada;
+use App\Events\EntregaConfirmada;
+use App\Events\NovedadEntregaReportada;
 use App\Http\Controllers\Controller;
 use App\Models\Entrega;
+use App\Models\Envio;
 use App\Models\Proforma;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class EntregaController extends Controller
 {
@@ -16,8 +22,116 @@ class EntregaController extends Controller
      */
 
     /**
+     * GET /api/chofer/trabajos
+     * Obtener ENTREGAS + ENVIOS asignados al chofer (combinados)
+     * Este es el endpoint recomendado para ver todas las cargas del chofer
+     */
+    public function misTrabjos(Request $request)
+    {
+        try {
+            $user = Auth::user();
+
+            // Verificar que sea chofer
+            if (!$user->chofer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no tiene perfil de chofer',
+                ], 404);
+            }
+
+            $chofer = $user->chofer;
+            $perPage = $request->per_page ?? 15;
+            $page = $request->page ?? 1;
+            $estado = $request->estado;
+
+            // Obtener entregas (desde proformas)
+            $entregas = $chofer->entregas()
+                ->with(['proforma', 'vehiculo', 'direccionCliente'])
+                ->when($estado, function ($q) use ($estado) {
+                    return $q->where('estado', $estado);
+                })
+                ->get()
+                ->map(function ($entrega) {
+                    return [
+                        'id' => $entrega->id,
+                        'type' => 'entrega',  // Tipo para identificar en app
+                        'numero' => $entrega->proforma?->numero ?? 'N/A',
+                        'cliente' => $entrega->proforma?->cliente?->nombre ?? 'N/A',
+                        'estado' => $entrega->estado,
+                        'fecha_asignacion' => $entrega->fecha_asignacion,
+                        'fecha_entrega' => $entrega->fecha_entrega,
+                        'direccion' => $entrega->direccionCliente?->direccion ?? 'N/A',
+                        'observaciones' => $entrega->observaciones,
+                        'data' => $entrega,
+                    ];
+                });
+
+            // Obtener envios (desde ventas)
+            $envios = $user->envios()
+                ->with(['venta', 'vehiculo'])
+                ->when($estado, function ($q) use ($estado) {
+                    return $q->where('estado', $estado);
+                })
+                ->get()
+                ->map(function ($envio) {
+                    return [
+                        'id' => $envio->id,
+                        'type' => 'envio',  // Tipo para identificar en app
+                        'numero' => $envio->numero_envio,
+                        'cliente' => $envio->venta?->cliente?->nombre ?? 'N/A',
+                        'estado' => $envio->estado,
+                        'fecha_asignacion' => $envio->created_at,
+                        'fecha_entrega' => $envio->fecha_entrega,
+                        'direccion' => $envio->venta?->direccionEntrega?->direccion ?? 'N/A',
+                        'observaciones' => $envio->observaciones ?? null,
+                        'data' => $envio,
+                    ];
+                });
+
+            // Combinar entregas + envios
+            $trabajos = $entregas->concat($envios)
+                ->sortByDesc('fecha_asignacion')
+                ->values();
+
+            // Aplicar paginación manual
+            $total = count($trabajos);
+            $items = $trabajos->slice(($page - 1) * $perPage, $perPage)->values();
+
+            $paginado = new LengthAwarePaginator(
+                $items,
+                $total,
+                $perPage,
+                $page,
+                [
+                    'path' => $request->url(),
+                    'query' => $request->query(),
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $paginado->items(),
+                'pagination' => [
+                    'total' => $paginado->total(),
+                    'per_page' => $paginado->perPage(),
+                    'current_page' => $paginado->currentPage(),
+                    'last_page' => $paginado->lastPage(),
+                    'from' => $paginado->firstItem(),
+                    'to' => $paginado->lastItem(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener trabajos',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * GET /api/chofer/entregas
-     * Obtener entregas asignadas al chofer autenticado
+     * Obtener entregas asignadas al chofer autenticado (solo entregas)
      */
     public function entregasAsignadas(Request $request)
     {
@@ -188,7 +302,7 @@ class EntregaController extends Controller
      * POST /api/chofer/entregas/{id}/marcar-llegada
      * Marcar que el chofer llegó al destino
      */
-    public function marcarLlegada($id)
+    public function marcarLlegada($id, Request $request)
     {
         try {
             $entrega = Entrega::findOrFail($id);
@@ -200,6 +314,10 @@ class EntregaController extends Controller
                 ], 422);
             }
 
+            // Obtener coordenadas GPS del request
+            $latitud = $request->input('latitud', null);
+            $longitud = $request->input('longitud', null);
+
             $entrega->update([
                 'estado' => Entrega::ESTADO_LLEGO,
                 'fecha_llegada' => now(),
@@ -210,6 +328,15 @@ class EntregaController extends Controller
                 'Chofer llegó al destino',
                 Auth::user()
             );
+
+            // Emitir evento de broadcast para notificar en tiempo real
+            event(new MarcarLlegadaConfirmada(
+                $entrega->fresh(),
+                [
+                    'latitud' => $latitud,
+                    'longitud' => $longitud,
+                ]
+            ));
 
             return response()->json([
                 'success' => true,
@@ -275,10 +402,20 @@ class EntregaController extends Controller
                 Auth::user()
             );
 
+            $entregaFresh = $entrega->fresh();
+
+            // Emitir evento de broadcast para notificar en tiempo real
+            event(new EntregaConfirmada(
+                $entregaFresh,
+                $firmaUrl,
+                $fotoUrl ? [$fotoUrl] : [],
+                $validated['observaciones'] ?? null
+            ));
+
             return response()->json([
                 'success' => true,
                 'message' => 'Entrega confirmada',
-                'data' => $entrega->fresh(),
+                'data' => $entregaFresh,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -329,10 +466,20 @@ class EntregaController extends Controller
                 Auth::user()
             );
 
+            $entregaFresh = $entrega->fresh();
+
+            // Emitir evento de broadcast para notificar en tiempo real
+            event(new NovedadEntregaReportada(
+                $entregaFresh,
+                $validated['motivo'],
+                $validated['descripcion'] ?? null,
+                $fotoUrl
+            ));
+
             return response()->json([
                 'success' => true,
                 'message' => 'Novedad reportada',
-                'data' => $entrega->fresh(),
+                'data' => $entregaFresh,
             ]);
         } catch (\Exception $e) {
             return response()->json([

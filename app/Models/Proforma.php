@@ -41,6 +41,17 @@ class Proforma extends Model
         // Auditoría de coordinación
         'coordinacion_completada',
         'comentario_coordinacion',
+        'coordinacion_actualizada_en',
+        'coordinacion_actualizada_por_id',
+        'motivo_cambio_entrega',
+        // Control de intentos de contacto
+        'numero_intentos_contacto',
+        'fecha_ultimo_intento',
+        'resultado_ultimo_intento',
+        // Datos de entrega realizada
+        'entregado_en',
+        'entregado_a',
+        'observaciones_entrega',
     ];
 
     protected function casts(): array
@@ -60,6 +71,10 @@ class Proforma extends Model
             'fecha_entrega_confirmada' => 'date',
             'hora_entrega_confirmada' => 'datetime:H:i',
             'coordinacion_completada' => 'boolean',
+            // Auditoría de coordinación
+            'coordinacion_actualizada_en' => 'datetime',
+            'fecha_ultimo_intento' => 'datetime',
+            'entregado_en' => 'datetime',
         ];
     }
 
@@ -95,6 +110,11 @@ class Proforma extends Model
     public function usuarioAprobador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'usuario_aprobador_id');
+    }
+
+    public function coordinacionActualizadaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'coordinacion_actualizada_por_id');
     }
 
     public function moneda(): BelongsTo

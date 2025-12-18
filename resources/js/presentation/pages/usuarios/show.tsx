@@ -1,5 +1,5 @@
 import { Link, Head } from '@inertiajs/react'
-import React from 'react'
+import { type ReactNode } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/presentation/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card'
@@ -7,32 +7,7 @@ import { Badge } from '@/presentation/components/ui/badge'
 import { ArrowLeft, Edit, Mail, User, Calendar, Shield } from 'lucide-react'
 import Can from '@/presentation/components/auth/Can'
 import { type BreadcrumbItem } from '@/types'
-
-interface User {
-    id: number
-    name: string
-    usernick: string
-    email: string
-    created_at: string
-    updated_at: string
-    roles: Array<{
-        id: number
-        name: string
-        permissions: Array<{
-            id: number
-            name: string
-        }>
-    }>
-    permissions: Array<{
-        id: number
-        name: string
-    }>
-}
-
-interface PageProps {
-    user: User
-    [key: string]: unknown
-}
+import type { UsersShowPageProps } from '@/domain/entities/usuarios'
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -45,13 +20,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ]
 
-export default function Show({ user }: PageProps) {
-    React.useEffect(() => {
-        // Log temporal para depuración: verificar qué objeto `user` llega al componente
-        // Remover este log una vez confirmado en el navegador
-         
-        console.log('[debug] usuarios/Show user prop:', user);
-    }, [user]);
+export default function Show({ user }: UsersShowPageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Usuario: ${user.name}`} />
@@ -254,7 +223,7 @@ export default function Show({ user }: PageProps) {
     )
 }
 
-function Label({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Label({ children, className = "" }: { children: ReactNode; className?: string }) {
     return (
         <div className={`text-sm font-medium ${className}`}>
             {children}

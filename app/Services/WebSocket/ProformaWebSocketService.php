@@ -96,4 +96,28 @@ class ProformaWebSocketService extends BaseWebSocketService
             'fecha_conversion' => now()->toIso8601String(),
         ]);
     }
+
+    /**
+     * Notificar actualización de coordinación de entrega
+     */
+    public function notifyCoordination($proforma, int $usuarioId): bool
+    {
+        return $this->send('notify/proforma-coordination', [
+            'id' => $proforma->id,
+            'numero' => $proforma->numero,
+            'cliente_id' => $proforma->cliente_id,
+            'usuario_actualizo' => [
+                'id' => $usuarioId,
+                'name' => \App\Models\User::find($usuarioId)?->name ?? 'Sistema',
+            ],
+            'coordinacion_actualizada_en' => $proforma->coordinacion_actualizada_en?->toIso8601String(),
+            'numero_intentos_contacto' => $proforma->numero_intentos_contacto ?? 0,
+            'resultado_ultimo_intento' => $proforma->resultado_ultimo_intento,
+            'fecha_entrega_confirmada' => $proforma->fecha_entrega_confirmada?->toIso8601String(),
+            'hora_entrega_confirmada' => $proforma->hora_entrega_confirmada,
+            'entregado_en' => $proforma->entregado_en?->toIso8601String(),
+            'entregado_a' => $proforma->entregado_a,
+            'observaciones_entrega' => $proforma->observaciones_entrega,
+        ]);
+    }
 }

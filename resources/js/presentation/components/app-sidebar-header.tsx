@@ -1,6 +1,7 @@
 import { Breadcrumbs } from '@/presentation/components/breadcrumbs';
 import { SidebarTrigger } from '@/presentation/components/ui/sidebar';
 import ProformaNotificationPanel from '@/presentation/components/proforma-notification-panel';
+import { CajaStatusIndicator } from '@/presentation/components/caja-status-indicator';
 import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: BreadcrumbItemType[] }) {
@@ -10,8 +11,11 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                 <SidebarTrigger className="-ml-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
-            {/* ✅ Panel de notificaciones de proformas */}
-            <div className="ml-auto">
+            {/* ✅ Indicadores en el lado derecho */}
+            <div className="ml-auto flex items-center gap-3">
+                {/* ✅ Indicador de estado de caja */}
+                <CajaStatusIndicator />
+                {/* Panel de notificaciones de proformas */}
                 <ProformaNotificationPanel />
             </div>
         </header>

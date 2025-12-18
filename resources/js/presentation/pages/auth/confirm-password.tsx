@@ -1,4 +1,3 @@
-import ConfirmablePasswordController from '@/actions/App/Http/Controllers/Auth/ConfirmablePasswordController';
 import InputError from '@/presentation/components/input-error';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
@@ -15,7 +14,7 @@ export default function ConfirmPassword() {
         >
             <Head title="Confirm password" />
 
-            <Form {...ConfirmablePasswordController.store.form()} resetOnSuccess={['password']}>
+            <Form method="POST" action="/confirm-password" resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <div className="grid gap-2">

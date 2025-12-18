@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\EnvioController::rechazar
  * @see app/Http/Controllers/EnvioController.php:303
@@ -56,38 +56,6 @@ rechazar.put = (args: { envio: number | { id: number } } | [envio: number | { id
     url: rechazar.url(args, options),
     method: 'put',
 })
-
-    /**
-* @see \App\Http\Controllers\EnvioController::rechazar
- * @see app/Http/Controllers/EnvioController.php:303
- * @route '/api/app/envios/{envio}/rechazar'
- */
-    const rechazarForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: rechazar.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'PUT',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\EnvioController::rechazar
- * @see app/Http/Controllers/EnvioController.php:303
- * @route '/api/app/envios/{envio}/rechazar'
- */
-        rechazarForm.put = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: rechazar.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PUT',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    rechazar.form = rechazarForm
 const envios = {
     rechazar,
 }

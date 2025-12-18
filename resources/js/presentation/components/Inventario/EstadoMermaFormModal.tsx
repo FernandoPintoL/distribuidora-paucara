@@ -5,21 +5,22 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Textarea } from '@/presentation/components/ui/textarea';
 import { Badge } from '@/presentation/components/ui/badge';
-import { useEstadoMermas, EstadoMermaApi } from '@/stores/useEstadoMermas';
-import { EstadoMermaService } from '@/infrastructure/services/estadoMermaService';
+import { useEstadoMermas } from '@/stores/useEstadoMermas';
+import estadoMermaService from '@/infrastructure/services/estadoMerma.service';
 import { Check, Loader2, Palette, Settings, X } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
+import type { EstadoMerma, EstadoMermaFormData } from '@/domain/entities/estado-merma';
 
 interface EstadoMermaFormModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    editingEstado?: EstadoMermaApi | null;
+    editingEstado?: EstadoMerma | null;
     onSuccess?: () => void;
 }
 
 export function EstadoMermaFormModal({ open, onOpenChange, editingEstado, onSuccess }: EstadoMermaFormModalProps) {
     const { fetchEstados } = useEstadoMermas();
-    const [form, setForm] = useState<Partial<EstadoMermaApi>>({});
+    const [form, setForm] = useState<Partial<EstadoMermaFormData>>({});
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -46,10 +47,10 @@ export function EstadoMermaFormModal({ open, onOpenChange, editingEstado, onSucc
 
         try {
             if (editingEstado) {
-                await EstadoMermaService.update(editingEstado.id, form);
+                await estadoMermaService.update(editingEstado.id, form);
                 NotificationService.success('Estado de merma actualizado exitosamente');
             } else {
-                await EstadoMermaService.create(form);
+                await estadoMermaService.create(form);
                 NotificationService.success('Estado de merma creado exitosamente');
             }
 

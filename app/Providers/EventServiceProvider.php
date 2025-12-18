@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use App\Events\EntregaAsignada;
 use App\Events\EntregaCompletada;
+use App\Events\EntregaConfirmada;
 use App\Events\EntregaRechazada;
+use App\Events\MarcarLlegadaConfirmada;
+use App\Events\NovedadEntregaReportada;
 use App\Events\ProformaAprobada;
+use App\Events\ProformaCoordinacionActualizada;
 use App\Events\ProformaConvertida;
 use App\Events\ProformaCreada;
 use App\Events\ProformaRechazada;
@@ -117,6 +121,10 @@ class EventServiceProviderRefactored extends ServiceProvider
             \App\Listeners\Venta\BroadcastProformaConvertida::class,
         ],
 
+        ProformaCoordinacionActualizada::class => [
+            \App\Listeners\SendProformaCoordinationNotification::class,
+        ],
+
         // ══════════════════════════════════════════════════════════
         // ENTREGA EVENTS
         // ══════════════════════════════════════════════════════════
@@ -139,6 +147,46 @@ class EventServiceProviderRefactored extends ServiceProvider
 
             // Importante: revertir stock
             \App\Listeners\Stock\ReturnStockFromRejectedDelivery::class,
+        ],
+
+        // ══════════════════════════════════════════════════════════
+        // ENTREGA - DRIVER ACTIONS EVENTS (Nuevas Acciones)
+        // ══════════════════════════════════════════════════════════
+
+        MarcarLlegadaConfirmada::class => [
+            // Broadcast en tiempo real
+            \App\Listeners\Logistica\BroadcastMarcarLlegada::class,
+
+            // Notificación al cliente
+            \App\Listeners\Logistica\SendDriverArrivedNotification::class,
+
+            // Auditoría
+            \App\Listeners\Logistica\CreateDeliveryAuditLog::class,
+        ],
+
+        EntregaConfirmada::class => [
+            // Broadcast en tiempo real
+            \App\Listeners\Logistica\BroadcastEntregaConfirmada::class,
+
+            // Notificación al cliente
+            \App\Listeners\Logistica\SendDeliveryConfirmedNotification::class,
+
+            // Auditoría
+            \App\Listeners\Logistica\CreateDeliveryAuditLog::class,
+
+            // Actualizar estado de venta
+            \App\Listeners\Logistica\UpdateVentaAsDelivered::class,
+        ],
+
+        NovedadEntregaReportada::class => [
+            // Broadcast en tiempo real
+            \App\Listeners\Logistica\BroadcastNovedadEntrega::class,
+
+            // Notificación a admin/logística
+            \App\Listeners\Logistica\SendDeliveryIssueNotification::class,
+
+            // Auditoría
+            \App\Listeners\Logistica\CreateDeliveryAuditLog::class,
         ],
 
         // ══════════════════════════════════════════════════════════

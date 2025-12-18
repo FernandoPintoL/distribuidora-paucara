@@ -2,12 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\Cliente;
 use App\Models\Compra;
+use App\Models\ModuloSidebar;
 use App\Models\PrecioProducto;
 use App\Models\Proforma;
 use App\Models\Ruta;
 use App\Models\RutaDetalle;
+use App\Observers\ClienteObserver;
 use App\Observers\CompraObserver;
+use App\Observers\ModuloSidebarObserver;
 use App\Observers\PrecioProductoObserver;
 use App\Observers\ProformaObserver;
 use App\Observers\RutaObserver;
@@ -33,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
+
+        // ✅ Observers
+        Cliente::observe(ClienteObserver::class);
+        ModuloSidebar::observe(ModuloSidebarObserver::class);
         PrecioProducto::observe(PrecioProductoObserver::class);
         Compra::observe(CompraObserver::class);
         Proforma::observe(ProformaObserver::class);

@@ -21,7 +21,11 @@ class LocalidadSeeder extends Seeder
         ];
 
         foreach ($localidades as $localidad) {
-            \App\Models\Localidad::create($localidad);
+            // Busca por código (clave única) y crea si no existe, o simplemente actualiza si existe
+            \App\Models\Localidad::firstOrCreate(
+                ['codigo' => $localidad['codigo']],
+                $localidad
+            );
         }
     }
 }

@@ -18,7 +18,8 @@ Route::post('/test-csrf', function () {
     return response()->json(['message' => 'CSRF token is valid', 'success' => true]);
 })->name('test.csrf');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+// ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma web
+Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
     // API routes para el dashboard
@@ -43,18 +44,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__ . '/configuracion.php';
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
-    Route::resource('clientes', \App\Http\Controllers\ClienteController::class)->middleware('permission:clientes.manage');
+
+    // ✅ ACTUALIZADO: Rutas de clientes protegidas por ClientePolicy
+    // La autorización se realiza en el controlador mediante $this->authorize()
+    Route::resource('clientes', \App\Http\Controllers\ClienteController::class);
 
     // Rutas para fotos de lugar de clientes
-    Route::middleware(['permission:clientes.manage'])->group(function () {
-        Route::get('clientes/{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'index'])->name('clientes.fotos.index');
-        Route::get('clientes/{cliente}/fotos/create', [\App\Http\Controllers\FotoLugarClienteController::class, 'create'])->name('clientes.fotos.create');
-        Route::post('clientes/{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'store'])->name('clientes.fotos.store');
-        Route::get('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'show'])->name('clientes.fotos.show');
-        Route::get('clientes/{cliente}/fotos/{foto}/edit', [\App\Http\Controllers\FotoLugarClienteController::class, 'edit'])->name('clientes.fotos.edit');
-        Route::put('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'update'])->name('clientes.fotos.update');
-        Route::delete('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'destroy'])->name('clientes.fotos.destroy');
-    });
+    // ✅ ACTUALIZADO: Protegidas por ClientePolicy (en el controlador)
+    Route::get('clientes/{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'index'])->name('clientes.fotos.index');
+    Route::get('clientes/{cliente}/fotos/create', [\App\Http\Controllers\FotoLugarClienteController::class, 'create'])->name('clientes.fotos.create');
+    Route::post('clientes/{cliente}/fotos', [\App\Http\Controllers\FotoLugarClienteController::class, 'store'])->name('clientes.fotos.store');
+    Route::get('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'show'])->name('clientes.fotos.show');
+    Route::get('clientes/{cliente}/fotos/{foto}/edit', [\App\Http\Controllers\FotoLugarClienteController::class, 'edit'])->name('clientes.fotos.edit');
+    Route::put('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'update'])->name('clientes.fotos.update');
+    Route::delete('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'destroy'])->name('clientes.fotos.destroy');
 
     Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
     Route::get('productos/crear/moderno', [\App\Http\Controllers\ProductoController::class, 'createModerno'])->middleware('permission:productos.manage')->name('productos.create.moderno');
@@ -91,8 +94,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('api/modulos-sidebar/matriz-acceso', [\App\Http\Controllers\ModuloSidebarController::class, 'getMatrizAcceso'])->middleware('auth')->name('api.modulos-sidebar.matriz-acceso');
     Route::get('api/modulos-sidebar/roles', [\App\Http\Controllers\ModuloSidebarController::class, 'obtenerRoles'])->middleware('auth')->name('api.modulos-sidebar.roles');
     Route::get('api/modulos-sidebar/preview/{rolName}', [\App\Http\Controllers\ModuloSidebarController::class, 'previewPorRol'])->middleware('auth')->name('api.modulos-sidebar.preview');
+    Route::get('api/modulos-sidebar/historial', [\App\Http\Controllers\ModuloSidebarController::class, 'obtenerHistorial'])->middleware('auth')->name('api.modulos-sidebar.historial');
+    Route::post('api/modulos-sidebar/matriz-acceso/bulk-update', [\App\Http\Controllers\ModuloSidebarController::class, 'bulkUpdateMatrizAcceso'])->middleware('permission:admin.config')->name('api.modulos-sidebar.matriz-acceso.bulk-update');
     Route::post('modulos-sidebar/actualizar-orden', [\App\Http\Controllers\ModuloSidebarController::class, 'actualizarOrden'])->middleware('permission:admin.config')->name('modulos-sidebar.actualizar-orden');
     Route::patch('modulos-sidebar/{moduloSidebar}/toggle-activo', [\App\Http\Controllers\ModuloSidebarController::class, 'toggleActivo'])->middleware('permission:admin.config')->name('modulos-sidebar.toggle-activo');
+    Route::post('modulos-sidebar/bulk-update', [\App\Http\Controllers\ModuloSidebarController::class, 'bulkUpdate'])->middleware('permission:admin.config')->name('modulos-sidebar.bulk-update');
 
     // Rutas para gestión de usuarios, roles y permisos
     Route::resource('usuarios', \App\Http\Controllers\UserController::class);
@@ -206,16 +212,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Vistas Inertia que reciben datos desde ApiProformaController
     // Todas las acciones (aprobar, rechazar, convertir) van a /api/proformas/*
     Route::prefix('proformas')->name('proformas.')->group(function () {
-        // Vista: Lista de proformas (usa ApiProformaController::index)
+        // Vista: Lista de proformas (usa ProformaController::index)
         Route::get('/', [\App\Http\Controllers\ProformaController::class, 'index'])->name('index');
 
-        // Vista: Detalle de proforma (usa ApiProformaController::show)
+        // Vista: Detalle de proforma (usa ProformaController::show)
         Route::get('/{proforma}', [\App\Http\Controllers\ProformaController::class, 'show'])->name('show');
 
-        // NOTA: Las acciones POST usan las rutas API (definidas en routes/api.php):
-        // - POST /api/proformas/{id}/aprobar → ApiProformaController::aprobar()
-        // - POST /api/proformas/{id}/rechazar → ApiProformaController::rechazar()
-        // - POST /api/proformas/{id}/convertir-venta → ApiProformaController::convertirAVenta()
+        // Acciones POST - usan ProformaController (compatible con ReservaStock del web UI)
+        Route::post('/{id}/aprobar', [\App\Http\Controllers\ProformaController::class, 'aprobar'])->name('aprobar');
+        Route::post('/{id}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
+        Route::post('/{id}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])->name('convertir-venta');
     });
 
     // Rutas para gestión de cajas
@@ -225,6 +231,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/cerrar', [\App\Http\Controllers\CajaController::class, 'cerrarCaja'])->name('cerrar');
         Route::get('/estado', [\App\Http\Controllers\CajaController::class, 'estadoCajas'])->name('estado');
         Route::get('/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosDia'])->name('movimientos');
+
+        // ✅ Rutas de auditoría de cajas (Sprint 4)
+        Route::prefix('auditoria')->name('auditoria.')->middleware('permission:admin.auditoria')->group(function () {
+            Route::get('/', [\App\Http\Controllers\AuditoriaCajaController::class, 'index'])->name('index');
+            Route::get('/alertas', [\App\Http\Controllers\AuditoriaCajaController::class, 'alertas'])->name('alertas');
+            Route::get('/{id}', [\App\Http\Controllers\AuditoriaCajaController::class, 'show'])->name('show');
+            Route::get('/exportar/csv', [\App\Http\Controllers\AuditoriaCajaController::class, 'exportar'])->name('exportar');
+        });
     });
 
     // Rutas para contabilidad

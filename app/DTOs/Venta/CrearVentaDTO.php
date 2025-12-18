@@ -20,9 +20,10 @@ class CrearVentaDTO extends BaseDTO
         public float $subtotal,
         public float $impuesto,
         public float $total,
-        public int $almacen_id = 1,
+        public int $almacen_id = 2,
         public ?string $observaciones = null,
         public ?int $usuario_id = null,
+        public ?int $proforma_id = null,
     ) {}
 
     /**

@@ -7,10 +7,22 @@ import type { EstadoDocumento } from './estados-documento';
 import type { Moneda } from './monedas';
 import type { Producto } from './productos';
 
+/**
+ * Dirección de entrega
+ */
+export interface Direccion {
+    id: Id;
+    direccion: string;
+    latitud?: number;
+    longitud?: number;
+    observaciones?: string;
+}
+
 export interface Proforma extends BaseEntity {
     id: Id;
     numero: string;
     fecha: string;
+    estado: string; // Estado del documento (PENDIENTE, APROBADA, RECHAZADA, CONVERTIDA, VENCIDA)
     subtotal: number;
     descuento: number;
     impuesto: number;
@@ -27,24 +39,39 @@ export interface Proforma extends BaseEntity {
     fecha_entrega_solicitada?: string;
     hora_entrega_solicitada?: string;
     direccion_entrega_solicitada_id?: Id;
+    direccion_solicitada?: Direccion; // ✅ Relación a dirección solicitada
 
     // Confirmación de entrega del vendedor (después de coordinación)
     fecha_entrega_confirmada?: string;
     hora_entrega_confirmada?: string;
     direccion_entrega_confirmada_id?: Id;
+    direccion_confirmada?: Direccion; // ✅ Relación a dirección confirmada
 
     // Auditoría de coordinación
     coordinacion_completada?: boolean;
     comentario_coordinacion?: string;
 
+    // Control mejorado de coordinación (NUEVOS)
+    coordinacion_actualizada_en?: string;
+    coordinacion_actualizada_por_id?: Id;
+    coordinacion_actualizada_por?: Usuario;
+    motivo_cambio_entrega?: string;
+    numero_intentos_contacto?: number;
+    fecha_ultimo_intento?: string;
+    resultado_ultimo_intento?: string;
+
+    // Datos de entrega realizada (NUEVOS)
+    entregado_en?: string;
+    entregado_a?: string;
+    observaciones_entrega?: string;
+
     // Relaciones
-    cliente?: Cliente;
+    cliente: Cliente; // ✅ OBLIGATORIO - Una proforma siempre tiene un cliente
     usuario?: Usuario;
+    usuarioCreador?: Usuario; // Usuario del sistema que creó la proforma
     estado_documento?: EstadoDocumento;
     moneda?: Moneda;
-    detalles?: ProformaDetalle[];
-    direccionSolicitada?: any;
-    direccionConfirmada?: any;
+    detalles: ProformaDetalle[]; // ✅ OBLIGATORIO - Una proforma siempre tiene detalles
 
     // Timestamps
     created_at: string;
@@ -59,7 +86,7 @@ export interface ProformaDetalle extends BaseEntity {
     precio_unitario: number;
     descuento: number;
     subtotal: number;
-    producto?: Producto;
+    producto: Producto; // ✅ OBLIGATORIO - Un detalle siempre tiene un producto
 }
 
 export interface ProformaFormData extends BaseFormData {
@@ -88,3 +115,53 @@ export interface ProformaDetalleFormData extends BaseFormData {
     descuento: number;
     subtotal: number;
 }
+
+// ============================================
+// UTILIDADES DE DOMINIO
+// ============================================
+
+/**
+ * Mapeo de estados de proforma a etiquetas y variantes visuales
+ */
+export const PROFORMA_ESTADOS = {
+    PENDIENTE: { label: 'Pendiente', variant: 'default' as const },
+    APROBADA: { label: 'Aprobada', variant: 'default' as const },
+    RECHAZADA: { label: 'Rechazada', variant: 'destructive' as const },
+    CONVERTIDA: { label: 'Convertida', variant: 'default' as const },
+    VENCIDA: { label: 'Vencida', variant: 'destructive' as const },
+} as const;
+
+/**
+ * Obtener etiqueta y variante visual para un estado de proforma
+ * @param estado Estado de la proforma
+ * @returns Objeto con label y variant para mostrar en Badge
+ */
+export function getEstadoBadge(estado: string) {
+    return PROFORMA_ESTADOS[estado as keyof typeof PROFORMA_ESTADOS]
+        || { label: 'Desconocido', variant: 'secondary' as const };
+}
+
+/**
+ * Validaciones de permisos de acciones sobre proformas
+ */
+export const validacionesProforma = {
+    /**
+     * Validar si una proforma puede ser aprobada
+     */
+    puedeAprobar: (proforma: Proforma): boolean => proforma.estado === 'PENDIENTE',
+
+    /**
+     * Validar si una proforma puede ser rechazada
+     */
+    puedeRechazar: (proforma: Proforma): boolean => proforma.estado === 'PENDIENTE',
+
+    /**
+     * Validar si una proforma puede ser convertida a venta
+     */
+    puedeConvertir: (proforma: Proforma): boolean => proforma.estado === 'APROBADA',
+
+    /**
+     * Validar si una proforma puede tener coordinación de entrega
+     */
+    puedeCoordinar: (proforma: Proforma): boolean => proforma.estado === 'APROBADA',
+};

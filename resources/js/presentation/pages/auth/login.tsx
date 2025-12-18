@@ -1,4 +1,3 @@
-import AuthenticatedSessionController from '@/actions/App/Http/Controllers/Auth/AuthenticatedSessionController';
 import InputError from '@/presentation/components/input-error';
 import { Button } from '@/presentation/components/ui/button';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
@@ -30,7 +29,8 @@ export default function Login({ status }: LoginProps) {
             <Head title="Iniciar sesión" />
 
             <Form
-                {...AuthenticatedSessionController.store.form()}
+                method="POST"
+                action="/login"
                 resetOnSuccess={['password']}
                 className="flex flex-col gap-6"
                 onSubmit={(e) => {

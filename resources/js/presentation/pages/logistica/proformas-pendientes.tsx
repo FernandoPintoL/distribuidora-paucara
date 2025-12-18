@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
+import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
@@ -15,12 +15,12 @@ import {
     Package,
     User,
     DollarSign,
-    Calendar,
     Filter,
     X,
     Eye
 } from 'lucide-react';
 import logisticaService, { type Proforma, type FiltrosProformas } from '@/infrastructure/services/logistica.service';
+import type { Id } from '@/domain/entities/shared';
 
 interface Props {
     proformas?: Proforma[];
@@ -53,7 +53,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
         comentario_coordinacion: '',
         comentario: '',
     });
-    const [procesandoId, setProcesandoId] = useState<number | null>(null);
+    const [procesandoId, setProcesandoId] = useState<Id | null>(null);
 
     // Cargar proformas
     useEffect(() => {
@@ -330,30 +330,6 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
                                                 className="gap-2"
                                             >
                                                 <Eye className="h-4 w-4" />
-                                                Ver detalles
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => abrirModalRechazo(proforma)}
-                                                disabled={procesandoId === proforma.id}
-                                                className="gap-2"
-                                            >
-                                                <XCircle className="h-4 w-4" />
-                                                Rechazar
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                onClick={() => abrirModalAprobacion(proforma)}
-                                                disabled={procesandoId === proforma.id}
-                                                className="gap-2 bg-green-600 hover:bg-green-700"
-                                            >
-                                                {procesandoId === proforma.id ? 'Procesando...' : (
-                                                    <>
-                                                        <CheckCircle className="h-4 w-4" />
-                                                        Aprobar
-                                                    </>
-                                                )}
                                             </Button>
                                         </div>
                                     </div>
@@ -397,11 +373,10 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
                                     {MOTIVOS_RECHAZO.map((motivo) => (
                                         <label
                                             key={motivo.value}
-                                            className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                                                motivoRechazoSeleccionado === motivo.value
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-border hover:border-primary/50'
-                                            }`}
+                                            className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${motivoRechazoSeleccionado === motivo.value
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-border hover:border-primary/50'
+                                                }`}
                                         >
                                             <input
                                                 type="radio"

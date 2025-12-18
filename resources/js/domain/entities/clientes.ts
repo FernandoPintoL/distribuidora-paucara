@@ -18,6 +18,7 @@ export interface Cliente extends BaseEntity {
     nit?: string | null;
     telefono?: string | null;
     email?: string | null;
+    direccion?: string | null; // ✅ Dirección principal (usado en Show de proforma)
     foto_perfil?: string | null;
     foto_perfil_url?: string | null; // URL generada para mostrar en el listado
     ci_anverso?: string | null;
@@ -66,4 +67,10 @@ export interface ClienteFormData extends BaseFormData {
     }>;
     // Ventanas de entrega del cliente
     ventanas_entrega?: VentanaEntregaCliente[];
+}
+
+// ✅ PageProps para el formulario de clientes
+export interface ClientesFormPageProps {
+    cliente?: Cliente | null;
+    localidades?: Array<{ id: number; nombre: string; codigo: string }>;
 }

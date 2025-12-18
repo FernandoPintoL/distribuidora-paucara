@@ -24,27 +24,44 @@ namespace App\Models\Traits;
 trait HasActiveScope
 {
     /**
-     * Obtener el nombre del campo activo (soporta 'activo' y 'activa')
+     * Obtener el nombre del campo activo (soporta 'activo', 'activa' y 'estado')
      * Detecta automáticamente el campo correcto
      */
     protected function getActiveField(): string
     {
-        // Detectar dinámicamente si el campo es 'activa' o 'activo'
-        if (in_array('activa', $this->getFillable())) {
+        // Detectar dinámicamente cuál campo se usa para "activo"
+        $fillable = $this->getFillable();
+
+        // Detectar si usa 'estado' (para Empleado y modelos similares que usan texto)
+        if (in_array('estado', $fillable)) {
+            return 'estado';
+        }
+
+        // Detectar si usa 'activa' (para modelos con genero femenino)
+        if (in_array('activa', $fillable)) {
             return 'activa';
         }
+
+        // Por defecto usar 'activo' (para modelos con genero masculino o neutro)
         return 'activo';
     }
 
     /**
      * Scope para obtener solo registros activos
-     * Soporta campos: activo, activa
+     * Soporta campos: activo (boolean), activa (boolean), estado (text)
      *
      * Uso: Model::activos()->get()
      */
     public function scopeActivos($query)
     {
         $field = $this->getActiveField();
+
+        // Si es campo 'estado', buscar valor 'activo'
+        if ($field === 'estado') {
+            return $query->where($this->getTable() . '.' . $field, 'activo');
+        }
+
+        // Si es 'activo' o 'activa', buscar boolean true
         return $query->where($this->getTable() . '.' . $field, true);
     }
 
@@ -56,6 +73,13 @@ trait HasActiveScope
     public function scopeInactivos($query)
     {
         $field = $this->getActiveField();
+
+        // Si es campo 'estado', buscar valores que NO sean 'activo'
+        if ($field === 'estado') {
+            return $query->where($this->getTable() . '.' . $field, '!=', 'activo');
+        }
+
+        // Si es 'activo' o 'activa', buscar boolean false
         return $query->where($this->getTable() . '.' . $field, false);
     }
 
@@ -64,8 +88,7 @@ trait HasActiveScope
      */
     public function scopeActivas($query)
     {
-        $field = $this->getActiveField();
-        return $query->where($this->getTable() . '.' . $field, true);
+        return $this->scopeActivos($query);
     }
 
     /**
@@ -84,7 +107,13 @@ trait HasActiveScope
      */
     public function estaActivo(): bool
     {
-        return $this->activo === true;
+        $field = $this->getActiveField();
+
+        if ($field === 'estado') {
+            return $this->{$field} === 'activo';
+        }
+
+        return $this->{$field} === true;
     }
 
     /**
@@ -92,7 +121,7 @@ trait HasActiveScope
      */
     public function estaInactivo(): bool
     {
-        return $this->activo === false;
+        return !$this->estaActivo();
     }
 
     /**
@@ -100,7 +129,14 @@ trait HasActiveScope
      */
     public function activar(): bool
     {
-        $this->activo = true;
+        $field = $this->getActiveField();
+
+        if ($field === 'estado') {
+            $this->{$field} = 'activo';
+        } else {
+            $this->{$field} = true;
+        }
+
         return $this->save();
     }
 
@@ -109,7 +145,14 @@ trait HasActiveScope
      */
     public function desactivar(): bool
     {
-        $this->activo = false;
+        $field = $this->getActiveField();
+
+        if ($field === 'estado') {
+            $this->{$field} = 'inactivo';
+        } else {
+            $this->{$field} = false;
+        }
+
         return $this->save();
     }
 
@@ -118,7 +161,10 @@ trait HasActiveScope
      */
     public function alternarEstado(): bool
     {
-        $this->activo = !$this->activo;
-        return $this->save();
+        if ($this->estaActivo()) {
+            return $this->desactivar();
+        }
+
+        return $this->activar();
     }
 }

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
  * @see app/Http/Controllers/Web/LogisticaController.php:177
@@ -65,42 +65,6 @@ seguimiento.head = (args: { envio: number | { id: number } } | [envio: number | 
     url: seguimiento.url(args, options),
     method: 'head',
 })
-
-    /**
-* @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:177
- * @route '/logistica/envios/{envio}/seguimiento'
- */
-    const seguimientoForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: seguimiento.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:177
- * @route '/logistica/envios/{envio}/seguimiento'
- */
-        seguimientoForm.get = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: seguimiento.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:177
- * @route '/logistica/envios/{envio}/seguimiento'
- */
-        seguimientoForm.head = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: seguimiento.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    seguimiento.form = seguimientoForm
 const envios = {
     seguimiento,
 }

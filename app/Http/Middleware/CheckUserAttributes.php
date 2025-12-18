@@ -94,8 +94,18 @@ class CheckUserAttributes
             $contextoAbac = $this->abacService->obtenerContextoUsuario($user);
             $request->attributes->set('abac_context', $contextoAbac);
 
-            // Guardar en sesión para acceso en vistas
-            $request->session()->put('abac_context', $contextoAbac);
+            // Guardar en sesión para acceso en vistas (solo si no es API)
+            // Las APIs con Sanctum no usan sesiones tradicionales
+            if (!$request->is('api/*')) {
+                try {
+                    $request->session()->put('abac_context', $contextoAbac);
+                } catch (\Exception $e) {
+                    \Log::warning('No se pudo guardar contexto ABAC en sesión (es una API)', [
+                        'usuario_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
         }
 
         return $next($request);

@@ -14,6 +14,13 @@ export * from './vehiculos';
 export * from './stock-producto';
 export * from './transferencias-inventario';
 export * from './mermas-inventario';
+
+// Logistics entities (NEW - Consolidated from dashboard types)
+export * from './logistica';
+
+// Financial entities (NEW - Box/Cash management)
+export * from './cajas';
+
 // movimientos-inventario already exported above (contains MovimientoUnificado)
 
 // Available entities:
@@ -23,3 +30,5 @@ export * from './mermas-inventario';
 // - tipos-documento, tipos-pago, tipos-precio, unidades
 // - usuarios, vehiculos, ventas
 // - NUEVO: stock-producto, transferencias-inventario, mermas-inventario
+// - NUEVO: logistica (para dashboard y operaciones de logística)
+// - NUEVO: cajas (para gestión de cajas y operaciones financieras)

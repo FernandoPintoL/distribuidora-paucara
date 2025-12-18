@@ -1,267 +1,64 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import L from 'leaflet';
-import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
+import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
-import { Select } from '@/presentation/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/components/ui/tabs';
-import { toast } from 'react-toastify';
 import {
     Truck,
-    User,
     MapPin,
     Clock,
-    Zap,
     Navigation,
     Filter,
     X,
     List,
     Map as MapIcon,
-    Phone,
     AlertCircle,
     Wifi,
     WifiOff
 } from 'lucide-react';
-import logisticaService, { type Entrega, type FiltrosEntregas } from '@/infrastructure/services/logistica.service';
-import { useWebSocket } from '@/application/hooks/use-websocket';
-import { useTracking } from '@/application/hooks/use-tracking';
+
+// Service types (re-exported from domain)
+import type { Entrega, FiltrosEntregas } from '@/infrastructure/services/logistica.service';
+
+// Application hooks
+import { useEntregasEnTransito } from '@/application/hooks/use-entregas-transito';
+import { useDeliveryMap } from '@/application/hooks/use-delivery-map';
 import { useRealtimeNotifications } from '@/application/hooks/use-realtime-notifications';
 
 interface Props {
     entregas?: Entrega[];
 }
 
-interface UbicacionEntrega {
-    entrega_id: number;
-    latitud: number;
-    longitud: number;
-    velocidad?: number;
-    timestamp: string;
-}
-
 export default function EntregasEnTransito({ entregas: initialEntregas = [] }: Props) {
-    const [entregas, setEntregas] = useState<Entrega[]>(initialEntregas);
-    const [loading, setLoading] = useState(false);
-    const [filtros, setFiltros] = useState<FiltrosEntregas>({});
-    const [showFilters, setShowFilters] = useState(false);
-    const [ubicaciones, setUbicaciones] = useState<Map<number, UbicacionEntrega>>(new Map());
-    const [etasInfo, setEtasInfo] = useState<Map<number, any>>(new Map());
-    const mapContainer = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<any>(null);
-    const markersRef = useRef<Map<number, any>>(new Map());
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-    // ✅ WebSocket hooks para conexión en tiempo real
-    const { isConnected: wsConnected, subscribeTo, on, off } = useWebSocket({
-        autoConnect: true
+    // ✅ Encapsulación de lógica de negocio en hooks de Application
+    const {
+        entregas,
+        ubicaciones,
+        loading,
+        wsConnected,
+        filtros,
+        setFiltros,
+    } = useEntregasEnTransito({
+        initialEntregas,
+        autoConnect: true,
     });
+
+    // ✅ Encapsulación de lógica de mapa en hook de Application
+    const { mapContainer, actualizarMarcadores } = useDeliveryMap();
+
+    // ✅ Notificaciones en tiempo real
     const { unreadCount } = useRealtimeNotifications({ enableAutoNotify: true });
 
-    // ✅ Escuchar eventos de WebSocket para actualizaciones en tiempo real
+    // Estado local solo para UI
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Actualizar marcadores cuando cambian ubicaciones
     useEffect(() => {
-        if (!wsConnected) {
-            console.log('⏳ Esperando conexión WebSocket...');
-            return;
-        }
-
-        console.log('✅ Suscribiendo a eventos de WebSocket para entregas');
-
-        // Escuchar cambios de ubicación en tiempo real
-        on('ubicacion.actualizada', (data: any) => {
-            console.log('📍 Ubicación actualizada:', data);
-            if (data.entrega_id) {
-                setUbicaciones(prev => new Map(prev).set(data.entrega_id, {
-                    entrega_id: data.entrega_id,
-                    latitud: data.latitud,
-                    longitud: data.longitud,
-                    velocidad: data.velocidad,
-                    timestamp: data.timestamp || new Date().toISOString(),
-                }));
-            }
-        });
-
-        // Escuchar cambios de estado de entregas
-        on('entrega.estado-cambio', (data: any) => {
-            console.log('🔄 Estado de entrega actualizado:', data);
-            setEntregas(prev =>
-                prev.map(e =>
-                    e.id === data.entrega_id
-                        ? { ...e, estado: data.estado_nuevo }
-                        : e
-                )
-            );
-        });
-
-        // Escuchar cuando una entrega se entrega
-        on('entrega.entregado', (data: any) => {
-            console.log('✅ Entrega completada:', data);
-            setEntregas(prev => prev.filter(e => e.id !== data.entrega_id));
-            setUbicaciones(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(data.entrega_id);
-                return newMap;
-            });
-            toast.success(`Entrega #${data.entrega_id} completada`);
-        });
-
-        // Cleanup: dejar de escuchar cuando se desmonta
-        return () => {
-            off('ubicacion.actualizada');
-            off('entrega.estado-cambio');
-            off('entrega.entregado');
-        };
-    }, [wsConnected, on, off]);
-
-    // Cargar entregas en tránsito
-    useEffect(() => {
-        cargarEntregas();
-    }, [filtros]);
-
-    // Auto-actualizar ubicaciones como fallback si WebSocket falla (cada 30 segundos)
-    useEffect(() => {
-        if (wsConnected) {
-            // Si WebSocket está conectado, no hacer polling
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-            return;
-        }
-
-        // Si WebSocket no está conectado, hacer polling
-        if (entregas.length > 0) {
-            console.warn('⚠️ WebSocket desconectado, usando polling de ubicaciones');
-            intervalRef.current = setInterval(() => {
-                actualizarUbicaciones();
-            }, 30000); // Actualizar cada 30 segundos como fallback
-
-            return () => {
-                if (intervalRef.current) clearInterval(intervalRef.current);
-            };
-        }
-    }, [wsConnected, entregas]);
-
-    // Inicializar mapa
-    useEffect(() => {
-        if (mapContainer.current && !mapRef.current) {
-            inicializarMapa();
-        }
-    }, [mapContainer]);
-
-    // Actualizar marcadores cuando cambien ubicaciones
-    useEffect(() => {
-        actualizarMarcadores();
-    }, [ubicaciones]);
-
-    const cargarEntregas = async () => {
-        setLoading(true);
-        try {
-            const resultado = await logisticaService.obtenerEntregasEnTransito(1, filtros);
-            setEntregas(resultado.data);
-
-            // Cargar ubicaciones de todas las entregas
-            resultado.data.forEach((entrega) => {
-                cargarUbicacionEntrega(entrega.id);
-            });
-        } catch (error) {
-            toast.error('Error al cargar entregas');
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const cargarUbicacionEntrega = async (entregaId: number) => {
-        try {
-            const data = await logisticaService.obtenerUbicacionesEntrega(entregaId);
-            if (data.ultima_ubicacion) {
-                setUbicaciones(prev => new Map(prev).set(entregaId, {
-                    entrega_id: entregaId,
-                    latitud: data.ultima_ubicacion!.latitud,
-                    longitud: data.ultima_ubicacion!.longitud,
-                    velocidad: data.ultima_ubicacion!.velocidad,
-                    timestamp: data.ultima_ubicacion!.timestamp,
-                }));
-            }
-        } catch (error) {
-            console.error(`Error cargando ubicación entrega ${entregaId}:`, error);
-        }
-    };
-
-    const actualizarUbicaciones = async () => {
-        for (const entrega of entregas) {
-            await cargarUbicacionEntrega(entrega.id);
-        }
-    };
-
-    const inicializarMapa = () => {
-        if (!mapContainer.current) {
-            console.warn('Map container no está disponible');
-            return;
-        }
-
-        try {
-            // Centro predeterminado (Bolivia)
-            const centro: [number, number] = [-16.5, -68.15];
-
-            mapRef.current = L.map(mapContainer.current).setView(centro, 6);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19,
-            }).addTo(mapRef.current);
-
-            console.log('✅ Mapa inicializado correctamente');
-        } catch (error) {
-            console.error('Error al inicializar Leaflet:', error);
-        }
-    };
-
-    const actualizarMarcadores = () => {
-        if (!mapRef.current) return;
-
-        try {
-            // Limpiar marcadores previos
-            markersRef.current.forEach((marker) => {
-                mapRef.current!.removeLayer(marker);
-            });
-            markersRef.current.clear();
-
-            // Agregar nuevos marcadores
-            ubicaciones.forEach((ubicacion) => {
-                const entrega = entregas.find(e => e.id === ubicacion.entrega_id);
-                if (entrega) {
-                    const marker = L.marker([ubicacion.latitud, ubicacion.longitud], {
-                        title: `Entrega #${entrega.id}`,
-                    }).addTo(mapRef.current!);
-
-                    marker.bindPopup(`
-                        <div style="min-width: 200px;">
-                            <strong>Entrega #${entrega.id}</strong><br/>
-                            <small>Proforma: #${entrega.proforma_id}</small><br/>
-                            ${ubicacion.velocidad ? `<small>Velocidad: ${ubicacion.velocidad.toFixed(1)} km/h</small><br/>` : ''}
-                            <small>Actualizado: ${new Date(ubicacion.timestamp).toLocaleTimeString('es-ES')}</small>
-                        </div>
-                    `);
-
-                    markersRef.current.set(ubicacion.entrega_id, marker);
-                }
-            });
-
-            // Auto-ajustar vista si hay marcadores
-            if (markersRef.current.size > 0) {
-                const bounds = L.latLngBounds(
-                    Array.from(ubicaciones.values()).map(u => [u.latitud, u.longitud] as L.LatLngExpression)
-                );
-                mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-            }
-        } catch (error) {
-            console.error('Error al actualizar marcadores:', error);
-        }
-    };
+        actualizarMarcadores(ubicaciones, entregas);
+    }, [ubicaciones, entregas, actualizarMarcadores]);
 
     const handleFiltroChange = (key: keyof FiltrosEntregas, value: string) => {
         const nuevosFiltros = { ...filtros, [key]: value || undefined };
@@ -368,14 +165,15 @@ export default function EntregasEnTransito({ entregas: initialEntregas = [] }: P
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>
                                         <label className="text-sm font-medium mb-2 block">Estado</label>
-                                        <Select
+                                        <select
+                                            className="w-full border rounded px-3 py-2"
                                             value={filtros.estado || ''}
                                             onChange={(e) => handleFiltroChange('estado', e.target.value)}
                                         >
                                             <option value="">Todos</option>
                                             <option value="EN_CAMINO">En Camino</option>
                                             <option value="LLEGO">Llegó</option>
-                                        </Select>
+                                        </select>
                                     </div>
 
                                     <div>

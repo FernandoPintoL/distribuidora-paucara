@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import AppLayoutTemplate from '@/layouts/app/app-sidebar-layout';
-import { useWebSocket } from '@/application/hooks/use-websocket';
+import { WebSocketProvider, useWebSocketContext } from '@/application/contexts/WebSocketContext';
 import { useAuth } from '@/application/hooks/use-auth';
 import { type BreadcrumbItem } from '@/types';
 import { type ReactNode } from 'react';
@@ -13,23 +13,20 @@ interface AppLayoutProps {
     breadcrumbs?: BreadcrumbItem[];
 }
 
-export default function AppLayout({ children, breadcrumbs, ...props }: AppLayoutProps) {
+/**
+ * Componente interno que usa el WebSocketContext
+ * Debe estar dentro del WebSocketProvider
+ */
+function AppLayoutContent({ children, breadcrumbs, ...props }: AppLayoutProps) {
     const { user } = useAuth();
-
-    // ✅ Conectar al WebSocket automáticamente cuando el usuario está autenticado
-    const { isConnected, error, subscribeTo, unsubscribeFrom } = useWebSocket({
-        autoConnect: true  // Se conecta automáticamente si existe token en localStorage
-    });
+    const { isConnected, error } = useWebSocketContext();
 
     // Logging de estado de conexión
-    // ⚠️ IMPORTANTE: El servidor se encarga automáticamente de unir a los usuarios
-    // a las salas correctas basado en su userType. No necesitamos subscribeTo() aquí.
     useEffect(() => {
         if (isConnected && user) {
             console.log(`✅ WebSocket conectado para usuario: ${user.name}`);
             console.log(`   ID: ${user.id}, Email: ${user.email}`);
             console.log(`✅ El servidor ha unido automáticamente al usuario a las salas correctas`);
-            console.log(`   (client → sala 'clients')`);
         }
         if (error && user) {
             console.error(`❌ Error de conexión WebSocket: ${error}`);
@@ -70,5 +67,19 @@ export default function AppLayout({ children, breadcrumbs, ...props }: AppLayout
                 }}
             />
         </AppLayoutTemplate>
+    );
+}
+
+/**
+ * Layout principal que envuelve la aplicación con WebSocketProvider
+ * Esto asegura una única conexión WebSocket global
+ */
+export default function AppLayout({ children, breadcrumbs, ...props }: AppLayoutProps) {
+    return (
+        <WebSocketProvider autoConnect={true}>
+            <AppLayoutContent breadcrumbs={breadcrumbs} {...props}>
+                {children}
+            </AppLayoutContent>
+        </WebSocketProvider>
     );
 }

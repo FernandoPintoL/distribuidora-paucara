@@ -8,12 +8,14 @@ use App\Services\AbacService;
 
 /**
  * ============================================
- * FASE 4: POLÍTICAS CON ABAC
- * ClientePolicy - Control de acceso a Clientes
+ * POLÍTICAS DE CLIENTE - CONTROL DE ACCESO GRANULAR
  * ============================================
  *
- * Ejemplifica cómo usar ABAC para autorización.
- * Un usuario solo puede ver clientes de su zona de venta.
+ * Control de acceso basado en:
+ * - Super-Admin: Acceso total
+ * - Admin: Ver todos (lectura)
+ * - Preventista: Ver/editar solo SUS clientes (preventista_id)
+ * - Cliente: Ver solo su propio registro
  */
 class ClientePolicy
 {
@@ -25,71 +27,177 @@ class ClientePolicy
     }
 
     /**
-     * Super Admin puede hacer cualquier cosa
+     * ✅ ACTUALIZADO: Super Admin y Admin pueden hacer casi cualquier cosa
      */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('Super Admin')) {
+        if ($user->hasRole(['super-admin', 'Super Admin'])) {
             return true;
         }
+
+        // Admin: puede ver todo pero no editar
+        if ($user->hasRole(['admin', 'Admin']) && in_array($ability, ['view', 'viewAny', 'audit'])) {
+            return true;
+        }
+
         return null;
     }
 
     /**
-     * Ver un cliente individual
-     * Requiere que el cliente esté en la zona del usuario
+     * ✅ Ver un cliente individual
      */
     public function view(User $user, Cliente $cliente): bool
     {
-        // Cliente puede ver sus propios datos
+        // Cliente puede ver sus propios datos (si tiene usuario asociado)
         if ($user->cliente && $user->cliente->id === $cliente->id) {
             return true;
         }
 
-        // Verificar atributo zona
-        return $this->abacService->puedeAcceder($user, 'cliente', $cliente->zona_id ?? $cliente->zona);
+        // Preventista: ver solo SUS clientes (por preventista_id)
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->empleado?->id === $cliente->preventista_id;
+        }
+
+        // Fallback a ABAC (zona) si no tiene preventista_id
+        $zona = $cliente->zona_id ?? $cliente->zona;
+        if ($zona) {
+            return $this->abacService->puedeAcceder($user, 'cliente', $zona);
+        }
+
+        return $user->esEmpleado() ?? false;
     }
 
     /**
-     * Listar clientes
-     * Devuelve solo clientes de la zona del usuario
+     * ✅ Listar clientes
      */
     public function viewAny(User $user): bool
     {
-        // Todos los empleados pueden listar clientes
-        return $user->esEmpleado();
+        // Preventista, Admin, Super-Admin pueden listar
+        return $user->hasRole(['Preventista', 'preventista', 'admin', 'Admin', 'super-admin', 'Super Admin']) ||
+               $user->esEmpleado() ?? false;
     }
 
     /**
-     * Crear cliente
-     * Solo managers y admins pueden crear
+     * ✅ Crear cliente
+     * Solo Preventista y Super-Admin pueden crear
      */
     public function create(User $user): bool
     {
-        return $user->hasRole(['Admin', 'Manager']);
-    }
-
-    /**
-     * Editar cliente
-     * Debe estar en la misma zona que el usuario
-     */
-    public function update(User $user, Cliente $cliente): bool
-    {
-        // Admins y managers siempre pueden
-        if ($user->hasRole(['Admin', 'Manager'])) {
+        // Super-Admin siempre
+        if ($user->hasRole(['super-admin', 'Super Admin'])) {
             return true;
         }
 
-        // Vendedores solo pueden editar de su zona
-        return $this->abacService->puedeAcceder($user, 'cliente', $cliente->zona_id ?? $cliente->zona);
+        // Preventista con permiso
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->hasPermissionTo('clientes.create');
+        }
+
+        // Admin NO puede crear
+        return false;
     }
 
     /**
-     * Eliminar cliente
-     * Solo Admin
+     * ✅ Editar cliente
+     * Preventista: solo SUS clientes
+     * Admin: NO puede editar
+     */
+    public function update(User $user, Cliente $cliente): bool
+    {
+        // Preventista: editar solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->hasPermissionTo('clientes.edit-own') &&
+                   $user->empleado?->id === $cliente->preventista_id;
+        }
+
+        // Admin NO puede editar
+        if ($user->hasRole(['admin', 'Admin'])) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * ✅ Eliminar cliente
+     * Solo Super-Admin o Preventista (el creador)
      */
     public function delete(User $user, Cliente $cliente): bool
     {
-        return $user->hasRole('Admin');
+        // Preventista: eliminar solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->hasPermissionTo('clientes.delete-own') &&
+                   $user->empleado?->id === $cliente->preventista_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * ✅ NUEVO: Bloquear cliente
+     */
+    public function block(User $user, Cliente $cliente): bool
+    {
+        // Preventista: bloquear solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->hasPermissionTo('clientes.block-own') &&
+                   $user->empleado?->id === $cliente->preventista_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * ✅ NUEVO: Ver auditoría
+     */
+    public function audit(User $user, Cliente $cliente): bool
+    {
+        // Preventista: ver auditoría solo de SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->hasPermissionTo('clientes.audit-own') &&
+                   $user->empleado?->id === $cliente->preventista_id;
+        }
+
+        // Admin: ver auditoría de cualquiera
+        if ($user->hasRole(['admin', 'Admin'])) {
+            return $user->hasPermissionTo('clientes.audit');
+        }
+
+        return false;
+    }
+
+    /**
+     * ✅ NUEVO: Cambiar estado
+     */
+    public function changeState(User $user, Cliente $cliente): bool
+    {
+        // Preventista: cambiar estado solo de SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->empleado?->id === $cliente->preventista_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * ✅ NUEVO: Restaurar cliente eliminado
+     */
+    public function restore(User $user, Cliente $cliente): bool
+    {
+        // Preventista: restaurar solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
+            return $user->empleado?->id === $cliente->preventista_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * ✅ NUEVO: Eliminar permanentemente
+     */
+    public function forceDelete(User $user, Cliente $cliente): bool
+    {
+        // Solo Super-Admin
+        return $user->hasRole(['super-admin', 'Super Admin']);
     }
 }

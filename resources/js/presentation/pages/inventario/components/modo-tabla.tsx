@@ -3,28 +3,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import NotificationService from '@/infrastructure/services/notification.service';
-
-interface Producto {
-    id: number;
-    nombre: string;
-    sku?: string | null;
-    categoria?: string;
-    marca?: string;
-}
-
-interface Almacen {
-    id: number;
-    nombre: string;
-}
-
-interface InventarioItem {
-    producto_id: number | '';
-    almacen_id: number | '';
-    cantidad: number | '';
-    lote?: string;
-    fecha_vencimiento?: string;
-    observaciones?: string;
-}
+import type { Producto, Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
 
 interface ModoTablaProps {
     items: InventarioItem[];

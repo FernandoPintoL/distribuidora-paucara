@@ -25,9 +25,8 @@ import GenericCrudModal from '@/presentation/components/generic/generic-crud-mod
 import { useModalForm } from '@/application/hooks/use-modal-form';
 
 // Services
-import { estadoMermaService } from '@/infrastructure/services/estadoMermaService';
-import { tipoMermaService } from '@/infrastructure/services/tipoMermaService';
-import { tipoAjusteService } from '@/infrastructure/services/tipoAjusteService';
+import estadoMermaService from '@/infrastructure/services/estadoMerma.service';
+import tipoMermaService from '@/infrastructure/services/tipoMerma.service';
 
 // Configs
 import {

@@ -1,0 +1,163 @@
+/**
+ * Component: CajaEstadoCard
+ *
+ * Responsabilidades:
+ * ✅ Renderizar estado actual de la caja del usuario
+ * ✅ Mostrar información de apertura/cierre
+ * ✅ Mostrar montos y movimientos
+ * ✅ Proveer botones de acción (Abrir/Cerrar)
+ */
+
+import type { AperturaCaja } from '@/domain/entities/cajas';
+import { formatCurrency, formatTime, getMovimientoColor } from '@/lib/cajas.utils';
+
+interface Props {
+    cajaAbiertaHoy: AperturaCaja | null;
+    totalMovimientos: number;
+    onAbrirClick: () => void;
+    onCerrarClick: () => void;
+}
+
+export function CajaEstadoCard({
+    cajaAbiertaHoy,
+    totalMovimientos,
+    onAbrirClick,
+    onCerrarClick
+}: Props) {
+    if (!cajaAbiertaHoy) {
+        return (
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                            Mi Caja del Día
+                        </h3>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
+                            ⚠️ Sin abrir
+                        </span>
+                    </div>
+
+                    <div className="text-center py-8">
+                        <div className="mx-auto h-12 w-12 text-gray-400 text-4xl">💰</div>
+                        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            No tienes caja abierta
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Debes abrir una caja para comenzar a trabajar.
+                        </p>
+                        <div className="mt-6">
+                            <button
+                                onClick={onAbrirClick}
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+                            >
+                                💰 Abrir Caja
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+            <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                        Mi Caja del Día
+                    </h3>
+
+                    {cajaAbiertaHoy.cierre ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            ❌ Cerrada
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                            ✅ Abierta
+                        </span>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Información de la Caja */}
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Caja
+                            </label>
+                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                {cajaAbiertaHoy.caja.nombre}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {cajaAbiertaHoy.caja.ubicacion}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Hora de Apertura
+                            </label>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                🕐 {formatTime(cajaAbiertaHoy.fecha)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Montos */}
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Monto Inicial
+                            </label>
+                            <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                                {formatCurrency(cajaAbiertaHoy.monto_apertura)}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Movimientos del Día
+                            </label>
+                            <p className={`text-lg font-semibold ${getMovimientoColor(totalMovimientos)}`}>
+                                {formatCurrency(totalMovimientos)}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Total Esperado
+                            </label>
+                            <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                                {formatCurrency(cajaAbiertaHoy.monto_apertura + totalMovimientos)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="flex flex-col justify-center space-y-3">
+                        {!cajaAbiertaHoy.cierre ? (
+                            <button
+                                onClick={onCerrarClick}
+                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+                            >
+                                🔒 Cerrar Caja
+                            </button>
+                        ) : (
+                            <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                    Caja cerrada a las {formatTime(cajaAbiertaHoy.cierre.created_at)}
+                                </p>
+                                {cajaAbiertaHoy.cierre.diferencia !== 0 && (
+                                    <p className={`text-sm font-medium ${cajaAbiertaHoy.cierre.diferencia > 0 ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                        Diferencia: {formatCurrency(cajaAbiertaHoy.cierre.diferencia)}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

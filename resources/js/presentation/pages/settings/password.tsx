@@ -1,4 +1,3 @@
-import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController';
 import InputError from '@/presentation/components/input-error';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -33,7 +32,8 @@ export default function Password() {
                     <HeadingSmall title="Actualizar contraseña" description="Asegúrate de usar una contraseña larga y aleatoria para mantener tu cuenta segura" />
 
                     <Form
-                        {...PasswordController.update.form()}
+                        method="PUT"
+                        action="/password"
                         options={{
                             preserveScroll: true,
                         }}

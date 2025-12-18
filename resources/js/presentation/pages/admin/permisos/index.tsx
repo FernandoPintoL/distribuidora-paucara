@@ -1,709 +1,351 @@
-import React, { useState, useEffect } from 'react';
-import { Head } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import axios from 'axios';
+import { Button } from '@/presentation/components/ui/button';
+import type { AdminUsuario, AdminRol, PermisoAudit, PermissionGroup, Permission } from '@/domain/entities/admin-permisos';
+import { NotificationService } from '@/infrastructure/services/notification.service';
+import { PermisosService } from '@/infrastructure/services/permisos.service';
+import { UsuariosTab } from './components/UsuariosTab';
+import { RolesTab } from './components/RolesTab';
+import { HistorialTab } from './components/HistorialTab';
+import { PermisosTab } from './components/PermisosTab';
+import { TemplatesTab } from './components/TemplatesTab';
+import { CompareTab } from './components/CompareTab';
+import { ModulosTab } from './components/ModulosTab';
+import type { ModuloSidebar } from '@/domain/modulos/types';
 
-interface Usuario {
-    id: number;
-    name: string;
-    email: string;
-    roles?: string[];
-    permissions_count?: number;
+type TabType = 'usuarios' | 'roles' | 'historial' | 'permisos' | 'plantillas' | 'comparar' | 'modulos';
+
+interface EstadisticasHistorial {
+  total_cambios: number;
+  cambios_hoy: number;
+  cambios_esta_semana: number;
+  cambios_este_mes: number;
 }
-
-interface Rol {
-    id: number;
-    name: string;
-    display_name: string;
-    permissions_count?: number;
-}
-
-interface AuditRecord {
-    id: number;
-    admin: { id: number; name: string; email: string };
-    target_type: string;
-    target_id: number;
-    target_name: string;
-    action: string;
-    descripcion: string;
-    permisos_changed: number;
-    ip_address: string;
-    created_at: string;
-}
-
-type TabType = 'usuarios' | 'roles' | 'historial';
 
 export default function PermisosIndex() {
-    const [activeTab, setActiveTab] = useState<TabType>('usuarios');
-    const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-    const [roles, setRoles] = useState<Rol[]>([]);
-    const [historial, setHistorial] = useState<AuditRecord[]>([]);
-    const [cargando, setCargando] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('usuarios');
+  const [usuarios, setUsuarios] = useState<AdminUsuario[]>([]);
+  const [roles, setRoles] = useState<AdminRol[]>([]);
+  const [historial, setHistorial] = useState<PermisoAudit[]>([]);
+  const [permisos, setPermisos] = useState<Permission[]>([]);
+  const [modulosSelectList, setModulosSelectList] = useState<string[]>([]);
+  const [modulosSidebar, setModulosSidebar] = useState<ModuloSidebar[]>([]);
+  const [todosLosPermisos, setTodosLosPermisos] = useState<PermissionGroup[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [estadisticas, setEstadisticas] = useState<EstadisticasHistorial | null>(null);
 
-    // Estados de búsqueda
-    const [searchUsuarios, setSearchUsuarios] = useState('');
-    const [searchRoles, setSearchRoles] = useState('');
+  // Cargar permisos disponibles al montar el componente
+  useEffect(() => {
+    cargarPermisosDisponibles();
+    cargarModulos();
+    cargarModulosSidebar();
+  }, []);
 
-    // Estados de bulk select
-    const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
-    const [todosSeleccionados, setTodosSeleccionados] = useState(false);
-    const [mostrarBulkEdit, setMostrarBulkEdit] = useState(false);
-    const [bulkEditGuardando, setBulkEditGuardando] = useState(false);
+  // Cargar permisos cuando se abre el tab de permisos
+  useEffect(() => {
+    if (activeTab === 'permisos') {
+      cargarPermisos('', '');
+    }
+  }, [activeTab]);
 
-    // Estados de historial
-    const [filtroHistorialTipo, setFiltroHistorialTipo] = useState<string | null>(null);
-    const [estadisticas, setEstadisticas] = useState<any>(null);
+  const cargarPermisosDisponibles = async () => {
+    try {
+      const permisos = await PermisosService.getPermisosDisponibles();
+      setTodosLosPermisos(permisos);
+    } catch (err) {
+      console.log(err);
+      NotificationService.error('Error al cargar permisos disponibles');
+    }
+  };
 
-    // Cargar datos al montar el componente
-    useEffect(() => {
-        cargarDatos();
-    }, [activeTab, searchUsuarios, searchRoles]);
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+  };
 
-    const cargarDatos = async () => {
-        setCargando(true);
-        setError(null);
-        try {
-            if (activeTab === 'usuarios') {
-                const response = await axios.get('/api/usuarios', {
-                    params: { search: searchUsuarios || undefined }
-                });
-                setUsuarios(response.data.data || []);
-            } else if (activeTab === 'roles') {
-                const response = await axios.get('/api/roles', {
-                    params: { search: searchRoles || undefined }
-                });
-                setRoles(response.data.data || []);
-            } else if (activeTab === 'historial') {
-                const response = await axios.get('/api/permisos/historial', {
-                    params: { target_type: filtroHistorialTipo || undefined }
-                });
-                setHistorial(response.data.data || []);
-                setEstadisticas(response.data.estadisticas);
-            }
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Error al cargar datos');
-            console.error('Error cargando datos:', err);
-        } finally {
-            setCargando(false);
-        }
-    };
+  const cargarUsuarios = async (search: string) => {
+    setCargando(true);
+    try {
+      const usuarios = await PermisosService.getUsuarios(search);
+      setUsuarios(usuarios);
+    } catch {
+      NotificationService.error('Error al cargar usuarios');
+    } finally {
+      setCargando(false);
+    }
+  };
 
-    const getRoleColor = (roleName: string) => {
-        const colors: Record<string, string> = {
-            'admin': 'bg-red-100 text-red-800',
-            'manager': 'bg-blue-100 text-blue-800',
-            'manager_de_ruta': 'bg-indigo-100 text-indigo-800',
-            'preventista': 'bg-green-100 text-green-800',
-            'cobrador': 'bg-yellow-100 text-yellow-800',
-            'chofer': 'bg-purple-100 text-purple-800',
-            'cliente': 'bg-gray-100 text-gray-800',
-            'client': 'bg-gray-100 text-gray-800',
-        };
-        return colors[roleName.toLowerCase()] || 'bg-gray-100 text-gray-800';
-    };
+  const cargarRoles = async (search: string) => {
+    setCargando(true);
+    try {
+      const roles = await PermisosService.getRoles(search);
+      setRoles(roles);
+    } catch {
+      NotificationService.error('Error al cargar roles');
+    } finally {
+      setCargando(false);
+    }
+  };
 
-    // Funciones de bulk select
-    const toggleSeleccion = (id: number) => {
-        const nuevo = new Set(seleccionados);
-        if (nuevo.has(id)) {
-            nuevo.delete(id);
-        } else {
-            nuevo.add(id);
-        }
-        setSeleccionados(nuevo);
-        setTodosSeleccionados(false);
-    };
+  const cargarHistorial = async (filtro: string | null) => {
+    setCargando(true);
+    try {
+      const { data, estadisticas } = await PermisosService.getHistorial(filtro);
+      setHistorial(data);
+      setEstadisticas(estadisticas);
+    } catch {
+      NotificationService.error('Error al cargar historial');
+    } finally {
+      setCargando(false);
+    }
+  };
 
-    const toggleTodos = () => {
-        if (todosSeleccionados) {
-            setSeleccionados(new Set());
-            setTodosSeleccionados(false);
-        } else {
-            const todas = new Set(activeTab === 'usuarios' ? usuarios.map(u => u.id) : roles.map(r => r.id));
-            setSeleccionados(todas);
-            setTodosSeleccionados(true);
-        }
-    };
+  const cargarPermisos = async (search: string, modulo: string) => {
+    setCargando(true);
+    try {
+      const permisos = await PermisosService.getPermisos(search, modulo);
+      setPermisos(permisos);
+    } catch {
+      NotificationService.error('Error al cargar permisos');
+    } finally {
+      setCargando(false);
+    }
+  };
 
-    const ejecutarBulkEdit = async (tipo: string, permisos: number[], accion: 'reemplazar' | 'agregar' | 'eliminar') => {
-        setBulkEditGuardando(true);
-        try {
-            const response = await axios.post('/api/permisos/bulk-edit', {
-                tipo: activeTab,
-                ids: Array.from(seleccionados),
-                permisos: permisos,
-                accion: accion,
-            });
+  const cargarModulos = async () => {
+    try {
+      const modulos = await PermisosService.getModulos();
+      setModulosSelectList(modulos);
+    } catch {
+      console.log('Error al cargar módulos');
+    }
+  };
 
-            setSuccess(response.data.message);
-            setMostrarBulkEdit(false);
-            setSeleccionados(new Set());
-            setTodosSeleccionados(false);
+  const cargarModulosSidebar = async () => {
+    try {
+      const response = await fetch('/api/modulos-sidebar');
+      const data = await response.json();
+      setModulosSidebar(data);
+    } catch {
+      console.log('Error al cargar módulos del sidebar');
+    }
+  };
 
-            // Recargar datos
-            setTimeout(() => cargarDatos(), 1000);
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Error en bulk edit');
-        } finally {
-            setBulkEditGuardando(false);
-        }
-    };
+  const handleBulkEdit = async (selectedIds: Set<number>, permisos: number[], accion: 'reemplazar' | 'agregar' | 'eliminar') => {
+    try {
+      await PermisosService.bulkEdit(activeTab as 'usuarios' | 'roles', Array.from(selectedIds), permisos, accion);
 
-    const handleTabChange = (tab: TabType) => {
-        setActiveTab(tab);
-        setSeleccionados(new Set());
-        setTodosSeleccionados(false);
-        setMostrarBulkEdit(false);
-        setSearchUsuarios('');
-        setSearchRoles('');
-    };
+      NotificationService.success('Operación realizada con éxito');
 
-    return (
-        <AppLayout>
-            <Head title="Centro de Permisos y Roles" />
+      // Recargar datos del tab actual
+      if (activeTab === 'usuarios') {
+        await cargarUsuarios('');
+      } else if (activeTab === 'roles') {
+        await cargarRoles('');
+      } else if (activeTab === 'historial') {
+        await cargarHistorial(null);
+      }
+    } catch {
+      NotificationService.error('Error en bulk edit');
+    }
+  };
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg p-8 mb-8 shadow-lg">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h1 className="text-4xl font-bold mb-2">🔐 Centro de Permisos</h1>
-                                <p className="text-purple-100">
-                                    Panel unificado con búsqueda, edición en lote e historial de cambios
-                                </p>
-                            </div>
-                            <a
-                                href="/dashboard"
-                                className="px-4 py-2 bg-white text-purple-600 font-medium rounded-lg hover:bg-purple-50 transition"
-                            >
-                                ← Volver
-                            </a>
-                        </div>
-                    </div>
+  return (
+    <AppLayout>
+      <Head title="Centro de Permisos y Roles" />
 
-                    {/* Mensajes */}
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                            <p className="text-red-800">❌ {error}</p>
-                        </div>
-                    )}
-                    {success && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                            <p className="text-green-800">✅ {success}</p>
-                        </div>
-                    )}
-
-                    {/* Tabs */}
-                    <div className="bg-white rounded-lg shadow-sm mb-6 border border-gray-200">
-                        <div className="flex border-b border-gray-200">
-                            <button
-                                onClick={() => handleTabChange('usuarios')}
-                                className={`flex-1 px-6 py-4 font-medium text-center transition ${
-                                    activeTab === 'usuarios'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                }`}
-                            >
-                                👥 Usuarios
-                            </button>
-                            <button
-                                onClick={() => handleTabChange('roles')}
-                                className={`flex-1 px-6 py-4 font-medium text-center transition ${
-                                    activeTab === 'roles'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                }`}
-                            >
-                                🎭 Roles
-                            </button>
-                            <button
-                                onClick={() => handleTabChange('historial')}
-                                className={`flex-1 px-6 py-4 font-medium text-center transition ${
-                                    activeTab === 'historial'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                }`}
-                            >
-                                📋 Historial y Auditoría
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* CONTENIDO: USUARIOS */}
-                    {activeTab === 'usuarios' && (
-                        <>
-                            {/* Barra de búsqueda y acciones */}
-                            <div className="bg-white rounded-lg shadow-sm p-4 mb-6 border border-gray-200">
-                                <div className="flex gap-4 items-end">
-                                    <div className="flex-1">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            🔍 Buscar usuario
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Nombre o email..."
-                                            value={searchUsuarios}
-                                            onChange={(e) => setSearchUsuarios(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    {seleccionados.size > 0 && (
-                                        <button
-                                            onClick={() => setMostrarBulkEdit(true)}
-                                            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-                                        >
-                                            ⚡ Editar {seleccionados.size} seleccionados
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Modal de Bulk Edit */}
-                            {mostrarBulkEdit && (
-                                <BulkEditModal
-                                    tipo="usuario"
-                                    cantidad={seleccionados.size}
-                                    onClose={() => setMostrarBulkEdit(false)}
-                                    onSubmit={ejecutarBulkEdit}
-                                    cargando={bulkEditGuardando}
-                                />
-                            )}
-
-                            {/* Tabla de usuarios */}
-                            {cargando ? (
-                                <div className="text-center py-8">
-                                    <div className="inline-block animate-spin text-purple-600">
-                                        <div className="text-3xl">⏳</div>
-                                    </div>
-                                    <p className="text-gray-600 mt-2">Cargando...</p>
-                                </div>
-                            ) : (
-                                <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-                                    {usuarios.length === 0 ? (
-                                        <div className="p-8 text-center text-gray-500">
-                                            <p className="text-lg">No hay usuarios</p>
-                                        </div>
-                                    ) : (
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full">
-                                                <thead className="bg-gray-50 border-b border-gray-200">
-                                                    <tr>
-                                                        <th className="px-6 py-3 text-left">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={todosSeleccionados}
-                                                                onChange={toggleTodos}
-                                                                className="w-4 h-4 text-purple-600 rounded cursor-pointer"
-                                                            />
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Usuario
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Email
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Roles
-                                                        </th>
-                                                        <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">
-                                                            Permisos
-                                                        </th>
-                                                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
-                                                            Acciones
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-200">
-                                                    {usuarios.map((usuario) => (
-                                                        <tr key={usuario.id} className="hover:bg-gray-50 transition">
-                                                            <td className="px-6 py-4">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={seleccionados.has(usuario.id)}
-                                                                    onChange={() => toggleSeleccion(usuario.id)}
-                                                                    className="w-4 h-4 text-purple-600 rounded cursor-pointer"
-                                                                />
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <p className="font-medium text-gray-900">{usuario.name}</p>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <p className="text-sm text-gray-600">{usuario.email}</p>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {usuario.roles && usuario.roles.length > 0 ? (
-                                                                        usuario.roles.map((role) => (
-                                                                            <span
-                                                                                key={role}
-                                                                                className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(
-                                                                                    role
-                                                                                )}`}
-                                                                            >
-                                                                                {role}
-                                                                            </span>
-                                                                        ))
-                                                                    ) : (
-                                                                        <span className="text-sm text-gray-500 italic">
-                                                                            Sin roles
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-center">
-                                                                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-                                                                    {usuario.permissions_count || 0}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-right">
-                                                                <a
-                                                                    href={`/permisos/usuario/${usuario.id}/editar`}
-                                                                    className="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition"
-                                                                >
-                                                                    ✏️ Editar
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </>
-                    )}
-
-                    {/* CONTENIDO: ROLES */}
-                    {activeTab === 'roles' && (
-                        <>
-                            {/* Barra de búsqueda */}
-                            <div className="bg-white rounded-lg shadow-sm p-4 mb-6 border border-gray-200">
-                                <div className="flex gap-4 items-end">
-                                    <div className="flex-1">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            🔍 Buscar rol
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Nombre del rol..."
-                                            value={searchRoles}
-                                            onChange={(e) => setSearchRoles(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    {seleccionados.size > 0 && (
-                                        <button
-                                            onClick={() => setMostrarBulkEdit(true)}
-                                            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-                                        >
-                                            ⚡ Editar {seleccionados.size} seleccionados
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Modal de Bulk Edit */}
-                            {mostrarBulkEdit && (
-                                <BulkEditModal
-                                    tipo="rol"
-                                    cantidad={seleccionados.size}
-                                    onClose={() => setMostrarBulkEdit(false)}
-                                    onSubmit={ejecutarBulkEdit}
-                                    cargando={bulkEditGuardando}
-                                />
-                            )}
-
-                            {/* Tabla de roles */}
-                            {cargando ? (
-                                <div className="text-center py-8">
-                                    <div className="inline-block animate-spin text-blue-600">
-                                        <div className="text-3xl">⏳</div>
-                                    </div>
-                                    <p className="text-gray-600 mt-2">Cargando...</p>
-                                </div>
-                            ) : (
-                                <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-                                    {roles.length === 0 ? (
-                                        <div className="p-8 text-center text-gray-500">
-                                            <p className="text-lg">No hay roles</p>
-                                        </div>
-                                    ) : (
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full">
-                                                <thead className="bg-gray-50 border-b border-gray-200">
-                                                    <tr>
-                                                        <th className="px-6 py-3 text-left">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={todosSeleccionados}
-                                                                onChange={toggleTodos}
-                                                                className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                                                            />
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Rol
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Descripción
-                                                        </th>
-                                                        <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">
-                                                            Permisos
-                                                        </th>
-                                                        <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
-                                                            Acciones
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-200">
-                                                    {roles.map((rol) => (
-                                                        <tr key={rol.id} className="hover:bg-gray-50 transition">
-                                                            <td className="px-6 py-4">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={seleccionados.has(rol.id)}
-                                                                    onChange={() => toggleSeleccion(rol.id)}
-                                                                    className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                                                                />
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <p className="font-medium text-gray-900">{rol.name}</p>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <p className="text-sm text-gray-600">
-                                                                    {rol.display_name || '-'}
-                                                                </p>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-center">
-                                                                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-                                                                    {rol.permissions_count || 0}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-right">
-                                                                <a
-                                                                    href={`/permisos/rol/${rol.id}/editar`}
-                                                                    className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
-                                                                >
-                                                                    ✏️ Editar
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </>
-                    )}
-
-                    {/* CONTENIDO: HISTORIAL */}
-                    {activeTab === 'historial' && (
-                        <>
-                            {/* Estadísticas */}
-                            {estadisticas && (
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                                        <p className="text-gray-600 text-sm">Total de cambios</p>
-                                        <p className="text-3xl font-bold text-purple-600">
-                                            {estadisticas.total_cambios}
-                                        </p>
-                                    </div>
-                                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                                        <p className="text-gray-600 text-sm">Cambios hoy</p>
-                                        <p className="text-3xl font-bold text-blue-600">
-                                            {estadisticas.cambios_hoy}
-                                        </p>
-                                    </div>
-                                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                                        <p className="text-gray-600 text-sm">Esta semana</p>
-                                        <p className="text-3xl font-bold text-green-600">
-                                            {estadisticas.cambios_esta_semana}
-                                        </p>
-                                    </div>
-                                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                                        <p className="text-gray-600 text-sm">Este mes</p>
-                                        <p className="text-3xl font-bold text-orange-600">
-                                            {estadisticas.cambios_este_mes}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Tabla de historial */}
-                            {cargando ? (
-                                <div className="text-center py-8">
-                                    <div className="inline-block animate-spin text-purple-600">
-                                        <div className="text-3xl">⏳</div>
-                                    </div>
-                                    <p className="text-gray-600 mt-2">Cargando historial...</p>
-                                </div>
-                            ) : (
-                                <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-                                    {historial.length === 0 ? (
-                                        <div className="p-8 text-center text-gray-500">
-                                            <p className="text-lg">No hay registros de auditoría</p>
-                                        </div>
-                                    ) : (
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full">
-                                                <thead className="bg-gray-50 border-b border-gray-200">
-                                                    <tr>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Administrador
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Objetivo
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Descripción
-                                                        </th>
-                                                        <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">
-                                                            Cambios
-                                                        </th>
-                                                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                                                            Fecha
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-200">
-                                                    {historial.map((registro) => (
-                                                        <tr key={registro.id} className="hover:bg-gray-50 transition">
-                                                            <td className="px-6 py-4">
-                                                                <div>
-                                                                    <p className="font-medium text-gray-900">
-                                                                        {registro.admin.name}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-500">
-                                                                        {registro.ip_address}
-                                                                    </p>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <div>
-                                                                    <p className="font-medium text-gray-900">
-                                                                        {registro.target_name}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-500 capitalize">
-                                                                        {registro.target_type}
-                                                                    </p>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <p className="text-sm text-gray-600">
-                                                                    {registro.descripcion}
-                                                                </p>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-center">
-                                                                <span className="inline-block px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full text-sm font-medium">
-                                                                    {registro.permisos_changed}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm text-gray-600">
-                                                                {new Date(registro.created_at).toLocaleString('es-ES')}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </>
-                    )}
-
-                    {/* Info Box */}
-                    <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                        <div className="flex gap-4">
-                            <div className="text-2xl">ℹ️</div>
-                            <div>
-                                <h3 className="font-semibold text-blue-900 mb-2">Características del panel:</h3>
-                                <ul className="text-sm text-blue-800 space-y-1 ml-4">
-                                    <li>
-                                        <strong>🔍 Búsqueda:</strong> Filtra usuarios o roles por nombre/email
-                                    </li>
-                                    <li>
-                                        <strong>☑️ Bulk Edit:</strong> Selecciona múltiples elementos y modifica sus
-                                        permisos en una sola acción
-                                    </li>
-                                    <li>
-                                        <strong>📋 Historial:</strong> Visualiza todos los cambios de permisos con
-                                        quién los hizo y cuándo
-                                    </li>
-                                    <li>
-                                        <strong>📊 Estadísticas:</strong> Monitorea la actividad de cambios por período
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      <div className="py-12">
+        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-700 dark:to-blue-700 text-white rounded-lg p-8 mb-8 shadow-lg">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-4xl font-bold mb-2">Centro de Permisos</h1>
+                <p className="text-purple-100 dark:text-purple-200">
+                  Panel unificado con búsqueda, edición en lote e historial de cambios
+                </p>
+              </div>
             </div>
-        </AppLayout>
-    );
-}
+          </div>
 
-// Componente Modal para Bulk Edit
-interface BulkEditModalProps {
-    tipo: 'usuario' | 'rol';
-    cantidad: number;
-    onClose: () => void;
-    onSubmit: (tipo: string, permisos: number[], accion: string) => Promise<void>;
-    cargando: boolean;
-}
-
-function BulkEditModal({ tipo, cantidad, onClose, onSubmit, cargando }: BulkEditModalProps) {
-    const [accion, setAccion] = useState<'reemplazar' | 'agregar' | 'eliminar'>('reemplazar');
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Editar {cantidad} {tipo === 'usuario' ? 'usuarios' : 'roles'}
-                </h2>
-
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                        <strong>Nota:</strong> Para esta demostración, mostraremos el flujo. Implementa la selección de
-                        permisos según tu diseño.
-                    </p>
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Acción:</label>
-                    <select
-                        value={accion}
-                        onChange={(e) => setAccion(e.target.value as any)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                        <option value="reemplazar">Reemplazar todos los permisos</option>
-                        <option value="agregar">Agregar estos permisos</option>
-                        <option value="eliminar">Eliminar estos permisos</option>
-                    </select>
-                </div>
-
-                <div className="flex gap-3">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 px-4 py-2 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition disabled:opacity-50"
-                        disabled={cargando}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={() => onSubmit(tipo, [], accion)}
-                        className="flex-1 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
-                        disabled={cargando}
-                    >
-                        {cargando ? 'Guardando...' : 'Aplicar'}
-                    </button>
-                </div>
+          {/* Tabs */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-slate-700">
+            <div className="flex border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+              <button
+                onClick={() => handleTabChange('usuarios')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'usuarios'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Usuarios
+              </button>
+              <button
+                onClick={() => handleTabChange('roles')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'roles'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Roles
+              </button>
+              <button
+                onClick={() => handleTabChange('plantillas')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'plantillas'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Plantillas
+              </button>
+              <button
+                onClick={() => handleTabChange('comparar')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'comparar'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Comparar Roles
+              </button>
+              <button
+                onClick={() => handleTabChange('historial')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'historial'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Historial y Auditoría
+              </button>
+              <button
+                onClick={() => handleTabChange('permisos')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'permisos'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Permisos
+              </button>
+              <button
+                onClick={() => handleTabChange('modulos')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'modulos'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Módulos
+              </button>
             </div>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'usuarios' && (
+            <UsuariosTab
+              usuarios={usuarios}
+              cargando={cargando}
+              todosLosPermisos={todosLosPermisos}
+              onLoadData={cargarUsuarios}
+              onBulkEdit={handleBulkEdit}
+            />
+          )}
+
+          {activeTab === 'roles' && (
+            <>
+              <div className="mb-4 flex justify-end">
+                <Link href="/admin/permisos/roles/create">
+                  <Button>
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Crear Nuevo Rol
+                  </Button>
+                </Link>
+              </div>
+              <RolesTab
+                roles={roles}
+                cargando={cargando}
+                todosLosPermisos={todosLosPermisos}
+                onLoadData={cargarRoles}
+                onBulkEdit={handleBulkEdit}
+              />
+            </>
+          )}
+
+          {activeTab === 'plantillas' && (
+            <TemplatesTab todosLosPermisos={todosLosPermisos} />
+          )}
+
+          {activeTab === 'comparar' && (
+            <CompareTab roles={roles} cargando={cargando} onLoadData={cargarRoles} />
+          )}
+
+          {activeTab === 'historial' && (
+            <HistorialTab
+              historial={historial}
+              estadisticas={estadisticas}
+              cargando={cargando}
+              onLoadData={cargarHistorial}
+            />
+          )}
+
+          {activeTab === 'permisos' && (
+            <PermisosTab
+              permisos={permisos}
+              cargando={cargando}
+              modulos={modulosSelectList}
+              onLoadData={cargarPermisos}
+            />
+          )}
+
+          {activeTab === 'modulos' && (
+            <ModulosTab
+              modulos={modulosSidebar}
+              cargando={cargando}
+              onLoadData={cargarModulosSidebar}
+            />
+          )}
+
+          {/* Info Box */}
+          <div className="mt-8 bg-blue-50 dark:bg-slate-700 border border-blue-200 dark:border-blue-900 rounded-lg p-6">
+            <div className="flex gap-4">
+              <div className="text-2xl">ℹ️</div>
+              <div>
+                <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Características del panel:</h3>
+                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-4">
+                  <li>
+                    <strong>Usuarios:</strong> Asigna permisos a usuarios específicos
+                  </li>
+                  <li>
+                    <strong>Roles:</strong> Gestiona permisos por roles
+                  </li>
+                  <li>
+                    <strong>Plantillas:</strong> Crea y reutiliza plantillas de permisos predefinidas
+                  </li>
+                  <li>
+                    <strong>Comparar Roles:</strong> Compara permisos entre dos roles para identificar diferencias
+                  </li>
+                  <li>
+                    <strong>Permisos:</strong> CRUD completo de permisos (crear, editar, eliminar)
+                  </li>
+                  <li>
+                    <strong>Módulos:</strong> Gestiona los módulos del sidebar y su visibilidad
+                  </li>
+                  <li>
+                    <strong>Bulk Edit:</strong> Selecciona múltiples elementos y modifica sus
+                    permisos en una sola acción
+                  </li>
+                  <li>
+                    <strong>Historial:</strong> Visualiza todos los cambios de permisos con
+                    quién los hizo y cuándo
+                  </li>
+                  <li>
+                    <strong>Estadísticas:</strong> Monitorea la actividad de cambios por período
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
-    );
+      </div>
+    </AppLayout>
+  );
 }

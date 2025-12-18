@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\AuthController::login
  * @see app/Http/Controllers/Api/AuthController.php:16
@@ -33,30 +33,9 @@ login.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\AuthController::login
- * @see app/Http/Controllers/Api/AuthController.php:16
- * @route '/api/login'
- */
-    const loginForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: login.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\AuthController::login
- * @see app/Http/Controllers/Api/AuthController.php:16
- * @route '/api/login'
- */
-        loginForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: login.url(options),
-            method: 'post',
-        })
-    
-    login.form = loginForm
 /**
 * @see \App\Http\Controllers\Api\AuthController::register
- * @see app/Http/Controllers/Api/AuthController.php:76
+ * @see app/Http/Controllers/Api/AuthController.php:88
  * @route '/api/register'
  */
 export const register = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -71,7 +50,7 @@ register.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::register
- * @see app/Http/Controllers/Api/AuthController.php:76
+ * @see app/Http/Controllers/Api/AuthController.php:88
  * @route '/api/register'
  */
 register.url = (options?: RouteQueryOptions) => {
@@ -80,7 +59,7 @@ register.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::register
- * @see app/Http/Controllers/Api/AuthController.php:76
+ * @see app/Http/Controllers/Api/AuthController.php:88
  * @route '/api/register'
  */
 register.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -88,30 +67,9 @@ register.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\AuthController::register
- * @see app/Http/Controllers/Api/AuthController.php:76
- * @route '/api/register'
- */
-    const registerForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: register.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\AuthController::register
- * @see app/Http/Controllers/Api/AuthController.php:76
- * @route '/api/register'
- */
-        registerForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: register.url(options),
-            method: 'post',
-        })
-    
-    register.form = registerForm
 /**
 * @see \App\Http\Controllers\Api\AuthController::logout
- * @see app/Http/Controllers/Api/AuthController.php:119
+ * @see app/Http/Controllers/Api/AuthController.php:142
  * @route '/api/logout'
  */
 export const logout = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -126,7 +84,7 @@ logout.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::logout
- * @see app/Http/Controllers/Api/AuthController.php:119
+ * @see app/Http/Controllers/Api/AuthController.php:142
  * @route '/api/logout'
  */
 logout.url = (options?: RouteQueryOptions) => {
@@ -135,7 +93,7 @@ logout.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::logout
- * @see app/Http/Controllers/Api/AuthController.php:119
+ * @see app/Http/Controllers/Api/AuthController.php:142
  * @route '/api/logout'
  */
 logout.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -143,30 +101,9 @@ logout.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\AuthController::logout
- * @see app/Http/Controllers/Api/AuthController.php:119
- * @route '/api/logout'
- */
-    const logoutForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: logout.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\AuthController::logout
- * @see app/Http/Controllers/Api/AuthController.php:119
- * @route '/api/logout'
- */
-        logoutForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: logout.url(options),
-            method: 'post',
-        })
-    
-    logout.form = logoutForm
 /**
 * @see \App\Http\Controllers\Api\AuthController::user
- * @see app/Http/Controllers/Api/AuthController.php:130
+ * @see app/Http/Controllers/Api/AuthController.php:153
  * @route '/api/user'
  */
 export const user = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -181,7 +118,7 @@ user.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::user
- * @see app/Http/Controllers/Api/AuthController.php:130
+ * @see app/Http/Controllers/Api/AuthController.php:153
  * @route '/api/user'
  */
 user.url = (options?: RouteQueryOptions) => {
@@ -190,7 +127,7 @@ user.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::user
- * @see app/Http/Controllers/Api/AuthController.php:130
+ * @see app/Http/Controllers/Api/AuthController.php:153
  * @route '/api/user'
  */
 user.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -199,7 +136,7 @@ user.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\AuthController::user
- * @see app/Http/Controllers/Api/AuthController.php:130
+ * @see app/Http/Controllers/Api/AuthController.php:153
  * @route '/api/user'
  */
 user.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -207,44 +144,9 @@ user.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\AuthController::user
- * @see app/Http/Controllers/Api/AuthController.php:130
- * @route '/api/user'
- */
-    const userForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: user.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\AuthController::user
- * @see app/Http/Controllers/Api/AuthController.php:130
- * @route '/api/user'
- */
-        userForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: user.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\Api\AuthController::user
- * @see app/Http/Controllers/Api/AuthController.php:130
- * @route '/api/user'
- */
-        userForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: user.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    user.form = userForm
 /**
 * @see \App\Http\Controllers\Api\AuthController::refresh
- * @see app/Http/Controllers/Api/AuthController.php:160
+ * @see app/Http/Controllers/Api/AuthController.php:183
  * @route '/api/refresh'
  */
 export const refresh = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -259,7 +161,7 @@ refresh.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::refresh
- * @see app/Http/Controllers/Api/AuthController.php:160
+ * @see app/Http/Controllers/Api/AuthController.php:183
  * @route '/api/refresh'
  */
 refresh.url = (options?: RouteQueryOptions) => {
@@ -268,7 +170,7 @@ refresh.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::refresh
- * @see app/Http/Controllers/Api/AuthController.php:160
+ * @see app/Http/Controllers/Api/AuthController.php:183
  * @route '/api/refresh'
  */
 refresh.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -276,30 +178,9 @@ refresh.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\AuthController::refresh
- * @see app/Http/Controllers/Api/AuthController.php:160
- * @route '/api/refresh'
- */
-    const refreshForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: refresh.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\AuthController::refresh
- * @see app/Http/Controllers/Api/AuthController.php:160
- * @route '/api/refresh'
- */
-        refreshForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: refresh.url(options),
-            method: 'post',
-        })
-    
-    refresh.form = refreshForm
 /**
 * @see \App\Http\Controllers\Api\AuthController::refreshPermissions
- * @see app/Http/Controllers/Api/AuthController.php:183
+ * @see app/Http/Controllers/Api/AuthController.php:206
  * @route '/api/auth/refresh-permissions'
  */
 export const refreshPermissions = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -314,7 +195,7 @@ refreshPermissions.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::refreshPermissions
- * @see app/Http/Controllers/Api/AuthController.php:183
+ * @see app/Http/Controllers/Api/AuthController.php:206
  * @route '/api/auth/refresh-permissions'
  */
 refreshPermissions.url = (options?: RouteQueryOptions) => {
@@ -323,7 +204,7 @@ refreshPermissions.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AuthController::refreshPermissions
- * @see app/Http/Controllers/Api/AuthController.php:183
+ * @see app/Http/Controllers/Api/AuthController.php:206
  * @route '/api/auth/refresh-permissions'
  */
 refreshPermissions.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -332,49 +213,13 @@ refreshPermissions.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =
 })
 /**
 * @see \App\Http\Controllers\Api\AuthController::refreshPermissions
- * @see app/Http/Controllers/Api/AuthController.php:183
+ * @see app/Http/Controllers/Api/AuthController.php:206
  * @route '/api/auth/refresh-permissions'
  */
 refreshPermissions.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: refreshPermissions.url(options),
     method: 'head',
 })
-
-    /**
-* @see \App\Http\Controllers\Api\AuthController::refreshPermissions
- * @see app/Http/Controllers/Api/AuthController.php:183
- * @route '/api/auth/refresh-permissions'
- */
-    const refreshPermissionsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: refreshPermissions.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\AuthController::refreshPermissions
- * @see app/Http/Controllers/Api/AuthController.php:183
- * @route '/api/auth/refresh-permissions'
- */
-        refreshPermissionsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: refreshPermissions.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\Api\AuthController::refreshPermissions
- * @see app/Http/Controllers/Api/AuthController.php:183
- * @route '/api/auth/refresh-permissions'
- */
-        refreshPermissionsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: refreshPermissions.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    refreshPermissions.form = refreshPermissionsForm
 const AuthController = { login, register, logout, user, refresh, refreshPermissions }
 
 export default AuthController

@@ -5,21 +5,22 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Textarea } from '@/presentation/components/ui/textarea';
 import { Badge } from '@/presentation/components/ui/badge';
-import { useTipoMermas, TipoMermaApi } from '@/stores/useTipoMermas';
-import { TipoMermaService } from '@/infrastructure/services/tipoMermaService';
+import { useTipoMermas } from '@/stores/useTipoMermas';
+import tipoMermaService from '@/infrastructure/services/tipoMerma.service';
 import { Check, Loader2, Palette, X } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
+import type { TipoMerma, TipoMermaFormData } from '@/domain/entities/tipo-merma';
 
 interface TipoMermaFormModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    editingTipo?: TipoMermaApi | null;
+    editingTipo?: TipoMerma | null;
     onSuccess?: () => void;
 }
 
 export function TipoMermaFormModal({ open, onOpenChange, editingTipo, onSuccess }: TipoMermaFormModalProps) {
     const { fetchTipos } = useTipoMermas();
-    const [form, setForm] = useState<Partial<TipoMermaApi>>({});
+    const [form, setForm] = useState<Partial<TipoMermaFormData>>({});
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -46,10 +47,10 @@ export function TipoMermaFormModal({ open, onOpenChange, editingTipo, onSuccess 
 
         try {
             if (editingTipo) {
-                await TipoMermaService.update(editingTipo.id, form);
+                await tipoMermaService.update(editingTipo.id, form);
                 NotificationService.success('Tipo de merma actualizado exitosamente');
             } else {
-                await TipoMermaService.create(form);
+                await tipoMermaService.create(form);
                 NotificationService.success('Tipo de merma creado exitosamente');
             }
 

@@ -1,4 +1,7 @@
 // Data Layer: Tipos de Ajuste de Inventario service
+// Patrón consolidado: Extiende GenericService para Inertia.js
+// Añade métodos HTTP directo para modales y componentes que no usan Inertia.js
+import axios from 'axios';
 import Controllers from '@/actions/App/Http/Controllers';
 import { GenericService } from '@/infrastructure/services/generic.service';
 import type { Filters, Id } from '@/domain/entities/shared';
@@ -46,6 +49,29 @@ export class TipoAjusteInventarioService extends GenericService<TipoAjusteInvent
     }
 
     return errors;
+  }
+
+  // ========================================
+  // Métodos HTTP directo para modales/componentes
+  // ========================================
+
+  async getAll() {
+    const { data } = await axios.get('/api/tipos-ajuste-inventario');
+    return data.data as TipoAjusteInventario[];
+  }
+
+  async create(payload: TipoAjusteInventarioFormData) {
+    const { data } = await axios.post('/api/tipos-ajuste-inventario', payload);
+    return data.data as TipoAjusteInventario;
+  }
+
+  async update(id: number, payload: Partial<TipoAjusteInventarioFormData>) {
+    const { data } = await axios.put(`/api/tipos-ajuste-inventario/${id}`, payload);
+    return data.data as TipoAjusteInventario;
+  }
+
+  async remove(id: number) {
+    await axios.delete(`/api/tipos-ajuste-inventario/${id}`);
   }
 }
 

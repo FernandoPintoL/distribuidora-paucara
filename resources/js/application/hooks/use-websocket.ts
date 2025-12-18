@@ -1,4 +1,6 @@
 // Application Layer: WebSocket hook for real-time communication
+// ⚠️ DEPRECADO: Usa useWebSocketContext() en su lugar
+// Este hook se mantiene por compatibilidad backward
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { usePage } from '@inertiajs/react';
 import websocketService from '@/infrastructure/services/websocket.service';
@@ -27,7 +29,10 @@ interface UseWebSocketReturn {
 }
 
 /**
- * Hook para manejar la conexión WebSocket y eventos en tiempo real
+ * Hook DEPRECADO para manejar la conexión WebSocket
+ *
+ * ⚠️ DEPRECADO: Por favor usa useWebSocketContext() en su lugar
+ * Esto mantiene compatibilidad pero se recomienda migrar a WebSocketProvider + useWebSocketContext()
  *
  * Uso básico:
  * ```tsx
@@ -53,6 +58,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   // Conectar al WebSocket
   const connect = useCallback(async () => {
+    // ✅ Si el websocket ya está conectado, simplemente actualizar estado
+    if (websocketService.isSocketConnected()) {
+      console.log('✅ WebSocket ya está conectado globalmente, reutilizando...');
+      setStatus('connected');
+      setSocketId(websocketService.getSocketId());
+      return;
+    }
+
     if (connectionAttemptRef.current || status === 'connected') {
       return;
     }

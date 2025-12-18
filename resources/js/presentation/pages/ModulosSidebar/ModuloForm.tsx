@@ -4,13 +4,16 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
+import { Textarea } from '@/presentation/components/ui/textarea';
 import { PermisosMultiSelect } from '@/presentation/components/forms/permisos-multi-select';
 
 const iconosDisponibles = [
     'Package', 'Boxes', 'Users', 'Truck', 'Wallet', 'CreditCard',
     'ShoppingCart', 'TrendingUp', 'BarChart3', 'Settings',
     'FolderTree', 'Tags', 'Ruler', 'DollarSign', 'Building2',
-    'ClipboardList', 'Home', 'FileText', 'Calculator'
+    'ClipboardList', 'Home', 'FileText', 'Calculator', 'Archive',
+    'Activity', 'AlertCircle', 'Bell', 'Calendar', 'Camera',
+    'Check', 'Clock', 'Cloud', 'Database', 'Download'
 ];
 
 interface ModuloFormProps {
@@ -18,7 +21,7 @@ interface ModuloFormProps {
     errors: Record<string, string>;
     processing: boolean;
     onSubmit: (e: React.FormEvent) => void;
-    onChange: (key: keyof ModuloFormData, value: any) => void;
+    onChange: <K extends keyof ModuloFormData>(key: K, value: ModuloFormData[K]) => void;
     onCancel?: () => void;
     submitLabel: string;
     modulosPadre: ModuloSidebar[];
@@ -80,12 +83,33 @@ export function ModuloForm({
             </div>
 
             <div>
+                <Label htmlFor="descripcion">Descripción</Label>
+                <Textarea
+                    id="descripcion"
+                    value={data.descripcion}
+                    onChange={(e) => onChange('descripcion', e.target.value)}
+                    placeholder="Descripción opcional del módulo"
+                    rows={3}
+                />
+            </div>
+
+            <div>
                 <Label htmlFor="categoria">Categoría</Label>
                 <Input
                     id="categoria"
                     value={data.categoria}
                     onChange={(e) => onChange('categoria', e.target.value)}
                     placeholder="Inventario, Comercial, etc."
+                />
+            </div>
+
+            <div>
+                <Label htmlFor="color">Color (opcional)</Label>
+                <Input
+                    id="color"
+                    type="color"
+                    value={data.color || ''}
+                    onChange={(e) => onChange('color', e.target.value)}
                 />
             </div>
 
@@ -114,15 +138,39 @@ export function ModuloForm({
                 />
             </div>
 
-            <div className="flex items-center space-x-2">
-                <input
-                    id="es_submenu"
-                    type="checkbox"
-                    checked={data.es_submenu}
-                    onChange={(e) => onChange('es_submenu', e.target.checked)}
-                    className="rounded border-gray-300"
-                />
-                <Label htmlFor="es_submenu">Es submódulo</Label>
+            <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                    <input
+                        id="activo"
+                        type="checkbox"
+                        checked={data.activo}
+                        onChange={(e) => onChange('activo', e.target.checked)}
+                        className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="activo">Módulo activo</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                    <input
+                        id="es_submenu"
+                        type="checkbox"
+                        checked={data.es_submenu}
+                        onChange={(e) => onChange('es_submenu', e.target.checked)}
+                        className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="es_submenu">Es submódulo</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                    <input
+                        id="visible_dashboard"
+                        type="checkbox"
+                        checked={data.visible_dashboard}
+                        onChange={(e) => onChange('visible_dashboard', e.target.checked)}
+                        className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="visible_dashboard">Visible en dashboard</Label>
+                </div>
             </div>
 
             {data.es_submenu && (

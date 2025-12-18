@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import logisticaService from '@/infrastructure/services/logistica.service';
 
 export interface EnvioStats {
     programados: number;
@@ -54,17 +54,18 @@ export function useLogisticaStats(options: UseLogisticaStatsOptions = {}) {
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
     /**
-     * Fetch logistics statistics from the API
+     * Fetch logistics statistics from the API using the service layer
      */
     const fetchStats = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const response = await axios.get('/api/logistica/dashboard/stats');
+            // Use service layer for API abstraction
+            const data = await logisticaService.obtenerDashboardStats();
 
-            if (response.data) {
-                setStats(response.data);
+            if (data) {
+                setStats(data);
                 setLastUpdate(new Date());
             } else {
                 throw new Error('No data received from server');

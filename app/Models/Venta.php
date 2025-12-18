@@ -61,9 +61,16 @@ class Venta extends Model
                 $venta->procesarMovimientosStock();
             }
 
-            // Generar asiento contable y movimiento de caja siempre
-            $venta->generarAsientoContable();
-            $venta->generarMovimientoCaja();
+            // TODO: Generar movimientos contables cuando CuentaContable esté completamente configurado
+            // Por ahora, solo generar movimientos de caja
+            // $venta->generarAsientoContable();
+
+            // Generar movimiento de caja
+            try {
+                $venta->generarMovimientoCaja();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Error generando movimiento de caja para venta {$venta->numero}: " . $e->getMessage());
+            }
         });
 
         // Antes de eliminar una venta, revertir movimientos
@@ -385,6 +392,9 @@ class Venta extends Model
 
     /**
      * Generar movimiento de caja automático
+     *
+     * ✅ MEJORADO: Ahora acepta cajaId desde el controller via _caja_id attribute
+     * Si no se proporciona, busca automáticamente la caja abierta del usuario
      */
     public function generarMovimientoCaja(): void
     {
@@ -399,15 +409,22 @@ class Venta extends Model
                 return;
             }
 
-            // Obtener caja abierta (usar user_id como en el modelo)
-            $cajaAbierta = AperturaCaja::where('user_id', $this->usuario_id)
-                ->whereDate('fecha', $this->fecha)
-                ->first();
+            // ✅ Obtener cajaId: primero del controller (via _caja_id), luego de la base de datos
+            $cajaId = $this->getAttribute('_caja_id');
 
-            if (! $cajaAbierta) {
-                Log::warning("No hay caja abierta para generar movimiento de venta {$this->numero}");
+            if (!$cajaId) {
+                // Fallback: Obtener caja abierta (usar user_id como en el modelo)
+                $cajaAbierta = AperturaCaja::where('user_id', $this->usuario_id)
+                    ->whereDate('fecha', $this->fecha)
+                    ->first();
 
-                return;
+                if (!$cajaAbierta) {
+                    Log::warning("No hay caja abierta para generar movimiento de venta {$this->numero}");
+
+                    return;
+                }
+
+                $cajaId = $cajaAbierta->caja_id;
             }
 
             // Obtener tipo de operación para venta
@@ -420,7 +437,7 @@ class Venta extends Model
             }
 
             MovimientoCaja::create([
-                'caja_id'           => $cajaAbierta->caja_id,
+                'caja_id'           => $cajaId,
                 'tipo_operacion_id' => $tipoOperacion->id,
                 'numero_documento'  => $this->numero,
                 'descripcion'       => "Venta #{$this->numero} - Cliente: {$this->cliente?->nombre}",

@@ -55,25 +55,61 @@ class VentaService
      * @throws StockInsuficientException
      * @throws \InvalidArgumentException
      */
-    public function crear(CrearVentaDTO $dto): VentaResponseDTO
+    public function crear(CrearVentaDTO $dto, ?int $cajaId = null): VentaResponseDTO
     {
+        \Log::info('🔄 [VentaService::crear] Iniciando creación de venta', [
+            'cliente_id' => $dto->cliente_id,
+            'cantidad_detalles' => count($dto->detalles),
+            'total' => $dto->total,
+            'almacen_id' => $dto->almacen_id,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
         // 1. Validar datos
+        \Log::debug('✓ [VentaService::crear] Validando detalles DTO');
         $dto->validarDetalles();
 
         // 2. Validar stock ANTES de la transacción
+        \Log::info('🔄 [VentaService::crear] Validando stock disponible', [
+            'almacen_id' => $dto->almacen_id,
+            'detalles_count' => count($dto->detalles),
+        ]);
+
         $validacionStock = $this->stockService->validarDisponible(
             $dto->detalles,
             $dto->almacen_id
         );
 
-        if (!$validacionStock['valido']) {
-            throw StockInsuficientException::create($validacionStock['detalles']);
+        if (!$validacionStock->valido) {
+            \Log::warning('❌ [VentaService::crear] Stock insuficiente', [
+                'detalles' => $validacionStock->detalles,
+            ]);
+            throw StockInsuficientException::create($validacionStock->detalles);
         }
 
+        \Log::info('✅ [VentaService::crear] Stock validado exitosamente');
+
         // 3. Crear dentro de transacción
-        $venta = $this->transaction(function () use ($dto) {
+        $venta = $this->transaction(function () use ($dto, $cajaId) {
+            \Log::debug('🔄 [VentaService::crear] Iniciando transacción', [
+                'proforma_id' => $dto->proforma_id,
+            ]);
+
+            // Obtener el estado documento PENDIENTE
+            $estadoPendiente = \App\Models\EstadoDocumento::where('codigo', 'PENDIENTE')->first();
+
+            // Obtener moneda por defecto (BOB - Bolivianos)
+            $monedaDefecto = \App\Models\Moneda::where('codigo', 'BOB')->first() ??
+                            \App\Models\Moneda::first();
+
             // 3.1 Crear Venta
+            \Log::debug('📝 [VentaService::crear] Creando registro de Venta en BD', [
+                'cliente_id' => $dto->cliente_id,
+                'total' => $dto->total,
+            ]);
+
             $venta = Venta::create([
+                'numero' => Venta::generarNumero(),
                 'cliente_id' => $dto->cliente_id,
                 'usuario_id' => $dto->usuario_id ?? Auth::id(),
                 'fecha' => $dto->fecha,
@@ -81,13 +117,27 @@ class VentaService
                 'impuesto' => $dto->impuesto,
                 'total' => $dto->total,
                 'estado' => 'PENDIENTE',
+                'estado_documento_id' => $estadoPendiente?->id ?? 2,
+                'moneda_id' => $monedaDefecto?->id ?? 1,
                 'observaciones' => $dto->observaciones,
                 'almacen_id' => $dto->almacen_id,
+                'proforma_id' => $dto->proforma_id,
             ]);
 
+            \Log::info('✅ [VentaService::crear] Venta creada en BD', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+            ]);
+
+            // ✅ Almacenar cajaId para que el observer lo use
+            if ($cajaId) {
+                $venta->setAttribute('_caja_id', $cajaId);
+            }
+
             // 3.2 Crear detalles
+            \Log::debug('📦 [VentaService::crear] Creando detalles de venta');
             foreach ($dto->detalles as $detalle) {
-                VentaDetalle::create([
+                \App\Models\DetalleVenta::create([
                     'venta_id' => $venta->id,
                     'producto_id' => $detalle['producto_id'],
                     'cantidad' => $detalle['cantidad'],
@@ -95,28 +145,44 @@ class VentaService
                     'subtotal' => $detalle['cantidad'] * $detalle['precio_unitario'],
                 ]);
             }
+            \Log::info('✅ [VentaService::crear] Detalles de venta creados', [
+                'venta_id' => $venta->id,
+                'cantidad_detalles' => count($dto->detalles),
+            ]);
 
             // 3.3 Consumir stock (Service maneja su propia lógica dentro de transacción)
+            \Log::debug('🔄 [VentaService::crear] Procesando salida de stock', [
+                'venta_id' => $venta->id,
+            ]);
+
             $this->stockService->procesarSalidaVenta(
                 $dto->detalles,
                 "VENTA#{$venta->id}",
                 $dto->almacen_id
             );
 
-            // 3.4 Crear asiento contable
-            $this->contabilidadService->crearAsientoVenta($venta);
+            \Log::info('✅ [VentaService::crear] Stock procesado exitosamente', [
+                'venta_id' => $venta->id,
+            ]);
+
+            // 3.4 Crear asiento contable (COMENTADO: Se habilitará cuando CuentasContables esté configurado)
+            // \Log::debug('🔄 [VentaService::crear] Creando asiento contable');
+            // $this->contabilidadService->crearAsientoVenta($venta);
+            \Log::info('✅ [VentaService::crear] Asiento contable omitido (será habilitado después)');
 
             // 3.5 Emitir evento (DESPUÉS de que todo esté persisted)
-            event(new \App\Events\VentaCreada($venta));
+            \Log::debug('📢 [VentaService::crear] Evento de venta creada omitido (no existe VentaCreada event)');
+            // event(new \App\Events\VentaCreada($venta));
 
             return $venta;
         });
 
         // 4. Log de éxito
-        $this->logSuccess('Venta creada exitosamente', [
+        \Log::info('✅ [VentaService::crear] Venta creada exitosamente', [
             'venta_id' => $venta->id,
             'cliente_id' => $venta->cliente_id,
             'total' => $venta->total,
+            'timestamp' => now()->toIso8601String(),
         ]);
 
         // 5. Retornar DTO

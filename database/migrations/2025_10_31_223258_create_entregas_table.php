@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('entregas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('proforma_id')->constrained('proformas');
-            $table->foreignId('chofer_id')->nullable()->constrained('choferes_legacy');
+            $table->foreignId('chofer_id')->nullable()->constrained('empleados');
             $table->foreignId('vehiculo_id')->nullable()->constrained('vehiculos');
             $table->foreignId('direccion_cliente_id')->nullable()->constrained('direcciones_cliente');
 
