@@ -62,9 +62,9 @@ class ProformaResponseDTO extends BaseDTO
             observaciones: $model->observaciones,
             canal: $model->canal ?? 'PRESENCIAL',
             fecha_entrega_solicitada: $model->fecha_entrega_solicitada?->toDateString(),
-            hora_entrega_solicitada: $this->extractTimeFromField($model->hora_entrega_solicitada),
+            hora_entrega_solicitada: self::extractTimeFromField($model->hora_entrega_solicitada),
             fecha_entrega_confirmada: $model->fecha_entrega_confirmada?->toDateString(),
-            hora_entrega_confirmada: $this->extractTimeFromField($model->hora_entrega_confirmada),
+            hora_entrega_confirmada: self::extractTimeFromField($model->hora_entrega_confirmada),
             detalles: $model->detalles->map(fn($det) => [
                 'id' => $det->id,
                 'producto_id' => $det->producto_id,
@@ -85,7 +85,7 @@ class ProformaResponseDTO extends BaseDTO
      * - Un timestamp completo (YYYY-MM-DD HH:mm:ss)
      * - Un objeto Carbon
      */
-    private function extractTimeFromField($value): ?string
+    private static function extractTimeFromField($value): ?string
     {
         if (!$value) {
             return null;
