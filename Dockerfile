@@ -8,7 +8,8 @@ RUN apk add --no-cache \
     libxml2-dev \
     libpng-dev \
     libjpeg-turbo-dev \
-    freetype-dev
+    freetype-dev \
+    postgresql-dev
 
 RUN docker-php-ext-install \
     pdo \
@@ -43,6 +44,7 @@ RUN apk add --no-cache \
     nginx \
     supervisor \
     postgresql-client \
+    postgresql-dev \
     curl \
     bash \
     libxml2-dev \
@@ -62,6 +64,9 @@ RUN docker-php-ext-install \
     curl \
     zip \
     gd
+
+# Remove dev dependencies to reduce image size
+RUN apk del --no-cache postgresql-dev libxml2-dev libpng-dev libjpeg-turbo-dev freetype-dev
 
 WORKDIR /app
 
