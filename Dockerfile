@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     npm \
     libxml2-dev \
     libpng-dev \
-    libjpeg-turbo-dev \
+    libjpeg62-turbo-dev \
     libfreetype6-dev \
     libpq-dev \
     libonig-dev \
