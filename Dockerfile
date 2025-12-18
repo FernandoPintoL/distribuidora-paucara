@@ -1,22 +1,19 @@
 # Build stage - compile PHP and Node dependencies
-FROM php:8.4-cli-bookworm as builder
+FROM php:8.4-cli-alpine as builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
+RUN apk add --no-cache \
+    build-base \
     autoconf \
-    pkg-config \
     nodejs \
     npm \
     libxml2-dev \
     libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    libpq-dev \
-    libonig-dev \
-    zlib1g-dev \
-    git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    libjpeg-turbo-dev \
+    libfreetype-dev \
+    postgresql-dev \
+    oniguruma-dev \
+    zlib-dev \
+    git
 
 # Install Composer directly
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -45,15 +42,14 @@ RUN DB_CONNECTION=sqlite \
     npm run build
 
 # Production stage
-FROM php:8.4-fpm
+FROM php:8.4-fpm-alpine
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     nginx \
     supervisor \
     postgresql-client \
     curl \
-    bash && \
-    rm -rf /var/lib/apt/lists/*
+    bash
 
 COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
 RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo zip
