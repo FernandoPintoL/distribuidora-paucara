@@ -17,13 +17,8 @@ RUN apk add --no-cache \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 RUN docker-php-ext-install \
-    pdo \
     pdo_pgsql \
     mbstring \
-    xml \
-    dom \
-    session \
-    fileinfo \
     zip
 
 WORKDIR /app
@@ -54,7 +49,7 @@ RUN apk add --no-cache \
     libxml2
 
 COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
-RUN docker-php-ext-enable pdo_pgsql mbstring xml dom fileinfo zip
+RUN docker-php-ext-enable pdo_pgsql mbstring zip
 
 WORKDIR /app
 
