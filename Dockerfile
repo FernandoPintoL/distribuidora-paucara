@@ -6,10 +6,7 @@ RUN apk add --no-cache \
     npm \
     git \
     curl \
-    postgresql-client \
-    libpng \
-    libjpeg \
-    libfreetype
+    postgresql-client
 
 # Install Composer directly
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -35,10 +32,7 @@ RUN apk add --no-cache \
     supervisor \
     postgresql-client \
     curl \
-    bash \
-    libpng \
-    libjpeg \
-    libfreetype
+    bash
 
 # php:8.2-fpm-alpine ya tiene todas las extensiones compiladas (pdo, mbstring, zip, curl, json, xml, etc.)
 
