@@ -10,13 +10,13 @@ RUN apk add --no-cache \
     postgresql-dev \
     oniguruma-dev \
     zlib-dev \
-    git
+    git \
+    curl
 
 # Install Composer directly
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN docker-php-ext-configure pdo_pgsql && \
-    docker-php-ext-install \
+RUN docker-php-ext-install \
     pdo \
     pdo_pgsql \
     mbstring \
@@ -54,19 +54,15 @@ RUN apk add --no-cache \
     libxml2
 
 COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
-RUN docker-php-ext-enable pdo pdo_pgsql mbstring xml dom session fileinfo zip
+RUN docker-php-ext-enable pdo_pgsql mbstring xml dom fileinfo zip
 
 WORKDIR /app
 
 COPY --from=builder /app /app
-COPY --from=builder /app/vendor /app/vendor
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/public/build /app/public/build
 
 RUN mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
-
-RUN chown -R www-data:www-data /app
+    && chmod -R 755 storage bootstrap/cache \
+    && chown -R www-data:www-data /app
 
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
