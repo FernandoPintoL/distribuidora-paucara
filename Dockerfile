@@ -18,6 +18,13 @@ RUN composer install --no-interaction --no-dev --no-progress --optimize-autoload
 
 COPY . .
 
+# Create minimal .env for build to avoid database connection errors
+RUN echo "APP_ENV=production" > .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_KEY=base64:+EKCy7Tb3hBU1s8hEZaAKjG7MsqRoV+7pV1C0MRxVc0=" >> .env && \
+    echo "DB_CONNECTION=sqlite" >> .env && \
+    echo "DB_DATABASE=:memory:" >> .env
+
 # Build frontend without database connection
 RUN npm install && npm run build
 
