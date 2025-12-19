@@ -22,6 +22,15 @@ COPY . .
 # Install PHP dependencies
 RUN composer install --no-interaction --no-dev --optimize-autoloader
 
+# Create temporary .env for build (to avoid DB connection errors)
+RUN echo "APP_ENV=production" > .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_KEY=base64:+EKCy7Tb3hBU1s8hEZaAKjG7MsqRoV+7pV1C0MRxVc0=" >> .env && \
+    echo "DB_CONNECTION=sqlite" >> .env && \
+    echo "DB_DATABASE=:memory:" >> .env && \
+    mkdir -p database && \
+    touch database/database.sqlite
+
 # Install and build frontend
 RUN npm ci && npm run build
 
