@@ -44,13 +44,14 @@ WORKDIR /app
 
 COPY --from=builder /app /app
 
-RUN mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache \
-    && chmod -R 755 storage bootstrap/cache \
+RUN mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache /var/log/nginx \
+    && chmod -R 755 storage bootstrap/cache /var/log/nginx \
     && chown -R www-data:www-data /app
 
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
 
 EXPOSE 8000
 
