@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    {{-- Application Configuration (Runtime) --}}
+    <script>
+        window.__APP_CONFIG__ = {
+            websocketUrl: "{{ env('VITE_WEBSOCKET_URL', 'http://localhost:3001') }}",
+            apiUrl: "{{ env('VITE_API_URL', '/api') }}"
+        };
+        console.log('🔧 App Config Loaded:', window.__APP_CONFIG__);
+    </script>
+
     {{-- Inline script to detect system dark mode preference and apply it immediately --}}
     <script>
         (function() {

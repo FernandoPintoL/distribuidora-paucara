@@ -29,7 +29,13 @@ class WebSocketService {
   connect(config: WebSocketConfig = {}): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        const baseUrl = config.url || import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:3001';
+        // Priority: config.url > runtime config > env variable > fallback
+        const baseUrl = config.url ||
+                        (window as any).__APP_CONFIG__?.websocketUrl ||
+                        import.meta.env.VITE_WEBSOCKET_URL ||
+                        'http://localhost:3001';
+
+        console.log('🔌 WebSocket URL:', baseUrl);
 
         this.socket = io(baseUrl, {
           reconnection: config.reconnection !== false,

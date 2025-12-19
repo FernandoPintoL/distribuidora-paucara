@@ -73,8 +73,8 @@ export function WebSocketProvider({
       }
 
       // Crear promesa de conexión y almacenarla
+      // Note: websocketService.connect() automatically resolves the URL from runtime config
       connectionPromiseRef.current = websocketService.connect({
-        url: import.meta.env.VITE_WEBSOCKET_URL,
         auth: {
           token: authToken,
           userId: userId,
