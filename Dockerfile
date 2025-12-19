@@ -1,7 +1,7 @@
-FROM php:8.2-fpm-alpine
+FROM php:8.2-fpm
 
 # Install dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     nodejs \
@@ -9,7 +9,8 @@ RUN apk add --no-cache \
     postgresql-client \
     curl \
     bash \
-    git
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
