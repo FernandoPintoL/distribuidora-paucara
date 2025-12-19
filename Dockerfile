@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Install PHP extensions
+RUN docker-php-ext-install pdo_pgsql
+
 # Copy Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
