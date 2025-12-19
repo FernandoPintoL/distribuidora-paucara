@@ -1,5 +1,7 @@
 {
   "projectName": "Distribuidora Paucara",
+  "buildCommand": "npm run build && php artisan storage:link",
+  "startCommand": "php artisan serve --host=0.0.0.0 --port=${PORT:-8000}",
   "variables": {
     "APP_ENV": "production",
     "APP_DEBUG": "false",
