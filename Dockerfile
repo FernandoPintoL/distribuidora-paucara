@@ -42,8 +42,8 @@ COPY . /app/
 
 # Configure Nginx and Supervisor
 RUN mkdir -p /run/nginx /var/log/nginx /etc/nginx/http.d \
-    && cp /app/docker/nginx.conf /etc/nginx/http.d/default.conf \
-    && cp /app/docker/supervisord.conf /etc/supervisord.conf
+    && cp /app/nginx.conf /etc/nginx/http.d/default.conf \
+    && cp /app/supervisord.conf /etc/supervisord.conf
 
 # Build assets
 RUN npm run build
