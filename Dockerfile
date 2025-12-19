@@ -7,18 +7,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs \
     npm \
     postgresql-client \
-    libpq-dev \
-    libzip-dev \
     curl \
     bash \
     git \
     && rm -rf /var/lib/apt/lists/*
-
-# Install PHP extensions - only what Laravel needs
-RUN docker-php-ext-install \
-    pdo_pgsql \
-    mbstring \
-    zip
 
 # Copy Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
