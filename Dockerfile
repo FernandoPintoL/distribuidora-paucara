@@ -1,25 +1,15 @@
 # Build stage - compile PHP and Node dependencies
-FROM php:8.4-cli-alpine as builder
+FROM php:8.4-fpm-alpine as builder
 
 RUN apk add --no-cache \
-    build-base \
-    autoconf \
     nodejs \
     npm \
-    libxml2-dev \
-    postgresql-dev \
-    oniguruma-dev \
-    zlib-dev \
     git \
-    curl
+    curl \
+    postgresql-client
 
 # Install Composer directly
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-RUN docker-php-ext-install \
-    pdo_pgsql \
-    mbstring \
-    zip
 
 WORKDIR /app
 
@@ -42,14 +32,9 @@ RUN apk add --no-cache \
     supervisor \
     postgresql-client \
     curl \
-    bash \
-    libpq \
-    libzip \
-    oniguruma \
-    libxml2
+    bash
 
-COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
-RUN docker-php-ext-enable pdo_pgsql mbstring zip
+# php:8.4-fpm ya tiene todas las extensiones compiladas
 
 WORKDIR /app
 
