@@ -1,57 +1,60 @@
-FROM php:8.2-fpm
+# Use PHP 8.2 to match Railway's version
+FROM php:8.2-fpm-alpine
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
-    supervisor \
+# Install minimal system dependencies and build requirements for PHP extensions
+RUN apk add --no-cache \
+    git \
+    curl \
     nodejs \
     npm \
-    postgresql-client \
-    curl \
-    bash \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+    nginx \
+    supervisor \
+    libzip-dev \
+    zlib-dev \
+    postgresql-dev \
+    oniguruma-dev \
+    $PHPIZE_DEPS
 
-# Copy Composer
+# Install and enable PHP extensions required by dependencies
+RUN docker-php-ext-install zip pdo_mysql mbstring pdo_pgsql
+
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Set working directory
 WORKDIR /app
 
-# Copy application files
-COPY . .
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
 
-# Install PHP dependencies
-RUN composer install --no-interaction --no-dev --optimize-autoloader
+# Install PHP dependencies (now that ext-zip is available)
+# Defer Composer scripts (which call artisan) until after app code is copied
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Create temporary .env for build (to avoid DB connection errors)
-RUN echo "APP_ENV=production" > .env && \
-    echo "APP_DEBUG=false" >> .env && \
-    echo "APP_KEY=base64:+EKCy7Tb3hBU1s8hEZaAKjG7MsqRoV+7pV1C0MRxVc0=" >> .env && \
-    echo "DB_CONNECTION=sqlite" >> .env && \
-    echo "DB_DATABASE=:memory:" >> .env && \
-    mkdir -p database && \
-    touch database/database.sqlite
+# Copy package files
+COPY package.json package-lock.json ./
 
-# Install and build frontend
-RUN npm ci && npm run build
+# Install Node dependencies
+RUN npm ci
 
-# Create necessary directories
-RUN mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache /var/log/nginx \
-    && chmod -R 755 storage bootstrap/cache /var/log/nginx \
-    && chown -R www-data:www-data /app
+# Copy application code
+COPY . /app/
 
-# Copy configurations
-COPY docker/nginx.conf /etc/nginx/http.d/default.conf
-COPY docker/supervisord.conf /etc/supervisord.conf
-COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
-COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+# Configure Nginx and Supervisor
+RUN mkdir -p /run/nginx /var/log/nginx /etc/nginx/http.d \
+    && cp /app/docker/nginx.conf /etc/nginx/http.d/default.conf \
+    && cp /app/docker/supervisord.conf /etc/supervisord.conf
 
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Build assets
+RUN npm run build
 
+# Clear any prebuilt caches (env will be provided at runtime on Railway)
+RUN php artisan package:discover --ansi || true && \
+    php artisan optimize:clear || true && \
+    chmod -R 777 storage/ public/ bootstrap/cache
+
+# Expose HTTP port (Railway defaults to 8080)
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Start Nginx and PHP-FPM via Supervisor (no automatic migrations)
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
