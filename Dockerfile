@@ -18,11 +18,8 @@ RUN composer install --no-interaction --no-dev --no-progress --optimize-autoload
 
 COPY . .
 
-# Build frontend using dummy SQLite to avoid DB connection during build
-RUN DB_CONNECTION=sqlite \
-    DB_DATABASE=:memory: \
-    npm install && \
-    npm run build
+# Build frontend without database connection
+RUN npm install && npm run build
 
 # Production stage
 FROM php:8.2-fpm-alpine
