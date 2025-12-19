@@ -1,12 +1,15 @@
 # Build stage - compile PHP and Node dependencies
-FROM php:8.4-fpm-alpine as builder
+FROM php:8.2-fpm-alpine as builder
 
 RUN apk add --no-cache \
     nodejs \
     npm \
     git \
     curl \
-    postgresql-client
+    postgresql-client \
+    libpng \
+    libjpeg \
+    libfreetype
 
 # Install Composer directly
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -14,7 +17,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 
 COPY composer.json composer.lock ./
-RUN composer install --no-interaction --no-dev --no-progress --optimize-autoloader
+RUN composer install --no-interaction --no-dev --no-progress --optimize-autoloader --no-scripts
 
 COPY . .
 
@@ -25,16 +28,19 @@ RUN DB_CONNECTION=sqlite \
     npm run build
 
 # Production stage
-FROM php:8.4-fpm-alpine
+FROM php:8.2-fpm-alpine
 
 RUN apk add --no-cache \
     nginx \
     supervisor \
     postgresql-client \
     curl \
-    bash
+    bash \
+    libpng \
+    libjpeg \
+    libfreetype
 
-# php:8.4-fpm ya tiene todas las extensiones compiladas
+# php:8.2-fpm-alpine ya tiene todas las extensiones compiladas (pdo, mbstring, zip, curl, json, xml, etc.)
 
 WORKDIR /app
 
