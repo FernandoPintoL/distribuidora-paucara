@@ -1,19 +1,31 @@
 FROM php:8.2-fpm
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     nodejs \
     npm \
     postgresql-client \
+    libpq-dev \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     curl \
     bash \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_pgsql
+# Install PHP extensions - all that Laravel might need
+RUN docker-php-ext-install \
+    pdo_pgsql \
+    pdo \
+    mbstring \
+    zip \
+    gd \
+    bcmath \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg
 
 # Copy Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
