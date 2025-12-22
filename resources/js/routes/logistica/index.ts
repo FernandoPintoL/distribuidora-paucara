@@ -1,5 +1,4 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
-import envios from './envios'
 import entregas from './entregas'
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
@@ -297,7 +296,6 @@ const logistica = {
 entregasAsignadas,
 entregasEnTransito,
 proformasPendientes,
-envios,
 entregas,
 }
 

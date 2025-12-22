@@ -4,7 +4,6 @@ import type { BaseEntity, BaseFormData } from './generic';
 import type { TipoPago } from './tipos-pago';
 import type { TipoDocumento } from './tipos-documento';
 import type { Proforma } from './proformas';
-import type { Envio } from './envios';
 
 // =============== INTERFACES BÁSICAS ===============
 
@@ -105,7 +104,6 @@ export interface Venta extends BaseEntity {
     tipo_pago?: TipoPago;
     tipo_documento?: TipoDocumento;
     proforma?: Proforma;
-    envio?: Envio;
     detalles?: DetalleVenta[];
     pagos?: Pago[];
     cuenta_por_cobrar?: CuentaPorCobrar;
