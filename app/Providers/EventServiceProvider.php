@@ -3,9 +3,7 @@
 namespace App\Providers;
 
 use App\Events\EntregaAsignada;
-use App\Events\EntregaCompletada;
 use App\Events\EntregaConfirmada;
-use App\Events\EntregaRechazada;
 use App\Events\MarcarLlegadaConfirmada;
 use App\Events\NovedadEntregaReportada;
 use App\Events\ProformaAprobada;
@@ -15,15 +13,18 @@ use App\Events\ProformaCreada;
 use App\Events\ProformaRechazada;
 use App\Events\RutaPlanificada;
 use App\Events\UbicacionActualizada;
-use App\Events\VentaAprobada;
-use App\Events\VentaCreada;
-use App\Events\VentaPagada;
-use App\Events\VentaRechazada;
 use App\Listeners\Logistica\BroadcastEntregaAsignada;
+use App\Listeners\Logistica\BroadcastEntregaConfirmada;
+use App\Listeners\Logistica\BroadcastMarcarLlegada;
+use App\Listeners\Logistica\BroadcastNovedadEntrega;
 use App\Listeners\Logistica\BroadcastRutaPlanificada;
 use App\Listeners\Logistica\BroadcastUbicacionActualizada;
+use App\Listeners\SendProformaApprovedNotification;
+use App\Listeners\SendProformaCoordinationNotification;
+use App\Listeners\SendProformaConvertedNotification;
+use App\Listeners\SendProformaCreatedNotification;
+use App\Listeners\SendProformaRejectedNotification;
 use App\Listeners\Venta\BroadcastProformaCreada;
-use App\Listeners\Venta\BroadcastVentaCreada;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -50,14 +51,6 @@ class EventServiceProvider extends ServiceProvider
      * @var array
      */
     protected $listen = [
-        // ══════════════════════════════════════════════════════════
-        // VENTA EVENTS
-        // ══════════════════════════════════════════════════════════
-
-        VentaCreada::class => [
-            BroadcastVentaCreada::class,
-        ],
-
         // ══════════════════════════════════════════════════════════
         // PROFORMA EVENTS
         // ══════════════════════════════════════════════════════════
