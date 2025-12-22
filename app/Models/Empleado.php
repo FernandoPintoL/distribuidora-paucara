@@ -1,7 +1,6 @@
 <?php
 namespace App\Models;
 
-use App\Models\Traits\ChoferTrait;
 use App\Models\Traits\HasActiveScope;
 use App\Models\Traits\RolesFuncionalesTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Empleado extends Model
 {
-    use HasFactory, ChoferTrait, RolesFuncionalesTrait, HasActiveScope;
+    use HasFactory, RolesFuncionalesTrait, HasActiveScope;
 
     protected $fillable = [
         'user_id',
@@ -244,5 +243,67 @@ class Empleado extends Model
     public function esCajero(): bool
     {
         return $this->user && $this->user->hasRole('Cajero');
+    }
+
+    /**
+     * Verificar si tiene licencia vigente (para choferes)
+     */
+    public function tieneLicenciaVigente(): bool
+    {
+        if (!$this->licencia || !$this->fecha_vencimiento_licencia) {
+            return false;
+        }
+
+        return now()->lte($this->fecha_vencimiento_licencia);
+    }
+
+    /**
+     * Verificar si está disponible para una fecha específica
+     * (no tiene rutas activas en esa fecha)
+     *
+     * @param string $fecha Fecha en formato Y-m-d
+     * @return bool
+     */
+    public function estaDisponiblePara(string $fecha): bool
+    {
+        if (!$this->estaActivo()) {
+            return false;
+        }
+
+        // Si es chofer, validar licencia
+        if ($this->esChofer() && !$this->tieneLicenciaVigente()) {
+            return false;
+        }
+
+        // Verificar si NO tiene rutas activas en esa fecha
+        $rutasActivas = $this->rutasAsignadas()
+            ->whereDate('fecha_ruta', $fecha)
+            ->whereIn('estado', ['planificada', 'en_progreso'])
+            ->count();
+
+        return $rutasActivas === 0;
+    }
+
+    /**
+     * Scope: Choferes con licencia vigente
+     */
+    public function scopeConLicenciaVigente($query)
+    {
+        return $query->whereNotNull('licencia')
+                     ->whereNotNull('fecha_vencimiento_licencia')
+                     ->where('fecha_vencimiento_licencia', '>=', now());
+    }
+
+    /**
+     * Scope: Choferes disponibles para una fecha
+     */
+    public function scopeDisponiblesPara($query, string $fecha)
+    {
+        return $query->where('estado', 'activo')
+                     ->conLicenciaVigente()
+                     ->whereDoesntHave('rutasAsignadas', function ($q) use ($fecha) {
+                         $q->whereDate('fecha_ruta', $fecha)
+                           ->whereIn('estado', ['planificada', 'en_progreso']);
+                     });
     }
 }

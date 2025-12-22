@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '@inertiajs/react';
 import type { AdminRol, PermissionGroup } from '@/domain/entities/admin-permisos';
 import { BulkEditModal } from './BulkEditModal';
+import { rolesService, permisosService } from '@/infrastructure/services';
 
 interface RolesTabProps {
   roles: AdminRol[];
@@ -44,7 +45,7 @@ export function RolesTab({
       setSeleccionados(new Set());
       setTodosSeleccionados(false);
     } else {
-      const todas = new Set(roles.map(r => r.id));
+      const todas = new Set(roles.map(r => Number(r.id)));
       setSeleccionados(todas);
       setTodosSeleccionados(true);
     }
@@ -150,8 +151,8 @@ export function RolesTab({
                       <td className="px-6 py-4">
                         <input
                           type="checkbox"
-                          checked={seleccionados.has(rol.id)}
-                          onChange={() => toggleSeleccion(rol.id)}
+                          checked={seleccionados.has(Number(rol.id))}
+                          onChange={() => toggleSeleccion(Number(rol.id))}
                           className="w-4 h-4 text-blue-600 dark:text-blue-400 rounded cursor-pointer"
                         />
                       </td>
@@ -171,16 +172,22 @@ export function RolesTab({
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Link
-                            href={`/admin/permisos/roles/${rol.id}`}
+                            href={rolesService.showUrl(rol.id)}
                             className="inline-flex items-center gap-2 px-3 py-2 bg-gray-600 dark:bg-gray-700 text-white text-sm font-medium rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition"
                           >
                             Ver
                           </Link>
                           <Link
-                            href={`/admin/permisos/roles/${rol.id}/edit`}
+                            href={rolesService.editUrl(rol.id)}
                             className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 dark:bg-blue-700 text-white text-sm font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
                           >
                             Editar
+                          </Link>
+                          <Link
+                            href={permisosService.editarRolUrl(rol.id)}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 dark:bg-green-700 text-white text-sm font-medium rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition"
+                          >
+                            Permisos
                           </Link>
                         </div>
                       </td>

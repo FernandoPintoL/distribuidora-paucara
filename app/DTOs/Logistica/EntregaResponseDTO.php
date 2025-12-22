@@ -30,23 +30,27 @@ class EntregaResponseDTO extends BaseDTO
     /**
      * Factory: Crear desde Model
      */
-    public static function fromModel(Entrega $entrega): self
+    public static function fromModel($model): static
     {
+        if (!$model instanceof Entrega) {
+            throw new \InvalidArgumentException('Model must be instance of Entrega');
+        }
+
         return new self(
-            id: $entrega->id,
-            venta_id: $entrega->venta_id,
-            chofer_id: $entrega->chofer_id,
-            vehiculo_id: $entrega->vehiculo_id,
-            estado: $entrega->estado,
-            direccion: $entrega->direccion,
-            fecha_programada: $entrega->fecha_programada?->toDateString(),
-            fecha_inicio: $entrega->fecha_inicio?->toIso8601String(),
-            fecha_entrega: $entrega->fecha_entrega?->toIso8601String(),
-            razon_rechazo: $entrega->razon_rechazo,
-            chofer_nombre: $entrega->chofer?->nombre,
-            vehiculo_placa: $entrega->vehiculo?->placa,
-            ubicaciones: $entrega->ubicaciones?->toArray() ?? [],
-            created_at: $entrega->created_at->toIso8601String(),
+            id: $model->id,
+            venta_id: $model->venta_id,
+            chofer_id: $model->chofer_id,
+            vehiculo_id: $model->vehiculo_id,
+            estado: $model->estado,
+            direccion: $model->direccion_entrega ?? $model->direccion ?? '',
+            fecha_programada: $model->fecha_programada?->toDateString(),
+            fecha_inicio: $model->fecha_inicio?->toIso8601String(),
+            fecha_entrega: $model->fecha_entrega?->toIso8601String(),
+            razon_rechazo: $model->motivo_novedad ?? null,
+            chofer_nombre: $model->chofer?->nombre,
+            vehiculo_placa: $model->vehiculo?->placa,
+            ubicaciones: $model->ubicaciones?->toArray() ?? [],
+            created_at: $model->created_at->toIso8601String(),
         );
     }
 }

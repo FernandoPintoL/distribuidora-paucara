@@ -36,6 +36,7 @@ class ProformaController extends Controller
 
     public function __construct(
         private ProformaService $proformaService,
+        private \App\Services\ImpresionService $impresionService,
     ) {
         $this->middleware('permission:proformas.index')->only('index');
         $this->middleware('permission:proformas.show')->only('show');
@@ -280,6 +281,125 @@ class ProformaController extends Controller
 
         } catch (\Exception $e) {
             return $this->respondError($e->getMessage());
+        }
+    }
+
+    // ==========================================
+    // MÉTODOS DE IMPRESIÓN
+    // ==========================================
+
+    /**
+     * Imprimir proforma en formato especificado
+     *
+     * GET /proformas/{proforma}/imprimir?formato=A4&accion=download
+     *
+     * @param \App\Models\Proforma $proforma
+     * @param Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function imprimir(\App\Models\Proforma $proforma, Request $request)
+    {
+        try {
+            $formato = $request->input('formato', 'A4'); // A4, TICKET_80, TICKET_58
+            $accion = $request->input('accion', 'download'); // download | stream
+
+            // Generar PDF usando el servicio
+            $pdf = $this->impresionService->imprimirProforma($proforma, $formato);
+
+            $nombreArchivo = "proforma_{$proforma->numero}_{$formato}.pdf";
+
+            // Retornar según acción solicitada
+            return $accion === 'stream'
+                ? $pdf->stream($nombreArchivo)
+                : $pdf->download($nombreArchivo);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al imprimir proforma', [
+                'proforma_id' => $proforma->id,
+                'formato' => $request->input('formato'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->respondError('Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Preview de impresión (retorna HTML)
+     *
+     * GET /proformas/{proforma}/preview?formato=A4
+     *
+     * Útil para debugging o vista previa en navegador
+     */
+    public function preview(\App\Models\Proforma $proforma, Request $request)
+    {
+        try {
+            $formato = $request->input('formato', 'A4');
+
+            // Obtener plantilla correspondiente
+            $plantilla = \App\Models\PlantillaImpresion::obtenerDefault('proforma', $formato);
+
+            if (!$plantilla) {
+                abort(404, "No existe plantilla para proforma con formato {$formato}");
+            }
+
+            $empresa = \App\Models\Empresa::principal();
+
+            // Cargar relaciones necesarias
+            $proforma->load([
+                'cliente',
+                'detalles.producto',
+                'usuarioCreador',
+                'usuarioAprobador',
+                'moneda',
+            ]);
+
+            // Retornar vista Blade directamente (sin PDF)
+            return view($plantilla->vista_blade, [
+                'documento' => $proforma,
+                'empresa' => $empresa,
+                'plantilla' => $plantilla,
+                'fecha_impresion' => now(),
+                'usuario' => auth()->user(),
+                'opciones' => [
+                    'porcentaje_impuesto' => 13,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al generar preview de proforma', [
+                'proforma_id' => $proforma->id,
+                'formato' => $request->input('formato'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->view('errors.500', ['message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Obtener formatos de impresión disponibles
+     *
+     * GET /proformas/formatos-disponibles
+     *
+     * @return JsonResponse
+     */
+    public function formatosDisponibles(): JsonResponse
+    {
+        try {
+            $formatos = $this->impresionService->obtenerFormatosDisponibles('proforma');
+
+            return response()->json([
+                'success' => true,
+                'data' => $formatos,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener formatos disponibles',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

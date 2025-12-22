@@ -71,11 +71,11 @@ class TransferenciaInventario extends Model
     }
 
     /**
-     * Chofer asignado
+     * Chofer asignado (empleado con rol Chofer)
      */
     public function chofer(): BelongsTo
     {
-        return $this->belongsTo(Chofer::class);
+        return $this->belongsTo(Empleado::class, 'chofer_id');
     }
 
     /**

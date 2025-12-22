@@ -92,6 +92,11 @@ export default function ModernFilters({
         value !== '' && value != null
     );
 
+    // Contar filtros activos (sin incluir búsqueda rápida)
+    const contadorFiltrosActivos = Object.entries(filters).filter(([key, value]) =>
+        key !== 'q' && key !== 'order_by' && key !== 'order_dir' && value !== '' && value != null
+    ).length;
+
     const renderFilterField = (field: FilterField) => {
         const value = filters[field.key];
         const fieldId = `filter-${field.key}`;
@@ -236,22 +241,27 @@ export default function ModernFilters({
     ];
 
     return (
-        <div className={cn('bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4', className)}>
+        <div className={cn('bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl p-5 space-y-4 shadow-sm', className)}>
             {/* Búsqueda rápida */}
             <form onSubmit={busquedaRapida} className="flex gap-3">
                 <div className="flex-1">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 h-4 w-4 transition-colors" />
                         <Input
                             type="text"
                             placeholder="Buscar..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="pl-10"
+                            className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         />
                     </div>
                 </div>
-                <Button type="submit" variant="outline" size="sm">
+                <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    className="hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
+                >
                     <Search className="h-4 w-4" />
                 </Button>
                 <Button
@@ -260,11 +270,22 @@ export default function ModernFilters({
                     size="sm"
                     onClick={() => setMostrarFiltrosAvanzados(!mostrarFiltrosAvanzados)}
                     className={cn(
-                        mostrarFiltrosAvanzados && 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
+                        'relative transition-all duration-200',
+                        mostrarFiltrosAvanzados
+                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 shadow-md'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                     )}
                 >
-                    <Filter className="h-4 w-4 mr-1" />
+                    <Filter className={cn(
+                        "h-4 w-4 mr-2 transition-transform duration-200",
+                        mostrarFiltrosAvanzados && "rotate-180"
+                    )} />
                     Filtros
+                    {contadorFiltrosActivos > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-lg animate-pulse">
+                            {contadorFiltrosActivos}
+                        </span>
+                    )}
                 </Button>
                 {hayFiltrosActivos && (
                     <Button
@@ -272,8 +293,9 @@ export default function ModernFilters({
                         variant="outline"
                         size="sm"
                         onClick={limpiarFiltros}
+                        className="hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 hover:border-red-300 dark:hover:border-red-600 transition-all duration-200"
                     >
-                        <RotateCcw className="h-4 w-4 mr-1" />
+                        <RotateCcw className="h-4 w-4 mr-2" />
                         Limpiar
                     </Button>
                 )}
@@ -281,7 +303,7 @@ export default function ModernFilters({
 
             {/* Filtros avanzados */}
             {mostrarFiltrosAvanzados && (
-                <div className="border-t pt-4 space-y-4">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {config.filters.map(field => renderFilterField(field))}
                     </div>
@@ -321,21 +343,24 @@ export default function ModernFilters({
                     </div>
 
                     {/* Botones de acción */}
-                    <div className="flex justify-end gap-3 pt-2 border-t">
+                    <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={() => setMostrarFiltrosAvanzados(false)}
+                            className="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
-                            <X className="h-4 w-4 mr-1" />
+                            <X className="h-4 w-4 mr-2" />
                             Cerrar
                         </Button>
                         <Button
                             type="button"
                             onClick={aplicarFiltros}
                             size="sm"
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
                         >
+                            <Filter className="h-4 w-4 mr-2" />
                             Aplicar Filtros
                         </Button>
                     </div>
@@ -343,33 +368,54 @@ export default function ModernFilters({
             )}
 
             {/* Indicadores de filtros activos */}
-            {hayFiltrosActivos && (
-                <div className="flex flex-wrap gap-2 pt-2 border-t">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Filtros activos:</span>
+            {hayFiltrosActivos && !mostrarFiltrosAvanzados && (
+                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400">
+                        <Filter className="h-3.5 w-3.5" />
+                        Activos:
+                    </div>
                     {searchQuery && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            Búsqueda: {searchQuery}
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 dark:from-blue-900/40 dark:to-blue-800/40 dark:text-blue-200 border border-blue-300 dark:border-blue-700 shadow-sm">
+                            <Search className="h-3 w-3" />
+                            <span className="font-semibold">Búsqueda:</span>
+                            <span className="font-normal">{searchQuery}</span>
                         </span>
                     )}
                     {Object.entries(filters).map(([key, value]) => {
-                        if (value === undefined || value === null || value === '') return null;
+                        if (value === undefined || value === null || value === '' || key === 'order_by' || key === 'order_dir') return null;
                         const field = config.filters.find(f => f.key === key);
                         if (!field) return null;
 
                         let displayValue = String(value);
+                        let badgeColor = 'from-emerald-100 to-emerald-200 text-emerald-800 border-emerald-300 dark:from-emerald-900/40 dark:to-emerald-800/40 dark:text-emerald-200 dark:border-emerald-700';
 
                         // Mostrar nombres en lugar de IDs para selects
                         if (field.type === 'select' && field.extraDataKey) {
                             const options = extraData?.[field.extraDataKey] as { id: number; nombre: string }[];
                             const option = options?.find(opt => opt.id === Number(value));
                             displayValue = option?.nombre || displayValue;
+                            badgeColor = 'from-purple-100 to-purple-200 text-purple-800 border-purple-300 dark:from-purple-900/40 dark:to-purple-800/40 dark:text-purple-200 dark:border-purple-700';
                         } else if (field.type === 'boolean') {
                             displayValue = value === '1' ? 'Activos' : 'Inactivos';
+                            badgeColor = value === '1'
+                                ? 'from-green-100 to-green-200 text-green-800 border-green-300 dark:from-green-900/40 dark:to-green-800/40 dark:text-green-200 dark:border-green-700'
+                                : 'from-red-100 to-red-200 text-red-800 border-red-300 dark:from-red-900/40 dark:to-red-800/40 dark:text-red-200 dark:border-red-700';
+                        } else if (field.type === 'date') {
+                            badgeColor = 'from-amber-100 to-amber-200 text-amber-800 border-amber-300 dark:from-amber-900/40 dark:to-amber-800/40 dark:text-amber-200 dark:border-amber-700';
+                        } else if (field.type === 'number') {
+                            badgeColor = 'from-cyan-100 to-cyan-200 text-cyan-800 border-cyan-300 dark:from-cyan-900/40 dark:to-cyan-800/40 dark:text-cyan-200 dark:border-cyan-700';
                         }
 
                         return (
-                            <span key={key} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                {field.label}: {displayValue}
+                            <span
+                                key={key}
+                                className={cn(
+                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r border shadow-sm transition-all hover:shadow-md",
+                                    badgeColor
+                                )}
+                            >
+                                <span className="font-semibold">{field.label}:</span>
+                                <span className="font-normal">{displayValue}</span>
                             </span>
                         );
                     })}

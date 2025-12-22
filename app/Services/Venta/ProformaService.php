@@ -306,6 +306,15 @@ class ProformaService
                 'total' => $proforma->total,
             ]);
 
+            // Determinar si requiere envío basado en las direcciones de la proforma
+            $requiereEnvio = $this->determinarSiRequiereEnvio($proforma);
+
+            // Obtener política de pago (puede venir del cliente o usar default)
+            $politicaPago = $this->obtenerPoliticaPago($proforma);
+
+            // Calcular ventanas de entrega
+            $ventanas = $this->calcularVentanasEntrega($proforma);
+
             $ventaDTO = $this->ventaService->crear(
                 new \App\DTOs\Venta\CrearVentaDTO(
                     cliente_id: $proforma->cliente_id,
@@ -318,6 +327,21 @@ class ProformaService
                     observaciones: "Convertida desde proforma #{$proforma->numero}",
                     usuario_id: Auth::id(),
                     proforma_id: $proforma->id,
+                    // Campos de logística
+                    requiere_envio: $requiereEnvio,
+                    canal_origen: $proforma->canal_origen ?? 'WEB',
+                    estado_logistico: $requiereEnvio ? 'PENDIENTE_ENVIO' : null,
+                    // Campos de política de pago
+                    politica_pago: $politicaPago,
+                    estado_pago: 'PENDIENTE',
+                    // Campos de SLA y compromisos de entrega
+                    fecha_entrega_comprometida: $proforma->fecha_entrega_confirmada,
+                    hora_entrega_comprometida: $proforma->hora_entrega_confirmada
+                        ? $proforma->hora_entrega_confirmada->format('H:i:s')
+                        : null,
+                    ventana_entrega_ini: $ventanas['inicio'],
+                    ventana_entrega_fin: $ventanas['fin'],
+                    idempotency_key: "proforma-{$proforma->id}-" . now()->timestamp,
                 )
             );
 
@@ -440,5 +464,95 @@ class ProformaService
         $count = Proforma::whereYear('created_at', $year)->count() + 1;
 
         return sprintf('PF-%d-%06d', $year, $count);
+    }
+
+    /**
+     * Determinar si la venta requiere envío
+     *
+     * Lógica:
+     * - Si tiene dirección de entrega confirmada → requiere envío
+     * - Si el cliente está fuera de la ciudad → requiere envío
+     * - Si es de canal APP_EXTERNA → generalmente requiere envío
+     */
+    private function determinarSiRequiereEnvio(Proforma $proforma): bool
+    {
+        // Si tiene dirección de entrega confirmada, requiere envío
+        if ($proforma->direccion_entrega_confirmada_id) {
+            return true;
+        }
+
+        // Si tiene dirección solicitada, requiere envío
+        if ($proforma->direccion_entrega_solicitada_id) {
+            return true;
+        }
+
+        // Si es de app externa, generalmente requiere envío
+        if ($proforma->canal_origen === Proforma::CANAL_APP_EXTERNA) {
+            return true;
+        }
+
+        // Si el cliente tiene localidad fuera de la ciudad base, requiere envío
+        if ($proforma->cliente && $proforma->cliente->localidad_id) {
+            // Aquí podrías agregar lógica para verificar si la localidad requiere envío
+            // Por ahora, asumimos que si tiene localidad, probablemente requiere envío
+            return true;
+        }
+
+        // Por defecto, no requiere envío (venta en mostrador)
+        return false;
+    }
+
+    /**
+     * Obtener política de pago para la venta
+     *
+     * Prioridad:
+     * 1. Política específica del cliente (si existe en tabla clientes)
+     * 2. Política por categoría de cliente
+     * 3. Default: CONTRA_ENTREGA
+     */
+    private function obtenerPoliticaPago(Proforma $proforma): string
+    {
+        // TODO: Cuando se agregue campo politica_pago en tabla clientes
+        // if ($proforma->cliente && $proforma->cliente->politica_pago) {
+        //     return $proforma->cliente->politica_pago;
+        // }
+
+        // TODO: Cuando se agregue política por categoría
+        // if ($proforma->cliente && $proforma->cliente->categorias->isNotEmpty()) {
+        //     $categoria = $proforma->cliente->categorias->first();
+        //     if ($categoria->politica_pago_default) {
+        //         return $categoria->politica_pago_default;
+        //     }
+        // }
+
+        // Default: CONTRA_ENTREGA (pago al recibir)
+        return 'CONTRA_ENTREGA';
+    }
+
+    /**
+     * Calcular ventanas de entrega basadas en la hora comprometida
+     *
+     * Si hay hora confirmada, genera una ventana de ±1 hora
+     * Si no hay hora, retorna null para ambas
+     */
+    private function calcularVentanasEntrega(Proforma $proforma): array
+    {
+        if (!$proforma->hora_entrega_confirmada) {
+            return [
+                'inicio' => null,
+                'fin' => null,
+            ];
+        }
+
+        // Crear ventana de ±1 hora alrededor de la hora comprometida
+        $horaConfirmada = $proforma->hora_entrega_confirmada;
+
+        $horaInicio = $horaConfirmada->copy()->subHour();
+        $horaFin = $horaConfirmada->copy()->addHour();
+
+        return [
+            'inicio' => $horaInicio->format('H:i:s'),
+            'fin' => $horaFin->format('H:i:s'),
+        ];
     }
 }

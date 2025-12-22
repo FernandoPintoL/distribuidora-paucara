@@ -5,6 +5,7 @@ import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { User } from 'lucide-react';
 import { useState } from 'react';
 import type { VentaShow, EstadoDocumento } from '@/domain/entities/ventas';
+import { FormatoSelector } from '@/presentation/components/impresion';
 
 interface PageProps extends InertiaPageProps {
     venta: VentaShow;
@@ -55,6 +56,12 @@ export default function VentaShow() {
                     Venta {venta.numero}
                 </h1>
                 <div className="flex space-x-3">
+                    {/* Botón de Impresión */}
+                    <FormatoSelector
+                        documentoId={venta.id}
+                        tipoDocumento="venta"
+                    />
+
                     {/* Botón Editar - Solo visible si la venta está PENDIENTE */}
                     {venta.estado_documento?.codigo === 'PENDIENTE' ? (
                         <Link

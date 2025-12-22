@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import GenericFormFields from '@/presentation/components/generic/generic-form-fields';
 import { useGenericForm } from '@/application/hooks/use-generic-form';
 import type { BaseEntity, BaseFormData, BaseService, ModuleConfig } from '@/domain/entities/generic';
-import { ArrowLeft, Save, RotateCcw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, RotateCcw, AlertCircle, Loader2 } from 'lucide-react';
 
 interface GenericFormContainerProps<T extends BaseEntity, F extends BaseFormData> {
   entity?: T | null;
@@ -77,30 +77,30 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
 
           {/* Form Card */}
           <Card className="shadow-xl border-0 ring-1 ring-gray-200/50 dark:ring-neutral-800/50 backdrop-blur-sm bg-white/95 dark:bg-neutral-900/95">
-            <CardHeader className="border-b border-gray-100 dark:border-neutral-800 pb-6">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-1 bg-primary rounded-full" />
-                <div className="flex-1">
-                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {config.displayName}
-                  </CardTitle>
-                  {config.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {config.description}
-                    </p>
+            <form id="generic-form" onSubmit={handleSubmit} className="space-y-0">
+              <CardHeader className="border-b border-gray-100 dark:border-neutral-800 pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-1 bg-primary rounded-full" />
+                  <div className="flex-1">
+                    <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {config.displayName}
+                    </CardTitle>
+                    {config.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {config.description}
+                      </p>
+                    )}
+                  </div>
+                  {processing && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span>Guardando...</span>
+                    </div>
                   )}
                 </div>
-                {processing && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span>Guardando...</span>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
+              </CardHeader>
 
-            <CardContent className="py-8 px-6 sm:px-10">
-              <form onSubmit={handleSubmit} className="space-y-8">
+              <CardContent className="py-8 px-6 sm:px-10 space-y-8">
                 <GenericFormFields<F>
                   data={data}
                   errors={errors as Partial<Record<keyof F, string>>}
@@ -110,48 +110,41 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
                   loadOptions={loadOptions}
                   extraData={extraData}
                 />
-
-                {/* Action Buttons */}
-                <div className="flex flex-col-reverse sm:flex-row gap-3 pt-8 border-t border-gray-100 dark:border-neutral-800">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleReset}
-                    disabled={processing}
-                    className="sm:flex-1 h-11 font-medium"
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Limpiar formulario
-                  </Button>
-
-                  <Button
-                    type="submit"
-                    disabled={processing}
-                    className="sm:flex-1 h-11 font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200"
-                  >
-                    {processing ? (
-                      <>
-                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                        Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        {submitButtonText} {config.singularName}
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Help Text */}
-                <div className="pt-4 border-t border-gray-50 dark:border-neutral-800/50">
-                  <p className="text-xs text-center text-muted-foreground">
-                    Los cambios se guardarán inmediatamente después de hacer clic en "{submitButtonText}"
-                  </p>
-                </div>
-              </form>
-            </CardContent>
+              </CardContent>
+            </form>
           </Card>
+
+          {/* Floating Action Buttons */}
+          <div className="fixed bottom-8 right-8 flex flex-col items-center gap-4 z-40 pointer-events-none">
+            {/* Clean Button (Secondary FAB) */}
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={handleReset}
+              disabled={processing}
+              title="Limpiar formulario"
+              className="h-12 w-12 p-0 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 border-2 pointer-events-auto"
+            >
+              <RotateCcw className="h-5 w-5" />
+            </Button>
+
+            {/* Save/Submit Button (Primary FAB) */}
+            <Button
+              type="submit"
+              form="generic-form"
+              disabled={processing}
+              size="lg"
+              title={submitButtonText}
+              className="h-16 w-16 p-0 rounded-full shadow-2xl hover:shadow-2xl hover:scale-110 transition-all duration-200 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 pointer-events-auto"
+            >
+              {processing ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <Save className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
 
           {/* Back to List Link */}
           <div className="flex justify-center">

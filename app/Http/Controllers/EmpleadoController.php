@@ -42,8 +42,6 @@ class EmpleadoController extends Controller
                 $q->whereRaw('LOWER(codigo_empleado) like ?', ["%{$searchLower}%"])
                     ->orWhereRaw('LOWER(ci) like ?', ["%{$searchLower}%"])
                     ->orWhereRaw('LOWER(telefono) like ?', ["%{$searchLower}%"])
-                    ->orWhereRaw('LOWER(cargo) like ?', ["%{$searchLower}%"])
-                    ->orWhereRaw('LOWER(departamento) like ?', ["%{$searchLower}%"])
                     ->orWhereHas('user', function ($q3) use ($searchLower) {
                         $q3->whereRaw('LOWER(name) like ?', ["%{$searchLower}%"])
                             ->orWhereRaw('LOWER(email) like ?', ["%{$searchLower}%"])
@@ -108,7 +106,6 @@ class EmpleadoController extends Controller
                 return [
                     'id'     => $empleado->id,
                     'nombre' => $empleado->user ? $empleado->user->name : $empleado->codigo_empleado,
-                    'cargo'  => $empleado->cargo,
                 ];
             });
 
@@ -183,7 +180,7 @@ class EmpleadoController extends Controller
         // Validaciones condicionales si se crea usuario
         if ($request->crear_usuario || $request->puede_acceder_sistema) {
             $request->validate([
-                'email'    => 'nullable|string|email|max:255|unique:users',
+                'email'    => 'nullable|string|email|max:255|unique:users', // Email es completamente opcional
                 'usernick' => 'required|string|max:255|unique:users', // Usernick es requerido si puede acceder al sistema
                 'password' => 'required|string|min:8|confirmed', // Password requerido al crear usuario
             ]);
@@ -200,9 +197,9 @@ class EmpleadoController extends Controller
                 $user = User::create([
                     'name'              => $request->nombre,
                     'usernick'          => $usernick,
-                    'email'             => $request->email,
+                    'email'             => $request->email ?: null, // Email es opcional - puede ser null si no se proporciona
                     'password'          => Hash::make($request->password), // Usar password del request
-                    'email_verified_at' => now(),
+                    'email_verified_at' => $request->email ? now() : null, // Solo verificar si se proporciona email
                     'activo'            => $request->puede_acceder_sistema ?? false,
                 ]);
 
@@ -216,22 +213,11 @@ class EmpleadoController extends Controller
             $empleadoData = [
                 'user_id'                      => $user ? $user->id : null,
                 'ci'                           => $request->ci,
-                'fecha_nacimiento'             => $request->fecha_nacimiento,
                 'telefono'                     => $request->telefono,
                 'direccion'                    => $request->direccion,
-                'cargo'                        => $request->cargo ?? 'Sin cargo',
-                'departamento'                 => $request->departamento ?? 'Sin departamento',
-                'supervisor_id'                => $request->supervisor_id,
                 'fecha_ingreso'                => $request->fecha_ingreso,
-                'tipo_contrato'                => $request->tipo_contrato ?? 'indefinido',
-                'salario_base'                 => $request->salario_base ?? 0,
-                'bonos'                        => $request->bonos ?? 0,
                 'estado'                       => $request->estado ?? 'activo',
                 'puede_acceder_sistema'        => $request->puede_acceder_sistema ?? false,
-                'contacto_emergencia_nombre'   => $request->contacto_emergencia_nombre,
-                'contacto_emergencia_telefono' => $request->contacto_emergencia_telefono,
-                'latitud'                      => $request->latitud,
-                'longitud'                     => $request->longitud,
             ];
 
             // Crear empleado sin código inicialmente
@@ -276,7 +262,6 @@ class EmpleadoController extends Controller
                 return [
                     'id'     => $emp->id,
                     'nombre' => $emp->user ? $emp->user->name : $emp->codigo_empleado,
-                    'cargo'  => $emp->cargo,
                 ];
             });
 
@@ -337,7 +322,7 @@ class EmpleadoController extends Controller
 
         if ($request->has('email')) {
             $rules['email'] = [
-                'nullable',
+                'nullable', // Email es completamente opcional
                 'string',
                 'email',
                 'max:255',
@@ -431,7 +416,13 @@ class EmpleadoController extends Controller
                 }
 
                 if ($request->has('email')) {
-                    $user->email = $request->email;
+                    $user->email = $request->email ?: null; // Email es opcional
+                    // Actualizar email_verified_at solo si se proporciona email
+                    if ($request->email && ! $user->email_verified_at) {
+                        $user->email_verified_at = now();
+                    } elseif (! $request->email) {
+                        $user->email_verified_at = null;
+                    }
                 }
 
                 // Actualizar contraseña si se proporcionó
@@ -468,14 +459,6 @@ class EmpleadoController extends Controller
 
             if ($request->has('puede_acceder_sistema')) {
                 $datosActualizacion['puede_acceder_sistema'] = $request->puede_acceder_sistema;
-            }
-
-            if ($request->has('latitud')) {
-                $datosActualizacion['latitud'] = $request->latitud;
-            }
-
-            if ($request->has('longitud')) {
-                $datosActualizacion['longitud'] = $request->longitud;
             }
 
             // Actualizar empleado SOLO si hay datos para actualizar
@@ -613,148 +596,34 @@ class EmpleadoController extends Controller
     }
 
     /**
-     * Determina el rol apropiado basado en el cargo del empleado
+     * DEPRECATED: Determina el rol apropiado basado en el cargo del empleado
+     * La columna 'cargo' fue eliminada de la tabla empleados
      */
-    private function determinarRolPorCargo(string $cargo): ?string
-    {
-        $mapeoCargosRoles = [
-            // Choferes
-            'Chofer'                   => 'Chofer',
-            'Conductor'                => 'Chofer',
-            'Repartidor'               => 'Chofer',
-            'Mensajero'                => 'Chofer',
-
-            // Cajeros
-            'Cajero'                   => 'Cajero',
-            'Cajera'                   => 'Cajero',
-            'Encargado de Caja'        => 'Cajero',
-
-            // Gestores de Almacén
-            'Gestor de Almacén'        => 'Gestor de Almacén',
-            'Encargado de Almacén'     => 'Gestor de Almacén',
-            'Almacenista'              => 'Gestor de Almacén',
-            'Supervisor de Inventario' => 'Gestor de Almacén',
-
-            // Compradores
-            'Comprador'                => 'Comprador',
-            'Compradora'               => 'Comprador',
-            'Encargado de Compras'     => 'Comprador',
-            'Supervisor de Compras'    => 'Compras',
-
-            // Managers/Gerentes
-            'Manager'                  => 'Manager',
-            'Gerente'                  => 'Gerente',
-            'Gerente General'          => 'Gerente',
-            'Gerente de Ventas'        => 'Gerente',
-            'Gerente de Operaciones'   => 'Manager',
-
-            // Vendedores
-            'Vendedor'                 => 'Vendedor',
-            'Vendedora'                => 'Vendedor',
-            'Asesor de Ventas'         => 'Vendedor',
-
-            // Otros roles específicos
-            'Contador'                 => 'Contabilidad',
-            'Contadora'                => 'Contabilidad',
-            'Logístico'                => 'Logística',
-            'Encargado de Logística'   => 'Logística',
-        ];
-
-        return $mapeoCargosRoles[$cargo] ?? null;
-    }
+    // private function determinarRolPorCargo(string $cargo): ?string
+    // {
+    //     // Método deprecado - columna 'cargo' eliminada
+    //     return null;
+    // }
 
     /**
-     * Método para crear o actualizar un chofer desde los datos de empleado
+     * DEPRECATED: Método para crear o actualizar un chofer desde los datos de empleado
+     * La columna 'cargo' fue eliminada de la tabla empleados
      */
-    protected function gestionarChofer(Empleado $empleado, Request $request)
-    {
-        // Si el cargo es de chofer, verificar o crear licencia y datos específicos
-        if (in_array($request->cargo, ['Chofer', 'Conductor', 'Repartidor', 'Mensajero'])) {
-            // Validar datos específicos de chofer
-            $request->validate([
-                'licencia'                   => 'required|string|max:20',
-                'fecha_vencimiento_licencia' => 'required|date|after:today',
-            ], [
-                'licencia.required'                   => 'La licencia de conducir es obligatoria para choferes',
-                'fecha_vencimiento_licencia.required' => 'La fecha de vencimiento de licencia es obligatoria',
-                'fecha_vencimiento_licencia.after'    => 'La fecha de vencimiento debe ser posterior a hoy',
-            ]);
-
-            // Asignar datos de chofer al empleado
-            $empleado->update([
-                'licencia'                   => $request->licencia,
-                'fecha_vencimiento_licencia' => $request->fecha_vencimiento_licencia,
-            ]);
-
-            // Asegurarse de que el usuario tenga rol de Chofer
-            if ($empleado->user && ! $empleado->user->hasRole('Chofer')) {
-                $empleado->user->assignRole('Chofer');
-            }
-        }
-    }
+    // protected function gestionarChofer(Empleado $empleado, Request $request)
+    // {
+    //     // Método deprecado - columna 'cargo' eliminada
+    // }
 
     /**
      * Método de conveniencia para crear empleado con rol automático
+     * DEPRECATED: Las columnas 'cargo', 'departamento', 'salario_base' fueron eliminadas
      */
     public function crearEmpleadoRapido(Request $request)
     {
-        $request->validate([
-            'nombre'        => 'required|string|max:255',
-            'email'         => 'required|string|email|max:255|unique:users',
-            'usernick'      => 'nullable|string|max:255|unique:users',
-            'ci'            => 'required|string|max:20|unique:empleados',
-            'cargo'         => 'required|string|max:100',
-            'departamento'  => 'required|string|max:100',
-            'fecha_ingreso' => 'required|date',
-            'salario_base'  => 'required|numeric|min:0',
-        ]);
-
-        DB::transaction(function () use ($request) {
-            // Generar usernick si no se proporciona
-            $usernick = $request->usernick ?: $this->generarUsernickUnico($request->nombre);
-
-            // Crear usuario
-            $user = User::create([
-                'name'              => $request->nombre,
-                'usernick'          => $usernick,
-                'email'             => $request->email,
-                'password'          => Hash::make('password123'),
-                'email_verified_at' => now(),
-                'activo'            => true,
-            ]);
-
-            // Determinar y asignar rol automáticamente
-            $rolAsignado = $this->determinarRolPorCargo($request->cargo);
-            if ($rolAsignado) {
-                $user->assignRole($rolAsignado);
-            }
-
-            // Crear empleado sin código inicialmente
-            $empleado = Empleado::create([
-                'user_id'               => $user->id,
-                'ci'                    => $request->ci,
-                'cargo'                 => $request->cargo,
-                'departamento'          => $request->departamento,
-                'fecha_ingreso'         => $request->fecha_ingreso,
-                'tipo_contrato'         => 'indefinido',
-                'salario_base'          => $request->salario_base,
-                'estado'                => 'activo',
-                'puede_acceder_sistema' => true,
-            ]);
-
-            // Generar código de empleado automáticamente
-            $codigoGenerado = $this->generarCodigoEmpleado($empleado->id);
-            $empleado->update([
-                'codigo_empleado' => $codigoGenerado,
-                'numero_empleado' => $codigoGenerado,
-            ]);
-        });
-
         return response()->json([
-            'success'      => true,
-            'message'      => 'Empleado creado exitosamente con rol asignado automáticamente.',
-            'rol_asignado' => $this->determinarRolPorCargo($request->cargo),
-        ]);
+            'success' => false,
+            'message' => 'Este método ha sido deprecado. Usa el método store() estándar.',
+        ], 410); // 410 Gone
     }
 
     /**
@@ -817,34 +686,22 @@ class EmpleadoController extends Controller
 
     /**
      * Obtiene la lista de departamentos disponibles
+     * DEPRECATED: La columna 'departamento' fue eliminada de la tabla empleados
      */
     public function getDepartamentos()
     {
-        $departamentos = [
-            ['value' => 'Ventas', 'label' => 'Ventas'],
-            ['value' => 'Administración', 'label' => 'Administración'],
-            ['value' => 'Logística', 'label' => 'Logística'],
-            ['value' => 'Contabilidad', 'label' => 'Contabilidad'],
-            ['value' => 'RRHH', 'label' => 'Recursos Humanos'],
-            ['value' => 'Sistemas', 'label' => 'Sistemas'],
-            ['value' => 'Compras', 'label' => 'Compras'],
-        ];
-
-        return response()->json($departamentos);
+        // Retornar array vacío ya que la funcionalidad de departamentos fue eliminada
+        return response()->json([]);
     }
 
     /**
      * Obtiene la lista de tipos de contrato disponibles
+     * DEPRECATED: La columna 'tipo_contrato' fue eliminada de la tabla empleados
      */
     public function getTiposContrato()
     {
-        $tiposContrato = [
-            ['value' => 'indefinido', 'label' => 'Indefinido'],
-            ['value' => 'temporal', 'label' => 'Temporal'],
-            ['value' => 'practicante', 'label' => 'Practicante'],
-        ];
-
-        return response()->json($tiposContrato);
+        // Retornar array vacío ya que la funcionalidad de tipos de contrato fue eliminada
+        return response()->json([]);
     }
 
     /**
@@ -882,7 +739,7 @@ class EmpleadoController extends Controller
                     return [
                         'value'       => $empleado->id,
                         'label'       => $empleado->user->name,
-                        'description' => ($empleado->cargo ?? 'Sin cargo') . ' - ' . ($empleado->departamento ?? 'Sin departamento'),
+                        'description' => 'Código: ' . ($empleado->codigo_empleado ?? 'Sin código'),
                     ];
                 })
                 ->filter()   // Remover valores null
@@ -1057,40 +914,14 @@ class EmpleadoController extends Controller
 
     /**
      * Obtiene el rol sugerido automáticamente basado en el cargo del empleado
+     * DEPRECATED: La columna 'cargo' fue eliminada de la tabla empleados
      */
     public function getRolSugeridoPorCargo(Request $request)
     {
-        try {
-            $request->validate([
-                'cargo' => 'required|string|max:255',
-            ]);
-
-            $rolSugerido = $this->determinarRolPorCargo($request->cargo);
-
-            if (!$rolSugerido) {
-                return response()->json([
-                    'rolSugerido' => null,
-                    'mensaje' => 'No hay rol sugerido automáticamente. Selecciona uno manualmente.',
-                ]);
-            }
-
-            // Obtener información detallada del rol sugerido
-            $rol = Role::where('name', $rolSugerido)->first();
-
-            return response()->json([
-                'rolSugerido' => $rolSugerido,
-                'descripcion' => $this->obtenerDescripcionRol($rolSugerido),
-                'permisos' => $this->obtenerPermisosResumenRol($rolSugerido),
-                'permisosCount' => $rol ? $rol->permissions->count() : 0,
-                'mensaje' => "Rol sugerido: {$rolSugerido}",
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error en getRolSugeridoPorCargo: ' . $e->getMessage());
-
-            return response()->json([
-                'error' => 'Error interno del servidor',
-                'message' => 'No se pudo determinar el rol sugerido',
-            ], 500);
-        }
+        // Funcionalidad deprecada - la columna 'cargo' ya no existe
+        return response()->json([
+            'rolSugerido' => null,
+            'mensaje' => 'No hay rol sugerido automáticamente. Selecciona uno manualmente.',
+        ]);
     }
 }

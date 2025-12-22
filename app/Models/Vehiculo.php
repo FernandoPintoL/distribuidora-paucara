@@ -49,9 +49,12 @@ class Vehiculo extends Model
         return $this->belongsTo(User::class, 'chofer_asignado_id');
     }
 
-    public function envios(): HasMany
+    /**
+     * Entregas asignadas a este vehículo (reemplaza la relación anterior con Envio)
+     */
+    public function entregas(): HasMany
     {
-        return $this->hasMany(Envio::class);
+        return $this->hasMany(Entrega::class);
     }
 
     /**
@@ -82,14 +85,6 @@ class Vehiculo extends Model
         return $this->hasMany(TransferenciaInventario::class);
     }
 
-    /**
-     * Entregas asignadas a este vehículo
-     */
-    public function entregas(): HasMany
-    {
-        return $this->hasMany(Entrega::class);
-    }
-
     // Métodos de utilidad
     public function estaDisponible(): bool
     {
@@ -99,5 +94,67 @@ class Vehiculo extends Model
     public function puedeAsignarse(): bool
     {
         return $this->estaDisponible();
+    }
+
+    /**
+     * Verificar si está disponible para una fecha específica
+     * (no tiene rutas activas en esa fecha)
+     *
+     * @param string $fecha Fecha en formato Y-m-d
+     * @return bool
+     */
+    public function estaDisponiblePara(string $fecha): bool
+    {
+        if (!$this->estaDisponible()) {
+            return false;
+        }
+
+        // Verificar si NO tiene rutas activas en esa fecha
+        $rutasActivas = Ruta::where('vehiculo_id', $this->id)
+            ->whereDate('fecha_ruta', $fecha)
+            ->whereIn('estado', ['planificada', 'en_progreso'])
+            ->count();
+
+        return $rutasActivas === 0;
+    }
+
+    /**
+     * Verificar si tiene capacidad suficiente para un peso dado
+     *
+     * @param float $pesoRequerido Peso en kg
+     * @return bool
+     */
+    public function tieneCapacidadPara(float $pesoRequerido): bool
+    {
+        return $this->capacidad_kg >= $pesoRequerido;
+    }
+
+    /**
+     * Scope: Vehículos disponibles para una fecha específica
+     */
+    public function scopeDisponiblesPara($query, string $fecha)
+    {
+        return $query->where('estado', self::DISPONIBLE)
+                     ->where('activo', true)
+                     ->whereDoesntHave('rutas', function ($q) use ($fecha) {
+                         $q->whereDate('fecha_ruta', $fecha)
+                           ->whereIn('estado', ['planificada', 'en_progreso']);
+                     });
+    }
+
+    /**
+     * Scope: Vehículos con capacidad mínima
+     */
+    public function scopeConCapacidadMinima($query, float $pesoMinimo)
+    {
+        return $query->where('capacidad_kg', '>=', $pesoMinimo);
+    }
+
+    /**
+     * Relación con rutas asignadas
+     */
+    public function rutas(): HasMany
+    {
+        return $this->hasMany(Ruta::class);
     }
 }

@@ -83,7 +83,6 @@ class TipoEmpleado
                             'error_message'  => 'Seleccione los vehículos autorizados',
                         ],
                     ],
-                    'trait'               => 'App\Models\Traits\ChoferTrait',
                     'cargos_relacionados' => ['Chofer', 'Conductor', 'Repartidor', 'Mensajero'],
                 ],
                 self::VENDEDOR => [
@@ -253,7 +252,6 @@ class TipoEmpleado
 
         // Añadir cualquier trait adicional que no esté en la configuración
         $traitsAdicionales = [
-            self::CHOFER         => 'App\Models\Traits\ChoferTrait',
             self::VENDEDOR       => 'App\Models\Traits\VendedorTrait',
             self::GESTOR_ALMACEN => 'App\Models\Traits\GestorAlmacenTrait',
             self::CAJERO         => 'App\Models\Traits\CajeroTrait',

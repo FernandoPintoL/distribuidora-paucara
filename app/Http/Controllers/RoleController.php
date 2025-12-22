@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -32,7 +31,7 @@ class RoleController extends Controller
         $roles = $query->orderBy('created_at', 'desc')->paginate(15);
 
         return Inertia::render('roles/index', [
-            'roles' => $roles,
+            'roles'   => $roles,
             'filters' => [
                 'search' => $request->search,
             ],
@@ -45,7 +44,7 @@ class RoleController extends Controller
             return explode('.', $permission->name)[0];
         });
 
-        return Inertia::render('roles/create', [
+        return Inertia::render('admin/permisos/roles/create', [
             'permissions' => $permissions,
         ]);
     }
@@ -53,14 +52,14 @@ class RoleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:roles'],
-            'guard_name' => ['required', 'string', 'max:255'],
-            'permissions' => ['array'],
+            'name'          => ['required', 'string', 'max:255', 'unique:roles'],
+            'guard_name'    => ['required', 'string', 'max:255'],
+            'permissions'   => ['array'],
             'permissions.*' => ['exists:permissions,id'],
         ]);
 
         $role = Role::create([
-            'name' => $validated['name'],
+            'name'       => $validated['name'],
             'guard_name' => $validated['guard_name'] ?? 'web',
         ]);
 
@@ -78,10 +77,10 @@ class RoleController extends Controller
     {
         $role->load(['permissions', 'users']);
 
-        return Inertia::render('roles/show', [
-            'role' => $role,
+        return Inertia::render('admin/permisos/roles/show', [
+            'role'            => $role,
             'rolePermissions' => $role->permissions,
-            'roleUsers' => $role->users,
+            'roleUsers'       => $role->users,
         ]);
     }
 
@@ -92,9 +91,9 @@ class RoleController extends Controller
             return explode('.', $permission->name)[0];
         });
 
-        return Inertia::render('roles/edit', [
-            'role' => $role,
-            'permissions' => $permissions,
+        return Inertia::render('admin/permisos/roles/edit', [
+            'role'            => $role,
+            'permissions'     => $permissions,
             'rolePermissions' => $role->permissions->pluck('id'),
         ]);
     }
@@ -102,14 +101,14 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:roles,name,'.$role->id],
-            'guard_name' => ['required', 'string', 'max:255'],
-            'permissions' => ['array'],
+            'name'          => ['required', 'string', 'max:255', 'unique:roles,name,' . $role->id],
+            'guard_name'    => ['required', 'string', 'max:255'],
+            'permissions'   => ['array'],
             'permissions.*' => ['exists:permissions,id'],
         ]);
 
         $role->update([
-            'name' => $validated['name'],
+            'name'       => $validated['name'],
             'guard_name' => $validated['guard_name'] ?? 'web',
         ]);
 
@@ -176,23 +175,23 @@ class RoleController extends Controller
     public function createTemplate(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => ['required', 'string', 'unique:role_templates'],
+            'nombre'      => ['required', 'string', 'unique:role_templates'],
             'descripcion' => ['nullable', 'string'],
-            'permisos' => ['required', 'array'],
-            'permisos.*' => ['exists:permissions,id'],
+            'permisos'    => ['required', 'array'],
+            'permisos.*'  => ['exists:permissions,id'],
         ]);
 
         $template = \App\Models\RoleTemplate::create([
-            'nombre' => $validated['nombre'],
+            'nombre'      => $validated['nombre'],
             'descripcion' => $validated['descripcion'],
-            'permisos' => $validated['permisos'],
-            'created_by' => auth()->id(),
+            'permisos'    => $validated['permisos'],
+            'created_by'  => auth()->id(),
         ]);
 
         return response()->json([
-            'success' => true,
+            'success'  => true,
             'template' => $template,
-            'message' => "Plantilla '{$template->nombre}' creada exitosamente.",
+            'message'  => "Plantilla '{$template->nombre}' creada exitosamente.",
         ]);
     }
 
@@ -280,7 +279,7 @@ class RoleController extends Controller
         // Calcular diferencias
         $soloEnRol1 = array_diff($permisos1, $permisos2);
         $soloEnRol2 = array_diff($permisos2, $permisos1);
-        $comunes = array_intersect($permisos1, $permisos2);
+        $comunes    = array_intersect($permisos1, $permisos2);
 
         // Obtener nombres de permisos
         $permisosObj = Permission::whereIn('id', array_merge($soloEnRol1, $soloEnRol2, $comunes))
@@ -288,19 +287,19 @@ class RoleController extends Controller
             ->keyBy('id');
 
         return response()->json([
-            'rol1' => [
-                'id' => $role1->id,
-                'nombre' => $role1->name,
+            'rol1'       => [
+                'id'         => $role1->id,
+                'nombre'     => $role1->name,
                 'soloEnEste' => array_map(fn($id) => $permisosObj[$id]->name ?? null, $soloEnRol1),
-                'total' => count($permisos1),
+                'total'      => count($permisos1),
             ],
-            'rol2' => [
-                'id' => $role2->id,
-                'nombre' => $role2->name,
+            'rol2'       => [
+                'id'         => $role2->id,
+                'nombre'     => $role2->name,
                 'soloEnEste' => array_map(fn($id) => $permisosObj[$id]->name ?? null, $soloEnRol2),
-                'total' => count($permisos2),
+                'total'      => count($permisos2),
             ],
-            'comunes' => count($comunes),
+            'comunes'    => count($comunes),
             'diferentes' => count($soloEnRol1) + count($soloEnRol2),
         ]);
     }
@@ -335,8 +334,8 @@ class RoleController extends Controller
         foreach ($grouped as $module => $permissions) {
             $result[$module] = $permissions->map(function ($permission) {
                 return [
-                    'id' => $permission->id,
-                    'name' => $permission->name,
+                    'id'          => $permission->id,
+                    'name'        => $permission->name,
                     'description' => $this->getPermissionDescription($permission->name),
                 ];
             })->toArray();
@@ -352,61 +351,61 @@ class RoleController extends Controller
     {
         $descriptions = [
             // Usuarios
-            'usuarios.index' => 'Ver lista de usuarios',
-            'usuarios.create' => 'Crear nuevos usuarios',
-            'usuarios.store' => 'Guardar usuarios',
-            'usuarios.show' => 'Ver detalles del usuario',
-            'usuarios.edit' => 'Editar usuarios',
-            'usuarios.update' => 'Actualizar usuarios',
-            'usuarios.destroy' => 'Eliminar usuarios',
-            'usuarios.assign-role' => 'Asignar roles a usuarios',
-            'usuarios.remove-role' => 'Quitar roles de usuarios',
+            'usuarios.index'                => 'Ver lista de usuarios',
+            'usuarios.create'               => 'Crear nuevos usuarios',
+            'usuarios.store'                => 'Guardar usuarios',
+            'usuarios.show'                 => 'Ver detalles del usuario',
+            'usuarios.edit'                 => 'Editar usuarios',
+            'usuarios.update'               => 'Actualizar usuarios',
+            'usuarios.destroy'              => 'Eliminar usuarios',
+            'usuarios.assign-role'          => 'Asignar roles a usuarios',
+            'usuarios.remove-role'          => 'Quitar roles de usuarios',
 
             // Roles
-            'roles.index' => 'Ver lista de roles',
-            'roles.create' => 'Crear nuevos roles',
-            'roles.store' => 'Guardar roles',
-            'roles.show' => 'Ver detalles del rol',
-            'roles.edit' => 'Editar roles',
-            'roles.update' => 'Actualizar roles',
-            'roles.delete' => 'Eliminar roles',
-            'roles.manage-permissions' => 'Gestionar permisos de roles',
+            'roles.index'                   => 'Ver lista de roles',
+            'roles.create'                  => 'Crear nuevos roles',
+            'roles.store'                   => 'Guardar roles',
+            'roles.show'                    => 'Ver detalles del rol',
+            'roles.edit'                    => 'Editar roles',
+            'roles.update'                  => 'Actualizar roles',
+            'roles.delete'                  => 'Eliminar roles',
+            'roles.manage-permissions'      => 'Gestionar permisos de roles',
 
             // Permisos
-            'permissions.index' => 'Ver lista de permisos',
-            'permissions.create' => 'Crear nuevos permisos',
-            'permissions.store' => 'Guardar permisos',
-            'permissions.show' => 'Ver detalles del permiso',
-            'permissions.edit' => 'Editar permisos',
-            'permissions.update' => 'Actualizar permisos',
-            'permissions.destroy' => 'Eliminar permisos',
+            'permissions.index'             => 'Ver lista de permisos',
+            'permissions.create'            => 'Crear nuevos permisos',
+            'permissions.store'             => 'Guardar permisos',
+            'permissions.show'              => 'Ver detalles del permiso',
+            'permissions.edit'              => 'Editar permisos',
+            'permissions.update'            => 'Actualizar permisos',
+            'permissions.destroy'           => 'Eliminar permisos',
 
             // Clientes
-            'clientes.manage' => 'Gestión completa de clientes',
-            'clientes.direcciones.*' => 'Gestión de direcciones de clientes',
-            'clientes.fotos.*' => 'Gestión de fotos/documentos',
-            'clientes.ventanas-entrega.*' => 'Gestión de ventanas de entrega',
+            'clientes.manage'               => 'Gestión completa de clientes',
+            'clientes.direcciones.*'        => 'Gestión de direcciones de clientes',
+            'clientes.fotos.*'              => 'Gestión de fotos/documentos',
+            'clientes.ventanas-entrega.*'   => 'Gestión de ventanas de entrega',
             'clientes.cuentas-por-cobrar.*' => 'Ver cuentas por cobrar',
 
             // Ventas
-            'ventas.index' => 'Ver listado de ventas',
-            'ventas.create' => 'Crear ventas',
-            'ventas.store' => 'Guardar ventas',
-            'ventas.show' => 'Ver detalle de venta',
-            'ventas.edit' => 'Editar ventas',
-            'ventas.update' => 'Actualizar ventas',
-            'ventas.destroy' => 'Eliminar ventas',
+            'ventas.index'                  => 'Ver listado de ventas',
+            'ventas.create'                 => 'Crear ventas',
+            'ventas.store'                  => 'Guardar ventas',
+            'ventas.show'                   => 'Ver detalle de venta',
+            'ventas.edit'                   => 'Editar ventas',
+            'ventas.update'                 => 'Actualizar ventas',
+            'ventas.destroy'                => 'Eliminar ventas',
 
             // Cajas
-            'cajas.index' => 'Ver dashboard de cajas',
-            'cajas.abrir' => 'Abrir cajas',
-            'cajas.cerrar' => 'Cerrar cajas',
-            'cajas.transacciones' => 'Gestionar transacciones de caja',
+            'cajas.index'                   => 'Ver dashboard de cajas',
+            'cajas.abrir'                   => 'Abrir cajas',
+            'cajas.cerrar'                  => 'Cerrar cajas',
+            'cajas.transacciones'           => 'Gestionar transacciones de caja',
 
             // Compras
-            'compras.index' => 'Ver listado de compras',
-            'compras.create' => 'Crear compras',
-            'compras.destroy' => 'Eliminar compras',
+            'compras.index'                 => 'Ver listado de compras',
+            'compras.create'                => 'Crear compras',
+            'compras.destroy'               => 'Eliminar compras',
         ];
 
         return $descriptions[$permissionName] ?? "Permiso: $permissionName";

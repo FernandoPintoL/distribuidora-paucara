@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '@inertiajs/react';
 import type { AdminUsuario, PermissionGroup } from '@/domain/entities/admin-permisos';
 import { getRoleColor } from '@/lib/admin-permisos.utils';
+import { permisosService } from '@/infrastructure/services';
 import { BulkEditModal } from './BulkEditModal';
 
 interface UsuariosTabProps {
@@ -190,7 +191,7 @@ export function UsuariosTab({
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Link
-                          href={`/permisos/usuario/${usuario.id}/editar`}
+                          href={permisosService.editarUsuarioUrl(usuario.id)}
                           className="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 dark:bg-purple-700 text-white text-sm font-medium rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition"
                         >
                           Editar

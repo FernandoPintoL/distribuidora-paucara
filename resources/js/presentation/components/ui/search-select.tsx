@@ -59,9 +59,10 @@ export default function SearchSelect({
   const filteredOptions = useMemo(() => {
     if (!searchQuery.trim()) return options;
 
+    const query = searchQuery.toLowerCase();
     return options.filter(option =>
-      option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      option.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      (option.label?.toLowerCase() ?? '').includes(query) ||
+      (option.description?.toLowerCase() ?? '').includes(query)
     );
   }, [options, searchQuery]);
 

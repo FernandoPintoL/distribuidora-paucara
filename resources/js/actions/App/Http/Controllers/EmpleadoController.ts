@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::create
- * @see app/Http/Controllers/EmpleadoController.php:102
+ * @see app/Http/Controllers/EmpleadoController.php:100
  * @route '/empleados/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::create
- * @see app/Http/Controllers/EmpleadoController.php:102
+ * @see app/Http/Controllers/EmpleadoController.php:100
  * @route '/empleados/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::create
- * @see app/Http/Controllers/EmpleadoController.php:102
+ * @see app/Http/Controllers/EmpleadoController.php:100
  * @route '/empleados/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::create
- * @see app/Http/Controllers/EmpleadoController.php:102
+ * @see app/Http/Controllers/EmpleadoController.php:100
  * @route '/empleados/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::create
- * @see app/Http/Controllers/EmpleadoController.php:102
+ * @see app/Http/Controllers/EmpleadoController.php:100
  * @route '/empleados/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::create
- * @see app/Http/Controllers/EmpleadoController.php:102
+ * @see app/Http/Controllers/EmpleadoController.php:100
  * @route '/empleados/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::create
- * @see app/Http/Controllers/EmpleadoController.php:102
+ * @see app/Http/Controllers/EmpleadoController.php:100
  * @route '/empleados/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::store
- * @see app/Http/Controllers/EmpleadoController.php:149
+ * @see app/Http/Controllers/EmpleadoController.php:146
  * @route '/empleados'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::store
- * @see app/Http/Controllers/EmpleadoController.php:149
+ * @see app/Http/Controllers/EmpleadoController.php:146
  * @route '/empleados'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::store
- * @see app/Http/Controllers/EmpleadoController.php:149
+ * @see app/Http/Controllers/EmpleadoController.php:146
  * @route '/empleados'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::store
- * @see app/Http/Controllers/EmpleadoController.php:149
+ * @see app/Http/Controllers/EmpleadoController.php:146
  * @route '/empleados'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::store
- * @see app/Http/Controllers/EmpleadoController.php:149
+ * @see app/Http/Controllers/EmpleadoController.php:146
  * @route '/empleados'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +212,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::show
- * @see app/Http/Controllers/EmpleadoController.php:255
+ * @see app/Http/Controllers/EmpleadoController.php:241
  * @route '/empleados/{empleado}'
  */
 export const show = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +227,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::show
- * @see app/Http/Controllers/EmpleadoController.php:255
+ * @see app/Http/Controllers/EmpleadoController.php:241
  * @route '/empleados/{empleado}'
  */
 show.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -260,7 +260,7 @@ show.url = (args: { empleado: number | { id: number } } | [empleado: number | { 
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::show
- * @see app/Http/Controllers/EmpleadoController.php:255
+ * @see app/Http/Controllers/EmpleadoController.php:241
  * @route '/empleados/{empleado}'
  */
 show.get = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -269,7 +269,7 @@ show.get = (args: { empleado: number | { id: number } } | [empleado: number | { 
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::show
- * @see app/Http/Controllers/EmpleadoController.php:255
+ * @see app/Http/Controllers/EmpleadoController.php:241
  * @route '/empleados/{empleado}'
  */
 show.head = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -279,7 +279,7 @@ show.head = (args: { empleado: number | { id: number } } | [empleado: number | {
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::show
- * @see app/Http/Controllers/EmpleadoController.php:255
+ * @see app/Http/Controllers/EmpleadoController.php:241
  * @route '/empleados/{empleado}'
  */
     const showForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -289,7 +289,7 @@ show.head = (args: { empleado: number | { id: number } } | [empleado: number | {
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::show
- * @see app/Http/Controllers/EmpleadoController.php:255
+ * @see app/Http/Controllers/EmpleadoController.php:241
  * @route '/empleados/{empleado}'
  */
         showForm.get = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -298,7 +298,7 @@ show.head = (args: { empleado: number | { id: number } } | [empleado: number | {
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::show
- * @see app/Http/Controllers/EmpleadoController.php:255
+ * @see app/Http/Controllers/EmpleadoController.php:241
  * @route '/empleados/{empleado}'
  */
         showForm.head = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -314,7 +314,7 @@ show.head = (args: { empleado: number | { id: number } } | [empleado: number | {
     show.form = showForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::edit
- * @see app/Http/Controllers/EmpleadoController.php:267
+ * @see app/Http/Controllers/EmpleadoController.php:253
  * @route '/empleados/{empleado}/edit'
  */
 export const edit = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -329,7 +329,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::edit
- * @see app/Http/Controllers/EmpleadoController.php:267
+ * @see app/Http/Controllers/EmpleadoController.php:253
  * @route '/empleados/{empleado}/edit'
  */
 edit.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -362,7 +362,7 @@ edit.url = (args: { empleado: number | { id: number } } | [empleado: number | { 
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::edit
- * @see app/Http/Controllers/EmpleadoController.php:267
+ * @see app/Http/Controllers/EmpleadoController.php:253
  * @route '/empleados/{empleado}/edit'
  */
 edit.get = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -371,7 +371,7 @@ edit.get = (args: { empleado: number | { id: number } } | [empleado: number | { 
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::edit
- * @see app/Http/Controllers/EmpleadoController.php:267
+ * @see app/Http/Controllers/EmpleadoController.php:253
  * @route '/empleados/{empleado}/edit'
  */
 edit.head = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -381,7 +381,7 @@ edit.head = (args: { empleado: number | { id: number } } | [empleado: number | {
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::edit
- * @see app/Http/Controllers/EmpleadoController.php:267
+ * @see app/Http/Controllers/EmpleadoController.php:253
  * @route '/empleados/{empleado}/edit'
  */
     const editForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -391,7 +391,7 @@ edit.head = (args: { empleado: number | { id: number } } | [empleado: number | {
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::edit
- * @see app/Http/Controllers/EmpleadoController.php:267
+ * @see app/Http/Controllers/EmpleadoController.php:253
  * @route '/empleados/{empleado}/edit'
  */
         editForm.get = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -400,7 +400,7 @@ edit.head = (args: { empleado: number | { id: number } } | [empleado: number | {
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::edit
- * @see app/Http/Controllers/EmpleadoController.php:267
+ * @see app/Http/Controllers/EmpleadoController.php:253
  * @route '/empleados/{empleado}/edit'
  */
         editForm.head = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -416,7 +416,7 @@ edit.head = (args: { empleado: number | { id: number } } | [empleado: number | {
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::update
- * @see app/Http/Controllers/EmpleadoController.php:318
+ * @see app/Http/Controllers/EmpleadoController.php:303
  * @route '/empleados/{empleado}'
  */
 export const update = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -431,7 +431,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::update
- * @see app/Http/Controllers/EmpleadoController.php:318
+ * @see app/Http/Controllers/EmpleadoController.php:303
  * @route '/empleados/{empleado}'
  */
 update.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -464,7 +464,7 @@ update.url = (args: { empleado: number | { id: number } } | [empleado: number | 
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::update
- * @see app/Http/Controllers/EmpleadoController.php:318
+ * @see app/Http/Controllers/EmpleadoController.php:303
  * @route '/empleados/{empleado}'
  */
 update.put = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -473,7 +473,7 @@ update.put = (args: { empleado: number | { id: number } } | [empleado: number | 
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::update
- * @see app/Http/Controllers/EmpleadoController.php:318
+ * @see app/Http/Controllers/EmpleadoController.php:303
  * @route '/empleados/{empleado}'
  */
 update.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -483,7 +483,7 @@ update.patch = (args: { empleado: number | { id: number } } | [empleado: number 
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::update
- * @see app/Http/Controllers/EmpleadoController.php:318
+ * @see app/Http/Controllers/EmpleadoController.php:303
  * @route '/empleados/{empleado}'
  */
     const updateForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -498,7 +498,7 @@ update.patch = (args: { empleado: number | { id: number } } | [empleado: number 
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::update
- * @see app/Http/Controllers/EmpleadoController.php:318
+ * @see app/Http/Controllers/EmpleadoController.php:303
  * @route '/empleados/{empleado}'
  */
         updateForm.put = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -512,7 +512,7 @@ update.patch = (args: { empleado: number | { id: number } } | [empleado: number 
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::update
- * @see app/Http/Controllers/EmpleadoController.php:318
+ * @see app/Http/Controllers/EmpleadoController.php:303
  * @route '/empleados/{empleado}'
  */
         updateForm.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -528,7 +528,7 @@ update.patch = (args: { empleado: number | { id: number } } | [empleado: number 
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::destroy
- * @see app/Http/Controllers/EmpleadoController.php:494
+ * @see app/Http/Controllers/EmpleadoController.php:477
  * @route '/empleados/{empleado}'
  */
 export const destroy = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -543,7 +543,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::destroy
- * @see app/Http/Controllers/EmpleadoController.php:494
+ * @see app/Http/Controllers/EmpleadoController.php:477
  * @route '/empleados/{empleado}'
  */
 destroy.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -576,7 +576,7 @@ destroy.url = (args: { empleado: number | { id: number } } | [empleado: number |
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::destroy
- * @see app/Http/Controllers/EmpleadoController.php:494
+ * @see app/Http/Controllers/EmpleadoController.php:477
  * @route '/empleados/{empleado}'
  */
 destroy.delete = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -586,7 +586,7 @@ destroy.delete = (args: { empleado: number | { id: number } } | [empleado: numbe
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::destroy
- * @see app/Http/Controllers/EmpleadoController.php:494
+ * @see app/Http/Controllers/EmpleadoController.php:477
  * @route '/empleados/{empleado}'
  */
     const destroyForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -601,7 +601,7 @@ destroy.delete = (args: { empleado: number | { id: number } } | [empleado: numbe
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::destroy
- * @see app/Http/Controllers/EmpleadoController.php:494
+ * @see app/Http/Controllers/EmpleadoController.php:477
  * @route '/empleados/{empleado}'
  */
         destroyForm.delete = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -617,7 +617,7 @@ destroy.delete = (args: { empleado: number | { id: number } } | [empleado: numbe
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:763
+ * @see app/Http/Controllers/EmpleadoController.php:632
  * @route '/empleados/{empleado}/toggle-estado'
  */
 export const toggleEstado = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -632,7 +632,7 @@ toggleEstado.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:763
+ * @see app/Http/Controllers/EmpleadoController.php:632
  * @route '/empleados/{empleado}/toggle-estado'
  */
 toggleEstado.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -665,7 +665,7 @@ toggleEstado.url = (args: { empleado: number | { id: number } } | [empleado: num
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:763
+ * @see app/Http/Controllers/EmpleadoController.php:632
  * @route '/empleados/{empleado}/toggle-estado'
  */
 toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -675,7 +675,7 @@ toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: n
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:763
+ * @see app/Http/Controllers/EmpleadoController.php:632
  * @route '/empleados/{empleado}/toggle-estado'
  */
     const toggleEstadoForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -690,7 +690,7 @@ toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: n
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:763
+ * @see app/Http/Controllers/EmpleadoController.php:632
  * @route '/empleados/{empleado}/toggle-estado'
  */
         toggleEstadoForm.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -706,7 +706,7 @@ toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: n
     toggleEstado.form = toggleEstadoForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:777
+ * @see app/Http/Controllers/EmpleadoController.php:646
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
 export const toggleAccesoSistema = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -721,7 +721,7 @@ toggleAccesoSistema.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:777
+ * @see app/Http/Controllers/EmpleadoController.php:646
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
 toggleAccesoSistema.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -754,7 +754,7 @@ toggleAccesoSistema.url = (args: { empleado: number | { id: number } } | [emplea
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:777
+ * @see app/Http/Controllers/EmpleadoController.php:646
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
 toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -764,7 +764,7 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:777
+ * @see app/Http/Controllers/EmpleadoController.php:646
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
     const toggleAccesoSistemaForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -779,7 +779,7 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:777
+ * @see app/Http/Controllers/EmpleadoController.php:646
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
         toggleAccesoSistemaForm.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -795,7 +795,7 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
     toggleAccesoSistema.form = toggleAccesoSistemaForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
- * @see app/Http/Controllers/EmpleadoController.php:699
+ * @see app/Http/Controllers/EmpleadoController.php:621
  * @route '/empleados/crear-rapido'
  */
 export const crearEmpleadoRapido = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -810,7 +810,7 @@ crearEmpleadoRapido.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
- * @see app/Http/Controllers/EmpleadoController.php:699
+ * @see app/Http/Controllers/EmpleadoController.php:621
  * @route '/empleados/crear-rapido'
  */
 crearEmpleadoRapido.url = (options?: RouteQueryOptions) => {
@@ -819,7 +819,7 @@ crearEmpleadoRapido.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
- * @see app/Http/Controllers/EmpleadoController.php:699
+ * @see app/Http/Controllers/EmpleadoController.php:621
  * @route '/empleados/crear-rapido'
  */
 crearEmpleadoRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -829,7 +829,7 @@ crearEmpleadoRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
- * @see app/Http/Controllers/EmpleadoController.php:699
+ * @see app/Http/Controllers/EmpleadoController.php:621
  * @route '/empleados/crear-rapido'
  */
     const crearEmpleadoRapidoForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -839,7 +839,7 @@ crearEmpleadoRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::crearEmpleadoRapido
- * @see app/Http/Controllers/EmpleadoController.php:699
+ * @see app/Http/Controllers/EmpleadoController.php:621
  * @route '/empleados/crear-rapido'
  */
         crearEmpleadoRapidoForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -850,7 +850,7 @@ crearEmpleadoRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'
     crearEmpleadoRapido.form = crearEmpleadoRapidoForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::getDepartamentos
- * @see app/Http/Controllers/EmpleadoController.php:821
+ * @see app/Http/Controllers/EmpleadoController.php:691
  * @route '/empleados-data/departamentos'
  */
 export const getDepartamentos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -865,7 +865,7 @@ getDepartamentos.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getDepartamentos
- * @see app/Http/Controllers/EmpleadoController.php:821
+ * @see app/Http/Controllers/EmpleadoController.php:691
  * @route '/empleados-data/departamentos'
  */
 getDepartamentos.url = (options?: RouteQueryOptions) => {
@@ -874,7 +874,7 @@ getDepartamentos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getDepartamentos
- * @see app/Http/Controllers/EmpleadoController.php:821
+ * @see app/Http/Controllers/EmpleadoController.php:691
  * @route '/empleados-data/departamentos'
  */
 getDepartamentos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -883,7 +883,7 @@ getDepartamentos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => 
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::getDepartamentos
- * @see app/Http/Controllers/EmpleadoController.php:821
+ * @see app/Http/Controllers/EmpleadoController.php:691
  * @route '/empleados-data/departamentos'
  */
 getDepartamentos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -893,7 +893,7 @@ getDepartamentos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::getDepartamentos
- * @see app/Http/Controllers/EmpleadoController.php:821
+ * @see app/Http/Controllers/EmpleadoController.php:691
  * @route '/empleados-data/departamentos'
  */
     const getDepartamentosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -903,7 +903,7 @@ getDepartamentos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::getDepartamentos
- * @see app/Http/Controllers/EmpleadoController.php:821
+ * @see app/Http/Controllers/EmpleadoController.php:691
  * @route '/empleados-data/departamentos'
  */
         getDepartamentosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -912,7 +912,7 @@ getDepartamentos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::getDepartamentos
- * @see app/Http/Controllers/EmpleadoController.php:821
+ * @see app/Http/Controllers/EmpleadoController.php:691
  * @route '/empleados-data/departamentos'
  */
         getDepartamentosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -928,7 +928,7 @@ getDepartamentos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
     getDepartamentos.form = getDepartamentosForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::getTiposContrato
- * @see app/Http/Controllers/EmpleadoController.php:839
+ * @see app/Http/Controllers/EmpleadoController.php:701
  * @route '/empleados-data/tipos-contrato'
  */
 export const getTiposContrato = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -943,7 +943,7 @@ getTiposContrato.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getTiposContrato
- * @see app/Http/Controllers/EmpleadoController.php:839
+ * @see app/Http/Controllers/EmpleadoController.php:701
  * @route '/empleados-data/tipos-contrato'
  */
 getTiposContrato.url = (options?: RouteQueryOptions) => {
@@ -952,7 +952,7 @@ getTiposContrato.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getTiposContrato
- * @see app/Http/Controllers/EmpleadoController.php:839
+ * @see app/Http/Controllers/EmpleadoController.php:701
  * @route '/empleados-data/tipos-contrato'
  */
 getTiposContrato.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -961,7 +961,7 @@ getTiposContrato.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => 
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::getTiposContrato
- * @see app/Http/Controllers/EmpleadoController.php:839
+ * @see app/Http/Controllers/EmpleadoController.php:701
  * @route '/empleados-data/tipos-contrato'
  */
 getTiposContrato.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -971,7 +971,7 @@ getTiposContrato.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::getTiposContrato
- * @see app/Http/Controllers/EmpleadoController.php:839
+ * @see app/Http/Controllers/EmpleadoController.php:701
  * @route '/empleados-data/tipos-contrato'
  */
     const getTiposContratoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -981,7 +981,7 @@ getTiposContrato.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::getTiposContrato
- * @see app/Http/Controllers/EmpleadoController.php:839
+ * @see app/Http/Controllers/EmpleadoController.php:701
  * @route '/empleados-data/tipos-contrato'
  */
         getTiposContratoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -990,7 +990,7 @@ getTiposContrato.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::getTiposContrato
- * @see app/Http/Controllers/EmpleadoController.php:839
+ * @see app/Http/Controllers/EmpleadoController.php:701
  * @route '/empleados-data/tipos-contrato'
  */
         getTiposContratoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1006,7 +1006,7 @@ getTiposContrato.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
     getTiposContrato.form = getTiposContratoForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::getEstados
- * @see app/Http/Controllers/EmpleadoController.php:853
+ * @see app/Http/Controllers/EmpleadoController.php:710
  * @route '/empleados-data/estados'
  */
 export const getEstados = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1021,7 +1021,7 @@ getEstados.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getEstados
- * @see app/Http/Controllers/EmpleadoController.php:853
+ * @see app/Http/Controllers/EmpleadoController.php:710
  * @route '/empleados-data/estados'
  */
 getEstados.url = (options?: RouteQueryOptions) => {
@@ -1030,7 +1030,7 @@ getEstados.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getEstados
- * @see app/Http/Controllers/EmpleadoController.php:853
+ * @see app/Http/Controllers/EmpleadoController.php:710
  * @route '/empleados-data/estados'
  */
 getEstados.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1039,7 +1039,7 @@ getEstados.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::getEstados
- * @see app/Http/Controllers/EmpleadoController.php:853
+ * @see app/Http/Controllers/EmpleadoController.php:710
  * @route '/empleados-data/estados'
  */
 getEstados.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1049,7 +1049,7 @@ getEstados.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::getEstados
- * @see app/Http/Controllers/EmpleadoController.php:853
+ * @see app/Http/Controllers/EmpleadoController.php:710
  * @route '/empleados-data/estados'
  */
     const getEstadosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1059,7 +1059,7 @@ getEstados.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::getEstados
- * @see app/Http/Controllers/EmpleadoController.php:853
+ * @see app/Http/Controllers/EmpleadoController.php:710
  * @route '/empleados-data/estados'
  */
         getEstadosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1068,7 +1068,7 @@ getEstados.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::getEstados
- * @see app/Http/Controllers/EmpleadoController.php:853
+ * @see app/Http/Controllers/EmpleadoController.php:710
  * @route '/empleados-data/estados'
  */
         getEstadosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1084,7 +1084,7 @@ getEstados.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     getEstados.form = getEstadosForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::getSupervisores
- * @see app/Http/Controllers/EmpleadoController.php:868
+ * @see app/Http/Controllers/EmpleadoController.php:725
  * @route '/empleados-data/supervisores'
  */
 export const getSupervisores = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1099,7 +1099,7 @@ getSupervisores.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getSupervisores
- * @see app/Http/Controllers/EmpleadoController.php:868
+ * @see app/Http/Controllers/EmpleadoController.php:725
  * @route '/empleados-data/supervisores'
  */
 getSupervisores.url = (options?: RouteQueryOptions) => {
@@ -1108,7 +1108,7 @@ getSupervisores.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getSupervisores
- * @see app/Http/Controllers/EmpleadoController.php:868
+ * @see app/Http/Controllers/EmpleadoController.php:725
  * @route '/empleados-data/supervisores'
  */
 getSupervisores.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1117,7 +1117,7 @@ getSupervisores.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => (
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::getSupervisores
- * @see app/Http/Controllers/EmpleadoController.php:868
+ * @see app/Http/Controllers/EmpleadoController.php:725
  * @route '/empleados-data/supervisores'
  */
 getSupervisores.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1127,7 +1127,7 @@ getSupervisores.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::getSupervisores
- * @see app/Http/Controllers/EmpleadoController.php:868
+ * @see app/Http/Controllers/EmpleadoController.php:725
  * @route '/empleados-data/supervisores'
  */
     const getSupervisoresForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1137,7 +1137,7 @@ getSupervisores.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::getSupervisores
- * @see app/Http/Controllers/EmpleadoController.php:868
+ * @see app/Http/Controllers/EmpleadoController.php:725
  * @route '/empleados-data/supervisores'
  */
         getSupervisoresForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1146,7 +1146,7 @@ getSupervisores.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::getSupervisores
- * @see app/Http/Controllers/EmpleadoController.php:868
+ * @see app/Http/Controllers/EmpleadoController.php:725
  * @route '/empleados-data/supervisores'
  */
         getSupervisoresForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1162,7 +1162,7 @@ getSupervisores.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
     getSupervisores.form = getSupervisoresForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::getRoles
- * @see app/Http/Controllers/EmpleadoController.php:915
+ * @see app/Http/Controllers/EmpleadoController.php:772
  * @route '/empleados-data/roles'
  */
 export const getRoles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1177,7 +1177,7 @@ getRoles.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getRoles
- * @see app/Http/Controllers/EmpleadoController.php:915
+ * @see app/Http/Controllers/EmpleadoController.php:772
  * @route '/empleados-data/roles'
  */
 getRoles.url = (options?: RouteQueryOptions) => {
@@ -1186,7 +1186,7 @@ getRoles.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getRoles
- * @see app/Http/Controllers/EmpleadoController.php:915
+ * @see app/Http/Controllers/EmpleadoController.php:772
  * @route '/empleados-data/roles'
  */
 getRoles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1195,7 +1195,7 @@ getRoles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\EmpleadoController::getRoles
- * @see app/Http/Controllers/EmpleadoController.php:915
+ * @see app/Http/Controllers/EmpleadoController.php:772
  * @route '/empleados-data/roles'
  */
 getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1205,7 +1205,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::getRoles
- * @see app/Http/Controllers/EmpleadoController.php:915
+ * @see app/Http/Controllers/EmpleadoController.php:772
  * @route '/empleados-data/roles'
  */
     const getRolesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1215,7 +1215,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::getRoles
- * @see app/Http/Controllers/EmpleadoController.php:915
+ * @see app/Http/Controllers/EmpleadoController.php:772
  * @route '/empleados-data/roles'
  */
         getRolesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1224,7 +1224,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\EmpleadoController::getRoles
- * @see app/Http/Controllers/EmpleadoController.php:915
+ * @see app/Http/Controllers/EmpleadoController.php:772
  * @route '/empleados-data/roles'
  */
         getRolesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1240,7 +1240,7 @@ getRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     getRoles.form = getRolesForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::getRolSugeridoPorCargo
- * @see app/Http/Controllers/EmpleadoController.php:1061
+ * @see app/Http/Controllers/EmpleadoController.php:919
  * @route '/empleados-data/rol-sugerido'
  */
 export const getRolSugeridoPorCargo = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1255,7 +1255,7 @@ getRolSugeridoPorCargo.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getRolSugeridoPorCargo
- * @see app/Http/Controllers/EmpleadoController.php:1061
+ * @see app/Http/Controllers/EmpleadoController.php:919
  * @route '/empleados-data/rol-sugerido'
  */
 getRolSugeridoPorCargo.url = (options?: RouteQueryOptions) => {
@@ -1264,7 +1264,7 @@ getRolSugeridoPorCargo.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::getRolSugeridoPorCargo
- * @see app/Http/Controllers/EmpleadoController.php:1061
+ * @see app/Http/Controllers/EmpleadoController.php:919
  * @route '/empleados-data/rol-sugerido'
  */
 getRolSugeridoPorCargo.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1274,7 +1274,7 @@ getRolSugeridoPorCargo.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::getRolSugeridoPorCargo
- * @see app/Http/Controllers/EmpleadoController.php:1061
+ * @see app/Http/Controllers/EmpleadoController.php:919
  * @route '/empleados-data/rol-sugerido'
  */
     const getRolSugeridoPorCargoForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1284,7 +1284,7 @@ getRolSugeridoPorCargo.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::getRolSugeridoPorCargo
- * @see app/Http/Controllers/EmpleadoController.php:1061
+ * @see app/Http/Controllers/EmpleadoController.php:919
  * @route '/empleados-data/rol-sugerido'
  */
         getRolSugeridoPorCargoForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

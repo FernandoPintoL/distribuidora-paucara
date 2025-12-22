@@ -218,6 +218,14 @@ class RutaService
 
     /**
      * Asignar chofer y vehículo a una ruta
+     *
+     * VALIDACIONES:
+     * ✓ Chofer debe estar activo
+     * ✓ Chofer debe tener licencia vigente
+     * ✓ Chofer NO debe tener otra ruta activa ese día
+     * ✓ Vehículo debe estar disponible
+     * ✓ Vehículo NO debe tener otra ruta activa ese día
+     * ✓ Vehículo debe tener capacidad suficiente
      */
     public function asignarRecursos(
         int $rutaId,
@@ -227,18 +235,47 @@ class RutaService
         $ruta = $this->transaction(function () use ($rutaId, $choferId, $vehiculoId) {
             $ruta = Ruta::lockForUpdate()->findOrFail($rutaId);
 
-            // Validar que chofer esté disponible
+            // ✅ VALIDAR CHOFER
             $chofer = \App\Models\Empleado::findOrFail($choferId);
-            if (!$chofer->licencia_vigente) {
-                throw new \Exception('Chofer no tiene licencia vigente');
+
+            if (!$chofer->estaActivo()) {
+                throw new \Exception("Chofer {$chofer->nombre} no está activo");
             }
 
-            // Validar que vehículo esté disponible
+            if (!$chofer->tieneLicenciaVigente()) {
+                $vencimiento = $chofer->fecha_vencimiento_licencia?->format('d/m/Y') ?? 'N/A';
+                throw new \Exception("Chofer {$chofer->nombre} no tiene licencia vigente (vence: {$vencimiento})");
+            }
+
+            $fechaRuta = $ruta->fecha_ruta ?? now()->toDateString();
+            if (!$chofer->estaDisponiblePara($fechaRuta)) {
+                throw new \Exception("Chofer {$chofer->nombre} ya tiene una ruta asignada para {$fechaRuta}");
+            }
+
+            // ✅ VALIDAR VEHÍCULO
             $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
-            if (!$vehiculo->operativo) {
-                throw new \Exception('Vehículo no está operativo');
+
+            if (!$vehiculo->estaDisponible()) {
+                throw new \Exception("Vehículo {$vehiculo->placa} no está disponible (estado: {$vehiculo->estado})");
             }
 
+            if (!$vehiculo->estaDisponiblePara($fechaRuta)) {
+                throw new \Exception("Vehículo {$vehiculo->placa} ya tiene una ruta asignada para {$fechaRuta}");
+            }
+
+            // ✅ VALIDAR CAPACIDAD DEL VEHÍCULO
+            $pesoTotal = $ruta->detalles->sum(function ($detalle) {
+                return $detalle->entrega?->peso_kg ?? 0;
+            });
+
+            if ($pesoTotal > 0 && !$vehiculo->tieneCapacidadPara($pesoTotal)) {
+                throw new \Exception(
+                    "Vehículo {$vehiculo->placa} no tiene capacidad suficiente. " .
+                    "Requiere: {$pesoTotal}kg, Capacidad: {$vehiculo->capacidad_kg}kg"
+                );
+            }
+
+            // ✅ ASIGNAR RECURSOS
             $ruta->update([
                 'chofer_id' => $choferId,
                 'vehiculo_id' => $vehiculoId,
@@ -250,6 +287,7 @@ class RutaService
         $this->logSuccess('Recursos asignados a ruta', [
             'ruta_id' => $rutaId,
             'chofer_id' => $choferId,
+            'vehiculo_id' => $vehiculoId,
         ]);
 
         return RutaResponseDTO::fromModel($ruta);

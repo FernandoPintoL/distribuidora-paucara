@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
-import { ModuloSidebar } from '@/domain/modulos/types';
+import type { ModuloSidebar } from '@/domain/entities/admin-permisos';
 import { Download, FileJson, FileSpreadsheet, FileText, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

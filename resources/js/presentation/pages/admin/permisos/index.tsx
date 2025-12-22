@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
-import type { AdminUsuario, AdminRol, PermisoAudit, PermissionGroup, Permission } from '@/domain/entities/admin-permisos';
+import type { AdminUsuario, AdminRol, PermisoAudit, PermissionGroup, Permission, ModuloSidebar } from '@/domain/entities/admin-permisos';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import { PermisosService } from '@/infrastructure/services/permisos.service';
 import { UsuariosTab } from './components/UsuariosTab';
@@ -12,7 +12,6 @@ import { PermisosTab } from './components/PermisosTab';
 import { TemplatesTab } from './components/TemplatesTab';
 import { CompareTab } from './components/CompareTab';
 import { ModulosTab } from './components/ModulosTab';
-import type { ModuloSidebar } from '@/domain/modulos/types';
 
 type TabType = 'usuarios' | 'roles' | 'historial' | 'permisos' | 'plantillas' | 'comparar' | 'modulos';
 
@@ -123,11 +122,25 @@ export default function PermisosIndex() {
 
   const cargarModulosSidebar = async () => {
     try {
-      const response = await fetch('/api/modulos-sidebar');
+      const response = await fetch('/api/modulos-sidebar/admin', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
-      setModulosSidebar(data);
-    } catch {
-      console.log('Error al cargar módulos del sidebar');
+      // El endpoint apiIndexAdmin devuelve un array de módulos directamente
+      const modulos = Array.isArray(data) ? data : (data.data || []);
+
+      setModulosSidebar(modulos);
+    } catch (error) {
+      console.error('Error al cargar módulos del sidebar:', error);
+      NotificationService.error('Error al cargar módulos del sidebar');
     }
   };
 
@@ -190,6 +203,24 @@ export default function PermisosIndex() {
                 Roles
               </button>
               <button
+                onClick={() => handleTabChange('permisos')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'permisos'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Permisos
+              </button>
+              <button
+                onClick={() => handleTabChange('modulos')}
+                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'modulos'
+                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+              >
+                Módulos
+              </button>
+              <button
                 onClick={() => handleTabChange('plantillas')}
                 className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'plantillas'
                   ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
@@ -216,24 +247,8 @@ export default function PermisosIndex() {
               >
                 Historial y Auditoría
               </button>
-              <button
-                onClick={() => handleTabChange('permisos')}
-                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'permisos'
-                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
-                  }`}
-              >
-                Permisos
-              </button>
-              <button
-                onClick={() => handleTabChange('modulos')}
-                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'modulos'
-                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
-                  }`}
-              >
-                Módulos
-              </button>
+
+
             </div>
           </div>
 
@@ -305,7 +320,7 @@ export default function PermisosIndex() {
           )}
 
           {/* Info Box */}
-          <div className="mt-8 bg-blue-50 dark:bg-slate-700 border border-blue-200 dark:border-blue-900 rounded-lg p-6">
+          {/* <div className="mt-8 bg-blue-50 dark:bg-slate-700 border border-blue-200 dark:border-blue-900 rounded-lg p-6">
             <div className="flex gap-4">
               <div className="text-2xl">ℹ️</div>
               <div>
@@ -343,7 +358,7 @@ export default function PermisosIndex() {
                 </ul>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </AppLayout>

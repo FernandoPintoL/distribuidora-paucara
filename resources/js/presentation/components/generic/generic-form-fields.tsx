@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import SearchMultiSelect from '@/presentation/components/ui/search-multi-select';
 import type { BaseFormData, FormField } from '@/domain/entities/generic';
-import { Info } from 'lucide-react';
+import { Info, Eye, EyeOff } from 'lucide-react';
 
 interface GenericFormFieldsProps<F extends BaseFormData> {
   data: F;
@@ -27,6 +27,7 @@ export default function GenericFormFields<F extends BaseFormData>({
   extraData
 }: GenericFormFieldsProps<F>) {
   const [dynamicOptions, setDynamicOptions] = useState<Record<string, Array<{ value: string | number; label: string }>>>({});
+  const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
 
   // Cargar opciones dinámicas cuando sea necesario
   useEffect(() => {
@@ -119,7 +120,7 @@ export default function GenericFormFields<F extends BaseFormData>({
             placeholder={placeholderValue}
             disabled={fieldDisabled}
             rows={4}
-            className={`flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            className={`flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 ${error ? 'border-2 border-red-500 focus-visible:ring-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950/30' : ''}`}
           />
         );
       }
@@ -134,7 +135,7 @@ export default function GenericFormFields<F extends BaseFormData>({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.value === '' ? null : parseFloat(e.target.value))}
             placeholder={placeholderValue}
             disabled={fieldDisabled}
-            className={`transition-all duration-200 ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            className={`transition-all duration-200 ${error ? 'border-2 border-red-500 focus-visible:ring-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950/30' : ''}`}
             min={field.validation?.min}
             max={field.validation?.max}
             step="any"
@@ -168,7 +169,7 @@ export default function GenericFormFields<F extends BaseFormData>({
             value={value ? String(value) : ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.value)}
             disabled={fieldDisabled}
-            className={`transition-all duration-200 ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            className={`transition-all duration-200 ${error ? 'border-2 border-red-500 focus-visible:ring-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950/30' : ''}`}
           />
         );
 
@@ -178,11 +179,22 @@ export default function GenericFormFields<F extends BaseFormData>({
 
         // Use SearchSelect if field has extraDataKey (for dynamic data like localidades)
         if (field.extraDataKey && extraData?.[field.extraDataKey]) {
-          const extraOptions = extraData[field.extraDataKey] as Array<{ id: number; nombre: string; codigo?: string }>;
-          const searchSelectOptions = extraOptions.map(opt => ({
-            value: opt.id,
-            label: opt.codigo ? `${opt.nombre} (${opt.codigo})` : opt.nombre
-          }));
+          const rawExtraData = extraData[field.extraDataKey] as Array<any>;
+
+          // Check if data is already in the correct format (has 'value' and 'label')
+          const isAlreadyFormatted = rawExtraData.length > 0 &&
+            'value' in rawExtraData[0] &&
+            'label' in rawExtraData[0];
+
+          const searchSelectOptions = isAlreadyFormatted
+            ? rawExtraData.map(opt => ({
+                value: opt.value,
+                label: opt.label
+              }))
+            : rawExtraData.map(opt => ({
+                value: opt.id,
+                label: opt.codigo ? `${opt.nombre} (${opt.codigo})` : opt.nombre
+              }));
 
           return (
             <SearchSelect
@@ -226,7 +238,7 @@ export default function GenericFormFields<F extends BaseFormData>({
             value={value ? String(value) : ''}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(field.key, e.target.value === '' ? null : e.target.value)}
             disabled={fieldDisabled}
-            className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 ${error ? 'border-2 border-red-500 focus-visible:ring-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950/30' : ''}`}
           >
             <option value="">Seleccionar...</option>
             {options.map((option) => (
@@ -327,6 +339,42 @@ export default function GenericFormFields<F extends BaseFormData>({
           );
         }
 
+      case 'password': {
+        const placeholderValue = typeof field.placeholder === 'function' ? field.placeholder(data) : field.placeholder;
+        const fieldKey = String(field.key);
+        const isPasswordVisible = showPassword[fieldKey] || false;
+
+        const passwordInput = (
+          <div className="relative">
+            <Input
+              id={fieldKey}
+              type={isPasswordVisible ? 'text' : 'password'}
+              value={value ? String(value) : ''}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.value)}
+              placeholder={placeholderValue}
+              disabled={fieldDisabled}
+              className={`pr-10 transition-all duration-200 ${error ? 'border-2 border-red-500 focus-visible:ring-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950/30' : ''}`}
+              minLength={field.validation?.minLength}
+              maxLength={field.validation?.maxLength}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(prev => ({ ...prev, [fieldKey]: !prev[fieldKey] }))}
+              disabled={fieldDisabled}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+              tabIndex={-1}
+            >
+              {isPasswordVisible ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        );
+        return withPrefixSuffix(passwordInput);
+      }
+
       default: { // text
         const placeholderValue = typeof field.placeholder === 'function' ? field.placeholder(data) : field.placeholder;
         const textInput = (
@@ -336,7 +384,7 @@ export default function GenericFormFields<F extends BaseFormData>({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.value)}
             placeholder={placeholderValue}
             disabled={fieldDisabled}
-            className={`transition-all duration-200 ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            className={`transition-all duration-200 ${error ? 'border-2 border-red-500 focus-visible:ring-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950/30' : ''}`}
             minLength={field.validation?.minLength}
             maxLength={field.validation?.maxLength}
           />

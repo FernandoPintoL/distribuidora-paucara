@@ -143,7 +143,7 @@ export const useEnviosCreate = (
      * Volver a la página anterior
      */
     const handleVolver = () => {
-        router.back();
+        window.history.back();
     };
 
     // Cargar historial cuando el componente monta

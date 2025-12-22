@@ -54,12 +54,12 @@ export default function Create({ ventas, vehiculos, choferes, ventaPreselecciona
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Crear Nuevo Envío</h1>
                         <p className="text-gray-600 dark:text-gray-400 mt-1">Completa todos los campos para programar un envío</p>
                     </div>
-                    <Button
+                    {/* <Button
                         variant="outline"
                         onClick={handleVolver}
                     >
                         Volver
-                    </Button>
+                    </Button> */}
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">

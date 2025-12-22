@@ -1,80 +1,56 @@
-import { router } from '@inertiajs/react';
-import { ModuloSidebar } from '@/domain/modulos/types';
-import { getCsrfHeaders } from './csrf';
-
 /**
- * Servicio centralizado para todas las operaciones API de módulos
- * Centraliza la lógica de comunicación con el backend
+ * @deprecated Este archivo está deprecado.
+ * Use @/infrastructure/services/modulos.service.ts en su lugar.
+ *
+ * Este archivo se mantiene temporalmente por compatibilidad,
+ * pero será eliminado en futuras versiones.
  */
 
+import { modulosService } from '@/infrastructure/services/modulos.service';
+
+/**
+ * @deprecated Use modulosService de @/infrastructure/services/modulos.service.ts
+ */
 export const modulosApi = {
     /**
-     * Obtiene los permisos disponibles
+     * @deprecated Use modulosService.obtenerPermisosDisponibles()
      */
     async obtenerPermisosDisponibles(): Promise<string[]> {
-        const response = await fetch('/api/modulos-sidebar/permisos/disponibles');
-        if (!response.ok) throw new Error('Error al obtener permisos');
-        return response.json();
+        return modulosService.obtenerPermisosDisponibles();
     },
 
     /**
-     * Obtiene la matriz de acceso rol-módulo
+     * @deprecated Use modulosService.obtenerMatrizAcceso()
      */
     async obtenerMatrizAcceso() {
-        const response = await fetch('/api/modulos-sidebar/matriz-acceso');
-        if (!response.ok) throw new Error('Error al obtener matriz de acceso');
-        return response.json();
+        return modulosService.obtenerMatrizAcceso();
     },
 
     /**
-     * Obtiene los roles disponibles
+     * @deprecated Use modulosService.obtenerRoles()
      */
     async obtenerRoles() {
-        const response = await fetch('/api/modulos-sidebar/roles');
-        if (!response.ok) throw new Error('Error al obtener roles');
-        return response.json();
+        return modulosService.obtenerRoles();
     },
 
     /**
-     * Obtiene la vista previa del sidebar para un rol específico
+     * @deprecated Use modulosService.obtenerPreviewPorRol()
      */
     async obtenerPreviewPorRol(rolName: string) {
-        const response = await fetch(`/api/modulos-sidebar/preview/${rolName}`);
-        if (!response.ok) throw new Error('Error al obtener preview');
-        return response.json();
+        return modulosService.obtenerPreviewPorRol(rolName);
     },
 
     /**
-     * Alterna el estado activo/inactivo de un módulo
-     * Usa router.patch() de Inertia para mantener consistencia
+     * @deprecated Use modulosService.toggleActivo()
      */
     toggleActivo(id: number): Promise<void> {
-        return new Promise((resolve, reject) => {
-            router.patch(
-                `/modulos-sidebar/${id}/toggle-activo`,
-                {},
-                {
-                    onSuccess: () => resolve(),
-                    onError: () => reject(new Error('Error al cambiar el estado del módulo')),
-                }
-            );
-        });
+        return modulosService.toggleActivo(id);
     },
 
     /**
-     * Guarda el nuevo orden de los módulos
-     * Usa Inertia.post() para mantener consistencia con el backend
+     * @deprecated Use modulosService.guardarOrden()
      */
     async guardarOrden(orden: Array<{ id: number; orden: number }>): Promise<void> {
-        return new Promise((resolve, reject) => {
-            router.post(
-                '/modulos-sidebar/actualizar-orden',
-                { modulos: orden },
-                {
-                    onSuccess: () => resolve(),
-                    onError: () => reject(new Error('Error al guardar orden')),
-                }
-            );
-        });
+        return modulosService.guardarOrden(orden);
     },
 };

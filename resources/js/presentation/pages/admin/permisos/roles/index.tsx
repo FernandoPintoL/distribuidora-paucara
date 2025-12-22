@@ -10,19 +10,8 @@ import toast from 'react-hot-toast'
 import { Trash2, Pencil, Plus, Search, Users, Shield } from 'lucide-react'
 import Can from '@/presentation/components/auth/Can'
 import { type BreadcrumbItem } from '@/types'
-
-interface Role {
-    id: number
-    name: string
-    guard_name: string
-    created_at: string
-    users_count: number
-    permissions_count: number
-    permissions: Array<{
-        id: number
-        name: string
-    }>
-}
+import type { Role } from '@/domain/entities/admin-permisos'
+import { rolesService } from '@/infrastructure/services/roles.service'
 
 interface PaginationLink {
     url: string | null
@@ -68,7 +57,7 @@ export default function Index() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
-        router.get('/admin/permisos/roles', {
+        router.get(rolesService.indexUrl(), {
             search: searchTerm,
         }, {
             preserveState: true,
@@ -77,13 +66,13 @@ export default function Index() {
     }
 
     const handleDelete = (role: Role) => {
-        if (role.users_count > 0) {
+        if ((role.users_count ?? 0) > 0) {
             toast.error(`No se puede eliminar el rol "${role.name}" porque tiene ${role.users_count} usuario(s) asignado(s).`)
             return
         }
 
         if (confirm(`¿Estás seguro de que quieres eliminar el rol "${role.name}"?`)) {
-            router.delete(`/roles/${role.id}`, {
+            router.delete(rolesService.destroyUrl(role.id), {
                 onSuccess: () => {
                     toast.success('Rol eliminado exitosamente.')
                 },
@@ -96,7 +85,7 @@ export default function Index() {
 
     const clearFilters = () => {
         setSearchTerm('')
-        router.get('/admin/permisos/roles')
+        router.get(rolesService.indexUrl())
     }
 
     return (
@@ -115,7 +104,7 @@ export default function Index() {
                             </p>
                         </div>
                         <Can permission="roles.create">
-                            <Link href="/admin/permisos/roles/create">
+                            <Link href={rolesService.createUrl()}>
                                 <Button>
                                     <Plus className="mr-2 h-4 w-4" />
                                     Crear Rol
@@ -222,14 +211,14 @@ export default function Index() {
                                                 <td className="py-4">
                                                     <div className="flex justify-end space-x-2">
                                                         <Can permission="roles.show">
-                                                            <Link href={`/admin/permisos/roles/${role.id}`}>
+                                                            <Link href={rolesService.showUrl(role.id)}>
                                                                 <Button size="sm" variant="ghost">
                                                                     Ver
                                                                 </Button>
                                                             </Link>
                                                         </Can>
                                                         <Can permission="roles.edit">
-                                                            <Link href={`/admin/permisos/roles/${role.id}/edit`}>
+                                                            <Link href={rolesService.editUrl(role.id)}>
                                                                 <Button size="sm" variant="ghost">
                                                                     <Pencil className="h-4 w-4" />
                                                                 </Button>

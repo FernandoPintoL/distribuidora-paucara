@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
 import { Eye, EyeOff, Search, Edit, Trash2, Plus, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { ModuloSidebar } from '@/domain/modulos/types';
-import { modulosService } from '@/domain/modulos/services';
+import type { ModuloSidebar, BulkOperation } from '@/domain/entities/admin-permisos';
+import type { Id } from '@/domain/entities/shared';
+import { modulosService } from '@/infrastructure/services/modulos.service';
 import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
 import { SidebarPreview } from '@/presentation/components/sidebar-preview';
 import { ModulosBulkEditModal } from './ModulosBulkEditModal';
@@ -30,7 +31,7 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activo' | 'inactivo'>('todos');
   const [modulosList, setModulosList] = useState<ModuloSidebar[]>(modulos);
   const [loading, setLoading] = useState(false);
-  const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
+  const [seleccionados, setSeleccionados] = useState<Set<Id>>(new Set());
   const [todosSeleccionados, setTodosSeleccionados] = useState(false);
   const [mostrarBulkMenu, setMostrarBulkMenu] = useState(false);
 
@@ -40,7 +41,7 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
   }, [modulos]);
 
   // Funciones para selección múltiple
-  const toggleSeleccion = (id: number) => {
+  const toggleSeleccion = (id: Id) => {
     const nuevo = new Set(seleccionados);
     if (nuevo.has(id)) {
       nuevo.delete(id);
@@ -84,7 +85,7 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
   const handleToggleActivo = async (modulo: ModuloSidebar) => {
     setLoading(true);
     try {
-      await modulosService.alternarEstadoModulo(modulo);
+      await modulosService.toggleActivo(modulo.id);
       // Actualizar la lista local
       setModulosList(
         modulosList.map((m) =>
@@ -103,27 +104,10 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
   };
 
   // Bulk edit handler
-  const handleBulkEdit = async (selectedIds: Set<number>, operacion: any) => {
+  const handleBulkEdit = async (selectedIds: Set<Id>, operacion: BulkOperation) => {
     setLoading(true);
     try {
-      // Llamar a la API para bulk update
-      const response = await fetch('/modulos-sidebar/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify({
-          ids: Array.from(selectedIds),
-          operacion,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al aplicar cambios en lote');
-      }
-
-      const data = await response.json();
+      await modulosService.bulkUpdate(Array.from(selectedIds), operacion);
       toast.success(`Cambios aplicados a ${selectedIds.size} módulos`);
 
       // Limpiar selección y recargar datos
@@ -139,9 +123,22 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
     }
   };
 
-  const handleDelete = (modulo: ModuloSidebar) => {
-    if (confirm(`¿Está seguro de eliminar el módulo "${modulo.titulo}"?`)) {
-      window.location.href = `/modulos-sidebar/${modulo.id}?_method=DELETE`;
+  const handleDelete = async (modulo: ModuloSidebar) => {
+    if (!confirm(`¿Está seguro de eliminar el módulo "${modulo.titulo}"?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await modulosService.delete(modulo.id);
+      toast.success(`Módulo "${modulo.titulo}" eliminado correctamente`);
+      // Recargar datos del servidor
+      await onLoadData();
+    } catch (error) {
+      toast.error('Error al eliminar el módulo');
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -238,11 +235,8 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
                     />
                   </TableHead>
                   <TableHead className="text-gray-900 dark:text-gray-100">Módulo</TableHead>
-                  <TableHead className="text-gray-900 dark:text-gray-100">Ruta</TableHead>
-                  <TableHead className="text-gray-900 dark:text-gray-100">Tipo</TableHead>
-                  <TableHead className="text-gray-900 dark:text-gray-100">Categoría</TableHead>
+                  <TableHead className="text-gray-900 dark:text-gray-100">Tipo / Categoria </TableHead>
                   <TableHead className="text-center text-gray-900 dark:text-gray-100">Estado</TableHead>
-                  <TableHead className="text-center text-gray-900 dark:text-gray-100">Orden</TableHead>
                   <TableHead className="text-right text-gray-900 dark:text-gray-100">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -270,6 +264,9 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
 
                       {/* Módulo */}
                       <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                        <Badge variant={modulo.es_submenu ? 'secondary' : 'default'}>
+                          {modulo.id}
+                        </Badge>
                         <div className="flex items-center gap-2">
                           {modulo.es_submenu && (
                             <span className="text-gray-400 dark:text-gray-500">└</span>
@@ -281,25 +278,20 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
                             </Badge>
                           )}
                         </div>
-                      </TableCell>
-
-                      {/* Ruta */}
-                      <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                        <code className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded text-xs text-gray-900 dark:text-gray-100">
+                        Ruta: <code className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded text-xs text-gray-900 dark:text-gray-100 mt-2">
                           {modulo.ruta}
                         </code>
+                        <br />
+                        Orden : {modulo.orden}
                       </TableCell>
 
                       {/* Tipo */}
                       <TableCell>
-                        <Badge variant={modulo.es_submenu ? 'secondary' : 'default'}>
+                        Tipo: <Badge variant={modulo.es_submenu ? 'secondary' : 'default'}>
                           {getTipoModulo(modulo)}
                         </Badge>
-                      </TableCell>
-
-                      {/* Categoría */}
-                      <TableCell>
-                        {modulo.categoria ? (
+                        <br />
+                        Categoria: {modulo.categoria ? (
                           <Badge variant="outline">{modulo.categoria}</Badge>
                         ) : (
                           <span className="text-gray-400 dark:text-gray-500 text-xs">Sin categoría</span>
@@ -324,11 +316,6 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
                             </>
                           )}
                         </Badge>
-                      </TableCell>
-
-                      {/* Orden */}
-                      <TableCell className="text-sm text-center font-medium">
-                        {modulo.orden}
                       </TableCell>
 
                       {/* Acciones */}

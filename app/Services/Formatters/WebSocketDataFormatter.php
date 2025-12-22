@@ -15,7 +15,7 @@ use App\Models\Vehiculo;
  *
  * Elimina duplicación de código en:
  * - ProformaWebSocketService
- * - EnvioWebSocketService
+ * - EntregaWebSocketService
  * - PagoWebSocketService
  * - StockWebSocketService
  *

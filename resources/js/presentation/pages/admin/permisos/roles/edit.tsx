@@ -5,10 +5,9 @@ import { Button } from '@/presentation/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
-import { Checkbox } from '@/presentation/components/ui/checkbox'
 import InputError from '@/presentation/components/input-error'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save, Copy, Database, History, Zap } from 'lucide-react'
+import { Save, Copy, Database, History } from 'lucide-react'
 import { type BreadcrumbItem } from '@/types'
 import AdvancedPermissionSelector from '@/presentation/components/roles/AdvancedPermissionSelector'
 import {
@@ -26,21 +25,23 @@ import {
     SelectValue,
 } from '@/presentation/components/ui/select'
 import axios from 'axios'
-
-interface Permission {
-    id: number
-    name: string
-}
-
-interface Role {
-    id: number
-    name: string
-    guard_name: string
-    permissions: Permission[]
-}
+import type { Role, Permission, PermisoAudit } from '@/domain/entities/admin-permisos'
+import { rolesService } from '@/infrastructure/services/roles.service'
 
 interface PermissionGroup {
     [key: string]: Permission[]
+}
+
+interface RoleTemplate {
+    id: number
+    nombre: string
+    descripcion?: string
+}
+
+interface RoleListItem {
+    id: number
+    name: string
+    permissions_count: number
 }
 
 interface PageProps {
@@ -60,11 +61,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ]
 
-export default function Edit({ role, permissions }: PageProps) {
+export default function Edit({ role }: PageProps) {
     const { data, setData, put, processing, errors } = useForm({
         name: role.name,
         guard_name: role.guard_name,
-        permissions: role.permissions.map(p => p.id),
+        permissions: role.permissions?.map(p => Number(p.id)) || [],
     })
 
     const [showCopyDialog, setShowCopyDialog] = useState(false)
@@ -72,18 +73,19 @@ export default function Edit({ role, permissions }: PageProps) {
     const [showAuditDialog, setShowAuditDialog] = useState(false)
     const [sourceRoleId, setSourceRoleId] = useState<string>('')
     const [templateId, setTemplateId] = useState<string>('')
-    const [roles, setRoles] = useState<any[]>([])
-    const [templates, setTemplates] = useState<any[]>([])
-    const [audits, setAudits] = useState<any[]>([])
+    const [roles, setRoles] = useState<RoleListItem[]>([])
+    const [templates, setTemplates] = useState<RoleTemplate[]>([])
+    const [audits, setAudits] = useState<PermisoAudit[]>([])
     const [loading, setLoading] = useState(false)
 
     // Cargar roles para copiar
     const handleOpenCopyDialog = async () => {
         if (roles.length === 0) {
             try {
-                const response = await axios.get('/roles')
-                setRoles(response.data.props.roles.data.filter((r: any) => r.id !== role.id))
+                const response = await axios.get(rolesService.indexUrl())
+                setRoles(response.data.props.roles.data.filter((r: RoleListItem) => r.id !== role.id))
             } catch (error) {
+                console.log(error)
                 toast.error('Error cargando roles')
             }
         }
@@ -94,9 +96,10 @@ export default function Edit({ role, permissions }: PageProps) {
     const handleOpenTemplateDialog = async () => {
         if (templates.length === 0) {
             try {
-                const response = await axios.get('/roles-data/templates')
+                const response = await axios.get(rolesService.templatesUrl())
                 setTemplates(response.data)
             } catch (error) {
+                console.log(error)
                 toast.error('Error cargando plantillas')
             }
         }
@@ -107,10 +110,11 @@ export default function Edit({ role, permissions }: PageProps) {
     const handleOpenAuditDialog = async () => {
         try {
             setLoading(true)
-            const response = await axios.get(`/roles/${role.id}/audit`)
+            const response = await axios.get(rolesService.auditUrl(role.id))
             setAudits(response.data.data)
             setShowAuditDialog(true)
         } catch (error) {
+            console.log(error)
             toast.error('Error cargando auditoría')
         } finally {
             setLoading(false)
@@ -126,13 +130,14 @@ export default function Edit({ role, permissions }: PageProps) {
 
         try {
             setLoading(true)
-            await axios.post(`/roles/${role.id}/copy-from`, {
+            await axios.post(rolesService.copyFromUrl(role.id), {
                 source_role_id: parseInt(sourceRoleId),
             })
             toast.success('Permisos copiados exitosamente')
             setShowCopyDialog(false)
             router.reload()
         } catch (error) {
+            console.log(error)
             toast.error('Error al copiar permisos')
         } finally {
             setLoading(false)
@@ -148,13 +153,14 @@ export default function Edit({ role, permissions }: PageProps) {
 
         try {
             setLoading(true)
-            await axios.post(`/roles/${role.id}/apply-template`, {
+            await axios.post(rolesService.applyTemplateUrl(role.id), {
                 template_id: parseInt(templateId),
             })
             toast.success('Plantilla aplicada exitosamente')
             setShowTemplateDialog(false)
             router.reload()
         } catch (error) {
+            console.log(error)
             toast.error('Error al aplicar plantilla')
         } finally {
             setLoading(false)
@@ -164,7 +170,7 @@ export default function Edit({ role, permissions }: PageProps) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
-        put(`/roles/${role.id}`, {
+        put(rolesService.updateUrl(role.id), {
             onSuccess: () => {
                 toast.success('Rol actualizado exitosamente.')
             },
@@ -191,12 +197,12 @@ export default function Edit({ role, permissions }: PageProps) {
                             Configura la información y permisos del rol.
                         </p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/permisos">
+                    {/* <Button variant="outline" asChild>
+                        <Link href={rolesService.indexUrl()}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Volver
                         </Link>
-                    </Button>
+                    </Button> */}
                 </div>
 
                 {/* Información básica */}
@@ -292,7 +298,7 @@ export default function Edit({ role, permissions }: PageProps) {
                 {/* Botones de acción */}
                 <div className="flex justify-end gap-2">
                     <Button variant="outline" asChild>
-                        <Link href="/admin/permisos">Cancelar</Link>
+                        <Link href={rolesService.indexUrl()}>Cancelar</Link>
                     </Button>
                     <Button onClick={handleSubmit} disabled={processing}>
                         <Save className="mr-2 h-4 w-4" />
@@ -349,7 +355,7 @@ export default function Edit({ role, permissions }: PageProps) {
                                     <SelectValue placeholder="Selecciona una plantilla..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {templates.map((t: any) => (
+                                    {templates.map((t) => (
                                         <SelectItem key={t.id} value={t.id.toString()}>
                                             {t.nombre}
                                         </SelectItem>
@@ -381,16 +387,16 @@ export default function Edit({ role, permissions }: PageProps) {
                             {audits.length === 0 ? (
                                 <p className="text-sm text-gray-500">No hay cambios registrados.</p>
                             ) : (
-                                audits.map((audit: any) => (
+                                audits.map((audit) => (
                                     <div key={audit.id} className="border-l-4 border-blue-500 p-4 bg-gray-50 dark:bg-gray-900">
                                         <div className="flex items-start justify-between">
                                             <div>
                                                 <p className="font-semibold text-sm">{audit.descripcion}</p>
                                                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    Por: {audit.usuario?.name} ({audit.usuario?.email})
+                                                    Por: {audit.admin?.name} ({audit.admin?.email})
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-500">
-                                                    Usuarios afectados: {audit.usuarios_afectados}
+                                                    Permisos cambiados: {audit.permisos_changed}
                                                 </p>
                                             </div>
                                             <span className="text-xs text-gray-500 whitespace-nowrap">

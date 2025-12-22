@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { LayoutList, Grid3x3, List } from 'lucide-react';
 // Domain imports
-import { ModuloSidebar, FiltrosModulo, VistaActual } from '@/domain/modulos/types';
-import { useFiltrarModulos, useExtraerDatos, useModulosPadre } from '@/domain/modulos/hooks';
-import { modulosService } from '@/domain/modulos/services';
+import type { ModuloSidebar, FiltrosModulo, VistaActual } from '@/domain/entities/admin-permisos';
+import { useFiltrarModulos, useExtraerDatos, useModulosPadre } from '@/infrastructure/hooks/modulos.hooks';
+import { modulosService } from '@/infrastructure/services/modulos.service';
 // Component imports
 import { MatrizAccesoRol } from '@/presentation/components/matriz-acceso-rol';
 import { ModulosFiltros } from '@/presentation/components/modulos-filtros';
@@ -87,7 +87,7 @@ export default function Index({ modulos }: Props) {
 
     const toggleActivo = async (modulo: ModuloSidebar) => {
         try {
-            await modulosService.alternarEstadoModulo(modulo);
+            await modulosService.toggleActivo(modulo.id);
         } catch (error) {
             console.error('Error:', error);
             alert(error instanceof Error ? error.message : 'Error al cambiar el estado del módulo');
@@ -97,7 +97,7 @@ export default function Index({ modulos }: Props) {
     const handleGuardarOrden = async (orden: Array<{ id: number; orden: number }>) => {
         setGuardandoOrden(true);
         try {
-            await modulosService.guardarOrdenModulos(orden);
+            await modulosService.guardarOrden(orden);
         } catch (error) {
             console.error('Error:', error);
             alert(error instanceof Error ? error.message : 'Error al guardar el orden de los módulos');

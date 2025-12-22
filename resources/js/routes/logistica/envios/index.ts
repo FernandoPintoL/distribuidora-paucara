@@ -4,7 +4,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
  * @see app/Http/Controllers/Web/LogisticaController.php:177
  * @route '/logistica/envios/{envio}/seguimiento'
  */
-export const seguimiento = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const seguimiento = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: seguimiento.url(args, options),
     method: 'get',
 })
@@ -19,14 +19,11 @@ seguimiento.definition = {
  * @see app/Http/Controllers/Web/LogisticaController.php:177
  * @route '/logistica/envios/{envio}/seguimiento'
  */
-seguimiento.url = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+seguimiento.url = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { envio: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { envio: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -37,9 +34,7 @@ seguimiento.url = (args: { envio: number | { id: number } } | [envio: number | {
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        envio: typeof args.envio === 'object'
-                ? args.envio.id
-                : args.envio,
+                        envio: args.envio,
                 }
 
     return seguimiento.definition.url
@@ -52,7 +47,7 @@ seguimiento.url = (args: { envio: number | { id: number } } | [envio: number | {
  * @see app/Http/Controllers/Web/LogisticaController.php:177
  * @route '/logistica/envios/{envio}/seguimiento'
  */
-seguimiento.get = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+seguimiento.get = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: seguimiento.url(args, options),
     method: 'get',
 })
@@ -61,7 +56,7 @@ seguimiento.get = (args: { envio: number | { id: number } } | [envio: number | {
  * @see app/Http/Controllers/Web/LogisticaController.php:177
  * @route '/logistica/envios/{envio}/seguimiento'
  */
-seguimiento.head = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+seguimiento.head = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: seguimiento.url(args, options),
     method: 'head',
 })
@@ -71,7 +66,7 @@ seguimiento.head = (args: { envio: number | { id: number } } | [envio: number | 
  * @see app/Http/Controllers/Web/LogisticaController.php:177
  * @route '/logistica/envios/{envio}/seguimiento'
  */
-    const seguimientoForm = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const seguimientoForm = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: seguimiento.url(args, options),
         method: 'get',
     })
@@ -81,7 +76,7 @@ seguimiento.head = (args: { envio: number | { id: number } } | [envio: number | 
  * @see app/Http/Controllers/Web/LogisticaController.php:177
  * @route '/logistica/envios/{envio}/seguimiento'
  */
-        seguimientoForm.get = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        seguimientoForm.get = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: seguimiento.url(args, options),
             method: 'get',
         })
@@ -90,7 +85,7 @@ seguimiento.head = (args: { envio: number | { id: number } } | [envio: number | 
  * @see app/Http/Controllers/Web/LogisticaController.php:177
  * @route '/logistica/envios/{envio}/seguimiento'
  */
-        seguimientoForm.head = (args: { envio: number | { id: number } } | [envio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        seguimientoForm.head = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: seguimiento.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',

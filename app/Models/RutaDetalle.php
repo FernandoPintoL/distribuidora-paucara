@@ -13,7 +13,7 @@ class RutaDetalle extends Model
     protected $fillable = [
         'ruta_id',
         'cliente_id',
-        'envio_id',
+        'entrega_id',
         'secuencia',
         'direccion_entrega',
         'latitud',
@@ -55,11 +55,11 @@ class RutaDetalle extends Model
     }
 
     /**
-     * Envío (si está vinculado)
+     * Entrega asociada a este detalle de ruta
      */
-    public function envio(): BelongsTo
+    public function entrega(): BelongsTo
     {
-        return $this->belongsTo(Envio::class);
+        return $this->belongsTo(Entrega::class);
     }
 
     /**

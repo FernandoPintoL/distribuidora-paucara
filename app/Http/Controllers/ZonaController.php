@@ -83,7 +83,7 @@ class ZonaController extends Controller
             'nombre' => $request->nombre,
             'codigo' => $request->codigo ?: strtoupper(substr($request->nombre, 0, 2)),
             'descripcion' => $request->descripcion,
-            'localidades' => $request->localidades,
+            // 'localidades' => REMOVED: Field deprecated, usar relación
             'latitud_centro' => $request->latitud_centro,
             'longitud_centro' => $request->longitud_centro,
             'tiempo_estimado_entrega' => $request->tiempo_estimado_entrega,
@@ -91,7 +91,7 @@ class ZonaController extends Controller
             'activa' => $request->activa ?? true,
         ]);
 
-        // Sincronizar con tabla pivot
+        // Sincronizar localidades con tabla pivot (relación many-to-many)
         if ($request->has('localidades') && is_array($request->localidades)) {
             $zona->localidades()->sync($request->localidades);
         }
@@ -161,7 +161,7 @@ class ZonaController extends Controller
             'nombre' => $request->nombre,
             'codigo' => $request->codigo ?: $zona->codigo,
             'descripcion' => $request->descripcion,
-            'localidades' => $request->localidades,
+            // 'localidades' => REMOVED: Field deprecated, usar relación
             'latitud_centro' => $request->latitud_centro,
             'longitud_centro' => $request->longitud_centro,
             'tiempo_estimado_entrega' => $request->tiempo_estimado_entrega,
@@ -169,7 +169,7 @@ class ZonaController extends Controller
             'activa' => $request->activa,
         ]);
 
-        // Sincronizar con tabla pivot
+        // Sincronizar localidades con tabla pivot (relación many-to-many)
         if ($request->has('localidades') && is_array($request->localidades)) {
             $zona->localidades()->sync($request->localidades);
         }

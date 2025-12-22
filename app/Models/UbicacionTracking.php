@@ -51,11 +51,11 @@ class UbicacionTracking extends Model
     }
 
     /**
-     * Chofer que registró esta ubicación
+     * Chofer que registró esta ubicación (empleado con rol Chofer)
      */
     public function chofer(): BelongsTo
     {
-        return $this->belongsTo(Chofer::class);
+        return $this->belongsTo(Empleado::class, 'chofer_id');
     }
 
     /**

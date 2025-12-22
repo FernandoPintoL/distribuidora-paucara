@@ -29,10 +29,25 @@ class Venta extends Model
         'proforma_id',
         'tipo_pago_id',
         'tipo_documento_id',
-        // Nuevos campos para logística
+        'almacen_id',
+        'direccion_cliente_id',
+        // Campos para logística
         'requiere_envio',
         'canal_origen',
         'estado_logistico',
+        // Campos de política de pago
+        'politica_pago',
+        'estado_pago',
+        'monto_pagado',
+        'monto_pendiente',
+        // Campos de SLA y compromisos de entrega
+        'fecha_entrega_comprometida',
+        'hora_entrega_comprometida',
+        'ventana_entrega_ini',
+        'ventana_entrega_fin',
+        'idempotency_key',
+        'fue_on_time',
+        'minutos_retraso',
     ];
 
     protected function casts(): array
@@ -44,6 +59,13 @@ class Venta extends Model
             'impuesto'       => 'decimal:2',
             'total'          => 'decimal:2',
             'requiere_envio' => 'boolean',
+            'monto_pagado'   => 'decimal:2',
+            'monto_pendiente' => 'decimal:2',
+            'fecha_entrega_comprometida' => 'date',
+            'hora_entrega_comprometida' => 'datetime:H:i:s',
+            'ventana_entrega_ini' => 'datetime:H:i:s',
+            'ventana_entrega_fin' => 'datetime:H:i:s',
+            'fue_on_time' => 'boolean',
         ];
     }
 
@@ -131,10 +153,24 @@ class Venta extends Model
         return $this->morphOne(AsientoContable::class, 'asientable');
     }
 
-    // Nuevas relaciones para logística
-    public function envio()
+    /**
+     * Entregas asociadas a esta venta (modelo consolidado)
+     *
+     * NOTA: La relación anterior $this->hasOne(Envio::class) fue deprecada en favor de entregas()
+     * El modelo Envio y su relación 1:1 con Venta fueron reemplazados por el sistema de Entregas
+     * que soporta múltiples entregas por venta y mejor optimización de rutas.
+     */
+    public function entregas()
     {
-        return $this->hasOne(Envio::class);
+        return $this->hasMany(Entrega::class);
+    }
+
+    /**
+     * Dirección de cliente asociada a esta venta
+     */
+    public function direccionCliente()
+    {
+        return $this->belongsTo(\App\Models\DireccionCliente::class, 'direccion_cliente_id');
     }
 
     // Constantes para el nuevo sistema

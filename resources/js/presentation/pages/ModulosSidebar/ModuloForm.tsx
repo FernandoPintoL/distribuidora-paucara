@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModuloSidebar, ModuloFormData } from '@/domain/modulos/types';
+import { type ModuloSidebar, type ModuloFormData } from '@/domain/entities/admin-permisos';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';

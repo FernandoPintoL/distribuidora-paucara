@@ -5,29 +5,11 @@ import { Badge } from '@/presentation/components/ui/badge'
 import { Button } from '@/presentation/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Label } from '@/presentation/components/ui/label'
-import { ArrowLeft, Edit, Users, Shield } from 'lucide-react'
+import { Edit, Users, Shield } from 'lucide-react'
 import Can from '@/presentation/components/auth/Can'
 import { type BreadcrumbItem } from '@/types'
-
-interface Permission {
-    id: number
-    name: string
-}
-
-interface User {
-    id: number
-    name: string
-    email: string
-}
-
-interface Role {
-    id: number
-    name: string
-    guard_name: string
-    created_at: string
-    permissions: Permission[]
-    users: User[]
-}
+import type { Role } from '@/domain/entities/admin-permisos'
+import { rolesService } from '@/infrastructure/services/roles.service'
 
 interface PageProps {
     role: Role
@@ -61,18 +43,18 @@ export default function Show({ role }: PageProps) {
                     <div className="flex space-x-2">
                         <Can permission="roles.edit">
                             <Button variant="outline" asChild>
-                                <Link href={`/admin/permisos/roles/${role.id}/edit`}>
+                                <Link href={rolesService.editUrl(role.id)}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     Editar
                                 </Link>
                             </Button>
                         </Can>
-                        <Button variant="outline" asChild>
-                            <Link href="/admin/permisos">
+                        {/* <Button variant="outline" asChild>
+                            <Link href={rolesService.indexUrl()}>
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 Volver
                             </Link>
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
 
@@ -106,11 +88,11 @@ export default function Show({ role }: PageProps) {
                             </div>
                             <div>
                                 <Label className="text-sm font-medium text-muted-foreground">Usuarios Asignados</Label>
-                                <p className="text-2xl font-bold text-primary">{role.users.length}</p>
+                                <p className="text-2xl font-bold text-primary">{role.users?.length ?? 0}</p>
                             </div>
                             <div>
                                 <Label className="text-sm font-medium text-muted-foreground">Permisos Asignados</Label>
-                                <p className="text-2xl font-bold text-primary">{role.permissions.length}</p>
+                                <p className="text-2xl font-bold text-primary">{role.permissions?.length ?? 0}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -124,9 +106,9 @@ export default function Show({ role }: PageProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {role.permissions.length > 0 ? (
+                            {(role.permissions?.length ?? 0) > 0 ? (
                                 <div className="flex flex-wrap gap-2">
-                                    {role.permissions.map((permission) => (
+                                    {role.permissions?.map((permission) => (
                                         <Badge key={permission.id} variant="secondary">
                                             {permission.name}
                                         </Badge>
@@ -150,9 +132,9 @@ export default function Show({ role }: PageProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {role.users.length > 0 ? (
+                            {(role.users?.length ?? 0) > 0 ? (
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {role.users.map((user) => (
+                                    {role.users?.map((user) => (
                                         <div key={user.id} className="flex items-center space-x-3 p-3 border rounded-lg">
                                             <div className="flex-1">
                                                 <p className="font-medium">{user.name}</p>

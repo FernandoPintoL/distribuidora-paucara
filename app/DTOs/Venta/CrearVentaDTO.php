@@ -24,6 +24,19 @@ class CrearVentaDTO extends BaseDTO
         public ?string $observaciones = null,
         public ?int $usuario_id = null,
         public ?int $proforma_id = null,
+        // Campos de logística y entrega
+        public ?bool $requiere_envio = null,
+        public ?string $canal_origen = 'WEB',
+        public ?string $estado_logistico = null,
+        // Campos de política de pago
+        public ?string $politica_pago = 'CONTRA_ENTREGA',
+        public ?string $estado_pago = 'PENDIENTE',
+        // Campos de SLA y compromisos de entrega
+        public ?string $fecha_entrega_comprometida = null,
+        public ?string $hora_entrega_comprometida = null,
+        public ?string $ventana_entrega_ini = null,
+        public ?string $ventana_entrega_fin = null,
+        public ?string $idempotency_key = null,
     ) {}
 
     /**

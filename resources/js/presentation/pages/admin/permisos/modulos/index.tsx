@@ -10,8 +10,8 @@ import { Label } from '@/presentation/components/ui/label';
 import { Eye, EyeOff, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { BreadcrumbItem } from '@/types';
-import { ModuloSidebar } from '@/domain/modulos/types';
-import { modulosService } from '@/domain/modulos/services';
+import type { ModuloSidebar } from '@/domain/entities/admin-permisos';
+import { modulosService } from '@/infrastructure/services/modulos.service';
 
 interface Props {
   modulos: ModuloSidebar[];
@@ -43,7 +43,7 @@ export default function Index({ modulos }: Props) {
   const handleToggleActivo = async (modulo: ModuloSidebar) => {
     setLoading(true);
     try {
-      await modulosService.alternarEstadoModulo(modulo);
+      await modulosService.toggleActivo(modulo.id);
       // Actualizar la lista local
       setModulosList(
         modulosList.map((m) =>
@@ -61,14 +61,14 @@ export default function Index({ modulos }: Props) {
 
   // Navegar a edición (Fase 2)
   const handleEdit = (modulo: ModuloSidebar) => {
-    toast.info('Edición disponible en Fase 2');
-    // router.visit(`/admin/permisos/modulos/${modulo.id}/edit`);
+    toast(`Edición disponible en Fase 2`, { icon: 'ℹ️' });
+    // router.visit(modulosService.editUrl(modulo.id));
   };
 
   const handleDelete = (modulo: ModuloSidebar) => {
-    toast.info('Eliminación disponible en Fase 2');
+    toast(`Eliminación disponible en Fase 2`, { icon: 'ℹ️' });
     // if (confirm(`¿Está seguro de eliminar el módulo "${modulo.titulo}"?`)) {
-    //   router.delete(`/modulos-sidebar/${modulo.id}`);
+    //   modulosService.destroy(modulo.id);
     // }
   };
 

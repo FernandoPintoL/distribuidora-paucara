@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoriaController;
-use App\Http\Controllers\EnvioController;
+use App\Http\Controllers\EmpresaController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -17,6 +17,12 @@ Route::get('/', function () {
 Route::post('/test-csrf', function () {
     return response()->json(['message' => 'CSRF token is valid', 'success' => true]);
 })->name('test.csrf');
+
+// Ruta de prueba para verificar logos
+Route::get('/test-logo', function () {
+    $empresa = \App\Models\Empresa::find(1);
+    return view('test-logo', ['empresa' => $empresa]);
+})->name('test.logo');
 
 // ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma web
 Route::middleware(['auth', 'verified', 'platform'])->group(function () {
@@ -42,6 +48,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
     // Incluir rutas de configuración global
     require __DIR__ . '/configuracion.php';
+
+    // Rutas de empresas
+    Route::resource('empresas', EmpresaController::class)->middleware('permission:empresas.manage');
 
     Route::resource('proveedores', \App\Http\Controllers\ProveedorController::class)->middleware('permission:proveedores.manage');
 
@@ -89,13 +98,16 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('modulos-sidebar/{moduloSidebar}/edit', [\App\Http\Controllers\ModuloSidebarController::class, 'edit'])->middleware('permission:admin.config')->name('modulos-sidebar.edit');
     Route::match(['PUT', 'PATCH'], 'modulos-sidebar/{moduloSidebar}', [\App\Http\Controllers\ModuloSidebarController::class, 'update'])->middleware('permission:admin.config')->name('modulos-sidebar.update');
     Route::delete('modulos-sidebar/{moduloSidebar}', [\App\Http\Controllers\ModuloSidebarController::class, 'destroy'])->middleware('permission:admin.config')->name('modulos-sidebar.destroy');
-    Route::get('api/modulos-sidebar', [\App\Http\Controllers\ModuloSidebarController::class, 'obtenerParaSidebar'])->name('api.modulos-sidebar');
-    Route::get('api/modulos-sidebar/permisos/disponibles', [\App\Http\Controllers\ModuloSidebarController::class, 'getPermisosDisponibles'])->middleware('auth')->name('api.modulos-sidebar.permisos');
-    Route::get('api/modulos-sidebar/matriz-acceso', [\App\Http\Controllers\ModuloSidebarController::class, 'getMatrizAcceso'])->middleware('auth')->name('api.modulos-sidebar.matriz-acceso');
-    Route::get('api/modulos-sidebar/roles', [\App\Http\Controllers\ModuloSidebarController::class, 'obtenerRoles'])->middleware('auth')->name('api.modulos-sidebar.roles');
-    Route::get('api/modulos-sidebar/preview/{rolName}', [\App\Http\Controllers\ModuloSidebarController::class, 'previewPorRol'])->middleware('auth')->name('api.modulos-sidebar.preview');
-    Route::get('api/modulos-sidebar/historial', [\App\Http\Controllers\ModuloSidebarController::class, 'obtenerHistorial'])->middleware('auth')->name('api.modulos-sidebar.historial');
-    Route::post('api/modulos-sidebar/matriz-acceso/bulk-update', [\App\Http\Controllers\ModuloSidebarController::class, 'bulkUpdateMatrizAcceso'])->middleware('permission:admin.config')->name('api.modulos-sidebar.matriz-acceso.bulk-update');
+
+    // ✅ MOVIDAS A api.php - Las rutas API deben estar en api.php para mejor organización
+    // Route::get('api/modulos-sidebar', ...) → Ahora en api.php
+    // Route::get('api/modulos-sidebar/permisos/disponibles', ...) → Ahora en api.php
+    // Route::get('api/modulos-sidebar/matriz-acceso', ...) → Ahora en api.php
+    // Route::get('api/modulos-sidebar/roles', ...) → Ahora en api.php
+    // Route::get('api/modulos-sidebar/preview/{rolName}', ...) → Ahora en api.php
+    // Route::get('api/modulos-sidebar/historial', ...) → Ahora en api.php
+    // Route::post('api/modulos-sidebar/matriz-acceso/bulk-update', ...) → Ahora en api.php
+
     Route::post('modulos-sidebar/actualizar-orden', [\App\Http\Controllers\ModuloSidebarController::class, 'actualizarOrden'])->middleware('permission:admin.config')->name('modulos-sidebar.actualizar-orden');
     Route::patch('modulos-sidebar/{moduloSidebar}/toggle-activo', [\App\Http\Controllers\ModuloSidebarController::class, 'toggleActivo'])->middleware('permission:admin.config')->name('modulos-sidebar.toggle-activo');
     Route::post('modulos-sidebar/bulk-update', [\App\Http\Controllers\ModuloSidebarController::class, 'bulkUpdate'])->middleware('permission:admin.config')->name('modulos-sidebar.bulk-update');
@@ -196,6 +208,15 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Rutas para gestión de ventas
     Route::resource('ventas', \App\Http\Controllers\VentaController::class);
 
+    // ==========================================
+    // RUTAS DE IMPRESIÓN - VENTAS
+    // ==========================================
+    Route::prefix('ventas')->name('ventas.')->group(function () {
+        Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir');
+        Route::get('{venta}/preview', [\App\Http\Controllers\VentaController::class, 'preview'])->name('preview');
+        Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
+    });
+
     // Rutas para gestión de stock en ventas
     Route::prefix('ventas/stock')->name('ventas.stock.')->group(function () {
         Route::post('verificar', [\App\Http\Controllers\VentaController::class, 'verificarStock'])->name('verificar');
@@ -222,6 +243,13 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('/{id}/aprobar', [\App\Http\Controllers\ProformaController::class, 'aprobar'])->name('aprobar');
         Route::post('/{id}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
         Route::post('/{id}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])->name('convertir-venta');
+
+        // ==========================================
+        // RUTAS DE IMPRESIÓN - PROFORMAS
+        // ==========================================
+        Route::get('formatos-disponibles', [\App\Http\Controllers\ProformaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
+        Route::get('{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
+        Route::get('{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
     });
 
     // Rutas para gestión de cajas
@@ -310,10 +338,36 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Rutas para logística y envíos
     Route::prefix('logistica')->name('logistica.')->group(function () {
         Route::get('dashboard', [App\Http\Controllers\Web\LogisticaController::class, 'dashboard'])->name('dashboard');
-        Route::get('entregas-asignadas', fn() => Inertia::render('logistica/entregas-asignadas'))->name('entregas-asignadas');
-        Route::get('entregas-en-transito', fn() => Inertia::render('logistica/entregas-en-transito'))->name('entregas-en-transito');
+        Route::get('entregas-asignadas', fn() => Inertia::render('logistica/entregas/asignadas'))->name('entregas-asignadas');
+        Route::get('entregas-en-transito', fn() => Inertia::render('logistica/entregas/en-transito'))->name('entregas-en-transito');
         Route::get('proformas-pendientes', fn() => Inertia::render('logistica/proformas-pendientes'))->name('proformas-pendientes');
         Route::get('envios/{envio}/seguimiento', [App\Http\Controllers\Web\LogisticaController::class, 'seguimiento'])->name('envios.seguimiento');
+
+        // ✅ NUEVO: Entregas consolidadas (migrado desde /envios)
+        Route::prefix('entregas')->name('entregas.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\EntregaController::class, 'index'])->name('index');
+
+            // ✅ NUEVO: Dashboard visual de entregas
+            Route::get('dashboard', fn() => Inertia::render('logistica/entregas/dashboard'))->name('dashboard');
+
+            Route::get('create', [\App\Http\Controllers\EntregaController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\EntregaController::class, 'store'])->name('store');
+
+            // Optimización masiva de rutas (FFD + Nearest Neighbor)
+            Route::post('optimizar', [\App\Http\Controllers\EntregaController::class, 'optimizarRutas'])->name('optimizar');
+
+            // ✅ NUEVO: Dashboard stats para estadísticas
+            Route::get('dashboard-stats', [\App\Http\Controllers\EntregaController::class, 'dashboardStats'])->name('dashboard-stats');
+
+            Route::get('{entrega}', [\App\Http\Controllers\EntregaController::class, 'show'])->name('show');
+            Route::post('{entrega}/asignar', [\App\Http\Controllers\EntregaController::class, 'asignarChoferVehiculo'])->name('asignar');
+            Route::post('{entrega}/iniciar', [\App\Http\Controllers\EntregaController::class, 'iniciar'])->name('iniciar');
+            Route::post('{entrega}/llego', [\App\Http\Controllers\EntregaController::class, 'registrarLlegada'])->name('llego');
+            Route::post('{entrega}/confirmar', [\App\Http\Controllers\EntregaController::class, 'confirmar'])->name('confirmar');
+            Route::post('{entrega}/novedad', [\App\Http\Controllers\EntregaController::class, 'reportarNovedad'])->name('novedad');
+            Route::post('{entrega}/rechazar', [\App\Http\Controllers\EntregaController::class, 'rechazar'])->name('rechazar'); // Legacy
+            Route::post('{entrega}/ubicacion', [\App\Http\Controllers\EntregaController::class, 'registrarUbicacion'])->name('ubicacion');
+        });
     });
 
     // ✅ NUEVO: Dashboard para Vendedor/Cajero
@@ -349,32 +403,13 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('detalles/{detalle}/registrar-entrega', [\App\Http\Controllers\RutaController::class, 'registrarEntrega'])->name('registrar-entrega');
     });
 
-    // Rutas de envíos - todas en un grupo para evitar conflictos
-    Route::prefix('envios')->name('envios.')->group(function () {
-        // API para obtener datos - DEBEN IR ANTES de las rutas con parámetros
-        Route::get('api/vehiculos-disponibles', [EnvioController::class, 'obtenerVehiculosDisponibles'])->name('vehiculos-disponibles');
-        Route::get('api/choferes-disponibles', [EnvioController::class, 'obtenerChoferesDisponibles'])->name('choferes-disponibles');
-
-        // ✅ NUEVO: Rutas de exportación
-        Route::get('export/pdf', [EnvioController::class, 'exportPdf'])->name('export-pdf');
-        Route::get('export/excel', [EnvioController::class, 'exportExcel'])->name('export-excel');
-        Route::get('export/rechazadas', [EnvioController::class, 'exportEntregasRechazadas'])->name('export-rechazadas');
-
-        // Rutas básicas de resource
-        Route::get('/', [EnvioController::class, 'index'])->name('index');
-        Route::get('create', [EnvioController::class, 'create'])->name('create');
-        Route::post('/', [EnvioController::class, 'store'])->name('store');
-
-        // Rutas para acciones específicas de envíos
-        Route::post('ventas/{venta}/programar', [EnvioController::class, 'programar'])->name('programar');
-        Route::post('{envio}/iniciar-preparacion', [EnvioController::class, 'iniciarPreparacion'])->name('iniciar-preparacion');
-        Route::post('{envio}/confirmar-salida', [EnvioController::class, 'confirmarSalida'])->name('confirmar-salida');
-        Route::post('{envio}/confirmar-entrega', [EnvioController::class, 'confirmarEntrega'])->name('confirmar-entrega');
-        Route::post('{envio}/cancelar', [EnvioController::class, 'cancelar'])->name('cancelar');
-
-        // Esta ruta DEBE ser la última porque captura cualquier cosa
-        Route::get('{envio}', [EnvioController::class, 'show'])->name('show');
-    });
+    // ✅ DEPRECATED: Rutas de envíos eliminadas - usar /logistica/entregas en su lugar
+    // Todos los /envios/* routes redirigen a /logistica/entregas con 301 Permanent Redirect
+    Route::redirect('/envios', '/logistica/entregas', 301);
+    Route::redirect('/envios/create', '/logistica/entregas/create', 301);
+    Route::redirect('/envios/api/vehiculos-disponibles', '/logistica/entregas/api/vehiculos-disponibles', 301);
+    Route::redirect('/envios/api/choferes-disponibles', '/logistica/entregas/api/choferes-disponibles', 301);
+    Route::get('/envios/{id}', fn($id) => redirect("/logistica/entregas/{$id}", 301))->where('id', '[0-9]+');
 
     // API routes para autocompletado (NOTA: Estas rutas deberían moverse a routes/api.php eventualmente)
     Route::get('api/proveedores/buscar', [\App\Http\Controllers\ProveedorController::class, 'buscarApi'])->name('api.proveedores.buscar');

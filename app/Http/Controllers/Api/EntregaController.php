@@ -8,7 +8,6 @@ use App\Events\EntregaConfirmada;
 use App\Events\NovedadEntregaReportada;
 use App\Http\Controllers\Controller;
 use App\Models\Entrega;
-use App\Models\Envio;
 use App\Models\Proforma;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,20 +30,20 @@ class EntregaController extends Controller
         try {
             $user = Auth::user();
 
-            // Verificar que sea chofer
-            if (!$user->chofer) {
+            // Verificar que sea chofer (mediante Empleado)
+            if (!$user->empleado) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no tiene perfil de chofer',
                 ], 404);
             }
 
-            $chofer = $user->chofer;
+            $chofer = $user->empleado;
             $perPage = $request->per_page ?? 15;
             $page = $request->page ?? 1;
             $estado = $request->estado;
 
-            // Obtener entregas (desde proformas)
+            // Obtener entregas asignadas al chofer
             $entregas = $chofer->entregas()
                 ->with(['proforma', 'vehiculo', 'direccionCliente'])
                 ->when($estado, function ($q) use ($estado) {
@@ -66,30 +65,8 @@ class EntregaController extends Controller
                     ];
                 });
 
-            // Obtener envios (desde ventas)
-            $envios = $user->envios()
-                ->with(['venta', 'vehiculo'])
-                ->when($estado, function ($q) use ($estado) {
-                    return $q->where('estado', $estado);
-                })
-                ->get()
-                ->map(function ($envio) {
-                    return [
-                        'id' => $envio->id,
-                        'type' => 'envio',  // Tipo para identificar en app
-                        'numero' => $envio->numero_envio,
-                        'cliente' => $envio->venta?->cliente?->nombre ?? 'N/A',
-                        'estado' => $envio->estado,
-                        'fecha_asignacion' => $envio->created_at,
-                        'fecha_entrega' => $envio->fecha_entrega,
-                        'direccion' => $envio->venta?->direccionEntrega?->direccion ?? 'N/A',
-                        'observaciones' => $envio->observaciones ?? null,
-                        'data' => $envio,
-                    ];
-                });
-
-            // Combinar entregas + envios
-            $trabajos = $entregas->concat($envios)
+            // Combinar entregas (sin legacy envios, ya que fueron eliminados)
+            $trabajos = $entregas
                 ->sortByDesc('fecha_asignacion')
                 ->values();
 
@@ -136,7 +113,7 @@ class EntregaController extends Controller
     public function entregasAsignadas(Request $request)
     {
         try {
-            $chofer = Auth::user()->chofer;
+            $chofer = Auth::user()->empleado;
 
             if (!$chofer) {
                 return response()->json([
@@ -185,7 +162,7 @@ class EntregaController extends Controller
             ])->findOrFail($id);
 
             // Verificar autorización
-            $chofer = Auth::user()->chofer;
+            $chofer = Auth::user()->empleado;
             if ($chofer && $entrega->chofer_id !== $chofer->id && !Auth::user()->hasRole(['admin', 'encargado'])) {
                 return response()->json([
                     'success' => false,
@@ -509,8 +486,16 @@ class EntregaController extends Controller
 
             $entrega = Entrega::findOrFail($id);
 
+            // Verificar que el usuario tiene perfil de empleado/chofer
+            if (!Auth::user()->empleado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no tiene perfil de chofer',
+                ], 404);
+            }
+
             $ubicacion = $entrega->ubicaciones()->create([
-                'chofer_id' => Auth::user()->chofer->id,
+                'chofer_id' => Auth::user()->empleado->id,
                 'latitud' => $validated['latitud'],
                 'longitud' => $validated['longitud'],
                 'velocidad' => $validated['velocidad'] ?? null,
@@ -545,7 +530,7 @@ class EntregaController extends Controller
     public function historialEntregas(Request $request)
     {
         try {
-            $chofer = Auth::user()->chofer;
+            $chofer = Auth::user()->empleado;
 
             if (!$chofer) {
                 return response()->json([
@@ -684,7 +669,7 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'chofer_id' => 'required|exists:choferes_legacy,id',
+                'chofer_id' => 'required|exists:empleados,id',
                 'vehiculo_id' => 'required|exists:vehiculos,id',
             ]);
 

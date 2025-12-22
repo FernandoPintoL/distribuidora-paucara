@@ -20,7 +20,7 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
     if (entity) {
       // Filtrar campos de archivo que son strings (rutas) para no enviarlos en actualizaciones
       const entityData = { ...entity };
-      const fileFields = ['foto_perfil', 'ci_anverso', 'ci_reverso', 'imagen', 'foto', 'archivo'];
+      const fileFields = ['foto_perfil', 'ci_anverso', 'ci_reverso', 'imagen', 'foto', 'archivo', 'logo', 'perfil', 'galeria'];
 
       Object.keys(entityData).forEach((key) => {
         const value = entityData[key as keyof typeof entityData];
@@ -102,26 +102,75 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
 
       // Crear promesa para actualización
       const updatePromise = new Promise<void>((resolve, reject) => {
-        router.put(service.updateUrl(entity.id), cleanData, {
-          // Usar FormData solo si hay archivos nuevos
-          forceFormData: hasNewFiles,
-          preserveState: true,
-          preserveScroll: true,
-          onSuccess: () => {
-            console.log('✅ Actualización exitosa');
-            resolve();
-          },
-          onError: (serverErrors) => {
-            console.error('❌ Error en actualización:', serverErrors);
-            // Mostrar errores específicos del servidor
-            if (serverErrors && typeof serverErrors === 'object') {
-              Object.values(serverErrors as unknown as Record<string, string[]>).flat().forEach((error) => {
-                NotificationService.error(String(error));
-              });
+        if (hasNewFiles) {
+          // Si hay archivos, construir FormData manualmente para asegurar que todos los campos se incluyan
+          const formData = new FormData();
+
+          Object.entries(cleanData).forEach(([key, value]) => {
+            if (value instanceof File) {
+              // Agregar archivo
+              formData.append(key, value);
+            } else if (value === null || value === undefined) {
+              // No agregar nulls
+            } else if (typeof value === 'object') {
+              // Convertir objetos a JSON
+              formData.append(key, JSON.stringify(value));
+            } else {
+              // Agregar valores simples
+              formData.append(key, String(value));
             }
-            reject(new Error('Error al actualizar'));
-          },
-        });
+          });
+
+          // Agregar _method=PUT para que Laravel lo procese como PUT
+          formData.append('_method', 'PUT');
+
+          console.log('📤 FormData enviado (manual):');
+          Array.from(formData.entries()).forEach(([key, value]) => {
+            if (value instanceof File) {
+              console.log(`  ${key}: File(${value.name}, ${value.size} bytes)`);
+            } else {
+              console.log(`  ${key}: ${String(value).substring(0, 100)}`);
+            }
+          });
+
+          router.post(service.updateUrl(entity.id), formData as any, {
+            forceFormData: true,
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+              console.log('✅ Actualización exitosa');
+              resolve();
+            },
+            onError: (serverErrors) => {
+              console.error('❌ Error en actualización:', serverErrors);
+              if (serverErrors && typeof serverErrors === 'object') {
+                Object.values(serverErrors as unknown as Record<string, string[]>).flat().forEach((error) => {
+                  NotificationService.error(String(error));
+                });
+              }
+              reject(new Error('Error al actualizar'));
+            },
+          });
+        } else {
+          // Sin archivos, usar PUT normal
+          router.put(service.updateUrl(entity.id), cleanData, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+              console.log('✅ Actualización exitosa');
+              resolve();
+            },
+            onError: (serverErrors) => {
+              console.error('❌ Error en actualización:', serverErrors);
+              if (serverErrors && typeof serverErrors === 'object') {
+                Object.values(serverErrors as unknown as Record<string, string[]>).flat().forEach((error) => {
+                  NotificationService.error(String(error));
+                });
+              }
+              reject(new Error('Error al actualizar'));
+            },
+          });
+        }
       });
 
       NotificationService.promise(updatePromise, {

@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/components/ui/table';
-import { Eye, Truck, User, Plus } from 'lucide-react';
+import { Eye, Truck, User, Plus, Printer } from 'lucide-react';
 import type { Envio } from '@/domain/entities/envios';
 import type { Pagination } from '@/domain/entities/shared';
 import { getEstadoBadgeVariant, getEstadoLabel, formatearFecha } from '@/lib/envios.utils';
 import { useEnvios } from '@/application/hooks/use-envios';
+import { FormatoSelector } from '@/presentation/components/impresion';
 
 interface Props extends PageProps {
     envios: Pagination<Envio>;
@@ -118,6 +119,11 @@ export default function EnviosIndex({ envios }: Props) {
                                                             <Eye className="h-4 w-4 mr-1" />
                                                             Ver
                                                         </Button>
+                                                        <FormatoSelector
+                                                            documentoId={envio.id}
+                                                            tipoDocumento="envio"
+                                                            className="h-8"
+                                                        />
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

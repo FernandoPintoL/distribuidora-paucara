@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
-import { ModuloSidebar } from '@/domain/modulos/types';
+import type { ModuloSidebar } from '@/domain/entities/admin-permisos';
 import { BarChart3, Database, Eye, Lock, Layers, Users } from 'lucide-react';
 
 interface ModulosAnalyticsProps {

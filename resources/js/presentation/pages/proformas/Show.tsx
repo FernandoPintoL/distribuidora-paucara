@@ -36,6 +36,7 @@ import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
 import { FileText, Package, Calendar, Clock, MapPin, AlertCircle, Check, X, ChevronUp, ChevronDown, ShoppingCart } from 'lucide-react'
 import MapView from '@/presentation/components/maps/MapView'
+import { FormatoSelector } from '@/presentation/components/impresion'
 
 // DOMAIN LAYER: Importar tipos desde domain
 import type { Proforma } from '@/domain/entities/proformas'
@@ -246,10 +247,10 @@ export default function ProformasShow({ item: proforma }: Props) {
                             </Button>
                         )}
 
-                        <Button variant="outline">
-                            <FileText className="mr-2 h-4 w-4" />
-                            Imprimir
-                        </Button>
+                        <FormatoSelector
+                            documentoId={proforma.id}
+                            tipoDocumento="proforma"
+                        />
                     </div>
                 </div>
 

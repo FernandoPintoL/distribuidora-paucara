@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use App\Exports\EnviosExport;
 use App\Exports\EntregasRechazadasExport;
-use App\Models\Envio;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Facades\Excel;
 use PDF;
@@ -22,28 +20,27 @@ use PDF;
 class ReportService
 {
     /**
-     * Exportar envíos a PDF
+     * DEPRECADO: Sistema de Envíos ha sido eliminado
+     * Usar entregas en su lugar (a través de EntregasRechazadasExport u otro método de Entregas)
+     *
+     * Exportar envíos a PDF (DEPRECATED)
+     * @deprecated El sistema de Envíos ha sido consolidado en Entregas
      */
-    public function exportarEnviosPdf(Collection $envios, array $filtros = []): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function exportarEnviosPdf(Collection $envios, array $filtros = [])
     {
-        $pdf = PDF::loadView('exports.envios-pdf', [
-            'envios' => $envios,
-            'fecha_generacion' => now(),
-            'filtros' => $filtros,
-        ]);
-
-        return $pdf->download('envios_' . now()->format('Y-m-d_His') . '.pdf');
+        throw new \Exception('Este método ha sido deprecado. El sistema de Envíos ha sido consolidado en Entregas. Por favor, use los métodos de reportes de Entregas en su lugar.');
     }
 
     /**
-     * Exportar envíos a Excel
+     * DEPRECADO: Sistema de Envíos ha sido eliminado
+     * Usar entregas en su lugar (a través de EntregasRechazadasExport u otro método de Entregas)
+     *
+     * Exportar envíos a Excel (DEPRECATED)
+     * @deprecated El sistema de Envíos ha sido consolidado en Entregas
      */
-    public function exportarEnviosExcel(Collection $envios): \Illuminate\Http\Response
+    public function exportarEnviosExcel(Collection $envios)
     {
-        return Excel::download(
-            new EnviosExport($envios),
-            'envios_' . now()->format('Y-m-d_His') . '.xlsx'
-        );
+        throw new \Exception('Este método ha sido deprecado. El sistema de Envíos ha sido consolidado en Entregas. Por favor, use los métodos de reportes de Entregas en su lugar.');
     }
 
     /**

@@ -2,7 +2,6 @@ import { NavFooter } from '@/presentation/components/nav-footer';
 import { NavMain } from '@/presentation/components/nav-main';
 import { NavUser } from '@/presentation/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/presentation/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import React, { useEffect, useState, useCallback } from 'react';
@@ -17,10 +16,10 @@ import { cn } from '@/lib/utils';
 const iconMap = LucideIcons as unknown as Record<string, LucideIcon>;
 
 // Debug: Ver cuántos iconos se cargaron y qué tipo son
-const availableIcons = Object.keys(iconMap).filter(key =>
+/* const availableIcons = Object.keys(iconMap).filter(key =>
     key[0] === key[0].toUpperCase() && // Empieza con mayúscula
     !['Icon', 'createLucideIcon', 'default'].includes(key) // No es helper
-);
+); */
 
 /* console.log('[AppSidebar] Total de iconos disponibles:', availableIcons.length);
 console.log('[AppSidebar] Primeros 10 iconos disponibles:', availableIcons.slice(0, 10));
@@ -47,7 +46,7 @@ const useSidebarModules = () => {
             if (module.icon) {
                 const iconFound = iconMap[module.icon];
                 // console.log(`[AppSidebar] Módulo "${module.title}" - Icono buscado: "${module.icon}" - ${iconFound ? '✅ Encontrado' : '❌ NO ENCONTRADO'}`);
-                if (!iconFound) {
+                if (!iconFound && module.icon.length > 0) {
                     console.log(`[AppSidebar] Iconos disponibles que empiezan con "${module.icon[0]}":`, Object.keys(iconMap).filter(k => k.startsWith(module.icon[0])).slice(0, 5));
                 }
             }
@@ -65,6 +64,7 @@ const useSidebarModules = () => {
         const fetchModules = async () => {
             try {
                 const response = await fetch('/api/modulos-sidebar', { credentials: 'include' });
+                console.log(response);
                 if (!response.ok) {
                     throw new Error('Error al cargar módulos del sidebar');
                 }

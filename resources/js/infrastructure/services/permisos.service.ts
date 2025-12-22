@@ -1,5 +1,6 @@
 import { httpClient } from './http-client';
-import type { AdminUsuario, AdminRol, PermisoAudit, PermissionGroup } from '@/domain/entities/admin-permisos';
+import type { AdminUsuario, AdminRol, PermisoAudit, PermissionGroup, Permission } from '@/domain/entities/admin-permisos';
+import type { Id } from '@/domain/entities/shared';
 
 interface EstadisticasHistorial {
   total_cambios: number;
@@ -8,7 +9,57 @@ interface EstadisticasHistorial {
   cambios_este_mes: number;
 }
 
+interface ModuloSidebar {
+  titulo?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface PermissionGroupResponse {
+  grouped?: PermissionGroup[];
+  [key: string]: unknown;
+}
+
+interface PermissionWithModule extends Permission {
+  module: string;
+}
+
 export class PermisosService {
+  /**
+   * URL para listar todos los permisos
+   */
+  indexUrl() {
+    return '/permisos';
+  }
+
+  /**
+   * URL para editar los permisos de un usuario
+   */
+  editarUsuarioUrl(userId: Id) {
+    return `/permisos/usuario/${userId}/editar`;
+  }
+
+  /**
+   * URL para actualizar los permisos de un usuario (PATCH)
+   */
+  actualizarUsuarioUrl(userId: Id) {
+    return `/permisos/usuario/${userId}`;
+  }
+
+  /**
+   * URL para editar los permisos de un rol
+   */
+  editarRolUrl(roleId: Id) {
+    return `/permisos/rol/${roleId}/editar`;
+  }
+
+  /**
+   * URL para actualizar los permisos de un rol (PATCH)
+   */
+  actualizarRolUrl(roleId: Id) {
+    return `/permisos/rol/${roleId}`;
+  }
+
   /**
    * Obtiene todos los permisos disponibles agrupados por módulo
    */
@@ -81,10 +132,10 @@ export class PermisosService {
    */
   static async getModulos(): Promise<string[]> {
     try {
-      const response = await httpClient.get<any>('/modulos-sidebar');
+      const response = await httpClient.get<ModuloSidebar[]>('/modulos-sidebar');
       // Mapear los módulos para obtener solo los títulos/nombres
       if (Array.isArray(response)) {
-        return response.map((m: any) => m.titulo || m.name).filter(Boolean);
+        return response.map((m) => m.titulo || m.name).filter(Boolean) as string[];
       }
       return [];
     } catch (error) {
@@ -96,40 +147,40 @@ export class PermisosService {
   /**
    * Obtiene los permisos disponibles desagrupados, con filtros opcionales
    */
-  static async getPermisos(search?: string, modulo?: string): Promise<any[]> {
+  static async getPermisos(search?: string, modulo?: string): Promise<PermissionWithModule[]> {
     try {
       // Obtener permisos disponibles agrupados
-      const response = await httpClient.get<any>('/permisos/agrupados');
+      const response = await httpClient.get<PermissionGroupResponse | PermissionGroup[]>('/permisos/agrupados');
 
-      let permisos: any[] = [];
-      let groupedData = response;
+      let permisos: PermissionWithModule[] = [];
+      let groupedData: PermissionGroup[] | PermissionGroupResponse = response;
 
       // Si la respuesta tiene un campo 'grouped', usarlo
-      if (response && response.grouped && Array.isArray(response.grouped)) {
+      if (response && typeof response === 'object' && 'grouped' in response && Array.isArray(response.grouped)) {
         groupedData = response.grouped;
       }
 
       // Desagrupar los permisos si vienen agrupados por módulo
       if (Array.isArray(groupedData)) {
         // Si es array de PermissionGroup
-        permisos = groupedData.flatMap((group: any) => {
+        permisos = groupedData.flatMap((group) => {
           if (group.permissions && Array.isArray(group.permissions)) {
             // Agregar el módulo a cada permiso para referencia
-            return group.permissions.map((p: any) => ({
+            return group.permissions.map((p) => ({
               ...p,
-              module: group.module || group.name || 'General'
-            }));
+              module: group.module || 'General'
+            } as PermissionWithModule));
           }
           return [];
         });
       } else if (groupedData && typeof groupedData === 'object') {
         // Si viene como objeto con módulos como keys
-        permisos = Object.entries(groupedData).flatMap(([module, permissions]: any) => {
+        permisos = Object.entries(groupedData).flatMap(([module, permissions]) => {
           if (Array.isArray(permissions)) {
-            return permissions.map((p: any) => ({
+            return permissions.map((p) => ({
               ...p,
               module
-            }));
+            } as PermissionWithModule));
           }
           return [];
         });
@@ -137,7 +188,7 @@ export class PermisosService {
 
       // Filtrar por búsqueda si se proporciona
       if (search) {
-        permisos = permisos.filter((p: any) =>
+        permisos = permisos.filter((p) =>
           (p.name?.toLowerCase().includes(search.toLowerCase())) ||
           (p.description?.toLowerCase().includes(search.toLowerCase()))
         );
@@ -145,7 +196,7 @@ export class PermisosService {
 
       // Filtrar por módulo si se proporciona
       if (modulo) {
-        permisos = permisos.filter((p: any) => p.module === modulo);
+        permisos = permisos.filter((p) => p.module === modulo);
       }
 
       return permisos;
@@ -178,3 +229,6 @@ export class PermisosService {
     }
   }
 }
+
+// Instancia singleton para usar en componentes
+export const permisosService = new PermisosService();

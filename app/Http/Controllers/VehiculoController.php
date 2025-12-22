@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Requests\VehiculoRequest;
+use App\Models\Empleado;
 use App\Models\Vehiculo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,23 +15,67 @@ class VehiculoController extends Controller
     public function index(Request $request): Response
     {
         $q = $request->string('q');
+        $activo = $request->query('activo');
+        $orderBy = $request->string('order_by', 'placa');
+        $orderDir = $request->string('order_dir', 'asc');
+
+        // Validar columnas permitidas para ordenamiento
+        $allowedOrderColumns = ['id', 'placa', 'marca', 'modelo', 'anho', 'capacidad_kg'];
+        if (!in_array($orderBy, $allowedOrderColumns)) {
+            $orderBy = 'placa';
+        }
 
         $items = Vehiculo::query()
-            ->when($q, fn($qq) => $qq->where('placa', 'ilike', "%{$q}%"))
-            ->orderBy('id', 'desc')
+            ->when($q, fn($qq) => $qq->where(function($query) use ($q) {
+                $query->where('placa', 'ilike', "%{$q}%")
+                      ->orWhere('marca', 'ilike', "%{$q}%")
+                      ->orWhere('modelo', 'ilike', "%{$q}%");
+            }))
+            ->when($activo !== null, fn($qq) => $qq->where('activo', $activo === '1'))
+            ->orderBy($orderBy, $orderDir)
             ->paginate(12)
             ->withQueryString();
 
         return Inertia::render('inventario/vehiculos/index', [
             'vehiculos' => $items,
-            'filters'   => ['q' => $q],
+            'filters'   => [
+                'q' => $q,
+                'activo' => $activo,
+                'order_by' => $orderBy,
+                'order_dir' => $orderDir,
+            ],
         ]);
     }
 
     public function create(): Response
     {
+        // Obtener choferes desde empleados activos con rol de Chofer
+        $choferesEmpleados = Empleado::query()
+            ->with(['user', 'user.roles'])
+            ->where('estado', 'activo')
+            ->get()
+            ->filter(fn($e) => $e->user !== null && $e->esChofer())
+            ->map(fn($e) => [
+                'value' => $e->id,
+                'label' => $e->user->name ?? $e->nombre,
+            ]);
+
+        // También buscar usuarios con rol de Chofer que no estén en empleados
+        $choferesUsuarios = \App\Models\User::query()
+            ->whereHas('roles', fn($q) => $q->where('name', 'Chofer'))
+            ->whereDoesntHave('empleado')
+            ->get()
+            ->map(fn($u) => [
+                'value' => $u->id,
+                'label' => $u->name . ' (Usuario)',
+            ]);
+
+        // Combinar ambas listas
+        $choferes = $choferesEmpleados->merge($choferesUsuarios)->values();
+
         return Inertia::render('inventario/vehiculos/form', [
-            'vehiculo' => null,
+            'entity'   => null,
+            'choferes' => $choferes,
         ]);
     }
 
@@ -46,8 +91,33 @@ class VehiculoController extends Controller
 
     public function edit(Vehiculo $vehiculo): Response
     {
+        // Obtener choferes desde empleados activos con rol de Chofer
+        $choferesEmpleados = Empleado::query()
+            ->with(['user', 'user.roles'])
+            ->where('estado', 'activo')
+            ->get()
+            ->filter(fn($e) => $e->user !== null && $e->esChofer())
+            ->map(fn($e) => [
+                'value' => $e->id,
+                'label' => $e->user->name ?? $e->nombre,
+            ]);
+
+        // También buscar usuarios con rol de Chofer que no estén en empleados
+        $choferesUsuarios = \App\Models\User::query()
+            ->whereHas('roles', fn($q) => $q->where('name', 'Chofer'))
+            ->whereDoesntHave('empleado')
+            ->get()
+            ->map(fn($u) => [
+                'value' => $u->id,
+                'label' => $u->name . ' (Usuario)',
+            ]);
+
+        // Combinar ambas listas
+        $choferes = $choferesEmpleados->merge($choferesUsuarios)->values();
+
         return Inertia::render('inventario/vehiculos/form', [
-            'vehiculo' => $vehiculo,
+            'entity'   => $vehiculo,
+            'choferes' => $choferes,
         ]);
     }
 

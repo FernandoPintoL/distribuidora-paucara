@@ -5,14 +5,23 @@ namespace App\Services;
 use Exception;
 
 /**
- * RutaOptimizer
+ * RutaOptimizer - Optimización de rutas con Bin Packing + Nearest Neighbor
  *
- * Optimiza rutas de entrega usando algoritmo Nearest Neighbor
+ * ALGORITMO HÍBRIDO:
+ * 1. First Fit Decreasing (FFD) → Agrupar por capacidad
+ * 2. Nearest Neighbor (NN) → Optimizar orden por distancia
+ *
  * Input: Lista de entregas + capacidad
- * Output: Ruta ordenada optimizada (secuencia)
+ * Output: Múltiples rutas optimizadas (si excede capacidad)
  */
 class RutaOptimizer
 {
+    private BinPacker $binPacker;
+
+    public function __construct()
+    {
+        $this->binPacker = new BinPacker();
+    }
     /**
      * Punto de inicio (base/oficina)
      */
@@ -33,10 +42,21 @@ class RutaOptimizer
     private int $tiempo_parada = 10;
 
     /**
-     * ALGORITMO: Nearest Neighbor (Greedy)
+     * ALGORITMO: Nearest Neighbor (Greedy) con Retorno a Base
      *
-     * Comienza en la base y siempre va hacia el cliente más cercano sin visitar
-     * No es óptimo global, pero es O(n²) y funciona bien para <100 entregas
+     * FLUJO:
+     * 1. Inicia en punto_inicio (base/oficina)
+     * 2. Loop: Selecciona entrega más cercana sin visitar
+     * 3. Valida capacidad del vehículo
+     * 4. Agrega a ruta y actualiza ubicación
+     * 5. Retorna a base (cierre de circuito)
+     *
+     * COMPLEJIDAD: O(n²) - Funciona bien para <100 entregas
+     * OPTIMALIDAD: No garantizada (greedy), típicamente 15-25% sobre óptimo
+     *
+     * @param array $entregas Lista de entregas con ['cliente_id', 'lat', 'lon', 'peso']
+     * @param float $capacidad_max Capacidad máxima del vehículo (kg)
+     * @return array ['ruta', 'distancia_total', 'distancia_regreso', 'tiempo_estimado', ...]
      */
     public function obtenerRutaOptimizada(array $entregas, float $capacidad_max): array
     {
@@ -84,7 +104,8 @@ class RutaOptimizer
             // 4. Agregar a ruta
             $ruta[] = [
                 'cliente_id' => $entrega_cercana['cliente_id'],
-                'venta_id' => $entrega_cercana['venta_id'] ?? $entrega_cercana['id'],
+                'venta_id' => $entrega_cercana['venta_id'] ?? $entrega_cercana['id'] ?? null,
+                'entrega_id' => $entrega_cercana['entrega_id'] ?? $entrega_cercana['id'] ?? null,
                 'direccion' => $entrega_cercana['direccion'] ?? 'N/A',
                 'lat' => $entrega_cercana['lat'],
                 'lon' => $entrega_cercana['lon'],
@@ -106,7 +127,7 @@ class RutaOptimizer
             $entregas_pendientes = array_values($entregas_pendientes);  // Reset keys
         }
 
-        // Retornar a base
+        // ✅ IMPORTANTE: Retornar a base (cierre del circuito)
         $distancia_regreso = $this->calcularDistanciaHaversine(
             $ubicacion_actual['lat'],
             $ubicacion_actual['lon'],
@@ -128,13 +149,14 @@ class RutaOptimizer
         // Última parada a base
         $ruta[count($ruta) - 1]['distancia_siguiente'] = $distancia_regreso;
 
-        // Calcular tiempo total
+        // Calcular tiempo total (incluye regreso a base)
         $tiempo_estimado_minutos = $this->calcularTiempoTotal($distancia_total, count($ruta));
 
         return [
             'ruta' => $ruta,
-            'distancia_total' => round($distancia_total, 2),
-            'tiempo_estimado' => $tiempo_estimado_minutos,
+            'distancia_total' => round($distancia_total, 2),  // Ya incluye retorno a base
+            'distancia_regreso' => round($distancia_regreso, 2),  // Distancia de retorno explícita
+            'tiempo_estimado' => $tiempo_estimado_minutos,  // Incluye tiempo de retorno
             'paradas' => count($ruta),
             'peso_total' => $peso_acumulado,
             'entregas_no_asignadas' => count($entregas_pendientes)
@@ -209,5 +231,111 @@ class RutaOptimizer
         $tiempo_paradas = $paradas * $this->tiempo_parada;
 
         return (int) ceil($tiempo_manejo + $tiempo_paradas);
+    }
+
+    /**
+     * ALGORITMO HÍBRIDO: FFD (Bin Packing) + Nearest Neighbor
+     *
+     * FLUJO COMPLETO:
+     * 1. Agrupar entregas por capacidad (First Fit Decreasing)
+     * 2. Para cada grupo, optimizar orden por distancia (Nearest Neighbor)
+     * 3. Retornar múltiples rutas optimizadas
+     *
+     * Este método es ideal para planificación diaria con múltiples vehículos
+     *
+     * @param array $entregas Lista completa de entregas del día
+     * @param float $capacidad_max Capacidad estándar de vehículos (kg)
+     * @return array ['rutas' => [...], 'estadisticas' => [...]]
+     */
+    public function optimizarMultiplesRutas(array $entregas, float $capacidad_max): array
+    {
+        if (empty($entregas)) {
+            return [
+                'rutas' => [],
+                'estadisticas' => [
+                    'total_entregas' => 0,
+                    'rutas_creadas' => 0,
+                    'uso_promedio_capacidad' => 0,
+                ],
+            ];
+        }
+
+        // PASO 1: Agrupar por capacidad usando FFD
+        $bins = $this->binPacker->agrupar($entregas, $capacidad_max, 0.95);
+
+        // PASO 2: Optimizar cada bin por distancia
+        $rutasOptimizadas = [];
+        foreach ($bins as $bin) {
+            $entregasBin = $bin['items'];
+
+            // Aplicar Nearest Neighbor a este grupo
+            $rutaOptimizada = $this->obtenerRutaOptimizada($entregasBin, $capacidad_max);
+
+            // Agregar metadata del bin
+            $rutaOptimizada['bin_numero'] = $bin['bin_numero'];
+            $rutaOptimizada['peso_total_bin'] = $bin['peso_total'];
+            $rutaOptimizada['porcentaje_uso'] = $bin['porcentaje_uso'];
+            $rutaOptimizada['sobrecargado'] = $bin['sobrecargado'] ?? false;
+
+            $rutasOptimizadas[] = $rutaOptimizada;
+        }
+
+        // PASO 3: Calcular estadísticas globales
+        $estadisticas = $this->binPacker->obtenerEstadisticas($bins, $capacidad_max);
+        $estadisticas['distancia_total'] = array_sum(array_column($rutasOptimizadas, 'distancia_total'));
+        $estadisticas['tiempo_total_minutos'] = array_sum(array_column($rutasOptimizadas, 'tiempo_estimado'));
+
+        return [
+            'rutas' => $rutasOptimizadas,
+            'estadisticas' => $estadisticas,
+        ];
+    }
+
+    /**
+     * Optimizar entregas con balanceo de carga (Best Fit)
+     *
+     * Similar a optimizarMultiplesRutas pero usa Best Fit en lugar de First Fit
+     * Resulta en mejor distribución de peso entre rutas
+     */
+    public function optimizarMultiplesRutasBalanceado(array $entregas, float $capacidad_max): array
+    {
+        if (empty($entregas)) {
+            return [
+                'rutas' => [],
+                'estadisticas' => [
+                    'total_entregas' => 0,
+                    'rutas_creadas' => 0,
+                    'uso_promedio_capacidad' => 0,
+                ],
+            ];
+        }
+
+        // PASO 1: Agrupar con Best Fit
+        $bins = $this->binPacker->agruparBalanceado($entregas, $capacidad_max, 0.95);
+
+        // PASO 2: Optimizar cada bin
+        $rutasOptimizadas = [];
+        foreach ($bins as $bin) {
+            $entregasBin = $bin['items'];
+
+            $rutaOptimizada = $this->obtenerRutaOptimizada($entregasBin, $capacidad_max);
+
+            $rutaOptimizada['bin_numero'] = $bin['bin_numero'];
+            $rutaOptimizada['peso_total_bin'] = $bin['peso_total'];
+            $rutaOptimizada['porcentaje_uso'] = $bin['porcentaje_uso'];
+            $rutaOptimizada['sobrecargado'] = $bin['sobrecargado'] ?? false;
+
+            $rutasOptimizadas[] = $rutaOptimizada;
+        }
+
+        // PASO 3: Estadísticas
+        $estadisticas = $this->binPacker->obtenerEstadisticas($bins, $capacidad_max);
+        $estadisticas['distancia_total'] = array_sum(array_column($rutasOptimizadas, 'distancia_total'));
+        $estadisticas['tiempo_total_minutos'] = array_sum(array_column($rutasOptimizadas, 'tiempo_estimado'));
+
+        return [
+            'rutas' => $rutasOptimizadas,
+            'estadisticas' => $estadisticas,
+        ];
     }
 }

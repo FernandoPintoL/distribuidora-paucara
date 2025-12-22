@@ -122,6 +122,21 @@ class VentaService
                 'observaciones' => $dto->observaciones,
                 'almacen_id' => $dto->almacen_id,
                 'proforma_id' => $dto->proforma_id,
+                // Campos de logística
+                'requiere_envio' => $dto->requiere_envio,
+                'canal_origen' => $dto->canal_origen ?? 'WEB',
+                'estado_logistico' => $dto->estado_logistico,
+                // Campos de política de pago
+                'politica_pago' => $dto->politica_pago ?? 'CONTRA_ENTREGA',
+                'estado_pago' => $dto->estado_pago ?? 'PENDIENTE',
+                'monto_pagado' => 0,
+                'monto_pendiente' => $dto->total,
+                // Campos de SLA y compromisos de entrega
+                'fecha_entrega_comprometida' => $dto->fecha_entrega_comprometida,
+                'hora_entrega_comprometida' => $dto->hora_entrega_comprometida,
+                'ventana_entrega_ini' => $dto->ventana_entrega_ini,
+                'ventana_entrega_fin' => $dto->ventana_entrega_fin,
+                'idempotency_key' => $dto->idempotency_key,
             ]);
 
             \Log::info('✅ [VentaService::crear] Venta creada en BD', [

@@ -176,8 +176,8 @@ class PermissionService
      */
     public function buscarUsuarios(string $query, int $limit = 20)
     {
-        return User::where('name', 'like', "%{$query}%")
-            ->orWhere('email', 'like', "%{$query}%")
+        return User::where('name', 'ilike', "%{$query}%")
+            ->orWhere('email', 'ilike', "%{$query}%")
             ->with('roles')
             ->limit($limit)
             ->get()
@@ -197,15 +197,14 @@ class PermissionService
      */
     public function buscarRoles(string $query, int $limit = 20)
     {
-        return Role::where('name', 'like', "%{$query}%")
-            ->orWhere('display_name', 'like', "%{$query}%")
+        return Role::where('name', 'ilike', "%{$query}%")
             ->limit($limit)
             ->get()
             ->map(function ($role) {
                 return [
                     'id' => $role->id,
                     'name' => $role->name,
-                    'display_name' => $role->display_name,
+                    'display_name' => $role->name, // Usar name como display_name
                     'permissions_count' => $role->permissions()->count(),
                 ];
             });
@@ -248,8 +247,8 @@ class PermissionService
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%");
             });
         }
 
@@ -273,10 +272,7 @@ class PermissionService
         $query = Role::with('permissions');
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('display_name', 'like', "%{$search}%");
-            });
+            $query->where('name', 'ilike', "%{$search}%");
         }
 
         return $query->paginate($perPage, ['*'], 'page', $page);

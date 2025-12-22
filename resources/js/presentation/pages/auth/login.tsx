@@ -5,7 +5,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import { Form, Head, usePage } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, Mail, Lock } from 'lucide-react';
 import { useEffect } from 'react';
 
 interface LoginProps {
@@ -33,69 +33,83 @@ export default function Login({ status }: LoginProps) {
                 action="/login"
                 resetOnSuccess={['password']}
                 className="flex flex-col gap-6"
-                onSubmit={(e) => {
-                    // Guardar datos del formulario para posterior generación de token
-                    const form = e.target as HTMLFormElement;
-                    const formData = new FormData(form);
-                    formDataRef.current = {
-                        email: formData.get('email') as string,
-                        password: formData.get('password') as string,
-                    };
-                }}
             >
                 {({ processing, errors }) => (
                     <>
-                        {/* Encabezado con logo para identidad de marca
-                        <div className="flex flex-col items-center gap-3">
-                            <img src="/logo.svg" alt="Distribuidora Paucara" className="h-12 w-auto" />
-                            <p className="text-xs text-muted-foreground">Sistema de gestión de ventas</p>
-                        </div>*/}
+                        <div className="group relative grid gap-6 rounded-2xl border border-border/40 bg-card/95 p-8 shadow-2xl backdrop-blur-md transition-all duration-500 hover:shadow-red-500/5 dark:border-white/5 dark:bg-black/40 dark:shadow-red-500/10">
+                            {/* Efecto de brillo superior */}
+                            <div className="absolute -top-px left-1/2 h-px w-1/2 -translate-x-1/2 bg-gradient-to-r from-transparent via-red-500/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
-                        <div className="grid gap-6 rounded-lg border bg-background/60 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-black/20">
+                            {/* Campo de Email con icono */}
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Correo o usuario</Label>
-                                <Input
-                                    id="email"
-                                    type="text"
-                                    name="email"
-                                    required
-                                    autoFocus
-                                    tabIndex={1}
-                                    autoComplete="username"
-                                    placeholder="correo@ejemplo.com o usuario"
-                                />
+                                <Label htmlFor="email" className="text-sm font-medium">
+                                    Correo o usuario
+                                </Label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors peer-focus:text-red-500" />
+                                    <Input
+                                        id="email"
+                                        type="text"
+                                        name="email"
+                                        required
+                                        autoFocus
+                                        tabIndex={1}
+                                        autoComplete="username"
+                                        placeholder="correo@ejemplo.com o usuario"
+                                        className="peer h-11 pl-10 transition-all duration-300 focus:ring-2 focus:ring-red-500/20"
+                                    />
+                                </div>
                                 <InputError message={errors.email} />
                             </div>
 
+                            {/* Campo de Contraseña con icono */}
                             <div className="grid gap-2">
                                 <div className="flex items-center">
-                                    <Label htmlFor="password">Contraseña</Label>
+                                    <Label htmlFor="password" className="text-sm font-medium">
+                                        Contraseña
+                                    </Label>
                                     {/*{canResetPassword && (
                                         <TextLink href={request()} className="ml-auto text-sm" tabIndex={5}>
                                             ¿Olvidaste tu contraseña?
                                         </TextLink>
                                     )}*/}
                                 </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="current-password"
-                                    placeholder="Contraseña"
-                                />
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors peer-focus:text-red-500" />
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        name="password"
+                                        required
+                                        tabIndex={2}
+                                        autoComplete="current-password"
+                                        placeholder="••••••••"
+                                        className="peer h-11 pl-10 transition-all duration-300 focus:ring-2 focus:ring-red-500/20"
+                                    />
+                                </div>
                                 <InputError message={errors.password} />
                             </div>
 
+                            {/* Checkbox con mejor estilo */}
                             <div className="flex items-center gap-3">
-                                <Checkbox id="remember" name="remember" tabIndex={3} />
-                                <Label htmlFor="remember">Recordarme</Label>
+                                <Checkbox id="remember" name="remember" tabIndex={3} className="border-border/60 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600" />
+                                <Label htmlFor="remember" className="cursor-pointer text-sm font-normal text-muted-foreground">
+                                    Recordarme
+                                </Label>
                             </div>
 
-                            <Button type="submit" className="mt-2 w-full bg-red-600 text-white hover:bg-red-700 focus:ring-4 focus:ring-red-600/30 dark:bg-red-500 dark:hover:bg-red-600" tabIndex={4} disabled={processing}>
-                                {processing && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                                Iniciar sesión
+                            {/* Botón mejorado con gradiente */}
+                            <Button
+                                type="submit"
+                                className="group/btn relative mt-2 h-11 w-full overflow-hidden bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/40 focus:ring-4 focus:ring-red-500/30 disabled:opacity-50 dark:from-red-500 dark:to-red-600"
+                                tabIndex={4}
+                                disabled={processing}
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-400 opacity-0 transition-opacity duration-300 group-hover/btn:opacity-100" />
+                                <span className="relative flex items-center justify-center">
+                                    {processing && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                    Iniciar sesión
+                                </span>
                             </Button>
                         </div>
 

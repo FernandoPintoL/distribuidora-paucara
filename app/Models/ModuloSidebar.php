@@ -151,6 +151,7 @@ class ModuloSidebar extends Model
     public function toNavItem(): array
     {
         $navItem = [
+            'id' => $this->id,
             'title' => $this->titulo,
             'href' => $this->ruta,
             'icon' => $this->icono,

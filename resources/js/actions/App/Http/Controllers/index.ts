@@ -5,7 +5,6 @@ import Auth from './Auth'
 import PermissionController from './PermissionController'
 import ProductoController from './ProductoController'
 import VentaController from './VentaController'
-import EnvioController from './EnvioController'
 import CompraController from './CompraController'
 import AsientoContableController from './AsientoContableController'
 import ReporteInventarioApiController from './ReporteInventarioApiController'
@@ -23,6 +22,7 @@ import CategoriaController from './CategoriaController'
 import MarcaController from './MarcaController'
 import AlmacenController from './AlmacenController'
 import ConfiguracionGlobalController from './ConfiguracionGlobalController'
+import EmpresaController from './EmpresaController'
 import UnidadMedidaController from './UnidadMedidaController'
 import TipoPrecioController from './TipoPrecioController'
 import MonedaController from './MonedaController'
@@ -41,6 +41,7 @@ import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import VehiculoController from './VehiculoController'
 import InventarioInicialController from './InventarioInicialController'
 import Web from './Web'
+import EntregaController from './EntregaController'
 import VendedorController from './VendedorController'
 import ChoferController from './ChoferController'
 import PreventistController from './PreventistController'
@@ -60,7 +61,6 @@ Auth,
 PermissionController,
 ProductoController,
 VentaController,
-EnvioController,
 CompraController,
 AsientoContableController,
 ReporteInventarioApiController,
@@ -78,6 +78,7 @@ CategoriaController,
 MarcaController,
 AlmacenController,
 ConfiguracionGlobalController,
+EmpresaController,
 UnidadMedidaController,
 TipoPrecioController,
 MonedaController,
@@ -96,6 +97,7 @@ TipoAjusteInventarioController,
 VehiculoController,
 InventarioInicialController,
 Web,
+EntregaController,
 VendedorController,
 ChoferController,
 PreventistController,

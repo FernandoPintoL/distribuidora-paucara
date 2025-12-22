@@ -7,13 +7,19 @@ export interface Vehiculo extends BaseEntity {
   placa: string;
   modelo: string;
   marca?: string | null;
-  año?: number | null;
-  capacidad_carga?: number | null;
+  anho?: string | null;
+  capacidad_kg?: number | null;
+  capacidad_volumen?: number | null;
+  estado?: string;
   activo: boolean;
-  chofer_id?: Id;
+  chofer_asignado_id?: Id | null;
+  observaciones?: string | null;
 
   // Relaciones
-  chofer?: Chofer;
+  choferAsignado?: {
+    id: Id;
+    name: string;
+  };
 }
 
 export interface Chofer extends BaseEntity {
@@ -37,10 +43,13 @@ export interface VehiculoFormData extends BaseFormData {
   placa: string;
   modelo: string;
   marca?: string | null;
-  año?: number | null;
-  capacidad_carga?: number | null;
+  anho?: string | null;
+  capacidad_kg?: number | null;
+  capacidad_volumen?: number | null;
+  estado?: string;
   activo?: boolean;
-  chofer_id?: Id | '';
+  chofer_asignado_id?: Id | null;
+  observaciones?: string | null;
 }
 
 export interface ChoferFormData extends BaseFormData {

@@ -13,14 +13,19 @@ class Entrega extends Model
 
     protected $fillable = [
         'proforma_id',
+        'venta_id',
         'chofer_id',
         'vehiculo_id',
         'direccion_cliente_id',
         'estado',
+        'peso_kg',
+        'volumen_m3',
         'fecha_asignacion',
         'fecha_inicio',
         'fecha_llegada',
         'fecha_entrega',
+        'fecha_programada',         // Nuevo campo para crear entregas
+        'direccion_entrega',        // Nuevo campo para crear entregas
         'observaciones',
         'motivo_novedad',
         'firma_digital_url',
@@ -35,11 +40,13 @@ class Entrega extends Model
             'fecha_inicio' => 'datetime',
             'fecha_llegada' => 'datetime',
             'fecha_entrega' => 'datetime',
+            'fecha_programada' => 'datetime',
             'fecha_firma_entrega' => 'datetime',
         ];
     }
 
     // Estados de la entrega
+    const ESTADO_PROGRAMADO = 'PROGRAMADO';     // Nuevo estado inicial
     const ESTADO_ASIGNADA = 'ASIGNADA';
     const ESTADO_EN_CAMINO = 'EN_CAMINO';
     const ESTADO_LLEGO = 'LLEGO';
@@ -52,11 +59,19 @@ class Entrega extends Model
      */
 
     /**
-     * Proforma asociada a esta entrega
+     * Proforma asociada a esta entrega (LEGACY - para retrocompatibilidad)
      */
     public function proforma(): BelongsTo
     {
         return $this->belongsTo(Proforma::class);
+    }
+
+    /**
+     * Venta asociada a esta entrega (NUEVO - modelo consolidado)
+     */
+    public function venta(): BelongsTo
+    {
+        return $this->belongsTo(Venta::class);
     }
 
     /**

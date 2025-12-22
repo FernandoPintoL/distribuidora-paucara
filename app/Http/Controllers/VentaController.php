@@ -41,6 +41,7 @@ class VentaController extends Controller
 
     public function __construct(
         private VentaService $ventaService,
+        private \App\Services\ImpresionService $impresionService,
     ) {
         $this->middleware('permission:ventas.index')->only('index');
         $this->middleware('permission:ventas.show')->only('show');
@@ -467,6 +468,97 @@ class VentaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al verificar stock: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Imprimir venta en formato especificado
+     *
+     * @param Venta $venta
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function imprimir(Venta $venta, Request $request)
+    {
+        $formato = $request->input('formato', 'A4'); // A4, TICKET_80, TICKET_58
+        $accion = $request->input('accion', 'download'); // download | stream
+
+        try {
+            $pdf = $this->impresionService->imprimirVenta($venta, $formato);
+
+            $nombreArchivo = "venta_{$venta->numero}_{$formato}.pdf";
+
+            return $accion === 'stream'
+                ? $pdf->stream($nombreArchivo)
+                : $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Preview de impresión (retorna HTML para vista previa)
+     *
+     * @param Venta $venta
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function preview(Venta $venta, Request $request)
+    {
+        $formato = $request->input('formato', 'A4');
+
+        try {
+            $plantilla = \App\Models\PlantillaImpresion::obtenerDefault('venta', $formato);
+
+            if (!$plantilla) {
+                abort(404, "No existe plantilla para el formato '{$formato}'");
+            }
+
+            $empresa = \App\Models\Empresa::principal();
+
+            // Cargar relaciones necesarias
+            $venta->load([
+                'cliente',
+                'detalles.producto',
+                'usuario',
+                'tipoPago',
+                'tipoDocumento',
+                'moneda',
+                'estadoDocumento',
+            ]);
+
+            return view($plantilla->vista_blade, [
+                'documento' => $venta,
+                'empresa' => $empresa,
+                'plantilla' => $plantilla,
+                'fecha_impresion' => now(),
+                'usuario' => auth()->user(),
+                'opciones' => [],
+            ]);
+        } catch (\Exception $e) {
+            abort(500, 'Error al generar preview: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener formatos de impresión disponibles para ventas
+     *
+     * @return JsonResponse
+     */
+    public function formatosDisponibles()
+    {
+        try {
+            $formatos = $this->impresionService->obtenerFormatosDisponibles('venta');
+
+            return response()->json([
+                'success' => true,
+                'data' => $formatos,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener formatos: ' . $e->getMessage(),
             ], 500);
         }
     }

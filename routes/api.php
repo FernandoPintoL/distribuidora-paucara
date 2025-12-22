@@ -17,7 +17,6 @@ use App\Http\Controllers\CategoriaClienteController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\DireccionClienteApiController;
-use App\Http\Controllers\EnvioController;
 use App\Http\Controllers\ImageBackupController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\LocalidadController;
@@ -65,8 +64,34 @@ Route::get('/roles/details', [RoleController::class, 'getRolesWithDetails']);
 // Validar combinación de roles
 Route::post('/roles/validate-combination', [RoleController::class, 'validateRoleCombination']);
 
-// Rutas API para módulos del sidebar (requiere autenticación)
-Route::middleware(['auth'])->get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');
+// ==========================================
+// 📋 RUTAS API PARA MÓDULOS DEL SIDEBAR
+// ==========================================
+Route::middleware(['auth'])->group(function () {
+    // Obtener módulos del sidebar (filtrados por permisos del usuario)
+    Route::get('/modulos-sidebar', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndex'])->name('api.modulos-sidebar');
+
+    // Obtener TODOS los módulos para administración (sin filtros)
+    Route::get('/modulos-sidebar/admin', [App\Http\Controllers\ModuloSidebarController::class, 'apiIndexAdmin'])->name('api.modulos-sidebar.admin');
+
+    // Obtener permisos disponibles
+    Route::get('/modulos-sidebar/permisos/disponibles', [App\Http\Controllers\ModuloSidebarController::class, 'getPermisosDisponibles'])->name('api.modulos-sidebar.permisos.disponibles');
+
+    // Obtener matriz de acceso rol-módulo
+    Route::get('/modulos-sidebar/matriz-acceso', [App\Http\Controllers\ModuloSidebarController::class, 'getMatrizAcceso'])->name('api.modulos-sidebar.matriz-acceso');
+
+    // Obtener roles disponibles
+    Route::get('/modulos-sidebar/roles', [App\Http\Controllers\ModuloSidebarController::class, 'obtenerRoles'])->name('api.modulos-sidebar.roles');
+
+    // Vista previa del sidebar para un rol
+    Route::get('/modulos-sidebar/preview/{rolName}', [App\Http\Controllers\ModuloSidebarController::class, 'previewPorRol'])->name('api.modulos-sidebar.preview');
+
+    // Historial de cambios
+    Route::get('/modulos-sidebar/historial', [App\Http\Controllers\ModuloSidebarController::class, 'obtenerHistorial'])->name('api.modulos-sidebar.historial');
+
+    // Bulk update de matriz de acceso
+    Route::post('/modulos-sidebar/matriz-acceso/bulk-update', [App\Http\Controllers\ModuloSidebarController::class, 'bulkUpdateMatrizAcceso'])->name('api.modulos-sidebar.matriz-acceso.bulk-update');
+});
 
 // ✅ NUEVA: Ruta API para obtener la redirección del dashboard según el rol
 Route::middleware(['auth'])->get('/dashboard-redirect', [App\Http\Controllers\Auth\DashboardRedirectController::class, 'getRedirectApi'])->name('api.dashboard-redirect');
@@ -236,7 +261,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // Cliente puede ver sus datos desde la app
     Route::prefix('app/cliente')->group(function () {
         Route::get('/ventas', [VentaController::class, 'ventasCliente']);
-        Route::get('/envios', [EnvioController::class, 'enviosCliente']);
+        // DEPRECATED: /app/cliente/envios - usar /api/entregas en su lugar
     });
 
     // 💳 GESTIÓN DE PAGOS EN VENTAS
@@ -244,30 +269,18 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::post('/{venta}/pagos', [VentaController::class, 'registrarPago'])->name('api.ventas.registrar-pago');
     });
 
-    // Seguimiento de envíos desde la app
-    Route::prefix('app/envios')->group(function () {
-        Route::get('/{envio}/seguimiento', [EnvioController::class, 'seguimientoApi']);
-        Route::post('/{envio}/ubicacion', [EnvioController::class, 'actualizarUbicacion']);
-
-        // ✅ NUEVO: Rechazar entrega desde app (chofer reporta problema)
-        Route::put('/{envio}/rechazar', [EnvioController::class, 'rechazarEntrega'])
-            ->name('api.envios.rechazar');
-    });
+    // DEPRECATED: Seguimiento de envíos desde la app
+    // Reemplazado por: /api/entregas/{entrega}/seguimiento
+    // (Las rutas de entregas están en routes/api.php dentro de EntregaController)
 });
 
 // ==========================================
 // 📊 RUTAS PARA DASHBOARD DE LOGÍSTICA
 // ==========================================
-// ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma
-Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
-    // Estadísticas del dashboard
-    Route::get('/logistica/dashboard/stats', [EnvioController::class, 'dashboardStats']);
-
-    // Gestión de envíos
-    Route::get('/envios', [EnvioController::class, 'index']);
-    Route::get('/envios/{envio}/seguimiento', [EnvioController::class, 'seguimiento']);
-    Route::post('/envios/{envio}/estado', [EnvioController::class, 'actualizarEstado']);
-});
+// DEPRECATED: Rutas de Envios eliminadas - usar /logistica/entregas en su lugar
+// Estadísticas: GET /api/entregas/dashboard-stats
+// Listado: GET /api/entregas
+// Seguimiento: GET /api/entregas/{entrega}/seguimiento
 
 // ==========================================
 // RUTAS API EXISTENTES
@@ -440,21 +453,32 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::get('/entregas/activas', [EncargadoController::class, 'entregasActivas']);
     });
 
-    // RECURSOS - Vehículos y Choferes disponibles
-    Route::prefix('recursos')->group(function () {
-        Route::get('/vehiculos/disponibles', [EnvioController::class, 'obtenerVehiculosDisponibles']);
-        Route::get('/choferes/disponibles', [EnvioController::class, 'obtenerChoferesDisponibles']);
-    });
-
-    // Alias sin prefijo para compatibilidad con service
-    Route::get('/vehiculos/disponibles', [EnvioController::class, 'obtenerVehiculosDisponibles']);
-    Route::get('/choferes/disponibles', [EnvioController::class, 'obtenerChoferesDisponibles']);
+    // DEPRECATED: RECURSOS - Vehículos y Choferes disponibles
+    // Estas rutas estaban usando EnvioController que ha sido eliminado
+    // TODO: Implementar endpoints equivalentes en EntregaController o recurso separado
+    // Route::prefix('recursos')->group(function () {
+    //     Route::get('/vehiculos/disponibles', [EntregaController::class, 'obtenerVehiculosDisponibles']);
+    //     Route::get('/choferes/disponibles', [EntregaController::class, 'obtenerChoferesDisponibles']);
+    // });
 
     // ADMIN - Gestión completa de entregas
     Route::prefix('admin')->group(function () {
         Route::get('/entregas', [EntregaController::class, 'indexAdmin']);
         Route::post('/entregas/{id}/asignar', [EntregaController::class, 'asignarEntrega']);
         Route::get('/entregas/activas', [EntregaController::class, 'entregasActivas']);
+    });
+
+    // ✅ NUEVO: Tracking GPS en tiempo real
+    Route::prefix('entregas')->group(function () {
+        // Registrar ubicación GPS (desde app móvil o web)
+        Route::post('/{id}/ubicacion', [EntregaController::class, 'registrarUbicacion'])
+            ->middleware('permission:envios.manage')
+            ->name('entregas.registrar-ubicacion');
+
+        // Obtener historial de ubicaciones (para visualización de ruta)
+        Route::get('/{id}/ubicaciones', [EntregaController::class, 'obtenerUbicaciones'])
+            ->middleware('permission:envios.manage')
+            ->name('entregas.ubicaciones');
     });
 });
 

@@ -48,7 +48,9 @@ class DashboardRedirectController extends Controller
         // Log para debugging
         \Log::info('Dashboard redirect', $this->dashboardService->getRedirectInfo($user));
 
-        return redirect()->to($dashboardUrl);
+        // ✅ Usar Inertia::location() para redirecciones externas en Inertia
+        // Esto maneja correctamente las peticiones Inertia vs no-Inertia
+        return \Inertia\Inertia::location($dashboardUrl);
     }
 
     /**

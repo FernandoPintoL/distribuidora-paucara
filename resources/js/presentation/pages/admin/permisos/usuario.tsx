@@ -13,7 +13,7 @@ interface UsuarioEditProps {
 }
 
 export default function UsuarioEdit({ usuario, permisosActuales, rolesActuales, todosLosPermisos }: UsuarioEditProps) {
-  const { data, setData, patch, processing } = useForm({
+  const { setData, patch, processing } = useForm({
     permisos: permisosActuales,
   });
 

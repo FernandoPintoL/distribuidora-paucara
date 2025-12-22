@@ -8,13 +8,10 @@ import { Label } from '@/presentation/components/ui/label'
 import { Checkbox } from '@/presentation/components/ui/checkbox'
 import InputError from '@/presentation/components/input-error'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { type BreadcrumbItem } from '@/types'
-
-interface Permission {
-    id: number
-    name: string
-}
+import type { Permission } from '@/domain/entities/admin-permisos'
+import { rolesService } from '@/infrastructure/services/roles.service'
 
 interface PermissionGroup {
     [key: string]: Permission[]
@@ -46,7 +43,7 @@ export default function Create({ permissions }: PageProps) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
-        post('/roles', {
+        post(rolesService.storeUrl(), {
             onSuccess: () => {
                 reset()
                 toast.success('Rol creado exitosamente.')
@@ -65,8 +62,8 @@ export default function Create({ permissions }: PageProps) {
         }
     }
 
-    const isPermissionSelected = (permissionId: number) => {
-        return data.permissions.includes(permissionId)
+    const isPermissionSelected = (permissionId: number | string) => {
+        return data.permissions.includes(Number(permissionId))
     }
 
     return (
@@ -81,12 +78,12 @@ export default function Create({ permissions }: PageProps) {
                             Crea un nuevo rol y asigna los permisos correspondientes.
                         </p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/permisos">
+                    {/* <Button variant="outline" asChild>
+                        <Link href={rolesService.indexUrl()}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Volver
                         </Link>
-                    </Button>
+                    </Button> */}
                 </div>
 
                 <Card>
@@ -141,7 +138,7 @@ export default function Create({ permissions }: PageProps) {
                                                             id={`permission-${permission.id}`}
                                                             checked={isPermissionSelected(permission.id)}
                                                             onCheckedChange={(checked) =>
-                                                                handlePermissionChange(permission.id, checked as boolean)
+                                                                handlePermissionChange(Number(permission.id), checked as boolean)
                                                             }
                                                         />
                                                         <Label
@@ -161,7 +158,7 @@ export default function Create({ permissions }: PageProps) {
 
                             <div className="flex justify-end space-x-2">
                                 <Button type="button" variant="outline" asChild>
-                                    <Link href="/admin/permisos">Cancelar</Link>
+                                    <Link href={rolesService.indexUrl()}>Cancelar</Link>
                                 </Button>
                                 <Button type="submit" disabled={processing}>
                                     <Save className="mr-2 h-4 w-4" />

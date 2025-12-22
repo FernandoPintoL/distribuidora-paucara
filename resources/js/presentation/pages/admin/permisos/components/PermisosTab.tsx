@@ -6,9 +6,9 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/presentation/components/ui/dialog';
-import { Badge } from '@/presentation/components/ui/badge';
 import { Pencil, Trash2, Plus, Search, Shield } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
+import { permissionsService } from '@/infrastructure/services/permissions.service';
 import type { Permission } from '@/domain/entities/admin-permisos';
 
 interface PermisosTabProps {
@@ -46,7 +46,7 @@ export function PermisosTab({ permisos, cargando, modulos, onLoadData }: Permiso
         }
 
         if (confirm(`¿Estás seguro de que quieres eliminar el permiso "${permission.name}"?`)) {
-            router.delete(`/admin/permisos/permisos/${permission.id}`, {
+            router.delete(permissionsService.destroyUrl(permission.id), {
                 onSuccess: () => {
                     NotificationService.success('Permiso eliminado exitosamente');
                     onLoadData(searchTerm, selectedModule);
@@ -60,6 +60,25 @@ export function PermisosTab({ permisos, cargando, modulos, onLoadData }: Permiso
 
     return (
         <div className="space-y-6">
+            {/* Información importante */}
+            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/10 dark:border-blue-800">
+                <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                        <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                        <div className="flex-1">
+                            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                                ℹ️ Gestión de Permisos
+                            </h4>
+                            <p className="text-sm text-blue-800 dark:text-blue-200">
+                                Los permisos se gestionan mediante <strong>seeders</strong> o <strong>comandos artisan</strong>.
+                                La creación, edición y eliminación desde la UI no está habilitada.
+                                Puedes visualizar y buscar permisos existentes.
+                            </p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -73,7 +92,7 @@ export function PermisosTab({ permisos, cargando, modulos, onLoadData }: Permiso
 
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button className="flex items-center gap-2">
+                        <Button className="flex items-center gap-2" disabled title="Los permisos se gestionan mediante seeders">
                             <Plus className="w-4 h-4" />
                             Nuevo Permiso
                         </Button>
@@ -99,7 +118,7 @@ export function PermisosTab({ permisos, cargando, modulos, onLoadData }: Permiso
                                 <Button
                                     onClick={() => {
                                         setIsCreateDialogOpen(false);
-                                        router.visit('/admin/permisos/permisos/crear');
+                                        router.visit(permissionsService.createUrl());
                                     }}
                                 >
                                     Ir a Crear
@@ -223,8 +242,8 @@ export function PermisosTab({ permisos, cargando, modulos, onLoadData }: Permiso
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => router.visit(`/admin/permisos/permisos/${permission.id}/editar`)}
-                                            title="Editar permiso"
+                                            disabled
+                                            title="Los permisos se gestionan mediante seeders o comandos artisan"
                                         >
                                             <Pencil className="w-4 h-4" />
                                         </Button>
@@ -232,9 +251,9 @@ export function PermisosTab({ permisos, cargando, modulos, onLoadData }: Permiso
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => handleDelete(permission)}
+                                            disabled
                                             className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/10"
-                                            title="Eliminar permiso"
+                                            title="Los permisos se gestionan mediante seeders o comandos artisan"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>

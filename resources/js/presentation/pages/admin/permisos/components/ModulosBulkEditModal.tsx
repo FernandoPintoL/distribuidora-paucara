@@ -4,21 +4,18 @@ import { Label } from '@/presentation/components/ui/label';
 import { Input } from '@/presentation/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 
+import type { Id } from '@/domain/entities/shared';
+import type { BulkOperation } from '@/domain/entities/admin-permisos';
+
 type OperationType = 'estado' | 'categoria' | 'permisos' | 'visible_dashboard';
 
 interface ModulosBulkEditModalProps {
   cantidad: number;
-  selectedIds: Set<number>;
+  selectedIds: Set<Id>;
   onClose: () => void;
-  onSubmit: (selectedIds: Set<number>, operacion: BulkOperation) => Promise<void>;
+  onSubmit: (selectedIds: Set<Id>, operacion: BulkOperation) => Promise<void>;
   cargando: boolean;
 }
-
-type BulkOperation =
-  | { tipo: 'estado'; valor: boolean }
-  | { tipo: 'categoria'; valor: string }
-  | { tipo: 'permisos'; permisos: string[]; accion: 'agregar' | 'reemplazar' | 'eliminar' }
-  | { tipo: 'visible_dashboard'; valor: boolean };
 
 export function ModulosBulkEditModal({
   cantidad,

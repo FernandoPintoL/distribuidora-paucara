@@ -67,6 +67,10 @@ class User extends Authenticatable
 
     /**
      * Relación con datos del chofer (empleado con rol Chofer)
+     *
+     * DEPRECADO: Usar $user->empleado en su lugar
+     * Los choferes ahora se gestionan exclusivamente a través de la tabla Empleados
+     * Esta relación se mantiene solo para compatibilidad histórica
      */
     public function chofer(): HasOne
     {
@@ -82,11 +86,18 @@ class User extends Authenticatable
     }
 
     /**
-     * Relación con envios asignados al chofer (usuario)
+     * Relación con entregas asignadas al chofer (usuario)
+     *
+     * DEPRECADO: Esta relación es solo para compatibilidad histórica
+     * Los usuarios como choferes ahora se registran como Empleados
+     * IMPORTANTE: Esta relación ya no debe usarse en código nuevo
+     * Usar Empleado::entregas() en su lugar
+     *
+     * @deprecated Usar $user->empleado->entregas() en su lugar
      */
-    public function envios(): HasMany
+    public function entregas(): HasMany
     {
-        return $this->hasMany(Envio::class, 'chofer_id');
+        return $this->hasMany(Entrega::class, 'chofer_id');
     }
 
     /**

@@ -30,7 +30,7 @@ class EmpleadoRequest extends FormRequest
             'puede_acceder_sistema' => 'boolean',
             'rol'                   => 'nullable|string',
             'usernick'              => 'nullable|string|max:100|unique:users,usernick',
-            'email'                 => 'nullable|email|max:255|unique:users,email', // Email es siempre opcional
+            'email'                 => 'nullable|email|max:255|unique:users,email', // Email es completamente opcional - el usuario puede loguearse con usernick
             'password'              => 'nullable|string|min:8|confirmed', // Para cambio de contraseña
         ];
 

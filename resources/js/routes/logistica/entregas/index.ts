@@ -1,0 +1,1049 @@
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+/**
+* @see \App\Http\Controllers\EntregaController::index
+ * @see app/Http/Controllers/EntregaController.php:47
+ * @route '/logistica/entregas'
+ */
+export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: index.url(options),
+    method: 'get',
+})
+
+index.definition = {
+    methods: ["get","head"],
+    url: '/logistica/entregas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::index
+ * @see app/Http/Controllers/EntregaController.php:47
+ * @route '/logistica/entregas'
+ */
+index.url = (options?: RouteQueryOptions) => {
+    return index.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::index
+ * @see app/Http/Controllers/EntregaController.php:47
+ * @route '/logistica/entregas'
+ */
+index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: index.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\EntregaController::index
+ * @see app/Http/Controllers/EntregaController.php:47
+ * @route '/logistica/entregas'
+ */
+index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: index.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::index
+ * @see app/Http/Controllers/EntregaController.php:47
+ * @route '/logistica/entregas'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::index
+ * @see app/Http/Controllers/EntregaController.php:47
+ * @route '/logistica/entregas'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EntregaController::index
+ * @see app/Http/Controllers/EntregaController.php:47
+ * @route '/logistica/entregas'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
+/**
+ * @see routes/web.php:351
+ * @route '/logistica/entregas/dashboard'
+ */
+export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboard.url(options),
+    method: 'get',
+})
+
+dashboard.definition = {
+    methods: ["get","head"],
+    url: '/logistica/entregas/dashboard',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see routes/web.php:351
+ * @route '/logistica/entregas/dashboard'
+ */
+dashboard.url = (options?: RouteQueryOptions) => {
+    return dashboard.definition.url + queryParams(options)
+}
+
+/**
+ * @see routes/web.php:351
+ * @route '/logistica/entregas/dashboard'
+ */
+dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboard.url(options),
+    method: 'get',
+})
+/**
+ * @see routes/web.php:351
+ * @route '/logistica/entregas/dashboard'
+ */
+dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: dashboard.url(options),
+    method: 'head',
+})
+
+    /**
+ * @see routes/web.php:351
+ * @route '/logistica/entregas/dashboard'
+ */
+    const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: dashboard.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:351
+ * @route '/logistica/entregas/dashboard'
+ */
+        dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:351
+ * @route '/logistica/entregas/dashboard'
+ */
+        dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    dashboard.form = dashboardForm
+/**
+* @see \App\Http\Controllers\EntregaController::create
+ * @see app/Http/Controllers/EntregaController.php:85
+ * @route '/logistica/entregas/create'
+ */
+export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: create.url(options),
+    method: 'get',
+})
+
+create.definition = {
+    methods: ["get","head"],
+    url: '/logistica/entregas/create',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::create
+ * @see app/Http/Controllers/EntregaController.php:85
+ * @route '/logistica/entregas/create'
+ */
+create.url = (options?: RouteQueryOptions) => {
+    return create.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::create
+ * @see app/Http/Controllers/EntregaController.php:85
+ * @route '/logistica/entregas/create'
+ */
+create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: create.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\EntregaController::create
+ * @see app/Http/Controllers/EntregaController.php:85
+ * @route '/logistica/entregas/create'
+ */
+create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: create.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::create
+ * @see app/Http/Controllers/EntregaController.php:85
+ * @route '/logistica/entregas/create'
+ */
+    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: create.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::create
+ * @see app/Http/Controllers/EntregaController.php:85
+ * @route '/logistica/entregas/create'
+ */
+        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EntregaController::create
+ * @see app/Http/Controllers/EntregaController.php:85
+ * @route '/logistica/entregas/create'
+ */
+        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    create.form = createForm
+/**
+* @see \App\Http\Controllers\EntregaController::store
+ * @see app/Http/Controllers/EntregaController.php:173
+ * @route '/logistica/entregas'
+ */
+export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: store.url(options),
+    method: 'post',
+})
+
+store.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::store
+ * @see app/Http/Controllers/EntregaController.php:173
+ * @route '/logistica/entregas'
+ */
+store.url = (options?: RouteQueryOptions) => {
+    return store.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::store
+ * @see app/Http/Controllers/EntregaController.php:173
+ * @route '/logistica/entregas'
+ */
+store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: store.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::store
+ * @see app/Http/Controllers/EntregaController.php:173
+ * @route '/logistica/entregas'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::store
+ * @see app/Http/Controllers/EntregaController.php:173
+ * @route '/logistica/entregas'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
+/**
+* @see \App\Http\Controllers\EntregaController::optimizar
+ * @see app/Http/Controllers/EntregaController.php:521
+ * @route '/logistica/entregas/optimizar'
+ */
+export const optimizar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: optimizar.url(options),
+    method: 'post',
+})
+
+optimizar.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/optimizar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::optimizar
+ * @see app/Http/Controllers/EntregaController.php:521
+ * @route '/logistica/entregas/optimizar'
+ */
+optimizar.url = (options?: RouteQueryOptions) => {
+    return optimizar.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::optimizar
+ * @see app/Http/Controllers/EntregaController.php:521
+ * @route '/logistica/entregas/optimizar'
+ */
+optimizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: optimizar.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::optimizar
+ * @see app/Http/Controllers/EntregaController.php:521
+ * @route '/logistica/entregas/optimizar'
+ */
+    const optimizarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: optimizar.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::optimizar
+ * @see app/Http/Controllers/EntregaController.php:521
+ * @route '/logistica/entregas/optimizar'
+ */
+        optimizarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: optimizar.url(options),
+            method: 'post',
+        })
+    
+    optimizar.form = optimizarForm
+/**
+* @see \App\Http\Controllers\EntregaController::dashboardStats
+ * @see app/Http/Controllers/EntregaController.php:612
+ * @route '/logistica/entregas/dashboard-stats'
+ */
+export const dashboardStats = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboardStats.url(options),
+    method: 'get',
+})
+
+dashboardStats.definition = {
+    methods: ["get","head"],
+    url: '/logistica/entregas/dashboard-stats',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::dashboardStats
+ * @see app/Http/Controllers/EntregaController.php:612
+ * @route '/logistica/entregas/dashboard-stats'
+ */
+dashboardStats.url = (options?: RouteQueryOptions) => {
+    return dashboardStats.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::dashboardStats
+ * @see app/Http/Controllers/EntregaController.php:612
+ * @route '/logistica/entregas/dashboard-stats'
+ */
+dashboardStats.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: dashboardStats.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\EntregaController::dashboardStats
+ * @see app/Http/Controllers/EntregaController.php:612
+ * @route '/logistica/entregas/dashboard-stats'
+ */
+dashboardStats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: dashboardStats.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::dashboardStats
+ * @see app/Http/Controllers/EntregaController.php:612
+ * @route '/logistica/entregas/dashboard-stats'
+ */
+    const dashboardStatsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: dashboardStats.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::dashboardStats
+ * @see app/Http/Controllers/EntregaController.php:612
+ * @route '/logistica/entregas/dashboard-stats'
+ */
+        dashboardStatsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboardStats.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EntregaController::dashboardStats
+ * @see app/Http/Controllers/EntregaController.php:612
+ * @route '/logistica/entregas/dashboard-stats'
+ */
+        dashboardStatsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboardStats.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    dashboardStats.form = dashboardStatsForm
+/**
+* @see \App\Http\Controllers\EntregaController::show
+ * @see app/Http/Controllers/EntregaController.php:224
+ * @route '/logistica/entregas/{entrega}'
+ */
+export const show = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show.url(args, options),
+    method: 'get',
+})
+
+show.definition = {
+    methods: ["get","head"],
+    url: '/logistica/entregas/{entrega}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::show
+ * @see app/Http/Controllers/EntregaController.php:224
+ * @route '/logistica/entregas/{entrega}'
+ */
+show.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return show.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::show
+ * @see app/Http/Controllers/EntregaController.php:224
+ * @route '/logistica/entregas/{entrega}'
+ */
+show.get = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\EntregaController::show
+ * @see app/Http/Controllers/EntregaController.php:224
+ * @route '/logistica/entregas/{entrega}'
+ */
+show.head = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: show.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::show
+ * @see app/Http/Controllers/EntregaController.php:224
+ * @route '/logistica/entregas/{entrega}'
+ */
+    const showForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::show
+ * @see app/Http/Controllers/EntregaController.php:224
+ * @route '/logistica/entregas/{entrega}'
+ */
+        showForm.get = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\EntregaController::show
+ * @see app/Http/Controllers/EntregaController.php:224
+ * @route '/logistica/entregas/{entrega}'
+ */
+        showForm.head = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show.form = showForm
+/**
+* @see \App\Http\Controllers\EntregaController::asignar
+ * @see app/Http/Controllers/EntregaController.php:244
+ * @route '/logistica/entregas/{entrega}/asignar'
+ */
+export const asignar = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: asignar.url(args, options),
+    method: 'post',
+})
+
+asignar.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/{entrega}/asignar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::asignar
+ * @see app/Http/Controllers/EntregaController.php:244
+ * @route '/logistica/entregas/{entrega}/asignar'
+ */
+asignar.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return asignar.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::asignar
+ * @see app/Http/Controllers/EntregaController.php:244
+ * @route '/logistica/entregas/{entrega}/asignar'
+ */
+asignar.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: asignar.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::asignar
+ * @see app/Http/Controllers/EntregaController.php:244
+ * @route '/logistica/entregas/{entrega}/asignar'
+ */
+    const asignarForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: asignar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::asignar
+ * @see app/Http/Controllers/EntregaController.php:244
+ * @route '/logistica/entregas/{entrega}/asignar'
+ */
+        asignarForm.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: asignar.url(args, options),
+            method: 'post',
+        })
+    
+    asignar.form = asignarForm
+/**
+* @see \App\Http\Controllers\EntregaController::iniciar
+ * @see app/Http/Controllers/EntregaController.php:279
+ * @route '/logistica/entregas/{entrega}/iniciar'
+ */
+export const iniciar = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iniciar.url(args, options),
+    method: 'post',
+})
+
+iniciar.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/{entrega}/iniciar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::iniciar
+ * @see app/Http/Controllers/EntregaController.php:279
+ * @route '/logistica/entregas/{entrega}/iniciar'
+ */
+iniciar.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return iniciar.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::iniciar
+ * @see app/Http/Controllers/EntregaController.php:279
+ * @route '/logistica/entregas/{entrega}/iniciar'
+ */
+iniciar.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iniciar.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::iniciar
+ * @see app/Http/Controllers/EntregaController.php:279
+ * @route '/logistica/entregas/{entrega}/iniciar'
+ */
+    const iniciarForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: iniciar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::iniciar
+ * @see app/Http/Controllers/EntregaController.php:279
+ * @route '/logistica/entregas/{entrega}/iniciar'
+ */
+        iniciarForm.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: iniciar.url(args, options),
+            method: 'post',
+        })
+    
+    iniciar.form = iniciarForm
+/**
+* @see \App\Http\Controllers\EntregaController::llego
+ * @see app/Http/Controllers/EntregaController.php:556
+ * @route '/logistica/entregas/{entrega}/llego'
+ */
+export const llego = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: llego.url(args, options),
+    method: 'post',
+})
+
+llego.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/{entrega}/llego',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::llego
+ * @see app/Http/Controllers/EntregaController.php:556
+ * @route '/logistica/entregas/{entrega}/llego'
+ */
+llego.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return llego.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::llego
+ * @see app/Http/Controllers/EntregaController.php:556
+ * @route '/logistica/entregas/{entrega}/llego'
+ */
+llego.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: llego.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::llego
+ * @see app/Http/Controllers/EntregaController.php:556
+ * @route '/logistica/entregas/{entrega}/llego'
+ */
+    const llegoForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: llego.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::llego
+ * @see app/Http/Controllers/EntregaController.php:556
+ * @route '/logistica/entregas/{entrega}/llego'
+ */
+        llegoForm.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: llego.url(args, options),
+            method: 'post',
+        })
+    
+    llego.form = llegoForm
+/**
+* @see \App\Http\Controllers\EntregaController::confirmar
+ * @see app/Http/Controllers/EntregaController.php:309
+ * @route '/logistica/entregas/{entrega}/confirmar'
+ */
+export const confirmar = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: confirmar.url(args, options),
+    method: 'post',
+})
+
+confirmar.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/{entrega}/confirmar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::confirmar
+ * @see app/Http/Controllers/EntregaController.php:309
+ * @route '/logistica/entregas/{entrega}/confirmar'
+ */
+confirmar.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return confirmar.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::confirmar
+ * @see app/Http/Controllers/EntregaController.php:309
+ * @route '/logistica/entregas/{entrega}/confirmar'
+ */
+confirmar.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: confirmar.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::confirmar
+ * @see app/Http/Controllers/EntregaController.php:309
+ * @route '/logistica/entregas/{entrega}/confirmar'
+ */
+    const confirmarForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::confirmar
+ * @see app/Http/Controllers/EntregaController.php:309
+ * @route '/logistica/entregas/{entrega}/confirmar'
+ */
+        confirmarForm.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmar.url(args, options),
+            method: 'post',
+        })
+    
+    confirmar.form = confirmarForm
+/**
+* @see \App\Http\Controllers\EntregaController::novedad
+ * @see app/Http/Controllers/EntregaController.php:580
+ * @route '/logistica/entregas/{entrega}/novedad'
+ */
+export const novedad = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: novedad.url(args, options),
+    method: 'post',
+})
+
+novedad.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/{entrega}/novedad',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::novedad
+ * @see app/Http/Controllers/EntregaController.php:580
+ * @route '/logistica/entregas/{entrega}/novedad'
+ */
+novedad.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return novedad.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::novedad
+ * @see app/Http/Controllers/EntregaController.php:580
+ * @route '/logistica/entregas/{entrega}/novedad'
+ */
+novedad.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: novedad.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::novedad
+ * @see app/Http/Controllers/EntregaController.php:580
+ * @route '/logistica/entregas/{entrega}/novedad'
+ */
+    const novedadForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: novedad.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::novedad
+ * @see app/Http/Controllers/EntregaController.php:580
+ * @route '/logistica/entregas/{entrega}/novedad'
+ */
+        novedadForm.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: novedad.url(args, options),
+            method: 'post',
+        })
+    
+    novedad.form = novedadForm
+/**
+* @see \App\Http\Controllers\EntregaController::rechazar
+ * @see app/Http/Controllers/EntregaController.php:341
+ * @route '/logistica/entregas/{entrega}/rechazar'
+ */
+export const rechazar = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: rechazar.url(args, options),
+    method: 'post',
+})
+
+rechazar.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/{entrega}/rechazar',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::rechazar
+ * @see app/Http/Controllers/EntregaController.php:341
+ * @route '/logistica/entregas/{entrega}/rechazar'
+ */
+rechazar.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return rechazar.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::rechazar
+ * @see app/Http/Controllers/EntregaController.php:341
+ * @route '/logistica/entregas/{entrega}/rechazar'
+ */
+rechazar.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: rechazar.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::rechazar
+ * @see app/Http/Controllers/EntregaController.php:341
+ * @route '/logistica/entregas/{entrega}/rechazar'
+ */
+    const rechazarForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: rechazar.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::rechazar
+ * @see app/Http/Controllers/EntregaController.php:341
+ * @route '/logistica/entregas/{entrega}/rechazar'
+ */
+        rechazarForm.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: rechazar.url(args, options),
+            method: 'post',
+        })
+    
+    rechazar.form = rechazarForm
+/**
+* @see \App\Http\Controllers\EntregaController::ubicacion
+ * @see app/Http/Controllers/EntregaController.php:397
+ * @route '/logistica/entregas/{entrega}/ubicacion'
+ */
+export const ubicacion = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: ubicacion.url(args, options),
+    method: 'post',
+})
+
+ubicacion.definition = {
+    methods: ["post"],
+    url: '/logistica/entregas/{entrega}/ubicacion',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\EntregaController::ubicacion
+ * @see app/Http/Controllers/EntregaController.php:397
+ * @route '/logistica/entregas/{entrega}/ubicacion'
+ */
+ubicacion.url = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: args.entrega,
+                }
+
+    return ubicacion.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\EntregaController::ubicacion
+ * @see app/Http/Controllers/EntregaController.php:397
+ * @route '/logistica/entregas/{entrega}/ubicacion'
+ */
+ubicacion.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: ubicacion.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\EntregaController::ubicacion
+ * @see app/Http/Controllers/EntregaController.php:397
+ * @route '/logistica/entregas/{entrega}/ubicacion'
+ */
+    const ubicacionForm = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: ubicacion.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\EntregaController::ubicacion
+ * @see app/Http/Controllers/EntregaController.php:397
+ * @route '/logistica/entregas/{entrega}/ubicacion'
+ */
+        ubicacionForm.post = (args: { entrega: string | number } | [entrega: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: ubicacion.url(args, options),
+            method: 'post',
+        })
+    
+    ubicacion.form = ubicacionForm
+const entregas = {
+    index,
+dashboard,
+create,
+store,
+optimizar,
+dashboardStats,
+show,
+asignar,
+iniciar,
+llego,
+confirmar,
+novedad,
+rechazar,
+ubicacion,
+}
+
+export default entregas

@@ -195,9 +195,10 @@ export default function GenericTable<T extends BaseEntity>({
           <span className="text-xs text-muted-foreground/60 italic">Sin fecha</span>
         );
       case 'number':
-        return typeof value === 'number' ? (
+        const numValue = typeof value === 'number' ? value : (typeof value === 'string' && value !== '' ? parseFloat(value) : null);
+        return numValue !== null && !isNaN(numValue) ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 font-mono text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-            {value.toLocaleString('es-ES')}
+            {numValue.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </span>
         ) : (
           <span className="text-muted-foreground/40">—</span>

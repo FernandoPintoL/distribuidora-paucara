@@ -18,7 +18,7 @@ class Zona extends Model
         'nombre',
         'codigo',
         'descripcion',
-        'localidades',
+        // 'localidades', // DEPRECATED: Usar relación localidades() many-to-many
         'latitud_centro',
         'longitud_centro',
         'tiempo_estimado_entrega',
@@ -29,7 +29,7 @@ class Zona extends Model
     protected function casts(): array
     {
         return [
-            'localidades' => 'array', // JSON a array
+            // 'localidades' => 'array', // DEPRECATED: Campo JSON deprecated
             'latitud_centro' => 'decimal:8',
             'longitud_centro' => 'decimal:8',
             'activa' => 'boolean',
@@ -72,38 +72,26 @@ class Zona extends Model
     }
 
     /**
-     * DEPRECATED: Usar relación localidades() en su lugar
-     * Mantener por compatibilidad con código existente
-     * Obtener localidades como array
+     * DEPRECATED: Usar $zona->localidades (relación) en su lugar
+     * Este método se mantiene solo para backward compatibility
+     *
+     * @deprecated v2.0 Use $zona->localidades relationship instead
      */
-    public function getLocalidadesAttribute($value)
+    public function getLocalidadesArrayAttribute(): array
     {
-        // Si hay datos en JSON, retornarlos (legacy)
-        if ($value) {
-            return json_decode($value, true);
-        }
-
-        // Sino, obtener desde relación (nuevo comportamiento)
-        if ($this->relationLoaded('localidades')) {
-            return $this->localidades()->pluck('localidades.id')->toArray();
-        }
-
-        return [];
+        \Log::warning('DEPRECATED: getLocalidadesArrayAttribute() - Use $zona->localidades relationship');
+        return $this->localidades()->pluck('localidades.id')->toArray();
     }
 
     /**
-     * DEPRECATED: Usar sync() en relación localidades()
-     * Convertir localidades a JSON al guardar
+     * DEPRECATED: Usar $zona->localidades()->sync($ids) en su lugar
+     *
+     * @deprecated v2.0 Use $zona->localidades()->sync($ids)
      */
-    public function setLocalidadesAttribute($value)
+    public function setLocalidadesArray(array $localidadesData): void
     {
-        // Mantener para backward compatibility
-        $this->attributes['localidades'] = is_array($value) ? json_encode($value) : $value;
-
-        // También sincronizar con tabla pivot
-        if (is_array($value) && $this->exists) {
-            $this->syncLocalidadesFromArray($value);
-        }
+        \Log::warning('DEPRECATED: setLocalidadesArray() - Use $zona->localidades()->sync($ids)');
+        $this->syncLocalidadesFromArray($localidadesData);
     }
 
     /**

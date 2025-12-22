@@ -1,17 +1,19 @@
-import { Link, useForm, Head, router } from '@inertiajs/react'
+import { useForm, Head, router } from '@inertiajs/react'
 import React from 'react'
 import AppLayout from '@/layouts/app-layout'
-import { Button } from '@/presentation/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card'
+import { Badge } from '@/presentation/components/ui/badge'
 import { ModuloForm } from '@/presentation/pages/ModulosSidebar/ModuloForm'
 import toast from 'react-hot-toast'
-import { ArrowLeft } from 'lucide-react'
 import { type BreadcrumbItem } from '@/types'
-import { type ModuloSidebar, type ModuloFormData } from '@/domain/modulos/types'
+import { type ModuloSidebar, type ModuloFormData } from '@/domain/entities/admin-permisos'
+import { modulosService } from '@/infrastructure/services/modulos.service'
+import { Folders, ChevronRight } from 'lucide-react'
 
 interface PageProps {
     modulo: ModuloSidebar
     modulosPadre: ModuloSidebar[]
+    submodulos?: ModuloSidebar[]
     [key: string]: unknown
 }
 
@@ -26,7 +28,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ]
 
-export default function Edit({ modulo, modulosPadre }: PageProps) {
+export default function Edit({ modulo, modulosPadre, submodulos = [] }: PageProps) {
     const { data, setData, put, processing, errors } = useForm<ModuloFormData>({
         titulo: modulo.titulo,
         ruta: modulo.ruta,
@@ -45,7 +47,7 @@ export default function Edit({ modulo, modulosPadre }: PageProps) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
-        put(`/modulos-sidebar/${modulo.id}`, {
+        put(modulosService.updateUrl(modulo.id), {
             onSuccess: () => {
                 toast.success('Módulo actualizado exitosamente.')
                 router.visit('/admin/permisos?tab=modulos')
@@ -60,18 +62,20 @@ export default function Edit({ modulo, modulosPadre }: PageProps) {
         key: K,
         value: ModuloFormData[K]
     ) => {
+        // @ts-expect-error - Inertia's setData has strict typing that doesn't accept optional field types
+        // but in practice we never pass undefined values
         setData(key, value)
     }
 
     const handleCancel = () => {
-        router.visit('/admin/permisos')
+        router.visit('/admin/permisos?tab=modulos')
     }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Editar Módulo: ${modulo.titulo}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-xl font-semibold">Editar Módulo: {modulo.titulo}</h1>
@@ -79,34 +83,128 @@ export default function Edit({ modulo, modulosPadre }: PageProps) {
                             Modifica la configuración y permisos del módulo del sidebar.
                         </p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/permisos">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver
-                        </Link>
-                    </Button>
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Información del Módulo</CardTitle>
-                        <CardDescription>
-                            Modifique la información del módulo según sea necesario.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ModuloForm
-                            data={data}
-                            errors={errors}
-                            processing={processing}
-                            onSubmit={handleSubmit}
-                            onChange={handleChange}
-                            onCancel={handleCancel}
-                            submitLabel="Actualizar Módulo"
-                            modulosPadre={modulosPadre}
-                        />
-                    </CardContent>
-                </Card>
+                <div className="grid gap-6 lg:grid-cols-3">
+                    {/* Formulario principal */}
+                    <div className="lg:col-span-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Información del Módulo</CardTitle>
+                                <CardDescription>
+                                    Modifique la información del módulo según sea necesario.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ModuloForm
+                                    data={data}
+                                    errors={errors}
+                                    processing={processing}
+                                    onSubmit={handleSubmit}
+                                    onChange={handleChange}
+                                    onCancel={handleCancel}
+                                    submitLabel="Actualizar Módulo"
+                                    modulosPadre={modulosPadre}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Panel lateral con información contextual */}
+                    <div className="space-y-6">
+                        {/* Información del módulo */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-sm flex items-center gap-2">
+                                    <Folders className="h-4 w-4" />
+                                    Información
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3 text-sm">
+                                <div>
+                                    <p className="text-muted-foreground">ID</p>
+                                    <p className="font-medium">{modulo.id}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground">Tipo</p>
+                                    <Badge variant={modulo.es_submenu ? 'secondary' : 'default'}>
+                                        {modulo.es_submenu ? 'Submódulo' : 'Módulo Principal'}
+                                    </Badge>
+                                </div>
+                                {modulo.padre && (
+                                    <div>
+                                        <p className="text-muted-foreground">Módulo Padre</p>
+                                        <p className="font-medium">{modulo.padre.titulo}</p>
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="text-muted-foreground">Creado</p>
+                                    <p className="font-medium">
+                                        {modulo.created_at ? new Date(modulo.created_at).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                </div>
+                                {modulo.updated_at && (
+                                    <div>
+                                        <p className="text-muted-foreground">Última actualización</p>
+                                        <p className="font-medium">
+                                            {new Date(modulo.updated_at).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Submódulos (solo si es módulo principal) */}
+                        {!modulo.es_submenu && submodulos.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-sm">Submódulos</CardTitle>
+                                    <CardDescription>
+                                        {submodulos.length} submódulo{submodulos.length !== 1 ? 's' : ''} asociado{submodulos.length !== 1 ? 's' : ''}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-2">
+                                        {submodulos.map((sub) => (
+                                            <div
+                                                key={sub.id}
+                                                className="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2 flex-1">
+                                                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                                                    <span className="text-sm font-medium">{sub.titulo}</span>
+                                                    {!sub.activo && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            Inactivo
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => router.visit(`/modulos-sidebar/${sub.id}/edit`)}
+                                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                                >
+                                                    Editar
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Sugerencia para módulos principales sin submódulos */}
+                        {!modulo.es_submenu && submodulos.length === 0 && (
+                            <Card className="border-dashed">
+                                <CardContent className="pt-6">
+                                    <p className="text-sm text-muted-foreground text-center">
+                                        Este módulo principal aún no tiene submódulos asociados.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                </div>
             </div>
         </AppLayout>
     )

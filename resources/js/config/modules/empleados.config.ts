@@ -4,6 +4,7 @@ import type { Empleado, EmpleadoFormData } from '@/domain/entities/empleados';
 import MapPicker from '@/presentation/components/maps/MapPicker';
 import RolesSelector from '@/presentation/components/empleados/RolesSelector';
 import { createElement } from 'react';
+import { Badge } from '@/presentation/components/ui/badge';
 
 export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
     // Module identification
@@ -42,6 +43,45 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
         { key: 'ci', label: 'CI', type: 'text' },
         { key: 'telefono', label: 'Teléfono', type: 'text' },
         { key: 'email', label: 'Email', type: 'text' },
+        {
+            key: 'user.roles',
+            label: 'Roles',
+            type: 'text',
+            render: (value: any, entity: any) => {
+                const roles = entity?.user?.roles || [];
+
+                if (!roles.length) {
+                    return createElement('span', { className: 'text-xs text-muted-foreground italic' }, 'Sin roles');
+                }
+
+                return createElement('div', { className: 'flex flex-wrap gap-1' },
+                    roles.map((role: any, idx: number) => {
+                        const roleName = typeof role === 'string' ? role : role.name;
+
+                        // Color de badge según el rol
+                        const roleColors: Record<string, string> = {
+                            'Super Admin': 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 border-red-300 dark:border-red-700',
+                            'Admin': 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200 border-orange-300 dark:border-orange-700',
+                            'Manager': 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 border-purple-300 dark:border-purple-700',
+                            'Vendedor': 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 border-blue-300 dark:border-blue-700',
+                            'Cajero': 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200 border-green-300 dark:border-green-700',
+                            'Chofer': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200 border-cyan-300 dark:border-cyan-700',
+                            'Gestor de Almacén': 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 border-amber-300 dark:border-amber-700',
+                            'Inventario': 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 border-amber-300 dark:border-amber-700',
+                            'Compras': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200 border-indigo-300 dark:border-indigo-700',
+                        };
+
+                        const colorClass = roleColors[roleName] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-200 border-gray-300 dark:border-gray-700';
+
+                        return createElement(Badge, {
+                            key: idx,
+                            className: `${colorClass} border text-xs font-semibold`,
+                            variant: 'outline'
+                        }, roleName);
+                    })
+                );
+            }
+        },
         { key: 'estado', label: 'Estado', type: 'text' },
         { key: 'puede_acceder_sistema', label: 'Acceso Sistema', type: 'boolean' },
     ],
@@ -116,34 +156,34 @@ export const empleadosConfig: ModuleConfig<Empleado, EmpleadoFormData> = {
             colSpan: 3, // 🆕 Ocupa todo el ancho
             section: 'Información Personal',
         },
-        // Campo personalizado para ubicación en mapa
-        {
-            key: 'coordenadas',
-            hidden: true, // Campo oculto, se maneja internamente
-            label: 'Ubicación en el mapa',
-            type: 'custom',
-            colSpan: 3,
-            fullWidth: true, // 🆕 Ocupa TODO el ancho de la pantalla
-            section: 'Información Personal',
-            render: ({ value, onChange, disabled, formData }) => {
-                // formData contiene latitud y longitud separados
-                const latitud = (formData as any)?.latitud;
-                const longitud = (formData as any)?.longitud;
-
-                return createElement(MapPicker, {
-                    latitude: latitud,
-                    longitude: longitud,
-                    onLocationSelect: (lat: number, lng: number, address?: string) => {
-                        // Actualizar los campos latitud y longitud
-                        onChange({ latitud: lat, longitud: lng, address });
-                    },
-                    label: 'Ubicación del empleado',
-                    description: 'Selecciona la ubicación del empleado en el mapa',
-                    disabled: Boolean(disabled),
-                    height: '350px'
-                });
-            }
-        },
+        // Campo personalizado para ubicación en mapa (DESHABILITADO - Las columnas latitud y longitud no existen en la tabla empleados)
+        // {
+        //     key: 'coordenadas',
+        //     hidden: true, // Campo oculto, se maneja internamente
+        //     label: 'Ubicación en el mapa',
+        //     type: 'custom',
+        //     colSpan: 3,
+        //     fullWidth: true, // 🆕 Ocupa TODO el ancho de la pantalla
+        //     section: 'Información Personal',
+        //     render: ({ value, onChange, disabled, formData }) => {
+        //         // formData contiene latitud y longitud separados
+        //         const latitud = (formData as any)?.latitud;
+        //         const longitud = (formData as any)?.longitud;
+        //
+        //         return createElement(MapPicker, {
+        //             latitude: latitud,
+        //             longitude: longitud,
+        //             onLocationSelect: (lat: number, lng: number, address?: string) => {
+        //                 // Actualizar los campos latitud y longitud
+        //                 onChange({ latitud: lat, longitud: lng, address });
+        //             },
+        //             label: 'Ubicación del empleado',
+        //             description: 'Selecciona la ubicación del empleado en el mapa',
+        //             disabled: Boolean(disabled),
+        //             height: '350px'
+        //         });
+        //     }
+        // },
         {
             key: 'estado',
             label: 'Estado',

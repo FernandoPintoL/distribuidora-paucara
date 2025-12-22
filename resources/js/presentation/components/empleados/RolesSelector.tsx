@@ -127,9 +127,9 @@ export default function RolesSelector({
 
       {/* Mostrar rol sugerido */}
       {rolSugerido && (
-        <Alert className="bg-blue-50 border-blue-200">
-          <Lightbulb className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
+        <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <Lightbulb className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
             <strong>Rol sugerido:</strong> {rolSugerido}
             <p className="text-sm mt-1">
               Basado en el cargo "{cargo}", recomendamos asignar este rol automáticamente.
@@ -139,9 +139,9 @@ export default function RolesSelector({
       )}
 
       {error && (
-        <Alert className="bg-red-50 border-red-200">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">{error}</AlertDescription>
+        <Alert className="bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800">
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-200">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -156,10 +156,10 @@ export default function RolesSelector({
               key={role.value}
               className={`cursor-pointer transition-all ${
                 isSelected
-                  ? 'ring-2 ring-green-500 border-green-500 bg-green-50'
+                  ? 'ring-2 ring-green-500 border-green-500 bg-green-50 dark:bg-green-950 dark:border-green-700'
                   : isRolSugerido
-                    ? 'border-blue-300 bg-blue-50'
-                    : 'hover:border-gray-400'
+                    ? 'border-blue-300 bg-blue-50 dark:bg-blue-950 dark:border-blue-700'
+                    : 'hover:border-gray-400 dark:hover:border-gray-600'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => toggleRole(role.value)}
               role="button"
@@ -177,7 +177,7 @@ export default function RolesSelector({
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                       isSelected
                         ? 'bg-green-500 border-green-500'
-                        : 'border-gray-300'
+                        : 'border-gray-300 dark:border-gray-600'
                     }`}>
                       {isSelected && (
                         <CheckCircle2 className="w-4 h-4 text-white" />
@@ -195,14 +195,14 @@ export default function RolesSelector({
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-gray-700">{role.description}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{role.description}</p>
 
                 {/* Mostrar permisos principales */}
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-600">Capacidades principales:</p>
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">Capacidades principales:</p>
                   <ul className="space-y-1">
                     {role.permisos.map((permiso, idx) => (
-                      <li key={idx} className="text-xs text-gray-600">
+                      <li key={idx} className="text-xs text-gray-600 dark:text-gray-400">
                         {permiso}
                       </li>
                     ))}
@@ -253,7 +253,7 @@ export default function RolesSelector({
 
       {selectedRoles.length > 0 && (
         <div className="pt-4">
-          <p className="text-sm font-semibold text-gray-700 mb-2">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Roles seleccionados ({selectedRoles.length}):
           </p>
           <div className="flex flex-wrap gap-2">

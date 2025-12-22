@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\ModuloSidebar;
@@ -15,32 +14,32 @@ class ModuloSidebarController extends Controller
     public function index(): Response
     {
         $modulos = ModuloSidebar::with(['padre', 'submodulos'])
-            ->ordenados()
+            ->orderBy('orden')
             ->get()
             ->map(function ($modulo) {
                 return [
-                    'id' => $modulo->id,
-                    'titulo' => $modulo->titulo,
-                    'ruta' => $modulo->ruta,
-                    'icono' => $modulo->icono,
-                    'descripcion' => $modulo->descripcion,
-                    'orden' => $modulo->orden,
-                    'activo' => $modulo->activo,
-                    'es_submenu' => $modulo->es_submenu,
-                    'categoria' => $modulo->categoria,
-                    'color' => $modulo->color,
+                    'id'                => $modulo->id,
+                    'titulo'            => $modulo->titulo,
+                    'ruta'              => $modulo->ruta,
+                    'icono'             => $modulo->icono,
+                    'descripcion'       => $modulo->descripcion,
+                    'orden'             => $modulo->orden,
+                    'activo'            => $modulo->activo,
+                    'es_submenu'        => $modulo->es_submenu,
+                    'categoria'         => $modulo->categoria,
+                    'color'             => $modulo->color,
                     'visible_dashboard' => $modulo->visible_dashboard,
-                    'padre' => $modulo->padre ? [
-                        'id' => $modulo->padre->id,
+                    'padre'             => $modulo->padre ? [
+                        'id'     => $modulo->padre->id,
                         'titulo' => $modulo->padre->titulo,
                     ] : null,
-                    'submodulos_count' => $modulo->submodulos->count(),
-                    'permisos' => $modulo->permisos,
+                    'submodulos_count'  => $modulo->submodulos->count(),
+                    'permisos'          => $modulo->permisos,
                 ];
-            });
+            })->values()->toArray();
 
-        return Inertia::render('ModulosSidebar/Index', [
-            'modulos' => $modulos,
+        return Inertia::render('admin/permisos/modulos/index', [
+            'modulos'    => $modulos,
             'categorias' => ModuloSidebar::select('categoria')
                 ->distinct()
                 ->whereNotNull('categoria')
@@ -58,8 +57,11 @@ class ModuloSidebarController extends Controller
             ->ordenados()
             ->get(['id', 'titulo']);
 
-        return Inertia::render('ModulosSidebar/Form', [
-            'modulosPadre' => $modulosPadre,
+        $totalModulos = ModuloSidebar::count();
+
+        return Inertia::render('admin/permisos/modulos/create', [
+            'modulosPadre'  => $modulosPadre,
+            'totalModulos'  => $totalModulos,
         ]);
     }
 
@@ -69,18 +71,18 @@ class ModuloSidebarController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'titulo' => 'required|string|max:255',
-            'ruta' => 'required|string|max:500',
-            'icono' => 'nullable|string|max:255',
-            'descripcion' => 'nullable|string|max:500',
-            'orden' => 'integer|min:0',
-            'activo' => 'boolean',
-            'es_submenu' => 'boolean',
-            'modulo_padre_id' => 'nullable|exists:modulos_sidebar,id',
-            'permisos' => 'nullable|array',
-            'permisos.*' => 'string',
-            'color' => 'nullable|string|max:50',
-            'categoria' => 'nullable|string|max:100',
+            'titulo'            => 'required|string|max:255',
+            'ruta'              => 'required|string|max:500',
+            'icono'             => 'nullable|string|max:255',
+            'descripcion'       => 'nullable|string|max:500',
+            'orden'             => 'integer|min:0',
+            'activo'            => 'boolean',
+            'es_submenu'        => 'boolean',
+            'modulo_padre_id'   => 'nullable|exists:modulos_sidebar,id',
+            'permisos'          => 'nullable|array',
+            'permisos.*'        => 'string',
+            'color'             => 'nullable|string|max:50',
+            'categoria'         => 'nullable|string|max:100',
             'visible_dashboard' => 'boolean',
         ]);
 
@@ -107,15 +109,27 @@ class ModuloSidebarController extends Controller
      */
     public function edit(ModuloSidebar $moduloSidebar): Response
     {
+        // Cargar relaciones necesarias
+        $moduloSidebar->load(['padre', 'submodulos']);
+
         $modulosPadre = ModuloSidebar::principales()
             ->activos()
             ->where('id', '!=', $moduloSidebar->id)
             ->ordenados()
             ->get(['id', 'titulo']);
 
-        return Inertia::render('ModulosSidebar/Form', [
-            'modulo' => $moduloSidebar,
+        // Obtener submódulos si es un módulo principal
+        $submodulos = [];
+        if (!$moduloSidebar->es_submenu) {
+            $submodulos = ModuloSidebar::where('modulo_padre_id', $moduloSidebar->id)
+                ->ordenados()
+                ->get(['id', 'titulo', 'ruta', 'activo', 'orden', 'icono']);
+        }
+
+        return Inertia::render('admin/permisos/modulos/edit', [
+            'modulo'       => $moduloSidebar,
             'modulosPadre' => $modulosPadre,
+            'submodulos'   => $submodulos,
         ]);
     }
 
@@ -125,18 +139,18 @@ class ModuloSidebarController extends Controller
     public function update(Request $request, ModuloSidebar $moduloSidebar)
     {
         $validated = $request->validate([
-            'titulo' => 'required|string|max:255',
-            'ruta' => 'required|string|max:500',
-            'icono' => 'nullable|string|max:255',
-            'descripcion' => 'nullable|string|max:500',
-            'orden' => 'integer|min:0',
-            'activo' => 'boolean',
-            'es_submenu' => 'boolean',
-            'modulo_padre_id' => 'nullable|exists:modulos_sidebar,id',
-            'permisos' => 'nullable|array',
-            'permisos.*' => 'string',
-            'color' => 'nullable|string|max:50',
-            'categoria' => 'nullable|string|max:100',
+            'titulo'            => 'required|string|max:255',
+            'ruta'              => 'required|string|max:500',
+            'icono'             => 'nullable|string|max:255',
+            'descripcion'       => 'nullable|string|max:500',
+            'orden'             => 'integer|min:0',
+            'activo'            => 'boolean',
+            'es_submenu'        => 'boolean',
+            'modulo_padre_id'   => 'nullable|exists:modulos_sidebar,id',
+            'permisos'          => 'nullable|array',
+            'permisos.*'        => 'string',
+            'color'             => 'nullable|string|max:50',
+            'categoria'         => 'nullable|string|max:100',
             'visible_dashboard' => 'boolean',
         ]);
 
@@ -190,8 +204,8 @@ class ModuloSidebarController extends Controller
     public function actualizarOrden(Request $request)
     {
         $validated = $request->validate([
-            'modulos' => 'required|array',
-            'modulos.*.id' => 'required|exists:modulos_sidebar,id',
+            'modulos'         => 'required|array',
+            'modulos.*.id'    => 'required|exists:modulos_sidebar,id',
             'modulos.*.orden' => 'required|integer|min:0',
         ]);
 
@@ -214,42 +228,57 @@ class ModuloSidebarController extends Controller
     }
 
     /**
-     * API endpoint para obtener módulos del sidebar
+     * API endpoint para obtener módulos del sidebar (para el usuario autenticado)
+     * Devuelve módulos filtrados por permisos del usuario
      */
     public function apiIndex()
     {
-        $modulos = ModuloSidebar::where('activo', true)
-            ->where('visible_dashboard', true)
-            ->with(['submodulos' => function ($query) {
-                $query->where('activo', true)
-                    ->where('visible_dashboard', true)
-                    ->orderBy('orden');
-            }])
-            ->whereNull('padre_id') // Solo módulos padre
-            ->orderBy('orden')
-            ->get()
+        $modulos = ModuloSidebar::obtenerParaSidebar()
             ->filter(function ($modulo) {
-                // Filtrar módulos padre por permisos
                 return $modulo->usuarioTienePermiso();
             })
             ->map(function ($modulo) {
-                $navItem = $modulo->toNavItem();
-
-                // Filtrar submódulos por permisos
-                if (isset($navItem['children'])) {
-                    $navItem['children'] = collect($navItem['children'])
-                        ->filter(function ($child) {
-                            // Los children ya están filtrados en toNavItem()
-                            return true;
-                        })
-                        ->values()
-                        ->toArray();
-                }
-
-                return $navItem;
+                return $modulo->toNavItem();
             })
-            ->values()
-            ->toArray();
+            ->values();
+
+        return response()->json($modulos);
+    }
+
+    /**
+     * API endpoint para obtener TODOS los módulos (para administración)
+     * Este método devuelve TODOS los módulos para la gestión administrativa
+     * sin filtrar por permisos del usuario
+     */
+    public function apiIndexAdmin()
+    {
+        // Devuelve TODOS los módulos para el Centro de Permisos
+        // Sin filtros de activo o permisos
+        $modulos = ModuloSidebar::with(['padre', 'submodulos'])
+            ->orderBy('orden')
+            ->get()
+            ->map(function ($modulo) {
+                return [
+                    'id'                => $modulo->id,
+                    'titulo'            => $modulo->titulo,
+                    'ruta'              => $modulo->ruta,
+                    'icono'             => $modulo->icono,
+                    'descripcion'       => $modulo->descripcion,
+                    'orden'             => $modulo->orden,
+                    'activo'            => $modulo->activo,
+                    'es_submenu'        => $modulo->es_submenu,
+                    'categoria'         => $modulo->categoria,
+                    'color'             => $modulo->color,
+                    'visible_dashboard' => $modulo->visible_dashboard,
+                    'padre_id'          => $modulo->modulo_padre_id,
+                    'padre'             => $modulo->padre ? [
+                        'id'     => $modulo->padre->id,
+                        'titulo' => $modulo->padre->titulo,
+                    ] : null,
+                    'submodulos_count'  => $modulo->submodulos->count(),
+                    'permisos'          => $modulo->permisos ?? [],
+                ];
+            });
 
         return response()->json($modulos);
     }
@@ -263,7 +292,7 @@ class ModuloSidebarController extends Controller
             ->sortBy('name')
             ->map(function ($permission) {
                 return [
-                    'id' => $permission->id,
+                    'id'    => $permission->id,
                     'value' => $permission->name,
                     'label' => $permission->name,
                 ];
@@ -296,13 +325,13 @@ class ModuloSidebarController extends Controller
 
         foreach ($modulos as $modulo) {
             $moduloData = [
-                'id' => $modulo->id,
-                'titulo' => $modulo->titulo,
-                'ruta' => $modulo->ruta,
-                'categoria' => $modulo->categoria,
+                'id'                  => $modulo->id,
+                'titulo'              => $modulo->titulo,
+                'ruta'                => $modulo->ruta,
+                'categoria'           => $modulo->categoria,
                 'permisos_requeridos' => $modulo->permisos ?? [],
-                'roles_acceso' => [],
-                'submodulos' => [],
+                'roles_acceso'        => [],
+                'submodulos'          => [],
             ];
 
             // Verificar acceso de cada rol a este módulo
@@ -316,11 +345,11 @@ class ModuloSidebarController extends Controller
             // Procesar submódulos
             foreach ($modulo->submodulos as $submodulo) {
                 $submoduloData = [
-                    'id' => $submodulo->id,
-                    'titulo' => $submodulo->titulo,
-                    'ruta' => $submodulo->ruta,
+                    'id'                  => $submodulo->id,
+                    'titulo'              => $submodulo->titulo,
+                    'ruta'                => $submodulo->ruta,
                     'permisos_requeridos' => $submodulo->permisos ?? [],
-                    'roles_acceso' => [],
+                    'roles_acceso'        => [],
                 ];
 
                 foreach ($roles as $role) {
@@ -337,7 +366,7 @@ class ModuloSidebarController extends Controller
         }
 
         return response()->json([
-            'roles' => $roles->pluck('name')->toArray(),
+            'roles'   => $roles->pluck('name')->toArray(),
             'modulos' => $matriz,
         ]);
     }
@@ -371,7 +400,7 @@ class ModuloSidebarController extends Controller
     {
         $role = \Spatie\Permission\Models\Role::where('name', $rolName)->first();
 
-        if (!$role) {
+        if (! $role) {
             return response()->json(['error' => 'Rol no encontrado'], 404);
         }
 
@@ -398,7 +427,10 @@ class ModuloSidebarController extends Controller
                         ->filter(function ($child) use ($role) {
                             // Encontrar el módulo original para verificar permisos
                             $submodulo = ModuloSidebar::find($child['id'] ?? null);
-                            if (!$submodulo) return false;
+                            if (! $submodulo) {
+                                return false;
+                            }
+
                             return $this->rolTieneAccesoAlModulo($role, $submodulo);
                         })
                         ->values()
@@ -411,11 +443,11 @@ class ModuloSidebarController extends Controller
             ->toArray();
 
         return response()->json([
-            'rol' => [
-                'name' => $role->name,
+            'rol'           => [
+                'name'         => $role->name,
                 'display_name' => $role->display_order ?? $role->name,
             ],
-            'modulos' => $modulos,
+            'modulos'       => $modulos,
             'total_modulos' => count($modulos),
         ]);
     }
@@ -429,8 +461,8 @@ class ModuloSidebarController extends Controller
             ->get(['id', 'name'])
             ->map(function ($role) {
                 return [
-                    'id' => $role->id,
-                    'name' => $role->name,
+                    'id'    => $role->id,
+                    'name'  => $role->name,
                     'label' => ucfirst(str_replace('-', ' ', $role->name)),
                 ];
             });
@@ -445,23 +477,23 @@ class ModuloSidebarController extends Controller
     public function bulkUpdateMatrizAcceso(Request $request)
     {
         $validated = $request->validate([
-            'cambios' => 'required|array|min:1',
-            'cambios.*.rol_id' => 'required|integer',
-            'cambios.*.rol_nombre' => 'required|string',
-            'cambios.*.modulo_id' => 'required|integer|exists:modulos_sidebar,id',
+            'cambios'                 => 'required|array|min:1',
+            'cambios.*.rol_id'        => 'required|integer',
+            'cambios.*.rol_nombre'    => 'required|string',
+            'cambios.*.modulo_id'     => 'required|integer|exists:modulos_sidebar,id',
             'cambios.*.modulo_titulo' => 'required|string',
-            'cambios.*.permisos' => 'required|array',
-            'cambios.*.accion' => 'required|in:agregar,eliminar,reemplazar',
+            'cambios.*.permisos'      => 'required|array',
+            'cambios.*.accion'        => 'required|in:agregar,eliminar,reemplazar',
         ]);
 
-        $cambios = $validated['cambios'];
+        $cambios          = $validated['cambios'];
         $cambiosAplicados = 0;
 
         try {
             foreach ($cambios as $cambio) {
-                $modulo = ModuloSidebar::findOrFail($cambio['modulo_id']);
+                $modulo           = ModuloSidebar::findOrFail($cambio['modulo_id']);
                 $permisosActuales = $modulo->permisos ?? [];
-                $nuevosPermisos = $permisosActuales;
+                $nuevosPermisos   = $permisosActuales;
 
                 switch ($cambio['accion']) {
                     case 'reemplazar':
@@ -523,21 +555,21 @@ class ModuloSidebarController extends Controller
             ->get()
             ->map(function ($audit) {
                 return [
-                    'id' => $audit->id,
-                    'modulo_id' => $audit->modulo_id,
-                    'modulo_titulo' => $audit->modulo?->titulo ?? 'N/A',
-                    'usuario_id' => $audit->usuario_id,
-                    'usuario_nombre' => $audit->usuario?->name ?? 'Sistema',
-                    'accion' => $audit->accion,
+                    'id'               => $audit->id,
+                    'modulo_id'        => $audit->modulo_id,
+                    'modulo_titulo'    => $audit->modulo?->titulo ?? 'N/A',
+                    'usuario_id'       => $audit->usuario_id,
+                    'usuario_nombre'   => $audit->usuario?->name ?? 'Sistema',
+                    'accion'           => $audit->accion,
                     'datos_anteriores' => $audit->datos_anteriores,
-                    'datos_nuevos' => $audit->datos_nuevos,
-                    'fecha' => $audit->created_at->toIso8601String(),
+                    'datos_nuevos'     => $audit->datos_nuevos,
+                    'fecha'            => $audit->created_at->toIso8601String(),
                 ];
             });
 
         return response()->json([
             'cambios' => $cambios,
-            'total' => $cambios->count(),
+            'total'   => $cambios->count(),
         ]);
     }
 
@@ -548,14 +580,14 @@ class ModuloSidebarController extends Controller
     public function bulkUpdate(Request $request)
     {
         $validated = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'required|integer|exists:modulos_sidebar,id',
-            'operacion' => 'required|array',
+            'ids'            => 'required|array|min:1',
+            'ids.*'          => 'required|integer|exists:modulos_sidebar,id',
+            'operacion'      => 'required|array',
             'operacion.tipo' => 'required|in:estado,categoria,visible_dashboard',
         ]);
 
-        $ids = $validated['ids'];
-        $operacion = $validated['operacion'];
+        $ids              = $validated['ids'];
+        $operacion        = $validated['operacion'];
         $cambiosAplicados = 0;
 
         try {
