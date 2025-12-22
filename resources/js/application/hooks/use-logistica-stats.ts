@@ -55,6 +55,10 @@ export function useLogisticaStats(options: UseLogisticaStatsOptions = {}) {
 
     /**
      * Fetch logistics statistics from the API using the service layer
+     *
+     * Note: El endpoint /api/logistica/dashboard/stats no está disponible.
+     * Las estadísticas se obtienen desde el servidor web (Inertia).
+     * Este hook mantiene los datos en estado vacío.
      */
     const fetchStats = useCallback(async () => {
         try {
@@ -62,13 +66,19 @@ export function useLogisticaStats(options: UseLogisticaStatsOptions = {}) {
             setError(null);
 
             // Use service layer for API abstraction
-            const data = await logisticaService.obtenerDashboardStats();
-
-            if (data) {
-                setStats(data);
+            // NOTA: El endpoint aún no está implementado, pero el dashboard
+            // obtiene sus datos directamente del server via Inertia
+            try {
+                const data = await logisticaService.obtenerDashboardStats();
+                if (data) {
+                    setStats(data);
+                    setLastUpdate(new Date());
+                }
+            } catch (apiError) {
+                // Si el endpoint no existe, mantener estado vacío
+                // El dashboard funcionará con los datos del servidor
+                setStats(null);
                 setLastUpdate(new Date());
-            } else {
-                throw new Error('No data received from server');
             }
         } catch (err: any) {
             const errorMessage = err.message || 'Error loading logistics statistics';
