@@ -228,7 +228,7 @@ class EntregaController extends Controller
 
             return $this->respondShow(
                 data: $entregaDTO,
-                inertiaComponent: 'Entregas/Show',
+                inertiaComponent: 'entregas/Show',
             );
 
         } catch (\Exception $e) {
@@ -489,14 +489,14 @@ class EntregaController extends Controller
 
             // Obtener métricas adicionales
             $distanciaRecorrida = $this->trackingService->obtenerDistanciaRecorrida($id);
-            $tiempoTotal = $this->trackingService->obtenerTiempoPromedio($id);
+            $tiempoTotal        = $this->trackingService->obtenerTiempoPromedio($id);
 
             return response()->json([
-                'success'                  => true,
-                'data'                     => $ubicaciones,
-                'total'                    => $ubicaciones->count(),
-                'distancia_recorrida_km'   => $distanciaRecorrida,
-                'tiempo_total_minutos'     => $tiempoTotal,
+                'success'                => true,
+                'data'                   => $ubicaciones,
+                'total'                  => $ubicaciones->count(),
+                'distancia_recorrida_km' => $distanciaRecorrida,
+                'tiempo_total_minutos'   => $tiempoTotal,
             ]);
 
         } catch (\Exception $e) {
@@ -617,18 +617,18 @@ class EntregaController extends Controller
                 'venta.cliente',
                 'chofer.user',
                 'vehiculo',
-                'proforma.cliente'
+                'proforma.cliente',
             ])->get();
 
             // 1. CONTAR POR ESTADO
             $estados = [
                 'PROGRAMADO' => $entregas->where('estado', 'PROGRAMADO')->count(),
-                'ASIGNADA' => $entregas->where('estado', 'ASIGNADA')->count(),
-                'EN_CAMINO' => $entregas->where('estado', 'EN_CAMINO')->count(),
-                'LLEGO' => $entregas->where('estado', 'LLEGO')->count(),
-                'ENTREGADO' => $entregas->where('estado', 'ENTREGADO')->count(),
-                'NOVEDAD' => $entregas->where('estado', 'NOVEDAD')->count(),
-                'CANCELADA' => $entregas->where('estado', 'CANCELADA')->count(),
+                'ASIGNADA'   => $entregas->where('estado', 'ASIGNADA')->count(),
+                'EN_CAMINO'  => $entregas->where('estado', 'EN_CAMINO')->count(),
+                'LLEGO'      => $entregas->where('estado', 'LLEGO')->count(),
+                'ENTREGADO'  => $entregas->where('estado', 'ENTREGADO')->count(),
+                'NOVEDAD'    => $entregas->where('estado', 'NOVEDAD')->count(),
+                'CANCELADA'  => $entregas->where('estado', 'CANCELADA')->count(),
             ];
 
             // 2. ENTREGAS POR ZONA (vía Venta -> Cliente -> Zona si existe)
@@ -643,11 +643,11 @@ class EntregaController extends Controller
                     return 'Sin zona';
                 })
                 ->map(function ($grupo, $zonaId) {
-                    $total = $grupo->count();
+                    $total       = $grupo->count();
                     $completadas = $grupo->whereIn('estado', ['ENTREGADO'])->count();
 
                     // Calcular tiempo promedio de entrega en minutos
-                    $tiempoPromedio = 0;
+                    $tiempoPromedio    = 0;
                     $entregasConTiempo = $grupo->filter(function ($e) {
                         return $e->fecha_inicio && $e->fecha_entrega;
                     });
@@ -661,16 +661,16 @@ class EntregaController extends Controller
 
                     $nombreZona = 'Sin zona';
                     if ($zonaId !== 'Sin zona') {
-                        $zona = \App\Models\Zona::find($zonaId);
+                        $zona       = \App\Models\Zona::find($zonaId);
                         $nombreZona = $zona?->nombre ?? "Zona {$zonaId}";
                     }
 
                     return [
-                        'zona_id' => $zonaId === 'Sin zona' ? null : $zonaId,
-                        'nombre' => $nombreZona,
-                        'total' => $total,
-                        'completadas' => $completadas,
-                        'porcentaje' => $total > 0 ? round(($completadas / $total) * 100, 2) : 0,
+                        'zona_id'                 => $zonaId === 'Sin zona' ? null : $zonaId,
+                        'nombre'                  => $nombreZona,
+                        'total'                   => $total,
+                        'completadas'             => $completadas,
+                        'porcentaje'              => $total > 0 ? round(($completadas / $total) * 100, 2) : 0,
                         'tiempo_promedio_minutos' => $tiempoPromedio,
                     ];
                 })
@@ -682,20 +682,20 @@ class EntregaController extends Controller
                 ->groupBy('chofer_id')
                 ->map(function ($grupo) {
                     $chofer = $grupo->first()->chofer;
-                    if (!$chofer) {
+                    if (! $chofer) {
                         return null;
                     }
 
-                    $total = $grupo->count();
+                    $total       = $grupo->count();
                     $completadas = $grupo->where('estado', 'ENTREGADO')->count();
-                    $eficiencia = $total > 0 ? round(($completadas / $total) * 100, 2) : 0;
+                    $eficiencia  = $total > 0 ? round(($completadas / $total) * 100, 2) : 0;
 
                     return [
-                        'chofer_id' => $chofer->id,
-                        'nombre' => $chofer->user?->name ?? $chofer->nombre,
-                        'email' => $chofer->user?->email,
-                        'entregas_total' => $total,
-                        'entregas_completadas' => $completadas,
+                        'chofer_id'             => $chofer->id,
+                        'nombre'                => $chofer->user?->name ?? $chofer->nombre,
+                        'email'                 => $chofer->user?->email,
+                        'entregas_total'        => $total,
+                        'entregas_completadas'  => $completadas,
                         'eficiencia_porcentaje' => $eficiencia,
                     ];
                 })
@@ -705,21 +705,21 @@ class EntregaController extends Controller
                 ->values();
 
             // 4. ENTREGAS ÚLTIMOS 7 DÍAS
-            $fechaInicio = now()->subDays(7)->startOfDay();
+            $fechaInicio  = now()->subDays(7)->startOfDay();
             $ultimos7Dias = collect();
 
             for ($i = 6; $i >= 0; $i--) {
-                $fecha = now()->subDays($i)->format('Y-m-d');
+                $fecha         = now()->subDays($i)->format('Y-m-d');
                 $cantidadFecha = $entregas
                     ->filter(function ($e) use ($i) {
                         return $e->fecha_entrega &&
-                               $e->fecha_entrega->format('Y-m-d') === now()->subDays($i)->format('Y-m-d');
+                        $e->fecha_entrega->format('Y-m-d') === now()->subDays($i)->format('Y-m-d');
                     })
                     ->count();
 
                 $ultimos7Dias->push([
-                    'fecha' => $fecha,
-                    'dia' => now()->subDays($i)->format('D'),
+                    'fecha'    => $fecha,
+                    'dia'      => now()->subDays($i)->format('D'),
                     'entregas' => $cantidadFecha,
                 ]);
             }
@@ -731,26 +731,26 @@ class EntregaController extends Controller
                 ->map(function ($entrega) {
                     $cliente = $entrega->venta?->cliente ?? $entrega->proforma?->cliente;
                     return [
-                        'id' => $entrega->id,
-                        'estado' => $entrega->estado,
-                        'cliente_nombre' => $cliente?->nombre ?? 'Sin cliente',
-                        'chofer_nombre' => $entrega->chofer?->user?->name ?? 'Sin asignar',
-                        'fecha_entrega' => $entrega->fecha_entrega?->format('Y-m-d H:i'),
+                        'id'               => $entrega->id,
+                        'estado'           => $entrega->estado,
+                        'cliente_nombre'   => $cliente?->nombre ?? 'Sin cliente',
+                        'chofer_nombre'    => $entrega->chofer?->user?->name ?? 'Sin asignar',
+                        'fecha_entrega'    => $entrega->fecha_entrega?->format('Y-m-d H:i'),
                         'fecha_programada' => $entrega->fecha_programada?->format('Y-m-d H:i'),
-                        'peso_kg' => $entrega->peso_kg,
-                        'vehiculo_placa' => $entrega->vehiculo?->placa ?? 'Sin vehículo',
+                        'peso_kg'          => $entrega->peso_kg,
+                        'vehiculo_placa'   => $entrega->vehiculo?->placa ?? 'Sin vehículo',
                     ];
                 })
                 ->values();
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'estados' => $estados,
-                    'estados_total' => array_sum($estados),
-                    'por_zona' => $porZona,
-                    'top_choferes' => $topChoferes,
-                    'ultimos_7_dias' => $ultimos7Dias,
+                'data'    => [
+                    'estados'            => $estados,
+                    'estados_total'      => array_sum($estados),
+                    'por_zona'           => $porZona,
+                    'top_choferes'       => $topChoferes,
+                    'ultimos_7_dias'     => $ultimos7Dias,
                     'entregas_recientes' => $entregasRecientes,
                 ],
             ]);
