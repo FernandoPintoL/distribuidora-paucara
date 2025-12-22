@@ -338,8 +338,6 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Rutas para logística y envíos
     Route::prefix('logistica')->name('logistica.')->group(function () {
         Route::get('dashboard', [App\Http\Controllers\Web\LogisticaController::class, 'dashboard'])->name('dashboard');
-        Route::get('entregas-asignadas', fn() => Inertia::render('logistica/entregas/asignadas'))->name('entregas-asignadas');
-        Route::get('entregas-en-transito', fn() => Inertia::render('logistica/entregas/en-transito'))->name('entregas-en-transito');
         Route::get('proformas-pendientes', fn() => Inertia::render('logistica/proformas-pendientes'))->name('proformas-pendientes');
         Route::get('envios/{envio}/seguimiento', [App\Http\Controllers\Web\LogisticaController::class, 'seguimiento'])->name('envios.seguimiento');
 
@@ -349,6 +347,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             // para evitar que sean capturadas por la ruta con parámetro
 
             Route::get('/', [\App\Http\Controllers\EntregaController::class, 'index'])->name('index');
+
+            // Rutas específicas de entregas
+            Route::get('asignadas', fn() => Inertia::render('logistica/entregas/asignadas'))->name('asignadas');
+            Route::get('en-transito', fn() => Inertia::render('logistica/entregas/en-transito'))->name('en-transito');
             Route::get('dashboard', fn() => Inertia::render('logistica/entregas/dashboard'))->name('dashboard');
             Route::get('dashboard-stats', [\App\Http\Controllers\EntregaController::class, 'dashboardStats'])->name('dashboard-stats');
             Route::get('create', [\App\Http\Controllers\EntregaController::class, 'create'])->name('create');
