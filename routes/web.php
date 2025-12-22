@@ -345,20 +345,19 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
         // ✅ NUEVO: Entregas consolidadas (migrado desde /envios)
         Route::prefix('entregas')->name('entregas.')->group(function () {
+            // ✅ IMPORTANTE: Las rutas específicas DEBEN estar ANTES de {entrega}
+            // para evitar que sean capturadas por la ruta con parámetro
+
             Route::get('/', [\App\Http\Controllers\EntregaController::class, 'index'])->name('index');
-
-            // ✅ NUEVO: Dashboard visual de entregas
             Route::get('dashboard', fn() => Inertia::render('logistica/entregas/dashboard'))->name('dashboard');
-
+            Route::get('dashboard-stats', [\App\Http\Controllers\EntregaController::class, 'dashboardStats'])->name('dashboard-stats');
             Route::get('create', [\App\Http\Controllers\EntregaController::class, 'create'])->name('create');
-            Route::post('/', [\App\Http\Controllers\EntregaController::class, 'store'])->name('store');
 
             // Optimización masiva de rutas (FFD + Nearest Neighbor)
             Route::post('optimizar', [\App\Http\Controllers\EntregaController::class, 'optimizarRutas'])->name('optimizar');
+            Route::post('/', [\App\Http\Controllers\EntregaController::class, 'store'])->name('store');
 
-            // ✅ NUEVO: Dashboard stats para estadísticas
-            Route::get('dashboard-stats', [\App\Http\Controllers\EntregaController::class, 'dashboardStats'])->name('dashboard-stats');
-
+            // ✅ IMPORTANTE: Las rutas con parámetro {entrega} DEBEN estar al final
             Route::get('{entrega}', [\App\Http\Controllers\EntregaController::class, 'show'])->name('show');
             Route::post('{entrega}/asignar', [\App\Http\Controllers\EntregaController::class, 'asignarChoferVehiculo'])->name('asignar');
             Route::post('{entrega}/iniciar', [\App\Http\Controllers\EntregaController::class, 'iniciar'])->name('iniciar');
