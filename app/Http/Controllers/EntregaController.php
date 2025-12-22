@@ -224,12 +224,25 @@ class EntregaController extends Controller
     public function show(int $id): JsonResponse | InertiaResponse
     {
         try {
-            $entregaDTO = $this->entregaService->obtener($id);
+            $entrega = \App\Models\Entrega::with([
+                'venta.cliente',
+                'proforma.cliente',
+                'chofer',
+                'vehiculo',
+            ])->findOrFail($id);
 
-            return $this->respondShow(
-                data: $entregaDTO,
-                inertiaComponent: 'entregas/Show',
-            );
+            // API/JSON
+            if ($this->isApiRequest()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $entrega,
+                ]);
+            }
+
+            // Web (Inertia)
+            return Inertia::render('logistica/entregas/Show', [
+                'entrega' => $entrega,
+            ]);
 
         } catch (\Exception $e) {
             return $this->respondNotFound('Entrega no encontrada');
