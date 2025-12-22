@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\Envio;
+use App\Models\Entrega;
 use App\Models\Proforma;
 use Inertia\Inertia;
 
@@ -24,9 +24,9 @@ class LogisticaController extends Controller
         // Estadísticas del dashboard - Consistent with API endpoints
         $estadisticas = [
             'proformas_pendientes'  => Proforma::where('estado', 'PENDIENTE')->count(),  // Count ALL pending, not just APP_EXTERNA
-            'envios_programados'    => Envio::where('estado', 'PROGRAMADO')->count(),
-            'envios_en_transito'    => Envio::where('estado', 'EN_RUTA')->count(),
-            'envios_entregados_hoy' => Envio::whereDate('fecha_entrega', today())
+            'entregas_programadas'    => Entrega::where('estado', 'PROGRAMADO')->count(),
+            'entregas_en_transito'    => Entrega::where('estado', 'EN_CAMINO')->count(),
+            'entregas_entregadas_hoy' => Entrega::whereDate('fecha_entrega', today())
                 ->where('estado', 'ENTREGADO')
                 ->count(),
             'rutas' => $rutasStats,
@@ -92,48 +92,48 @@ class LogisticaController extends Controller
             'to'           => $proformasPaginated->lastItem(),
         ];
 
-        // Envíos activos con paginación (FIXED: was hardcoded limit(10))
-        $enviosQuery = Envio::with(['venta.cliente'])
-            ->whereIn('estado', ['PROGRAMADO', 'EN_PREPARACION', 'EN_RUTA'])
+        // Entregas activas con paginación
+        $entregasQuery = Entrega::with(['venta.cliente', 'proforma.cliente'])
+            ->whereIn('estado', ['PROGRAMADO', 'ASIGNADA', 'EN_CAMINO'])
             ->orderBy('fecha_programada', 'desc');
 
-        // Apply search filter for envios
-        if (request()->has('search_envios') && request('search_envios') !== '') {
-            $searchEnvios = request('search_envios');
-            $enviosQuery->where(function ($q) use ($searchEnvios) {
-                $q->where('numero_envio', 'like', "%{$searchEnvios}%")
-                  ->orWhereHas('venta.cliente', function ($clienteQuery) use ($searchEnvios) {
-                      $clienteQuery->where('nombre', 'like', "%{$searchEnvios}%");
-                  });
+        // Apply search filter for entregas
+        if (request()->has('search_entregas') && request('search_entregas') !== '') {
+            $searchEntregas = request('search_entregas');
+            $entregasQuery->where(function ($q) use ($searchEntregas) {
+                $q->orWhereHas('venta.cliente', function ($clienteQuery) use ($searchEntregas) {
+                    $clienteQuery->where('nombre', 'like', "%{$searchEntregas}%");
+                })->orWhereHas('proforma.cliente', function ($clienteQuery) use ($searchEntregas) {
+                    $clienteQuery->where('nombre', 'like', "%{$searchEntregas}%");
+                });
             });
         }
 
-        // Apply estado filter for envios
-        if (request()->has('estado_envios') && request('estado_envios') !== 'TODOS') {
-            $enviosQuery->where('estado', request('estado_envios'));
+        // Apply estado filter for entregas
+        if (request()->has('estado_entregas') && request('estado_entregas') !== 'TODOS') {
+            $entregasQuery->where('estado', request('estado_entregas'));
         }
 
-        $enviosPaginados = $enviosQuery->paginate(15, ['*'], 'page_envios'); // Paginate with 15 per page
+        $entregasPaginadas = $entregasQuery->paginate(15, ['*'], 'page_entregas'); // Paginate with 15 per page
 
-        $enviosActivos = [
-            'data' => $enviosPaginados->map(function ($envio) {
+        $entregasActivas = [
+            'data' => $entregasPaginadas->map(function ($entrega) {
+                $cliente = $entrega->venta?->cliente ?? $entrega->proforma?->cliente;
                 return [
-                    'id'                 => $envio->id,
-                    'numero_seguimiento' => $envio->numero_envio,
-                    'cliente_nombre'     => $envio->venta->cliente->nombre ?? 'N/A',
-                    'estado'             => $envio->estado,
-                    'fecha_programada'   => $envio->fecha_programada,
-                    'fecha_salida'       => $envio->fecha_salida,
-                    'fecha_entrega'      => $envio->fecha_entrega,
-                    'direccion_entrega'  => $envio->direccion_entrega,
+                    'id'                 => $entrega->id,
+                    'numero_referencia'  => $entrega->proforma?->numero ?? $entrega->venta?->numero ?? 'N/A',
+                    'cliente_nombre'     => $cliente?->nombre ?? 'N/A',
+                    'estado'             => $entrega->estado,
+                    'fecha_programada'   => $entrega->fecha_programada,
+                    'fecha_entrega'      => $entrega->fecha_entrega,
                 ];
             }),
-            'current_page' => $enviosPaginados->currentPage(),
-            'last_page'    => $enviosPaginados->lastPage(),
-            'per_page'     => $enviosPaginados->perPage(),
-            'total'        => $enviosPaginados->total(),
-            'from'         => $enviosPaginados->firstItem(),
-            'to'           => $enviosPaginados->lastItem(),
+            'current_page' => $entregasPaginadas->currentPage(),
+            'last_page'    => $entregasPaginadas->lastPage(),
+            'per_page'     => $entregasPaginadas->perPage(),
+            'total'        => $entregasPaginadas->total(),
+            'from'         => $entregasPaginadas->firstItem(),
+            'to'           => $entregasPaginadas->lastItem(),
         ];
 
         // Rutas del día
@@ -166,48 +166,42 @@ class LogisticaController extends Controller
         return Inertia::render('logistica/dashboard', [
             'estadisticas'       => $estadisticas,
             'proformasRecientes' => $proformasRecientes,
-            'enviosActivos'      => $enviosActivos,
+            'entregasActivas'    => $entregasActivas,
             'rutasDelDia'        => $rutasData,
         ]);
     }
 
     /**
-     * Página de seguimiento de envío
+     * Página de seguimiento de entrega (DEPRECATED)
+     * Esta ruta sigue existiendo para compatibilidad pero debería usar /logistica/entregas/{id} en su lugar
      */
-    public function seguimiento(Envio $envio)
+    public function seguimiento(Entrega $entrega)
     {
-        $envio->load(['venta.cliente', 'seguimientos' => function ($query) {
-            $query->orderBy('fecha_hora', 'desc');
+        $entrega->load(['venta.cliente', 'proforma.cliente', 'ubicacionesTracking' => function ($query) {
+            $query->orderBy('created_at', 'desc');
         }]);
 
-        $envioData = [
-            'id'                    => $envio->id,
-            'numero_seguimiento'    => $envio->numero_envio,
-            'estado'                => $envio->estado,
-            'fecha_programada'      => $envio->fecha_programada?->format('Y-m-d H:i'),
-            'fecha_salida'          => $envio->fecha_salida?->format('Y-m-d H:i'),
-            'fecha_entrega'         => $envio->fecha_entrega?->format('Y-m-d H:i'),
-            'direccion_entrega'     => $envio->direccion_entrega,
-            'cliente_nombre'        => $envio->venta->cliente->nombre ?? 'N/A',
-            'ubicacion_actual'      => ($envio->coordenadas_lat && $envio->coordenadas_lng) ? [
-                'latitud'   => $envio->coordenadas_lat,
-                'longitud'  => $envio->coordenadas_lng,
-                'direccion' => $envio->direccion_entrega,
-            ] : null,
-            'historial_seguimiento' => $envio->seguimientos->map(function ($item) {
+        $cliente = $entrega->venta?->cliente ?? $entrega->proforma?->cliente;
+
+        $entregaData = [
+            'id'                    => $entrega->id,
+            'numero_referencia'     => $entrega->proforma?->numero ?? $entrega->venta?->numero ?? 'N/A',
+            'estado'                => $entrega->estado,
+            'fecha_programada'      => $entrega->fecha_programada?->format('Y-m-d H:i'),
+            'fecha_entrega'         => $entrega->fecha_entrega?->format('Y-m-d H:i'),
+            'cliente_nombre'        => $cliente?->nombre ?? 'N/A',
+            'historial_ubicaciones' => $entrega->ubicacionesTracking->map(function ($item) {
                 return [
-                    'estado'      => $item->estado,
-                    'fecha'       => $item->fecha_hora->format('Y-m-d H:i'),
-                    'descripcion' => $item->observaciones ?? '',
-                    'ubicacion'   => ($item->coordenadas_lat && $item->coordenadas_lng)
-                        ? "Lat: {$item->coordenadas_lat}, Lng: {$item->coordenadas_lng}"
-                        : '',
+                    'fecha'       => $item->created_at->format('Y-m-d H:i'),
+                    'latitud'     => $item->latitud,
+                    'longitud'    => $item->longitud,
+                    'precicion'   => $item->presicion,
                 ];
             }),
         ];
 
         return Inertia::render('logistica/seguimiento', [
-            'envio' => $envioData,
+            'entrega' => $entregaData,
         ]);
     }
 }

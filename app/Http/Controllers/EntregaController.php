@@ -35,10 +35,10 @@ class EntregaController extends Controller
         private EntregaService $entregaService,
         private TrackingService $trackingService,
     ) {
-        $this->middleware('permission:envios.index')->only('index');
-        $this->middleware('permission:envios.show')->only('show');
-        $this->middleware('permission:envios.create')->only(['create', 'store']);
-        $this->middleware('permission:envios.programar')->only('asignarChoferVehiculo');
+        $this->middleware('permission:entregas.index')->only('index');
+        $this->middleware('permission:entregas.show')->only('show');
+        $this->middleware('permission:entregas.create')->only(['create', 'store']);
+        $this->middleware('permission:entregas.manage')->only('asignarChoferVehiculo');
     }
 
     /**
