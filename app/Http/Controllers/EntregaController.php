@@ -221,15 +221,16 @@ class EntregaController extends Controller
     /**
      * Mostrar detalle de entrega
      */
-    public function show(int $id): JsonResponse | InertiaResponse
+    public function show(\App\Models\Entrega $entrega): JsonResponse | InertiaResponse
     {
         try {
-            $entrega = \App\Models\Entrega::with([
+            // Cargar relaciones necesarias
+            $entrega->load([
                 'venta.cliente',
                 'proforma.cliente',
                 'chofer',
                 'vehiculo',
-            ])->findOrFail($id);
+            ]);
 
             // API/JSON
             if ($this->isApiRequest()) {
