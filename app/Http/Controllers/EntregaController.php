@@ -80,46 +80,52 @@ class EntregaController extends Controller
     }
 
     /**
-     * Mostrar formulario de creación
+     * Mostrar formulario unificado de creación (1 o múltiples entregas)
+     *
+     * FASE UNIFICADA: Una sola ruta para crear entregas simples o en lote
+     *
+     * Parámetros opcionales:
+     * - ?venta_id=N → Preselecciona una venta (modo single)
+     * - Sin parámetros → Modo batch (seleccionar múltiples)
+     *
+     * El frontend decide dinámicamente:
+     * - 1 venta → Muestra Wizard
+     * - 2+ ventas → Muestra Batch UI con optimización
      */
-    public function create(): InertiaResponse
+    public function create(Request $request): InertiaResponse
     {
-        // DEBUG: Contar ventas disponibles
-        $totalVentas       = \App\Models\Venta::count();
-        $ventasSinEntregas = \App\Models\Venta::whereDoesntHave('entregas')->count();
-        Log::info("DEBUG Entregas Create - Total ventas: {$totalVentas}, Sin entregas: {$ventasSinEntregas}");
+        // 1. Detectar modo basado en parámetro (opcional)
+        $ventaPreseleccionada = $request->input('venta_id');
 
-        // Obtener ventas sin entrega asignada (sin filtro de estado por ahora para testing)
-        // Pueden filtrarse manualmente las ventas que requieren entrega
+        // 2. Obtener ventas (mostrar todas para permitir recriar entregas)
+        // Usar datos enriquecidos para soportar ambos flujos
         $ventas = \App\Models\Venta::query()
-            ->with(['cliente', 'estadoDocumento'])
-            ->whereDoesntHave('entregas')
-        // Temporalmente comentado para permitir todas las ventas sin entrega
-        // ->whereHas('estadoDocumento', function($q) {
-        //     $q->whereIn('nombre', ['CONFIRMADO', 'CONFIRMADA', 'APROBADO', 'APROBADA']);
-        // })
+            ->with(['cliente', 'detalles.producto', 'estadoDocumento'])
             ->latest()
             ->get()
             ->map(function ($venta) {
                 return [
-                    'id'           => $venta->id,
-                    'numero_venta' => $venta->numero ?? "V-{$venta->id}",
-                    'numero'      => $venta->numero,
-                    'total'       => (float) $venta->total,
-                    'fecha_venta' => $venta->fecha?->format('Y-m-d'),
-                    'fecha'       => $venta->fecha?->format('Y-m-d'),
-                    'estado'      => $venta->estadoDocumento?->nombre ?? 'Sin estado',
-                    'cliente'     => [
+                    // Datos para formulario wizard (simple)
+                    'id'               => $venta->id,
+                    'numero_venta'     => $venta->numero ?? "V-{$venta->id}",
+                    'numero'           => $venta->numero,
+                    'total'            => (float) $venta->total,
+                    'fecha_venta'      => $venta->fecha?->format('Y-m-d'),
+                    'fecha'            => $venta->fecha?->format('Y-m-d'),
+                    'estado'           => $venta->estadoDocumento?->nombre ?? 'Sin estado',
+                    'cliente'          => [
                         'id'       => $venta->cliente?->id,
                         'nombre'   => $venta->cliente?->nombre ?? 'Cliente no disponible',
                         'telefono' => $venta->cliente?->telefono,
                     ],
+                    // Datos para batch UI
+                    'cantidad_items'   => $venta->detalles?->count() ?? 0,
+                    'peso_estimado'    => $venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10,
+                    'detalles'         => $venta->detalles?->toArray() ?? [],
                 ];
             });
 
-        Log::info("DEBUG Entregas Create - Ventas encontradas: " . $ventas->count());
-
-        // Obtener vehículos disponibles
+        // 3. Obtener vehículos disponibles
         $vehiculos = Vehiculo::disponibles()
             ->get()
             ->map(fn($v) => [
@@ -131,23 +137,12 @@ class EntregaController extends Controller
                 'capacidad_kg'    => $v->capacidad_kg,
             ]);
 
-        // Obtener choferes activos con licencia vigente
-        $totalEmpleados       = Empleado::where('estado', 'activo')->count();
-        $empleadosConLicencia = Empleado::whereNotNull('licencia')->count();
-        Log::info("DEBUG Entregas Create - Empleados activos: {$totalEmpleados}, Con licencia: {$empleadosConLicencia}");
-
-        // Obtener empleados activos (relajar requisito de licencia temporalmente)
-        // En producción, descomentar validación de licencia
-        $empleadosQuery = Empleado::query()
+        // 4. Obtener choferes activos
+        $choferes = Empleado::query()
             ->with('user')
             ->where('estado', 'activo')
-            ->get();
-
-        Log::info("DEBUG - Empleados antes de filtrar: " . $empleadosQuery->count());
-        Log::info("DEBUG - Empleados sin user: " . $empleadosQuery->filter(fn($e) => $e->user === null)->count());
-
-        $choferes = $empleadosQuery
-            ->filter(fn($e) => $e->user !== null) // Asegurar que tengan usuario asociado
+            ->get()
+            ->filter(fn($e) => $e->user !== null)
             ->map(fn($e) => [
                 'id'             => $e->id,
                 'name'           => $e->user->name ?? $e->nombre,
@@ -157,18 +152,23 @@ class EntregaController extends Controller
             ])
             ->values();
 
-        Log::info("DEBUG Entregas Create - Choferes encontrados: " . $choferes->count());
-        Log::info("DEBUG - Choferes data: " . json_encode($choferes->take(2)));
-
+        // 5. Renderizar con una sola página unificada
         return Inertia::render('logistica/entregas/create', [
-            'ventas'    => $ventas,
-            'vehiculos' => $vehiculos,
-            'choferes'  => $choferes,
+            'ventas'                 => $ventas,
+            'vehiculos'              => $vehiculos,
+            'choferes'               => $choferes,
+            'ventaPreseleccionada'   => $ventaPreseleccionada,
         ]);
     }
 
     /**
      * Crear nueva entrega
+     *
+     * POST /logistica/entregas (web form)
+     * POST /api/entregas (API JSON)
+     *
+     * El peso se calcula automáticamente desde los detalles de la venta
+     * si no se proporciona explícitamente.
      */
     public function store(Request $request): JsonResponse | RedirectResponse
     {
@@ -178,10 +178,18 @@ class EntregaController extends Controller
                 'vehiculo_id'       => 'required|exists:vehiculos,id',
                 'chofer_id'         => 'required|exists:empleados,id',
                 'fecha_programada'  => 'required|date|after:now',
-                'direccion_entrega' => 'required|string|max:500',
-                'peso_kg'           => 'required|numeric|min:0.01|max:50000',
+                'direccion_entrega' => 'nullable|string|max:500',
+                'peso_kg'           => 'nullable|numeric|min:0.01|max:50000',
                 'observaciones'     => 'nullable|string|max:1000',
             ]);
+
+            // ✅ NUEVO: Obtener peso de la venta si no se proporciona
+            if (empty($validated['peso_kg'])) {
+                $venta = \App\Models\Venta::with('detalles')->findOrFail($validated['venta_id']);
+                // Calcular peso basado en detalles de la venta
+                // Por defecto: cantidad * 2 (estimación)
+                $validated['peso_kg'] = $venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10;
+            }
 
             // Validar que el peso no exceda la capacidad del vehículo
             $vehiculo = Vehiculo::findOrFail($validated['vehiculo_id']);
@@ -198,22 +206,51 @@ class EntregaController extends Controller
                 'vehiculo_id'       => $validated['vehiculo_id'],
                 'chofer_id'         => $validated['chofer_id'],
                 'fecha_programada'  => $validated['fecha_programada'],
-                'direccion_entrega' => $validated['direccion_entrega'],
+                'direccion_entrega' => $validated['direccion_entrega'] ?? null,
                 'peso_kg'           => $validated['peso_kg'],
                 'observaciones'     => $validated['observaciones'] ?? null,
                 'estado'            => 'PROGRAMADO',
             ]);
 
-            return $this->respondSuccess(
-                data: $entrega,
-                message: 'Entrega creada exitosamente',
-                redirectTo: route('logistica.entregas.show', $entrega->id),
-            );
+            // ✅ DIFERENCIADO: Respuesta API vs Web
+            if ($this->isApiRequest()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Entrega creada exitosamente',
+                    'data' => $entrega,
+                ], 201);
+            }
+
+            // Para solicitudes web, redirigir
+            return redirect()
+                ->route('logistica.entregas.show', $entrega->id)
+                ->with('success', 'Entrega creada exitosamente');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            // ✅ DIFERENCIADO: Errores en API vs Web
+            if ($this->isApiRequest()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+
             return $this->respondError('Error de validación', statusCode: 422, errors: $e->errors());
 
         } catch (\Exception $e) {
+            Log::error('Error creando entrega', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($this->isApiRequest()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al crear entrega: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return $this->respondError($e->getMessage());
         }
     }
@@ -776,5 +813,74 @@ class EntregaController extends Controller
                 'message' => 'Error al obtener estadísticas: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * ⚠️ DEPRECATED: Usar create() en su lugar
+     *
+     * Este método ha sido reemplazado por create() que soporta
+     * tanto entregas simples como en lote en una sola interfaz unificada.
+     *
+     * FASE UNIFICADA: La ruta /logistica/entregas/create ahora maneja
+     * ambos flujos (single + batch) dinámicamente según la selección del usuario.
+     *
+     * Mantener por backward compatibility temporalmente.
+     * Será eliminado en próximo sprint.
+     *
+     * @deprecated Use GET /logistica/entregas/create instead
+     * @see \App\Http\Controllers\EntregaController::create()
+     */
+    public function createBatch(): InertiaResponse
+    {
+        // Obtener ventas sin entrega
+        $ventas = \App\Models\Venta::query()
+            ->with(['cliente', 'detalles', 'estadoDocumento'])
+            ->whereDoesntHave('entregas')
+            ->latest()
+            ->get()
+            ->map(function ($venta) {
+                return [
+                    'id'            => $venta->id,
+                    'numero_venta'  => $venta->numero ?? "V-{$venta->id}",
+                    'total'         => (float) $venta->total,
+                    'fecha_venta'   => $venta->fecha?->format('Y-m-d'),
+                    'cliente'       => [
+                        'id'     => $venta->cliente?->id,
+                        'nombre' => $venta->cliente?->nombre ?? 'Cliente no disponible',
+                    ],
+                    'cantidad_items' => $venta->detalles?->count() ?? 0,
+                    'peso_estimado'  => $venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10,
+                ];
+            });
+
+        // Obtener vehículos disponibles
+        $vehiculos = Vehiculo::disponibles()
+            ->get()
+            ->map(fn($v) => [
+                'id'           => $v->id,
+                'placa'        => $v->placa,
+                'marca'        => $v->marca,
+                'modelo'       => $v->modelo,
+                'capacidad_kg' => $v->capacidad_kg,
+            ]);
+
+        // Obtener choferes activos
+        $choferes = Empleado::query()
+            ->with('user')
+            ->where('estado', 'activo')
+            ->get()
+            ->filter(fn($e) => $e->user !== null)
+            ->map(fn($e) => [
+                'id'     => $e->id,
+                'nombre' => $e->user?->name ?? $e->nombre,
+                'email'  => $e->user?->email,
+            ])
+            ->values();
+
+        return Inertia::render('logistica/entregas/create-batch', [
+            'ventas'    => $ventas,
+            'vehiculos' => $vehiculos,
+            'choferes'  => $choferes,
+        ]);
     }
 }

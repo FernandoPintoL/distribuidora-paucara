@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChoferPreferenciaController;
 use App\Http\Controllers\Api\EmpleadoApiController;
+use App\Http\Controllers\Api\EntregaBatchController;
 use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\EstadoMermaController;
@@ -489,6 +490,27 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::get('/{id}/ubicaciones', [EntregaController::class, 'obtenerUbicaciones'])
             ->middleware('permission:envios.manage')
             ->name('entregas.ubicaciones');
+    });
+
+    // ✅ PHASE 2: ENTREGAS (Simples y en Lote)
+    Route::prefix('entregas')->group(function () {
+        // Crear entrega simple (1 venta)
+        Route::post('/', [\App\Http\Controllers\EntregaController::class, 'store'])
+            ->middleware('permission:entregas.create')
+            ->name('api.entregas.store');
+    });
+
+    // ✅ PHASE 2: ENTREGAS EN LOTE (Creación Masiva Optimizada)
+    Route::prefix('entregas/lote')->group(function () {
+        // Preview/simulación de creación en lote
+        Route::post('/preview', [EntregaBatchController::class, 'preview'])
+            ->middleware('permission:entregas.create')
+            ->name('entregas.lote.preview');
+
+        // Crear entregas en lote
+        Route::post('/', [EntregaBatchController::class, 'store'])
+            ->middleware('permission:entregas.create')
+            ->name('entregas.lote.crear');
     });
 });
 
