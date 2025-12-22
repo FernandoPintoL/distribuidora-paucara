@@ -3,7 +3,11 @@
 namespace App\Providers;
 
 use App\Events\EntregaAsignada;
+use App\Events\EntregaCompletada;
 use App\Events\EntregaConfirmada;
+use App\Events\EntregaCreada;
+use App\Events\EntregaEnCamino;
+use App\Events\EntregaRechazada;
 use App\Events\MarcarLlegadaConfirmada;
 use App\Events\NovedadEntregaReportada;
 use App\Events\ProformaAprobada;
@@ -80,12 +84,28 @@ class EventServiceProvider extends ServiceProvider
         // ENTREGA EVENTS
         // ══════════════════════════════════════════════════════════
 
+        EntregaCreada::class => [
+            // Broadcast cuando se crea una entrega
+        ],
+
         EntregaAsignada::class => [
             BroadcastEntregaAsignada::class,
         ],
 
+        EntregaEnCamino::class => [
+            // Broadcast cuando entrega está en camino
+        ],
+
+        EntregaCompletada::class => [
+            // Broadcast cuando entrega se completa
+        ],
+
         EntregaConfirmada::class => [
             BroadcastEntregaConfirmada::class,
+        ],
+
+        EntregaRechazada::class => [
+            // Broadcast cuando entrega es rechazada
         ],
 
         // ══════════════════════════════════════════════════════════
