@@ -3,6 +3,7 @@ import EmpleadoApiController from './EmpleadoApiController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import RoleController from './RoleController'
 import NotificationController from './NotificationController'
+import ChoferPreferenciaController from './ChoferPreferenciaController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
@@ -17,6 +18,7 @@ EmpleadoApiController,
 TipoAjusteInventarioController,
 RoleController,
 NotificationController,
+ChoferPreferenciaController,
 TipoMermaController,
 EstadoMermaController,
 ApiProformaController,

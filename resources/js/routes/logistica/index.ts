@@ -81,148 +81,6 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dashboard.form = dashboardForm
 /**
  * @see routes/web.php:341
- * @route '/logistica/entregas-asignadas'
- */
-export const entregasAsignadas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: entregasAsignadas.url(options),
-    method: 'get',
-})
-
-entregasAsignadas.definition = {
-    methods: ["get","head"],
-    url: '/logistica/entregas-asignadas',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
- * @see routes/web.php:341
- * @route '/logistica/entregas-asignadas'
- */
-entregasAsignadas.url = (options?: RouteQueryOptions) => {
-    return entregasAsignadas.definition.url + queryParams(options)
-}
-
-/**
- * @see routes/web.php:341
- * @route '/logistica/entregas-asignadas'
- */
-entregasAsignadas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: entregasAsignadas.url(options),
-    method: 'get',
-})
-/**
- * @see routes/web.php:341
- * @route '/logistica/entregas-asignadas'
- */
-entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: entregasAsignadas.url(options),
-    method: 'head',
-})
-
-    /**
- * @see routes/web.php:341
- * @route '/logistica/entregas-asignadas'
- */
-    const entregasAsignadasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: entregasAsignadas.url(options),
-        method: 'get',
-    })
-
-            /**
- * @see routes/web.php:341
- * @route '/logistica/entregas-asignadas'
- */
-        entregasAsignadasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: entregasAsignadas.url(options),
-            method: 'get',
-        })
-            /**
- * @see routes/web.php:341
- * @route '/logistica/entregas-asignadas'
- */
-        entregasAsignadasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: entregasAsignadas.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    entregasAsignadas.form = entregasAsignadasForm
-/**
- * @see routes/web.php:342
- * @route '/logistica/entregas-en-transito'
- */
-export const entregasEnTransito = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: entregasEnTransito.url(options),
-    method: 'get',
-})
-
-entregasEnTransito.definition = {
-    methods: ["get","head"],
-    url: '/logistica/entregas-en-transito',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
- * @see routes/web.php:342
- * @route '/logistica/entregas-en-transito'
- */
-entregasEnTransito.url = (options?: RouteQueryOptions) => {
-    return entregasEnTransito.definition.url + queryParams(options)
-}
-
-/**
- * @see routes/web.php:342
- * @route '/logistica/entregas-en-transito'
- */
-entregasEnTransito.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: entregasEnTransito.url(options),
-    method: 'get',
-})
-/**
- * @see routes/web.php:342
- * @route '/logistica/entregas-en-transito'
- */
-entregasEnTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: entregasEnTransito.url(options),
-    method: 'head',
-})
-
-    /**
- * @see routes/web.php:342
- * @route '/logistica/entregas-en-transito'
- */
-    const entregasEnTransitoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: entregasEnTransito.url(options),
-        method: 'get',
-    })
-
-            /**
- * @see routes/web.php:342
- * @route '/logistica/entregas-en-transito'
- */
-        entregasEnTransitoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: entregasEnTransito.url(options),
-            method: 'get',
-        })
-            /**
- * @see routes/web.php:342
- * @route '/logistica/entregas-en-transito'
- */
-        entregasEnTransitoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: entregasEnTransito.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    entregasEnTransito.form = entregasEnTransitoForm
-/**
- * @see routes/web.php:343
  * @route '/logistica/proformas-pendientes'
  */
 export const proformasPendientes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -236,7 +94,7 @@ proformasPendientes.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:343
+ * @see routes/web.php:341
  * @route '/logistica/proformas-pendientes'
  */
 proformasPendientes.url = (options?: RouteQueryOptions) => {
@@ -244,7 +102,7 @@ proformasPendientes.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:343
+ * @see routes/web.php:341
  * @route '/logistica/proformas-pendientes'
  */
 proformasPendientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -252,7 +110,7 @@ proformasPendientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
     method: 'get',
 })
 /**
- * @see routes/web.php:343
+ * @see routes/web.php:341
  * @route '/logistica/proformas-pendientes'
  */
 proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -261,7 +119,7 @@ proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 })
 
     /**
- * @see routes/web.php:343
+ * @see routes/web.php:341
  * @route '/logistica/proformas-pendientes'
  */
     const proformasPendientesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -270,7 +128,7 @@ proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     })
 
             /**
- * @see routes/web.php:343
+ * @see routes/web.php:341
  * @route '/logistica/proformas-pendientes'
  */
         proformasPendientesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -278,7 +136,7 @@ proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'
             method: 'get',
         })
             /**
- * @see routes/web.php:343
+ * @see routes/web.php:341
  * @route '/logistica/proformas-pendientes'
  */
         proformasPendientesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -294,8 +152,6 @@ proformasPendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     proformasPendientes.form = proformasPendientesForm
 const logistica = {
     dashboard,
-entregasAsignadas,
-entregasEnTransito,
 proformasPendientes,
 envios,
 entregas,

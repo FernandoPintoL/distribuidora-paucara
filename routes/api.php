@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChoferPreferenciaController;
 use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
@@ -205,6 +206,15 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::post('/{notification}/marcar-leida', [NotificationController::class, 'markAsRead']);
         Route::post('/{notification}/marcar-no-leida', [NotificationController::class, 'markAsUnread']);
         Route::delete('/{notification}', [NotificationController::class, 'destroy']);
+    });
+
+    // ==========================================
+    // 👤 PREFERENCIAS DE USUARIO
+    // ==========================================
+    Route::prefix('user')->group(function () {
+        // Chofer preferences for intelligent delivery wizard
+        Route::get('/chofer-preferencias', [ChoferPreferenciaController::class, 'index']);
+        Route::post('/chofer-preferencias', [ChoferPreferenciaController::class, 'store']);
     });
 
     // Catálogos de mermas
