@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
+import lote from './lote'
 /**
 * @see \App\Http\Controllers\Api\EntregaController::registrarUbicacion
  * @see app/Http/Controllers/Api/EntregaController.php:474
@@ -173,6 +174,7 @@ ubicaciones.head = (args: { id: string | number } | [id: string | number ] | str
 const entregas = {
     registrarUbicacion,
 ubicaciones,
+lote,
 }
 
 export default entregas

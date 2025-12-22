@@ -4,6 +4,7 @@ import proformas from './proformas'
 import ventas from './ventas'
 import compras from './compras'
 import productos from './productos'
+import entregas from './entregas'
 import proveedores from './proveedores'
 import cajas from './cajas'
 import dashboard from './dashboard'
@@ -170,6 +171,7 @@ proformas,
 ventas,
 compras,
 productos,
+entregas,
 proveedores,
 cajas,
 dashboard,

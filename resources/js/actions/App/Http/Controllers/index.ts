@@ -13,6 +13,7 @@ import DireccionClienteApiController from './DireccionClienteApiController'
 import FotoLugarClienteController from './FotoLugarClienteController'
 import LocalidadController from './LocalidadController'
 import CategoriaClienteController from './CategoriaClienteController'
+import EntregaController from './EntregaController'
 import ProveedorController from './ProveedorController'
 import ImageBackupController from './ImageBackupController'
 import AuditoriaCajaController from './AuditoriaCajaController'
@@ -41,7 +42,6 @@ import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import VehiculoController from './VehiculoController'
 import InventarioInicialController from './InventarioInicialController'
 import Web from './Web'
-import EntregaController from './EntregaController'
 import VendedorController from './VendedorController'
 import ChoferController from './ChoferController'
 import PreventistController from './PreventistController'
@@ -69,6 +69,7 @@ DireccionClienteApiController,
 FotoLugarClienteController,
 LocalidadController,
 CategoriaClienteController,
+EntregaController,
 ProveedorController,
 ImageBackupController,
 AuditoriaCajaController,
@@ -97,7 +98,6 @@ TipoAjusteInventarioController,
 VehiculoController,
 InventarioInicialController,
 Web,
-EntregaController,
 VendedorController,
 ChoferController,
 PreventistController,

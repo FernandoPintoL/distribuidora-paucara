@@ -606,6 +606,120 @@ class EntregaService
     }
 
     /**
+     * Crear entregas en lote desde múltiples ventas
+     *
+     * FASE 2: Creación masiva optimizada
+     *
+     * Flujo:
+     * 1. Crear entregas para cada venta
+     * 2. Asignar chofer y vehículo
+     * 3. Opcionalmente optimizar rutas
+     * 4. Retornar entregas creadas con información de optimización
+     *
+     * @param array $ventaIds IDs de ventas a procesar
+     * @param int $vehiculoId ID del vehículo a usar
+     * @param int $choferId ID del chofer a usar
+     * @param bool $optimizar Si debe optimizar rutas (genera sugerencias)
+     * @return array ['entregas' => [...], 'optimizacion' => [...], 'estadisticas' => [...]]
+     */
+    public function crearLote(
+        array $ventaIds,
+        int $vehiculoId,
+        int $choferId,
+        bool $optimizar = true
+    ): array {
+        $resultado = $this->transaction(function () use ($ventaIds, $vehiculoId, $choferId, $optimizar) {
+            $entregasCreadas = [];
+            $errores = [];
+
+            // Validar vehículo y chofer
+            $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
+            $chofer = \App\Models\Empleado::findOrFail($choferId);
+
+            if ($vehiculo->estado !== 'disponible') {
+                throw new \Exception("Vehículo {$vehiculo->placa} no está disponible");
+            }
+
+            if ($chofer->estado !== 'activo') {
+                throw new \Exception("Chofer {$chofer->nombre} no está activo");
+            }
+
+            // 1. Crear entregas desde ventas
+            foreach ($ventaIds as $ventaId) {
+                try {
+                    $venta = Venta::findOrFail($ventaId);
+
+                    // Crear una entrega por venta
+                    $entrega = Entrega::create([
+                        'venta_id' => $venta->id,
+                        'estado' => 'PROGRAMADO',
+                        'direccion_entrega' => $venta->direccion_entrega,
+                        'fecha_programada' => $venta->fecha_entrega_programada ?? now()->addDays(3),
+                        'peso_kg' => $venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10,
+                        'chofer_id' => $choferId,
+                        'vehiculo_id' => $vehiculoId,
+                        'usuario_asignado_id' => Auth::id(),
+                    ]);
+
+                    // Registrar en historial
+                    $this->registrarCambioEstado(
+                        $entrega,
+                        null,
+                        'PROGRAMADO',
+                        'Entrega creada en lote'
+                    );
+
+                    event(new \App\Events\EntregaCreada($entrega));
+
+                    $entregasCreadas[] = $entrega;
+                } catch (\Exception $e) {
+                    $errores[] = [
+                        'venta_id' => $ventaId,
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            // 2. Preparar respuesta
+            $respuesta = [
+                'entregas' => $entregasCreadas,
+                'estadisticas' => [
+                    'total_creadas' => count($entregasCreadas),
+                    'total_errores' => count($errores),
+                    'peso_total' => $entregasCreadas->sum('peso_kg'),
+                    'vehiculo' => [
+                        'id' => $vehiculo->id,
+                        'placa' => $vehiculo->placa,
+                        'capacidad_kg' => $vehiculo->capacidad_kg,
+                    ],
+                    'chofer' => [
+                        'id' => $chofer->id,
+                        'nombre' => $chofer->nombre,
+                    ],
+                ],
+                'errores' => $errores,
+            ];
+
+            // 3. Si se solicita optimización, calcular sugerencias de rutas
+            if ($optimizar && !$entregasCreadas->isEmpty()) {
+                $entregaIds = $entregasCreadas->pluck('id')->toArray();
+                $optimizacion = $this->optimizarAsignacionMasiva($entregaIds, $vehiculo->capacidad_kg);
+                $respuesta['optimizacion'] = $optimizacion;
+            }
+
+            return $respuesta;
+        });
+
+        $this->logSuccess('Entregas en lote creadas', [
+            'total' => count($resultado['entregas']),
+            'vehiculo_id' => $vehiculoId,
+            'chofer_id' => $choferId,
+        ]);
+
+        return $resultado;
+    }
+
+    /**
      * Obtener el almacén a usar para una entrega
      *
      * Prioridad:

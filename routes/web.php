@@ -353,7 +353,14 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::get('en-transito', fn() => Inertia::render('logistica/entregas/en-transito'))->name('en-transito');
             Route::get('dashboard', fn() => Inertia::render('logistica/entregas/dashboard'))->name('dashboard');
             Route::get('dashboard-stats', [\App\Http\Controllers\EntregaController::class, 'dashboardStats'])->name('dashboard-stats');
+            // ✅ FASE UNIFICADA: Una sola ruta para crear entregas simples o en lote
+            // Soporta: ?venta_id=N para modo single, o sin parámetros para batch
             Route::get('create', [\App\Http\Controllers\EntregaController::class, 'create'])->name('create');
+
+            // ⚠️ DEPRECATED: /crear-lote → Usar /create en su lugar
+            // FASE UNIFICADA ha consolidado ambos flujos en una sola interfaz.
+            // Esta ruta será eliminada en próximo sprint.
+            Route::get('crear-lote', [\App\Http\Controllers\EntregaController::class, 'create'])->name('create-batch');
 
             // Optimización masiva de rutas (FFD + Nearest Neighbor)
             Route::post('optimizar', [\App\Http\Controllers\EntregaController::class, 'optimizarRutas'])->name('optimizar');

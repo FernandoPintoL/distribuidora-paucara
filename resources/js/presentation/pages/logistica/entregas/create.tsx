@@ -1,9 +1,8 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import type { PageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
 import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega } from '@/domain/entities/entregas';
-import { useEntregaWizard } from '@/application/hooks/use-entrega-wizard';
-import EntregaFormWizard from './components/EntregaFormWizard';
+import CreateEntregasUnificado from './components/CreateEntregasUnificado';
 
 interface Props extends PageProps {
     ventas: VentaConDetalles[];
@@ -13,19 +12,29 @@ interface Props extends PageProps {
 }
 
 /**
- * Página de Crear Entrega - Form Wizard Inteligente
+ * Página Unificada de Creación de Entregas
+ *
+ * FASE UNIFICADA: Una sola página para crear entregas simples o en lote
  *
  * Features:
- * ✅ Auto-carga de peso desde detalles de venta
- * ✅ Auto-carga de dirección desde cliente
- * ✅ Sugerencias de vehículos por capacidad
- * ✅ Sugerencias de choferes por historial
- * ✅ Validaciones en tiempo real
- * ✅ 3 pasos progresivos con barra de progreso
+ * ✅ Interfaz dinámica que se adapta según selección
+ * ✅ 1 venta → Form Wizard inteligente (3 pasos)
+ * ✅ 2+ ventas → Batch UI con optimización Phase 3
+ * ✅ Auto-carga de pesos desde detalles de venta
+ * ✅ Sugerencias de vehículos y choferes
+ * ✅ Preview de optimización (clustering + ML + rebalanceo)
  * ✅ Dark mode completo
+ * ✅ Cambio dinámico entre modos sin perder datos
  */
-export default function Create({ ventas, vehiculos, choferes, ventaPreseleccionada }: Props) {
-    const { isSubmitting, submitError, handleSubmit, handleCancel } = useEntregaWizard();
+export default function Create({
+    ventas,
+    vehiculos,
+    choferes,
+    ventaPreseleccionada,
+}: Props) {
+    const handleCancel = () => {
+        router.visit('/logistica/entregas');
+    };
 
     return (
         <AppLayout
@@ -35,17 +44,15 @@ export default function Create({ ventas, vehiculos, choferes, ventaPreselecciona
                 { title: 'Crear', href: '#' },
             ]}
         >
-            <Head title="Crear Entrega - Form Wizard" />
+            <Head title="Crear Entrega/s - Unificado" />
 
-            <div className="min-h-screen bg-white dark:bg-slate-950">
-                <EntregaFormWizard
-                    ventas={ventas}
-                    vehiculos={vehiculos}
-                    choferes={choferes}
-                    onSubmit={handleSubmit}
-                    onCancel={handleCancel}
-                />
-            </div>
+            <CreateEntregasUnificado
+                ventas={ventas}
+                vehiculos={vehiculos}
+                choferes={choferes}
+                ventaPreseleccionada={ventaPreseleccionada}
+                onCancel={handleCancel}
+            />
         </AppLayout>
     );
 }

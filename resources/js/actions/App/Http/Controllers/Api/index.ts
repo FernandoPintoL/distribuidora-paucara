@@ -12,6 +12,7 @@ import RutaApiController from './RutaApiController'
 import EntregaController from './EntregaController'
 import TrackingController from './TrackingController'
 import EncargadoController from './EncargadoController'
+import EntregaBatchController from './EntregaBatchController'
 const Api = {
     AuthController,
 EmpleadoApiController,
@@ -27,6 +28,7 @@ RutaApiController,
 EntregaController,
 TrackingController,
 EncargadoController,
+EntregaBatchController,
 }
 
 export default Api
