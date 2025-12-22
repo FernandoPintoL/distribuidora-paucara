@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CrearEntregasBatchRequest;
+use App\Http\Requests\OptimizarEntregasRequest;
 use App\Services\Logistica\EntregaService;
 use App\Services\Logistica\AdvancedVRPService;
 use Illuminate\Http\JsonResponse;
@@ -247,6 +248,163 @@ class EntregaBatchController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener preview',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Optimizar entregas para múltiples vehículos
+     *
+     * Diferencia con preview():
+     * - Acepta múltiples vehículos y choferes
+     * - Optimización pura sin crear entregas
+     * - Usado para planificación logística avanzada
+     *
+     * @param OptimizarEntregasRequest $request
+     * @return JsonResponse
+     */
+    public function optimizar(OptimizarEntregasRequest $request): JsonResponse
+    {
+        try {
+            Log::info('Iniciando optimización de entregas', [
+                'venta_count' => count($request->input('venta_ids')),
+                'vehiculo_count' => count($request->input('vehiculo_ids')),
+                'chofer_count' => count($request->input('chofer_ids')),
+                'user_id' => auth()->id(),
+            ]);
+
+            // 1. LOOKUP: Obtener datos de ventas desde DB
+            $ventas = \App\Models\Venta::whereIn('id', $request->input('venta_ids'))
+                ->with(['cliente', 'detalles'])
+                ->get();
+
+            if ($ventas->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron ventas válidas',
+                    'data' => null,
+                ], 404);
+            }
+
+            // 2. LOOKUP: Obtener datos de vehículos desde DB
+            $vehiculos = \App\Models\Vehiculo::whereIn('id', $request->input('vehiculo_ids'))
+                ->get()
+                ->map(fn($v) => [
+                    'id' => $v->id,
+                    'placa' => $v->placa,
+                    'capacidad_kg' => $v->capacidad_kg,
+                ])
+                ->toArray();
+
+            if (empty($vehiculos)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron vehículos válidos',
+                    'data' => null,
+                ], 404);
+            }
+
+            // 3. LOOKUP: Obtener datos de choferes desde DB
+            $choferes = \App\Models\Empleado::whereIn('id', $request->input('chofer_ids'))
+                ->get()
+                ->map(fn($c) => [
+                    'id' => $c->id,
+                    'nombre' => $c->user->name ?? 'Sin nombre',
+                ])
+                ->toArray();
+
+            if (empty($choferes)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron choferes válidos',
+                    'data' => null,
+                ], 404);
+            }
+
+            // 4. PREPARAR DATOS: Transformar ventas a formato de optimización
+            $entregasParaOptimizar = $ventas->map(function ($venta) {
+                $cliente = $venta->cliente;
+                $direccion = $cliente?->direcciones?->first();
+
+                return [
+                    'id' => $venta->id,
+                    'venta_id' => $venta->id,
+                    'cliente_id' => $venta->cliente_id,
+                    'cliente_nombre' => $cliente?->nombre ?? 'Sin cliente',
+                    'peso' => $venta->peso_estimado ?? ($venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10),
+                    'lat' => $direccion?->latitud ?? $cliente?->latitud ?? -17.3895,
+                    'lon' => $direccion?->longitud ?? $cliente?->longitud ?? -66.1568,
+                    'direccion' => $venta->direccion_entrega ?? $direccion?->direccion ?? 'Sin dirección',
+                ];
+            })->toArray();
+
+            // 5. OPTIMIZAR: Llamar al servicio VRP
+            $radioCluster = $request->input('opciones.radio_cluster_km', 2.0);
+
+            $resultadoOptimizacion = $this->advancedVRPService->optimizarEntregasMasivas(
+                entregas: $entregasParaOptimizar,
+                vehiculos: $vehiculos,
+                choferes: $choferes,
+                radioClusterKm: $radioCluster
+            );
+
+            // 6. OBTENER SUGERENCIAS
+            $sugerencias = $this->advancedVRPService->obtenerSugerencias($resultadoOptimizacion);
+
+            // 7. FORMATEAR RESPUESTA
+            $rutasFormato = array_map(function ($ruta, $idx) {
+                return [
+                    'numero' => $idx + 1,
+                    'cluster_id' => $ruta['cluster_id'] ?? null,
+                    'paradas' => $ruta['paradas'],
+                    'entregas_ids' => $ruta['entregas'],
+                    'ruta' => $ruta['ruta'],
+                    'distancia_total' => $ruta['distancia_total'],
+                    'peso_total' => $ruta['peso_total'],
+                    'tiempo_estimado' => $ruta['tiempo_estimado'],
+                    'porcentaje_uso' => $ruta['porcentaje_uso'],
+                ];
+            }, $resultadoOptimizacion['rutas'], array_keys($resultadoOptimizacion['rutas']));
+
+            Log::info('Optimización completada exitosamente', [
+                'venta_count' => $ventas->count(),
+                'rutas_generadas' => count($rutasFormato),
+                'vehiculos_usados' => count($vehiculos),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Optimización generada exitosamente',
+                'data' => [
+                    'rutas' => $rutasFormato,
+                    'estadisticas' => $resultadoOptimizacion['estadisticas'],
+                    'clustering' => $resultadoOptimizacion['clustering'],
+                    'problemas' => $resultadoOptimizacion['problemas'],
+                    'sugerencias' => $sugerencias,
+                ],
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Error de validación en optimización', [
+                'errors' => $e->errors(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Error en optimización de entregas', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al optimizar entregas',
                 'error' => $e->getMessage(),
             ], 500);
         }

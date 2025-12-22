@@ -511,6 +511,11 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/', [EntregaBatchController::class, 'store'])
             ->middleware('permission:entregas.create')
             ->name('entregas.lote.crear');
+
+        // Optimizar entregas para múltiples vehículos (sin crear)
+        Route::post('/optimizar', [EntregaBatchController::class, 'optimizar'])
+            ->middleware('permission:entregas.create')
+            ->name('entregas.lote.optimizar');
     });
 });
 
