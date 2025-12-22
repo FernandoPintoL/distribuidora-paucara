@@ -522,29 +522,16 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
     /**
      * Obtener estadísticas del dashboard de logística
      *
-     * Endpoint: /api/logistica/dashboard/stats
-     * Retorna estadísticas completas del módulo de logística
+     * NOTA: El endpoint /api/logistica/dashboard/stats no está implementado.
+     * Las estadísticas se obtienen desde el servidor web mediante Inertia.
+     * Este método devuelve null para indicar que no hay datos adicionales disponibles.
+     *
+     * @returns null - Las estadísticas se obtienen del servidor web, no desde API
      */
-    async obtenerDashboardStats(): Promise<any> {
-        try {
-            const response = await fetch('/api/logistica/dashboard/stats', {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                throw new Error('Error obteniendo estadísticas del dashboard');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error obteniendo estadísticas del dashboard:', error);
-            NotificationService.error('Error al obtener estadísticas del dashboard');
-            throw error;
-        }
+    async obtenerDashboardStats(): Promise<null> {
+        // El endpoint no existe, devolver null
+        // El dashboard obtiene sus datos desde el servidor via Inertia
+        return null;
     }
 
     /**
