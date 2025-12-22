@@ -42,7 +42,7 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
  * ✓ Listeners NO pueden fallar la transacción
  * ✓ Si un Listener falla, otros continúan
  */
-class EventServiceProviderRefactored extends ServiceProvider
+class EventServiceProvider extends ServiceProvider
 {
     /**
      * Los Event listeners para la aplicación
@@ -55,42 +55,7 @@ class EventServiceProviderRefactored extends ServiceProvider
         // ══════════════════════════════════════════════════════════
 
         VentaCreada::class => [
-            // Notificación: enviar email al cliente
-            \App\Listeners\Venta\SendVentaCreatedNotification::class,
-
-            // WebSocket: broadcast a clientes interesados
             BroadcastVentaCreada::class,
-
-            // Auditoría: registrar en log
-            \App\Listeners\Venta\CreateVentaAuditLog::class,
-
-            // Queue: encolar reportes o tasks async
-            \App\Listeners\Venta\EnqueueVentaReportGeneration::class,
-        ],
-
-        VentaAprobada::class => [
-            // Notificación
-            \App\Listeners\Venta\SendVentaApprovedNotification::class,
-
-            // WebSocket
-            \App\Listeners\Venta\BroadcastVentaAprobada::class,
-
-            // Auditoría
-            \App\Listeners\Venta\CreateVentaAuditLog::class,
-
-            // Logística: crear entrega si aplica
-            \App\Listeners\Logistica\CreateDeliveryFromVenta::class,
-        ],
-
-        VentaRechazada::class => [
-            \App\Listeners\Venta\SendVentaRejectedNotification::class,
-            \App\Listeners\Venta\BroadcastVentaRechazada::class,
-            \App\Listeners\Venta\CreateVentaAuditLog::class,
-        ],
-
-        VentaPagada::class => [
-            \App\Listeners\Venta\SendVentaPaidNotification::class,
-            \App\Listeners\Venta\BroadcastVentaPagada::class,
         ],
 
         // ══════════════════════════════════════════════════════════
@@ -98,31 +63,24 @@ class EventServiceProviderRefactored extends ServiceProvider
         // ══════════════════════════════════════════════════════════
 
         ProformaCreada::class => [
-            \App\Listeners\Venta\SendProformaCreatedNotification::class,
             BroadcastProformaCreada::class,
-            \App\Listeners\Venta\CreateProformaAuditLog::class,
+            SendProformaCreatedNotification::class,
         ],
 
         ProformaAprobada::class => [
-            \App\Listeners\Venta\SendProformaApprovedNotification::class,
-            \App\Listeners\Venta\BroadcastProformaAprobada::class,
+            SendProformaApprovedNotification::class,
         ],
 
         ProformaRechazada::class => [
-            \App\Listeners\Venta\SendProformaRejectedNotification::class,
-            \App\Listeners\Venta\BroadcastProformaRechazada::class,
-
-            // Importante: liberar stock reservado
-            \App\Listeners\Stock\ReleaseReservedStock::class,
+            SendProformaRejectedNotification::class,
         ],
 
         ProformaConvertida::class => [
-            \App\Listeners\Venta\SendProformaConvertedNotification::class,
-            \App\Listeners\Venta\BroadcastProformaConvertida::class,
+            SendProformaConvertedNotification::class,
         ],
 
         ProformaCoordinacionActualizada::class => [
-            \App\Listeners\SendProformaCoordinationNotification::class,
+            SendProformaCoordinationNotification::class,
         ],
 
         // ══════════════════════════════════════════════════════════
@@ -130,63 +88,23 @@ class EventServiceProviderRefactored extends ServiceProvider
         // ══════════════════════════════════════════════════════════
 
         EntregaAsignada::class => [
-            \App\Listeners\Logistica\SendDeliveryAssignedNotification::class,
             BroadcastEntregaAsignada::class,
-            \App\Listeners\Logistica\CreateDeliveryAuditLog::class,
-        ],
-
-        EntregaCompletada::class => [
-            \App\Listeners\Logistica\SendDeliveryCompletedNotification::class,
-            \App\Listeners\Logistica\BroadcastEntregaCompletada::class,
-            \App\Listeners\Logistica\UpdateVentaAsDelivered::class,
-        ],
-
-        EntregaRechazada::class => [
-            \App\Listeners\Logistica\SendDeliveryRejectedNotification::class,
-            \App\Listeners\Logistica\BroadcastEntregaRechazada::class,
-
-            // Importante: revertir stock
-            \App\Listeners\Stock\ReturnStockFromRejectedDelivery::class,
-        ],
-
-        // ══════════════════════════════════════════════════════════
-        // ENTREGA - DRIVER ACTIONS EVENTS (Nuevas Acciones)
-        // ══════════════════════════════════════════════════════════
-
-        MarcarLlegadaConfirmada::class => [
-            // Broadcast en tiempo real
-            \App\Listeners\Logistica\BroadcastMarcarLlegada::class,
-
-            // Notificación al cliente
-            \App\Listeners\Logistica\SendDriverArrivedNotification::class,
-
-            // Auditoría
-            \App\Listeners\Logistica\CreateDeliveryAuditLog::class,
         ],
 
         EntregaConfirmada::class => [
-            // Broadcast en tiempo real
-            \App\Listeners\Logistica\BroadcastEntregaConfirmada::class,
+            BroadcastEntregaConfirmada::class,
+        ],
 
-            // Notificación al cliente
-            \App\Listeners\Logistica\SendDeliveryConfirmedNotification::class,
+        // ══════════════════════════════════════════════════════════
+        // ENTREGA - DRIVER ACTIONS EVENTS
+        // ══════════════════════════════════════════════════════════
 
-            // Auditoría
-            \App\Listeners\Logistica\CreateDeliveryAuditLog::class,
-
-            // Actualizar estado de venta
-            \App\Listeners\Logistica\UpdateVentaAsDelivered::class,
+        MarcarLlegadaConfirmada::class => [
+            BroadcastMarcarLlegada::class,
         ],
 
         NovedadEntregaReportada::class => [
-            // Broadcast en tiempo real
-            \App\Listeners\Logistica\BroadcastNovedadEntrega::class,
-
-            // Notificación a admin/logística
-            \App\Listeners\Logistica\SendDeliveryIssueNotification::class,
-
-            // Auditoría
-            \App\Listeners\Logistica\CreateDeliveryAuditLog::class,
+            BroadcastNovedadEntrega::class,
         ],
 
         // ══════════════════════════════════════════════════════════
@@ -194,14 +112,7 @@ class EventServiceProviderRefactored extends ServiceProvider
         // ══════════════════════════════════════════════════════════
 
         UbicacionActualizada::class => [
-            // HIGH FREQUENCY EVENT - cuidado con el logging
             BroadcastUbicacionActualizada::class,
-
-            // Calcular ETA
-            \App\Listeners\Logistica\CalculateDeliveryETA::class,
-
-            // Opcional: cheques de geofencing, etc
-            // \App\Listeners\Logistica\CheckGeofencing::class,
         ],
 
         // ══════════════════════════════════════════════════════════
@@ -209,9 +120,7 @@ class EventServiceProviderRefactored extends ServiceProvider
         // ══════════════════════════════════════════════════════════
 
         RutaPlanificada::class => [
-            \App\Listeners\Logistica\SendRoutePlannedNotification::class,
             BroadcastRutaPlanificada::class,
-            \App\Listeners\Logistica\CreateRouteAuditLog::class,
         ],
     ];
 
