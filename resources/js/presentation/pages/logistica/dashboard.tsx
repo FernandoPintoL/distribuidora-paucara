@@ -89,9 +89,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [proformasRecientes]);
 
-    // Filtrar envios localmente
-    const enviosFiltrados = envioFilters.filtrarEnvios(envios);
-
     // Verificar si proforma está vencida
     const estaVencida = (proforma: ProformaAppExterna): boolean => {
         if (!proforma.fecha_vencimiento) return false;
