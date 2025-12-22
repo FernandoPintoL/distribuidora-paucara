@@ -1,8 +1,7 @@
 <?php
 namespace App\Models\Traits;
 
-use App\Models\Envio;
-use App\Models\SeguimientoEnvio;
+use App\Models\Entrega;
 use App\Models\TransferenciaInventario;
 use App\Models\Venta;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,19 +21,11 @@ trait LogisticaTrait
     }
 
     /**
-     * Envíos gestionados por este empleado de logística
+     * Entregas gestionadas por este empleado de logística
      */
-    public function enviosGestionados(): HasMany
+    public function entregasGestionadas(): HasMany
     {
-        return $this->hasMany(Envio::class, 'gestionado_por');
-    }
-
-    /**
-     * Seguimientos de envío registrados por este empleado
-     */
-    public function seguimientosRegistrados(): HasMany
-    {
-        return $this->hasMany(SeguimientoEnvio::class, 'registrado_por');
+        return $this->hasMany(Entrega::class, 'chofer_id');
     }
 
     /**
@@ -46,18 +37,18 @@ trait LogisticaTrait
     }
 
     /**
-     * Obtiene los envíos pendientes asignados
+     * Obtiene las entregas pendientes asignadas
      */
-    public function enviosPendientes(): Collection
+    public function entregasPendientes(): Collection
     {
-        return $this->enviosGestionados()
-            ->whereIn('estado', ['Pendiente', 'En Preparación', 'En Tránsito'])
-            ->with(['venta', 'venta.cliente', 'chofer'])
+        return $this->entregasGestionadas()
+            ->whereIn('estado', ['ASIGNADA', 'EN_CAMINO'])
+            ->with(['venta', 'venta.cliente', 'proforma', 'proforma.cliente'])
             ->get();
     }
 
     /**
-     * Obtiene las ventas pendientes de asignación para envío
+     * Obtiene las ventas pendientes de asignación para entrega
      */
     public function ventasPendientesAsignacion(): Collection
     {
@@ -65,33 +56,32 @@ trait LogisticaTrait
             return collect();
         }
 
-        return Venta::whereDoesntHave('envio')
+        return Venta::whereDoesntHave('entregas')
             ->where('requiere_envio', true)
-            ->where('estado', 'Confirmado')
-            ->with(['cliente', 'direccionEntrega'])
+            ->with(['cliente'])
             ->get();
     }
 
     /**
-     * Verifica si hay alguna alerta de retraso en envíos
+     * Verifica si hay alguna alerta de retraso en entregas
      */
     public function tieneAlertasRetraso(): bool
     {
-        return $this->enviosGestionados()
-            ->whereIn('estado', ['En Preparación', 'En Tránsito'])
-            ->whereDate('fecha_entrega_estimada', '<', now())
+        return $this->entregasGestionadas()
+            ->whereIn('estado', ['ASIGNADA', 'EN_CAMINO'])
+            ->whereDate('fecha_entrega', '<', now())
             ->exists();
     }
 
     /**
-     * Obtiene los envíos con alerta de retraso
+     * Obtiene las entregas con alerta de retraso
      */
-    public function enviosConRetraso(): Collection
+    public function entregasConRetraso(): Collection
     {
-        return $this->enviosGestionados()
-            ->whereIn('estado', ['En Preparación', 'En Tránsito'])
-            ->whereDate('fecha_entrega_estimada', '<', now())
-            ->with(['venta', 'venta.cliente', 'chofer'])
+        return $this->entregasGestionadas()
+            ->whereIn('estado', ['ASIGNADA', 'EN_CAMINO'])
+            ->whereDate('fecha_entrega', '<', now())
+            ->with(['venta', 'venta.cliente', 'proforma', 'proforma.cliente'])
             ->get();
     }
 }

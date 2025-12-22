@@ -55,128 +55,57 @@ class ReportService
     }
 
     /**
-     * Obtener envíos rechazados con filtros opcionales
+     * DEPRECADO: Sistema de Envíos ha sido eliminado
+     *
+     * Obtener envíos rechazados con filtros opcionales (DEPRECATED)
+     * @deprecated El sistema de Envíos ha sido consolidado en Entregas
      */
     public function obtenerEnviosRechazados(array $filtros = []): Collection
     {
-        $query = Envio::whereIn('estado_entrega', [
-            Envio::ESTADO_ENTREGA_CLIENTE_AUSENTE,
-            Envio::ESTADO_ENTREGA_TIENDA_CERRADA,
-            Envio::ESTADO_ENTREGA_PROBLEMA,
-        ])->with(['venta.cliente', 'chofer', 'vehiculo']);
-
-        // Aplicar filtros si existen
-        if (!empty($filtros['fecha_desde'])) {
-            $query->whereDate('fecha_intento_entrega', '>=', $filtros['fecha_desde']);
-        }
-
-        if (!empty($filtros['fecha_hasta'])) {
-            $query->whereDate('fecha_intento_entrega', '<=', $filtros['fecha_hasta']);
-        }
-
-        if (!empty($filtros['tipo_rechazo'])) {
-            $query->where('estado_entrega', $filtros['tipo_rechazo']);
-        }
-
-        if (!empty($filtros['chofer_id'])) {
-            $query->where('chofer_id', $filtros['chofer_id']);
-        }
-
-        if (!empty($filtros['search'])) {
-            $query->where(function ($q) use ($filtros) {
-                $q->where('numero_envio', 'like', '%' . $filtros['search'] . '%')
-                  ->orWhereHas('venta.cliente', function ($clienteQ) use ($filtros) {
-                      $clienteQ->where('nombre', 'like', '%' . $filtros['search'] . '%');
-                  });
-            });
-        }
-
-        return $query->orderBy('fecha_intento_entrega', 'desc')->get();
+        throw new \Exception('Este método ha sido deprecado. El sistema de Envíos ha sido consolidado en Entregas.');
     }
 
     /**
-     * Obtener estadísticas de entregas rechazadas
+     * DEPRECADO: Sistema de Envíos ha sido eliminado
+     *
+     * Obtener estadísticas de entregas rechazadas (DEPRECATED)
+     * @deprecated El sistema de Envíos ha sido consolidado en Entregas
      */
     public function estadisticasEntregasRechazadas(): array
     {
-        $totalRechazadas = Envio::whereIn('estado_entrega', [
-            Envio::ESTADO_ENTREGA_CLIENTE_AUSENTE,
-            Envio::ESTADO_ENTREGA_TIENDA_CERRADA,
-            Envio::ESTADO_ENTREGA_PROBLEMA,
-        ])->count();
-
-        $clienteAusente = Envio::where('estado_entrega', Envio::ESTADO_ENTREGA_CLIENTE_AUSENTE)->count();
-        $tiendaCerrada = Envio::where('estado_entrega', Envio::ESTADO_ENTREGA_TIENDA_CERRADA)->count();
-        $otroProblema = Envio::where('estado_entrega', Envio::ESTADO_ENTREGA_PROBLEMA)->count();
-
-        $tasaRechazo = Envio::count() > 0
-            ? round(($totalRechazadas / Envio::count()) * 100, 2)
-            : 0;
-
-        return [
-            'total_rechazadas' => $totalRechazadas,
-            'cliente_ausente' => $clienteAusente,
-            'tienda_cerrada' => $tiendaCerrada,
-            'otro_problema' => $otroProblema,
-            'tasa_rechazo_porcentaje' => $tasaRechazo,
-            'ultimas_24_horas' => Envio::whereIn('estado_entrega', [
-                Envio::ESTADO_ENTREGA_CLIENTE_AUSENTE,
-                Envio::ESTADO_ENTREGA_TIENDA_CERRADA,
-                Envio::ESTADO_ENTREGA_PROBLEMA,
-            ])->where('fecha_intento_entrega', '>=', now()->subDay())->count(),
-        ];
+        throw new \Exception('Este método ha sido deprecado. El sistema de Envíos ha sido consolidado en Entregas.');
     }
 
     /**
-     * Obtener envíos agrupados por estado
+     * DEPRECADO: Sistema de Envíos ha sido eliminado
+     *
+     * Obtener envíos agrupados por estado (DEPRECATED)
+     * @deprecated El sistema de Envíos ha sido consolidado en Entregas
      */
     public function enviosPorEstado(): array
     {
-        return [
-            'programados' => Envio::where('estado', Envio::PROGRAMADO)->count(),
-            'en_preparacion' => Envio::where('estado', Envio::EN_PREPARACION)->count(),
-            'en_ruta' => Envio::where('estado', Envio::EN_RUTA)->count(),
-            'entregados' => Envio::where('estado', Envio::ENTREGADO)->count(),
-            'rechazados' => Envio::whereNotNull('estado_entrega')->count(),
-            'cancelados' => Envio::where('estado', Envio::CANCELADO)->count(),
-        ];
+        throw new \Exception('Este método ha sido deprecado. El sistema de Envíos ha sido consolidado en Entregas.');
     }
 
     /**
-     * Top de choferes con más entregas rechazadas
+     * DEPRECADO: Sistema de Envíos ha sido eliminado
+     *
+     * Top de choferes con más entregas rechazadas (DEPRECATED)
+     * @deprecated El sistema de Envíos ha sido consolidado en Entregas
      */
     public function topChoforesRechazos(int $limite = 5): Collection
     {
-        return Envio::select(
-            'chofer_id',
-            \Illuminate\Support\Facades\DB::raw('COUNT(*) as total_rechazos'),
-            \Illuminate\Support\Facades\DB::raw('name as chofer_nombre')
-        )
-            ->whereIn('estado_entrega', [
-                Envio::ESTADO_ENTREGA_CLIENTE_AUSENTE,
-                Envio::ESTADO_ENTREGA_TIENDA_CERRADA,
-                Envio::ESTADO_ENTREGA_PROBLEMA,
-            ])
-            ->join('users', 'envios.chofer_id', '=', 'users.id')
-            ->groupBy('chofer_id', 'name')
-            ->orderBy('total_rechazos', 'desc')
-            ->limit($limite)
-            ->get();
+        throw new \Exception('Este método ha sido deprecado. El sistema de Envíos ha sido consolidado en Entregas.');
     }
 
     /**
-     * Generar reporte completo de entregas (estadísticas + datos)
+     * DEPRECADO: Sistema de Envíos ha sido eliminado
+     *
+     * Generar reporte completo de entregas (DEPRECATED)
+     * @deprecated El sistema de Envíos ha sido consolidado en Entregas
      */
     public function generarReporteCompleto(array $filtros = []): array
     {
-        $envios = $this->obtenerEnviosRechazados($filtros);
-
-        return [
-            'estadisticas' => $this->estadisticasEntregasRechazadas(),
-            'por_estado' => $this->enviosPorEstado(),
-            'top_choferes' => $this->topChoforesRechazos(),
-            'envios' => $envios,
-            'fecha_generacion' => now(),
-        ];
+        throw new \Exception('Este método ha sido deprecado. El sistema de Envíos ha sido consolidado en Entregas.');
     }
 }
