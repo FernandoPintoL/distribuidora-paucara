@@ -13,6 +13,7 @@ use App\Events\ProformaConvertida;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -520,7 +521,7 @@ class ApiProformaController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error obteniendo estadísticas de proformas', [
+            Log::error('Error obteniendo estadísticas de proformas', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -680,7 +681,7 @@ class ApiProformaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('❌ Error al aprobar proforma', [
+            Log::error('❌ Error al aprobar proforma', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'proforma_id' => $proforma->id,
@@ -802,7 +803,7 @@ class ApiProformaController extends Controller
             event(new \App\Events\ProformaCoordinacionActualizada($proforma, auth()->id()));
 
             // Log de coordinación actualizada
-            \Log::info('Coordinación de proforma actualizada', [
+            Log::info('Coordinación de proforma actualizada', [
                 'proforma_id' => $proforma->id,
                 'proforma_numero' => $proforma->numero,
                 'usuario_id' => auth()->id(),
@@ -822,7 +823,7 @@ class ApiProformaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('❌ Error al guardar coordinación de proforma', [
+            Log::error('❌ Error al guardar coordinación de proforma', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'proforma_id' => $proforma->id,
@@ -869,7 +870,7 @@ class ApiProformaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('❌ Error al extender vencimiento de proforma', [
+            Log::error('❌ Error al extender vencimiento de proforma', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'proforma_id' => $proforma->id,
@@ -1238,7 +1239,7 @@ class ApiProformaController extends Controller
             DB::rollBack();
 
             // Log del error para debugging
-            \Log::error('Error creando pedido desde app', [
+            Log::error('Error creando pedido desde app', [
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -1648,7 +1649,7 @@ class ApiProformaController extends Controller
                 // NOTA: Las notificaciones WebSocket ahora se envían a través de los Events/Listeners
                 // Ver: ProformaConvertida event → SendProformaConvertedNotification listener
 
-                \Log::info('Proforma confirmada como venta (API)', [
+                Log::info('Proforma confirmada como venta (API)', [
                     'proforma_id' => $proforma->id,
                     'proforma_numero' => $proforma->numero,
                     'venta_id' => $venta->id,
@@ -1683,7 +1684,7 @@ class ApiProformaController extends Controller
             } catch (\Exception $e) {
                 DB::rollBack();
 
-                \Log::error('Error al confirmar proforma como venta (API)', [
+                Log::error('Error al confirmar proforma como venta (API)', [
                     'proforma_id' => $proforma->id,
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
@@ -1805,7 +1806,7 @@ class ApiProformaController extends Controller
                 // ✅ Emitir evento para notificaciones WebSocket
                 event(new ProformaConvertida($proforma, $venta));
 
-                \Log::info('Proforma convertida a venta exitosamente (API)', [
+                Log::info('Proforma convertida a venta exitosamente (API)', [
                     'proforma_id' => $proforma->id,
                     'proforma_numero' => $proforma->numero,
                     'venta_id' => $venta->id,
@@ -1842,7 +1843,7 @@ class ApiProformaController extends Controller
             } catch (\Exception $e) {
                 DB::rollBack();
 
-                \Log::error('Error al convertir proforma a venta (API)', [
+                Log::error('Error al convertir proforma a venta (API)', [
                     'proforma_id' => $proforma->id,
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
@@ -1957,7 +1958,7 @@ class ApiProformaController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Error al obtener último carrito', [
+            Log::error('Error al obtener último carrito', [
                 'usuario_id' => $request->route('usuarioId'),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

@@ -209,31 +209,28 @@ class ModuloSidebarSeeder extends Seeder
             );
         }
 
-        // Módulo de Logística
+        // Módulo de Logística (Consolidado: solo Entregas, sin legacy Envios)
         $logistica = ModuloSidebar::firstOrCreate(
-            ['titulo' => 'Logística', 'ruta' => '/logistica/dashboard', 'es_submenu' => false],
+            ['titulo' => 'Logística', 'ruta' => '/logistica/entregas', 'es_submenu' => false],
             [
                 'icono'       => 'Truck',
-                'descripcion' => 'Gestión de envíos y logística',
+                'descripcion' => 'Gestión de entregas y logística',
                 'orden'       => 6,
                 'categoria'   => 'Logística',
                 'activo'      => true,
-                'permisos'    => ['envios.index'],
+                'permisos'    => ['entregas.index'],
             ]
         );
 
-        // Submódulos de Logística
+        // Submódulos de Logística (sin legacy Envios)
         $submenuLogistica = [
-            ['titulo' => 'Dashboard Logística', 'ruta' => '/logistica/dashboard', 'icono' => 'BarChart3', 'orden' => 1, 'permisos' => ['envios.index']],
-            ['titulo' => 'Envíos', 'ruta' => '/envios', 'icono' => 'Package', 'orden' => 2, 'permisos' => ['envios.index']],
-            ['titulo' => 'Nuevo Envío', 'ruta' => '/envios/create', 'icono' => 'Plus', 'orden' => 3, 'permisos' => ['envios.create']],
-            ['titulo' => 'Entregas', 'ruta' => '/logistica/entregas', 'icono' => 'PackageCheck', 'orden' => 4, 'permisos' => ['entregas.index']],
-            ['titulo' => 'Dashboard Entregas', 'ruta' => '/logistica/entregas/dashboard', 'icono' => 'BarChart3', 'orden' => 5, 'permisos' => ['entregas.index']],
-            ['titulo' => 'Crear Entrega', 'ruta' => '/logistica/entregas/create', 'icono' => 'Plus', 'orden' => 6, 'permisos' => ['entregas.create']],
-            ['titulo' => 'Entregas Asignadas', 'ruta' => '/logistica/entregas/asignadas', 'icono' => 'Users', 'orden' => 7, 'permisos' => ['entregas.asignar']],
-            ['titulo' => 'Entregas en Tránsito', 'ruta' => '/logistica/entregas/en-transito', 'icono' => 'TrendingUp', 'orden' => 8, 'permisos' => ['entregas.tracking']],
-            ['titulo' => 'Vehículos', 'ruta' => '/inventario/vehiculos', 'icono' => 'Truck', 'orden' => 9, 'permisos' => ['inventario.vehiculos.index']],
-            ['titulo' => 'Crear Vehículo', 'ruta' => '/inventario/vehiculos/create', 'icono' => 'Plus', 'orden' => 10, 'permisos' => ['inventario.vehiculos.create']],
+            ['titulo' => 'Dashboard Logística', 'ruta' => '/logistica/entregas/dashboard', 'icono' => 'BarChart3', 'orden' => 1, 'permisos' => ['entregas.index']],
+            ['titulo' => 'Entregas', 'ruta' => '/logistica/entregas', 'icono' => 'PackageCheck', 'orden' => 2, 'permisos' => ['entregas.index']],
+            ['titulo' => 'Crear Entrega', 'ruta' => '/logistica/entregas/create', 'icono' => 'Plus', 'orden' => 3, 'permisos' => ['entregas.create']],
+            ['titulo' => 'Entregas Asignadas', 'ruta' => '/logistica/entregas/asignadas', 'icono' => 'Users', 'orden' => 4, 'permisos' => ['entregas.asignar']],
+            ['titulo' => 'Entregas en Tránsito', 'ruta' => '/logistica/entregas/en-transito', 'icono' => 'TrendingUp', 'orden' => 5, 'permisos' => ['entregas.tracking']],
+            ['titulo' => 'Vehículos', 'ruta' => '/inventario/vehiculos', 'icono' => 'Truck', 'orden' => 6, 'permisos' => ['inventario.vehiculos.index']],
+            ['titulo' => 'Crear Vehículo', 'ruta' => '/inventario/vehiculos/create', 'icono' => 'Plus', 'orden' => 7, 'permisos' => ['inventario.vehiculos.create']],
         ];
 
         foreach ($submenuLogistica as $submenu) {
