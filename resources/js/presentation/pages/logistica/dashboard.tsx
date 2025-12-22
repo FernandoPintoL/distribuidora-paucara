@@ -120,7 +120,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
         <AppLayout>
             <Head title="Dashboard de Logística" />
 
-            <div className="space-y-6 p-4">
+            <div className="space-y-6 p-4 bg-white dark:bg-slate-950 min-h-screen">
                 {/* Estadísticas */}
                 <DashboardStats
                     logisticaStats={logisticaStats}
