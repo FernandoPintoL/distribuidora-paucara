@@ -48,6 +48,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'envios.choferes-disponibles', 'envios.vehiculos-disponibles',
             'logistica.dashboard', 'logistica.envios.seguimiento',
 
+            // Entregas (Flujo de carga)
+            'entregas.index', 'entregas.create', 'entregas.store', 'entregas.show', 'entregas.view', 'entregas.edit', 'entregas.update', 'entregas.delete', 'entregas.destroy',
+            'entregas.confirmar-carga', 'entregas.listo-para-entrega', 'entregas.iniciar-transito', 'entregas.actualizar-ubicacion',
+
+            // Reportes de Carga
+            'reportes-carga.crear', 'reportes-carga.show', 'reportes-carga.view', 'reportes-carga.actualizar-detalle', 'reportes-carga.verificar-detalle',
+            'reportes-carga.confirmar', 'reportes-carga.listo-para-entrega', 'reportes-carga.cancelar', 'reportes-carga.delete',
+
             // Contabilidad
             'contabilidad.manage', 'contabilidad.asientos.index', 'contabilidad.asientos.show', 'contabilidad.reportes.libro-mayor', 'contabilidad.reportes.balance-comprobacion',
 
@@ -199,6 +207,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'envios.programar', 'envios.cancelar', 'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
             'envios.choferes-disponibles', 'envios.vehiculos-disponibles',
             'logistica.dashboard', 'logistica.envios.seguimiento',
+            // Entregas - Nuevo flujo de carga
+            'entregas.index', 'entregas.create', 'entregas.store', 'entregas.show', 'entregas.view', 'entregas.edit', 'entregas.update',
+            'entregas.confirmar-carga', 'entregas.listo-para-entrega', 'entregas.iniciar-transito', 'entregas.actualizar-ubicacion',
+            // Reportes de Carga
+            'reportes-carga.crear', 'reportes-carga.show', 'reportes-carga.view', 'reportes-carga.actualizar-detalle', 'reportes-carga.verificar-detalle',
+            'reportes-carga.confirmar', 'reportes-carga.listo-para-entrega',
         ];
         $logistica->syncPermissions($logisticaPerms);
 
@@ -238,11 +252,17 @@ class RolesAndPermissionsSeeder extends Seeder
             // === GESTIÓN DE CLIENTES ===
             'clientes.manage',
 
-            // === GESTIÓN COMPLETA DE LOGÍSTICA ===
+            // === GESTIÓN COMPLETA DE LOGÍSTICA (SISTEMA ANTIGUO) ===
             'envios.index', 'envios.create', 'envios.store', 'envios.show', 'envios.edit', 'envios.update', 'envios.destroy',
             'envios.programar', 'envios.cancelar', 'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
             'envios.choferes-disponibles', 'envios.vehiculos-disponibles',
             'logistica.dashboard', 'logistica.envios.seguimiento',
+
+            // === NUEVO FLUJO DE ENTREGAS Y REPORTES DE CARGA ===
+            'entregas.index', 'entregas.create', 'entregas.store', 'entregas.show', 'entregas.view', 'entregas.edit', 'entregas.update',
+            'entregas.confirmar-carga', 'entregas.listo-para-entrega', 'entregas.iniciar-transito', 'entregas.actualizar-ubicacion',
+            'reportes-carga.crear', 'reportes-carga.show', 'reportes-carga.view', 'reportes-carga.actualizar-detalle', 'reportes-carga.verificar-detalle',
+            'reportes-carga.confirmar', 'reportes-carga.listo-para-entrega',
         ];
         $cajero->syncPermissions($cajeroPerms);
 
@@ -266,6 +286,13 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // === OPERACIONES DE ENTREGA ===
             'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
+
+            // === NUEVAS ENTREGAS - FLUJO DE CARGA ===
+            'entregas.index', 'entregas.show', 'entregas.view',
+            'entregas.listo-para-entrega', 'entregas.iniciar-transito', 'entregas.actualizar-ubicacion',
+
+            // === REPORTES DE CARGA (READ & UPDATE) ===
+            'reportes-carga.show', 'reportes-carga.view', 'reportes-carga.actualizar-detalle', 'reportes-carga.verificar-detalle',
 
             // === GESTIÓN DE CAJA PROPIA ===
             'cajas.index', 'cajas.show', 'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones',

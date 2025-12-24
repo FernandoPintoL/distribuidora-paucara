@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
+import type { Id } from '@/domain/entities/shared';
+import type { TipoReporteCarga } from '@/domain/entities/entregas';
 import {
     optimizacionEntregasService,
     type CrearLoteRequest,
@@ -8,10 +10,11 @@ import {
 } from '@/application/services/optimizacion-entregas.service';
 
 export interface BatchFormData {
-    venta_ids: number[];
-    vehiculo_id: number | null;
-    chofer_id: number | null;
+    venta_ids: Id[];
+    vehiculo_id: Id | null;
+    chofer_id: Id | null;
     optimizar: boolean;
+    tipo_reporte: TipoReporteCarga;
 }
 
 interface UseBatchState {
@@ -31,6 +34,7 @@ export function useEntregaBatch() {
             vehiculo_id: null,
             chofer_id: null,
             optimizar: true,
+            tipo_reporte: 'individual',
         },
         isLoading: false,
         isSubmitting: false,
@@ -55,7 +59,7 @@ export function useEntregaBatch() {
     /**
      * Agregar/remover venta del lote
      */
-    const toggleVenta = (ventaId: number) => {
+    const toggleVenta = (ventaId: Id) => {
         setState((prev) => ({
             ...prev,
             formData: {
@@ -72,7 +76,7 @@ export function useEntregaBatch() {
     /**
      * Seleccionar todas las ventas
      */
-    const selectAllVentas = (ventaIds: number[]) => {
+    const selectAllVentas = (ventaIds: Id[]) => {
         setState((prev) => ({
             ...prev,
             formData: {
@@ -126,6 +130,7 @@ export function useEntregaBatch() {
                 vehiculo_id: state.formData.vehiculo_id,
                 chofer_id: state.formData.chofer_id,
                 optimizar: state.formData.optimizar,
+                tipo_reporte: state.formData.tipo_reporte,
             };
 
             const preview = await optimizacionEntregasService.obtenerPreview(request);
@@ -179,6 +184,7 @@ export function useEntregaBatch() {
                 vehiculo_id: state.formData.vehiculo_id,
                 chofer_id: state.formData.chofer_id,
                 optimizar: state.formData.optimizar,
+                tipo_reporte: state.formData.tipo_reporte,
             };
 
             const resultado = await optimizacionEntregasService.crearLote(request);

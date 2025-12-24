@@ -33,11 +33,17 @@ export type EstadoEntrega =
  * Interfaces para relaciones de Entrega
  * Definidas aquí para evitar dependencias circulares
  */
+export interface LocalidadCliente {
+    id: Id;
+    nombre: string;
+}
+
 export interface ClienteEntrega {
     id: Id;
     nombre: string;
     email?: string;
     telefono?: string;
+    localidad?: LocalidadCliente;
 }
 
 export interface VentaEntrega {
@@ -70,6 +76,13 @@ export interface ChoferEntrega {
     email?: string;
     telefono?: string;
     licencia?: string;
+}
+
+export interface DireccionClienteEntrega {
+    id: Id;
+    direccion: string;
+    latitud?: number;
+    longitud?: number;
 }
 
 /**
@@ -212,6 +225,17 @@ export interface VentaConDetalles {
     total: number;
     fecha_venta: string;
     cliente: ClienteEntrega;
+
+    // Campos de entrega comprometida (heredados de proforma)
+    fecha_entrega_comprometida?: string;    // Ej: "2025-12-25"
+    hora_entrega_comprometida?: string;     // Ej: "14:30"
+    ventana_entrega_ini?: string;           // Ej: "08:00"
+    ventana_entrega_fin?: string;           // Ej: "17:00"
+    direccion_entrega?: string;             // Dirección heredada de proforma (legacy)
+    direccionCliente?: DireccionClienteEntrega; // Dirección del cliente (FK)
+    peso_estimado?: number;                 // Peso calculado de detalles
+
+    // Detalles de los productos
     detalles: Array<{
         id: Id;
         cantidad: number;
@@ -222,10 +246,15 @@ export interface VentaConDetalles {
             codigo: string;
         };
     }>;
+
+    // Información adicional
+    cantidad_items?: number;                // Total de items en la venta
 }
 
 export interface VehiculoCompleto extends VehiculoEntrega {
     capacidad_carga?: number;
+    chofer_id?: Id;           // Chofer asociado al vehículo
+    chofer?: ChoferEntrega;   // Relación con datos del chofer
 }
 
 /**
@@ -236,6 +265,106 @@ export interface EntregasCreatePageProps {
     vehiculos: VehiculoCompleto[];
     choferes: ChoferEntrega[];
     ventaPreseleccionada?: Id;
+}
+
+/**
+ * ReporteCarga - Gestión de reportes de carga
+ *
+ * Estados: PENDIENTE → CONFIRMADO → ENTREGADO / CANCELADO
+ */
+export type EstadoReporteCarga = 'PENDIENTE' | 'CONFIRMADO' | 'ENTREGADO' | 'CANCELADO';
+
+/**
+ * Tipo de Reporte de Carga en Batch Mode
+ *
+ * - individual: 1 reporte por entrega (tracking granular)
+ * - consolidado: 1 reporte para todas las entregas (simplificado)
+ */
+export type TipoReporteCarga = 'individual' | 'consolidado';
+
+export interface ProductoReporteCarga {
+    id: Id;
+    nombre: string;
+    codigo?: string;
+    peso_kg?: number;
+}
+
+export interface DetalleReporteCarga extends BaseEntity {
+    id: Id;
+    reporte_carga_id: Id;
+    detalle_venta_id?: Id;
+    producto_id: Id;
+    producto?: ProductoReporteCarga;
+
+    // Cantidades
+    cantidad_solicitada: number;
+    cantidad_cargada: number;
+    diferencia?: number;
+    porcentaje_cargado?: number;
+
+    // Peso
+    peso_kg?: number;
+
+    // Verificación
+    verificado: boolean;
+    verificado_por?: Id;
+    fecha_verificacion?: string;
+    notas?: string;
+
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ResumenReporteCarga {
+    total_lineas: number;
+    total_solicitado: number;
+    total_cargado: number;
+    lineas_verificadas: number;
+    peso_total_cargado?: number;
+    porcentaje_carga: number;
+}
+
+export interface ReporteCarga extends BaseEntity {
+    id: Id;
+    numero_reporte: string;
+    entrega_id?: Id;
+    vehiculo_id?: Id;
+    venta_id?: Id;
+
+    // Información
+    descripcion?: string;
+    peso_total_kg: number;
+    volumen_total_m3?: number;
+
+    // Auditoria
+    generado_por?: string;
+    confirmado_por?: string;
+    fecha_generacion: string;
+    fecha_confirmacion?: string;
+
+    // Estado
+    estado: EstadoReporteCarga;
+    porcentaje_cargado?: number;
+
+    // Relaciones
+    detalles?: DetalleReporteCarga[];
+    resumen?: ResumenReporteCarga;
+
+    created_at: string;
+    updated_at: string;
+}
+
+export interface GenerarReporteFormData extends BaseFormData {
+    entrega_id: Id;
+    vehiculo_id?: Id;
+    descripcion?: string;
+    peso_total_kg?: number;
+    volumen_total_m3?: number;
+}
+
+export interface ActualizarDetalleReporteCargaFormData extends BaseFormData {
+    cantidad_cargada: number;
+    notas?: string;
 }
 
 // Legacy compatibility exports

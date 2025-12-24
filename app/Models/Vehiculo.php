@@ -21,6 +21,7 @@ class Vehiculo extends Model
         'estado',
         'activo',
         'chofer_asignado_id',
+        'localidad_id',
         'observaciones',
     ];
 
@@ -47,6 +48,11 @@ class Vehiculo extends Model
     public function choferAsignado(): BelongsTo
     {
         return $this->belongsTo(User::class, 'chofer_asignado_id');
+    }
+
+    public function localidad(): BelongsTo
+    {
+        return $this->belongsTo(Localidad::class);
     }
 
     /**

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\DTOs\Venta\CrearProformaDTO;
@@ -15,6 +14,7 @@ use App\Services\Venta\ProformaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -46,11 +46,11 @@ class ProformaController extends Controller
     /**
      * Listar proformas
      */
-    public function index(Request $request): JsonResponse|InertiaResponse
+    public function index(Request $request): JsonResponse | InertiaResponse
     {
         try {
             $filtros = [
-                'estado' => $request->input('estado'),
+                'estado'     => $request->input('estado'),
                 'cliente_id' => $request->input('cliente_id'),
             ];
 
@@ -76,7 +76,7 @@ class ProformaController extends Controller
     public function create(): InertiaResponse
     {
         return Inertia::render('proformas/create', [
-            'clientes' => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+            'clientes'  => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
             'productos' => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
             'almacenes' => Almacen::activos()->select('id', 'nombre')->get(),
         ]);
@@ -91,7 +91,7 @@ class ProformaController extends Controller
      * 3. ProformaService::crear() → RESERVA stock
      * 4. Retornar respuesta
      */
-    public function store(StoreProformaRequest $request): JsonResponse|RedirectResponse
+    public function store(StoreProformaRequest $request): JsonResponse | RedirectResponse
     {
         try {
             $dto = CrearProformaDTO::fromRequest($request);
@@ -116,7 +116,7 @@ class ProformaController extends Controller
             return $this->respondError($e->getMessage());
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error al crear proforma', [
+            Log::error('Error al crear proforma', [
                 'error' => $e->getMessage(),
             ]);
 
@@ -127,10 +127,10 @@ class ProformaController extends Controller
     /**
      * Mostrar detalle de proforma
      */
-    public function show(string $id): JsonResponse|InertiaResponse|RedirectResponse
+    public function show(string $id): JsonResponse | InertiaResponse | RedirectResponse
     {
         try {
-            $proformaDTO = $this->proformaService->obtener((int)$id);
+            $proformaDTO = $this->proformaService->obtener((int) $id);
 
             return $this->respondShow(
                 data: $proformaDTO,
@@ -149,10 +149,10 @@ class ProformaController extends Controller
      *
      * Mantiene la reserva de stock (no la consume)
      */
-    public function aprobar(string $id): JsonResponse|RedirectResponse
+    public function aprobar(string $id): JsonResponse | RedirectResponse
     {
         try {
-            $proformaDTO = $this->proformaService->aprobar((int)$id);
+            $proformaDTO = $this->proformaService->aprobar((int) $id);
 
             return $this->respondSuccess(
                 data: $proformaDTO,
@@ -175,12 +175,12 @@ class ProformaController extends Controller
      *
      * Libera la reserva de stock
      */
-    public function rechazar(string $id): JsonResponse|RedirectResponse
+    public function rechazar(string $id): JsonResponse | RedirectResponse
     {
         try {
             $motivo = request()->input('motivo', '');
 
-            $proformaDTO = $this->proformaService->rechazar((int)$id, $motivo);
+            $proformaDTO = $this->proformaService->rechazar((int) $id, $motivo);
 
             return $this->respondSuccess(
                 data: $proformaDTO,
@@ -203,52 +203,52 @@ class ProformaController extends Controller
      * 2. Adentro: VentaService::crear() consume reserva
      * 3. Retorna VentaResponseDTO
      */
-    public function convertirAVenta(string $id): JsonResponse|RedirectResponse
+    public function convertirAVenta(string $id): JsonResponse | RedirectResponse
     {
         try {
-            \Log::info('🔄 [ProformaController::convertirAVenta] Iniciando conversión de proforma', [
+            Log::info('🔄 [ProformaController::convertirAVenta] Iniciando conversión de proforma', [
                 'proforma_id' => $id,
-                'timestamp' => now()->toIso8601String(),
+                'timestamp'   => now()->toIso8601String(),
             ]);
 
-            $ventaDTO = $this->proformaService->convertirAVenta((int)$id);
+            $ventaDTO = $this->proformaService->convertirAVenta((int) $id);
 
-            \Log::info('✅ [ProformaController::convertirAVenta] Conversión exitosa', [
-                'proforma_id' => $id,
-                'venta_id' => $ventaDTO->id,
+            Log::info('✅ [ProformaController::convertirAVenta] Conversión exitosa', [
+                'proforma_id'  => $id,
+                'venta_id'     => $ventaDTO->id,
                 'venta_numero' => $ventaDTO->numero,
-                'timestamp' => now()->toIso8601String(),
+                'timestamp'    => now()->toIso8601String(),
             ]);
 
             // Retornar respuesta con redirección
             // El frontend manejará la redirección después de recibir la respuesta exitosa
             return response()->json([
-                'success' => true,
-                'message' => 'Proforma convertida a venta exitosamente',
-                'data' => $ventaDTO->toArray(),
+                'success'     => true,
+                'message'     => 'Proforma convertida a venta exitosamente',
+                'data'        => $ventaDTO->toArray(),
                 'redirect_to' => route('ventas.show', $ventaDTO->id),
             ], 200, [
-                'X-Inertia' => true,
+                'X-Inertia'         => true,
                 'X-Inertia-Version' => \Illuminate\Support\Facades\Session::token(),
             ]);
 
         } catch (EstadoInvalidoException $e) {
-            \Log::warning('⚠️ [ProformaController::convertirAVenta] Estado inválido', [
+            Log::warning('⚠️ [ProformaController::convertirAVenta] Estado inválido', [
                 'proforma_id' => $id,
-                'error' => $e->getMessage(),
-                'timestamp' => now()->toIso8601String(),
+                'error'       => $e->getMessage(),
+                'timestamp'   => now()->toIso8601String(),
             ]);
             return $this->respondError($e->getMessage(), statusCode: 422);
 
         } catch (\Exception $e) {
-            \Log::error('❌ [ProformaController::convertirAVenta] Error general', [
+            Log::error('❌ [ProformaController::convertirAVenta] Error general', [
                 'proforma_id' => $id,
-                'error' => $e->getMessage(),
+                'error'       => $e->getMessage(),
                 'error_class' => get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'timestamp' => now()->toIso8601String(),
+                'file'        => $e->getFile(),
+                'line'        => $e->getLine(),
+                'trace'       => $e->getTraceAsString(),
+                'timestamp'   => now()->toIso8601String(),
             ]);
             return $this->respondError($e->getMessage());
         }
@@ -259,7 +259,7 @@ class ProformaController extends Controller
      *
      * POST /proformas/{id}/extender
      */
-    public function extenderValidez(string $id): JsonResponse|RedirectResponse
+    public function extenderValidez(string $id): JsonResponse | RedirectResponse
     {
         try {
             $dias = (int) request()->input('dias', 15);
@@ -268,7 +268,7 @@ class ProformaController extends Controller
                 throw new \InvalidArgumentException('Días debe ser mayor a 0');
             }
 
-            $proformaDTO = $this->proformaService->extenderValidez((int)$id, $dias);
+            $proformaDTO = $this->proformaService->extenderValidez((int) $id, $dias);
 
             return $this->respondSuccess(
                 data: $proformaDTO,
@@ -300,8 +300,8 @@ class ProformaController extends Controller
     public function imprimir(\App\Models\Proforma $proforma, Request $request)
     {
         try {
-            $formato = $request->input('formato', 'A4'); // A4, TICKET_80, TICKET_58
-            $accion = $request->input('accion', 'download'); // download | stream
+            $formato = $request->input('formato', 'A4');      // A4, TICKET_80, TICKET_58
+            $accion  = $request->input('accion', 'download'); // download | stream
 
             // Generar PDF usando el servicio
             $pdf = $this->impresionService->imprimirProforma($proforma, $formato);
@@ -314,10 +314,10 @@ class ProformaController extends Controller
                 : $pdf->download($nombreArchivo);
 
         } catch (\Exception $e) {
-            \Log::error('Error al imprimir proforma', [
+            Log::error('Error al imprimir proforma', [
                 'proforma_id' => $proforma->id,
-                'formato' => $request->input('formato'),
-                'error' => $e->getMessage(),
+                'formato'     => $request->input('formato'),
+                'error'       => $e->getMessage(),
             ]);
 
             return $this->respondError('Error al generar PDF: ' . $e->getMessage());
@@ -339,7 +339,7 @@ class ProformaController extends Controller
             // Obtener plantilla correspondiente
             $plantilla = \App\Models\PlantillaImpresion::obtenerDefault('proforma', $formato);
 
-            if (!$plantilla) {
+            if (! $plantilla) {
                 abort(404, "No existe plantilla para proforma con formato {$formato}");
             }
 
@@ -356,21 +356,21 @@ class ProformaController extends Controller
 
             // Retornar vista Blade directamente (sin PDF)
             return view($plantilla->vista_blade, [
-                'documento' => $proforma,
-                'empresa' => $empresa,
-                'plantilla' => $plantilla,
+                'documento'       => $proforma,
+                'empresa'         => $empresa,
+                'plantilla'       => $plantilla,
                 'fecha_impresion' => now(),
-                'usuario' => auth()->user(),
-                'opciones' => [
+                'usuario'         => auth()->user(),
+                'opciones'        => [
                     'porcentaje_impuesto' => 13,
                 ],
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al generar preview de proforma', [
+            Log::error('Error al generar preview de proforma', [
                 'proforma_id' => $proforma->id,
-                'formato' => $request->input('formato'),
-                'error' => $e->getMessage(),
+                'formato'     => $request->input('formato'),
+                'error'       => $e->getMessage(),
             ]);
 
             return response()->view('errors.500', ['message' => $e->getMessage()], 500);
@@ -391,14 +391,14 @@ class ProformaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $formatos,
+                'data'    => $formatos,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener formatos disponibles',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }

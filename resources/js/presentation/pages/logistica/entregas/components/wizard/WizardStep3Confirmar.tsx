@@ -2,7 +2,7 @@ import { Label } from '@/presentation/components/ui/label';
 import { Card } from '@/presentation/components/ui/card';
 import { Textarea } from '@/presentation/components/ui/textarea';
 import { Input } from '@/presentation/components/ui/input';
-import { AlertCircle, CheckCircle2, DollarSign, Package, MapPin, User, Truck, Calendar } from 'lucide-react';
+import { CheckCircle2, Package, MapPin, Truck, Calendar } from 'lucide-react';
 import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega } from '@/domain/entities/entregas';
 import type { WizardFormData } from '../EntregaFormWizard';
 
@@ -116,21 +116,19 @@ export default function WizardStep3Confirmar({
                     {/* Validación de capacidad */}
                     {vehiculo && formData.peso_kg && (
                         <div
-                            className={`rounded-lg p-3 ${
-                                formData.peso_kg <= (vehiculo.capacidad_kg || 0)
+                            className={`rounded-lg p-3 ${formData.peso_kg <= (vehiculo.capacidad_kg || 0)
                                     ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
                                     : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                            }`}
+                                }`}
                         >
                             <p className="text-sm font-medium">
                                 {formData.peso_kg} kg / {vehiculo.capacidad_kg} kg capacidad
                             </p>
                             <p
-                                className={`text-xs mt-1 ${
-                                    formData.peso_kg <= (vehiculo.capacidad_kg || 0)
+                                className={`text-xs mt-1 ${formData.peso_kg <= (vehiculo.capacidad_kg || 0)
                                         ? 'text-green-700 dark:text-green-200'
                                         : 'text-red-700 dark:text-red-200'
-                                }`}
+                                    }`}
                             >
                                 {formData.peso_kg <= (vehiculo.capacidad_kg || 0)
                                     ? `✓ Espacio disponible: ${((vehiculo.capacidad_kg || 0) - formData.peso_kg).toFixed(1)} kg`
@@ -210,13 +208,13 @@ export default function WizardStep3Confirmar({
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                 {formData.fecha_programada
                                     ? new Date(formData.fecha_programada).toLocaleDateString('es-ES', {
-                                          weekday: 'long',
-                                          year: 'numeric',
-                                          month: 'long',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                      })
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                    })
                                     : 'No asignada'}
                             </p>
                         </div>

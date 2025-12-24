@@ -122,6 +122,7 @@ class VentaService
                 'observaciones' => $dto->observaciones,
                 'almacen_id' => $dto->almacen_id,
                 'proforma_id' => $dto->proforma_id,
+                'direccion_cliente_id' => $dto->direccion_cliente_id,
                 // Campos de logística
                 'requiere_envio' => $dto->requiere_envio,
                 'canal_origen' => $dto->canal_origen ?? 'WEB',

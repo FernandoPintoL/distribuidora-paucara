@@ -9,6 +9,7 @@ export interface CrearLoteRequest {
     chofer_id: number;
     agrupar_por_zona?: boolean;
     optimizar?: boolean;
+    tipo_reporte?: 'individual' | 'consolidado';
 }
 
 export interface EntregaCreada {

@@ -741,6 +741,115 @@ class EntregaController extends Controller
     }
 
     /**
+     * POST /api/entregas/{id}/confirmar-carga
+     * Confirmar carga de una entrega (cambiar a EN_CARGA)
+     */
+    public function confirmarCarga(int $id)
+    {
+        try {
+            $entregaService = app(\App\Services\Logistica\EntregaService::class);
+            $dto = $entregaService->confirmarCarga($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Carga confirmada exitosamente',
+                'data' => $dto,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error confirmando carga: ' . $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * POST /api/entregas/{id}/listo-para-entrega
+     * Marcar entrega como lista para partida (después de completar carga)
+     */
+    public function marcarListoParaEntrega(int $id)
+    {
+        try {
+            $entregaService = app(\App\Services\Logistica\EntregaService::class);
+            $dto = $entregaService->marcarListoParaEntrega($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Entrega marcada como lista para partida',
+                'data' => $dto,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error marcando como listo: ' . $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * POST /api/entregas/{id}/iniciar-transito
+     * Iniciar tránsito de entrega con coordenadas GPS
+     */
+    public function iniciarTransito(Request $request, int $id)
+    {
+        try {
+            $validated = $request->validate([
+                'latitud' => 'required|numeric|between:-90,90',
+                'longitud' => 'required|numeric|between:-180,180',
+            ]);
+
+            $entregaService = app(\App\Services\Logistica\EntregaService::class);
+            $dto = $entregaService->iniciarTransito(
+                $id,
+                (float) $validated['latitud'],
+                (float) $validated['longitud']
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tránsito iniciado exitosamente',
+                'data' => $dto,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error iniciando tránsito: ' . $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * PATCH /api/entregas/{id}/ubicacion-gps
+     * Actualizar ubicación GPS de una entrega en tránsito
+     */
+    public function actualizarUbicacionGPS(Request $request, int $id)
+    {
+        try {
+            $validated = $request->validate([
+                'latitud' => 'required|numeric|between:-90,90',
+                'longitud' => 'required|numeric|between:-180,180',
+            ]);
+
+            $entregaService = app(\App\Services\Logistica\EntregaService::class);
+            $entregaService->actualizarUbicacionGPS(
+                $id,
+                (float) $validated['latitud'],
+                (float) $validated['longitud']
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ubicación actualizada exitosamente',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error actualizando ubicación: ' . $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Métodos auxiliares
      */
 

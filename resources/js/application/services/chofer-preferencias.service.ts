@@ -3,8 +3,10 @@
  * Almacena en BD para persistencia entre dispositivos
  */
 
+import type { Id } from '@/domain/entities/shared';
+
 export interface ChoferPreferencia {
-    chofer_id: number;
+    chofer_id: Id;
     fecha_uso: string; // ISO datetime
     frecuencia: number; // Cuántas veces ha sido usado
 }
@@ -33,7 +35,7 @@ class ChoferPreferenciasService {
     /**
      * Guardar uso de un chofer
      */
-    async guardarUso(chofer_id: number): Promise<void> {
+    async guardarUso(chofer_id: Id): Promise<void> {
         try {
             const response = await fetch(this.API_ENDPOINT, {
                 method: 'POST',
@@ -64,7 +66,7 @@ class ChoferPreferenciasService {
     /**
      * Ordenar choferes por preferencia (más usados primero)
      */
-    ordenarPorPreferencia<T extends { id: number }>(
+    ordenarPorPreferencia<T extends { id: Id }>(
         items: T[],
         preferencias: ChoferPreferencia[]
     ): T[] {

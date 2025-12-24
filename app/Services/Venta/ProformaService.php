@@ -315,6 +315,10 @@ class ProformaService
             // Calcular ventanas de entrega
             $ventanas = $this->calcularVentanasEntrega($proforma);
 
+            // Obtener dirección de entrega confirmada (prioridad) o solicitada
+            $direccionClienteId = $proforma->direccion_entrega_confirmada_id
+                ?? $proforma->direccion_entrega_solicitada_id;
+
             $ventaDTO = $this->ventaService->crear(
                 new \App\DTOs\Venta\CrearVentaDTO(
                     cliente_id: $proforma->cliente_id,
@@ -327,6 +331,8 @@ class ProformaService
                     observaciones: "Convertida desde proforma #{$proforma->numero}",
                     usuario_id: Auth::id(),
                     proforma_id: $proforma->id,
+                    // Dirección de entrega
+                    direccion_cliente_id: $direccionClienteId,
                     // Campos de logística
                     requiere_envio: $requiereEnvio,
                     canal_origen: $proforma->canal_origen ?? 'WEB',

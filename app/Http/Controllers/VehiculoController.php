@@ -148,4 +148,165 @@ class VehiculoController extends Controller
     {
         return ApiResponse::success($vehiculo);
     }
+
+    /**
+     * POST /api/vehiculos/sugerir
+     * Sugerir vehículo recomendado basado en peso total
+     *
+     * Request:
+     *   - peso_total: float (kg)
+     *
+     * Response:
+     *   - recomendado: { id, placa, marca, modelo, capacidad_kg, porcentaje_uso }
+     *   - disponibles: [ { id, placa, marca, modelo, capacidad_kg, porcentaje_uso, estado } ]
+     */
+    public function apiSugerir(Request $request)
+    {
+        try {
+            $pesoTotal = (float) $request->input('peso_total', 0);
+            $ventaIds = $request->input('venta_ids', []);
+
+            if ($pesoTotal <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El peso total debe ser mayor a 0',
+                ], 422);
+            }
+
+            // Obtener localidad de destino de las ventas seleccionadas
+            $localidadesDestino = [];
+            if (!empty($ventaIds)) {
+                $localidadesDestino = \App\Models\Venta::whereIn('id', $ventaIds)
+                    ->with('cliente')
+                    ->get()
+                    ->pluck('cliente.localidad_id')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->toArray();
+            }
+
+            // Validar que todas las ventas van a la misma localidad (información, no filtrado)
+            if (count($localidadesDestino) > 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Las ventas seleccionadas tienen destinos en diferentes localidades. Por favor selecciona ventas de la misma localidad.',
+                    'data' => [
+                        'recomendado' => null,
+                        'peso_total' => $pesoTotal,
+                        'disponibles' => [],
+                        'alerta' => 'DESTINOS MÚLTIPLES',
+                    ],
+                ], 422);
+            }
+
+            $localidadDestino = $localidadesDestino[0] ?? null;
+            \Log::info('Recomendación de vehículo', [
+                'peso_total' => $pesoTotal,
+                'localidad_destino' => $localidadDestino,
+                'venta_ids' => $ventaIds,
+            ]);
+
+            // Obtener vehículos disponibles ordenados por capacidad (menor primero)
+            // Solo filtrar por capacidad, los vehículos pueden servir a cualquier localidad
+            $vehiculosDisponibles = Vehiculo::where('activo', true)
+                ->whereRaw('LOWER(estado) = ?', ['disponible'])
+                ->where('capacidad_kg', '>=', $pesoTotal)
+                ->with('choferAsignado')
+                ->orderBy('capacidad_kg', 'asc')
+                ->get()
+                ->map(function ($vehiculo) use ($pesoTotal) {
+                    $porcentajeUso = round(($pesoTotal / $vehiculo->capacidad_kg) * 100, 1);
+                    return [
+                        'id' => $vehiculo->id,
+                        'placa' => $vehiculo->placa,
+                        'marca' => $vehiculo->marca,
+                        'modelo' => $vehiculo->modelo,
+                        'anho' => $vehiculo->anho,
+                        'capacidad_kg' => $vehiculo->capacidad_kg,
+                        'porcentaje_uso' => $porcentajeUso,
+                        'estado' => 'recomendado',
+                        'choferAsignado' => $vehiculo->choferAsignado ? [
+                            'id' => $vehiculo->choferAsignado->id,
+                            'name' => $vehiculo->choferAsignado->name,
+                            'nombre' => $vehiculo->choferAsignado->name,
+                            'telefono' => $vehiculo->choferAsignado->phone ?? null,
+                        ] : null,
+                    ];
+                });
+
+            // El primero es el recomendado (menor capacidad que cabe el peso)
+            $recomendado = $vehiculosDisponibles->first();
+
+            if (!$recomendado) {
+                // Si no hay vehículos con capacidad suficiente, mostrar todos disponibles
+                $todosDisponibles = Vehiculo::where('activo', true)
+                    ->whereRaw('LOWER(estado) = ?', ['disponible'])
+                    ->with('choferAsignado')
+                    ->orderBy('capacidad_kg', 'asc')
+                    ->get()
+                    ->map(function ($vehiculo) use ($pesoTotal) {
+                        $porcentajeUso = round(($pesoTotal / $vehiculo->capacidad_kg) * 100, 1);
+                        $excesoCarga = $pesoTotal > $vehiculo->capacidad_kg;
+                        return [
+                            'id' => $vehiculo->id,
+                            'placa' => $vehiculo->placa,
+                            'marca' => $vehiculo->marca,
+                            'modelo' => $vehiculo->modelo,
+                            'anho' => $vehiculo->anho,
+                            'capacidad_kg' => $vehiculo->capacidad_kg,
+                            'porcentaje_uso' => $porcentajeUso,
+                            'estado' => $excesoCarga ? 'excede_capacidad' : 'disponible',
+                            'choferAsignado' => $vehiculo->choferAsignado ? [
+                                'id' => $vehiculo->choferAsignado->id,
+                                'name' => $vehiculo->choferAsignado->name,
+                                'nombre' => $vehiculo->choferAsignado->name,
+                                'telefono' => $vehiculo->choferAsignado->phone ?? null,
+                            ] : null,
+                        ];
+                    });
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No hay vehículos con capacidad suficiente',
+                    'data' => [
+                        'recomendado' => null,
+                        'peso_total' => $pesoTotal,
+                        'disponibles' => $todosDisponibles,
+                        'alerta' => 'CARGA EXCEDE CAPACIDAD',
+                    ],
+                ], 200);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vehículo recomendado obtenido',
+                'data' => [
+                    'recomendado' => $recomendado,
+                    'peso_total' => $pesoTotal,
+                    'disponibles' => $vehiculosDisponibles->map(fn($v) => [
+                        'id' => $v['id'],
+                        'placa' => $v['placa'],
+                        'marca' => $v['marca'],
+                        'modelo' => $v['modelo'],
+                        'anho' => $v['anho'],
+                        'capacidad_kg' => $v['capacidad_kg'],
+                        'porcentaje_uso' => $v['porcentaje_uso'],
+                        'estado' => 'disponible',
+                        'choferAsignado' => $v['choferAsignado'],
+                    ])->toArray(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error sugerindo vehículo', [
+                'peso_total' => $request->input('peso_total'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al sugerir vehículo: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

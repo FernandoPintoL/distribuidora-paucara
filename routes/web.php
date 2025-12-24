@@ -353,6 +353,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::get('en-transito', fn() => Inertia::render('logistica/entregas/en-transito'))->name('en-transito');
             Route::get('dashboard', fn() => Inertia::render('logistica/entregas/dashboard'))->name('dashboard');
             Route::get('dashboard-stats', [\App\Http\Controllers\EntregaController::class, 'dashboardStats'])->name('dashboard-stats');
+
+            // 🔍 DEBUG: Endpoint para diagnosticar qué ventas están disponibles
+            Route::get('debug-ventas', [\App\Http\Controllers\EntregaController::class, 'debugVentas'])->name('debug-ventas');
+
             // ✅ FASE UNIFICADA: Una sola ruta para crear entregas simples o en lote
             // Soporta: ?venta_id=N para modo single, o sin parámetros para batch
             Route::get('create', [\App\Http\Controllers\EntregaController::class, 'create'])->name('create');

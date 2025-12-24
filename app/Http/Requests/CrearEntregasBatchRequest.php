@@ -15,6 +15,19 @@ class CrearEntregasBatchRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     * Defaults tipo_reporte to 'individual' if not provided.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (!$this->has('tipo_reporte')) {
+            $this->merge([
+                'tipo_reporte' => 'individual',
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -28,6 +41,7 @@ class CrearEntregasBatchRequest extends FormRequest
             'chofer_id' => 'required|integer|exists:empleados,id',
             'agrupar_por_zona' => 'boolean|default:true',
             'optimizar' => 'boolean|default:true',
+            'tipo_reporte' => 'required|string|in:individual,consolidado',
         ];
     }
 
@@ -45,6 +59,8 @@ class CrearEntregasBatchRequest extends FormRequest
             'vehiculo_id.exists' => 'El vehículo seleccionado no existe',
             'chofer_id.required' => 'Debe asignar un chofer',
             'chofer_id.exists' => 'El chofer seleccionado no existe',
+            'tipo_reporte.required' => 'Debe seleccionar un tipo de reporte',
+            'tipo_reporte.in' => 'El tipo de reporte debe ser individual o consolidado',
         ];
     }
 }

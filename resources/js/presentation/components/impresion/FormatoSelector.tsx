@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import {
     DropdownMenu,
@@ -18,7 +18,7 @@ interface FormatoImpresion {
 
 interface FormatoSelectorProps {
     documentoId: number | string;
-    tipoDocumento: 'venta' | 'proforma' | 'envio';
+    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga';
     formatos?: FormatoImpresion[];
     onPreview?: (formato: string) => void;
     className?: string;
@@ -51,9 +51,14 @@ export function FormatoSelector({
     );
 
     // Cargar formatos disponibles desde el backend si no se proporcionaron
-    useState(() => {
+    useEffect(() => {
         if (!formatos || formatos.length === 0) {
-            fetch(`/${tipoDocumento}s/formatos-disponibles`)
+            // Manejar caso especial de reportes-carga (usa /api/)
+            const urlFormatos = tipoDocumento === 'reportes-carga'
+                ? `/api/reportes-carga/formatos-disponibles`
+                : `/${tipoDocumento}s/formatos-disponibles`;
+
+            fetch(urlFormatos)
                 .then((res) => {
                     // Verificar si la respuesta es JSON válido
                     const contentType = res.headers.get('content-type');
@@ -72,12 +77,15 @@ export function FormatoSelector({
                     // Mantener formatos por defecto
                 });
         }
-    });
+    }, [formatos, tipoDocumento]);
 
     const handleImprimir = (formato: string, accion: 'download' | 'stream' = 'download') => {
         setLoading(true);
 
-        const url = `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
+        // Manejar caso especial de reportes-carga (usa /api/ y /descargar)
+        const url = tipoDocumento === 'reportes-carga'
+            ? `/api/reportes-carga/${documentoId}/descargar?formato=${formato}&accion=${accion}`
+            : `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
 
         // Abrir en nueva ventana para stream, o descargar
         if (accion === 'stream') {
@@ -95,7 +103,9 @@ export function FormatoSelector({
             onPreview(formato);
         } else {
             // Abrir preview en nueva ventana
-            const url = `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
+            const url = tipoDocumento === 'reportes-carga'
+                ? `/api/reportes-carga/${documentoId}/preview?formato=${formato}`
+                : `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
             window.open(url, '_blank');
         }
     };

@@ -3,7 +3,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Card } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
-import { Search, Package, DollarSign, User } from 'lucide-react';
+import { Search, Package, DollarSign } from 'lucide-react';
 import type { VentaConDetalles } from '@/domain/entities/entregas';
 import type { WizardFormData } from '../EntregaFormWizard';
 
@@ -82,11 +82,10 @@ export default function WizardStep1Venta({
                         <Card
                             key={venta.id}
                             onClick={() => handleSelectVenta(venta)}
-                            className={`cursor-pointer transition-all ${
-                                formData.venta_id === venta.id
+                            className={`cursor-pointer transition-all ${formData.venta_id === venta.id
                                     ? 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
                                     : 'hover:shadow-md dark:hover:bg-slate-800'
-                            } dark:bg-slate-900 dark:border-slate-700`}
+                                } dark:bg-slate-900 dark:border-slate-700`}
                         >
                             <div className="p-4 space-y-3">
                                 {/* Header */}

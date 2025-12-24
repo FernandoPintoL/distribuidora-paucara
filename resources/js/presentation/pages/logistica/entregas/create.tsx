@@ -32,6 +32,7 @@ export default function Create({
     choferes,
     ventaPreseleccionada,
 }: Props) {
+    console.log('Renderizando Create Entregas Unificado con props:');
     const handleCancel = () => {
         router.visit('/logistica/entregas');
     };

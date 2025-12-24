@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Label } from '@/presentation/components/ui/label';
 import { Card } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
-import { AlertCircle, CheckCircle2, AlertTriangle, Truck, User, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, AlertTriangle, Truck, Clock } from 'lucide-react';
 import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega } from '@/domain/entities/entregas';
 import type { WizardFormData } from '../EntregaFormWizard';
 import { Input } from '@/presentation/components/ui/input';
@@ -18,7 +18,6 @@ interface WizardStep2RecursosProps {
 }
 
 export default function WizardStep2Recursos({
-    venta,
     vehiculos,
     choferes,
     formData,
@@ -51,7 +50,7 @@ export default function WizardStep2Recursos({
     }, [choferes, preferencias]);
 
     const selectedVehiculo = vehiculos.find((v) => v.id === formData.vehiculo_id);
-    const selectedChofer = choferes.find((c) => c.id === formData.chofer_id);
+    // const selectedChofer = choferes.find((c) => c.id === formData.chofer_id);
 
     // Validación de fecha
     const minDate = getMinDateTimeLocal();
@@ -107,11 +106,10 @@ export default function WizardStep2Recursos({
                                 <Card
                                     key={v.id}
                                     onClick={() => onUpdate({ vehiculo_id: v.id })}
-                                    className={`cursor-pointer transition-all p-3 ${
-                                        formData.vehiculo_id === v.id
-                                            ? 'ring-2 ring-green-500 dark:ring-green-400 bg-green-50 dark:bg-green-900/20'
-                                            : 'hover:shadow-md dark:hover:bg-slate-800'
-                                    } dark:bg-slate-900 dark:border-slate-700`}
+                                    className={`cursor-pointer transition-all p-3 ${formData.vehiculo_id === v.id
+                                        ? 'ring-2 ring-green-500 dark:ring-green-400 bg-green-50 dark:bg-green-900/20'
+                                        : 'hover:shadow-md dark:hover:bg-slate-800'
+                                        } dark:bg-slate-900 dark:border-slate-700`}
                                 >
                                     <div className="flex items-start justify-between">
                                         <div>
@@ -214,11 +212,10 @@ export default function WizardStep2Recursos({
                                     // Guardar uso del chofer en la BD
                                     choferPreferenciasService.guardarUso(c.id);
                                 }}
-                                className={`cursor-pointer transition-all p-3 ${
-                                    formData.chofer_id === c.id
-                                        ? 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'hover:shadow-md dark:hover:bg-slate-800'
-                                } dark:bg-slate-900 dark:border-slate-700`}
+                                className={`cursor-pointer transition-all p-3 ${formData.chofer_id === c.id
+                                    ? 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                    : 'hover:shadow-md dark:hover:bg-slate-800'
+                                    } dark:bg-slate-900 dark:border-slate-700`}
                             >
                                 <div className="flex items-start justify-between">
                                     <div>
@@ -263,9 +260,8 @@ export default function WizardStep2Recursos({
                     value={formData.fecha_programada || ''}
                     onChange={(e) => handleFechaChange(e.target.value)}
                     min={minDate}
-                    className={`mt-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white ${
-                        fechaError ? 'border-red-500' : ''
-                    }`}
+                    className={`mt-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white ${fechaError ? 'border-red-500' : ''
+                        }`}
                 />
                 {fechaError && (
                     <p className="text-sm text-red-600 dark:text-red-400 mt-1">{fechaError}</p>

@@ -1,48 +1,17 @@
-import { useMemo, useState } from 'react';
-import { AlertCircle, Package, ChevronLeft, CheckCircle2, Plus } from 'lucide-react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
+import { AlertCircle, Package, CheckCircle2, Plus } from 'lucide-react';
 import { Card } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import BatchVentaSelector from './BatchVentaSelector';
 import BatchVehiculoAssignment from './BatchVehiculoAssignment';
 import BatchOptimizationResult from './BatchOptimizationResult';
 import SimpleEntregaForm from './SimpleEntregaForm';
+import { VehicleRecommendationCard } from '@/presentation/components/entrega/VehicleRecommendationCard';
 import { useEntregaBatch } from '@/application/hooks/use-entrega-batch';
-import { router } from '@inertiajs/react';
-
-interface VentaConDetalles {
-    id: number;
-    numero_venta: string;
-    numero?: string;
-    total: number;
-    fecha_venta?: string;
-    fecha?: string;
-    estado?: string;
-    cliente: {
-        id: number;
-        nombre: string;
-        telefono?: string;
-    };
-    cantidad_items?: number;
-    peso_estimado?: number;
-    detalles?: any[];
-}
-
-interface VehiculoCompleto {
-    id: number;
-    placa: string;
-    marca: string;
-    modelo: string;
-    capacidad_carga?: number;
-    capacidad_kg: number;
-}
-
-interface ChoferEntrega {
-    id: number;
-    name?: string;
-    nombre?: string;
-    email?: string;
-    tiene_licencia?: boolean;
-}
+import { useSimpleEntregaSubmit } from '@/application/hooks/use-simple-entrega-submit';
+import { useVehiculoRecomendado } from '@/application/hooks/use-vehiculo-recomendado';
+import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega, EntregaFormData } from '@/domain/entities/entregas';
+import type { Id } from '@/domain/entities/shared';
 
 interface CreateEntregasUnificadoProps {
     ventas: VentaConDetalles[];
@@ -53,16 +22,37 @@ interface CreateEntregasUnificadoProps {
 }
 
 /**
- * Componente Unificado para Creación de Entregas - OPCIÓN B
+ * Presentación: Componente Unificado de Creación de Entregas
  *
- * Layout persistente: Lista de ventas siempre visible (izquierda)
- * Panel dinámico: Formulario cambia según selección (derecha)
+ * ARQUITECTURA LIMPIA - Responsabilidades por capa:
  *
- * Estructura:
+ * ✅ PRESENTACIÓN (Este archivo):
+ *   - UI layout y renderizado
+ *   - Gestión de estado de selección
+ *   - Delegación a hooks de application
+ *   - Mostrar estados y errores
+ *
+ * ✅ APPLICATION (Hooks):
+ *   - use-entregas-create.ts: Lógica para 1 venta
+ *   - use-entrega-batch.ts: Lógica para 2+ ventas
+ *   - Validación de negocio
+ *   - Orquestación de servicios
+ *   - Manejo de navegación
+ *
+ * ✅ INFRASTRUCTURE (Servicios):
+ *   - entregas.service.ts: URLs y operaciones HTTP
+ *   - logistica.service.ts: Operaciones complejas
+ *   - Abstracción de HTTP
+ *
+ * ✅ DOMAIN (Tipos):
+ *   - Tipos de Entrega, VentaConDetalles, etc.
+ *   - Sin lógica, solo contratos
+ *
+ * Layout:
  * - Panel Izquierdo (4/12): BatchVentaSelector sticky
  * - Panel Derecho (8/12): renderDynamicFormPanel()
  *   - 0 ventas: Mensaje instructivo
- *   - 1 venta: SimpleEntregaForm
+ *   - 1 venta: SimpleEntregaForm (usa Inertia.js router.post())
  *   - 2+ ventas: BatchUI con optimización
  * - Footer Sticky: Solo cuando hay ≥1 venta seleccionada
  */
@@ -71,10 +61,10 @@ export default function CreateEntregasUnificado({
     vehiculos,
     choferes,
     ventaPreseleccionada,
-    onCancel,
 }: CreateEntregasUnificadoProps) {
     // Estado de selección de ventas
-    const [selectedVentaIds, setSelectedVentaIds] = useState<number[]>(
+    // Usar Id en lugar de number para ser compatible con VentaConDetalles.id
+    const [selectedVentaIds, setSelectedVentaIds] = useState<Id[]>(
         ventaPreseleccionada ? [ventaPreseleccionada] : []
     );
 
@@ -91,6 +81,46 @@ export default function CreateEntregasUnificado({
         obtenerPreview,
         handleSubmit: handleSubmitBatch,
     } = useEntregaBatch();
+
+    // Hook para envío de entrega simple
+    const { submitEntrega } = useSimpleEntregaSubmit();
+
+    // Memoized callbacks para vehicle recommendation
+    // Estos callbacks deben ser estables para que el useEffect en VehicleRecommendationCard funcione correctamente
+    const handleSelectVehiculo = useCallback((vehiculoId: Id) => {
+        updateFormData({ vehiculo_id: vehiculoId });
+    }, [updateFormData]);
+
+    const handleSelectChofer = useCallback((choferId: Id) => {
+        updateFormData({ chofer_id: choferId });
+    }, [updateFormData]);
+
+    // Hook para recomendación de vehículo (batch mode)
+    const {
+        recomendado,
+        disponibles,
+        pesoTotal: pesoRecomendacion,
+        isLoading: loadingRecomendacion,
+        error: errorRecomendacion,
+        alerta: alertaRecomendacion,
+    } = useVehiculoRecomendado(
+        selectedVentaIds,
+        ventas,
+        true, // Auto-select recomendado
+        handleSelectVehiculo
+    );
+
+    // Auto-seleccionar vehículo y chofer cuando se cargan las recomendaciones
+    // Este useEffect captura los callbacks memoizados y asegura que formData se actualice
+    useEffect(() => {
+        if (recomendado && !formData.vehiculo_id) {
+            handleSelectVehiculo(recomendado.id);
+
+            if (recomendado.choferAsignado && formData.chofer_id === undefined) {
+                handleSelectChofer(recomendado.choferAsignado.id);
+            }
+        }
+    }, [recomendado?.id, formData.vehiculo_id, formData.chofer_id, handleSelectVehiculo, handleSelectChofer]);
 
     // Detectar modo
     const selectedCount = selectedVentaIds.length;
@@ -110,10 +140,10 @@ export default function CreateEntregasUnificado({
 
     // Validaciones para batch
     const selectedVehiculo = vehiculos.find((v) => v.id === formData.vehiculo_id);
-    const capacidadInsuficiente = selectedVehiculo && totals.pesoTotal > selectedVehiculo.capacidad_kg;
+    const capacidadInsuficiente = selectedVehiculo && totals.pesoTotal > (selectedVehiculo.capacidad_kg ?? 0);
 
     // Handlers
-    const handleToggleVenta = (ventaId: number) => {
+    const handleToggleVenta = (ventaId: Id) => {
         setSelectedVentaIds((prev) => {
             const updated = prev.includes(ventaId)
                 ? prev.filter((id) => id !== ventaId)
@@ -137,21 +167,9 @@ export default function CreateEntregasUnificado({
     };
 
     // Handler para SimpleEntregaForm (1 venta)
-    const handleSubmitSimple = async (data: any) => {
-        try {
-            const response = await fetch('/api/entregas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok) throw new Error('Error al crear entrega');
-
-            router.visit('/logistica/entregas');
-        } catch (error) {
-            console.error('Error al crear entrega:', error);
-            throw error;
-        }
+    // Delega al hook de application que usa el servicio de infrastructure
+    const handleSubmitSimple = async (data: EntregaFormData): Promise<void> => {
+        await submitEntrega(data);
     };
 
     // Renderizar panel dinámico según selección
@@ -238,21 +256,97 @@ export default function CreateEntregasUnificado({
                     </Card>
                 )}
 
-                {/* Asignación de Vehículo y Chofer */}
+                {/* Asignación de Recursos - Recomendación + Selección Manual */}
+                <div className="space-y-4 mb-4">
+                    {/* Recomendación Inteligente de Vehículo (si está disponible) */}
+                    {(recomendado || alertaRecomendacion || errorRecomendacion || loadingRecomendacion) && (
+                        <VehicleRecommendationCard
+                            recomendado={recomendado}
+                            disponibles={disponibles}
+                            pesoTotal={pesoRecomendacion}
+                            isLoading={loadingRecomendacion}
+                            error={errorRecomendacion}
+                            alerta={alertaRecomendacion}
+                            selectedVehiculoId={formData.vehiculo_id ?? undefined}
+                            selectedChoferId={formData.chofer_id ?? null}
+                            choferes={choferes}
+                            onSelectVehiculo={handleSelectVehiculo}
+                            onSelectChofer={handleSelectChofer}
+                        />
+                    )}
+
+                    {/* Selección Manual de Vehículo y Chofer (siempre disponible como fallback) */}
+                    {/* <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4">
+                        <BatchVehiculoAssignment
+                            vehiculos={vehiculos}
+                            choferes={choferes}
+                            selectedVehiculoId={formData.vehiculo_id}
+                            selectedChoferId={formData.chofer_id}
+                            pesoTotal={totals.pesoTotal}
+                            onVehiculoSelect={(id) => updateFormData({ vehiculo_id: id })}
+                            onChoferSelect={(id) => updateFormData({ chofer_id: id })}
+                        />
+                    </Card> */}
+                </div>
+
+                {/* Tipo de Reporte de Carga */}
                 <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4">
-                    <BatchVehiculoAssignment
-                        vehiculos={vehiculos}
-                        choferes={choferes}
-                        selectedVehiculoId={formData.vehiculo_id}
-                        selectedChoferId={formData.chofer_id}
-                        pesoTotal={totals.pesoTotal}
-                        onVehiculoSelect={(id) => updateFormData({ vehiculo_id: id })}
-                        onChoferSelect={(id) => updateFormData({ chofer_id: id })}
-                    />
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                        Tipo de Reporte de Carga
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Selecciona cómo deseas generar los reportes de carga para estas entregas
+                    </p>
+
+                    <div className="space-y-3">
+                        {/* Opción Individual */}
+                        <label className="flex items-start gap-3 cursor-pointer p-3 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition">
+                            <input
+                                type="radio"
+                                name="tipo_reporte"
+                                value="individual"
+                                checked={formData.tipo_reporte === 'individual'}
+                                onChange={(e) => updateFormData({ tipo_reporte: 'individual' })}
+                                className="mt-1"
+                            />
+                            <div className="flex-1">
+                                <p className="font-medium text-gray-900 dark:text-white">
+                                    Individual - 1 reporte por entrega
+                                </p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    Genera un reporte de carga separado para cada entrega.
+                                    Ejemplo: {selectedCount} entregas = {selectedCount} reportes.
+                                    Permite seguimiento granular por entrega.
+                                </p>
+                            </div>
+                        </label>
+
+                        {/* Opción Consolidada */}
+                        <label className="flex items-start gap-3 cursor-pointer p-3 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition">
+                            <input
+                                type="radio"
+                                name="tipo_reporte"
+                                value="consolidado"
+                                checked={formData.tipo_reporte === 'consolidado'}
+                                onChange={(e) => updateFormData({ tipo_reporte: 'consolidado' })}
+                                className="mt-1"
+                            />
+                            <div className="flex-1">
+                                <p className="font-medium text-gray-900 dark:text-white">
+                                    Consolidado - 1 reporte para todas
+                                </p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    Genera un solo reporte que incluye todos los productos de todas las entregas.
+                                    Ejemplo: {selectedCount} entregas = 1 reporte consolidado.
+                                    Simplifica el proceso de carga.
+                                </p>
+                            </div>
+                        </label>
+                    </div>
                 </Card>
 
                 {/* Opciones de optimización */}
-                <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4">
+                {/* <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4">
                     <label className="flex items-center gap-3 cursor-pointer">
                         <input
                             type="checkbox"
@@ -269,7 +363,7 @@ export default function CreateEntregasUnificado({
                             </p>
                         </div>
                     </label>
-                </Card>
+                </Card> */}
 
                 {/* Advertencias */}
                 {capacidadInsuficiente && (
@@ -282,7 +376,7 @@ export default function CreateEntregasUnificado({
                                 </p>
                                 <p className="text-xs text-red-700 dark:text-red-300 mt-1">
                                     El peso total ({totals.pesoTotal.toFixed(1)} kg) excede la capacidad
-                                    del vehículo ({selectedVehiculo?.capacidad_kg} kg)
+                                    del vehículo ({(selectedVehiculo?.capacidad_kg ?? 0).toFixed(1)} kg)
                                 </p>
                             </div>
                         </div>
@@ -290,7 +384,7 @@ export default function CreateEntregasUnificado({
                 )}
 
                 {/* Preview de Optimización */}
-                {formData.optimizar && (
+                {/* {formData.optimizar && (
                     <div className="space-y-3">
                         <button
                             onClick={obtenerPreview}
@@ -310,7 +404,7 @@ export default function CreateEntregasUnificado({
                             isLoading={isLoading}
                         />
                     </div>
-                )}
+                )} */}
             </>
         );
     };
@@ -353,43 +447,24 @@ export default function CreateEntregasUnificado({
                     </div>
                 </div>
 
-                {/* Footer Sticky - Solo cuando hay selección */}
-                {selectedCount > 0 && (
+                {/* Footer Sticky - Solo cuando hay selección en modo batch (2+) */}
+                {isBatchMode && (
                     <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 flex gap-3 justify-end sticky bottom-0 bg-white dark:bg-slate-950 py-4">
                         <Button
-                            onClick={() => {
-                                if (isSingleMode) {
-                                    handleToggleVenta(selectedVentaIds[0]);
-                                } else {
-                                    handleClearSelection();
-                                }
-                            }}
+                            onClick={handleClearSelection}
                             variant="outline"
                         >
                             Cancelar
                         </Button>
                         <Button
-                            onClick={() => {
-                                if (isSingleMode) {
-                                    // SimpleEntregaForm maneja su propio submit
-                                    // Este botón se maneja dentro del formulario
-                                } else {
-                                    handleSubmitBatch();
-                                }
-                            }}
+                            onClick={handleSubmitBatch}
                             disabled={
-                                isBatchMode &&
-                                (!formData.vehiculo_id || !formData.chofer_id || capacidadInsuficiente || isSubmitting)
+                                !formData.vehiculo_id || !formData.chofer_id || capacidadInsuficiente || isSubmitting
                             }
                             className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 dark:bg-green-700 dark:hover:bg-green-600 dark:disabled:bg-gray-600 text-white"
                         >
-                            {isSingleMode && 'Crear Entrega'}
-                            {isBatchMode && (
-                                <>
-                                    {isSubmitting ? 'Creando...' : `Crear ${selectedCount} Entregas`}
-                                    {!isSubmitting && <Plus className="h-4 w-4 ml-2" />}
-                                </>
-                            )}
+                            {isSubmitting ? 'Creando...' : `Crear ${selectedCount} Entregas`}
+                            {!isSubmitting && <Plus className="h-4 w-4 ml-2" />}
                         </Button>
                     </div>
                 )}

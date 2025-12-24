@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EntregaBatchController;
 use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
+use App\Http\Controllers\Api\ReporteCargoController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RoleController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\LocalidadController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ReporteInventarioApiController;
+use App\Http\Controllers\VehiculoController;
 use App\Http\Controllers\VentaController;
 use Illuminate\Support\Facades\Route;
 
@@ -354,6 +356,13 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('{producto}/historial-precios', [ProductoController::class, 'historialPrecios']);
     });
 
+    // Rutas API para vehículos
+    Route::group(['prefix' => 'vehiculos'], function () {
+        Route::get('/', [VehiculoController::class, 'apiIndex']);
+        Route::get('/{vehiculo}', [VehiculoController::class, 'apiShow']);
+        Route::post('/sugerir', [VehiculoController::class, 'apiSugerir']);
+    });
+
     // Rutas API para clientes
     Route::group(['prefix' => 'clientes'], function () {
         Route::get('/', [ClienteController::class, 'index']);
@@ -516,6 +525,82 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/optimizar', [EntregaBatchController::class, 'optimizar'])
             ->middleware('permission:entregas.create')
             ->name('entregas.lote.optimizar');
+    });
+
+    // ✅ PHASE 3: ENTREGAS - Flujo de carga y tránsito
+    Route::prefix('entregas')->group(function () {
+        // Confirmar carga (cambiar a EN_CARGA)
+        Route::post('/{id}/confirmar-carga', [EntregaController::class, 'confirmarCarga'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.confirmar-carga');
+
+        // Marcar listo para entrega (cambiar a LISTO_PARA_ENTREGA)
+        Route::post('/{id}/listo-para-entrega', [EntregaController::class, 'marcarListoParaEntrega'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.listo-para-entrega');
+
+        // Iniciar tránsito (cambiar a EN_TRANSITO)
+        Route::post('/{id}/iniciar-transito', [EntregaController::class, 'iniciarTransito'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.iniciar-transito');
+
+        // Actualizar ubicación GPS
+        Route::patch('/{id}/ubicacion-gps', [EntregaController::class, 'actualizarUbicacionGPS'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.ubicacion-gps');
+    });
+
+    // ✅ PHASE 3: REPORTES DE CARGA (Gestión de cargas en vehículos)
+    Route::prefix('reportes-carga')->group(function () {
+        // Crear nuevo reporte de carga (accesible si puedes crear entregas)
+        Route::post('/', [ReporteCargoController::class, 'generarReporte'])
+            ->middleware('permission:entregas.create')
+            ->name('reportes-carga.crear');
+
+        // 🖨️ Formatos de impresión disponibles (ANTES de /{reporte} para mayor especificidad)
+        Route::get('/formatos-disponibles', [ReporteCargoController::class, 'formatosDisponibles'])
+            ->middleware('auth')  // Solo requiere autenticación
+            ->name('reportes-carga.formatos-disponibles');
+
+        // Obtener detalles de un reporte
+        Route::get('/{reporte}', [ReporteCargoController::class, 'show'])
+            ->middleware('permission:reportes-carga.view')
+            ->name('reportes-carga.show');
+
+        // 🖨️ Vista previa de reporte
+        Route::get('/{reporte}/preview', [ReporteCargoController::class, 'preview'])
+            ->middleware('auth')  // Solo requiere autenticación
+            ->name('reportes-carga.preview');
+
+        // 🖨️ Descargar reporte como PDF
+        Route::get('/{reporte}/descargar', [ReporteCargoController::class, 'descargar'])
+            ->middleware('auth')  // Solo requiere autenticación, no permiso específico
+            ->name('reportes-carga.descargar');
+
+        // Actualizar cantidad cargada de un detalle
+        Route::patch('/{reporte}/detalles/{detalle}', [ReporteCargoController::class, 'actualizarDetalle'])
+            ->middleware('permission:reportes-carga.actualizar-detalle')
+            ->name('reportes-carga.actualizar-detalle');
+
+        // Verificar un detalle de carga
+        Route::post('/{reporte}/detalles/{detalle}/verificar', [ReporteCargoController::class, 'verificarDetalle'])
+            ->middleware('permission:reportes-carga.verificar-detalle')
+            ->name('reportes-carga.verificar-detalle');
+
+        // Confirmar carga completa
+        Route::post('/{reporte}/confirmar', [ReporteCargoController::class, 'confirmarCarga'])
+            ->middleware('permission:reportes-carga.confirmar')
+            ->name('reportes-carga.confirmar');
+
+        // Marcar como listo para entrega
+        Route::post('/{reporte}/listo-para-entrega', [ReporteCargoController::class, 'marcarListoParaEntrega'])
+            ->middleware('permission:reportes-carga.listo-para-entrega')
+            ->name('reportes-carga.listo-para-entrega');
+
+        // Cancelar reporte
+        Route::post('/{reporte}/cancelar', [ReporteCargoController::class, 'cancelarReporte'])
+            ->middleware('permission:reportes-carga.delete')
+            ->name('reportes-carga.cancelar');
     });
 });
 

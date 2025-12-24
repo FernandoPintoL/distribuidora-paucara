@@ -1,10 +1,9 @@
 <?php
-
 namespace App\Services\WebSocket;
 
+use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 /**
  * Servicio base abstracto para comunicación con el servidor WebSocket
@@ -22,14 +21,14 @@ abstract class BaseWebSocketService
 
     public function __construct()
     {
-        $this->wsUrl = config('websocket.url', 'http://localhost:3000');
-        $this->enabled = config('websocket.enabled', true);
-        $this->debug = config('websocket.debug', false);
-        $this->timeout = config('websocket.timeout', 5);
+        $this->wsUrl       = config('websocket.url', 'http://localhost:3000');
+        $this->enabled     = config('websocket.enabled', true);
+        $this->debug       = config('websocket.debug', false);
+        $this->timeout     = config('websocket.timeout', 5);
         $this->retryConfig = config('websocket.retry', [
             'enabled' => true,
-            'times' => 2,
-            'sleep' => 100,
+            'times'   => 2,
+            'sleep'   => 100,
         ]);
     }
 
@@ -50,11 +49,11 @@ abstract class BaseWebSocketService
      */
     protected function send(string $endpoint, array $data): bool
     {
-        if (!$this->enabled) {
+        if (! $this->enabled) {
             if ($this->debug) {
                 Log::info('WebSocket deshabilitado, notificación omitida', [
                     'endpoint' => $endpoint,
-                    'data' => $data,
+                    'data'     => $data,
                 ]);
             }
             return false;
@@ -65,7 +64,7 @@ abstract class BaseWebSocketService
 
             if ($this->debug) {
                 Log::info('Enviando notificación WebSocket', [
-                    'url' => $url,
+                    'url'  => $url,
                     'data' => $data,
                 ]);
             }
@@ -97,16 +96,16 @@ abstract class BaseWebSocketService
             } else {
                 Log::warning('Error al enviar notificación WebSocket', [
                     'endpoint' => $endpoint,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
+                    'status'   => $response->status(),
+                    'body'     => $response->body(),
                 ]);
                 return false;
             }
         } catch (Exception $e) {
             Log::error('Excepción al enviar notificación WebSocket', [
                 'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'    => $e->getMessage(),
+                'trace'    => $e->getTraceAsString(),
             ]);
             return false;
         }
@@ -118,9 +117,9 @@ abstract class BaseWebSocketService
     public function notifyUser(int $userId, string $event, array $data): bool
     {
         return $this->send('notify/user', [
-            'user_id' => $userId,
-            'event' => $event,
-            'data' => $data,
+            'user_id'   => $userId,
+            'event'     => $event,
+            'data'      => $data,
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -131,9 +130,9 @@ abstract class BaseWebSocketService
     public function notifyRole(string $role, string $event, array $data): bool
     {
         return $this->send('notify/role', [
-            'role' => $role,
-            'event' => $event,
-            'data' => $data,
+            'role'      => $role,
+            'event'     => $event,
+            'data'      => $data,
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -144,8 +143,8 @@ abstract class BaseWebSocketService
     public function broadcast(string $event, array $data): bool
     {
         return $this->send('notify/broadcast', [
-            'event' => $event,
-            'data' => $data,
+            'event'     => $event,
+            'data'      => $data,
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -161,21 +160,21 @@ abstract class BaseWebSocketService
             if ($response->successful()) {
                 return [
                     'available' => true,
-                    'status' => 'online',
-                    'data' => $response->json(),
+                    'status'    => 'online',
+                    'data'      => $response->json(),
                 ];
             } else {
                 return [
                     'available' => false,
-                    'status' => 'error',
-                    'message' => 'WebSocket server returned error: ' . $response->status(),
+                    'status'    => 'error',
+                    'message'   => 'WebSocket server returned error: ' . $response->status(),
                 ];
             }
         } catch (Exception $e) {
             return [
                 'available' => false,
-                'status' => 'offline',
-                'message' => $e->getMessage(),
+                'status'    => 'offline',
+                'message'   => $e->getMessage(),
             ];
         }
     }

@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -68,7 +69,9 @@ class EntregaController extends Controller
             ->paginate($perPage);
 
         // Cargar vehículos y choferes para optimización
-        $vehiculos = Vehiculo::disponibles()->get(['id', 'placa', 'marca', 'modelo', 'capacidad_kg']);
+        $vehiculos = Vehiculo::disponibles()
+            ->with('choferAsignado')  // 🔧 Cargar relación de chofer asignado (User)
+            ->get(['id', 'placa', 'marca', 'modelo', 'capacidad_kg', 'chofer_asignado_id']);
         $choferes  = Empleado::where('estado', 'activo')->get();
 
         return Inertia::render('logistica/entregas/index', [
@@ -92,18 +95,77 @@ class EntregaController extends Controller
      * - 1 venta → Muestra Wizard
      * - 2+ ventas → Muestra Batch UI con optimización
      */
+    /**
+     * DEBUG: Ver ventas disponibles para entregar
+     */
+    public function debugVentas(): JsonResponse
+    {
+        $ventasConEntregas = \App\Models\Venta::whereHas('entregas')->pluck('id')->toArray();
+        $ventasSinEntregas = \App\Models\Venta::whereDoesntHave('entregas')
+            ->whereNotNull('cliente_id')
+            ->with('cliente', 'detalles')
+            ->get()
+            ->map(fn($v) => [
+                'id' => $v->id,
+                'numero' => $v->numero,
+                'cliente' => $v->cliente?->nombre,
+                'detalles' => $v->detalles?->count(),
+                'total' => $v->total,
+            ]);
+
+        return response()->json([
+            'ventas_con_entregas' => count($ventasConEntregas),
+            'ventas_sin_entregas' => count($ventasSinEntregas),
+            'ids_con_entregas' => $ventasConEntregas,
+            'ventas_disponibles' => $ventasSinEntregas,
+        ]);
+    }
+
     public function create(Request $request): InertiaResponse
     {
         // 1. Detectar modo basado en parámetro (opcional)
         $ventaPreseleccionada = $request->input('venta_id');
 
-        // 2. Obtener ventas (mostrar todas para permitir recriar entregas)
+        // 2. Obtener ventas sin entregas
+        // Solo mostrar ventas que no tienen entregas creadas
         // Usar datos enriquecidos para soportar ambos flujos
         $ventas = \App\Models\Venta::query()
-            ->with(['cliente', 'detalles.producto', 'estadoDocumento'])
+            ->with([
+                'cliente.direcciones',  // Cargar direcciones del cliente (fallback)
+                'cliente.localidad',    // Cargar localidad del cliente para agrupar
+                'detalles.producto',
+                'estadoDocumento',
+                'direccionCliente'      // Dirección específica de la venta (prioridad)
+            ])
+            ->whereDoesntHave('entregas')  // Solo ventas sin entregas
+            ->whereNotNull('cliente_id')    // Debe tener cliente
+            ->whereHas('detalles')          // Debe tener detalles de productos
             ->latest()
             ->get()
             ->map(function ($venta) {
+                // Obtener dirección: prioridad venta -> cliente principal -> primera dirección cliente
+                $direccionCliente = null;
+                if ($venta->direccionCliente) {
+                    $direccionCliente = [
+                        'id'        => $venta->direccionCliente->id,
+                        'direccion' => $venta->direccionCliente->direccion,
+                        'latitud'   => $venta->direccionCliente->latitud,
+                        'longitud'  => $venta->direccionCliente->longitud,
+                    ];
+                } elseif ($venta->cliente?->direcciones?->count()) {
+                    // Fallback: usar dirección principal del cliente
+                    $dirPrincipal = $venta->cliente->direcciones->firstWhere('es_principal', true)
+                        ?? $venta->cliente->direcciones->first();
+                    if ($dirPrincipal) {
+                        $direccionCliente = [
+                            'id'        => $dirPrincipal->id,
+                            'direccion' => $dirPrincipal->direccion,
+                            'latitud'   => $dirPrincipal->latitud,
+                            'longitud'  => $dirPrincipal->longitud,
+                        ];
+                    }
+                }
+
                 return [
                     // Datos para formulario wizard (simple)
                     'id'               => $venta->id,
@@ -117,7 +179,18 @@ class EntregaController extends Controller
                         'id'       => $venta->cliente?->id,
                         'nombre'   => $venta->cliente?->nombre ?? 'Cliente no disponible',
                         'telefono' => $venta->cliente?->telefono,
+                        'localidad' => [
+                            'id'      => $venta->cliente?->localidad?->id,
+                            'nombre'  => $venta->cliente?->localidad?->nombre ?? 'Sin localidad',
+                        ],
                     ],
+                    // Dirección de entrega (desde proforma/confirmada o fallback a cliente)
+                    'direccionCliente' => $direccionCliente,
+                    // Datos de entrega comprometida (heredados de proforma)
+                    'fecha_entrega_comprometida' => $venta->fecha_entrega_comprometida?->format('Y-m-d'),
+                    'hora_entrega_comprometida'  => $venta->hora_entrega_comprometida?->format('H:i'),
+                    'ventana_entrega_ini'        => $venta->ventana_entrega_ini?->format('H:i'),
+                    'ventana_entrega_fin'        => $venta->ventana_entrega_fin?->format('H:i'),
                     // Datos para batch UI
                     'cantidad_items'   => $venta->detalles?->count() ?? 0,
                     'peso_estimado'    => $venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10,
@@ -127,14 +200,26 @@ class EntregaController extends Controller
 
         // 3. Obtener vehículos disponibles
         $vehiculos = Vehiculo::disponibles()
+            ->with('choferAsignado')  // 🔧 Cargar relación de chofer asignado (User)
             ->get()
             ->map(fn($v) => [
                 'id'              => $v->id,
                 'placa'           => $v->placa,
                 'marca'           => $v->marca,
                 'modelo'          => $v->modelo,
+                'anho'            => $v->anho,
                 'capacidad_carga' => $v->capacidad_kg,
                 'capacidad_kg'    => $v->capacidad_kg,
+                'estado'          => $v->estado,
+                'activo'          => $v->activo,
+                'chofer_asignado_id' => $v->chofer_asignado_id,  // 🔧 Incluir ID del chofer
+                // 🔧 Incluir datos del chofer si existe (User)
+                'chofer' => $v->choferAsignado ? [
+                    'id'    => $v->choferAsignado->id,
+                    'name'  => $v->choferAsignado->name,
+                    'nombre' => $v->choferAsignado->name,
+                    'email' => $v->choferAsignado->email,
+                ] : null,
             ]);
 
         // 4. Obtener choferes activos
@@ -173,15 +258,45 @@ class EntregaController extends Controller
     public function store(Request $request): JsonResponse | RedirectResponse
     {
         try {
-            $validated = $request->validate([
-                'venta_id'          => 'required|exists:ventas,id',
-                'vehiculo_id'       => 'required|exists:vehiculos,id',
-                'chofer_id'         => 'required|exists:empleados,id',
-                'fecha_programada'  => 'required|date|after:now',
-                'direccion_entrega' => 'nullable|string|max:500',
-                'peso_kg'           => 'nullable|numeric|min:0.01|max:50000',
-                'observaciones'     => 'nullable|string|max:1000',
-            ]);
+            // Definir validación personalizada para fecha_entrega_valida
+            Validator::extend('fecha_entrega_valida', function ($attribute, $value, $parameters, $validator) {
+                try {
+                    $fechaPrograma = \DateTime::createFromFormat('Y-m-d\TH:i', $value);
+                    if (!$fechaPrograma) {
+                        return false;
+                    }
+
+                    $ahora = new \DateTime('now');
+                    $hoy = new \DateTime('today');
+
+                    // Permitir entregas de hoy si la hora es futura
+                    // O entregas de días posteriores a cualquier hora
+                    if ($fechaPrograma->format('Y-m-d') === $ahora->format('Y-m-d')) {
+                        // Es hoy: verificar que la hora sea futura
+                        return $fechaPrograma > $ahora;
+                    } else {
+                        // Es un día posterior: permitir
+                        return $fechaPrograma > $hoy;
+                    }
+                } catch (\Exception $e) {
+                    return false;
+                }
+            });
+
+            $validated = $request->validate(
+                [
+                    'venta_id'          => 'required|exists:ventas,id',
+                    'vehiculo_id'       => 'required|exists:vehiculos,id',
+                    'chofer_id'         => 'required|exists:empleados,id',
+                    'fecha_programada'  => 'required|date_format:Y-m-d\TH:i|fecha_entrega_valida',
+                    'direccion_entrega' => 'nullable|string|max:500',
+                    'peso_kg'           => 'nullable|numeric|min:0.01|max:50000',
+                    'observaciones'     => 'nullable|string|max:1000',
+                ],
+                [
+                    'fecha_programada.fecha_entrega_valida' => 'La fecha de entrega debe ser hoy (con hora futura) o posterior',
+                ]
+            );
 
             // ✅ NUEVO: Obtener peso de la venta si no se proporciona
             if (empty($validated['peso_kg'])) {
@@ -200,16 +315,20 @@ class EntregaController extends Controller
                 );
             }
 
-            // Crear entrega
+            // Obtener la venta para completar datos adicionales
+            $venta = \App\Models\Venta::with('direccionCliente')->findOrFail($validated['venta_id']);
+
+            // Crear entrega con todos los datos disponibles
             $entrega = \App\Models\Entrega::create([
-                'venta_id'          => $validated['venta_id'],
-                'vehiculo_id'       => $validated['vehiculo_id'],
-                'chofer_id'         => $validated['chofer_id'],
-                'fecha_programada'  => $validated['fecha_programada'],
-                'direccion_entrega' => $validated['direccion_entrega'] ?? null,
-                'peso_kg'           => $validated['peso_kg'],
-                'observaciones'     => $validated['observaciones'] ?? null,
-                'estado'            => 'PROGRAMADO',
+                'venta_id'              => $validated['venta_id'],
+                'vehiculo_id'           => $validated['vehiculo_id'],
+                'chofer_id'             => $validated['chofer_id'],
+                'fecha_programada'      => $validated['fecha_programada'],
+                'direccion_entrega'     => $validated['direccion_entrega'] ?? $venta->direccionCliente?->direccion ?? null,
+                'direccion_cliente_id'  => $venta->direccion_cliente_id,  // ✅ Asignar dirección del cliente
+                'peso_kg'               => $validated['peso_kg'],
+                'observaciones'         => $validated['observaciones'] ?? null,
+                'estado'                => 'PROGRAMADO',
             ]);
 
             // ✅ DIFERENCIADO: Respuesta API vs Web
@@ -227,6 +346,11 @@ class EntregaController extends Controller
                 ->with('success', 'Entrega creada exitosamente');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('Error de validación en EntregaController::store', [
+                'errors' => $e->errors(),
+                'data' => $request->all(),
+            ]);
+
             // ✅ DIFERENCIADO: Errores en API vs Web
             if ($this->isApiRequest()) {
                 return response()->json([
@@ -236,7 +360,11 @@ class EntregaController extends Controller
                 ], 422);
             }
 
-            return $this->respondError('Error de validación', statusCode: 422, errors: $e->errors());
+            // Para Inertia.js: redirigir atrás con los errores (Inertia maneja esto automáticamente)
+            return redirect()
+                ->back()
+                ->withErrors($e->errors())
+                ->withInput($request->except('peso_kg')); // No guardar peso en input para recalcularlo
 
         } catch (\Exception $e) {
             Log::error('Error creando entrega', [
@@ -855,13 +983,25 @@ class EntregaController extends Controller
 
         // Obtener vehículos disponibles
         $vehiculos = Vehiculo::disponibles()
+            ->with('choferAsignado')  // 🔧 Cargar relación de chofer asignado (User)
             ->get()
             ->map(fn($v) => [
                 'id'           => $v->id,
                 'placa'        => $v->placa,
                 'marca'        => $v->marca,
                 'modelo'       => $v->modelo,
+                'anho'         => $v->anho,
                 'capacidad_kg' => $v->capacidad_kg,
+                'estado'       => $v->estado,
+                'activo'       => $v->activo,
+                'chofer_asignado_id' => $v->chofer_asignado_id,  // 🔧 Incluir ID del chofer
+                // 🔧 Incluir datos del chofer si existe (User)
+                'chofer' => $v->choferAsignado ? [
+                    'id'    => $v->choferAsignado->id,
+                    'name'  => $v->choferAsignado->name,
+                    'nombre' => $v->choferAsignado->name,
+                    'email' => $v->choferAsignado->email,
+                ] : null,
             ]);
 
         // Obtener choferes activos

@@ -1278,6 +1278,312 @@ obtenerUbicaciones.head = (args: { id: string | number } | [id: string | number 
         })
     
     obtenerUbicaciones.form = obtenerUbicacionesForm
-const EntregaController = { misTrabjos, entregasAsignadas, showEntrega, iniciarRuta, actualizarEstado, marcarLlegada, confirmarEntrega, reportarNovedad, registrarUbicacion, historialEntregas, obtenerTracking, indexAdmin, asignarEntrega, entregasActivas, obtenerUbicaciones }
+/**
+* @see \App\Http\Controllers\Api\EntregaController::confirmarCarga
+ * @see app/Http/Controllers/Api/EntregaController.php:747
+ * @route '/api/entregas/{id}/confirmar-carga'
+ */
+export const confirmarCarga = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: confirmarCarga.url(args, options),
+    method: 'post',
+})
+
+confirmarCarga.definition = {
+    methods: ["post"],
+    url: '/api/entregas/{id}/confirmar-carga',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::confirmarCarga
+ * @see app/Http/Controllers/Api/EntregaController.php:747
+ * @route '/api/entregas/{id}/confirmar-carga'
+ */
+confirmarCarga.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return confirmarCarga.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::confirmarCarga
+ * @see app/Http/Controllers/Api/EntregaController.php:747
+ * @route '/api/entregas/{id}/confirmar-carga'
+ */
+confirmarCarga.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: confirmarCarga.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::confirmarCarga
+ * @see app/Http/Controllers/Api/EntregaController.php:747
+ * @route '/api/entregas/{id}/confirmar-carga'
+ */
+    const confirmarCargaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmarCarga.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::confirmarCarga
+ * @see app/Http/Controllers/Api/EntregaController.php:747
+ * @route '/api/entregas/{id}/confirmar-carga'
+ */
+        confirmarCargaForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmarCarga.url(args, options),
+            method: 'post',
+        })
+    
+    confirmarCarga.form = confirmarCargaForm
+/**
+* @see \App\Http\Controllers\Api\EntregaController::marcarListoParaEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:770
+ * @route '/api/entregas/{id}/listo-para-entrega'
+ */
+export const marcarListoParaEntrega = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: marcarListoParaEntrega.url(args, options),
+    method: 'post',
+})
+
+marcarListoParaEntrega.definition = {
+    methods: ["post"],
+    url: '/api/entregas/{id}/listo-para-entrega',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::marcarListoParaEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:770
+ * @route '/api/entregas/{id}/listo-para-entrega'
+ */
+marcarListoParaEntrega.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return marcarListoParaEntrega.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::marcarListoParaEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:770
+ * @route '/api/entregas/{id}/listo-para-entrega'
+ */
+marcarListoParaEntrega.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: marcarListoParaEntrega.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::marcarListoParaEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:770
+ * @route '/api/entregas/{id}/listo-para-entrega'
+ */
+    const marcarListoParaEntregaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: marcarListoParaEntrega.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::marcarListoParaEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:770
+ * @route '/api/entregas/{id}/listo-para-entrega'
+ */
+        marcarListoParaEntregaForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: marcarListoParaEntrega.url(args, options),
+            method: 'post',
+        })
+    
+    marcarListoParaEntrega.form = marcarListoParaEntregaForm
+/**
+* @see \App\Http\Controllers\Api\EntregaController::iniciarTransito
+ * @see app/Http/Controllers/Api/EntregaController.php:793
+ * @route '/api/entregas/{id}/iniciar-transito'
+ */
+export const iniciarTransito = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iniciarTransito.url(args, options),
+    method: 'post',
+})
+
+iniciarTransito.definition = {
+    methods: ["post"],
+    url: '/api/entregas/{id}/iniciar-transito',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::iniciarTransito
+ * @see app/Http/Controllers/Api/EntregaController.php:793
+ * @route '/api/entregas/{id}/iniciar-transito'
+ */
+iniciarTransito.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return iniciarTransito.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::iniciarTransito
+ * @see app/Http/Controllers/Api/EntregaController.php:793
+ * @route '/api/entregas/{id}/iniciar-transito'
+ */
+iniciarTransito.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: iniciarTransito.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::iniciarTransito
+ * @see app/Http/Controllers/Api/EntregaController.php:793
+ * @route '/api/entregas/{id}/iniciar-transito'
+ */
+    const iniciarTransitoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: iniciarTransito.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::iniciarTransito
+ * @see app/Http/Controllers/Api/EntregaController.php:793
+ * @route '/api/entregas/{id}/iniciar-transito'
+ */
+        iniciarTransitoForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: iniciarTransito.url(args, options),
+            method: 'post',
+        })
+    
+    iniciarTransito.form = iniciarTransitoForm
+/**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarUbicacionGPS
+ * @see app/Http/Controllers/Api/EntregaController.php:825
+ * @route '/api/entregas/{id}/ubicacion-gps'
+ */
+export const actualizarUbicacionGPS = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: actualizarUbicacionGPS.url(args, options),
+    method: 'patch',
+})
+
+actualizarUbicacionGPS.definition = {
+    methods: ["patch"],
+    url: '/api/entregas/{id}/ubicacion-gps',
+} satisfies RouteDefinition<["patch"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarUbicacionGPS
+ * @see app/Http/Controllers/Api/EntregaController.php:825
+ * @route '/api/entregas/{id}/ubicacion-gps'
+ */
+actualizarUbicacionGPS.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return actualizarUbicacionGPS.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarUbicacionGPS
+ * @see app/Http/Controllers/Api/EntregaController.php:825
+ * @route '/api/entregas/{id}/ubicacion-gps'
+ */
+actualizarUbicacionGPS.patch = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: actualizarUbicacionGPS.url(args, options),
+    method: 'patch',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarUbicacionGPS
+ * @see app/Http/Controllers/Api/EntregaController.php:825
+ * @route '/api/entregas/{id}/ubicacion-gps'
+ */
+    const actualizarUbicacionGPSForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: actualizarUbicacionGPS.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarUbicacionGPS
+ * @see app/Http/Controllers/Api/EntregaController.php:825
+ * @route '/api/entregas/{id}/ubicacion-gps'
+ */
+        actualizarUbicacionGPSForm.patch = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: actualizarUbicacionGPS.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    actualizarUbicacionGPS.form = actualizarUbicacionGPSForm
+const EntregaController = { misTrabjos, entregasAsignadas, showEntrega, iniciarRuta, actualizarEstado, marcarLlegada, confirmarEntrega, reportarNovedad, registrarUbicacion, historialEntregas, obtenerTracking, indexAdmin, asignarEntrega, entregasActivas, obtenerUbicaciones, confirmarCarga, marcarListoParaEntrega, iniciarTransito, actualizarUbicacionGPS }
 
 export default EntregaController

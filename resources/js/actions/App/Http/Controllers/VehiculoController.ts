@@ -1,5 +1,240 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
+* @see \App\Http\Controllers\VehiculoController::apiIndex
+ * @see app/Http/Controllers/VehiculoController.php:140
+ * @route '/api/vehiculos'
+ */
+export const apiIndex = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: apiIndex.url(options),
+    method: 'get',
+})
+
+apiIndex.definition = {
+    methods: ["get","head"],
+    url: '/api/vehiculos',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\VehiculoController::apiIndex
+ * @see app/Http/Controllers/VehiculoController.php:140
+ * @route '/api/vehiculos'
+ */
+apiIndex.url = (options?: RouteQueryOptions) => {
+    return apiIndex.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VehiculoController::apiIndex
+ * @see app/Http/Controllers/VehiculoController.php:140
+ * @route '/api/vehiculos'
+ */
+apiIndex.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: apiIndex.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\VehiculoController::apiIndex
+ * @see app/Http/Controllers/VehiculoController.php:140
+ * @route '/api/vehiculos'
+ */
+apiIndex.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: apiIndex.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\VehiculoController::apiIndex
+ * @see app/Http/Controllers/VehiculoController.php:140
+ * @route '/api/vehiculos'
+ */
+    const apiIndexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: apiIndex.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\VehiculoController::apiIndex
+ * @see app/Http/Controllers/VehiculoController.php:140
+ * @route '/api/vehiculos'
+ */
+        apiIndexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: apiIndex.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\VehiculoController::apiIndex
+ * @see app/Http/Controllers/VehiculoController.php:140
+ * @route '/api/vehiculos'
+ */
+        apiIndexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: apiIndex.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    apiIndex.form = apiIndexForm
+/**
+* @see \App\Http\Controllers\VehiculoController::apiShow
+ * @see app/Http/Controllers/VehiculoController.php:147
+ * @route '/api/vehiculos/{vehiculo}'
+ */
+export const apiShow = (args: { vehiculo: number | { id: number } } | [vehiculo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: apiShow.url(args, options),
+    method: 'get',
+})
+
+apiShow.definition = {
+    methods: ["get","head"],
+    url: '/api/vehiculos/{vehiculo}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\VehiculoController::apiShow
+ * @see app/Http/Controllers/VehiculoController.php:147
+ * @route '/api/vehiculos/{vehiculo}'
+ */
+apiShow.url = (args: { vehiculo: number | { id: number } } | [vehiculo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { vehiculo: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { vehiculo: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    vehiculo: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        vehiculo: typeof args.vehiculo === 'object'
+                ? args.vehiculo.id
+                : args.vehiculo,
+                }
+
+    return apiShow.definition.url
+            .replace('{vehiculo}', parsedArgs.vehiculo.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VehiculoController::apiShow
+ * @see app/Http/Controllers/VehiculoController.php:147
+ * @route '/api/vehiculos/{vehiculo}'
+ */
+apiShow.get = (args: { vehiculo: number | { id: number } } | [vehiculo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: apiShow.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\VehiculoController::apiShow
+ * @see app/Http/Controllers/VehiculoController.php:147
+ * @route '/api/vehiculos/{vehiculo}'
+ */
+apiShow.head = (args: { vehiculo: number | { id: number } } | [vehiculo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: apiShow.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\VehiculoController::apiShow
+ * @see app/Http/Controllers/VehiculoController.php:147
+ * @route '/api/vehiculos/{vehiculo}'
+ */
+    const apiShowForm = (args: { vehiculo: number | { id: number } } | [vehiculo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: apiShow.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\VehiculoController::apiShow
+ * @see app/Http/Controllers/VehiculoController.php:147
+ * @route '/api/vehiculos/{vehiculo}'
+ */
+        apiShowForm.get = (args: { vehiculo: number | { id: number } } | [vehiculo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: apiShow.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\VehiculoController::apiShow
+ * @see app/Http/Controllers/VehiculoController.php:147
+ * @route '/api/vehiculos/{vehiculo}'
+ */
+        apiShowForm.head = (args: { vehiculo: number | { id: number } } | [vehiculo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: apiShow.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    apiShow.form = apiShowForm
+/**
+* @see \App\Http\Controllers\VehiculoController::apiSugerir
+ * @see app/Http/Controllers/VehiculoController.php:163
+ * @route '/api/vehiculos/sugerir'
+ */
+export const apiSugerir = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: apiSugerir.url(options),
+    method: 'post',
+})
+
+apiSugerir.definition = {
+    methods: ["post"],
+    url: '/api/vehiculos/sugerir',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\VehiculoController::apiSugerir
+ * @see app/Http/Controllers/VehiculoController.php:163
+ * @route '/api/vehiculos/sugerir'
+ */
+apiSugerir.url = (options?: RouteQueryOptions) => {
+    return apiSugerir.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VehiculoController::apiSugerir
+ * @see app/Http/Controllers/VehiculoController.php:163
+ * @route '/api/vehiculos/sugerir'
+ */
+apiSugerir.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: apiSugerir.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\VehiculoController::apiSugerir
+ * @see app/Http/Controllers/VehiculoController.php:163
+ * @route '/api/vehiculos/sugerir'
+ */
+    const apiSugerirForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: apiSugerir.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\VehiculoController::apiSugerir
+ * @see app/Http/Controllers/VehiculoController.php:163
+ * @route '/api/vehiculos/sugerir'
+ */
+        apiSugerirForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: apiSugerir.url(options),
+            method: 'post',
+        })
+    
+    apiSugerir.form = apiSugerirForm
+/**
 * @see \App\Http\Controllers\VehiculoController::index
  * @see app/Http/Controllers/VehiculoController.php:15
  * @route '/inventario/vehiculos'
@@ -490,6 +725,6 @@ destroy.delete = (args: { vehiculo: number | { id: number } } | [vehiculo: numbe
         })
     
     destroy.form = destroyForm
-const VehiculoController = { index, create, store, edit, update, destroy }
+const VehiculoController = { apiIndex, apiShow, apiSugerir, index, create, store, edit, update, destroy }
 
 export default VehiculoController

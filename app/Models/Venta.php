@@ -29,7 +29,6 @@ class Venta extends Model
         'proforma_id',
         'tipo_pago_id',
         'tipo_documento_id',
-        'almacen_id',
         'direccion_cliente_id',
         // Campos para logística
         'requiere_envio',

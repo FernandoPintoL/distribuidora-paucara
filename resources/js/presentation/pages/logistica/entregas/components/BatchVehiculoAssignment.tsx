@@ -3,29 +3,17 @@ import { Card } from '@/presentation/components/ui/card';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Label } from '@/presentation/components/ui/label';
 import { CheckCircle2, AlertCircle, Truck, User } from 'lucide-react';
-
-interface Vehiculo {
-    id: number;
-    placa: string;
-    marca: string;
-    modelo: string;
-    capacidad_kg: number;
-}
-
-interface Chofer {
-    id: number;
-    nombre: string;
-    email?: string;
-}
+import type { VehiculoCompleto, ChoferEntrega } from '@/domain/entities/entregas';
+import type { Id } from '@/domain/entities/shared';
 
 interface BatchVehiculoAssignmentProps {
-    vehiculos: Vehiculo[];
-    choferes: Chofer[];
-    selectedVehiculoId: number | null;
-    selectedChoferId: number | null;
+    vehiculos: VehiculoCompleto[];
+    choferes: ChoferEntrega[];
+    selectedVehiculoId: Id | null | undefined;
+    selectedChoferId: Id | null | undefined;
     pesoTotal: number;
-    onVehiculoSelect: (vehiculoId: number) => void;
-    onChoferSelect: (choferId: number) => void;
+    onVehiculoSelect: (vehiculoId: Id) => void;
+    onChoferSelect: (choferId: Id) => void;
 }
 
 export default function BatchVehiculoAssignment({
@@ -43,11 +31,11 @@ export default function BatchVehiculoAssignment({
     );
 
     const vehiculosCompatibles = useMemo(() => {
-        return vehiculos.filter((v) => v.capacidad_kg >= pesoTotal);
+        return vehiculos.filter((v) => (v.capacidad_kg ?? 0) >= pesoTotal);
     }, [vehiculos, pesoTotal]);
 
-    const capacidadSuficiente = selectedVehiculo && pesoTotal <= selectedVehiculo.capacidad_kg;
-    const capacidadInsuficiente = selectedVehiculo && pesoTotal > selectedVehiculo.capacidad_kg;
+    const capacidadSuficiente = selectedVehiculo && pesoTotal <= (selectedVehiculo.capacidad_kg ?? 0);
+    const capacidadInsuficiente = selectedVehiculo && pesoTotal > (selectedVehiculo.capacidad_kg ?? 0);
 
     return (
         <div className="space-y-6">
@@ -86,7 +74,7 @@ export default function BatchVehiculoAssignment({
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {vehiculosCompatibles.map((vehiculo) => {
-                            const espacioDisponible = vehiculo.capacidad_kg - pesoTotal;
+                            const espacioDisponible = (vehiculo.capacidad_kg ?? 0) - pesoTotal;
                             const isSelected = selectedVehiculoId === vehiculo.id;
 
                             return (
@@ -158,7 +146,7 @@ export default function BatchVehiculoAssignment({
                     <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 p-3">
                         <p className="text-sm text-red-800 dark:text-red-200">
                             ⚠️ Capacidad insuficiente: Faltarían{' '}
-                            {(pesoTotal - (selectedVehiculo?.capacidad_kg || 0)).toFixed(1)} kg
+                            {(pesoTotal - (selectedVehiculo?.capacidad_kg ?? 0)).toFixed(1)} kg
                         </p>
                     </Card>
                 )}

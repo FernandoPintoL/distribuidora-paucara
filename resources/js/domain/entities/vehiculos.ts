@@ -60,3 +60,34 @@ export interface ChoferFormData extends BaseFormData {
   tipo_licencia?: string | null;
   fecha_vencimiento_licencia?: string | null;
 }
+
+/**
+ * Recomendación de Vehículo basada en Peso Total
+ */
+export interface VehiculoRecomendado {
+  id: Id;
+  placa: string;
+  marca: string;
+  modelo: string;
+  anho?: string;
+  capacidad_kg: number;
+  porcentaje_uso: number; // 0-100%
+  estado: 'recomendado' | 'disponible' | 'excede_capacidad';
+  choferAsignado?: {
+    id: Id;
+    name: string;
+    nombre?: string;
+    telefono?: string | null;
+  } | null;
+}
+
+export interface VehicleRecommendationResponse {
+  success: boolean;
+  message: string;
+  data: {
+    recomendado: VehiculoRecomendado | null;
+    peso_total: number;
+    disponibles: VehiculoRecomendado[];
+    alerta?: string;
+  };
+}

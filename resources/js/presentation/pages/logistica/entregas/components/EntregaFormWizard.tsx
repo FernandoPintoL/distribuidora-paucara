@@ -4,14 +4,15 @@ import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega } from '@/domain/entities/entregas';
+import type { Id } from '@/domain/entities/shared';
 import WizardStep1Venta from './wizard/WizardStep1Venta';
 import WizardStep2Recursos from './wizard/WizardStep2Recursos';
 import WizardStep3Confirmar from './wizard/WizardStep3Confirmar';
 
 export interface WizardFormData {
-    venta_id?: number;
-    vehiculo_id?: number;
-    chofer_id?: number;
+    venta_id?: Id;
+    vehiculo_id?: Id;
+    chofer_id?: Id;
     fecha_programada?: string;
     direccion_entrega?: string;
     peso_kg?: number;
@@ -240,7 +241,6 @@ export default function EntregaFormWizard({
                         <Button
                             onClick={handleSubmit}
                             disabled={!canSubmit(formData) || isLoading}
-                            isLoading={isLoading}
                         >
                             Crear Entrega
                         </Button>

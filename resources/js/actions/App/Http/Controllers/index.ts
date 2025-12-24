@@ -8,6 +8,7 @@ import VentaController from './VentaController'
 import CompraController from './CompraController'
 import AsientoContableController from './AsientoContableController'
 import ReporteInventarioApiController from './ReporteInventarioApiController'
+import VehiculoController from './VehiculoController'
 import ClienteController from './ClienteController'
 import DireccionClienteApiController from './DireccionClienteApiController'
 import FotoLugarClienteController from './FotoLugarClienteController'
@@ -39,7 +40,6 @@ import DetalleVentaController from './DetalleVentaController'
 import ProformaController from './ProformaController'
 import CajaController from './CajaController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
-import VehiculoController from './VehiculoController'
 import InventarioInicialController from './InventarioInicialController'
 import Web from './Web'
 import VendedorController from './VendedorController'
@@ -64,6 +64,7 @@ VentaController,
 CompraController,
 AsientoContableController,
 ReporteInventarioApiController,
+VehiculoController,
 ClienteController,
 DireccionClienteApiController,
 FotoLugarClienteController,
@@ -95,7 +96,6 @@ DetalleVentaController,
 ProformaController,
 CajaController,
 TipoAjusteInventarioController,
-VehiculoController,
 InventarioInicialController,
 Web,
 VendedorController,

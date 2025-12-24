@@ -31,6 +31,15 @@ class Entrega extends Model
         'firma_digital_url',
         'foto_entrega_url',
         'fecha_firma_entrega',
+        // Campos para flujo de carga
+        'reporte_carga_id',
+        'confirmado_carga_por',
+        'fecha_confirmacion_carga',
+        'iniciada_entrega_por',
+        'fecha_inicio_entrega',
+        'latitud_actual',
+        'longitud_actual',
+        'fecha_ultima_ubicacion',
     ];
 
     protected function casts(): array
@@ -42,17 +51,29 @@ class Entrega extends Model
             'fecha_entrega' => 'datetime',
             'fecha_programada' => 'datetime',
             'fecha_firma_entrega' => 'datetime',
+            'fecha_confirmacion_carga' => 'datetime',
+            'fecha_inicio_entrega' => 'datetime',
+            'fecha_ultima_ubicacion' => 'datetime',
+            'latitud_actual' => 'decimal:8',
+            'longitud_actual' => 'decimal:8',
         ];
     }
 
-    // Estados de la entrega
-    const ESTADO_PROGRAMADO = 'PROGRAMADO';     // Nuevo estado inicial
+    // Estados de la entrega - Flujo original
+    const ESTADO_PROGRAMADO = 'PROGRAMADO';     // Estado inicial
     const ESTADO_ASIGNADA = 'ASIGNADA';
     const ESTADO_EN_CAMINO = 'EN_CAMINO';
     const ESTADO_LLEGO = 'LLEGO';
     const ESTADO_ENTREGADO = 'ENTREGADO';
     const ESTADO_NOVEDAD = 'NOVEDAD';
     const ESTADO_CANCELADA = 'CANCELADA';
+
+    // Estados de la entrega - Nuevo flujo de carga (PREPARACION_CARGA → EN_CARGA → LISTO_PARA_ENTREGA → EN_TRANSITO → ENTREGADO)
+    const ESTADO_PREPARACION_CARGA = 'PREPARACION_CARGA';      // Reporte generado, awaiting physical loading
+    const ESTADO_EN_CARGA = 'EN_CARGA';                        // Physical loading in progress
+    const ESTADO_LISTO_PARA_ENTREGA = 'LISTO_PARA_ENTREGA';   // Ready to depart
+    const ESTADO_EN_TRANSITO = 'EN_TRANSITO';                 // GPS tracking active
+    const ESTADO_RECHAZADO = 'RECHAZADO';                     // Rejected at delivery
 
     /**
      * Relaciones
@@ -112,6 +133,30 @@ class Entrega extends Model
     public function historialEstados(): HasMany
     {
         return $this->hasMany(EntregaEstadoHistorial::class);
+    }
+
+    /**
+     * Reporte de carga asociado a esta entrega
+     */
+    public function reporteCarga(): BelongsTo
+    {
+        return $this->belongsTo(ReporteCarga::class);
+    }
+
+    /**
+     * Usuario que confirmó la carga
+     */
+    public function confirmadorCarga(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmado_carga_por');
+    }
+
+    /**
+     * Usuario que inició la entrega
+     */
+    public function iniciadorEntrega(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'iniciada_entrega_por');
     }
 
     /**

@@ -24,7 +24,8 @@ class CrearVentaDTO extends BaseDTO
         public ?string $observaciones = null,
         public ?int $usuario_id = null,
         public ?int $proforma_id = null,
-        // Campos de logística y entrega
+        // Campos de dirección y logística
+        public ?int $direccion_cliente_id = null,
         public ?bool $requiere_envio = null,
         public ?string $canal_origen = 'WEB',
         public ?string $estado_logistico = null,

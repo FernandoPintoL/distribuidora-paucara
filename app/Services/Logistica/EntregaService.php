@@ -10,6 +10,7 @@ use App\Models\Venta;
 use App\Services\Stock\StockService;
 use App\Services\Traits\LogsOperations;
 use App\Services\Traits\ManagesTransactions;
+use App\Services\WebSocket\EntregaWebSocketService;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -46,6 +47,8 @@ class EntregaService
     public function __construct(
         private StockService $stockService,
         private \App\Services\RutaOptimizer $rutaOptimizer,
+        private EntregaWebSocketService $webSocketService,
+        private ReporteCargoService $reporteCargoService,
     ) {}
 
     /**
@@ -82,7 +85,6 @@ class EntregaService
                 'Entrega creada desde venta'
             );
 
-            event(new \App\Events\EntregaCreada($entrega));
 
             $entregas[] = $entrega;
 
@@ -164,7 +166,6 @@ class EntregaService
                 "Asignado chofer: {$chofer->nombre}, Vehículo: {$vehiculo->placa}"
             );
 
-            event(new \App\Events\EntregaAsignada($entrega));
 
             return $entrega;
         });
@@ -214,7 +215,6 @@ class EntregaService
                 'Chofer inicia ruta de entrega - Stock reducido'
             );
 
-            event(new \App\Events\EntregaEnCamino($entrega));
 
             return $entrega;
         });
@@ -304,7 +304,6 @@ class EntregaService
                 $venta->update(['estado' => 'ENTREGADO']);
             }
 
-            event(new \App\Events\EntregaCompletada($entrega));
 
             return $entrega;
         });
@@ -371,7 +370,6 @@ class EntregaService
                 $venta->update(['estado' => 'CON_NOVEDAD']);
             }
 
-            event(new \App\Events\EntregaRechazada($entrega, $motivoNovedad));
 
             return $entrega;
         });
@@ -626,9 +624,10 @@ class EntregaService
         array $ventaIds,
         int $vehiculoId,
         int $choferId,
-        bool $optimizar = true
+        bool $optimizar = true,
+        string $tipoReporte = 'individual'
     ): array {
-        $resultado = $this->transaction(function () use ($ventaIds, $vehiculoId, $choferId, $optimizar) {
+        $resultado = $this->transaction(function () use ($ventaIds, $vehiculoId, $choferId, $optimizar, $tipoReporte) {
             $entregasCreadas = [];
             $errores = [];
 
@@ -647,18 +646,19 @@ class EntregaService
             // 1. Crear entregas desde ventas
             foreach ($ventaIds as $ventaId) {
                 try {
-                    $venta = Venta::findOrFail($ventaId);
+                    $venta = Venta::with('direccionCliente')->findOrFail($ventaId);
 
-                    // Crear una entrega por venta
+                    // Crear una entrega por venta con todos los datos disponibles
                     $entrega = Entrega::create([
-                        'venta_id' => $venta->id,
-                        'estado' => 'PROGRAMADO',
-                        'direccion_entrega' => $venta->direccion_entrega,
-                        'fecha_programada' => $venta->fecha_entrega_programada ?? now()->addDays(3),
-                        'peso_kg' => $venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10,
-                        'chofer_id' => $choferId,
-                        'vehiculo_id' => $vehiculoId,
-                        'usuario_asignado_id' => Auth::id(),
+                        'venta_id'              => $venta->id,
+                        'estado'                => 'PROGRAMADO',
+                        'direccion_entrega'     => $venta->direccion_entrega ?? $venta->direccionCliente?->direccion,
+                        'direccion_cliente_id'  => $venta->direccion_cliente_id,  // ✅ Asignar dirección del cliente
+                        'fecha_programada'      => $venta->fecha_entrega_programada ?? now()->addDays(3),
+                        'peso_kg'               => $venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10,
+                        'chofer_id'             => $choferId,
+                        'vehiculo_id'           => $vehiculoId,
+                        'usuario_asignado_id'   => Auth::id(),
                     ]);
 
                     // Registrar en historial
@@ -669,13 +669,72 @@ class EntregaService
                         'Entrega creada en lote'
                     );
 
-                    event(new \App\Events\EntregaCreada($entrega));
+
+                    // FASE 3: Generar reporte individual si tipo_reporte === 'individual'
+                    if ($tipoReporte === 'individual') {
+                        try {
+                            $reporte = $this->reporteCargoService->generarReporteDesdeEntrega(
+                                $entrega,
+                                [
+                                    'vehiculo_id' => $vehiculoId,
+                                    'descripcion' => "Reporte automático - Batch individual",
+                                    'peso_total_kg' => $entrega->peso_kg,
+                                ]
+                            );
+
+                            $this->logSuccess('Reporte individual generado', [
+                                'entrega_id' => $entrega->id,
+                                'reporte_id' => $reporte->id,
+                            ]);
+                        } catch (\Exception $e) {
+                            // Log error pero continuar con las demás entregas
+                            $this->logError('Error generando reporte individual', [
+                                'entrega_id' => $entrega->id,
+                                'error' => $e->getMessage(),
+                            ]);
+
+                            $errores[] = [
+                                'entrega_id' => $entrega->id,
+                                'error' => "Reporte no generado: {$e->getMessage()}",
+                            ];
+                        }
+                    }
 
                     $entregasCreadas[] = $entrega;
                 } catch (\Exception $e) {
                     $errores[] = [
                         'venta_id' => $ventaId,
                         'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            // FASE 3: Generar reporte consolidado si tipo_reporte === 'consolidado'
+            if ($tipoReporte === 'consolidado' && !$entregasCreadas->isEmpty()) {
+                try {
+                    $reporteConsolidado = $this->reporteCargoService->generarReporteConsolidado(
+                        $entregasCreadas->toArray(),
+                        [
+                            'vehiculo_id' => $vehiculoId,
+                            'descripcion' => "Reporte consolidado - Batch ({$entregasCreadas->count()} entregas)",
+                        ]
+                    );
+
+                    $this->logSuccess('Reporte consolidado generado', [
+                        'reporte_id' => $reporteConsolidado->id,
+                        'entregas_count' => $entregasCreadas->count(),
+                    ]);
+
+                    // Agregar reporte_consolidado a la respuesta
+                    // Se agregaré a la respuesta después de crear la respuesta base
+                } catch (\Exception $e) {
+                    $this->logError('Error generando reporte consolidado', [
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    $errores[] = [
+                        'tipo' => 'reporte_consolidado',
+                        'error' => "Reporte consolidado no generado: {$e->getMessage()}",
                     ];
                 }
             }
@@ -748,5 +807,235 @@ class EntregaService
         $almacen = \App\Models\Almacen::where('activo', true)->first();
 
         return $almacen ? $almacen->id : 1;
+    }
+
+    /**
+     * Confirmar carga de una entrega (cambiar a EN_CARGA)
+     *
+     * Se ejecuta después de que el reporte de carga ha sido confirmado
+     * Indica que la carga física está en progreso
+     *
+     * @param int $entregaId ID de la entrega
+     * @return EntregaResponseDTO
+     * @throws EstadoInvalidoException
+     */
+    public function confirmarCarga(int $entregaId): EntregaResponseDTO
+    {
+        $entrega = $this->transaction(function () use ($entregaId) {
+            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+
+            // Validar que esté en PREPARACION_CARGA
+            if ($entrega->estado !== Entrega::ESTADO_PREPARACION_CARGA) {
+                throw EstadoInvalidoException::transicionInvalida(
+                    'Entrega',
+                    $entregaId,
+                    $entrega->estado,
+                    Entrega::ESTADO_EN_CARGA
+                );
+            }
+
+            $estadoAnterior = $entrega->estado;
+
+            // Actualizar a EN_CARGA
+            $entrega->update([
+                'estado' => Entrega::ESTADO_EN_CARGA,
+                'confirmado_carga_por' => Auth::id(),
+                'fecha_confirmacion_carga' => now(),
+            ]);
+
+            $this->registrarCambioEstado(
+                $entrega,
+                $estadoAnterior,
+                Entrega::ESTADO_EN_CARGA,
+                'Carga confirmada - Iniciando proceso de carga física'
+            );
+
+            // Recargar relaciones para WebSocket
+            $entrega->load(['chofer', 'venta.cliente', 'confirmadorCarga']);
+
+            return $entrega;
+        });
+
+        $this->logSuccess('Carga confirmada', ['entrega_id' => $entregaId]);
+
+        // Notificar por WebSocket a chofer y cliente
+        try {
+            $this->webSocketService->notifyCargoConfirmado($entrega);
+        } catch (\Exception $e) {
+            $this->logError('Error enviando notificación WebSocket de carga confirmada', [
+                'entrega_id' => $entregaId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return EntregaResponseDTO::fromModel($entrega);
+    }
+
+    /**
+     * Marcar entrega como lista para partida (después de completar carga)
+     *
+     * Transición: EN_CARGA → LISTO_PARA_ENTREGA
+     * Indica que la carga está completa y lista para que el chofer inicie viaje
+     *
+     * @param int $entregaId ID de la entrega
+     * @return EntregaResponseDTO
+     * @throws EstadoInvalidoException
+     */
+    public function marcarListoParaEntrega(int $entregaId): EntregaResponseDTO
+    {
+        $entrega = $this->transaction(function () use ($entregaId) {
+            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+
+            // Validar que esté en EN_CARGA
+            if ($entrega->estado !== Entrega::ESTADO_EN_CARGA) {
+                throw EstadoInvalidoException::transicionInvalida(
+                    'Entrega',
+                    $entregaId,
+                    $entrega->estado,
+                    Entrega::ESTADO_LISTO_PARA_ENTREGA
+                );
+            }
+
+            $estadoAnterior = $entrega->estado;
+
+            // Actualizar a LISTO_PARA_ENTREGA
+            $entrega->update([
+                'estado' => Entrega::ESTADO_LISTO_PARA_ENTREGA,
+            ]);
+
+            $this->registrarCambioEstado(
+                $entrega,
+                $estadoAnterior,
+                Entrega::ESTADO_LISTO_PARA_ENTREGA,
+                'Carga completada - Entrega lista para partida'
+            );
+
+
+            // Recargar relaciones para WebSocket
+            $entrega->load(['chofer', 'venta.cliente', 'vehiculo']);
+
+            return $entrega;
+        });
+
+        $this->logSuccess('Entrega marcada como lista para partida', ['entrega_id' => $entregaId]);
+
+        // Notificar por WebSocket a chofer y cliente
+        try {
+            $this->webSocketService->notifyListoParaEntrega($entrega);
+        } catch (\Exception $e) {
+            $this->logError('Error enviando notificación WebSocket de listo para entrega', [
+                'entrega_id' => $entregaId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return EntregaResponseDTO::fromModel($entrega);
+    }
+
+    /**
+     * Iniciar tránsito de entrega con coordenadas GPS (cambiar a EN_TRANSITO)
+     *
+     * Se ejecuta cuando el chofer inicia el viaje de entrega
+     * Requiere ubicación GPS inicial
+     *
+     * @param int $entregaId ID de la entrega
+     * @param float $latitud Latitud inicial
+     * @param float $longitud Longitud inicial
+     * @return EntregaResponseDTO
+     * @throws EstadoInvalidoException
+     */
+    public function iniciarTransito(int $entregaId, float $latitud, float $longitud): EntregaResponseDTO
+    {
+        $entrega = $this->transaction(function () use ($entregaId, $latitud, $longitud) {
+            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+
+            // Validar que esté en LISTO_PARA_ENTREGA
+            if ($entrega->estado !== Entrega::ESTADO_LISTO_PARA_ENTREGA) {
+                throw EstadoInvalidoException::transicionInvalida(
+                    'Entrega',
+                    $entregaId,
+                    $entrega->estado,
+                    Entrega::ESTADO_EN_TRANSITO
+                );
+            }
+
+            $estadoAnterior = $entrega->estado;
+
+            // Actualizar a EN_TRANSITO con coordenadas iniciales
+            $entrega->update([
+                'estado' => Entrega::ESTADO_EN_TRANSITO,
+                'latitud_actual' => $latitud,
+                'longitud_actual' => $longitud,
+                'fecha_ultima_ubicacion' => now(),
+            ]);
+
+            $this->registrarCambioEstado(
+                $entrega,
+                $estadoAnterior,
+                Entrega::ESTADO_EN_TRANSITO,
+                "Chofer iniciando tránsito - Ubicación inicial: ({$latitud}, {$longitud})"
+            );
+
+
+            // Recargar relaciones para WebSocket
+            $entrega->load(['chofer', 'venta.cliente', 'vehiculo']);
+
+            return $entrega;
+        });
+
+        $this->logSuccess('Entrega iniciada en tránsito', [
+            'entrega_id' => $entregaId,
+            'latitud' => $latitud,
+            'longitud' => $longitud,
+        ]);
+
+        // Notificar por WebSocket a chofer y cliente
+        try {
+            $this->webSocketService->notifyInicioTransito($entrega, $latitud, $longitud);
+        } catch (\Exception $e) {
+            $this->logError('Error enviando notificación WebSocket de inicio de tránsito', [
+                'entrega_id' => $entregaId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return EntregaResponseDTO::fromModel($entrega);
+    }
+
+    /**
+     * Actualizar ubicación GPS actual de una entrega en tránsito
+     *
+     * @param int $entregaId ID de la entrega
+     * @param float $latitud Latitud actual
+     * @param float $longitud Longitud actual
+     * @return void
+     */
+    public function actualizarUbicacionGPS(int $entregaId, float $latitud, float $longitud): void
+    {
+        $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+
+        if ($entrega->estado === Entrega::ESTADO_EN_TRANSITO) {
+            $entrega->update([
+                'latitud_actual' => $latitud,
+                'longitud_actual' => $longitud,
+                'fecha_ultima_ubicacion' => now(),
+            ]);
+
+            $this->logSuccess('Ubicación GPS actualizada', [
+                'entrega_id' => $entregaId,
+                'latitud' => $latitud,
+                'longitud' => $longitud,
+            ]);
+
+            // Notificar por WebSocket a cliente sobre actualización de ubicación
+            try {
+                $this->webSocketService->notifyActualizacionUbicacion($entrega, $latitud, $longitud);
+            } catch (\Exception $e) {
+                $this->logError('Error enviando notificación WebSocket de actualización de ubicación', [
+                    'entrega_id' => $entregaId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 }
