@@ -140,6 +140,12 @@ export default function CreateEntregasUnificado({
         }
     }, [recomendado?.id, formData.vehiculo_id, formData.chofer_id, handleSelectVehiculo, handleSelectChofer, pesoRecomendacion]);
 
+    // Detectar modo - DEBE IR ANTES del useEffect que lo usa
+    const selectedCount = selectedVentaIds.length;
+    const isSingleMode = selectedCount === 1;
+    const isBatchMode = selectedCount > 1;
+    const isEmptyMode = selectedCount === 0;
+
     // Monitor del estado del formulario
     useEffect(() => {
         if (isBatchMode) {
@@ -158,12 +164,6 @@ export default function CreateEntregasUnificado({
             });
         }
     }, [formData.vehiculo_id, formData.chofer_id, isBatchMode, capacidadInsuficiente, totals.pesoTotal]);
-
-    // Detectar modo
-    const selectedCount = selectedVentaIds.length;
-    const isSingleMode = selectedCount === 1;
-    const isBatchMode = selectedCount > 1;
-    const isEmptyMode = selectedCount === 0;
 
     // Totales seleccionados
     const totals = useMemo(() => {
