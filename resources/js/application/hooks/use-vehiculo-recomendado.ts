@@ -131,6 +131,21 @@ export function useVehiculoRecomendado(
         alerta: data.data.alerta,
       });
 
+      // Log detallado del chofer asignado para debugging
+      if (data.data.recomendado) {
+        if (data.data.recomendado.choferAsignado) {
+          console.log('✅ Chofer Asignado encontrado:', {
+            id: data.data.recomendado.choferAsignado.id,
+            name: data.data.recomendado.choferAsignado.name,
+            nombre: data.data.recomendado.choferAsignado.nombre,
+            telefono: data.data.recomendado.choferAsignado.telefono,
+          });
+        } else {
+          console.warn('⚠️ Vehículo recomendado NO tiene choferAsignado (es null/undefined)');
+          console.warn('Objeto completo del recomendado:', JSON.stringify(data.data.recomendado, null, 2));
+        }
+      }
+
       setState((prev) => ({
         ...prev,
         recomendado: data.data.recomendado,
