@@ -142,6 +142,11 @@ export default function CreateEntregasUnificado({
         }
     }, [recomendado?.choferAsignado?.id, formData.chofer_id, handleSelectChofer]);
 
+    // Sincronizar selectedVentaIds con formData.venta_ids para que el submit funcione
+    useEffect(() => {
+        updateFormData({ venta_ids: selectedVentaIds });
+    }, [selectedVentaIds]);
+
     // Detectar modo - DEBE IR ANTES del useEffect que lo usa
     const selectedCount = selectedVentaIds.length;
     const isSingleMode = selectedCount === 1;
