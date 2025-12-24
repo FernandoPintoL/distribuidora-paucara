@@ -36,11 +36,17 @@ class EntregaBatchController extends Controller
     public function store(CrearEntregasBatchRequest $request): JsonResponse
     {
         try {
-            Log::info('Iniciando creación de entregas en lote', [
-                'venta_count' => count($request->input('venta_ids')),
-                'vehiculo_id' => $request->input('vehiculo_id'),
-                'chofer_id' => $request->input('chofer_id'),
+            $ventaIds = $request->input('venta_ids', []);
+            $vehiculoId = $request->input('vehiculo_id');
+            $choferId = $request->input('chofer_id');
+
+            Log::info('🔍 INICIANDO CREACIÓN DE ENTREGAS EN LOTE', [
+                'venta_count' => count($ventaIds),
+                'venta_ids' => $ventaIds,
+                'vehiculo_id' => $vehiculoId,
+                'chofer_id' => $choferId,
                 'user_id' => auth()->id(),
+                'request_data' => $request->all(),
             ]);
 
             // ✅ NUEVO: Validar capacidad del vehículo antes de crear entregas
@@ -103,15 +109,22 @@ class EntregaBatchController extends Controller
             ], 422);
 
         } catch (\Exception $e) {
-            Log::error('Error creando entregas en lote', [
-                'error' => $e->getMessage(),
+            Log::error('❌ ERROR CREANDO ENTREGAS EN LOTE', [
+                'error_message' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
+                'venta_ids' => $ventaIds ?? [],
+                'vehiculo_id' => $vehiculoId ?? null,
+                'chofer_id' => $choferId ?? null,
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear entregas en lote',
+                'message' => 'Error al crear entregas en lote: ' . $e->getMessage(),
                 'error' => $e->getMessage(),
+                'error_class' => get_class($e),
             ], 500);
         }
     }
