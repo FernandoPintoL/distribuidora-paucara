@@ -38,6 +38,7 @@ export function useVehiculoRecomendado(
   useEffect(() => {
     // Si no hay ventas seleccionadas, limpiar recomendación
     if (selectedVentaIds.length === 0) {
+      console.log('🚫 Recomendación limpiada - No hay ventas seleccionadas');
       setState({
         recomendado: null,
         disponibles: [],
@@ -53,8 +54,18 @@ export function useVehiculoRecomendado(
     const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
     const pesoTotal = selectedVentas.reduce((sum, v) => sum + (v.peso_estimado ?? 0), 0);
 
+    console.log('📊 Calculando recomendación:', {
+      ventasCount: selectedVentaIds.length,
+      ventaIds: selectedVentaIds,
+      pesoTotal,
+      detalle: selectedVentas.map(v => ({
+        numero_venta: v.numero_venta,
+        peso_estimado: v.peso_estimado,
+      }))
+    });
+
     if (pesoTotal <= 0) {
-      console.log('[useVehiculoRecomendado] Peso total <= 0');
+      console.log('❌ Peso total <= 0, no se puede calcular recomendación');
       setState((prev) => ({
         ...prev,
         error: 'No se pudo calcular el peso total',
@@ -63,11 +74,11 @@ export function useVehiculoRecomendado(
     }
 
     // Fetch recomendación
-    console.log('[useVehiculoRecomendado] Llamando a fetchRecomendacion con peso:', pesoTotal);
     fetchRecomendacion(pesoTotal);
   }, [selectedVentaIds, ventas]);
 
   const fetchRecomendacion = async (pesoTotal: number) => {
+    console.log('🔄 Iniciando búsqueda de vehículo recomendado...');
     setState((prev) => ({
       ...prev,
       isLoading: true,
@@ -76,7 +87,11 @@ export function useVehiculoRecomendado(
     }));
 
     try {
-      console.log('[useVehiculoRecomendado] Iniciando fetch a /api/vehiculos/sugerir', { peso_total: pesoTotal, venta_ids: selectedVentaIds });
+      console.log('🚀 Llamada POST a /api/vehiculos/sugerir con:', {
+        peso_total: pesoTotal,
+        venta_ids: selectedVentaIds
+      });
+
       const response = await fetch('/api/vehiculos/sugerir', {
         method: 'POST',
         headers: {
@@ -89,16 +104,32 @@ export function useVehiculoRecomendado(
         }),
       });
 
-      console.log('[useVehiculoRecomendado] Response status:', response.status);
+      console.log('📨 Respuesta recibida - Status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[useVehiculoRecomendado] Response error:', errorText);
+        console.error('❌ Error en respuesta:', { status: response.status, errorText });
         throw new Error(`Error: ${response.status}`);
       }
 
       const data: VehicleRecommendationResponse = await response.json();
-      console.log('[useVehiculoRecomendado] Response data:', data);
+
+      console.log('✨ Datos de recomendación recibidos:', {
+        success: data.success,
+        message: data.message,
+        recomendado: data.data.recomendado ? {
+          id: data.data.recomendado.id,
+          placa: data.data.recomendado.placa,
+          marca: data.data.recomendado.marca,
+          modelo: data.data.recomendado.modelo,
+          capacidad_kg: data.data.recomendado.capacidad_kg,
+          porcentaje_uso: data.data.recomendado.porcentaje_uso,
+          choferAsignado: data.data.recomendado.choferAsignado,
+        } : null,
+        disponibles_count: (data.data.disponibles || []).length,
+        peso_total: data.data.peso_total,
+        alerta: data.data.alerta,
+      });
 
       setState((prev) => ({
         ...prev,
@@ -112,16 +143,17 @@ export function useVehiculoRecomendado(
 
       // Auto-seleccionar si existe recomendado y autoSelect es true
       if (autoSelect && data.data.recomendado && onVehiculoSelected) {
+        console.log('🎯 Auto-seleccionando vehículo recomendado:', data.data.recomendado.id);
         onVehiculoSelected(data.data.recomendado.id);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al obtener recomendación';
+      console.error('❌ Error en useVehiculoRecomendado:', err);
       setState((prev) => ({
         ...prev,
         isLoading: false,
         error: errorMessage,
       }));
-      console.error('Error en useVehiculoRecomendado:', err);
     }
   };
 

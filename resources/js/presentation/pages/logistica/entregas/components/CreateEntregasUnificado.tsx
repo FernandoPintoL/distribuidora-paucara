@@ -88,10 +88,12 @@ export default function CreateEntregasUnificado({
     // Memoized callbacks para vehicle recommendation
     // Estos callbacks deben ser estables para que el useEffect en VehicleRecommendationCard funcione correctamente
     const handleSelectVehiculo = useCallback((vehiculoId: Id) => {
+        console.log('📍 Actualizando vehiculo_id:', vehiculoId);
         updateFormData({ vehiculo_id: vehiculoId });
     }, [updateFormData]);
 
     const handleSelectChofer = useCallback((choferId: Id) => {
+        console.log('👤 Actualizando chofer_id:', choferId);
         updateFormData({ chofer_id: choferId });
     }, [updateFormData]);
 
@@ -114,13 +116,48 @@ export default function CreateEntregasUnificado({
     // Este useEffect captura los callbacks memoizados y asegura que formData se actualice
     useEffect(() => {
         if (recomendado && !formData.vehiculo_id) {
+            console.log('✅ Auto-seleccionando vehículo recomendado:', {
+                vehiculo: {
+                    id: recomendado.id,
+                    placa: recomendado.placa,
+                    marca: recomendado.marca,
+                    modelo: recomendado.modelo,
+                    capacidad_kg: recomendado.capacidad_kg,
+                    porcentaje_uso: recomendado.porcentaje_uso,
+                },
+                peso_total: pesoRecomendacion,
+            });
             handleSelectVehiculo(recomendado.id);
 
             if (recomendado.choferAsignado && formData.chofer_id === undefined) {
+                console.log('✅ Auto-seleccionando chofer:', {
+                    id: recomendado.choferAsignado.id,
+                    nombre: recomendado.choferAsignado.nombre || recomendado.choferAsignado.name,
+                    telefono: recomendado.choferAsignado.telefono,
+                });
                 handleSelectChofer(recomendado.choferAsignado.id);
             }
         }
-    }, [recomendado?.id, formData.vehiculo_id, formData.chofer_id, handleSelectVehiculo, handleSelectChofer]);
+    }, [recomendado?.id, formData.vehiculo_id, formData.chofer_id, handleSelectVehiculo, handleSelectChofer, pesoRecomendacion]);
+
+    // Monitor del estado del formulario
+    useEffect(() => {
+        if (isBatchMode) {
+            const buttonStatus = !formData.vehiculo_id || !formData.chofer_id ? '❌ DESHABILITADO' : '✅ HABILITADO';
+            console.log('📋 Estado del Formulario:', {
+                buttonStatus,
+                formData: {
+                    vehiculo_id: formData.vehiculo_id ?? 'undefined',
+                    chofer_id: formData.chofer_id ?? 'undefined',
+                    tipo_reporte: formData.tipo_reporte,
+                },
+                validaciones: {
+                    capacidadInsuficiente,
+                    pesoTotal: totals.pesoTotal,
+                },
+            });
+        }
+    }, [formData.vehiculo_id, formData.chofer_id, isBatchMode, capacidadInsuficiente, totals.pesoTotal]);
 
     // Detectar modo
     const selectedCount = selectedVentaIds.length;
@@ -148,6 +185,20 @@ export default function CreateEntregasUnificado({
             const updated = prev.includes(ventaId)
                 ? prev.filter((id) => id !== ventaId)
                 : [...prev, ventaId];
+
+            // Log de selección
+            const selectedVentas = ventas.filter((v) => updated.includes(v.id));
+            console.log('📦 Ventas Seleccionadas:', {
+                count: updated.length,
+                ventaIds: updated,
+                ventas: selectedVentas.map(v => ({
+                    id: v.id,
+                    numero_venta: v.numero_venta,
+                    cliente: v.cliente?.nombre,
+                    peso_estimado: v.peso_estimado,
+                    total: v.total,
+                }))
+            });
 
             // Limpiar preview si deselecciona en batch con optimización activa
             if (prev.length >= 2 && updated.length >= 2 && formData.optimizar) {
