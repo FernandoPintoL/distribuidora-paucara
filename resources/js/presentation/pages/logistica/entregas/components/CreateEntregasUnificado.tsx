@@ -112,8 +112,7 @@ export default function CreateEntregasUnificado({
         handleSelectVehiculo
     );
 
-    // Auto-seleccionar vehículo y chofer cuando se cargan las recomendaciones
-    // Este useEffect captura los callbacks memoizados y asegura que formData se actualice
+    // Auto-seleccionar vehículo cuando se carga la recomendación
     useEffect(() => {
         if (recomendado && !formData.vehiculo_id) {
             console.log('✅ Auto-seleccionando vehículo recomendado:', {
@@ -128,17 +127,20 @@ export default function CreateEntregasUnificado({
                 peso_total: pesoRecomendacion,
             });
             handleSelectVehiculo(recomendado.id);
-
-            if (recomendado.choferAsignado && formData.chofer_id === undefined) {
-                console.log('✅ Auto-seleccionando chofer:', {
-                    id: recomendado.choferAsignado.id,
-                    nombre: recomendado.choferAsignado.nombre || recomendado.choferAsignado.name,
-                    telefono: recomendado.choferAsignado.telefono,
-                });
-                handleSelectChofer(recomendado.choferAsignado.id);
-            }
         }
-    }, [recomendado?.id, formData.vehiculo_id, formData.chofer_id, handleSelectVehiculo, handleSelectChofer, pesoRecomendacion]);
+    }, [recomendado?.id, formData.vehiculo_id, handleSelectVehiculo, pesoRecomendacion]);
+
+    // Auto-seleccionar chofer cuando se carga la recomendación y hay un choferAsignado
+    useEffect(() => {
+        if (recomendado?.choferAsignado && !formData.chofer_id) {
+            console.log('✅ Auto-seleccionando chofer:', {
+                id: recomendado.choferAsignado.id,
+                nombre: recomendado.choferAsignado.nombre || recomendado.choferAsignado.name,
+                telefono: recomendado.choferAsignado.telefono,
+            });
+            handleSelectChofer(recomendado.choferAsignado.id);
+        }
+    }, [recomendado?.choferAsignado?.id, formData.chofer_id, handleSelectChofer]);
 
     // Detectar modo - DEBE IR ANTES del useEffect que lo usa
     const selectedCount = selectedVentaIds.length;
