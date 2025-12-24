@@ -217,6 +217,19 @@ class VehiculoController extends Controller
                 ->get()
                 ->map(function ($vehiculo) use ($pesoTotal) {
                     $porcentajeUso = round(($pesoTotal / $vehiculo->capacidad_kg) * 100, 1);
+
+                    // Debug logging
+                    \Log::info('Mapeando vehículo:', [
+                        'vehiculo_id' => $vehiculo->id,
+                        'placa' => $vehiculo->placa,
+                        'chofer_asignado_id' => $vehiculo->chofer_asignado_id,
+                        'choferAsignado' => $vehiculo->choferAsignado ? [
+                            'id' => $vehiculo->choferAsignado->id,
+                            'name' => $vehiculo->choferAsignado->name,
+                            'campos' => array_keys($vehiculo->choferAsignado->toArray()),
+                        ] : 'NULL',
+                    ]);
+
                     return [
                         'id' => $vehiculo->id,
                         'placa' => $vehiculo->placa,
@@ -248,6 +261,19 @@ class VehiculoController extends Controller
                     ->map(function ($vehiculo) use ($pesoTotal) {
                         $porcentajeUso = round(($pesoTotal / $vehiculo->capacidad_kg) * 100, 1);
                         $excesoCarga = $pesoTotal > $vehiculo->capacidad_kg;
+
+                        // Debug logging
+                        \Log::info('Mapeando vehículo (sin capacidad):', [
+                            'vehiculo_id' => $vehiculo->id,
+                            'placa' => $vehiculo->placa,
+                            'chofer_asignado_id' => $vehiculo->chofer_asignado_id,
+                            'choferAsignado' => $vehiculo->choferAsignado ? [
+                                'id' => $vehiculo->choferAsignado->id,
+                                'name' => $vehiculo->choferAsignado->name,
+                                'campos' => array_keys($vehiculo->choferAsignado->toArray()),
+                            ] : 'NULL',
+                        ]);
+
                         return [
                             'id' => $vehiculo->id,
                             'placa' => $vehiculo->placa,
