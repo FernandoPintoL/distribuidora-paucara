@@ -146,6 +146,20 @@ export default function CreateEntregasUnificado({
     const isBatchMode = selectedCount > 1;
     const isEmptyMode = selectedCount === 0;
 
+    // Totales seleccionados - DEBE IR ANTES del useEffect que lo usa
+    const totals = useMemo(() => {
+        const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
+        return {
+            count: selectedVentaIds.length,
+            pesoTotal: selectedVentas.reduce((sum, v) => sum + (v.peso_estimado ?? 0), 0),
+            montoTotal: selectedVentas.reduce((sum, v) => sum + (v.total ?? 0), 0),
+        };
+    }, [ventas, selectedVentaIds]);
+
+    // Validaciones para batch - DEBE IR ANTES del useEffect que lo usa
+    const selectedVehiculo = vehiculos.find((v) => v.id === formData.vehiculo_id);
+    const capacidadInsuficiente = selectedVehiculo && totals.pesoTotal > (selectedVehiculo.capacidad_kg ?? 0);
+
     // Monitor del estado del formulario
     useEffect(() => {
         if (isBatchMode) {
@@ -164,20 +178,6 @@ export default function CreateEntregasUnificado({
             });
         }
     }, [formData.vehiculo_id, formData.chofer_id, isBatchMode, capacidadInsuficiente, totals.pesoTotal]);
-
-    // Totales seleccionados
-    const totals = useMemo(() => {
-        const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
-        return {
-            count: selectedVentaIds.length,
-            pesoTotal: selectedVentas.reduce((sum, v) => sum + (v.peso_estimado ?? 0), 0),
-            montoTotal: selectedVentas.reduce((sum, v) => sum + (v.total ?? 0), 0),
-        };
-    }, [ventas, selectedVentaIds]);
-
-    // Validaciones para batch
-    const selectedVehiculo = vehiculos.find((v) => v.id === formData.vehiculo_id);
-    const capacidadInsuficiente = selectedVehiculo && totals.pesoTotal > (selectedVehiculo.capacidad_kg ?? 0);
 
     // Handlers
     const handleToggleVenta = (ventaId: Id) => {
