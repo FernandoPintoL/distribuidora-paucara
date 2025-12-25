@@ -2,7 +2,7 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
-import { ArrowLeft, MapPin, Package, Calendar, User, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, Calendar, User, FileText, Printer, Download, Eye } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import type { Entrega, VehiculoCompleto, ClienteEntrega } from '@/domain/entities/entregas';
 import EntregaFlujoCarga from './components/EntregaFlujoCarga';
@@ -28,6 +28,8 @@ const estadoBadgeColor: Record<string, string> = {
 
 export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }: ShowProps) {
     const [entrega, setEntrega] = useState<Entrega>(initialEntrega);
+    const [loadingPdf, setLoadingPdf] = useState<number | null>(null);
+    const [loadingPdfDetallado, setLoadingPdfDetallado] = useState<number | null>(null);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     const [reportError, setReportError] = useState<string | null>(null);
 
@@ -80,6 +82,85 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
             setReportError(msg);
         } finally {
             setIsGeneratingReport(false);
+        }
+    };
+
+    /**
+     * Descargar PDF del reporte
+     */
+    const handleDescargarPdf = async (reporteId: number, detallado: boolean = false) => {
+        try {
+            const pdfLoadingState = detallado ? setLoadingPdfDetallado : setLoadingPdf;
+            pdfLoadingState(reporteId);
+
+            const endpoint = detallado
+                ? `/api/reportes-carga/${reporteId}/pdf-detallado`
+                : `/api/reportes-carga/${reporteId}/pdf`;
+
+            const response = await fetch(endpoint);
+
+            if (!response.ok) {
+                throw new Error(`Error descargando PDF (${response.status})`);
+            }
+
+            // Crear blob y descargar
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reporte-${entrega.reportes?.[0]?.numero_reporte || 'carga'}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error descargando PDF:', error);
+            alert('Error descargando PDF. Intenta de nuevo.');
+        } finally {
+            detallado ? setLoadingPdfDetallado(null) : setLoadingPdf(null);
+        }
+    };
+
+    /**
+     * Ver vista previa del PDF en navegador
+     */
+    const handleVerPdfPreview = async (reporteId: number) => {
+        try {
+            window.open(
+                `/api/reportes-carga/${reporteId}/pdf-preview`,
+                '_blank',
+                'width=1000,height=700'
+            );
+        } catch (error) {
+            console.error('Error abriendo vista previa:', error);
+            alert('Error abriendo vista previa. Intenta de nuevo.');
+        }
+    };
+
+    /**
+     * Imprimir reporte (abre diálogo de impresión del navegador)
+     */
+    const handleImprimirReporte = async (reporteId: number) => {
+        try {
+            setLoadingPdf(reporteId);
+            // Abre la vista previa y permite imprimir desde ahí
+            const popup = window.open(
+                `/api/reportes-carga/${reporteId}/pdf-preview`,
+                'printWindow',
+                'width=1000,height=700'
+            );
+
+            if (popup) {
+                // Espera a que cargue el PDF
+                setTimeout(() => {
+                    popup.print();
+                }, 1500);
+            }
+        } catch (error) {
+            console.error('Error imprimiendo reporte:', error);
+            alert('Error imprimiendo reporte. Intenta de nuevo.');
+        } finally {
+            setLoadingPdf(null);
         }
     };
 
@@ -317,6 +398,52 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
                                                 <p className="text-sm text-gray-900 dark:text-white">{pivot.notas}</p>
                                             </div>
                                         )}
+
+                                        {/* Botones de Acciones - Imprimir y Descargar */}
+                                        <div className="flex gap-2 flex-wrap pt-3 border-t border-gray-200 dark:border-slate-600">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleImprimirReporte(reporte.id)}
+                                                disabled={loadingPdf === reporte.id}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <Printer className="w-4 h-4" />
+                                                {loadingPdf === reporte.id ? 'Abriendo...' : 'Imprimir'}
+                                            </Button>
+
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleDescargarPdf(reporte.id, false)}
+                                                disabled={loadingPdf === reporte.id}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                {loadingPdf === reporte.id ? 'Descargando...' : 'PDF'}
+                                            </Button>
+
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleDescargarPdf(reporte.id, true)}
+                                                disabled={loadingPdfDetallado === reporte.id}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                {loadingPdfDetallado === reporte.id ? 'Descargando...' : 'PDF Detallado'}
+                                            </Button>
+
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleVerPdfPreview(reporte.id)}
+                                                className="flex items-center gap-2 ml-auto"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                                Ver
+                                            </Button>
+                                        </div>
 
                                         {/* Otras entregas en el reporte */}
                                         {otrasEntregas.length > 0 && (

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\ReporteCargoController;
 use App\Http\Controllers\Api\EstadoMermaController;
+use App\Http\Controllers\ReporteCargaPdfController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TipoAjusteInventarioController;
@@ -527,6 +528,32 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
             ->name('entregas.lote.optimizar');
     });
 
+    // ✅ LOGÍSTICA: Seguimiento de Ventas y Entregas
+    Route::prefix('ventas')->group(function () {
+        // Obtener detalle logístico de una venta (estado de entregas)
+        Route::get('/{venta}/logistica', [\App\Http\Controllers\Api\VentaLogisticaController::class, 'show'])
+            ->middleware('permission:ventas.show')
+            ->name('ventas.logistica.show');
+
+        // Obtener todas las entregas de una venta
+        Route::get('/{venta}/entregas', [\App\Http\Controllers\Api\VentaLogisticaController::class, 'entregas'])
+            ->middleware('permission:ventas.show')
+            ->name('ventas.entregas');
+    });
+
+    // ✅ LOGÍSTICA: Estadísticas y Admin
+    Route::prefix('logistica')->group(function () {
+        // Estadísticas generales de entregas por estado
+        Route::get('/estadisticas', [\App\Http\Controllers\Api\VentaLogisticaController::class, 'estadisticas'])
+            ->middleware('permission:entregas.index')
+            ->name('logistica.estadisticas');
+
+        // Resincronizar estados (admin only)
+        Route::post('/resincronizar', [\App\Http\Controllers\Api\VentaLogisticaController::class, 'resincronizar'])
+            ->middleware('permission:admin.panel')
+            ->name('logistica.resincronizar');
+    });
+
     // ✅ PHASE 3: ENTREGAS - Flujo de carga y tránsito
     Route::prefix('entregas')->group(function () {
         // Confirmar carga (cambiar a EN_CARGA)
@@ -601,6 +628,21 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/{reporte}/cancelar', [ReporteCargoController::class, 'cancelarReporte'])
             ->middleware('permission:reportes-carga.delete')
             ->name('reportes-carga.cancelar');
+
+        // ✅ NUEVA: Generar PDF del reporte (descargar)
+        Route::get('/{reporte}/pdf', [ReporteCargaPdfController::class, 'generarPdf'])
+            ->middleware('auth')
+            ->name('reportes-carga.pdf');
+
+        // ✅ NUEVA: Generar PDF detallado con entregas (descargar)
+        Route::get('/{reporte}/pdf-detallado', [ReporteCargaPdfController::class, 'generarPdfDetallado'])
+            ->middleware('auth')
+            ->name('reportes-carga.pdf-detallado');
+
+        // ✅ NUEVA: Vista previa de PDF en navegador
+        Route::get('/{reporte}/pdf-preview', [ReporteCargaPdfController::class, 'previewPdf'])
+            ->middleware('auth')
+            ->name('reportes-carga.pdf-preview');
     });
 });
 
