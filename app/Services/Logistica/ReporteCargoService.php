@@ -72,7 +72,14 @@ class ReporteCargoService
                 // Crear detalles del reporte desde los detalles de la venta
                 $this->crearDetallesDesdeVenta($reporte, $venta);
 
-                // Actualizar la entrega con el reporte
+                // ✅ NUEVA: Vincular entrega al reporte via tabla pivot (Many-to-Many)
+                $reporte->entregas()->attach($entrega->id, [
+                    'orden' => 1,
+                    'incluida_en_carga' => false,
+                    'notas' => null,
+                ]);
+
+                // Actualizar la entrega con el estado (mantener reporte_carga_id para compatibilidad legacy)
                 $entrega->update([
                     'reporte_carga_id' => $reporte->id,
                     'estado' => Entrega::ESTADO_PREPARACION_CARGA,
@@ -210,7 +217,17 @@ class ReporteCargoService
                     ReporteCargaDetalle::insert(array_values($detallesConsolidados));
                 }
 
-                // Actualizar todas las entregas con el reporte_carga_id
+                // ✅ NUEVA: Vincular TODAS las entregas al reporte via tabla pivot (Many-to-Many)
+                // Esto permite que 1 reporte tenga N entregas, cada una con orden e incluida_en_carga
+                foreach ($entregasModels as $idx => $entrega) {
+                    $reporte->entregas()->attach($entrega->id, [
+                        'orden' => $idx + 1,  // Posición en el reporte consolidado
+                        'incluida_en_carga' => false,
+                        'notas' => null,
+                    ]);
+                }
+
+                // Actualizar estado de todas las entregas (mantener reporte_carga_id para compatibilidad legacy)
                 $entregaIds = collect($entregasModels)->pluck('id')->toArray();
                 Entrega::whereIn('id', $entregaIds)->update([
                     'reporte_carga_id' => $reporte->id,

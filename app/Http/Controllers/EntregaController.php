@@ -395,6 +395,8 @@ class EntregaController extends Controller
                 'proforma.cliente',
                 'chofer',
                 'vehiculo',
+                'reportes',          // ✅ NUEVO: Reportes asociados (Many-to-Many)
+                'reporteEntregas',   // ✅ NUEVO: Pivot con metadata (orden, incluida_en_carga, notas)
             ]);
 
             // API/JSON
