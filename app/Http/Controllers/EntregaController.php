@@ -388,33 +388,28 @@ class EntregaController extends Controller
      */
     public function show(\App\Models\Entrega $entrega): JsonResponse | InertiaResponse
     {
-        try {
-            // Cargar relaciones necesarias
-            $entrega->load([
-                'venta.cliente',
-                'proforma.cliente',
-                'chofer',
-                'vehiculo',
-                'reportes',          // ✅ NUEVO: Reportes asociados (Many-to-Many)
-                'reporteEntregas',   // ✅ NUEVO: Pivot con metadata (orden, incluida_en_carga, notas)
+        // Cargar relaciones necesarias
+        $entrega->load([
+            'venta.cliente',
+            'proforma.cliente',
+            'chofer',
+            'vehiculo',
+            'reportes',          // ✅ NUEVO: Reportes asociados (Many-to-Many)
+            'reporteEntregas',   // ✅ NUEVO: Pivot con metadata (orden, incluida_en_carga, notas)
+        ]);
+
+        // API/JSON
+        if ($this->isApiRequest()) {
+            return response()->json([
+                'success' => true,
+                'data' => $entrega,
             ]);
-
-            // API/JSON
-            if ($this->isApiRequest()) {
-                return response()->json([
-                    'success' => true,
-                    'data' => $entrega,
-                ]);
-            }
-
-            // Web (Inertia)
-            return Inertia::render('logistica/entregas/Show', [
-                'entrega' => $entrega,
-            ]);
-
-        } catch (\Exception $e) {
-            return $this->respondNotFound('Entrega no encontrada');
         }
+
+        // Web (Inertia)
+        return Inertia::render('logistica/entregas/Show', [
+            'entrega' => $entrega,
+        ]);
     }
 
     /**

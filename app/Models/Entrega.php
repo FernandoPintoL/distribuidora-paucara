@@ -136,11 +136,40 @@ class Entrega extends Model
     }
 
     /**
-     * Reporte de carga asociado a esta entrega
+     * Reporte de carga asociado a esta entrega (legacy - para compatibilidad)
+     * NOTA: Preferir usar reportes() para acceder a todos los reportes
      */
     public function reporteCarga(): BelongsTo
     {
         return $this->belongsTo(ReporteCarga::class);
+    }
+
+    /**
+     * Reportes de carga asociados a esta entrega (Many-to-Many)
+     *
+     * NUEVA RELACIÓN: Una entrega puede estar en múltiples reportes
+     * - Si se divide una entrega entre varios reportes
+     * - O si se recrea un reporte
+     */
+    public function reportes()
+    {
+        return $this->belongsToMany(
+            ReporteCarga::class,
+            'reporte_carga_entregas',
+            'entrega_id',
+            'reporte_carga_id'
+        )->withPivot(['orden', 'incluida_en_carga', 'notas'])
+         ->withTimestamps()
+         ->orderBy('reporte_carga_entregas.created_at', 'desc');
+    }
+
+    /**
+     * Acceso directo a la tabla pivot (reporte_carga_entregas)
+     * Útil para acceder a metadatos del vínculo (orden, incluida_en_carga, notas)
+     */
+    public function reporteEntregas(): HasMany
+    {
+        return $this->hasMany(ReporteCargaEntrega::class);
     }
 
     /**
@@ -160,6 +189,53 @@ class Entrega extends Model
     }
 
     /**
+     * Boot del modelo
+     * Validaciones antes de crear/actualizar + Sincronización con Venta
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // Validar que siempre haya proforma_id o venta_id
+        static::creating(function ($model) {
+            if (!$model->proforma_id && !$model->venta_id) {
+                throw new \InvalidArgumentException(
+                    'Entrega debe tener al menos proforma_id o venta_id. ' .
+                    'Nueva política: entregas pueden venir de venta (nuevo flujo) o proforma (legacy).'
+                );
+            }
+        });
+
+        static::updating(function ($model) {
+            if (!$model->proforma_id && !$model->venta_id) {
+                throw new \InvalidArgumentException(
+                    'Entrega debe tener al menos proforma_id o venta_id.'
+                );
+            }
+        });
+
+        // Sincronizar estado de venta cuando se crea entrega
+        static::created(function ($model) {
+            if ($model->venta_id) {
+                $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
+                $sincronizador->alCrearEntrega($model);
+            }
+        });
+
+        // Sincronizar estado de venta cuando cambia estado de entrega
+        static::updated(function ($model) {
+            // Solo si cambió el estado
+            if ($model->isDirty('estado') && $model->venta_id) {
+                $estadoAnterior = $model->getOriginal('estado');
+                $estadoNuevo = $model->estado;
+
+                $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
+                $sincronizador->alCambiarEstadoEntrega($model, $estadoAnterior, $estadoNuevo);
+            }
+        });
+    }
+
+    /**
      * Métodos útiles
      */
 
@@ -172,10 +248,111 @@ class Entrega extends Model
     }
 
     /**
-     * Cambiar estado de la entrega
+     * Definir transiciones válidas de estados
+     *
+     * Estados antiguos (legacy):
+     *   PROGRAMADO → ASIGNADA → EN_CAMINO → LLEGO → ENTREGADO
+     *
+     * Estados nuevos (flujo de carga):
+     *   PROGRAMADO → PREPARACION_CARGA → EN_CARGA → LISTO_PARA_ENTREGA → EN_TRANSITO → ENTREGADO
+     *
+     * Ambos flujos pueden ir a CANCELADA, NOVEDAD o RECHAZADO en cualquier momento
+     */
+    private function obtenerTransicionesValidas(): array
+    {
+        return [
+            // Estado inicial
+            self::ESTADO_PROGRAMADO => [
+                self::ESTADO_ASIGNADA,              // Flujo legacy
+                self::ESTADO_PREPARACION_CARGA,     // Flujo nuevo de carga
+                self::ESTADO_CANCELADA,             // Cancelar desde inicio
+            ],
+            // Flujo legacy
+            self::ESTADO_ASIGNADA => [
+                self::ESTADO_EN_CAMINO,
+                self::ESTADO_CANCELADA,
+                self::ESTADO_NOVEDAD,
+            ],
+            self::ESTADO_EN_CAMINO => [
+                self::ESTADO_LLEGO,
+                self::ESTADO_NOVEDAD,
+            ],
+            self::ESTADO_LLEGO => [
+                self::ESTADO_ENTREGADO,
+                self::ESTADO_NOVEDAD,
+                self::ESTADO_RECHAZADO,
+            ],
+            // Flujo nuevo de carga
+            self::ESTADO_PREPARACION_CARGA => [
+                self::ESTADO_EN_CARGA,
+                self::ESTADO_CANCELADA,
+            ],
+            self::ESTADO_EN_CARGA => [
+                self::ESTADO_LISTO_PARA_ENTREGA,
+                self::ESTADO_CANCELADA,
+            ],
+            self::ESTADO_LISTO_PARA_ENTREGA => [
+                self::ESTADO_EN_TRANSITO,
+                self::ESTADO_CANCELADA,
+            ],
+            self::ESTADO_EN_TRANSITO => [
+                self::ESTADO_ENTREGADO,
+                self::ESTADO_NOVEDAD,
+                self::ESTADO_RECHAZADO,
+            ],
+            // Estados finales/excepcionales
+            self::ESTADO_ENTREGADO => [],          // Terminal
+            self::ESTADO_CANCELADA => [],          // Terminal
+            self::ESTADO_NOVEDAD => [
+                self::ESTADO_ENTREGADO,
+                self::ESTADO_CANCELADA,
+            ],
+            self::ESTADO_RECHAZADO => [
+                self::ESTADO_CANCELADA,
+            ],
+        ];
+    }
+
+    /**
+     * Validar si una transición de estado es permitida
+     */
+    public function esTransicionValida(string $nuevoEstado): bool
+    {
+        $transiciones = $this->obtenerTransicionesValidas();
+        $estadoActual = $this->estado;
+
+        if (!isset($transiciones[$estadoActual])) {
+            return false;
+        }
+
+        return in_array($nuevoEstado, $transiciones[$estadoActual]);
+    }
+
+    /**
+     * Obtener los estados a los que puede transicionar
+     */
+    public function obtenerEstadosSiguientes(): array
+    {
+        $transiciones = $this->obtenerTransicionesValidas();
+        return $transiciones[$this->estado] ?? [];
+    }
+
+    /**
+     * Cambiar estado de la entrega con validación
      */
     public function cambiarEstado(string $nuevoEstado, ?string $comentario = null, ?\Illuminate\Foundation\Auth\User $usuario = null): void
     {
+        // Validar que la transición sea válida
+        if (!$this->esTransicionValida($nuevoEstado)) {
+            $estadoActual = $this->estado;
+            $estadosSiguientes = $this->obtenerEstadosSiguientes();
+            $estados = implode(', ', $estadosSiguientes);
+            throw new \InvalidArgumentException(
+                "No se puede transicionar de '{$estadoActual}' a '{$nuevoEstado}'. " .
+                "Estados válidos: {$estados}"
+            );
+        }
+
         // Registrar en historial
         $this->historialEstados()->create([
             'estado_anterior' => $this->estado,
@@ -187,6 +364,50 @@ class Entrega extends Model
 
         // Actualizar estado
         $this->update(['estado' => $nuevoEstado]);
+    }
+
+    /**
+     * Obtener la fuente de la entrega (Venta o Proforma)
+     */
+    public function obtenerFuente()
+    {
+        if ($this->venta_id) {
+            return $this->venta;
+        }
+        return $this->proforma;
+    }
+
+    /**
+     * Obtener el nombre de la fuente
+     */
+    public function obtenerNombreFuente(): string
+    {
+        return $this->venta_id ? 'Venta' : 'Proforma';
+    }
+
+    /**
+     * Verificar si está en el flujo nuevo de carga
+     */
+    public function estaEnFlujoDeCargas(): bool
+    {
+        return in_array($this->estado, [
+            self::ESTADO_PREPARACION_CARGA,
+            self::ESTADO_EN_CARGA,
+            self::ESTADO_LISTO_PARA_ENTREGA,
+            self::ESTADO_EN_TRANSITO,
+        ]);
+    }
+
+    /**
+     * Verificar si está en el flujo legacy
+     */
+    public function estaEnFlujoLegacy(): bool
+    {
+        return in_array($this->estado, [
+            self::ESTADO_ASIGNADA,
+            self::ESTADO_EN_CAMINO,
+            self::ESTADO_LLEGO,
+        ]);
     }
 
     /**
@@ -202,7 +423,7 @@ class Entrega extends Model
      */
     public function estaEnTransito(): bool
     {
-        return in_array($this->estado, [self::ESTADO_EN_CAMINO, self::ESTADO_LLEGO]);
+        return in_array($this->estado, [self::ESTADO_EN_CAMINO, self::ESTADO_LLEGO, self::ESTADO_EN_TRANSITO]);
     }
 
     /**
@@ -211,5 +432,13 @@ class Entrega extends Model
     public function fueCancelada(): bool
     {
         return $this->estado === self::ESTADO_CANCELADA;
+    }
+
+    /**
+     * Verificar si tiene reporte de carga
+     */
+    public function tieneReporteDeCarga(): bool
+    {
+        return $this->reporte_carga_id !== null;
     }
 }
