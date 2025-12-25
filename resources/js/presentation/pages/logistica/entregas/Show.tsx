@@ -4,7 +4,8 @@ import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { ArrowLeft, MapPin, Package, Calendar, User, FileText, Printer, Download, Eye } from 'lucide-react';
 import { router } from '@inertiajs/react';
-import type { Entrega, VehiculoCompleto, ClienteEntrega } from '@/domain/entities/entregas';
+import type { Entrega, VehiculoCompleto, ClienteEntrega, EstadoEntrega } from '@/domain/entities/entregas';
+import type { Id } from '@/domain/entities/shared';
 import EntregaFlujoCarga from './components/EntregaFlujoCarga';
 import { getEstadoLabel, estadoColorMap } from '@/domain/utils/estado-entrega';
 import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
@@ -15,7 +16,7 @@ interface ShowProps {
     vehiculos?: VehiculoCompleto[];
 }
 
-const estadoBadgeColor: Record<string, string> = {
+/* const estadoBadgeColor: Record<string, string> = {
     PROGRAMADO: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
     ASIGNADA: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
     EN_CAMINO: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
@@ -24,20 +25,20 @@ const estadoBadgeColor: Record<string, string> = {
     LLEGO: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200',
     NOVEDAD: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
     CANCELADA: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100',
-};
+}; */
 
-export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }: ShowProps) {
+export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
     const [entrega, setEntrega] = useState<Entrega>(initialEntrega);
-    const [loadingPdf, setLoadingPdf] = useState<number | null>(null);
-    const [loadingPdfDetallado, setLoadingPdfDetallado] = useState<number | null>(null);
-    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-    const [reportError, setReportError] = useState<string | null>(null);
+    const [loadingPdf, setLoadingPdf] = useState<Id | null>(null);
+    const [loadingPdfDetallado, setLoadingPdfDetallado] = useState<Id | null>(null);
+    // const [setIsGeneratingReport] = useState(false);
+    // const [setReportError] = useState<string | null>(null);
 
     console.log('Entrega data:', entrega);
     const cliente: ClienteEntrega | undefined = entrega.venta?.cliente || entrega.proforma?.cliente;
     const numero: string = String(entrega.proforma?.numero || entrega.venta?.numero || entrega.numero || `#${entrega.id}`);
 
-    const handleGenerarReporte = async () => {
+    /* const handleGenerarReporte = async () => {
         setIsGeneratingReport(true);
         setReportError(null);
 
@@ -83,12 +84,12 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
         } finally {
             setIsGeneratingReport(false);
         }
-    };
+    }; */
 
     /**
      * Descargar PDF del reporte
      */
-    const handleDescargarPdf = async (reporteId: number, detallado: boolean = false) => {
+    const handleDescargarPdf = async (reporteId: Id, detallado: boolean = false) => {
         try {
             const pdfLoadingState = detallado ? setLoadingPdfDetallado : setLoadingPdf;
             pdfLoadingState(reporteId);
@@ -117,14 +118,14 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
             console.error('Error descargando PDF:', error);
             alert('Error descargando PDF. Intenta de nuevo.');
         } finally {
-            detallado ? setLoadingPdfDetallado(null) : setLoadingPdf(null);
+            void (detallado ? setLoadingPdfDetallado(null) : setLoadingPdf(null));
         }
     };
 
     /**
      * Ver vista previa del PDF en navegador
      */
-    const handleVerPdfPreview = async (reporteId: number) => {
+    const handleVerPdfPreview = async (reporteId: Id) => {
         try {
             window.open(
                 `/api/reportes-carga/${reporteId}/pdf-preview`,
@@ -140,7 +141,7 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
     /**
      * Imprimir reporte (abre diálogo de impresión del navegador)
      */
-    const handleImprimirReporte = async (reporteId: number) => {
+    const handleImprimirReporte = async (reporteId: Id) => {
         try {
             setLoadingPdf(reporteId);
             // Abre la vista previa y permite imprimir desde ahí
@@ -174,13 +175,13 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
     ];
 
     const isInCargoFlow = cargoFlowStates.includes(entrega.estado);
-    const estadoColors: Record<string, string> = {
+    /* const estadoColors: Record<string, string> = {
         ...estadoBadgeColor,
         PREPARACION_CARGA: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
         EN_CARGA: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
         LISTO_PARA_ENTREGA: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
         RECHAZADO: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
-    };
+    }; */
 
     return (
         <AppLayout>
@@ -206,7 +207,7 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
                     </Badge>
                     {/* Selector de Formato de Impresión */}
                     <FormatoSelector
-                        documentoId={entrega.reporte_carga_id}
+                        documentoId={entrega.reporte_carga_id as number | string}
                         tipoDocumento="reportes-carga"
                         className="w-full sm:w-auto"
                     />
@@ -355,10 +356,10 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
                                                     reporte.estado === 'PENDIENTE'
                                                         ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
                                                         : reporte.estado === 'CONFIRMADO'
-                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
-                                                        : reporte.estado === 'ENTREGADO'
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                                                            : reporte.estado === 'ENTREGADO'
+                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
                                                 }
                                             >
                                                 {reporte.estado}
@@ -452,7 +453,7 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
                                                     Otras entregas en este reporte:
                                                 </p>
                                                 <div className="space-y-2">
-                                                    {otrasEntregas.map((otraEntrega, idx) => {
+                                                    {otrasEntregas.map((otraEntrega) => {
                                                         const ordenOtra = reporte.entregas?.findIndex(
                                                             e => e.id === otraEntrega.id
                                                         ) ?? -1;
@@ -539,7 +540,7 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
                             onStateChange={(newState) => {
                                 setEntrega((prev) => ({
                                     ...prev,
-                                    estado: newState as any,
+                                    estado: newState as EstadoEntrega,
                                 }));
                             }}
                         />

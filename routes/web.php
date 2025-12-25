@@ -380,6 +380,13 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::post('{entrega}/rechazar', [\App\Http\Controllers\EntregaController::class, 'rechazar'])->name('rechazar'); // Legacy
             Route::post('{entrega}/ubicacion', [\App\Http\Controllers\EntregaController::class, 'registrarUbicacion'])->name('ubicacion');
         });
+
+        // ✅ FASE 2: Reportes de Carga (gestión centralizada)
+        Route::prefix('reportes')->name('reportes.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ReporteCargoListController::class, 'index'])
+                ->middleware('permission:reportes-carga.index')
+                ->name('index');
+        });
     });
 
     // ✅ NUEVO: Dashboard para Vendedor/Cajero

@@ -1,6 +1,109 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
+import logistica from './logistica'
 import stock from './stock'
 import detalles from './detalles'
+/**
+* @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @route '/api/ventas/{venta}/entregas'
+ */
+export const entregas = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregas.url(args, options),
+    method: 'get',
+})
+
+entregas.definition = {
+    methods: ["get","head"],
+    url: '/api/ventas/{venta}/entregas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @route '/api/ventas/{venta}/entregas'
+ */
+entregas.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { venta: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { venta: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    venta: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        venta: typeof args.venta === 'object'
+                ? args.venta.id
+                : args.venta,
+                }
+
+    return entregas.definition.url
+            .replace('{venta}', parsedArgs.venta.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @route '/api/ventas/{venta}/entregas'
+ */
+entregas.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregas.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @route '/api/ventas/{venta}/entregas'
+ */
+entregas.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: entregas.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @route '/api/ventas/{venta}/entregas'
+ */
+    const entregasForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: entregas.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @route '/api/ventas/{venta}/entregas'
+ */
+        entregasForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregas.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @route '/api/ventas/{venta}/entregas'
+ */
+        entregasForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregas.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    entregas.form = entregasForm
 /**
 * @see \App\Http\Controllers\VentaController::index
  * @see app/Http/Controllers/VentaController.php:63
@@ -880,7 +983,9 @@ formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     
     formatosDisponibles.form = formatosDisponiblesForm
 const ventas = {
-    index,
+    logistica,
+entregas,
+index,
 create,
 store,
 show,

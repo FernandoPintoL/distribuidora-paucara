@@ -13,6 +13,7 @@ import EntregaController from './EntregaController'
 import TrackingController from './TrackingController'
 import EncargadoController from './EncargadoController'
 import EntregaBatchController from './EntregaBatchController'
+import VentaLogisticaController from './VentaLogisticaController'
 import ReporteCargoController from './ReporteCargoController'
 const Api = {
     AuthController,
@@ -30,6 +31,7 @@ EntregaController,
 TrackingController,
 EncargadoController,
 EntregaBatchController,
+VentaLogisticaController,
 ReporteCargoController,
 }
 

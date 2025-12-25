@@ -39,8 +39,6 @@ class CrearEntregasBatchRequest extends FormRequest
             'venta_ids.*' => 'required|integer|exists:ventas,id',
             'vehiculo_id' => 'required|integer|exists:vehiculos,id',
             'chofer_id' => 'required|integer|exists:empleados,id',
-            'agrupar_por_zona' => 'boolean|default:true',
-            'optimizar' => 'boolean|default:true',
             'tipo_reporte' => 'required|string|in:individual,consolidado',
         ];
     }

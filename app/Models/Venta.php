@@ -172,12 +172,97 @@ class Venta extends Model
         return $this->belongsTo(\App\Models\DireccionCliente::class, 'direccion_cliente_id');
     }
 
+    /**
+     * Métodos de Utilidad para Logística
+     */
+
+    /**
+     * Obtener información de entregas y estado logístico
+     */
+    public function obtenerDetalleLogistico(): array
+    {
+        $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
+        return $sincronizador->obtenerDetalleEntregas($this);
+    }
+
+    /**
+     * Verificar si la venta está siendo entregada
+     */
+    public function estaBeingDelivered(): bool
+    {
+        return in_array($this->estado_logistico, [
+            'EN_PREPARACION',
+            'EN_TRANSITO',
+        ]);
+    }
+
+    /**
+     * Verificar si la entrega fue completada
+     */
+    public function wasDelivered(): bool
+    {
+        return $this->estado_logistico === 'ENTREGADA';
+    }
+
+    /**
+     * Verificar si hay problemas en la entrega
+     */
+    public function hasDeliveryProblems(): bool
+    {
+        return $this->estado_logistico === 'PROBLEMAS';
+    }
+
+    /**
+     * Obtener estado logístico legible
+     */
+    public function getEstadoLogisticoLabel(): string
+    {
+        $labels = [
+            'SIN_ENTREGA' => 'Sin Entrega',
+            'PROGRAMADO' => 'Programado',
+            'EN_PREPARACION' => 'En Preparación',
+            'EN_TRANSITO' => 'En Tránsito',
+            'ENTREGADA' => 'Entregada',
+            'PROBLEMAS' => 'Con Problemas',
+            'CANCELADA' => 'Cancelada',
+        ];
+
+        return $labels[$this->estado_logistico] ?? 'Desconocido';
+    }
+
+    /**
+     * Obtener color para representar estado logístico
+     */
+    public function getEstadoLogisticoColor(): string
+    {
+        $colors = [
+            'SIN_ENTREGA' => 'gray',
+            'PROGRAMADO' => 'blue',
+            'EN_PREPARACION' => 'yellow',
+            'EN_TRANSITO' => 'purple',
+            'ENTREGADA' => 'green',
+            'PROBLEMAS' => 'red',
+            'CANCELADA' => 'dark',
+        ];
+
+        return $colors[$this->estado_logistico] ?? 'gray';
+    }
+
     // Constantes para el nuevo sistema
     const CANAL_APP_EXTERNA = 'APP_EXTERNA';
 
     const CANAL_WEB = 'WEB';
 
     const CANAL_PRESENCIAL = 'PRESENCIAL';
+
+    // Estados Logísticos
+    const ESTADO_LOGISTICO_SIN_ENTREGA = 'SIN_ENTREGA';
+    const ESTADO_LOGISTICO_PROGRAMADO = 'PROGRAMADO';
+    const ESTADO_LOGISTICO_EN_PREPARACION = 'EN_PREPARACION';
+    const ESTADO_LOGISTICO_EN_TRANSITO = 'EN_TRANSITO';
+    const ESTADO_LOGISTICO_ENTREGADA = 'ENTREGADA';
+    const ESTADO_LOGISTICO_PROBLEMAS = 'PROBLEMAS';
+    const ESTADO_LOGISTICO_CANCELADA = 'CANCELADA';
 
     const ESTADO_PENDIENTE_ENVIO = 'PENDIENTE_ENVIO';
 

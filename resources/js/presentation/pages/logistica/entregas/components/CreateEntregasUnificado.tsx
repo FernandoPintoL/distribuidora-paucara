@@ -3,8 +3,6 @@ import { AlertCircle, Package, CheckCircle2, Plus } from 'lucide-react';
 import { Card } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import BatchVentaSelector from './BatchVentaSelector';
-import BatchVehiculoAssignment from './BatchVehiculoAssignment';
-import BatchOptimizationResult from './BatchOptimizationResult';
 import SimpleEntregaForm from './SimpleEntregaForm';
 import { VehicleRecommendationCard } from '@/presentation/components/entrega/VehicleRecommendationCard';
 import { useEntregaBatch } from '@/application/hooks/use-entrega-batch';
@@ -71,14 +69,10 @@ export default function CreateEntregasUnificado({
     // Hooks para batch (2+ ventas)
     const {
         formData,
-        isLoading,
         isSubmitting,
-        preview,
-        previewError,
         submitError,
         successMessage,
         updateFormData,
-        obtenerPreview,
         handleSubmit: handleSubmitBatch,
     } = useEntregaBatch();
 
@@ -292,9 +286,25 @@ export default function CreateEntregasUnificado({
                     <Card className="mb-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 p-4">
                         <div className="flex items-start gap-3">
                             <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <h3 className="font-semibold text-red-800 dark:text-red-200">Error</h3>
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-red-800 dark:text-red-200">Error al crear entregas</h3>
                                 <p className="text-sm text-red-700 dark:text-red-300 mt-1">{submitError}</p>
+
+                                {/* Acciones para diferentes tipos de error */}
+                                {submitError.includes('no está disponible') && (
+                                    <div className="mt-3 flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                // Limpiar selección de vehículo/chofer para re-obtener recomendación
+                                                updateFormData({ vehiculo_id: null, chofer_id: null });
+                                                console.log('🔄 Limpiando selección para solicitar nueva recomendación');
+                                            }}
+                                            className="text-sm px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                                        >
+                                            Solicitar nueva recomendación
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </Card>

@@ -837,6 +837,312 @@ cancelar.post = (args: { reporte: number | { id: number } } | [reporte: number |
         })
     
     cancelar.form = cancelarForm
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdf
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:27
+ * @route '/api/reportes-carga/{reporte}/pdf'
+ */
+export const pdf = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: pdf.url(args, options),
+    method: 'get',
+})
+
+pdf.definition = {
+    methods: ["get","head"],
+    url: '/api/reportes-carga/{reporte}/pdf',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdf
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:27
+ * @route '/api/reportes-carga/{reporte}/pdf'
+ */
+pdf.url = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { reporte: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { reporte: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    reporte: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        reporte: typeof args.reporte === 'object'
+                ? args.reporte.id
+                : args.reporte,
+                }
+
+    return pdf.definition.url
+            .replace('{reporte}', parsedArgs.reporte.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdf
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:27
+ * @route '/api/reportes-carga/{reporte}/pdf'
+ */
+pdf.get = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: pdf.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdf
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:27
+ * @route '/api/reportes-carga/{reporte}/pdf'
+ */
+pdf.head = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: pdf.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdf
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:27
+ * @route '/api/reportes-carga/{reporte}/pdf'
+ */
+    const pdfForm = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: pdf.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdf
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:27
+ * @route '/api/reportes-carga/{reporte}/pdf'
+ */
+        pdfForm.get = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: pdf.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdf
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:27
+ * @route '/api/reportes-carga/{reporte}/pdf'
+ */
+        pdfForm.head = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: pdf.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    pdf.form = pdfForm
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfDetallado
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:75
+ * @route '/api/reportes-carga/{reporte}/pdf-detallado'
+ */
+export const pdfDetallado = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: pdfDetallado.url(args, options),
+    method: 'get',
+})
+
+pdfDetallado.definition = {
+    methods: ["get","head"],
+    url: '/api/reportes-carga/{reporte}/pdf-detallado',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfDetallado
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:75
+ * @route '/api/reportes-carga/{reporte}/pdf-detallado'
+ */
+pdfDetallado.url = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { reporte: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { reporte: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    reporte: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        reporte: typeof args.reporte === 'object'
+                ? args.reporte.id
+                : args.reporte,
+                }
+
+    return pdfDetallado.definition.url
+            .replace('{reporte}', parsedArgs.reporte.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfDetallado
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:75
+ * @route '/api/reportes-carga/{reporte}/pdf-detallado'
+ */
+pdfDetallado.get = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: pdfDetallado.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfDetallado
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:75
+ * @route '/api/reportes-carga/{reporte}/pdf-detallado'
+ */
+pdfDetallado.head = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: pdfDetallado.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfDetallado
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:75
+ * @route '/api/reportes-carga/{reporte}/pdf-detallado'
+ */
+    const pdfDetalladoForm = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: pdfDetallado.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfDetallado
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:75
+ * @route '/api/reportes-carga/{reporte}/pdf-detallado'
+ */
+        pdfDetalladoForm.get = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: pdfDetallado.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfDetallado
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:75
+ * @route '/api/reportes-carga/{reporte}/pdf-detallado'
+ */
+        pdfDetalladoForm.head = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: pdfDetallado.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    pdfDetallado.form = pdfDetalladoForm
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfPreview
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:126
+ * @route '/api/reportes-carga/{reporte}/pdf-preview'
+ */
+export const pdfPreview = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: pdfPreview.url(args, options),
+    method: 'get',
+})
+
+pdfPreview.definition = {
+    methods: ["get","head"],
+    url: '/api/reportes-carga/{reporte}/pdf-preview',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfPreview
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:126
+ * @route '/api/reportes-carga/{reporte}/pdf-preview'
+ */
+pdfPreview.url = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { reporte: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { reporte: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    reporte: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        reporte: typeof args.reporte === 'object'
+                ? args.reporte.id
+                : args.reporte,
+                }
+
+    return pdfPreview.definition.url
+            .replace('{reporte}', parsedArgs.reporte.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfPreview
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:126
+ * @route '/api/reportes-carga/{reporte}/pdf-preview'
+ */
+pdfPreview.get = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: pdfPreview.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfPreview
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:126
+ * @route '/api/reportes-carga/{reporte}/pdf-preview'
+ */
+pdfPreview.head = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: pdfPreview.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfPreview
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:126
+ * @route '/api/reportes-carga/{reporte}/pdf-preview'
+ */
+    const pdfPreviewForm = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: pdfPreview.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfPreview
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:126
+ * @route '/api/reportes-carga/{reporte}/pdf-preview'
+ */
+        pdfPreviewForm.get = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: pdfPreview.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteCargaPdfController::pdfPreview
+ * @see app/Http/Controllers/ReporteCargaPdfController.php:126
+ * @route '/api/reportes-carga/{reporte}/pdf-preview'
+ */
+        pdfPreviewForm.head = (args: { reporte: number | { id: number } } | [reporte: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: pdfPreview.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    pdfPreview.form = pdfPreviewForm
 const reportesCarga = {
     crear,
 formatosDisponibles,
@@ -848,6 +1154,9 @@ verificarDetalle,
 confirmar,
 listoParaEntrega,
 cancelar,
+pdf,
+pdfDetallado,
+pdfPreview,
 }
 
 export default reportesCarga

@@ -142,8 +142,8 @@ class EntregaService
                 }
             }
 
-            // Validar estado del vehículo
-            if ($vehiculo->estado !== 'disponible') {
+            // Validar estado del vehículo (case-insensitive)
+            if (strtolower($vehiculo->estado) !== 'disponible') {
                 throw new \Exception("Vehículo {$vehiculo->placa} no está disponible");
             }
 
@@ -628,14 +628,15 @@ class EntregaService
         string $tipoReporte = 'individual'
     ): array {
         $resultado = $this->transaction(function () use ($ventaIds, $vehiculoId, $choferId, $optimizar, $tipoReporte) {
-            $entregasCreadas = [];
+            $entregasCreadas = collect(); // Usar Collection en lugar de array para acceso a métodos como count() y isEmpty()
             $errores = [];
 
             // Validar vehículo y chofer
             $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
             $chofer = \App\Models\Empleado::findOrFail($choferId);
 
-            if ($vehiculo->estado !== 'disponible') {
+            // Validar estado del vehículo (case-insensitive)
+            if (strtolower($vehiculo->estado) !== 'disponible') {
                 throw new \Exception("Vehículo {$vehiculo->placa} no está disponible");
             }
 
@@ -700,7 +701,7 @@ class EntregaService
                         }
                     }
 
-                    $entregasCreadas[] = $entrega;
+                    $entregasCreadas->push($entrega);
                 } catch (\Exception $e) {
                     $errores[] = [
                         'venta_id' => $ventaId,

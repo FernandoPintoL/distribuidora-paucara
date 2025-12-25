@@ -97,6 +97,33 @@ class ReporteCarga extends Model
     }
 
     /**
+     * Entregas asociadas a este reporte (Many-to-Many)
+     *
+     * NUEVA RELACIÓN: Un reporte puede tener múltiples entregas
+     * - Reporte consolidado = 1 reporte con N entregas
+     * - Reporte individual = 1 reporte con 1 entrega
+     */
+    public function entregas()
+    {
+        return $this->belongsToMany(
+            Entrega::class,
+            'reporte_carga_entregas',
+            'reporte_carga_id',
+            'entrega_id'
+        )->withPivot(['orden', 'incluida_en_carga', 'notas'])
+         ->withTimestamps()
+         ->orderBy('reporte_carga_entregas.orden');
+    }
+
+    /**
+     * Entregas a través de pivot (acceso directo)
+     */
+    public function reporteEntregas(): HasMany
+    {
+        return $this->hasMany(ReporteCargaEntrega::class);
+    }
+
+    /**
      * Métodos útiles
      */
 
@@ -106,12 +133,20 @@ class ReporteCarga extends Model
     public static function generarNumeroReporte(): string
     {
         $fecha = now()->format('Ymd');
-        $secuencial = str_pad(
-            (static::whereDate('fecha_generacion', now())->max('id') ?? 0) + 1,
-            6,
-            '0',
-            STR_PAD_LEFT
-        );
+
+        // Contar reportes generados hoy
+        $countHoy = static::whereDate('fecha_generacion', now())->count();
+
+        // El siguiente número secuencial (contando desde 1, no desde 0)
+        $numeroSecuencial = $countHoy + 1;
+
+        // Aplicar padding: 001-999, luego sin padding a partir de 1000
+        if ($numeroSecuencial < 1000) {
+            $secuencial = str_pad($numeroSecuencial, 3, '0', STR_PAD_LEFT);
+        } else {
+            $secuencial = (string) $numeroSecuencial;
+        }
+
         return "REP{$fecha}{$secuencial}";
     }
 

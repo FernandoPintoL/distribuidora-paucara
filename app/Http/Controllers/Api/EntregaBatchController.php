@@ -49,13 +49,33 @@ class EntregaBatchController extends Controller
                 'request_data' => $request->all(),
             ]);
 
-            // ✅ NUEVO: Validar capacidad del vehículo antes de crear entregas
+            // ✅ Validar vehículo y disponibilidad ANTES de crear entregas
+            $vehiculo = \App\Models\Vehiculo::findOrFail($request->input('vehiculo_id'));
+
+            // Validar que el vehículo está disponible (consistente con la recomendación)
+            // Usar LOWER() para comparación case-insensitive (la BD puede tener "DISPONIBLE" o "disponible")
+            if (strtolower($vehiculo->estado) !== 'disponible') {
+                Log::warning('Vehículo no disponible en creación de lote', [
+                    'vehiculo_id' => $vehiculo->id,
+                    'placa' => $vehiculo->placa,
+                    'estado' => $vehiculo->estado,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "El vehículo {$vehiculo->placa} no está disponible (estado actual: {$vehiculo->estado}). Por favor, selecciona otro vehículo.",
+                    'data' => [
+                        'vehiculo_id' => $vehiculo->id,
+                        'estado_actual' => $vehiculo->estado,
+                    ],
+                ], 422);
+            }
+
+            // Validar capacidad del vehículo
             $pesoTotal = \App\Models\Venta::whereIn('id', $request->input('venta_ids'))
                 ->with('detalles')
                 ->get()
                 ->sum(fn($v) => $v->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10);
-
-            $vehiculo = \App\Models\Vehiculo::findOrFail($request->input('vehiculo_id'));
 
             if ($pesoTotal > $vehiculo->capacidad_kg) {
                 Log::warning('Capacidad insuficiente para lote de entregas', [

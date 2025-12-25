@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\ReporteCargoController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\ReporteCargaPdfController;
+use App\Http\Controllers\ReporteCargoListController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TipoAjusteInventarioController;
@@ -643,6 +644,19 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::get('/{reporte}/pdf-preview', [ReporteCargaPdfController::class, 'previewPdf'])
             ->middleware('auth')
             ->name('reportes-carga.pdf-preview');
+    });
+
+    // ✅ FASE 2: Endpoints para gestión centralizada de reportes
+    Route::group(['prefix' => 'reportes'], function () {
+        // Obtener estadísticas de reportes
+        Route::get('/estadisticas', [ReporteCargoListController::class, 'estadisticas'])
+            ->middleware('auth')
+            ->name('reportes.estadisticas');
+
+        // Exportar múltiples reportes como ZIP
+        Route::post('/exportar-zip', [ReporteCargoListController::class, 'exportarZip'])
+            ->middleware('auth')
+            ->name('reportes.exportar-zip');
     });
 });
 

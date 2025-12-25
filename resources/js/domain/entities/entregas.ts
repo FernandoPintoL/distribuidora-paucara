@@ -364,6 +364,7 @@ export interface ReporteCarga extends BaseEntity {
     // Relaciones
     detalles?: DetalleReporteCarga[];
     resumen?: ResumenReporteCarga;
+    vehiculo?: VehiculoEntrega;             // Vehículo del reporte
 
     // ✅ NUEVO: Entregas Many-to-Many
     entregas?: Entrega[];                   // Todas las entregas en este reporte

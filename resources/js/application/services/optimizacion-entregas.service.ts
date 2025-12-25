@@ -117,6 +117,14 @@ class OptimizacionEntregasService {
      */
     async crearLote(request: CrearLoteRequest): Promise<CrearLoteResponse> {
         try {
+            console.log('🚀 POST /api/entregas/lote con datos:', {
+                venta_ids: request.venta_ids,
+                vehiculo_id: request.vehiculo_id,
+                chofer_id: request.chofer_id,
+                optimizar: request.optimizar,
+                tipo_reporte: request.tipo_reporte,
+            });
+
             const response = await fetch(this.API_ENDPOINT, {
                 method: 'POST',
                 headers: {
@@ -126,15 +134,40 @@ class OptimizacionEntregasService {
                 body: JSON.stringify(request),
             });
 
+            console.log('📨 Respuesta recibida - Status:', response.status);
+
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || `Error: ${response.status}`);
+
+                console.error('❌ Error en respuesta:', {
+                    status: response.status,
+                    message: errorData.message,
+                    error: errorData.error,
+                    errors: errorData.errors,
+                    fullResponse: errorData,
+                });
+
+                // Prioridad de mensajes: message > error > errors > status
+                const errorMessage =
+                    errorData.message ||
+                    errorData.error ||
+                    (errorData.errors ? JSON.stringify(errorData.errors) : null) ||
+                    `Error ${response.status}: ${response.statusText}`;
+
+                throw new Error(errorMessage);
             }
 
-            return await response.json();
+            const data = await response.json();
+            console.log('✅ Entregas creadas exitosamente:', {
+                total_creadas: data.data?.estadisticas?.total_creadas,
+                total_errores: data.data?.estadisticas?.total_errores,
+            });
+
+            return data;
         } catch (error) {
-            console.error('Error en crearLote:', error);
-            throw error;
+            const message = error instanceof Error ? error.message : 'Error desconocido';
+            console.error('❌ Error en crearLote:', message);
+            throw new Error(message);
         }
     }
 

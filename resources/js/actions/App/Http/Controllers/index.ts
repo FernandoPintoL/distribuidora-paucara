@@ -15,6 +15,8 @@ import FotoLugarClienteController from './FotoLugarClienteController'
 import LocalidadController from './LocalidadController'
 import CategoriaClienteController from './CategoriaClienteController'
 import EntregaController from './EntregaController'
+import ReporteCargaPdfController from './ReporteCargaPdfController'
+import ReporteCargoListController from './ReporteCargoListController'
 import ProveedorController from './ProveedorController'
 import ImageBackupController from './ImageBackupController'
 import AuditoriaCajaController from './AuditoriaCajaController'
@@ -71,6 +73,8 @@ FotoLugarClienteController,
 LocalidadController,
 CategoriaClienteController,
 EntregaController,
+ReporteCargaPdfController,
+ReporteCargoListController,
 ProveedorController,
 ImageBackupController,
 AuditoriaCajaController,
