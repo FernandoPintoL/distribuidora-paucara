@@ -86,6 +86,17 @@ export interface DireccionClienteEntrega {
 }
 
 /**
+ * Pivot metadata: Vínculo entre Reporte y Entrega
+ */
+export interface ReporteCargaEntregaPivot {
+    orden: number;                      // Posición en el reporte
+    incluida_en_carga: boolean;         // Fue incluida físicamente
+    notas: string | null;               // Observaciones
+    created_at: string;
+    updated_at: string;
+}
+
+/**
  * Entrega principal - Modelo consolidado
  */
 export interface Entrega extends BaseEntity {
@@ -129,6 +140,10 @@ export interface Entrega extends BaseEntity {
     vehiculo?: VehiculoEntrega;
     chofer?: ChoferEntrega;
     seguimientos?: SeguimientoEntrega[];
+
+    // ✅ NUEVO: Reportes Many-to-Many
+    reportes?: ReporteCarga[];                          // Todos los reportes donde está esta entrega
+    reporteEntregas?: ReporteCargaEntregaPivot[];       // Pivot metadata con orden, incluida_en_carga, notas
 
     // Timestamps
     created_at: string;
@@ -349,6 +364,10 @@ export interface ReporteCarga extends BaseEntity {
     // Relaciones
     detalles?: DetalleReporteCarga[];
     resumen?: ResumenReporteCarga;
+
+    // ✅ NUEVO: Entregas Many-to-Many
+    entregas?: Entrega[];                   // Todas las entregas en este reporte
+    entregas_count?: number;                // Contador de entregas (si se usa withCount)
 
     created_at: string;
     updated_at: string;

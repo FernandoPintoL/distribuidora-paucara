@@ -241,7 +241,168 @@ export default function EntregaShow({ entrega: initialEntrega, vehiculos = [] }:
                     )}
                 </div>
 
+                {/* Reportes Asociados (Many-to-Many) */}
+                {entrega.reportes && entrega.reportes.length > 0 && (
+                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                            <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            Reportes Asociados
+                        </h2>
+                        <div className="space-y-4">
+                            {entrega.reportes.map((reporte) => {
+                                const pivot = entrega.reporteEntregas?.find(
+                                    r => r.created_at === reporte.created_at
+                                );
+                                const otrasEntregas = reporte.entregas?.filter(e => e.id !== entrega.id) ?? [];
 
+                                return (
+                                    <div
+                                        key={reporte.id}
+                                        className="border border-gray-300 dark:border-slate-600 rounded-lg p-4 space-y-3"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-semibold text-gray-900 dark:text-white">
+                                                    Reporte #{reporte.numero_reporte}
+                                                </p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {reporte.descripcion}
+                                                </p>
+                                            </div>
+                                            <Badge
+                                                className={
+                                                    reporte.estado === 'PENDIENTE'
+                                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                                                        : reporte.estado === 'CONFIRMADO'
+                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                                                        : reporte.estado === 'ENTREGADO'
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                                                }
+                                            >
+                                                {reporte.estado}
+                                            </Badge>
+                                        </div>
+
+                                        {/* Información de Pivot */}
+                                        <div className="grid grid-cols-3 gap-4 text-sm">
+                                            <div>
+                                                <p className="text-gray-500 dark:text-gray-400">Orden en Reporte</p>
+                                                <p className="font-medium text-gray-900 dark:text-white">
+                                                    {pivot?.orden ?? 'N/A'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-500 dark:text-gray-400">Incluida en Carga</p>
+                                                <p className="font-medium">
+                                                    {pivot?.incluida_en_carga ? (
+                                                        <span className="text-green-600 dark:text-green-400">✅ Sí</span>
+                                                    ) : (
+                                                        <span className="text-yellow-600 dark:text-yellow-400">⏳ Pendiente</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-500 dark:text-gray-400">Total Entregas</p>
+                                                <p className="font-medium text-gray-900 dark:text-white">
+                                                    {reporte.entregas?.length ?? 0}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Notas si existen */}
+                                        {pivot?.notas && (
+                                            <div className="bg-gray-50 dark:bg-slate-800 rounded p-3">
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">Notas</p>
+                                                <p className="text-sm text-gray-900 dark:text-white">{pivot.notas}</p>
+                                            </div>
+                                        )}
+
+                                        {/* Otras entregas en el reporte */}
+                                        {otrasEntregas.length > 0 && (
+                                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-3 border border-blue-200 dark:border-blue-800">
+                                                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                                                    Otras entregas en este reporte:
+                                                </p>
+                                                <div className="space-y-2">
+                                                    {otrasEntregas.map((otraEntrega, idx) => {
+                                                        const ordenOtra = reporte.entregas?.findIndex(
+                                                            e => e.id === otraEntrega.id
+                                                        ) ?? -1;
+                                                        return (
+                                                            <div
+                                                                key={otraEntrega.id}
+                                                                className="text-sm text-blue-800 dark:text-blue-300 flex justify-between"
+                                                            >
+                                                                <span>
+                                                                    #{ordenOtra + 1} - Entrega #{otraEntrega.numero_entrega}{' '}
+                                                                    ({otraEntrega.venta?.cliente?.nombre})
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+
+
+                {/* Información del Lote - Entregas con mismo chofer y vehículo */}
+                {entrega.chofer && entrega.vehiculo && (
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-50/50 dark:from-purple-900/20 dark:to-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800 p-6">
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-purple-900 dark:text-purple-200">
+                            <Package className="w-5 h-5" />
+                            Contexto del Lote
+                        </h2>
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-purple-700 dark:text-purple-300">Chofer Asignado</p>
+                                    <p className="font-medium text-purple-900 dark:text-purple-100">{entrega.chofer.nombre}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-purple-700 dark:text-purple-300">Vehículo</p>
+                                    <p className="font-medium text-purple-900 dark:text-purple-100">
+                                        {entrega.vehiculo.placa}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-purple-700 dark:text-purple-300">Fecha Programada</p>
+                                    <p className="font-medium text-purple-900 dark:text-purple-100">
+                                        {new Date(entrega.fecha_programada).toLocaleDateString('es-ES', {
+                                            weekday: 'short',
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                        })}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-purple-700 dark:text-purple-300">Peso Entrega</p>
+                                    <p className="font-medium text-purple-900 dark:text-purple-100">
+                                        {entrega.peso_kg ? `${entrega.peso_kg} kg` : 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-800/50 rounded-lg p-4 mt-4">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                                    ℹ️ Esta entrega es parte de un lote. Va en el mismo viaje que otros pedidos.
+                                </p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    El reporte asociado contiene todas las entregas que viajan juntas. Ver sección de
+                                    "Reportes Asociados" para más detalles.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Flujo de Carga - Mostrar si está en ese estado */}
                 {isInCargoFlow && (
