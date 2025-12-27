@@ -46,7 +46,7 @@ class RutaResponseDTO extends BaseDTO
                 'entrega_id' => $det->entrega_id,
                 'posicion_orden' => $det->posicion_orden,
                 'estado_entrega' => $det->estado_entrega,
-                'cliente_nombre' => $det->entrega?->venta?->cliente?->nombre,
+                'cliente_nombre' => $det->entrega?->ventas?->first()?->cliente?->nombre,
                 'direccion' => $det->entrega?->direccion,
             ])->toArray() ?? [],
             created_at: $ruta->created_at->toIso8601String(),

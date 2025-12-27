@@ -2,11 +2,12 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
-import { ArrowLeft, MapPin, Package, Calendar, User, FileText, Printer, Download, Eye } from 'lucide-react';
+import { ArrowLeft, Package } from 'lucide-react';
 import { router } from '@inertiajs/react';
-import type { Entrega, VehiculoCompleto, ClienteEntrega, EstadoEntrega } from '@/domain/entities/entregas';
-import type { Id } from '@/domain/entities/shared';
+import type { Entrega, VehiculoCompleto, EstadoEntrega } from '@/domain/entities/entregas';
+
 import EntregaFlujoCarga from './components/EntregaFlujoCarga';
+import VentasEntregaSection from './components/VentasEntregaSection';
 import { getEstadoLabel, estadoColorMap } from '@/domain/utils/estado-entrega';
 import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
 import { useState } from 'react';
@@ -29,13 +30,13 @@ interface ShowProps {
 
 export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
     const [entrega, setEntrega] = useState<Entrega>(initialEntrega);
-    const [loadingPdf, setLoadingPdf] = useState<Id | null>(null);
-    const [loadingPdfDetallado, setLoadingPdfDetallado] = useState<Id | null>(null);
+    // const [loadingPdf, setLoadingPdf] = useState<Id | null>(null);
+    // const [loadingPdfDetallado, setLoadingPdfDetallado] = useState<Id | null>(null);
     // const [setIsGeneratingReport] = useState(false);
     // const [setReportError] = useState<string | null>(null);
 
     console.log('Entrega data:', entrega);
-    const cliente: ClienteEntrega | undefined = entrega.venta?.cliente || entrega.proforma?.cliente;
+    // const cliente: ClienteEntrega | undefined = entrega.venta?.cliente || entrega.proforma?.cliente;
     const numero: string = String(entrega.proforma?.numero || entrega.venta?.numero || entrega.numero || `#${entrega.id}`);
 
     /* const handleGenerarReporte = async () => {
@@ -89,7 +90,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
     /**
      * Descargar PDF del reporte
      */
-    const handleDescargarPdf = async (reporteId: Id, detallado: boolean = false) => {
+    /* const handleDescargarPdf = async (reporteId: Id, detallado: boolean = false) => {
         try {
             const pdfLoadingState = detallado ? setLoadingPdfDetallado : setLoadingPdf;
             pdfLoadingState(reporteId);
@@ -120,12 +121,12 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
         } finally {
             void (detallado ? setLoadingPdfDetallado(null) : setLoadingPdf(null));
         }
-    };
+    }; */
 
     /**
      * Ver vista previa del PDF en navegador
      */
-    const handleVerPdfPreview = async (reporteId: Id) => {
+    /* const handleVerPdfPreview = async (reporteId: Id) => {
         try {
             window.open(
                 `/api/reportes-carga/${reporteId}/pdf-preview`,
@@ -136,12 +137,12 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
             console.error('Error abriendo vista previa:', error);
             alert('Error abriendo vista previa. Intenta de nuevo.');
         }
-    };
+    }; */
 
     /**
      * Imprimir reporte (abre diálogo de impresión del navegador)
      */
-    const handleImprimirReporte = async (reporteId: Id) => {
+    /* const handleImprimirReporte = async (reporteId: Id) => {
         try {
             setLoadingPdf(reporteId);
             // Abre la vista previa y permite imprimir desde ahí
@@ -163,7 +164,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
         } finally {
             setLoadingPdf(null);
         }
-    };
+    }; */
 
     // Estados del nuevo flujo de carga
     const cargoFlowStates = [
@@ -205,281 +206,13 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                     <Badge className={(estadoColorMap[entrega.estado as string] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100') as string}>
                         {getEstadoLabel(entrega.estado)}
                     </Badge>
-                    {/* Selector de Formato de Impresión */}
+                    {/* Selector de Formato de Impresión - Imprimir entrega en diferentes formatos */}
                     <FormatoSelector
-                        documentoId={entrega.reporte_carga_id as number | string}
-                        tipoDocumento="reportes-carga"
+                        documentoId={entrega.id as number | string}
+                        tipoDocumento="entregas"
                         className="w-full sm:w-auto"
                     />
                 </div>
-
-                {/* Main Content */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                    {/* Client Information */}
-                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                            <Package className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                            Información del Cliente
-                        </h2>
-                        <div className="space-y-3">
-                            {cliente ? (
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Cliente</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">{cliente.nombre ?? 'N/A'}</p>
-                                </div>
-                            ) : null}
-                            {entrega.venta ? (
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Venta</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">#{entrega.venta.numero}</p>
-                                </div>
-                            ) : null}
-                            {entrega.proforma ? (
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Proforma</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">#{entrega.proforma.numero}</p>
-                                </div>
-                            ) : null}
-                        </div>
-                    </div>
-
-                    {/* Dates Information */}
-                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                            <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                            Fechas
-                        </h2>
-                        <div className="space-y-3">
-                            {entrega.fecha_programada && (
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Fecha Programada</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">
-                                        {new Date(entrega.fecha_programada).toLocaleDateString('es-ES', {
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        })}
-                                    </p>
-                                </div>
-                            )}
-                            {entrega.fecha_entrega && (
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Fecha de Entrega</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">
-                                        {new Date(entrega.fecha_entrega).toLocaleDateString('es-ES', {
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        })}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Chofer Information */}
-                    {entrega.chofer && (
-                        <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                Conductor
-                            </h2>
-                            <div className="space-y-3">
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Nombre</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">{entrega.chofer.nombre}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Vehicle Information */}
-                    {entrega.vehiculo && (
-                        <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                                <MapPin className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                Vehículo
-                            </h2>
-                            <div className="space-y-3">
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Placa</p>
-                                    <p className="font-medium text-lg text-gray-900 dark:text-white">{entrega.vehiculo.placa}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Modelo</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">
-                                        {entrega.vehiculo.marca} {entrega.vehiculo.modelo}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Reportes Asociados (Many-to-Many) */}
-                {entrega.reportes && entrega.reportes.length > 0 && (
-                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-                            <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                            Reportes Asociados
-                        </h2>
-                        <div className="space-y-4">
-                            {entrega.reportes.map((reporte) => {
-                                const pivot = entrega.reporteEntregas?.find(
-                                    r => r.created_at === reporte.created_at
-                                );
-                                const otrasEntregas = reporte.entregas?.filter(e => e.id !== entrega.id) ?? [];
-
-                                return (
-                                    <div
-                                        key={reporte.id}
-                                        className="border border-gray-300 dark:border-slate-600 rounded-lg p-4 space-y-3"
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="font-semibold text-gray-900 dark:text-white">
-                                                    Reporte #{reporte.numero_reporte}
-                                                </p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {reporte.descripcion}
-                                                </p>
-                                            </div>
-                                            <Badge
-                                                className={
-                                                    reporte.estado === 'PENDIENTE'
-                                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                                                        : reporte.estado === 'CONFIRMADO'
-                                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
-                                                            : reporte.estado === 'ENTREGADO'
-                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
-                                                }
-                                            >
-                                                {reporte.estado}
-                                            </Badge>
-                                        </div>
-
-                                        {/* Información de Pivot */}
-                                        <div className="grid grid-cols-3 gap-4 text-sm">
-                                            <div>
-                                                <p className="text-gray-500 dark:text-gray-400">Orden en Reporte</p>
-                                                <p className="font-medium text-gray-900 dark:text-white">
-                                                    {pivot?.orden ?? 'N/A'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-500 dark:text-gray-400">Incluida en Carga</p>
-                                                <p className="font-medium">
-                                                    {pivot?.incluida_en_carga ? (
-                                                        <span className="text-green-600 dark:text-green-400">✅ Sí</span>
-                                                    ) : (
-                                                        <span className="text-yellow-600 dark:text-yellow-400">⏳ Pendiente</span>
-                                                    )}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-500 dark:text-gray-400">Total Entregas</p>
-                                                <p className="font-medium text-gray-900 dark:text-white">
-                                                    {reporte.entregas?.length ?? 0}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Notas si existen */}
-                                        {pivot?.notas && (
-                                            <div className="bg-gray-50 dark:bg-slate-800 rounded p-3">
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">Notas</p>
-                                                <p className="text-sm text-gray-900 dark:text-white">{pivot.notas}</p>
-                                            </div>
-                                        )}
-
-                                        {/* Botones de Acciones - Imprimir y Descargar */}
-                                        <div className="flex gap-2 flex-wrap pt-3 border-t border-gray-200 dark:border-slate-600">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleImprimirReporte(reporte.id)}
-                                                disabled={loadingPdf === reporte.id}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <Printer className="w-4 h-4" />
-                                                {loadingPdf === reporte.id ? 'Abriendo...' : 'Imprimir'}
-                                            </Button>
-
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleDescargarPdf(reporte.id, false)}
-                                                disabled={loadingPdf === reporte.id}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                {loadingPdf === reporte.id ? 'Descargando...' : 'PDF'}
-                                            </Button>
-
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleDescargarPdf(reporte.id, true)}
-                                                disabled={loadingPdfDetallado === reporte.id}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                {loadingPdfDetallado === reporte.id ? 'Descargando...' : 'PDF Detallado'}
-                                            </Button>
-
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleVerPdfPreview(reporte.id)}
-                                                className="flex items-center gap-2 ml-auto"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                                Ver
-                                            </Button>
-                                        </div>
-
-                                        {/* Otras entregas en el reporte */}
-                                        {otrasEntregas.length > 0 && (
-                                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-3 border border-blue-200 dark:border-blue-800">
-                                                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
-                                                    Otras entregas en este reporte:
-                                                </p>
-                                                <div className="space-y-2">
-                                                    {otrasEntregas.map((otraEntrega) => {
-                                                        const ordenOtra = reporte.entregas?.findIndex(
-                                                            e => e.id === otraEntrega.id
-                                                        ) ?? -1;
-                                                        return (
-                                                            <div
-                                                                key={otraEntrega.id}
-                                                                className="text-sm text-blue-800 dark:text-blue-300 flex justify-between"
-                                                            >
-                                                                <span>
-                                                                    #{ordenOtra + 1} - Entrega #{otraEntrega.numero_entrega}{' '}
-                                                                    ({otraEntrega.venta?.cliente?.nombre})
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-
 
                 {/* Información del Lote - Entregas con mismo chofer y vehículo */}
                 {entrega.chofer && entrega.vehiculo && (
@@ -532,16 +265,40 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                     </div>
                 )}
 
+                {/* Ventas en la Entrega */}
+                {entrega.ventas && entrega.ventas.length > 0 && (
+                    <VentasEntregaSection
+                        entrega={entrega}
+                        ventas={entrega.ventas}
+                        totalVentas={entrega.ventas.length}
+                    />
+                )}
+
                 {/* Flujo de Carga - Mostrar si está en ese estado */}
                 {isInCargoFlow && (
                     <div className="pt-4">
                         <EntregaFlujoCarga
                             entrega={entrega}
-                            onStateChange={(newState) => {
+                            onStateChange={async (newState) => {
+                                // Actualizar estado localmente
                                 setEntrega((prev) => ({
                                     ...prev,
                                     estado: newState as EstadoEntrega,
                                 }));
+
+                                // Recargar datos del servidor para obtener coordenadas actualizadas
+                                try {
+                                    const response = await fetch(`/api/entregas/${entrega.id}`);
+                                    if (response.ok) {
+                                        const result = await response.json();
+                                        if (result.data) {
+                                            setEntrega(result.data);
+                                            console.log('✅ [Show] Entrega recargada con datos actualizados:', result.data);
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.warn('⚠️ [Show] Error recargando entrega:', error);
+                                }
                             }}
                         />
                     </div>

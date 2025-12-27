@@ -1,17 +1,23 @@
-// Domain: Tipos de Documento
-import type { Id } from './shared';
-import type { BaseEntity, BaseFormData } from './generic';
+import { BaseEntity, BaseFormData } from './base';
 
 export interface TipoDocumento extends BaseEntity {
-    id: Id;
-    codigo: string;
-    nombre: string;
-    descripcion?: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  genera_inventario: boolean;
+  requiere_autorizacion: boolean;
+  formato_numeracion?: string;
+  siguiente_numero: number;
+  activo: boolean;
 }
 
 export interface TipoDocumentoFormData extends BaseFormData {
-    id?: Id;
-    codigo: string;
-    nombre: string;
-    descripcion?: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  genera_inventario: boolean;
+  requiere_autorizacion: boolean;
+  formato_numeracion?: string;
+  siguiente_numero: number;
+  activo: boolean;
 }

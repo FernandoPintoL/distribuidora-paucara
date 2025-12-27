@@ -46,11 +46,29 @@ export interface ClienteEntrega {
     localidad?: LocalidadCliente;
 }
 
+export interface DetalleVentaEntrega {
+    id: Id;
+    cantidad: number;
+    precio_unitario: number | string;
+    subtotal: number | string;
+    producto?: {
+        id: Id;
+        nombre: string;
+        codigo?: string;
+        peso?: number;
+    };
+}
+
 export interface VentaEntrega {
     id: Id;
     numero: string;
     cliente: ClienteEntrega;
     total?: number;
+    estado_logistico?: string;
+    fecha_entrega_comprometida?: string;
+    direccion_entrega?: string;
+    peso_estimado?: number;
+    detalles?: DetalleVentaEntrega[];
 }
 
 export interface ProformaEntrega {
@@ -144,6 +162,10 @@ export interface Entrega extends BaseEntity {
     // ✅ NUEVO: Reportes Many-to-Many
     reportes?: ReporteCarga[];                          // Todos los reportes donde está esta entrega
     reporteEntregas?: ReporteCargaEntregaPivot[];       // Pivot metadata con orden, incluida_en_carga, notas
+
+    // ✅ NUEVO: Ventas Many-to-Many (Entregas consolidadas)
+    ventas?: VentaEntrega[];                            // Todas las ventas en esta entrega consolidada
+    fecha_asignacion?: string;                          // Fecha cuando se asignó la entrega
 
     // Timestamps
     created_at: string;

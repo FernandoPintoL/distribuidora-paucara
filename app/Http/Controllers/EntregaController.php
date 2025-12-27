@@ -57,13 +57,12 @@ class EntregaController extends Controller
         ];
 
         $entregas = \App\Models\Entrega::query()
-            ->with(['venta.cliente', 'proforma.cliente', 'vehiculo', 'chofer'])
+            ->with(['ventas.cliente', 'vehiculo', 'chofer'])
             ->when($filtros['estado'], fn($q, $estado) => $q->where('estado', $estado))
             ->when($filtros['fecha_desde'], fn($q, $fecha) => $q->whereDate('fecha_programada', '>=', $fecha))
             ->when($filtros['fecha_hasta'], fn($q, $fecha) => $q->whereDate('fecha_programada', '<=', $fecha))
             ->when($filtros['search'], function ($q, $search) {
-                $q->whereHas('venta.cliente', fn($q) => $q->where('nombre', 'like', "%{$search}%"))
-                    ->orWhereHas('proforma.cliente', fn($q) => $q->where('nombre', 'like', "%{$search}%"));
+                $q->whereHas('ventas.cliente', fn($q) => $q->where('nombre', 'like', "%{$search}%"));
             })
             ->latest()
             ->paginate($perPage);
@@ -390,12 +389,13 @@ class EntregaController extends Controller
     {
         // Cargar relaciones necesarias
         $entrega->load([
-            'venta.cliente',
-            'proforma.cliente',
+            'ventas.cliente',
+            'ventas.detalles.producto',  // Productos de cada venta
             'chofer',
             'vehiculo',
-            'reportes',          // ✅ NUEVO: Reportes asociados (Many-to-Many)
-            'reporteEntregas',   // ✅ NUEVO: Pivot con metadata (orden, incluida_en_carga, notas)
+            'localidad',
+            'reportes',          // Reportes asociados (Many-to-Many)
+            'reporteEntregas',   // Pivot con metadata (orden, incluida_en_carga, notas)
         ]);
 
         // API/JSON
@@ -497,6 +497,90 @@ class EntregaController extends Controller
             );
 
         } catch (EstadoInvalidoException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (\Exception $e) {
+            return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Confirmar carga (cambiar a EN_CARGA)
+     *
+     * POST /entregas/{id}/confirmar-carga
+     *
+     * Marca que la carga ha sido confirmada y lista para salir
+     */
+    public function confirmarCarga(int $id): JsonResponse | RedirectResponse
+    {
+        try {
+            $entregaDTO = $this->entregaService->confirmarCarga($id);
+
+            return $this->respondSuccess(
+                data: $entregaDTO,
+                message: 'Carga confirmada exitosamente',
+                redirectTo: route('entregas.show', $id),
+            );
+
+        } catch (EstadoInvalidoException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (\Exception $e) {
+            return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Marcar entrega como lista para entrega (cambiar a LISTO_PARA_ENTREGA)
+     *
+     * POST /entregas/{id}/listo-para-entrega
+     */
+    public function marcarListoParaEntrega(int $id): JsonResponse | RedirectResponse
+    {
+        try {
+            $entregaDTO = $this->entregaService->marcarListoParaEntrega($id);
+
+            return $this->respondSuccess(
+                data: $entregaDTO,
+                message: 'Entrega lista para partida',
+                redirectTo: route('entregas.show', $id),
+            );
+
+        } catch (EstadoInvalidoException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (\Exception $e) {
+            return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Iniciar tránsito (cambiar a EN_TRANSITO)
+     *
+     * POST /entregas/{id}/iniciar-transito
+     */
+    public function iniciarTransito(Request $request, int $id): JsonResponse | RedirectResponse
+    {
+        try {
+            $latitud = $request->input('latitud');
+            $longitud = $request->input('longitud');
+
+            if (!$latitud || !$longitud) {
+                throw new \InvalidArgumentException('Latitud y longitud son requeridas');
+            }
+
+            $entregaDTO = $this->entregaService->iniciarTransito($id, (float)$latitud, (float)$longitud);
+
+            return $this->respondSuccess(
+                data: $entregaDTO,
+                message: 'Tránsito iniciado',
+                redirectTo: route('entregas.show', $id),
+            );
+
+        } catch (EstadoInvalidoException $e) {
+            return $this->respondError($e->getMessage(), statusCode: 422);
+
+        } catch (\InvalidArgumentException $e) {
             return $this->respondError($e->getMessage(), statusCode: 422);
 
         } catch (\Exception $e) {
@@ -790,10 +874,10 @@ class EntregaController extends Controller
         try {
             // Obtener todas las entregas con relaciones necesarias
             $entregas = \App\Models\Entrega::with([
-                'venta.cliente',
+                'ventas.cliente',
                 'chofer.user',
                 'vehiculo',
-                'proforma.cliente',
+                'localidad',
             ])->get();
 
             // 1. CONTAR POR ESTADO
@@ -807,12 +891,18 @@ class EntregaController extends Controller
                 'CANCELADA'  => $entregas->where('estado', 'CANCELADA')->count(),
             ];
 
-            // 2. ENTREGAS POR ZONA (vía Venta -> Cliente -> Zona si existe)
-            // Para esta fase, agruparemos por zona del cliente
+            // 2. ENTREGAS POR ZONA (vía Entrega.zona_id o ventas asociadas)
+            // Usamos zona_id directamente de la entrega o la zona de la primera venta
             $porZona = $entregas
                 ->groupBy(function ($entrega) {
-                    // Obtener zona del cliente asociado a la venta
-                    $cliente = $entrega->venta?->cliente ?? $entrega->proforma?->cliente;
+                    // Usar zona_id de entrega directamente, o la zona de la primera venta
+                    if ($entrega->zona_id) {
+                        return $entrega->zona_id;
+                    }
+
+                    // Obtener zona del cliente de la primera venta (si existe)
+                    $primeraVenta = $entrega->ventas?->first();
+                    $cliente = $primeraVenta?->cliente;
                     if ($cliente && $cliente->zona_id) {
                         return $cliente->zona_id;
                     }
@@ -905,7 +995,10 @@ class EntregaController extends Controller
                 ->sortByDesc('created_at')
                 ->take(10)
                 ->map(function ($entrega) {
-                    $cliente = $entrega->venta?->cliente ?? $entrega->proforma?->cliente;
+                    // Obtener cliente de la primera venta asociada
+                    $primeraVenta = $entrega->ventas?->first();
+                    $cliente = $primeraVenta?->cliente;
+
                     return [
                         'id'               => $entrega->id,
                         'estado'           => $entrega->estado,

@@ -84,10 +84,11 @@ class AnalyzeUnassignedDeliveries extends Command
         $this->table(
             ['ID', 'Venta', 'Cliente', 'Estado', 'Fecha Prog.', 'Vehículo'],
             $entregas->map(function ($entrega) {
+                $primeraVenta = $entrega->ventas?->first();
                 return [
                     $entrega->id,
-                    $entrega->venta_id,
-                    $entrega->venta?->cliente?->nombre ?? 'N/A',
+                    $primeraVenta?->numero ?? 'N/A',
+                    $primeraVenta?->cliente?->nombre ?? 'N/A',
                     $entrega->estado,
                     $entrega->fecha_programada?->format('d/m/Y') ?? 'N/A',
                     $entrega->vehiculo?->placa ?? 'N/A',
@@ -188,10 +189,11 @@ class AnalyzeUnassignedDeliveries extends Command
         fputcsv($handle, ['ID', 'Venta ID', 'Cliente', 'Estado', 'Fecha Programada', 'Vehículo', 'Dirección']);
 
         foreach ($entregas as $entrega) {
+            $primeraVenta = $entrega->ventas?->first();
             fputcsv($handle, [
                 $entrega->id,
-                $entrega->venta_id,
-                $entrega->venta?->cliente?->nombre ?? 'N/A',
+                $primeraVenta?->numero ?? 'N/A',
+                $primeraVenta?->cliente?->nombre ?? 'N/A',
                 $entrega->estado,
                 $entrega->fecha_programada?->format('d/m/Y H:i') ?? 'N/A',
                 $entrega->vehiculo?->placa ?? 'N/A',

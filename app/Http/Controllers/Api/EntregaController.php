@@ -11,6 +11,7 @@ use App\Models\Entrega;
 use App\Models\Proforma;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -45,21 +46,22 @@ class EntregaController extends Controller
 
             // Obtener entregas asignadas al chofer
             $entregas = $chofer->entregas()
-                ->with(['proforma', 'vehiculo', 'direccionCliente'])
+                ->with(['ventas.cliente', 'vehiculo'])
                 ->when($estado, function ($q) use ($estado) {
                     return $q->where('estado', $estado);
                 })
                 ->get()
                 ->map(function ($entrega) {
+                    $primeraVenta = $entrega->ventas?->first();
                     return [
                         'id' => $entrega->id,
                         'type' => 'entrega',  // Tipo para identificar en app
-                        'numero' => $entrega->proforma?->numero ?? 'N/A',
-                        'cliente' => $entrega->proforma?->cliente?->nombre ?? 'N/A',
+                        'numero' => $primeraVenta?->numero ?? 'N/A',
+                        'cliente' => $primeraVenta?->cliente?->nombre ?? 'N/A',
                         'estado' => $entrega->estado,
                         'fecha_asignacion' => $entrega->fecha_asignacion,
                         'fecha_entrega' => $entrega->fecha_entrega,
-                        'direccion' => $entrega->direccionCliente?->direccion ?? 'N/A',
+                        'direccion' => $primeraVenta?->direccion ?? 'N/A',
                         'observaciones' => $entrega->observaciones,
                         'data' => $entrega,
                     ];
@@ -123,7 +125,7 @@ class EntregaController extends Controller
             }
 
             $entregas = $chofer->entregas()
-                ->with(['proforma', 'vehiculo', 'direccionCliente'])
+                ->with(['ventas.cliente', 'vehiculo'])
                 ->when($request->estado, function ($q) use ($request) {
                     return $q->where('estado', $request->estado);
                 })
@@ -151,12 +153,11 @@ class EntregaController extends Controller
     {
         try {
             $entrega = Entrega::with([
-                'proforma',
-                'proforma.cliente',
-                'proforma.detalles',
-                'chofer',
+                'ventas.cliente',
+                'ventas.detalles.producto',
+                'chofer.user',
                 'vehiculo',
-                'direccionCliente',
+                'reportes',
                 'ubicaciones',
                 'historialEstados',
             ])->findOrFail($id);
@@ -541,7 +542,7 @@ class EntregaController extends Controller
 
             $entregas = $chofer->entregas()
                 ->where('estado', Entrega::ESTADO_ENTREGADO)
-                ->with(['proforma', 'historialEstados'])
+                ->with(['ventas.cliente', 'historialEstados'])
                 ->latest('fecha_entrega')
                 ->paginate($request->per_page ?? 15);
 
@@ -633,7 +634,7 @@ class EntregaController extends Controller
     public function indexAdmin(Request $request)
     {
         try {
-            $query = Entrega::with(['proforma', 'chofer', 'vehiculo'])
+            $query = Entrega::with(['ventas.cliente', 'chofer', 'vehiculo'])
                 ->when($request->estado, function ($q) use ($request) {
                     return $q->where('estado', $request->estado);
                 })
@@ -641,7 +642,7 @@ class EntregaController extends Controller
                     return $q->where('chofer_id', $request->chofer_id);
                 })
                 ->when($request->cliente_id, function ($q) use ($request) {
-                    return $q->whereHas('proforma', function ($query) use ($request) {
+                    return $q->whereHas('ventas.cliente', function ($query) use ($request) {
                         $query->where('cliente_id', $request->cliente_id);
                     });
                 });
@@ -846,6 +847,321 @@ class EntregaController extends Controller
                 'success' => false,
                 'message' => 'Error actualizando ubicación: ' . $e->getMessage(),
             ], 422);
+        }
+    }
+
+    /**
+     * ═════════════════════════════════════════════════════════════════
+     * FASE 4 - CONSOLIDACIÓN AUTOMÁTICA
+     * ═════════════════════════════════════════════════════════════════
+     */
+
+    /**
+     * POST /api/entregas/consolidar-automatico
+     * Ejecutar consolidación automática de todas las ventas pendientes por zona
+     *
+     * No requiere parámetros en body
+     * Retorna reporte detallado de entregas creadas y ventas pendientes
+     */
+    public function consolidarAutomatico()
+    {
+        try {
+            $service = app(\App\Services\Logistica\ConsolidacionAutomaticaService::class);
+            $reporte = $service->consolidarAutomatico();
+
+            return response()->json($reporte);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en consolidación automática: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * ═════════════════════════════════════════════════════════════════
+     * FASE 3 - NUEVOS ENDPOINTS PARA ENTREGAS CONSOLIDADAS
+     * ═════════════════════════════════════════════════════════════════
+     */
+
+    /**
+     * POST /api/entregas/crear-consolidada
+     * Crear una entrega consolidada con múltiples ventas
+     *
+     * Request body:
+     * {
+     *   "venta_ids": [1001, 1002, 1003],
+     *   "vehiculo_id": 10,
+     *   "chofer_id": 5,
+     *   "zona_id": 3,
+     *   "observaciones": "Entrega zona centro"
+     * }
+     */
+    public function crearEntregaConsolidada(\Illuminate\Http\Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'venta_ids' => 'required|array|min:1',
+                'venta_ids.*' => 'integer|exists:ventas,id',
+                'vehiculo_id' => 'required|integer|exists:vehiculos,id',
+                'chofer_id' => 'required|integer|exists:empleados,id',
+                'zona_id' => 'nullable|integer|exists:localidades,id',
+                'observaciones' => 'nullable|string|max:500',
+            ]);
+
+            $service = app(\App\Services\Logistica\CrearEntregaPorLocalidadService::class);
+
+            $entrega = $service->crearEntregaConsolidada(
+                ventaIds: $validated['venta_ids'],
+                vehiculoId: $validated['vehiculo_id'],
+                choferId: $validated['chofer_id'],
+                zonaId: $validated['zona_id'],
+                datos: [
+                    'observaciones' => $validated['observaciones'] ?? null,
+                    'usuario_id' => Auth::id(),
+                ]
+            );
+
+            // Cargar relaciones para la respuesta
+            $entrega->load(['vehiculo:id,placa', 'chofer.user:id,name']);
+
+            // Obtener ventas y sus clientes con query simple
+            $ventasCount = DB::table('entrega_venta')
+                ->where('entrega_id', $entrega->id)
+                ->count();
+
+            $ventas = [];
+            if ($ventasCount > 0) {
+                $ventas = DB::table('ventas')
+                    ->join('entrega_venta', 'ventas.id', '=', 'entrega_venta.venta_id')
+                    ->where('entrega_venta.entrega_id', $entrega->id)
+                    ->select('ventas.id', 'ventas.numero', 'ventas.cliente_id', 'ventas.total')
+                    ->orderBy('entrega_venta.orden')
+                    ->get()
+                    ->map(function ($venta) {
+                        $cliente = \App\Models\Cliente::find($venta->cliente_id);
+                        return [
+                            'id' => $venta->id,
+                            'numero' => $venta->numero,
+                            'cliente' => $cliente?->nombre,
+                            'total' => $venta->total,
+                        ];
+                    });
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Entrega consolidada creada exitosamente',
+                'data' => [
+                    'id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'estado' => $entrega->estado,
+                    'fecha_asignacion' => $entrega->fecha_asignacion,
+                    'vehiculo' => [
+                        'id' => $entrega->vehiculo?->id,
+                        'placa' => $entrega->vehiculo?->placa,
+                    ],
+                    'chofer' => [
+                        'id' => $entrega->chofer?->id,
+                        'nombre' => $entrega->chofer?->user?->name,
+                    ],
+                    'ventas_count' => $ventasCount,
+                    'ventas' => $ventas,
+                    'peso_kg' => $entrega->peso_kg,
+                    'volumen_m3' => $entrega->volumen_m3,
+                ],
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validación fallida',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creando entrega consolidada: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/entregas/{id}/confirmar-venta/{venta_id}
+     * Confirmar que una venta fue cargada en el vehículo
+     *
+     * Request body:
+     * {
+     *   "notas": "Confirmada sin problemas"
+     * }
+     */
+    public function confirmarVentaCargada(\Illuminate\Http\Request $request, int $id, int $venta_id)
+    {
+        try {
+            $entrega = Entrega::findOrFail($id);
+            $venta = \App\Models\Venta::findOrFail($venta_id);
+
+            // Validar que la venta pertenece a la entrega
+            if (!$entrega->ventas()->where('ventas.id', $venta_id)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La venta no pertenece a esta entrega',
+                ], 404);
+            }
+
+            $validated = $request->validate([
+                'notas' => 'nullable|string|max:500',
+            ]);
+
+            $entrega->confirmarVentaCargada(
+                $venta,
+                Auth::user(),
+                $validated['notas'] ?? null
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Venta confirmada como cargada',
+                'data' => [
+                    'entrega_id' => $entrega->id,
+                    'venta_id' => $venta->id,
+                    'confirmado_por' => Auth::user()->name,
+                    'fecha_confirmacion' => now(),
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error confirmando venta: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * DELETE /api/entregas/{id}/confirmar-venta/{venta_id}
+     * Desmarcar una venta como cargada (remover confirmación)
+     */
+    public function desmarcarVentaCargada(int $id, int $venta_id)
+    {
+        try {
+            $entrega = Entrega::findOrFail($id);
+            $venta = \App\Models\Venta::findOrFail($venta_id);
+
+            // Validar que la venta pertenece a la entrega
+            if (!$entrega->ventas()->where('ventas.id', $venta_id)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La venta no pertenece a esta entrega',
+                ], 404);
+            }
+
+            $entrega->desmarcarVentaCargada($venta);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Confirmación de venta removida',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error desmarcando venta: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /api/entregas/{id}/detalles
+     * Obtener detalles de una entrega consolidada con todas sus ventas
+     */
+    public function obtenerDetalles(int $id)
+    {
+        try {
+            $entrega = Entrega::with([
+                'ventas' => function ($q) {
+                    $q->with('cliente')->orderBy('entrega_venta.orden');
+                },
+                'vehiculo',
+                'chofer',
+            ])->findOrFail($id);
+
+            $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
+
+            // Obtener detalles de entregas para cada venta
+            $ventasDetalles = [];
+            foreach ($entrega->ventas as $venta) {
+                $detalles = $sincronizador->obtenerDetalleEntregas($venta);
+                $ventasDetalles[] = [
+                    'venta_id' => $venta->id,
+                    'numero' => $venta->numero,
+                    'cliente' => $venta->cliente->nombre,
+                    'detalles' => $detalles,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'estado' => $entrega->estado,
+                    'fecha_asignacion' => $entrega->fecha_asignacion,
+                    'vehiculo' => [
+                        'id' => $entrega->vehiculo->id,
+                        'placa' => $entrega->vehiculo->placa,
+                        'capacidad_kg' => $entrega->vehiculo->capacidad_kg,
+                    ],
+                    'chofer' => [
+                        'id' => $entrega->chofer->id,
+                        'nombre' => $entrega->chofer->nombre,
+                    ],
+                    'peso_kg' => $entrega->peso_kg,
+                    'volumen_m3' => $entrega->volumen_m3,
+                    'porcentaje_utilizacion' => $entrega->obtenerPorcentajeUtilizacion(),
+                    'ventas' => $ventasDetalles,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error obteniendo detalles: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /api/entregas/{id}/progreso
+     * Obtener progreso de confirmación de carga de una entrega
+     */
+    public function obtenerProgreso(int $id)
+    {
+        try {
+            $entrega = Entrega::findOrFail($id);
+
+            $progreso = $entrega->obtenerProgresoConfirmacion();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'entrega_id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'estado' => $entrega->estado,
+                    'confirmadas' => $progreso['confirmadas'],
+                    'total' => $progreso['total'],
+                    'pendientes' => $progreso['pendientes'],
+                    'porcentaje' => $progreso['porcentaje'],
+                    'completado' => $progreso['completado'],
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error obteniendo progreso: ' . $e->getMessage(),
+            ], 500);
         }
     }
 

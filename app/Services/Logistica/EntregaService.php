@@ -420,7 +420,7 @@ class EntregaService
     public function optimizarAsignacionMasiva(array $entregaIds, float $capacidadMaxVehiculo = 1000): array
     {
         // Cargar entregas con relaciones necesarias
-        $entregas = Entrega::with(['venta.cliente', 'venta.direccionCliente'])
+        $entregas = Entrega::with(['ventas.cliente', 'ventas.direccionCliente'])
             ->whereIn('id', $entregaIds)
             ->whereIn('estado', ['PROGRAMADO', 'PENDIENTE'])
             ->get();
@@ -437,18 +437,19 @@ class EntregaService
 
         // Preparar datos para algoritmo
         $entregasParaOptimizar = $entregas->map(function ($entrega) {
-            $direccion = $entrega->venta?->direccionCliente ?? null;
+            $primeraVenta = $entrega->ventas?->first();
+            $direccion = $primeraVenta?->direccionCliente ?? null;
 
             return [
                 'id' => $entrega->id,
                 'entrega_id' => $entrega->id,
-                'venta_id' => $entrega->venta_id,
-                'cliente_id' => $entrega->venta?->cliente_id,
+                'venta_id' => $primeraVenta?->id,
+                'cliente_id' => $primeraVenta?->cliente_id,
                 'peso' => $entrega->peso_kg ?? 10, // Default 10kg si no está configurado
                 'peso_kg' => $entrega->peso_kg ?? 10,
                 'lat' => $direccion?->latitud ?? -17.3895,  // Default: Cochabamba centro
                 'lon' => $direccion?->longitud ?? -66.1568,
-                'direccion' => $entrega->direccion_entrega ?? $direccion?->direccion ?? 'Sin dirección',
+                'direccion' => $primeraVenta?->direccion ?? $direccion?->direccion ?? 'Sin dirección',
             ];
         })->toArray();
 
@@ -855,7 +856,7 @@ class EntregaService
             );
 
             // Recargar relaciones para WebSocket
-            $entrega->load(['chofer', 'venta.cliente', 'confirmadorCarga']);
+            $entrega->load(['chofer', 'ventas.cliente', 'confirmadorCarga']);
 
             return $entrega;
         });
@@ -916,7 +917,7 @@ class EntregaService
 
 
             // Recargar relaciones para WebSocket
-            $entrega->load(['chofer', 'venta.cliente', 'vehiculo']);
+            $entrega->load(['chofer', 'ventas.cliente', 'vehiculo']);
 
             return $entrega;
         });
@@ -982,7 +983,7 @@ class EntregaService
 
 
             // Recargar relaciones para WebSocket
-            $entrega->load(['chofer', 'venta.cliente', 'vehiculo']);
+            $entrega->load(['chofer', 'ventas.cliente', 'vehiculo']);
 
             return $entrega;
         });

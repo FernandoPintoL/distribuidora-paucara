@@ -39,6 +39,69 @@ class CoreCatalogSeeder extends Seeder
         ];
         DB::table('tipos_pago')->upsert($tiposPago, ['codigo'], ['nombre']);
 
+        // Tipos de documento
+        $tiposDocumento = [
+            [
+                'codigo' => 'FAC',
+                'nombre' => 'Factura',
+                'descripcion' => 'Documento fiscal de venta',
+                'genera_inventario' => true,
+                'requiere_autorizacion' => true,
+                'formato_numeracion' => 'FAC-{YYYY}-{####}',
+                'siguiente_numero' => 1,
+                'activo' => true,
+            ],
+            [
+                'codigo' => 'BOL',
+                'nombre' => 'Boleta',
+                'descripcion' => 'Comprobante de venta simplificado',
+                'genera_inventario' => true,
+                'requiere_autorizacion' => false,
+                'formato_numeracion' => 'BOL-{YYYY}-{####}',
+                'siguiente_numero' => 1,
+                'activo' => true,
+            ],
+            [
+                'codigo' => 'REC',
+                'nombre' => 'Recibo',
+                'descripcion' => 'Comprobante de pago',
+                'genera_inventario' => false,
+                'requiere_autorizacion' => false,
+                'formato_numeracion' => 'REC-{YYYY}-{####}',
+                'siguiente_numero' => 1,
+                'activo' => true,
+            ],
+            [
+                'codigo' => 'NC',
+                'nombre' => 'Nota de Crédito',
+                'descripcion' => 'Documento que reduce deuda al cliente',
+                'genera_inventario' => true,
+                'requiere_autorizacion' => false,
+                'formato_numeracion' => 'NC-{YYYY}-{####}',
+                'siguiente_numero' => 1,
+                'activo' => true,
+            ],
+            [
+                'codigo' => 'ND',
+                'nombre' => 'Nota de Débito',
+                'descripcion' => 'Documento que aumenta deuda al cliente',
+                'genera_inventario' => false,
+                'requiere_autorizacion' => false,
+                'formato_numeracion' => 'ND-{YYYY}-{####}',
+                'siguiente_numero' => 1,
+                'activo' => true,
+            ],
+        ];
+        DB::table('tipos_documento')->upsert($tiposDocumento, ['codigo'], [
+            'nombre',
+            'descripcion',
+            'genera_inventario',
+            'requiere_autorizacion',
+            'formato_numeracion',
+            'siguiente_numero',
+            'activo',
+        ]);
+
         // Tipo operación de caja
         /* $tiposOpCaja = [
             ['codigo' => 'APERTURA', 'nombre' => 'Apertura'],

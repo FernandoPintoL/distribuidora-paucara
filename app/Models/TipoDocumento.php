@@ -2,15 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Traits\HasActiveScope;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TipoDocumento extends Model
 {
-    use HasFactory, HasActiveScope;
-
     protected $table = 'tipos_documento';
 
     protected $fillable = [
@@ -24,52 +19,10 @@ class TipoDocumento extends Model
         'activo',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'genera_inventario' => 'boolean',
-            'requiere_autorizacion' => 'boolean',
-            'siguiente_numero' => 'integer',
-            'activo' => 'boolean',
-        ];
-    }
-
-    /**
-     * Relación con ventas
-     */
-    public function ventas(): HasMany
-    {
-        return $this->hasMany(Venta::class);
-    }
-
-    /**
-     * Relación con el libro de ventas IVA
-     */
-    public function libroVentasIva(): HasMany
-    {
-        return $this->hasMany(LibroVentasIva::class);
-    }
-
-    /**
-     * Scope para tipos de documento activos
-     */
-
-    /**
-     * Obtener el siguiente número para auto-numeración
-     */
-    public function obtenerSiguienteNumero(): string
-    {
-        $numero = $this->siguiente_numero;
-        $this->increment('siguiente_numero');
-
-        if ($this->formato_numeracion) {
-            return str_replace(
-                ['{YYYY}', '{####}'],
-                [date('Y'), str_pad($numero, 4, '0', STR_PAD_LEFT)],
-                $this->formato_numeracion
-            );
-        }
-
-        return str_pad($numero, 6, '0', STR_PAD_LEFT);
-    }
+    protected $casts = [
+        'genera_inventario' => 'boolean',
+        'requiere_autorizacion' => 'boolean',
+        'activo' => 'boolean',
+        'siguiente_numero' => 'integer',
+    ];
 }

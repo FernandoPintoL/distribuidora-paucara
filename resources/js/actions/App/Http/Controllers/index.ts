@@ -15,6 +15,7 @@ import FotoLugarClienteController from './FotoLugarClienteController'
 import LocalidadController from './LocalidadController'
 import CategoriaClienteController from './CategoriaClienteController'
 import EntregaController from './EntregaController'
+import EntregaPdfController from './EntregaPdfController'
 import ReporteCargaPdfController from './ReporteCargaPdfController'
 import ReporteCargoListController from './ReporteCargoListController'
 import ProveedorController from './ProveedorController'
@@ -31,6 +32,7 @@ import UnidadMedidaController from './UnidadMedidaController'
 import TipoPrecioController from './TipoPrecioController'
 import MonedaController from './MonedaController'
 import TipoPagoController from './TipoPagoController'
+import TipoDocumentoController from './TipoDocumentoController'
 import UserController from './UserController'
 import EmpleadoController from './EmpleadoController'
 import CuentaPorPagarController from './CuentaPorPagarController'
@@ -73,6 +75,7 @@ FotoLugarClienteController,
 LocalidadController,
 CategoriaClienteController,
 EntregaController,
+EntregaPdfController,
 ReporteCargaPdfController,
 ReporteCargoListController,
 ProveedorController,
@@ -89,6 +92,7 @@ UnidadMedidaController,
 TipoPrecioController,
 MonedaController,
 TipoPagoController,
+TipoDocumentoController,
 UserController,
 EmpleadoController,
 CuentaPorPagarController,

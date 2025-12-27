@@ -1,9 +1,10 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { AlertCircle, Package, CheckCircle2, Plus } from 'lucide-react';
+import { AlertCircle, Package, CheckCircle2, Plus, Zap } from 'lucide-react';
 import { Card } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import BatchVentaSelector from './BatchVentaSelector';
 import SimpleEntregaForm from './SimpleEntregaForm';
+import ConsolidacionAutomaticaModal from './ConsolidacionAutomaticaModal';
 import { VehicleRecommendationCard } from '@/presentation/components/entrega/VehicleRecommendationCard';
 import { useEntregaBatch } from '@/application/hooks/use-entrega-batch';
 import { useSimpleEntregaSubmit } from '@/application/hooks/use-simple-entrega-submit';
@@ -65,6 +66,9 @@ export default function CreateEntregasUnificado({
     const [selectedVentaIds, setSelectedVentaIds] = useState<Id[]>(
         ventaPreseleccionada ? [ventaPreseleccionada] : []
     );
+
+    // Estado del modal de consolidación automática
+    const [isConsolidacionModalOpen, setIsConsolidacionModalOpen] = useState(false);
 
     // Hooks para batch (2+ ventas)
     const {
@@ -436,13 +440,22 @@ export default function CreateEntregasUnificado({
         <div className="min-h-screen bg-white dark:bg-slate-950 py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        Crear Entrega o Entregas
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">
-                        Selecciona una o más ventas para continuar
-                    </p>
+                <div className="mb-8 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                            Crear Entrega o Entregas
+                        </h1>
+                        <p className="text-gray-600 dark:text-gray-400 mt-2">
+                            Selecciona una o más ventas para continuar
+                        </p>
+                    </div>
+                    <Button
+                        onClick={() => setIsConsolidacionModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white whitespace-nowrap"
+                    >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Consolidar Automáticamente
+                    </Button>
                 </div>
 
                 {/* Layout Principal: Grid 4/8 */}
@@ -491,6 +504,12 @@ export default function CreateEntregasUnificado({
                         </Button>
                     </div>
                 )}
+
+                {/* Modal de Consolidación Automática */}
+                <ConsolidacionAutomaticaModal
+                    isOpen={isConsolidacionModalOpen}
+                    onClose={() => setIsConsolidacionModalOpen(false)}
+                />
             </div>
         </div>
     );

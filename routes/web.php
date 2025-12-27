@@ -87,6 +87,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Rutas para gestión de tipos de pago
     Route::resource('tipos-pago', \App\Http\Controllers\TipoPagoController::class)->parameters(['tipos-pago' => 'tipoPago'])->middleware('permission:tipos-pago.manage');
 
+    // Rutas para gestión de tipos de documento
+    Route::resource('tipos-documento', \App\Http\Controllers\TipoDocumentoController::class)->parameters(['tipos-documento' => 'tipoDocumento'])->middleware('permission:tipos-documento.manage');
+
     // Rutas para backup de imágenes
     Route::get('admin/image-backup', fn() => \Inertia\Inertia::render('admin/image-backup'))->middleware('permission:admin.image-backup.manage')->name('admin.image-backup');
 

@@ -135,6 +135,35 @@ class Cliente extends Model
         ]);
     }
 
+    /**
+     * ✅ SCOPE: Filtrar clientes por usuario actual
+     * - Preventista: Solo VE sus clientes (preventista_id = empleado_id)
+     * - Cliente: Solo VE su propio cliente (user_id = auth()->id())
+     * - Super Admin: VE TODOS los clientes (sin filtro)
+     */
+    public function scopeForCurrentUser($query)
+    {
+        $user = auth()->user();
+
+        // Super Admin ve TODOS
+        if ($user?->hasRole(['super-admin', 'Super Admin'])) {
+            return $query;
+        }
+
+        // Preventista ve SOLO sus clientes
+        if ($user?->hasRole(['Preventista', 'preventista'])) {
+            return $query->where('preventista_id', $user->empleado?->id);
+        }
+
+        // Cliente ve SOLO su cliente
+        if ($user?->hasRole(['Cliente', 'cliente'])) {
+            return $query->where('user_id', $user->id);
+        }
+
+        // Admin y otros: Sin filtro específico (controlado por Policy)
+        return $query;
+    }
+
     protected static function boot()
     {
         parent::boot();

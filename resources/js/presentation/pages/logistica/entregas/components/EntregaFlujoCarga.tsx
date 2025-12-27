@@ -19,8 +19,10 @@ import {
     MapPin,
     Truck,
     Loader,
+    Package,
 } from 'lucide-react';
 import type { Entrega } from '@/domain/entities/entregas';
+import UbicacionMapa from './UbicacionMapa';
 
 interface EntregaFlujoCargoProps {
     entrega: Entrega;
@@ -33,17 +35,16 @@ export default function EntregaFlujoCarga({
 }: EntregaFlujoCargoProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [gpsData, setGpsData] = useState({ latitud: 0, longitud: 0 });
-    const [showGpsForm, setShowGpsForm] = useState(false);
+    const [isAutoGeolocating, setIsAutoGeolocating] = useState(false);
 
     const flujoEstados = [
-        /* {
+        {
             estado: 'PREPARACION_CARGA',
             label: 'Preparación de Carga',
             descripcion: 'Reporte generado, esperando carga física',
             icon: Package,
             color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-        }, */
+        },
         {
             estado: 'EN_CARGA',
             label: 'En Carga',
@@ -121,6 +122,61 @@ export default function EntregaFlujoCarga({
         }
     };
 
+    const obtenerGeolocalización = (): Promise<{ latitud: number; longitud: number }> => {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocalización no disponible en tu navegador'));
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitud: position.coords.latitude,
+                        longitud: position.coords.longitude,
+                    });
+                    console.log('✅ [EntregaFlujoCarga] Geolocalización obtenida:', {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                    });
+                },
+                (error) => {
+                    console.warn('⚠️ [EntregaFlujoCarga] Error obteniendo geolocalización:', error.message);
+                    // Usar ubicación por defecto si falla
+                    resolve({
+                        latitud: 0,
+                        longitud: 0,
+                    });
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0,
+                }
+            );
+        });
+    };
+
+    // Ejecutar flujo automático: obtener ubicación e iniciar tránsito sin pasar por LISTO_PARA_ENTREGA
+    const ejecutarFlujoAutomatico = async () => {
+        setIsAutoGeolocating(true);
+        setError(null);
+        console.log('🔍 [EntregaFlujoCarga] Iniciando flujo automático: obteniendo geolocalización...');
+        try {
+            const geoLocation = await obtenerGeolocalización();
+            console.log('📍 [EntregaFlujoCarga] Ubicación obtenida:', geoLocation);
+            console.log('🚀 [EntregaFlujoCarga] Iniciando tránsito automáticamente...');
+            await iniciarTransitoAutomatico(geoLocation);
+        } catch (geoError) {
+            console.warn('⚠️ [EntregaFlujoCarga] Error obteniendo geolocalización, usando 0,0:', geoError);
+            // Iniciar tránsito incluso sin ubicación válida
+            await iniciarTransitoAutomatico({ latitud: 0, longitud: 0 });
+        } finally {
+            setIsAutoGeolocating(false);
+        }
+    };
+
     const handleMarcarListoParaEntrega = async () => {
         try {
             setError(null);
@@ -151,29 +207,23 @@ export default function EntregaFlujoCarga({
             }
 
             const result = await response.json();
-            console.log('✅ [EntregaFlujoCarga] Listo para entrega:', result);
+            console.log('✅ [EntregaFlujoCarga] Marcado como LISTO_PARA_ENTREGA');
             if (result.success) {
                 onStateChange?.('LISTO_PARA_ENTREGA');
+                // Ejecutar flujo automático después de marcar como listo
+                await ejecutarFlujoAutomatico();
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
             setError(errorMessage);
-            console.error('❌ [EntregaFlujoCarga] Error capturado:', errorMessage);
+            console.error('❌ [EntregaFlujoCarga] Error:', errorMessage);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleIniciarTransito = async () => {
-        if (gpsData.latitud === 0 || gpsData.longitud === 0) {
-            setError('Ingrese coordenadas GPS válidas');
-            return;
-        }
-
+    const iniciarTransitoAutomatico = async (geoLocation: { latitud: number; longitud: number }) => {
         try {
-            setError(null);
-            setIsLoading(true);
-
             const response = await fetch(`/api/entregas/${entrega.id}/iniciar-transito`, {
                 method: 'POST',
                 headers: {
@@ -181,8 +231,8 @@ export default function EntregaFlujoCarga({
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
                 body: JSON.stringify({
-                    latitud: parseFloat(gpsData.latitud.toString()),
-                    longitud: parseFloat(gpsData.longitud.toString()),
+                    latitud: geoLocation.latitud,
+                    longitud: geoLocation.longitud,
                 }),
             });
 
@@ -191,23 +241,38 @@ export default function EntregaFlujoCarga({
                 try {
                     const errorData = await response.json();
                     errorMsg = errorData.message || errorMsg;
-                    console.error('❌ [EntregaFlujoCarga] Error iniciando tránsito:', {
-                        status: response.status,
-                        message: errorData.message,
-                        errors: errorData.errors,
-                    });
                 } catch {
-                    console.error('❌ [EntregaFlujoCarga] Error iniciando tránsito (no JSON):', response.statusText);
+                    // Sin error message
                 }
                 throw new Error(errorMsg);
             }
 
             const result = await response.json();
-            console.log('✅ [EntregaFlujoCarga] Tránsito iniciado:', result);
+            console.log('✅ [EntregaFlujoCarga] Tránsito iniciado automáticamente:', result);
             if (result.success) {
-                setShowGpsForm(false);
+                // Actualizar ubicación inmediatamente en el objeto entrega
+                entrega.latitud = geoLocation.latitud;
+                entrega.longitud = geoLocation.longitud;
+                console.log('📍 [EntregaFlujoCarga] Ubicación actualizada en entrega:', { latitud: geoLocation.latitud, longitud: geoLocation.longitud });
                 onStateChange?.('EN_TRANSITO');
             }
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+            setError(errorMessage);
+            console.error('❌ [EntregaFlujoCarga] Error iniciando tránsito automático:', errorMessage);
+        }
+    };
+
+    /* const handleIniciarTransito = async () => {
+        if (gpsData.latitud === 0 || gpsData.longitud === 0) {
+            setError('Ingrese coordenadas GPS válidas');
+            return;
+        }
+
+        try {
+            setError(null);
+            setIsLoading(true);
+            await iniciarTransitoAutomatico(gpsData);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
             setError(errorMessage);
@@ -215,7 +280,7 @@ export default function EntregaFlujoCarga({
         } finally {
             setIsLoading(false);
         }
-    };
+    }; */
 
     if (!currentState) {
         return (
@@ -337,70 +402,22 @@ export default function EntregaFlujoCarga({
 
                                                 {paso.estado === 'LISTO_PARA_ENTREGA' && (
                                                     <>
-                                                        {!showGpsForm ? (
+                                                        {isAutoGeolocating ? (
+                                                            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                                <Loader className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+                                                                <span className="text-sm text-blue-600 dark:text-blue-400">
+                                                                    Obteniendo ubicación e iniciando tránsito automáticamente...
+                                                                </span>
+                                                            </div>
+                                                        ) : (
                                                             <Button
                                                                 size="sm"
-                                                                onClick={() => setShowGpsForm(true)}
+                                                                onClick={ejecutarFlujoAutomatico}
+                                                                disabled={isAutoGeolocating}
                                                             >
                                                                 <MapPin className="w-4 h-4 mr-2" />
-                                                                Iniciar Tránsito
+                                                                Reintentar Flujo Automático
                                                             </Button>
-                                                        ) : (
-                                                            <div className="space-y-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
-                                                                <div>
-                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                        Latitud
-                                                                    </label>
-                                                                    <input
-                                                                        type="number"
-                                                                        step="0.000001"
-                                                                        value={gpsData.latitud}
-                                                                        onChange={(e) =>
-                                                                            setGpsData((prev) => ({
-                                                                                ...prev,
-                                                                                latitud: parseFloat(e.target.value),
-                                                                            }))
-                                                                        }
-                                                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-slate-600 rounded dark:bg-slate-700 dark:text-white"
-                                                                        placeholder="Ej: -16.5023"
-                                                                    />
-                                                                </div>
-                                                                <div>
-                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                        Longitud
-                                                                    </label>
-                                                                    <input
-                                                                        type="number"
-                                                                        step="0.000001"
-                                                                        value={gpsData.longitud}
-                                                                        onChange={(e) =>
-                                                                            setGpsData((prev) => ({
-                                                                                ...prev,
-                                                                                longitud: parseFloat(e.target.value),
-                                                                            }))
-                                                                        }
-                                                                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-slate-600 rounded dark:bg-slate-700 dark:text-white"
-                                                                        placeholder="Ej: -68.1192"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex gap-2">
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={handleIniciarTransito}
-
-                                                                    >
-                                                                        {isLoading && <Loader className="w-3 h-3 mr-1 animate-spin" />}
-                                                                        Enviar
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        onClick={() => setShowGpsForm(false)}
-                                                                    >
-                                                                        Cancelar
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
                                                         )}
                                                     </>
                                                 )}
@@ -414,35 +431,16 @@ export default function EntregaFlujoCarga({
                 </div>
             </Card>
 
-            {/* Información GPS (si está en tránsito) */}
+            {/* Mapa de ubicación en tiempo real (si está en tránsito) */}
             {entrega.estado === 'EN_TRANSITO' && (
-                <Card className="p-6 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-purple-600" />
-                        Ubicación Actual
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <p className="text-gray-600 dark:text-gray-400">Latitud</p>
-                            <p className="font-medium text-gray-900 dark:text-white">
-                                {entrega.latitud?.toFixed(6) || 'N/A'}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-gray-600 dark:text-gray-400">Longitud</p>
-                            <p className="font-medium text-gray-900 dark:text-white">
-                                {entrega.longitud?.toFixed(6) || 'N/A'}
-                            </p>
-                        </div>
-                        {entrega.updated_at && (
-                            <div className="col-span-2">
-                                <p className="text-gray-600 dark:text-gray-400">Última actualización</p>
-                                <p className="font-medium text-gray-900 dark:text-white text-sm">
-                                    {new Date(entrega.updated_at).toLocaleString('es-ES')}
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                <Card className="p-6">
+                    <UbicacionMapa
+                        latitud={entrega.latitud || 0}
+                        longitud={entrega.longitud || 0}
+                        nombreChofer={entrega.chofer?.nombre}
+                        placa={entrega.vehiculo?.placa}
+                        entregaId={entrega.id as number}
+                    />
                 </Card>
             )}
         </div>

@@ -12,7 +12,7 @@ class EntregaResponseDTO extends BaseDTO
 {
     public function __construct(
         public int $id,
-        public int $venta_id,
+        public ?int $venta_id,
         public ?int $chofer_id,
         public ?int $vehiculo_id,
         public string $estado,

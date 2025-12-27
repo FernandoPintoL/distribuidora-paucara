@@ -158,10 +158,26 @@ class Venta extends Model
      * NOTA: La relación anterior $this->hasOne(Envio::class) fue deprecada en favor de entregas()
      * El modelo Envio y su relación 1:1 con Venta fueron reemplazados por el sistema de Entregas
      * que soporta múltiples entregas por venta y mejor optimización de rutas.
+     *
+     * NUEVA ARQUITECTURA (FASE 1): Relación N:M via pivot table entrega_venta
      */
     public function entregas()
     {
-        return $this->hasMany(Entrega::class);
+        return $this->belongsToMany(
+            Entrega::class,
+            'entrega_venta',      // tabla pivot
+            'venta_id',           // FK en pivot hacia ventas
+            'entrega_id'          // FK en pivot hacia entregas
+        )
+        ->withPivot([
+            'orden',
+            'confirmado_por',
+            'fecha_confirmacion',
+            'notas',
+            'created_at',
+            'updated_at',
+        ])
+        ->orderByPivot('orden');  // Usar orderByPivot para evitar ambiguous column
     }
 
     /**

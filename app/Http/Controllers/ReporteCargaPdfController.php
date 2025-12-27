@@ -32,8 +32,8 @@ class ReporteCargaPdfController extends Controller
                 'entregas' => function ($query) {
                     $query->orderBy('reporte_carga_entregas.orden');
                 },
-                'entregas.venta.cliente',
-                'entregas.venta.detalles.producto',
+                'entregas.ventas.cliente',
+                'entregas.ventas.detalles.producto',
                 'vehiculo',
                 'detalles.producto',
             ]);
@@ -80,8 +80,8 @@ class ReporteCargaPdfController extends Controller
                 'entregas' => function ($query) {
                     $query->orderBy('reporte_carga_entregas.orden');
                 },
-                'entregas.venta.cliente',
-                'entregas.venta.detalles.producto',
+                'entregas.ventas.cliente',
+                'entregas.ventas.detalles.producto',
                 'entregas.chofer',
                 'entregas.vehiculo',
                 'vehiculo',
@@ -131,8 +131,8 @@ class ReporteCargaPdfController extends Controller
                 'entregas' => function ($query) {
                     $query->orderBy('reporte_carga_entregas.orden');
                 },
-                'entregas.venta.cliente',
-                'entregas.venta.detalles.producto',
+                'entregas.ventas.cliente',
+                'entregas.ventas.detalles.producto',
                 'vehiculo',
                 'detalles.producto',
             ]);

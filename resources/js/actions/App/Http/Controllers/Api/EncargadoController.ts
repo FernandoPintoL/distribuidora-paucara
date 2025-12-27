@@ -241,7 +241,7 @@ entregasAsignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     entregasAsignadas.form = entregasAsignadasForm
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
- * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @see app/Http/Controllers/Api/EncargadoController.php:217
  * @route '/api/encargado/entregas/{id}/procesar-carga'
  */
 export const procesarCargaVehiculo = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -256,7 +256,7 @@ procesarCargaVehiculo.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
- * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @see app/Http/Controllers/Api/EncargadoController.php:217
  * @route '/api/encargado/entregas/{id}/procesar-carga'
  */
 procesarCargaVehiculo.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -284,7 +284,7 @@ procesarCargaVehiculo.url = (args: { id: string | number } | [id: string | numbe
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
- * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @see app/Http/Controllers/Api/EncargadoController.php:217
  * @route '/api/encargado/entregas/{id}/procesar-carga'
  */
 procesarCargaVehiculo.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -294,7 +294,7 @@ procesarCargaVehiculo.post = (args: { id: string | number } | [id: string | numb
 
     /**
 * @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
- * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @see app/Http/Controllers/Api/EncargadoController.php:217
  * @route '/api/encargado/entregas/{id}/procesar-carga'
  */
     const procesarCargaVehiculoForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -304,7 +304,7 @@ procesarCargaVehiculo.post = (args: { id: string | number } | [id: string | numb
 
             /**
 * @see \App\Http\Controllers\Api\EncargadoController::procesarCargaVehiculo
- * @see app/Http/Controllers/Api/EncargadoController.php:220
+ * @see app/Http/Controllers/Api/EncargadoController.php:217
  * @route '/api/encargado/entregas/{id}/procesar-carga'
  */
         procesarCargaVehiculoForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -315,7 +315,7 @@ procesarCargaVehiculo.post = (args: { id: string | number } | [id: string | numb
     procesarCargaVehiculo.form = procesarCargaVehiculoForm
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
- * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @see app/Http/Controllers/Api/EncargadoController.php:270
  * @route '/api/encargado/entregas'
  */
 export const indexAdmin = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -330,7 +330,7 @@ indexAdmin.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
- * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @see app/Http/Controllers/Api/EncargadoController.php:270
  * @route '/api/encargado/entregas'
  */
 indexAdmin.url = (options?: RouteQueryOptions) => {
@@ -339,7 +339,7 @@ indexAdmin.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
- * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @see app/Http/Controllers/Api/EncargadoController.php:270
  * @route '/api/encargado/entregas'
  */
 indexAdmin.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -348,7 +348,7 @@ indexAdmin.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
- * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @see app/Http/Controllers/Api/EncargadoController.php:270
  * @route '/api/encargado/entregas'
  */
 indexAdmin.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -358,7 +358,7 @@ indexAdmin.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
- * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @see app/Http/Controllers/Api/EncargadoController.php:270
  * @route '/api/encargado/entregas'
  */
     const indexAdminForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -368,7 +368,7 @@ indexAdmin.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
- * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @see app/Http/Controllers/Api/EncargadoController.php:270
  * @route '/api/encargado/entregas'
  */
         indexAdminForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -377,7 +377,7 @@ indexAdmin.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\EncargadoController::indexAdmin
- * @see app/Http/Controllers/Api/EncargadoController.php:273
+ * @see app/Http/Controllers/Api/EncargadoController.php:270
  * @route '/api/encargado/entregas'
  */
         indexAdminForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -393,7 +393,7 @@ indexAdmin.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     indexAdmin.form = indexAdminForm
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
- * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @see app/Http/Controllers/Api/EncargadoController.php:318
  * @route '/api/encargado/entregas/{id}/asignar'
  */
 export const asignarEntrega = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -408,7 +408,7 @@ asignarEntrega.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
- * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @see app/Http/Controllers/Api/EncargadoController.php:318
  * @route '/api/encargado/entregas/{id}/asignar'
  */
 asignarEntrega.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -436,7 +436,7 @@ asignarEntrega.url = (args: { id: string | number } | [id: string | number ] | s
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
- * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @see app/Http/Controllers/Api/EncargadoController.php:318
  * @route '/api/encargado/entregas/{id}/asignar'
  */
 asignarEntrega.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -446,7 +446,7 @@ asignarEntrega.post = (args: { id: string | number } | [id: string | number ] | 
 
     /**
 * @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
- * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @see app/Http/Controllers/Api/EncargadoController.php:318
  * @route '/api/encargado/entregas/{id}/asignar'
  */
     const asignarEntregaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -456,7 +456,7 @@ asignarEntrega.post = (args: { id: string | number } | [id: string | number ] | 
 
             /**
 * @see \App\Http\Controllers\Api\EncargadoController::asignarEntrega
- * @see app/Http/Controllers/Api/EncargadoController.php:322
+ * @see app/Http/Controllers/Api/EncargadoController.php:318
  * @route '/api/encargado/entregas/{id}/asignar'
  */
         asignarEntregaForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -467,7 +467,7 @@ asignarEntrega.post = (args: { id: string | number } | [id: string | number ] | 
     asignarEntrega.form = asignarEntregaForm
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
- * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @see app/Http/Controllers/Api/EncargadoController.php:367
  * @route '/api/encargado/entregas/activas'
  */
 export const entregasActivas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -482,7 +482,7 @@ entregasActivas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
- * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @see app/Http/Controllers/Api/EncargadoController.php:367
  * @route '/api/encargado/entregas/activas'
  */
 entregasActivas.url = (options?: RouteQueryOptions) => {
@@ -491,7 +491,7 @@ entregasActivas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
- * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @see app/Http/Controllers/Api/EncargadoController.php:367
  * @route '/api/encargado/entregas/activas'
  */
 entregasActivas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -500,7 +500,7 @@ entregasActivas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => (
 })
 /**
 * @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
- * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @see app/Http/Controllers/Api/EncargadoController.php:367
  * @route '/api/encargado/entregas/activas'
  */
 entregasActivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -510,7 +510,7 @@ entregasActivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
     /**
 * @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
- * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @see app/Http/Controllers/Api/EncargadoController.php:367
  * @route '/api/encargado/entregas/activas'
  */
     const entregasActivasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -520,7 +520,7 @@ entregasActivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
 
             /**
 * @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
- * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @see app/Http/Controllers/Api/EncargadoController.php:367
  * @route '/api/encargado/entregas/activas'
  */
         entregasActivasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -529,7 +529,7 @@ entregasActivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
         })
             /**
 * @see \App\Http\Controllers\Api\EncargadoController::entregasActivas
- * @see app/Http/Controllers/Api/EncargadoController.php:371
+ * @see app/Http/Controllers/Api/EncargadoController.php:367
  * @route '/api/encargado/entregas/activas'
  */
         entregasActivasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

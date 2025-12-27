@@ -9,122 +9,56 @@ export interface CrearLoteRequest {
     venta_ids: Id[];
     vehiculo_id: Id;
     chofer_id: Id;
-    agrupar_por_zona?: boolean;
-    optimizar?: boolean;
-    tipo_reporte?: 'individual' | 'consolidado';
+    zona_id?: Id | null;
+    observaciones?: string;
 }
 
-export interface EntregaCreada {
+export interface VentaEnEntrega {
     id: number;
-    venta_id: number;
-    estado: string;
-    peso_kg: number;
-    direccion_entrega: string;
-}
-
-export interface EstadisticasLote {
-    total_creadas: number;
-    total_errores: number;
-    peso_total: number;
-    vehiculo: {
-        id: number;
-        placa: string;
-        capacidad_kg: number;
-    };
-    chofer: {
-        id: number;
-        nombre: string;
-    };
-}
-
-export interface OptimizacionRuta {
-    rutas: Array<{
-        ruta: Array<any>;
-        distancia_total: number;
-        distancia_regreso: number;
-        tiempo_estimado: number;
-        paradas: number;
-        peso_total: number;
-        bin_numero: number;
-        porcentaje_uso: number;
-    }>;
-    estadisticas: {
-        total_entregas: number;
-        rutas_creadas: number;
-        uso_promedio_capacidad: number;
-        distancia_total: number;
-        tiempo_total_minutos: number;
-    };
+    numero: string;
+    cliente: string;
+    total: number;
 }
 
 export interface CrearLoteResponse {
     success: boolean;
     message: string;
     data: {
-        entregas: EntregaCreada[];
-        estadisticas: EstadisticasLote;
-        optimizacion?: OptimizacionRuta;
-        errores: Array<{ venta_id: number; error: string }>;
+        id: number;
+        numero_entrega: string;
+        estado: string;
+        fecha_asignacion: string;
+        vehiculo: {
+            id: number;
+            placa: string;
+        };
+        chofer: {
+            id: number;
+            nombre: string;
+        };
+        ventas_count: number;
+        ventas: VentaEnEntrega[];
+        peso_kg: number;
+        volumen_m3: number;
     };
     errors?: Record<string, string[]>;
 }
 
-export interface PreviewResponse {
-    success: boolean;
-    message: string;
-    data: {
-        ventas: number;
-        optimizacion: OptimizacionRuta;
-        vehiculo: {
-            id: number;
-            placa: string;
-            capacidad_kg: number;
-        };
-        peso_total: number;
-    };
-}
-
 class OptimizacionEntregasService {
-    private readonly API_ENDPOINT = '/api/entregas/lote';
+    private readonly API_ENDPOINT = '/api/entregas/crear-consolidada';
 
     /**
-     * Obtener preview/simulación de creación en lote
-     * Calcula optimización sin crear entregas aún
-     */
-    async obtenerPreview(request: CrearLoteRequest): Promise<PreviewResponse> {
-        try {
-            const response = await fetch(`${this.API_ENDPOINT}/preview`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': this.getCsrfToken(),
-                },
-                body: JSON.stringify(request),
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error en obtenerPreview:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Crear entregas en lote
-     * Crea las entregas y retorna sugerencias de rutas
+     * Crear entrega consolidada
+     * Crea 1 entrega con múltiples ventas asociadas en la tabla pivot
      */
     async crearLote(request: CrearLoteRequest): Promise<CrearLoteResponse> {
         try {
-            console.log('🚀 POST /api/entregas/lote con datos:', {
+            console.log('🚀 POST /api/entregas/crear-consolidada con datos:', {
                 venta_ids: request.venta_ids,
                 vehiculo_id: request.vehiculo_id,
                 chofer_id: request.chofer_id,
-                optimizar: request.optimizar,
-                tipo_reporte: request.tipo_reporte,
+                zona_id: request.zona_id,
+                observaciones: request.observaciones,
             });
 
             const response = await fetch(this.API_ENDPOINT, {
@@ -160,9 +94,10 @@ class OptimizacionEntregasService {
             }
 
             const data = await response.json();
-            console.log('✅ Entregas creadas exitosamente:', {
-                total_creadas: data.data?.estadisticas?.total_creadas,
-                total_errores: data.data?.estadisticas?.total_errores,
+            console.log('✅ Entrega consolidada creada exitosamente:', {
+                id: data.data?.id,
+                numero_entrega: data.data?.numero_entrega,
+                ventas_count: data.data?.ventas_count,
             });
 
             return data;

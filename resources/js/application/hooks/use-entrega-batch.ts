@@ -1,27 +1,22 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import type { Id } from '@/domain/entities/shared';
-import type { TipoReporteCarga } from '@/domain/entities/entregas';
 import {
     optimizacionEntregasService,
     type CrearLoteRequest,
-    type PreviewResponse,
 } from '@/application/services/optimizacion-entregas.service';
 
 export interface BatchFormData {
     venta_ids: Id[];
     vehiculo_id: Id | null;
     chofer_id: Id | null;
-    optimizar: boolean;
-    tipo_reporte: TipoReporteCarga;
+    zona_id?: Id | null;
+    observaciones?: string;
 }
 
 interface UseBatchState {
     formData: BatchFormData;
-    isLoading: boolean;
     isSubmitting: boolean;
-    preview: PreviewResponse | null;
-    previewError: string | null;
     submitError: string | null;
     successMessage: string | null;
 }
@@ -32,13 +27,10 @@ export function useEntregaBatch() {
             venta_ids: [],
             vehiculo_id: null,
             chofer_id: null,
-            optimizar: true,
-            tipo_reporte: 'individual',
+            zona_id: null,
+            observaciones: '',
         },
-        isLoading: false,
         isSubmitting: false,
-        preview: null,
-        previewError: null,
         submitError: null,
         successMessage: null,
     });
@@ -57,7 +49,6 @@ export function useEntregaBatch() {
 
     /**
      * Agregar/remover venta del lote
-     * ✅ MEJORADO: tipo_reporte se determina automáticamente
      */
     const toggleVenta = (ventaId: Id) => {
         setState((prev) => {
@@ -65,25 +56,18 @@ export function useEntregaBatch() {
                 ? prev.formData.venta_ids.filter((id) => id !== ventaId)
                 : [...prev.formData.venta_ids, ventaId];
 
-            // Determinar tipo_reporte automáticamente
-            const nuevoTipoReporte = nuevasVentaIds.length > 1 ? 'consolidado' : 'individual';
-
             return {
                 ...prev,
                 formData: {
                     ...prev.formData,
                     venta_ids: nuevasVentaIds,
-                    tipo_reporte: nuevoTipoReporte,
                 },
-                preview: null,
-                previewError: null,
             };
         });
     };
 
     /**
      * Seleccionar todas las ventas
-     * ✅ MEJORADO: tipo_reporte se determina automáticamente
      */
     const selectAllVentas = (ventaIds: Id[]) => {
         setState((prev) => ({
@@ -91,15 +75,12 @@ export function useEntregaBatch() {
             formData: {
                 ...prev.formData,
                 venta_ids: ventaIds,
-                tipo_reporte: ventaIds.length > 1 ? 'consolidado' : 'individual',
             },
-            preview: null,
         }));
     };
 
     /**
      * Limpiar selección de ventas
-     * ✅ MEJORADO: tipo_reporte vuelve a 'individual' cuando no hay ventas
      */
     const clearVentas = () => {
         setState((prev) => ({
@@ -107,59 +88,8 @@ export function useEntregaBatch() {
             formData: {
                 ...prev.formData,
                 venta_ids: [],
-                tipo_reporte: 'individual', // Reset a default
             },
-            preview: null,
         }));
-    };
-
-    /**
-     * Obtener preview de la creación
-     */
-    const obtenerPreview = async () => {
-        // Validar datos mínimos
-        if (!state.formData.vehiculo_id || !state.formData.chofer_id) {
-            setState((prev) => ({
-                ...prev,
-                previewError: 'Debe seleccionar vehículo y chofer',
-            }));
-            return;
-        }
-
-        if (state.formData.venta_ids.length === 0) {
-            setState((prev) => ({
-                ...prev,
-                previewError: 'Debe seleccionar al menos una venta',
-            }));
-            return;
-        }
-
-        setState((prev) => ({ ...prev, isLoading: true, previewError: null }));
-
-        try {
-            const request: CrearLoteRequest = {
-                venta_ids: state.formData.venta_ids,
-                vehiculo_id: state.formData.vehiculo_id,
-                chofer_id: state.formData.chofer_id,
-                optimizar: state.formData.optimizar,
-                tipo_reporte: state.formData.tipo_reporte,
-            };
-
-            const preview = await optimizacionEntregasService.obtenerPreview(request);
-
-            setState((prev) => ({
-                ...prev,
-                preview,
-                isLoading: false,
-            }));
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Error al obtener preview';
-            setState((prev) => ({
-                ...prev,
-                previewError: message,
-                isLoading: false,
-            }));
-        }
     };
 
     /**
@@ -195,8 +125,8 @@ export function useEntregaBatch() {
                 venta_ids: state.formData.venta_ids,
                 vehiculo_id: state.formData.vehiculo_id,
                 chofer_id: state.formData.chofer_id,
-                optimizar: state.formData.optimizar,
-                tipo_reporte: state.formData.tipo_reporte,
+                zona_id: state.formData.zona_id,
+                observaciones: state.formData.observaciones,
             };
 
             const resultado = await optimizacionEntregasService.crearLote(request);
@@ -242,7 +172,6 @@ export function useEntregaBatch() {
         toggleVenta,
         selectAllVentas,
         clearVentas,
-        obtenerPreview,
         handleSubmit,
         handleCancel,
     };

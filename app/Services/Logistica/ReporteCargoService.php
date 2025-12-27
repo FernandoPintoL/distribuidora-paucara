@@ -46,25 +46,27 @@ class ReporteCargoService
     {
         // ✅ CORREGIDO: Removido $this->transaction() para evitar anidamiento de transacciones en PostgreSQL
         // La transacción exterior en EntregaService::crearLote() manejará todo
+        // ✅ FASE 3: Actualizado para trabajar con N:M relación (1 entrega, N ventas)
 
         try {
-            // Obtener la venta asociada
-            $venta = $entrega->venta;
-            if (!$venta) {
-                throw new Exception("La entrega {$entrega->id} no tiene venta asociada");
+            // Obtener todas las ventas asociadas a la entrega (N:M via pivot)
+            $ventas = $entrega->ventas()->with('detalles.producto')->get();
+
+            if ($ventas->count() === 0) {
+                throw new Exception("La entrega {$entrega->id} no tiene ventas asociadas");
             }
 
             // Generar número de reporte único
             $numeroReporte = ReporteCarga::generarNumeroReporte();
 
-            // Crear el reporte
+            // Crear el reporte (venta_id = null ahora ya que tiene múltiples ventas)
             // ✅ CORREGIDO: Para operaciones en lote, no asignamos generado_por ya que es una operación del sistema
             $reporte = ReporteCarga::create([
                 'numero_reporte' => $numeroReporte,
                 'entrega_id' => $entrega->id,
                 'vehiculo_id' => $datos['vehiculo_id'] ?? null,
-                'venta_id' => $venta->id,
-                'descripcion' => $datos['descripcion'] ?? null,
+                'venta_id' => null,  // NULL ahora (múltiples ventas via N:M)
+                'descripcion' => $datos['descripcion'] ?? "Reporte de {$ventas->count()} ventas",
                 'peso_total_kg' => $datos['peso_total_kg'] ?? 0,
                 'volumen_total_m3' => $datos['volumen_total_m3'] ?? null,
                 'generado_por' => null,  // Sistema/Lote - sin usuario específico
@@ -72,8 +74,10 @@ class ReporteCargoService
                 'fecha_generacion' => now(),
             ]);
 
-            // Crear detalles del reporte desde los detalles de la venta
-            $this->crearDetallesDesdeVenta($reporte, $venta);
+            // Crear detalles del reporte desde TODAS las ventas asociadas
+            foreach ($ventas as $venta) {
+                $this->crearDetallesDesdeVenta($reporte, $venta);
+            }
 
             // ✅ NUEVA: Vincular entrega al reporte via tabla pivot (Many-to-Many)
             $reporte->entregas()->attach($entrega->id, [
@@ -92,15 +96,15 @@ class ReporteCargoService
                 'reporte_id' => $reporte->id,
                 'numero' => $numeroReporte,
                 'entrega_id' => $entrega->id,
-                'venta_id' => $venta->id,
+                'ventas_count' => $ventas->count(),
             ]);
 
             // ✅ CORREGIDO: Cargar solo relaciones esenciales, evitando relaciones anidadas problemáticas
             // El chofer es un Empleado que tiene relación con User, y si ese User no existe,
             // falla la carga y aborta la transacción. Solo cargamos lo necesario.
             try {
-                // Solo cargamos venta.cliente, evitamos chofer que tiene relaciones con User
-                $entrega->load(['venta.cliente']);
+                // Cargar relaciones de ventas
+                $entrega->load(['ventas.cliente']);
             } catch (Exception $e) {
                 Log::warning('No se pudieron cargar todas las relaciones de la entrega', [
                     'entrega_id' => $entrega->id,
@@ -184,46 +188,55 @@ class ReporteCargoService
                     $entregasModels[] = $entrega;
                 } else {
                     // Si es un array, intenta cargar desde BD
-                    $entregasModels[] = Entrega::with('venta.detalles.producto')->findOrFail($entrega['id'] ?? $entrega);
+                    $entregasModels[] = Entrega::with('ventas.detalles.producto')->findOrFail($entrega['id'] ?? $entrega);
                 }
             }
 
             // Procesar detalles de cada entrega
             foreach ($entregasModels as $entrega) {
-                $venta = $entrega->venta;
+                // Obtener todas las ventas asociadas a esta entrega
+                $ventas = $entrega->ventas ?? collect();
 
-                if (!$venta || !$venta->detalles) {
-                    continue;
+                // Si tiene una sola venta (legacy), usarla
+                if ($ventas->isEmpty() && isset($entrega->venta) && $entrega->venta) {
+                    $ventas = collect([$entrega->venta]);
                 }
 
-                foreach ($venta->detalles as $detalleVenta) {
-                    $productoId = $detalleVenta->producto_id;
+                // Procesar detalles de cada venta
+                foreach ($ventas as $venta) {
+                    if (!$venta || !$venta->detalles) {
+                        continue;
+                    }
 
-                    // Si el producto ya existe en consolidados, sumar cantidad
-                    if (isset($detallesConsolidados[$productoId])) {
-                        $detallesConsolidados[$productoId]['cantidad_solicitada'] += $detalleVenta->cantidad;
-                        $pesoDetalle = $detalleVenta->producto?->peso_kg
-                            ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
-                            : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
-                        $detallesConsolidados[$productoId]['peso_kg'] += $pesoDetalle;
-                    } else {
-                        // Agregar nuevo producto
-                        $pesoDetalle = $detalleVenta->producto?->peso_kg
-                            ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
-                            : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
+                    foreach ($venta->detalles as $detalleVenta) {
+                        $productoId = $detalleVenta->producto_id;
 
-                        $detallesConsolidados[$productoId] = [
-                            'reporte_carga_id' => $reporte->id,
-                            'detalle_venta_id' => $detalleVenta->id, // Referencia al primero encontrado
-                            'producto_id' => $productoId,
-                            'cantidad_solicitada' => $detalleVenta->cantidad,
-                            'cantidad_cargada' => 0,
-                            'verificado' => false,
-                            'peso_kg' => $pesoDetalle,
-                            'notas' => "Consolidado de {$venta->numero_venta}",
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
+                        // Si el producto ya existe en consolidados, sumar cantidad
+                        if (isset($detallesConsolidados[$productoId])) {
+                            $detallesConsolidados[$productoId]['cantidad_solicitada'] += $detalleVenta->cantidad;
+                            $pesoDetalle = $detalleVenta->producto?->peso_kg
+                                ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
+                                : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
+                            $detallesConsolidados[$productoId]['peso_kg'] += $pesoDetalle;
+                        } else {
+                            // Agregar nuevo producto
+                            $pesoDetalle = $detalleVenta->producto?->peso_kg
+                                ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
+                                : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
+
+                            $detallesConsolidados[$productoId] = [
+                                'reporte_carga_id' => $reporte->id,
+                                'detalle_venta_id' => $detalleVenta->id, // Referencia al primero encontrado
+                                'producto_id' => $productoId,
+                                'cantidad_solicitada' => $detalleVenta->cantidad,
+                                'cantidad_cargada' => 0,
+                                'verificado' => false,
+                                'peso_kg' => $pesoDetalle,
+                                'notas' => "Consolidado de {$venta->numero_venta}",
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
                     }
                 }
             }

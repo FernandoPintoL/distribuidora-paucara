@@ -68,6 +68,7 @@ class ClienteController extends Controller
 
         // Construir query
         $query = ClienteModel::query()
+            ->forCurrentUser()  // ✅ NUEVO: Filtrar por usuario actual (Preventista ve solo sus clientes)
             ->leftJoin('localidades', 'clientes.localidad_id', '=', 'localidades.id')
             ->when($q, function ($query) use ($q, $options) {
                 // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
@@ -211,7 +212,8 @@ class ClienteController extends Controller
             $handleDirecciones = $this->isApiRequest() || $request->has('direcciones');
 
             // Usar el método compartido para crear el cliente
-            $cliente = $this->handleClientCreation($request, $data, false, $handleDirecciones, ! $this->isApiRequest());
+            // ✅ FIX: Always process files ($processFiles = true) for both API and web requests
+            $cliente = $this->handleClientCreation($request, $data, false, $handleDirecciones, true);
 
             // Guardar ventanas de entrega (tanto para web como API)
             $this->syncVentanasEntrega($cliente, isset($data['ventanas_entrega']) ? (array) $data['ventanas_entrega'] : null);
@@ -436,15 +438,15 @@ class ClienteController extends Controller
 
         // Cargar TODAS las relaciones del cliente de una sola vez
         $cliente->load([
-            'user' => function ($query) {
+            'user'             => function ($query) {
                 $query->select('id', 'name', 'email', 'usernick', 'activo');
             },
             'direcciones',
             'localidad',
-            'categorias' => function ($query) {
+            'categorias'       => function ($query) {
                 $query->select('categorias_cliente.id', 'categorias_cliente.clave', 'categorias_cliente.nombre', 'categorias_cliente.descripcion', 'categorias_cliente.activo');
             },
-            'ventanasEntrega' => function ($query) {
+            'ventanasEntrega'  => function ($query) {
                 $query->select('ventanas_entrega_cliente.id', 'ventanas_entrega_cliente.cliente_id', 'ventanas_entrega_cliente.dia_semana', 'ventanas_entrega_cliente.hora_inicio', 'ventanas_entrega_cliente.hora_fin', 'ventanas_entrega_cliente.activo')
                     ->orderBy('dia_semana');
             },
@@ -453,11 +455,11 @@ class ClienteController extends Controller
             },
         ]);
 
-        \Log::info('📡 API: Cliente cargado completamente', [
-            'cliente_id' => $cliente->id,
-            'nombre' => $cliente->nombre,
-            'categorias_count' => $cliente->categorias->count(),
-            'ventanas_count' => $cliente->ventanasEntrega->count(),
+        Log::info('📡 API: Cliente cargado completamente', [
+            'cliente_id'        => $cliente->id,
+            'nombre'            => $cliente->nombre,
+            'categorias_count'  => $cliente->categorias->count(),
+            'ventanas_count'    => $cliente->ventanasEntrega->count(),
             'direcciones_count' => $cliente->direcciones->count(),
         ]);
 
@@ -552,7 +554,7 @@ class ClienteController extends Controller
         }
 
         // ✅ NUEVO: Obtener el preventista (empleado) asociado al usuario autenticado
-        $preventista = Auth::user()?->empleado;
+        $preventista   = Auth::user()?->empleado;
         $preventistaId = $preventista?->id;
 
         $cliente = ClienteModel::create([
@@ -568,8 +570,8 @@ class ClienteController extends Controller
             'activo'              => $data['activo'] ?? true,
             'fecha_registro'      => now(),
             'usuario_creacion_id' => $usuarioCreacionId,
-            'preventista_id'      => $preventistaId,      // ✅ NUEVO
-            'estado'              => 'prospecto',         // ✅ NUEVO
+            'preventista_id'      => $preventistaId, // ✅ NUEVO
+            'estado'              => 'prospecto',    // ✅ NUEVO
         ]);
 
         // Crear direcciones si se proporcionaron y se deben manejar
@@ -585,24 +587,38 @@ class ClienteController extends Controller
         // Procesar archivos de imagen con ruta dinámica si se solicita
         if ($processFiles) {
             $updates = [];
+
+            Log::info('📸 Procesando archivos del cliente', [
+                'cliente_id'   => $cliente->id,
+                'has_foto'     => $request->hasFile('foto_perfil'),
+                'has_ci_anverso' => $request->hasFile('ci_anverso'),
+                'has_ci_reverso' => $request->hasFile('ci_reverso'),
+            ]);
+
             if ($request->hasFile('foto_perfil') && $request->file('foto_perfil')->isValid()) {
                 $folderName             = $this->generateClientFolderName($cliente);
                 $updates['foto_perfil'] = $request->file('foto_perfil')->store($folderName, 'public');
+                Log::info('✅ Foto de perfil guardada', ['path' => $updates['foto_perfil']]);
             }
             if ($request->hasFile('ci_anverso') && $request->file('ci_anverso')->isValid()) {
                 $folderName            = $this->generateClientFolderName($cliente);
                 $updates['ci_anverso'] = $request->file('ci_anverso')->store($folderName, 'public');
+                Log::info('✅ CI anverso guardado', ['path' => $updates['ci_anverso']]);
             }
             if ($request->hasFile('ci_reverso') && $request->file('ci_reverso')->isValid()) {
                 $folderName            = $this->generateClientFolderName($cliente);
                 $updates['ci_reverso'] = $request->file('ci_reverso')->store($folderName, 'public');
+                Log::info('✅ CI reverso guardado', ['path' => $updates['ci_reverso']]);
             }
 
             // Actualizar cliente con las rutas de las imágenes si se subieron
             if (! empty($updates)) {
+                Log::info('💾 Actualizando cliente con archivos', ['updates' => array_keys($updates)]);
                 $cliente->update($updates);
                 $cliente->refresh(); // Recargar el modelo con los nuevos datos
             }
+        } else {
+            Log::warning('⚠️ Procesamiento de archivos deshabilitado', ['cliente_id' => $cliente->id]);
         }
 
         return $cliente;
@@ -622,7 +638,8 @@ class ClienteController extends Controller
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = strtolower($q);
-        $clientes    = ClienteModel::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
+        $clientes    = ClienteModel::forCurrentUser()  // ✅ NUEVO: Filtrar por usuario actual
+            ->select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
             ->where('activo', true)
             ->where(function ($query) use ($searchLower) {
                 $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])

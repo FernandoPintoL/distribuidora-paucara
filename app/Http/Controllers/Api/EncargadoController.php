@@ -178,12 +178,9 @@ class EncargadoController extends Controller
         try {
             $entregas = Entrega::where('estado', Entrega::ESTADO_ASIGNADA)
                 ->with([
-                    'proforma',
-                    'proforma.cliente',
-                    'proforma.detalles',
+                    'ventas.cliente',
                     'chofer',
                     'vehiculo',
-                    'direccionCliente',
                 ])
                 ->when($request->estado, function ($q) use ($request) {
                     return $q->where('estado', $request->estado);
@@ -274,8 +271,7 @@ class EncargadoController extends Controller
     {
         try {
             $query = Entrega::with([
-                'proforma',
-                'proforma.cliente',
+                'ventas.cliente',
                 'chofer',
                 'vehiculo',
             ])
@@ -289,7 +285,7 @@ class EncargadoController extends Controller
                     return $q->where('vehiculo_id', $request->vehiculo_id);
                 })
                 ->when($request->cliente_id, function ($q) use ($request) {
-                    return $q->whereHas('proforma', function ($query) use ($request) {
+                    return $q->whereHas('ventas.cliente', function ($query) use ($request) {
                         $query->where('cliente_id', $request->cliente_id);
                     });
                 })
@@ -376,8 +372,7 @@ class EncargadoController extends Controller
                 Entrega::ESTADO_LLEGO,
             ])
                 ->with([
-                    'proforma',
-                    'proforma.cliente',
+                    'ventas.cliente',
                     'chofer',
                     'chofer.user',
                     'vehiculo',
@@ -389,14 +384,16 @@ class EncargadoController extends Controller
                 ->get()
                 ->map(function ($entrega) {
                     $ultimaUbicacion = $entrega->ubicaciones->first();
+                    $primeraVenta = $entrega->ventas?->first();
+                    $cliente = $primeraVenta?->cliente;
 
                     return [
                         'id' => $entrega->id,
-                        'numero_proforma' => $entrega->proforma->numero ?? null,
+                        'numero_proforma' => $primeraVenta?->numero ?? null,
                         'estado' => $entrega->estado,
                         'cliente' => [
-                            'id' => $entrega->proforma->cliente->id,
-                            'nombre' => $entrega->proforma->cliente->razon_social ?? $entrega->proforma->cliente->nombres,
+                            'id' => $cliente?->id,
+                            'nombre' => $cliente?->razon_social ?? $cliente?->nombres,
                         ],
                         'chofer' => [
                             'id' => $entrega->chofer->id,

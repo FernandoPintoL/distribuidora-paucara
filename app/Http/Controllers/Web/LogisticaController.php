@@ -93,7 +93,7 @@ class LogisticaController extends Controller
         ];
 
         // Entregas activas con paginación
-        $entregasQuery = Entrega::with(['venta.cliente', 'proforma.cliente'])
+        $entregasQuery = Entrega::with(['ventas.cliente', 'proforma.cliente'])
             ->whereIn('estado', ['PROGRAMADO', 'ASIGNADA', 'EN_CAMINO'])
             ->orderBy('fecha_programada', 'desc');
 
@@ -101,7 +101,7 @@ class LogisticaController extends Controller
         if (request()->has('search_entregas') && request('search_entregas') !== '') {
             $searchEntregas = request('search_entregas');
             $entregasQuery->where(function ($q) use ($searchEntregas) {
-                $q->orWhereHas('venta.cliente', function ($clienteQuery) use ($searchEntregas) {
+                $q->orWhereHas('ventas.cliente', function ($clienteQuery) use ($searchEntregas) {
                     $clienteQuery->where('nombre', 'like', "%{$searchEntregas}%");
                 })->orWhereHas('proforma.cliente', function ($clienteQuery) use ($searchEntregas) {
                     $clienteQuery->where('nombre', 'like', "%{$searchEntregas}%");
@@ -118,10 +118,11 @@ class LogisticaController extends Controller
 
         $entregasActivas = [
             'data' => $entregasPaginadas->map(function ($entrega) {
-                $cliente = $entrega->venta?->cliente ?? $entrega->proforma?->cliente;
+                $primeraVenta = $entrega->ventas?->first();
+                $cliente = $primeraVenta?->cliente;
                 return [
                     'id'                 => $entrega->id,
-                    'numero_referencia'  => $entrega->proforma?->numero ?? $entrega->venta?->numero ?? 'N/A',
+                    'numero_referencia'  => $primeraVenta?->numero ?? 'N/A',
                     'cliente_nombre'     => $cliente?->nombre ?? 'N/A',
                     'estado'             => $entrega->estado,
                     'fecha_programada'   => $entrega->fecha_programada,
@@ -177,15 +178,16 @@ class LogisticaController extends Controller
      */
     public function seguimiento(Entrega $entrega)
     {
-        $entrega->load(['venta.cliente', 'proforma.cliente', 'ubicacionesTracking' => function ($query) {
+        $entrega->load(['ventas.cliente', 'ubicacionesTracking' => function ($query) {
             $query->orderBy('created_at', 'desc');
         }]);
 
-        $cliente = $entrega->venta?->cliente ?? $entrega->proforma?->cliente;
+        $primeraVenta = $entrega->ventas?->first();
+        $cliente = $primeraVenta?->cliente;
 
         $entregaData = [
             'id'                    => $entrega->id,
-            'numero_referencia'     => $entrega->proforma?->numero ?? $entrega->venta?->numero ?? 'N/A',
+            'numero_referencia'     => $primeraVenta?->numero ?? 'N/A',
             'estado'                => $entrega->estado,
             'fecha_programada'      => $entrega->fecha_programada?->format('Y-m-d H:i'),
             'fecha_entrega'         => $entrega->fecha_entrega?->format('Y-m-d H:i'),

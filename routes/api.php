@@ -464,9 +464,14 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 
     // TRACKING - Información de ubicación y ETA
     Route::prefix('tracking')->group(function () {
-        Route::get('/entregas/{id}/ubicaciones', [TrackingController::class, 'obtenerUbicaciones']);
-        Route::get('/entregas/{id}/ultima-ubicacion', [TrackingController::class, 'ultimaUbicacion']);
-        Route::post('/entregas/{id}/calcular-eta', [TrackingController::class, 'calcularETA']);
+        // Rutas originales (web)
+        Route::get('/entregas/{entregaId}/ubicaciones', [TrackingController::class, 'obtenerUbicaciones']);
+        Route::get('/entregas/{entregaId}/ultima-ubicacion', [TrackingController::class, 'ultimaUbicacion']);
+        Route::post('/entregas/{entregaId}/calcular-eta', [TrackingController::class, 'calcularETA']);
+
+        // ✅ ALIAS: Rutas alternativas para compatibilidad con app Flutter
+        Route::get('/ubicaciones/{entregaId}', [TrackingController::class, 'obtenerUbicaciones']);
+        Route::get('/ultima-ubicacion/{entregaId}', [TrackingController::class, 'ultimaUbicacion']);
     });
 
     // ENCARGADO - Gestión de entregas
@@ -564,6 +569,21 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 
     // ✅ PHASE 3: ENTREGAS - Flujo de carga y tránsito
     Route::prefix('entregas')->group(function () {
+        // 🖨️ Descargar entrega como PDF (múltiples formatos)
+        Route::get('/{entrega}/descargar', [\App\Http\Controllers\EntregaPdfController::class, 'descargar'])
+            ->middleware('auth')
+            ->name('entregas.descargar');
+
+        // 🖨️ Vista previa de entrega en navegador
+        Route::get('/{entrega}/preview', [\App\Http\Controllers\EntregaPdfController::class, 'preview'])
+            ->middleware('auth')
+            ->name('entregas.preview');
+
+        // 🔍 Debug - Ver datos de entrega (TEMPORAL)
+        Route::get('/{entrega}/debug', [\App\Http\Controllers\EntregaPdfController::class, 'debug'])
+            ->middleware('auth')
+            ->name('entregas.debug');
+
         // Confirmar carga (cambiar a EN_CARGA)
         Route::post('/{id}/confirmar-carga', [EntregaController::class, 'confirmarCarga'])
             ->middleware('permission:entregas.update')
@@ -583,6 +603,37 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::patch('/{id}/ubicacion-gps', [EntregaController::class, 'actualizarUbicacionGPS'])
             ->middleware('permission:entregas.update')
             ->name('entregas.ubicacion-gps');
+
+        // ✅ PHASE 4: Entregas consolidadas (N:M Venta-Entrega)
+        // Consolidación automática (botón en header)
+        Route::post('/consolidar-automatico', [EntregaController::class, 'consolidarAutomatico'])
+            ->middleware('permission:entregas.create')
+            ->name('entregas.consolidar-automatico');
+
+        // Crear entrega consolidada con múltiples ventas
+        Route::post('/crear-consolidada', [EntregaController::class, 'crearEntregaConsolidada'])
+            ->middleware('permission:entregas.create')
+            ->name('entregas.crear-consolidada');
+
+        // Confirmar venta cargada en almacén (confirmar_carga workflow)
+        Route::post('/{id}/confirmar-venta/{venta_id}', [EntregaController::class, 'confirmarVentaCargada'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.confirmar-venta');
+
+        // Desmarcar venta como cargada
+        Route::delete('/{id}/confirmar-venta/{venta_id}', [EntregaController::class, 'desmarcarVentaCargada'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.desmarcar-venta');
+
+        // Obtener detalles completos de entrega consolidada
+        Route::get('/{id}/detalles', [EntregaController::class, 'obtenerDetalles'])
+            ->middleware('permission:entregas.show')
+            ->name('entregas.detalles');
+
+        // Obtener progreso de confirmación de carga
+        Route::get('/{id}/progreso', [EntregaController::class, 'obtenerProgreso'])
+            ->middleware('permission:entregas.show')
+            ->name('entregas.progreso');
     });
 
     // ✅ PHASE 3: REPORTES DE CARGA (Gestión de cargas en vehículos)

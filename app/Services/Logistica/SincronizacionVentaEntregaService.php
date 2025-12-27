@@ -69,68 +69,123 @@ class SincronizacionVentaEntregaService
 
     /**
      * Actualizar estado logístico de la venta cuando se crea una entrega
+     *
+     * FASE 3 - REFACTORIZACIÓN:
+     * Ahora sincroniza TODAS las ventas asociadas a una entrega
+     * (No solo una venta via venta_id)
      */
     public function alCrearEntrega(Entrega $entrega): void
     {
-        if (!$entrega->venta_id) {
-            return;
-        }
+        // Sincronizar con todas las ventas asociadas (via pivot entrega_venta)
+        $ventas = $entrega->ventas()->get();
 
-        $venta = $entrega->venta;
-        if (!$venta) {
-            return;
-        }
+        foreach ($ventas as $venta) {
+            try {
+                // Determinar nuevo estado logístico
+                $nuevoEstado = $this->determinarEstadoLogistico($venta);
 
-        // Determinar nuevo estado logístico
-        $nuevoEstado = $this->determinarEstadoLogistico($venta);
+                Log::info('Sincronización: Entrega creada (vía pivot)', [
+                    'venta_id' => $venta->id,
+                    'numero_venta' => $venta->numero,
+                    'entrega_id' => $entrega->id,
+                    'estado_anterior' => $venta->estado_logistico,
+                    'estado_nuevo' => $nuevoEstado,
+                ]);
 
-        Log::info('Sincronización: Entrega creada', [
-            'venta_id' => $venta->id,
-            'entrega_id' => $entrega->id,
-            'estado_anterior' => $venta->estado_logistico,
-            'estado_nuevo' => $nuevoEstado,
-        ]);
-
-        // Actualizar solo si cambió
-        if ($venta->estado_logistico !== $nuevoEstado) {
-            $venta->update(['estado_logistico' => $nuevoEstado]);
+                // Actualizar solo si cambió
+                if ($venta->estado_logistico !== $nuevoEstado) {
+                    $venta->update(['estado_logistico' => $nuevoEstado]);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error sincronizando venta al crear entrega', [
+                    'venta_id' => $venta->id,
+                    'entrega_id' => $entrega->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continuar sincronizando otras ventas
+            }
         }
     }
 
     /**
      * Actualizar estado logístico cuando cambia el estado de la entrega
+     *
+     * FASE 3 - REFACTORIZACIÓN:
+     * Ahora sincroniza TODAS las ventas asociadas a una entrega
+     * Se llama desde Entrega::boot() cuando cambia el estado
      */
-    public function alCambiarEstadoEntrega(Entrega $entrega, string $estadoAnterior, string $estadoNuevo): void
-    {
-        if (!$entrega->venta_id) {
+    public function alCambiarEstadoEntrega(
+        Entrega $entrega,
+        string $estadoAnterior,
+        string $estadoNuevo,
+        ?\App\Models\Venta $ventaEspecifica = null
+    ): void {
+        // Si se proporciona una venta específica (para backward compatibility)
+        if ($ventaEspecifica) {
+            try {
+                $nuevoEstadoVenta = $this->determinarEstadoLogistico($ventaEspecifica);
+
+                Log::info('Sincronización: Estado de entrega cambió (venta específica)', [
+                    'venta_id' => $ventaEspecifica->id,
+                    'entrega_id' => $entrega->id,
+                    'estado_entrega_anterior' => $estadoAnterior,
+                    'estado_entrega_nuevo' => $estadoNuevo,
+                    'estado_venta_anterior' => $ventaEspecifica->estado_logistico,
+                    'estado_venta_nuevo' => $nuevoEstadoVenta,
+                ]);
+
+                if ($ventaEspecifica->estado_logistico !== $nuevoEstadoVenta) {
+                    $ventaEspecifica->update(['estado_logistico' => $nuevoEstadoVenta]);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error sincronizando venta específica', [
+                    'venta_id' => $ventaEspecifica->id,
+                    'entrega_id' => $entrega->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
             return;
         }
 
-        $venta = $entrega->venta;
-        if (!$venta) {
-            return;
-        }
+        // Sincronizar TODAS las ventas asociadas (nuevo flujo N:M)
+        $ventas = $entrega->ventas()->get();
 
-        // Determinar nuevo estado logístico de venta
-        $nuevoEstadoVenta = $this->determinarEstadoLogistico($venta);
+        foreach ($ventas as $venta) {
+            try {
+                // Determinar nuevo estado logístico de venta
+                $nuevoEstadoVenta = $this->determinarEstadoLogistico($venta);
 
-        Log::info('Sincronización: Estado de entrega cambió', [
-            'venta_id' => $venta->id,
-            'entrega_id' => $entrega->id,
-            'estado_entrega_anterior' => $estadoAnterior,
-            'estado_entrega_nuevo' => $estadoNuevo,
-            'estado_venta_anterior' => $venta->estado_logistico,
-            'estado_venta_nuevo' => $nuevoEstadoVenta,
-        ]);
+                Log::info('Sincronización: Estado de entrega cambió (vía pivot)', [
+                    'venta_id' => $venta->id,
+                    'numero_venta' => $venta->numero,
+                    'entrega_id' => $entrega->id,
+                    'estado_entrega_anterior' => $estadoAnterior,
+                    'estado_entrega_nuevo' => $estadoNuevo,
+                    'estado_venta_anterior' => $venta->estado_logistico,
+                    'estado_venta_nuevo' => $nuevoEstadoVenta,
+                ]);
 
-        // Actualizar solo si cambió
-        if ($venta->estado_logistico !== $nuevoEstadoVenta) {
-            $venta->update(['estado_logistico' => $nuevoEstadoVenta]);
+                // Actualizar solo si cambió
+                if ($venta->estado_logistico !== $nuevoEstadoVenta) {
+                    $venta->update(['estado_logistico' => $nuevoEstadoVenta]);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error sincronizando venta al cambiar estado entrega', [
+                    'venta_id' => $venta->id,
+                    'entrega_id' => $entrega->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continuar sincronizando otras ventas
+            }
         }
     }
 
     /**
      * Determinar el estado logístico de una venta basado en sus entregas
+     *
+     * FASE 3 - REFACTORIZACIÓN:
+     * Ahora usa relación ventas() (N:M via pivot entrega_venta)
+     * Una venta puede estar en múltiples entregas consolidadas
      *
      * Lógica:
      * 1. Si no tiene entregas → SIN_ENTREGA
@@ -144,8 +199,9 @@ class SincronizacionVentaEntregaService
      */
     public function determinarEstadoLogistico(Venta $venta): string
     {
+        // Obtener TODAS las entregas de esta venta (via pivot entrega_venta)
         $entregas = $venta->entregas()
-            ->select('id', 'estado')
+            ->select('entregas.id', 'entregas.estado')
             ->get();
 
         // Si no hay entregas
@@ -202,11 +258,15 @@ class SincronizacionVentaEntregaService
 
     /**
      * Obtener información de entregas para una venta
+     *
+     * FASE 3 - ACTUALIZADO:
+     * Ahora usa relación belongsToMany via pivot entrega_venta
      */
     public function obtenerDetalleEntregas(Venta $venta): array
     {
+        // Obtener entregas con sus metadatos del pivot
         $entregas = $venta->entregas()
-            ->select('id', 'estado', 'fecha_programada', 'chofer_id', 'vehiculo_id')
+            ->select('entregas.id', 'entregas.numero_entrega', 'entregas.estado', 'entregas.fecha_programada', 'entregas.chofer_id', 'entregas.vehiculo_id', 'entrega_venta.orden', 'entrega_venta.fecha_confirmacion')
             ->with(['chofer:id,nombre', 'vehiculo:id,placa'])
             ->get();
 
@@ -217,9 +277,13 @@ class SincronizacionVentaEntregaService
             'entregas' => $entregas->map(function ($entrega) {
                 return [
                     'id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'orden' => $entrega->pivot->orden ?? null,  // Orden en la consolidación
                     'estado' => $entrega->estado,
                     'estado_logistico_venta' => self::$mapeoEstados[$entrega->estado] ?? 'DESCONOCIDO',
                     'fecha_programada' => $entrega->fecha_programada,
+                    'cargada' => $entrega->pivot->fecha_confirmacion ? true : false,
+                    'fecha_confirmacion_carga' => $entrega->pivot->fecha_confirmacion,
                     'chofer' => $entrega->chofer?->nombre ?? 'Sin asignar',
                     'vehiculo' => $entrega->vehiculo?->placa ?? 'Sin asignar',
                 ];

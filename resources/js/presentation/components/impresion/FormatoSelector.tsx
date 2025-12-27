@@ -18,7 +18,7 @@ interface FormatoImpresion {
 
 interface FormatoSelectorProps {
     documentoId: number | string;
-    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga';
+    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga' | 'entregas';
     formatos?: FormatoImpresion[];
     onPreview?: (formato: string) => void;
     className?: string;
@@ -58,9 +58,11 @@ export function FormatoSelector({
     const handleImprimir = (formato: string, accion: 'download' | 'stream' = 'download') => {
         setLoading(true);
 
-        // Manejar caso especial de reportes-carga (usa /api/ y /descargar)
+        // Manejar casos especiales de API endpoints
         const url = tipoDocumento === 'reportes-carga'
             ? `/api/reportes-carga/${documentoId}/descargar?formato=${formato}&accion=${accion}`
+            : tipoDocumento === 'entregas'
+            ? `/api/entregas/${documentoId}/descargar?formato=${formato}&accion=${accion}`
             : `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
 
         // Abrir en nueva ventana para stream, o descargar
@@ -81,6 +83,8 @@ export function FormatoSelector({
             // Abrir preview en nueva ventana
             const url = tipoDocumento === 'reportes-carga'
                 ? `/api/reportes-carga/${documentoId}/preview?formato=${formato}`
+                : tipoDocumento === 'entregas'
+                ? `/api/entregas/${documentoId}/preview?formato=${formato}`
                 : `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
             window.open(url, '_blank');
         }

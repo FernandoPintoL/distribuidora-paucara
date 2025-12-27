@@ -43,7 +43,7 @@ trait LogisticaTrait
     {
         return $this->entregasGestionadas()
             ->whereIn('estado', ['ASIGNADA', 'EN_CAMINO'])
-            ->with(['venta', 'venta.cliente', 'proforma', 'proforma.cliente'])
+            ->with(['ventas.cliente', 'proforma', 'proforma.cliente'])
             ->get();
     }
 
@@ -81,7 +81,7 @@ trait LogisticaTrait
         return $this->entregasGestionadas()
             ->whereIn('estado', ['ASIGNADA', 'EN_CAMINO'])
             ->whereDate('fecha_entrega', '<', now())
-            ->with(['venta', 'venta.cliente', 'proforma', 'proforma.cliente'])
+            ->with(['ventas.cliente', 'proforma', 'proforma.cliente'])
             ->get();
     }
 }

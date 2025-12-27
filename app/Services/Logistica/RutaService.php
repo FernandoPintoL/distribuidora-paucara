@@ -66,7 +66,7 @@ class RutaService
                     $fecha->startOfDay(),
                     $fecha->endOfDay(),
                 ])
-                ->with(['venta', 'venta.cliente'])
+                ->with(['ventas.cliente'])
                 ->get();
 
             if ($entregas->isEmpty()) {
@@ -78,7 +78,8 @@ class RutaService
 
             // 2. Agrupar por zona/localidad
             $entregazPorZona = $entregas->groupBy(function ($entrega) {
-                return $entrega->venta->cliente->zona_id ?? 'DEFAULT';
+                // Usar zona_id directo o de la primera venta
+                return $entrega->zona_id ?? $entrega->ventas?->first()?->cliente?->zona_id ?? 'DEFAULT';
             });
 
             // 3. Crear ruta por zona

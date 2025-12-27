@@ -154,7 +154,9 @@ class TrackingService
             }
 
             // Si no hay dirección de entrega, no podemos calcular ETA
-            if (!$entrega->direccion_entrega && !$entrega->direccionCliente) {
+            $primeraVenta = $entrega->ventas?->first();
+            $tieneDirectionInfo = $entrega->direccion_entrega || $primeraVenta?->direccion || $primeraVenta?->direccionCliente;
+            if (!$tieneDirectionInfo) {
                 return null;
             }
 

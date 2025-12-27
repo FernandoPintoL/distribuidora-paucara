@@ -283,22 +283,32 @@
     @endif
 
     <!-- Entregas Asociadas (si modo detallado) -->
-    @if ($detallado && $reporte->entregas && $reporte->entregas->count() > 0)
+    @if ((isset($detallado) ? $detallado : false) && $reporte->entregas && $reporte->entregas->count() > 0)
         <div class="entregas-list">
             <div class="section-title">ENTREGAS INCLUIDAS EN ESTE REPORTE</div>
             @foreach ($reporte->entregas as $entrega)
                 <div class="entrega-item">
                     <div class="entrega-numero">
-                        #{{ loop.iteration }} - Entrega #{{ $entrega->numero_entrega }}
+                        #{{ $loop->iteration }} - Entrega #{{ $entrega->numero_entrega }}
                     </div>
                     <div class="entrega-cliente">
                         <strong>Cliente:</strong>
-                        {{ $entrega->venta?->cliente?->nombre ?? 'Sin cliente' }}
+                        @if ($entrega->ventas && $entrega->ventas->count() > 0)
+                            {{ $entrega->ventas->first()?->cliente?->nombre ?? 'Sin cliente' }}
+                        @else
+                            Sin cliente
+                        @endif
                     </div>
-                    @if ($entrega->venta?->detalles)
+                    @if ($entrega->ventas && $entrega->ventas->count() > 0)
                         <div class="entrega-detalles">
                             <strong>Productos:</strong>
-                            {{ $entrega->venta->detalles->count() }} artículos
+                            @php
+                                $totalProductos = 0;
+                                foreach ($entrega->ventas as $venta) {
+                                    $totalProductos += $venta->detalles?->count() ?? 0;
+                                }
+                            @endphp
+                            {{ $totalProductos }} artículos
                             | <strong>Peso:</strong> {{ number_format($entrega->peso_kg ?? 0, 2) }} kg
                         </div>
                     @endif

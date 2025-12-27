@@ -618,7 +618,7 @@ destroy.delete = (args: { empleado: number | { id: number } } | [empleado: numbe
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:632
+ * @see app/Http/Controllers/EmpleadoController.php:638
  * @route '/empleados/{empleado}/toggle-estado'
  */
 export const toggleEstado = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -633,7 +633,7 @@ toggleEstado.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:632
+ * @see app/Http/Controllers/EmpleadoController.php:638
  * @route '/empleados/{empleado}/toggle-estado'
  */
 toggleEstado.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -666,7 +666,7 @@ toggleEstado.url = (args: { empleado: number | { id: number } } | [empleado: num
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:632
+ * @see app/Http/Controllers/EmpleadoController.php:638
  * @route '/empleados/{empleado}/toggle-estado'
  */
 toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -676,7 +676,7 @@ toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: n
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:632
+ * @see app/Http/Controllers/EmpleadoController.php:638
  * @route '/empleados/{empleado}/toggle-estado'
  */
     const toggleEstadoForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -691,7 +691,7 @@ toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: n
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::toggleEstado
- * @see app/Http/Controllers/EmpleadoController.php:632
+ * @see app/Http/Controllers/EmpleadoController.php:638
  * @route '/empleados/{empleado}/toggle-estado'
  */
         toggleEstadoForm.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -707,7 +707,7 @@ toggleEstado.patch = (args: { empleado: number | { id: number } } | [empleado: n
     toggleEstado.form = toggleEstadoForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:646
+ * @see app/Http/Controllers/EmpleadoController.php:652
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
 export const toggleAccesoSistema = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -722,7 +722,7 @@ toggleAccesoSistema.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:646
+ * @see app/Http/Controllers/EmpleadoController.php:652
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
 toggleAccesoSistema.url = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -755,7 +755,7 @@ toggleAccesoSistema.url = (args: { empleado: number | { id: number } } | [emplea
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:646
+ * @see app/Http/Controllers/EmpleadoController.php:652
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
 toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -765,7 +765,7 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:646
+ * @see app/Http/Controllers/EmpleadoController.php:652
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
     const toggleAccesoSistemaForm = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -780,7 +780,7 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::toggleAccesoSistema
- * @see app/Http/Controllers/EmpleadoController.php:646
+ * @see app/Http/Controllers/EmpleadoController.php:652
  * @route '/empleados/{empleado}/toggle-acceso-sistema'
  */
         toggleAccesoSistemaForm.patch = (args: { empleado: number | { id: number } } | [empleado: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -796,7 +796,7 @@ toggleAccesoSistema.patch = (args: { empleado: number | { id: number } } | [empl
     toggleAccesoSistema.form = toggleAccesoSistemaForm
 /**
 * @see \App\Http\Controllers\EmpleadoController::crearRapido
- * @see app/Http/Controllers/EmpleadoController.php:621
+ * @see app/Http/Controllers/EmpleadoController.php:627
  * @route '/empleados/crear-rapido'
  */
 export const crearRapido = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -811,7 +811,7 @@ crearRapido.definition = {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::crearRapido
- * @see app/Http/Controllers/EmpleadoController.php:621
+ * @see app/Http/Controllers/EmpleadoController.php:627
  * @route '/empleados/crear-rapido'
  */
 crearRapido.url = (options?: RouteQueryOptions) => {
@@ -820,7 +820,7 @@ crearRapido.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\EmpleadoController::crearRapido
- * @see app/Http/Controllers/EmpleadoController.php:621
+ * @see app/Http/Controllers/EmpleadoController.php:627
  * @route '/empleados/crear-rapido'
  */
 crearRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -830,7 +830,7 @@ crearRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\EmpleadoController::crearRapido
- * @see app/Http/Controllers/EmpleadoController.php:621
+ * @see app/Http/Controllers/EmpleadoController.php:627
  * @route '/empleados/crear-rapido'
  */
     const crearRapidoForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -840,7 +840,7 @@ crearRapido.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\EmpleadoController::crearRapido
- * @see app/Http/Controllers/EmpleadoController.php:621
+ * @see app/Http/Controllers/EmpleadoController.php:627
  * @route '/empleados/crear-rapido'
  */
         crearRapidoForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
