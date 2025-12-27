@@ -93,7 +93,7 @@ class LogisticaController extends Controller
         ];
 
         // Entregas activas con paginación
-        $entregasQuery = Entrega::with(['ventas.cliente', 'proforma.cliente'])
+        $entregasQuery = Entrega::with(['ventas.cliente'])
             ->whereIn('estado', ['PROGRAMADO', 'ASIGNADA', 'EN_CAMINO'])
             ->orderBy('fecha_programada', 'desc');
 
