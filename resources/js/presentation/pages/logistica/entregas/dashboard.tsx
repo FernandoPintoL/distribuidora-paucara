@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 import { useEntregasDashboardStats } from '@/application/hooks/use-entregas-dashboard-stats';
 
 // Componentes
+import { PageHeader } from '@/presentation/components/entrega/PageHeader';
 import { DashboardEntregasStats } from './components/DashboardEntregasStats';
 import { MetricasZonas } from './components/MetricasZonas';
 import { TopChoferes } from './components/TopChoferes';
@@ -14,11 +15,7 @@ import { EntregasUltimos7Dias } from './components/EntregasUltimos7Dias';
 import { EntregasPorEstado } from './components/EntregasPorEstado';
 import { EntregasRecientes } from './components/EntregasRecientes';
 
-interface DashboardEntregasProps {
-    // Props del servidor (si los hay)
-}
-
-export default function DashboardEntregas({}: DashboardEntregasProps) {
+export default function DashboardEntregas() {
     // Hook para cargar estadísticas
     const {
         stats,
@@ -66,20 +63,18 @@ export default function DashboardEntregas({}: DashboardEntregasProps) {
 
             <div className="space-y-6 p-4">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold">Dashboard de Entregas</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Visualización completa de estadísticas de entregas y rendimiento
-                        </p>
-                    </div>
-                    <Link href="/logistica/entregas/create">
-                        <Button>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Nueva Entrega
-                        </Button>
-                    </Link>
-                </div>
+                <PageHeader
+                    title="Dashboard de Entregas"
+                    description="Visualización completa de estadísticas de entregas y rendimiento"
+                    actions={
+                        <Link href="/logistica/entregas/create">
+                            <Button>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Nueva Entrega
+                            </Button>
+                        </Link>
+                    }
+                />
 
                 {/* Cards de Estados */}
                 <DashboardEntregasStats

@@ -1,24 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
-import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Eye } from 'lucide-react';
 import type { EntregaReciente } from '@/application/hooks/use-entregas-dashboard-stats';
+import { EntregaEstadoBadge } from '@/presentation/components/entrega/EntregaEstadoBadge';
+import { LoadingState } from '@/presentation/components/entrega/LoadingState';
 
 interface EntregasRecientesProps {
     entregas: EntregaReciente[];
     loading: boolean;
     onVerEntrega?: (entregaId: number) => void;
 }
-
-const estadoBadgeConfig: Record<string, { bg: string; text: string }> = {
-    PROGRAMADO: { bg: 'bg-blue-100', text: 'text-blue-800' },
-    ASIGNADA: { bg: 'bg-purple-100', text: 'text-purple-800' },
-    EN_CAMINO: { bg: 'bg-orange-100', text: 'text-orange-800' },
-    LLEGO: { bg: 'bg-cyan-100', text: 'text-cyan-800' },
-    ENTREGADO: { bg: 'bg-green-100', text: 'text-green-800' },
-    NOVEDAD: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-    CANCELADA: { bg: 'bg-red-100', text: 'text-red-800' },
-};
 
 export function EntregasRecientes({
     entregas,
@@ -33,10 +24,8 @@ export function EntregasRecientes({
                         Entregas Recientes
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="h-12 bg-muted animate-pulse rounded"></div>
-                    ))}
+                <CardContent>
+                    <LoadingState variant="card" count={5} />
                 </CardContent>
             </Card>
         );
@@ -66,13 +55,7 @@ export function EntregasRecientes({
             </CardHeader>
             <CardContent>
                 <div className="space-y-2">
-                    {entregas.map((entrega) => {
-                        const badgeConfig =
-                            estadoBadgeConfig[
-                                entrega.estado as keyof typeof estadoBadgeConfig
-                            ] || estadoBadgeConfig.PROGRAMADO;
-
-                        return (
+                    {entregas.map((entrega) => (
                             <div
                                 key={entrega.id}
                                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -82,12 +65,7 @@ export function EntregasRecientes({
                                         <span className="font-medium text-sm">
                                             #{entrega.id}
                                         </span>
-                                        <Badge
-                                            className={`${badgeConfig.bg} ${badgeConfig.text}`}
-                                            variant="secondary"
-                                        >
-                                            {entrega.estado}
-                                        </Badge>
+                                        <EntregaEstadoBadge estado={entrega.estado} />
                                     </div>
                                     <p className="text-xs text-muted-foreground truncate">
                                         {entrega.cliente_nombre}
@@ -114,8 +92,8 @@ export function EntregasRecientes({
                                     </Button>
                                 )}
                             </div>
-                        );
-                    })}
+                        )
+                    )}
                 </div>
             </CardContent>
         </Card>

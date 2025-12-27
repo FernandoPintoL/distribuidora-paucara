@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent } from '@/presentation/components/ui/card';
-import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
-import { Input } from '@/presentation/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import { toast } from 'react-toastify';
@@ -15,11 +13,14 @@ import {
     Clock,
     ChevronRight,
     Plus,
-    Filter,
-    X,
 } from 'lucide-react';
 import logisticaService, { type Entrega, type FiltrosEntregas } from '@/infrastructure/services/logistica.service';
 import type { Id } from '@/domain/entities/shared';
+import { PageHeader } from '@/presentation/components/entrega/PageHeader';
+import { EntregaListFilters } from '@/presentation/components/entrega/EntregaListFilters';
+import { EntregaEstadoBadge } from '@/presentation/components/entrega/EntregaEstadoBadge';
+import { LoadingState } from '@/presentation/components/entrega/LoadingState';
+import { EmptyState } from '@/presentation/components/entrega/EmptyState';
 
 interface Props {
     entregas?: Entrega[];
@@ -148,114 +149,43 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
         setShowFilters(false);
     };
 
-    const getEstadoBadge = (estado: string) => {
-        const config: Record<string, { color: string; label: string }> = {
-            'ASIGNADA': { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200', label: 'Asignada' },
-            'EN_CAMINO': { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200', label: 'En Camino' },
-            'LLEGO': { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200', label: 'Llegó' },
-            'ENTREGADO': { color: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200', label: 'Entregado' },
-            'NOVEDAD': { color: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200', label: 'Novedad' },
-            'CANCELADA': { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-200', label: 'Cancelada' },
-        };
-
-        const cfg = config[estado] || { color: 'bg-gray-100 text-gray-800', label: estado };
-        return <Badge className={cfg.color}>{cfg.label}</Badge>;
-    };
-
     return (
         <AppLayout>
             <Head title="Entregas Asignadas" />
             <div className="space-y-6 p-4">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold">Entregas Asignadas</h1>
-                        <p className="text-muted-foreground mt-1">Gestiona y asigna entregas a choferes</p>
-                    </div>
-                </div>
+                <PageHeader
+                    title="Entregas Asignadas"
+                    description="Gestiona y asigna entregas a choferes"
+                />
 
                 {/* Filtros */}
-                <div className="space-y-4">
-                    <div className="flex gap-2">
-                        <Button
-                            variant={showFilters ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="gap-2"
-                        >
-                            <Filter className="h-4 w-4" />
-                            Filtros
-                        </Button>
-                        {Object.keys(filtros).length > 0 && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={limpiarFiltros}
-                                className="gap-2"
-                            >
-                                <X className="h-4 w-4" />
-                                Limpiar
-                            </Button>
-                        )}
-                    </div>
-
-                    {showFilters && (
-                        <Card className="bg-muted/30">
-                            <CardContent className="pt-6">
-                                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <div>
-                                        <SearchSelect
-                                            label="Estado"
-                                            placeholder="Todos los estados"
-                                            value={filtros.estado || ''}
-                                            options={[
-                                                { value: '', label: 'Todos' },
-                                                { value: 'ASIGNADA', label: 'Asignada' },
-                                                { value: 'EN_CAMINO', label: 'En Camino' },
-                                                { value: 'LLEGO', label: 'Llegó' },
-                                            ]}
-                                            onChange={(value) => handleFiltroChange('estado', value as string)}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-sm font-medium mb-2 block">Fecha Desde</label>
-                                        <Input
-                                            type="date"
-                                            value={filtros.fecha_desde || ''}
-                                            onChange={(e) => handleFiltroChange('fecha_desde', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-sm font-medium mb-2 block">Fecha Hasta</label>
-                                        <Input
-                                            type="date"
-                                            value={filtros.fecha_hasta || ''}
-                                            onChange={(e) => handleFiltroChange('fecha_hasta', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
+                <EntregaListFilters
+                    filtros={filtros}
+                    onFiltroChange={handleFiltroChange}
+                    onLimpiar={limpiarFiltros}
+                    showFilters={showFilters}
+                    onToggleFilters={() => setShowFilters(!showFilters)}
+                    estadoOptions={[
+                        { value: '', label: 'Todos' },
+                        { value: 'ASIGNADA', label: 'Asignada' },
+                        { value: 'EN_CAMINO', label: 'En Camino' },
+                        { value: 'LLEGO', label: 'Llegó' },
+                        { value: 'ENTREGADO', label: 'Entregado' },
+                        { value: 'NOVEDAD', label: 'Novedad' },
+                        { value: 'CANCELADA', label: 'Cancelada' },
+                    ]}
+                />
 
                 {/* Entregas */}
                 <div className="space-y-3">
                     {loading ? (
-                        <div className="text-center py-8">
-                            <p className="text-muted-foreground">Cargando entregas...</p>
-                        </div>
+                        <LoadingState variant="card" count={3} />
                     ) : entregas.length === 0 ? (
-                        <Card>
-                            <CardContent className="pt-6">
-                                <div className="text-center py-8">
-                                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                    <p className="text-muted-foreground">No hay entregas asignadas</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <EmptyState
+                            icon={Package}
+                            title="No hay entregas asignadas"
+                        />
                     ) : (
                         entregas.map((entrega) => (
                             <Card key={entrega.id} className="hover:shadow-md transition-shadow">
@@ -272,7 +202,7 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                {getEstadoBadge(entrega.estado)}
+                                                <EntregaEstadoBadge estado={entrega.estado} />
                                             </div>
                                         </div>
 

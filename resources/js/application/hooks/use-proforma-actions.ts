@@ -14,7 +14,7 @@
 
 import { useState, useCallback } from 'react';
 import { router } from '@inertiajs/react';
-import type { Proforma } from '@/domain/entities/proformas';
+import type { Proforma, PaymentData } from '@/domain/entities/proformas';
 import { validacionesProforma } from '@/domain/entities/proformas';
 import proformasService from '@/infrastructure/services/proformas.service';
 import NotificationService from '@/infrastructure/services/notification.service';
@@ -25,13 +25,17 @@ import NotificationService from '@/infrastructure/services/notification.service'
 export interface CoordinacionData {
     fecha_entrega_confirmada: string;
     hora_entrega_confirmada: string;
+    hora_entrega_confirmada_fin?: string;
     comentario_coordinacion: string;
     notas_llamada: string;
     numero_intentos_contacto: number;
+    fecha_ultimo_intento?: string;
     resultado_ultimo_intento: string;
     entregado_en: string;
     entregado_a: string;
     observaciones_entrega: string;
+    // ✅ NUEVO: Datos de pago para aprobación con pago inmediato
+    payment?: PaymentData;
 }
 
 /**
@@ -110,69 +114,87 @@ export function useProformaActions(
 
         setIsSubmitting(true);
 
-        // Si hay datos de coordinación, guardarlos primero
-        if (coordinacion?.fecha_entrega_confirmada) {
-            // Obtener token CSRF del meta tag
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        // Preparar datos para APROBAR
+        const payload = {
+            // Coordinación de entrega
+            fecha_entrega_confirmada: coordinacion?.fecha_entrega_confirmada,
+            hora_entrega_confirmada: coordinacion?.hora_entrega_confirmada,
+            hora_entrega_confirmada_fin: coordinacion?.hora_entrega_confirmada_fin,
+            comentario_coordinacion: coordinacion?.comentario_coordinacion,
+        };
 
-            fetch(proformasService.coordinarUrl(proforma.id), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-Token': csrfToken,
-                },
-                body: JSON.stringify(coordinacion),
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Error al guardar coordinación');
-                return response.json();
-            })
-            .then(() => {
-                NotificationService.success('Coordinación guardada correctamente');
-                // Una vez guardada la coordinación, proceder a aprobar
-                router.post(
-                    proformasService.aprobarUrl(proforma.id),
-                    {},
-                    {
-                        onSuccess: () => {
-                            NotificationService.success('Proforma aprobada correctamente');
-                            options?.onSuccess?.();
-                            setIsSubmitting(false);
-                        },
-                        onError: (errors) => {
-                            NotificationService.error('Error al aprobar la proforma');
-                            console.error('Approve errors:', errors);
-                            options?.onError?.(new Error('Error al aprobar'));
-                            setIsSubmitting(false);
-                        },
-                    }
-                );
-            })
-            .catch(() => {
-                NotificationService.error('Error al guardar la coordinación');
-                setIsSubmitting(false);
-            });
-        } else {
-            // Si no hay coordinación, solo aprobar
-            router.post(
-                proformasService.aprobarUrl(proforma.id),
-                {},
-                {
-                    onSuccess: () => {
-                        NotificationService.success('Proforma aprobada correctamente');
+        console.log('%c📤 PASO 1: Aprobando proforma...', 'font-size: 14px; color: blue; font-weight: bold;');
+        console.log('Payload de aprobación:', payload);
+
+        // PASO 1: APROBAR LA PROFORMA
+        router.post(
+            proformasService.aprobarUrl(proforma.id),
+            payload,
+            {
+                onSuccess: () => {
+                    console.log('%c✅ Proforma aprobada', 'color: green; font-weight: bold;');
+                    NotificationService.success('Proforma aprobada correctamente');
+
+                    // PASO 2: Si incluye pago, CONVERTIR A VENTA
+                    if (coordinacion?.payment?.con_pago) {
+                        console.log('%c📤 PASO 2: Convirtiendo a venta...', 'font-size: 14px; color: blue; font-weight: bold;');
+
+                        const datosConversion = {
+                            con_pago: true,
+                            tipo_pago_id: coordinacion.payment.tipo_pago_id,
+                            politica_pago: coordinacion.payment.politica_pago,
+                            monto_pagado: coordinacion.payment.monto_pagado,
+                            fecha_pago: coordinacion.payment.fecha_pago,
+                            numero_recibo: coordinacion.payment.numero_recibo,
+                            numero_transferencia: coordinacion.payment.numero_transferencia,
+                        };
+
+                        console.log('Datos de pago:', datosConversion);
+
+                        // Llamar al endpoint de conversión
+                        router.post(
+                            `/api/proformas/${proforma.id}/convertir-venta`,
+                            datosConversion,
+                            {
+                                onSuccess: () => {
+                                    console.log('%c✅ Proforma convertida a venta', 'color: green; font-weight: bold;');
+                                    NotificationService.success('Proforma convertida a venta exitosamente');
+                                    options?.onSuccess?.();
+                                    setIsSubmitting(false);
+                                },
+                                onError: (errors: any) => {
+                                    console.error('❌ Error al convertir a venta:', errors);
+
+                                    // Extraer mensaje de error del servidor si está disponible
+                                    const errorMessage = errors?.message || 'Error al convertir la proforma a venta';
+                                    NotificationService.error(errorMessage);
+                                    options?.onError?.(new Error(errorMessage));
+                                    setIsSubmitting(false);
+
+                                    // Log detallado para debugging
+                                    console.log('%c📋 Detalles del error de conversión:', 'color: red; font-weight: bold;', {
+                                        fullError: errors,
+                                        status: errors?.status,
+                                        statusText: errors?.statusText,
+                                    });
+                                },
+                            }
+                        );
+                    } else {
+                        // Sin conversión, solo aprobación
                         options?.onSuccess?.();
                         setIsSubmitting(false);
-                    },
-                    onError: (errors) => {
-                        NotificationService.error('Error al aprobar la proforma');
-                        console.error('Approve errors:', errors);
-                        options?.onError?.(new Error('Error al aprobar'));
-                        setIsSubmitting(false);
-                    },
-                }
-            );
-        }
+                    }
+                },
+                onError: (errors: any) => {
+                    console.error('❌ Error al aprobar:', errors);
+                    const errorMessage = errors?.message || 'Error al aprobar la proforma';
+                    NotificationService.error(errorMessage);
+                    options?.onError?.(new Error(errorMessage));
+                    setIsSubmitting(false);
+                },
+            }
+        );
     }, [proforma.id, puedeAprobar, options]);
 
     // ============================================

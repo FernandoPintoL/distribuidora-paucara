@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent } from '@/presentation/components/ui/card';
@@ -21,20 +21,11 @@ import {
 } from 'lucide-react';
 import logisticaService, { type Proforma, type FiltrosProformas } from '@/infrastructure/services/logistica.service';
 import type { Id } from '@/domain/entities/shared';
+import { MOTIVOS_RECHAZO_PROFORMA } from '@/lib/proformas.utils';
 
 interface Props {
     proformas?: Proforma[];
 }
-
-// Motivos predefinidos de rechazo
-const MOTIVOS_RECHAZO = [
-    { value: 'cliente_cancelo', label: 'Cliente canceló el pedido' },
-    { value: 'sin_disponibilidad', label: 'No hay disponibilidad para la fecha solicitada' },
-    { value: 'sin_respuesta', label: 'Cliente no contestó llamadas' },
-    { value: 'fuera_cobertura', label: 'Dirección fuera de cobertura' },
-    { value: 'stock_insuficiente', label: 'Stock insuficiente' },
-    { value: 'otro', label: 'Otro motivo (especificar abajo)' },
-];
 
 export default function ProformasPendientes({ proformas: initialProformas = [] }: Props) {
     const [proformas, setProformas] = useState<Proforma[]>(initialProformas);
@@ -56,11 +47,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
     const [procesandoId, setProcesandoId] = useState<Id | null>(null);
 
     // Cargar proformas
-    useEffect(() => {
-        cargarProformas();
-    }, [filtros]);
-
-    const cargarProformas = async () => {
+    const cargarProformas = useCallback(async () => {
         setLoading(true);
         try {
             const resultado = await logisticaService.obtenerProformasPendientes(1, filtros);
@@ -71,9 +58,13 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
         } finally {
             setLoading(false);
         }
-    };
+    }, [filtros]);
 
-    const abrirModalAprobacion = (proforma: Proforma) => {
+    useEffect(() => {
+        cargarProformas();
+    }, [cargarProformas]);
+
+    /* const abrirModalAprobacion = (proforma: Proforma) => {
         setProformaSeleccionada(proforma);
         setDatosConfirmacion({
             fecha_entrega_confirmada: proforma.fecha_entrega_solicitada || '',
@@ -83,7 +74,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
             comentario: '',
         });
         setMostrarModalAprobacion(true);
-    };
+    }; */
 
     const cerrarModalAprobacion = () => {
         setMostrarModalAprobacion(false);
@@ -120,12 +111,12 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
         }
     };
 
-    const abrirModalRechazo = (proforma: Proforma) => {
+    /* const abrirModalRechazo = (proforma: Proforma) => {
         setProformaSeleccionada(proforma);
         setMotivoRechazo('');
         setMotivoRechazoSeleccionado('');
         setMostrarModalRechazo(true);
-    };
+    }; */
 
     const cerrarModalRechazo = () => {
         setMostrarModalRechazo(false);
@@ -138,7 +129,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
         if (!proformaSeleccionada) return;
 
         // Construir motivo final
-        const motivoSeleccionadoLabel = MOTIVOS_RECHAZO.find(m => m.value === motivoRechazoSeleccionado)?.label || '';
+        const motivoSeleccionadoLabel = MOTIVOS_RECHAZO_PROFORMA.find(m => m.value === motivoRechazoSeleccionado)?.label || '';
         const motivoFinal = motivoRechazoSeleccionado === 'otro'
             ? motivoRechazo
             : motivoRechazo
@@ -370,7 +361,7 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
                             <div>
                                 <label className="text-sm font-medium mb-3 block">Motivo del rechazo *</label>
                                 <div className="space-y-2">
-                                    {MOTIVOS_RECHAZO.map((motivo) => (
+                                    {MOTIVOS_RECHAZO_PROFORMA.map((motivo) => (
                                         <label
                                             key={motivo.value}
                                             className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${motivoRechazoSeleccionado === motivo.value

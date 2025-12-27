@@ -701,6 +701,84 @@ destroy.delete = (args: { venta: string | number } | [venta: string | number ] |
     
     destroy.form = destroyForm
 /**
+* @see \App\Http\Controllers\VentaController::formatosDisponibles
+ * @see app/Http/Controllers/VentaController.php:549
+ * @route '/ventas/formatos-disponibles'
+ */
+export const formatosDisponibles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: formatosDisponibles.url(options),
+    method: 'get',
+})
+
+formatosDisponibles.definition = {
+    methods: ["get","head"],
+    url: '/ventas/formatos-disponibles',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\VentaController::formatosDisponibles
+ * @see app/Http/Controllers/VentaController.php:549
+ * @route '/ventas/formatos-disponibles'
+ */
+formatosDisponibles.url = (options?: RouteQueryOptions) => {
+    return formatosDisponibles.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VentaController::formatosDisponibles
+ * @see app/Http/Controllers/VentaController.php:549
+ * @route '/ventas/formatos-disponibles'
+ */
+formatosDisponibles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: formatosDisponibles.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\VentaController::formatosDisponibles
+ * @see app/Http/Controllers/VentaController.php:549
+ * @route '/ventas/formatos-disponibles'
+ */
+formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: formatosDisponibles.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\VentaController::formatosDisponibles
+ * @see app/Http/Controllers/VentaController.php:549
+ * @route '/ventas/formatos-disponibles'
+ */
+    const formatosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: formatosDisponibles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\VentaController::formatosDisponibles
+ * @see app/Http/Controllers/VentaController.php:549
+ * @route '/ventas/formatos-disponibles'
+ */
+        formatosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: formatosDisponibles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\VentaController::formatosDisponibles
+ * @see app/Http/Controllers/VentaController.php:549
+ * @route '/ventas/formatos-disponibles'
+ */
+        formatosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: formatosDisponibles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    formatosDisponibles.form = formatosDisponiblesForm
+/**
 * @see \App\Http\Controllers\VentaController::imprimir
  * @see app/Http/Controllers/VentaController.php:482
  * @route '/ventas/{venta}/imprimir'
@@ -904,84 +982,6 @@ preview.head = (args: { venta: number | { id: number } } | [venta: number | { id
         })
     
     preview.form = previewForm
-/**
-* @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:549
- * @route '/ventas/formatos-disponibles'
- */
-export const formatosDisponibles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: formatosDisponibles.url(options),
-    method: 'get',
-})
-
-formatosDisponibles.definition = {
-    methods: ["get","head"],
-    url: '/ventas/formatos-disponibles',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:549
- * @route '/ventas/formatos-disponibles'
- */
-formatosDisponibles.url = (options?: RouteQueryOptions) => {
-    return formatosDisponibles.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:549
- * @route '/ventas/formatos-disponibles'
- */
-formatosDisponibles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: formatosDisponibles.url(options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:549
- * @route '/ventas/formatos-disponibles'
- */
-formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: formatosDisponibles.url(options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:549
- * @route '/ventas/formatos-disponibles'
- */
-    const formatosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: formatosDisponibles.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:549
- * @route '/ventas/formatos-disponibles'
- */
-        formatosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: formatosDisponibles.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:549
- * @route '/ventas/formatos-disponibles'
- */
-        formatosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: formatosDisponibles.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    formatosDisponibles.form = formatosDisponiblesForm
 const ventas = {
     logistica,
 entregas,
@@ -992,9 +992,9 @@ show,
 edit,
 update,
 destroy,
+formatosDisponibles,
 imprimir,
 preview,
-formatosDisponibles,
 stock,
 detalles,
 }

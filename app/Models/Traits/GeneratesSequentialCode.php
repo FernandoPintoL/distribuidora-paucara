@@ -11,12 +11,16 @@ use Illuminate\Support\Facades\Log;
  * Características:
  * - Usa lockForUpdate() para evitar condiciones de carrera
  * - Reintentos automáticos con backoff exponencial en caso de deadlock
- * - Fallback con timestamp como último recurso
+ * - Padding inteligente: 4 dígitos (0001-0999), luego sin padding (1000+)
  * - Logging detallado para auditoría
  *
  * Métodos disponibles:
- * - generateSequentialCode() : Prefijo-Año-Secuencial (ej: VEN20250001)
+ * - generateSequentialCode() : Prefijo-Fecha-Secuencial (ej: VEN20250126-0001, VEN20250126-1000)
  * - generateIdBasedCode() : Prefijo-ID_PADDED (ej: PRO0001)
+ *
+ * Formato de ventas:
+ * - VEN + YYYYMMDD + "-" + SECUENCIAL
+ * - Ejemplos: VEN20250126-0001, VEN20250126-0999, VEN20250126-1000, VEN20250126-1001
  *
  * Uso:
  * class Venta extends Model {
@@ -30,22 +34,31 @@ use Illuminate\Support\Facades\Log;
 trait GeneratesSequentialCode
 {
     /**
-     * Genera código secuencial: PREFIX-AÑO-NÚMERO
-     * Ejemplo: VEN2025000001, PF2025000042, RTA2025000001
+     * Genera código secuencial: PREFIX-FECHA-NÚMERO
+     * Formato: VEN + YYYYMMDD + "-" + SECUENCIAL
+     * Ejemplos: VEN20250126-0001, VEN20250126-0999, VEN20250126-1000, VEN20250126-1001
+     *
+     * Padding inteligente:
+     * - Si SECUENCIAL < 1000: muestra con 4 dígitos (0001, 0002, ..., 0999)
+     * - Si SECUENCIAL >= 1000: muestra sin padding (1000, 1001, 1002, ...)
      *
      * @param string $prefix Prefijo del código (ej: 'VEN', 'PF', 'RTA')
      * @param string $column Columna donde se almacena (default: 'numero')
-     * @param bool $includeDate Incluir año en el código (default: true)
+     * @param bool $includeDate Incluir fecha en el código (default: true)
      * @param string $dateFormat Formato de fecha (default: 'Ymd' = YYYYMMDD)
-     * @param int $padding Cantidad de dígitos para el secuencial (default: 6)
+     * @param int $padding Ignorado - se usa padding inteligente (default: 6)
      * @param int $maxRetries Reintentos en caso de deadlock (default: 5)
      *
      * @return string Código generado
      * @throws \RuntimeException Si no puede generar después de reintentos
      *
      * Ejemplo de uso:
-     * $numero = Venta::generateSequentialCode('VEN', 'numero', true, 'Ymd', 6);
-     * // Resultado: VEN2025000001
+     * $numero = Venta::generateSequentialCode('VEN', 'numero', true, 'Ymd');
+     * // Resultados progresivos:
+     * // VEN20250126-0001 (primera venta del día)
+     * // VEN20250126-0999 (venta 999 del día)
+     * // VEN20250126-1000 (venta 1000 del día - cambio de formato)
+     * // VEN20250126-1001 (venta 1001 del día)
      */
     protected static function generateSequentialCode(
         string $prefix,
@@ -71,14 +84,28 @@ trait GeneratesSequentialCode
                 $secuencial = 1;
                 if ($ultimo) {
                     // El número tiene formato: PREFIX + DATE + SECUENCIAL
-                    // Ej: VEN20251218000001
-                    // Extraer los últimos `padding` dígitos
+                    // Ej: VEN20251218-0001 o VEN20251218-1000
+                    // Extraer los últimos dígitos numéricos (variable según el valor)
                     $numeroAnterior = $ultimo->{$column};
-                    $ultimosDigitos = substr($numeroAnterior, -$padding);
-                    $secuencial = (int) $ultimosDigitos + 1;
+
+                    // Extraer el secuencial (últimos dígitos después del guion o fecha)
+                    // Buscar desde el final: puede ser 0001-0999 (4 dígitos) o 1000+ (4+ dígitos)
+                    preg_match('/(\d+)$/', $numeroAnterior, $matches);
+                    if (isset($matches[1])) {
+                        $secuencial = (int) $matches[1] + 1;
+                    }
                 }
 
-                $numeroGenerado = $prefix . $date . str_pad($secuencial, $padding, '0', STR_PAD_LEFT);
+                // Aplicar padding inteligente:
+                // - Si secuencial < 1000: mostrar con 4 dígitos (0001, 0002, ..., 0999)
+                // - Si secuencial >= 1000: sin padding (1000, 1001, 1002, ...)
+                if ($secuencial < 1000) {
+                    $secuencialFormato = str_pad($secuencial, 4, '0', STR_PAD_LEFT);
+                } else {
+                    $secuencialFormato = (string) $secuencial;
+                }
+
+                $numeroGenerado = $prefix . $date . '-' . $secuencialFormato;
 
                 Log::info('Número secuencial generado exitosamente', [
                     'prefix' => $prefix,

@@ -44,77 +44,90 @@ class ReporteCargoService
      */
     public function generarReporteDesdeEntrega(Entrega $entrega, array $datos = []): ReporteCarga
     {
-        return $this->transaction(function () use ($entrega, $datos) {
-            try {
-                // Obtener la venta asociada
-                $venta = $entrega->venta;
-                if (!$venta) {
-                    throw new Exception("La entrega {$entrega->id} no tiene venta asociada");
-                }
+        // ✅ CORREGIDO: Removido $this->transaction() para evitar anidamiento de transacciones en PostgreSQL
+        // La transacción exterior en EntregaService::crearLote() manejará todo
 
-                // Generar número de reporte único
-                $numeroReporte = ReporteCarga::generarNumeroReporte();
-
-                // Crear el reporte
-                $reporte = ReporteCarga::create([
-                    'numero_reporte' => $numeroReporte,
-                    'entrega_id' => $entrega->id,
-                    'vehiculo_id' => $datos['vehiculo_id'] ?? null,
-                    'venta_id' => $venta->id,
-                    'descripcion' => $datos['descripcion'] ?? null,
-                    'peso_total_kg' => $datos['peso_total_kg'] ?? 0,
-                    'volumen_total_m3' => $datos['volumen_total_m3'] ?? null,
-                    'generado_por' => Auth::id(),
-                    'estado' => ReporteCarga::ESTADO_PENDIENTE,
-                    'fecha_generacion' => now(),
-                ]);
-
-                // Crear detalles del reporte desde los detalles de la venta
-                $this->crearDetallesDesdeVenta($reporte, $venta);
-
-                // ✅ NUEVA: Vincular entrega al reporte via tabla pivot (Many-to-Many)
-                $reporte->entregas()->attach($entrega->id, [
-                    'orden' => 1,
-                    'incluida_en_carga' => false,
-                    'notas' => null,
-                ]);
-
-                // Actualizar la entrega con el estado (mantener reporte_carga_id para compatibilidad legacy)
-                $entrega->update([
-                    'reporte_carga_id' => $reporte->id,
-                    'estado' => Entrega::ESTADO_PREPARACION_CARGA,
-                ]);
-
-                $this->logSuccess('Reporte de carga generado', [
-                    'reporte_id' => $reporte->id,
-                    'numero' => $numeroReporte,
-                    'entrega_id' => $entrega->id,
-                    'venta_id' => $venta->id,
-                ]);
-
-                // Recargar entrega con relaciones para WebSocket
-                $entrega->load(['chofer', 'venta.cliente']);
-
-                // Notificar por WebSocket
-                try {
-                    $this->webSocketService->notifyReporteCargoGenerado($entrega, $reporte);
-                } catch (Exception $e) {
-                    Log::error('Error enviando notificación WebSocket de reporte generado', [
-                        'entrega_id' => $entrega->id,
-                        'reporte_id' => $reporte->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-
-                return $reporte;
-            } catch (Exception $e) {
-                Log::error('Error generando reporte de carga: ' . $e->getMessage(), [
-                    'entrega_id' => $entrega->id,
-                    'trace' => $e->getTraceAsString(),
-                ]);
-                throw $e;
+        try {
+            // Obtener la venta asociada
+            $venta = $entrega->venta;
+            if (!$venta) {
+                throw new Exception("La entrega {$entrega->id} no tiene venta asociada");
             }
-        });
+
+            // Generar número de reporte único
+            $numeroReporte = ReporteCarga::generarNumeroReporte();
+
+            // Crear el reporte
+            // ✅ CORREGIDO: Para operaciones en lote, no asignamos generado_por ya que es una operación del sistema
+            $reporte = ReporteCarga::create([
+                'numero_reporte' => $numeroReporte,
+                'entrega_id' => $entrega->id,
+                'vehiculo_id' => $datos['vehiculo_id'] ?? null,
+                'venta_id' => $venta->id,
+                'descripcion' => $datos['descripcion'] ?? null,
+                'peso_total_kg' => $datos['peso_total_kg'] ?? 0,
+                'volumen_total_m3' => $datos['volumen_total_m3'] ?? null,
+                'generado_por' => null,  // Sistema/Lote - sin usuario específico
+                'estado' => ReporteCarga::ESTADO_PENDIENTE,
+                'fecha_generacion' => now(),
+            ]);
+
+            // Crear detalles del reporte desde los detalles de la venta
+            $this->crearDetallesDesdeVenta($reporte, $venta);
+
+            // ✅ NUEVA: Vincular entrega al reporte via tabla pivot (Many-to-Many)
+            $reporte->entregas()->attach($entrega->id, [
+                'orden' => 1,
+                'incluida_en_carga' => false,
+                'notas' => null,
+            ]);
+
+            // Actualizar la entrega con el estado (mantener reporte_carga_id para compatibilidad legacy)
+            $entrega->update([
+                'reporte_carga_id' => $reporte->id,
+                'estado' => Entrega::ESTADO_PREPARACION_CARGA,
+            ]);
+
+            $this->logSuccess('Reporte de carga generado', [
+                'reporte_id' => $reporte->id,
+                'numero' => $numeroReporte,
+                'entrega_id' => $entrega->id,
+                'venta_id' => $venta->id,
+            ]);
+
+            // ✅ CORREGIDO: Cargar solo relaciones esenciales, evitando relaciones anidadas problemáticas
+            // El chofer es un Empleado que tiene relación con User, y si ese User no existe,
+            // falla la carga y aborta la transacción. Solo cargamos lo necesario.
+            try {
+                // Solo cargamos venta.cliente, evitamos chofer que tiene relaciones con User
+                $entrega->load(['venta.cliente']);
+            } catch (Exception $e) {
+                Log::warning('No se pudieron cargar todas las relaciones de la entrega', [
+                    'entrega_id' => $entrega->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continuar sin las relaciones - no es crítico para la creación
+            }
+
+            // Notificar por WebSocket (con o sin relaciones cargadas)
+            try {
+                $this->webSocketService->notifyReporteCargoGenerado($entrega, $reporte);
+            } catch (Exception $e) {
+                Log::error('Error enviando notificación WebSocket de reporte generado', [
+                    'entrega_id' => $entrega->id,
+                    'reporte_id' => $reporte->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return $reporte;
+        } catch (Exception $e) {
+            Log::error('Error generando reporte de carga: ' . $e->getMessage(), [
+                'entrega_id' => $entrega->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -130,126 +143,128 @@ class ReporteCargoService
      */
     public function generarReporteConsolidado(array $entregas, array $datos = []): ReporteCarga
     {
-        return $this->transaction(function () use ($entregas, $datos) {
-            try {
-                // Validar que hay entregas
-                if (empty($entregas)) {
-                    throw new Exception("No hay entregas para consolidar");
-                }
+        // ✅ CORREGIDO: Removido $this->transaction() para evitar anidamiento de transacciones en PostgreSQL
+        // La transacción exterior en EntregaService::crearLote() manejará todo
 
-                // Generar número de reporte único
-                $numeroReporte = ReporteCarga::generarNumeroReporte();
-
-                // Calcular peso total de todas las entregas
-                $pesoTotal = collect($entregas)->sum('peso_kg') ?? 0;
-
-                // Crear el reporte consolidado (sin entrega_id específica, sin venta_id específica)
-                $reporte = ReporteCarga::create([
-                    'numero_reporte' => $numeroReporte,
-                    'entrega_id' => null,                           // Consolidado no está vinculado a una entrega específica
-                    'vehiculo_id' => $datos['vehiculo_id'] ?? null,
-                    'venta_id' => null,                             // Múltiples ventas
-                    'descripcion' => $datos['descripcion'] ?? 'Reporte consolidado',
-                    'peso_total_kg' => $pesoTotal,
-                    'volumen_total_m3' => $datos['volumen_total_m3'] ?? null,
-                    'generado_por' => Auth::id(),
-                    'estado' => ReporteCarga::ESTADO_PENDIENTE,
-                    'fecha_generacion' => now(),
-                ]);
-
-                // Consolidar detalles de todas las ventas
-                $detallesConsolidados = [];
-                $entregasCount = count($entregas);
-
-                // Convert to Entrega models if they're arrays
-                $entregasModels = [];
-                foreach ($entregas as $entrega) {
-                    if ($entrega instanceof Entrega) {
-                        $entregasModels[] = $entrega;
-                    } else {
-                        // Si es un array, intenta cargar desde BD
-                        $entregasModels[] = Entrega::with('venta.detalles.producto')->findOrFail($entrega['id'] ?? $entrega);
-                    }
-                }
-
-                // Procesar detalles de cada entrega
-                foreach ($entregasModels as $entrega) {
-                    $venta = $entrega->venta;
-
-                    if (!$venta || !$venta->detalles) {
-                        continue;
-                    }
-
-                    foreach ($venta->detalles as $detalleVenta) {
-                        $productoId = $detalleVenta->producto_id;
-
-                        // Si el producto ya existe en consolidados, sumar cantidad
-                        if (isset($detallesConsolidados[$productoId])) {
-                            $detallesConsolidados[$productoId]['cantidad_solicitada'] += $detalleVenta->cantidad;
-                            $pesoDetalle = $detalleVenta->producto?->peso_kg
-                                ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
-                                : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
-                            $detallesConsolidados[$productoId]['peso_kg'] += $pesoDetalle;
-                        } else {
-                            // Agregar nuevo producto
-                            $pesoDetalle = $detalleVenta->producto?->peso_kg
-                                ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
-                                : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
-
-                            $detallesConsolidados[$productoId] = [
-                                'reporte_carga_id' => $reporte->id,
-                                'detalle_venta_id' => $detalleVenta->id, // Referencia al primero encontrado
-                                'producto_id' => $productoId,
-                                'cantidad_solicitada' => $detalleVenta->cantidad,
-                                'cantidad_cargada' => 0,
-                                'verificado' => false,
-                                'peso_kg' => $pesoDetalle,
-                                'notas' => "Consolidado de {$venta->numero_venta}",
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ];
-                        }
-                    }
-                }
-
-                // Insertar detalles consolidados
-                if (!empty($detallesConsolidados)) {
-                    ReporteCargaDetalle::insert(array_values($detallesConsolidados));
-                }
-
-                // ✅ NUEVA: Vincular TODAS las entregas al reporte via tabla pivot (Many-to-Many)
-                // Esto permite que 1 reporte tenga N entregas, cada una con orden e incluida_en_carga
-                foreach ($entregasModels as $idx => $entrega) {
-                    $reporte->entregas()->attach($entrega->id, [
-                        'orden' => $idx + 1,  // Posición en el reporte consolidado
-                        'incluida_en_carga' => false,
-                        'notas' => null,
-                    ]);
-                }
-
-                // Actualizar estado de todas las entregas (mantener reporte_carga_id para compatibilidad legacy)
-                $entregaIds = collect($entregasModels)->pluck('id')->toArray();
-                Entrega::whereIn('id', $entregaIds)->update([
-                    'reporte_carga_id' => $reporte->id,
-                    'estado' => Entrega::ESTADO_PREPARACION_CARGA,
-                ]);
-
-                $this->logSuccess('Reporte consolidado generado', [
-                    'reporte_id' => $reporte->id,
-                    'numero' => $numeroReporte,
-                    'entregas_count' => $entregasCount,
-                    'productos_count' => count($detallesConsolidados),
-                ]);
-
-                return $reporte;
-            } catch (Exception $e) {
-                Log::error('Error generando reporte consolidado: ' . $e->getMessage(), [
-                    'entregas_count' => count($entregas),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-                throw $e;
+        try {
+            // Validar que hay entregas
+            if (empty($entregas)) {
+                throw new Exception("No hay entregas para consolidar");
             }
-        });
+
+            // Generar número de reporte único
+            $numeroReporte = ReporteCarga::generarNumeroReporte();
+
+            // Calcular peso total de todas las entregas
+            $pesoTotal = collect($entregas)->sum('peso_kg') ?? 0;
+
+            // Crear el reporte consolidado (sin entrega_id específica, sin venta_id específica)
+            // ✅ CORREGIDO: Para operaciones en lote, no asignamos generado_por ya que es una operación del sistema
+            $reporte = ReporteCarga::create([
+                'numero_reporte' => $numeroReporte,
+                'entrega_id' => null,                           // Consolidado no está vinculado a una entrega específica
+                'vehiculo_id' => $datos['vehiculo_id'] ?? null,
+                'venta_id' => null,                             // Múltiples ventas
+                'descripcion' => $datos['descripcion'] ?? 'Reporte consolidado',
+                'peso_total_kg' => $pesoTotal,
+                'volumen_total_m3' => $datos['volumen_total_m3'] ?? null,
+                'generado_por' => null,  // Sistema/Lote - sin usuario específico
+                'estado' => ReporteCarga::ESTADO_PENDIENTE,
+                'fecha_generacion' => now(),
+            ]);
+
+            // Consolidar detalles de todas las ventas
+            $detallesConsolidados = [];
+            $entregasCount = count($entregas);
+
+            // Convert to Entrega models if they're arrays
+            $entregasModels = [];
+            foreach ($entregas as $entrega) {
+                if ($entrega instanceof Entrega) {
+                    $entregasModels[] = $entrega;
+                } else {
+                    // Si es un array, intenta cargar desde BD
+                    $entregasModels[] = Entrega::with('venta.detalles.producto')->findOrFail($entrega['id'] ?? $entrega);
+                }
+            }
+
+            // Procesar detalles de cada entrega
+            foreach ($entregasModels as $entrega) {
+                $venta = $entrega->venta;
+
+                if (!$venta || !$venta->detalles) {
+                    continue;
+                }
+
+                foreach ($venta->detalles as $detalleVenta) {
+                    $productoId = $detalleVenta->producto_id;
+
+                    // Si el producto ya existe en consolidados, sumar cantidad
+                    if (isset($detallesConsolidados[$productoId])) {
+                        $detallesConsolidados[$productoId]['cantidad_solicitada'] += $detalleVenta->cantidad;
+                        $pesoDetalle = $detalleVenta->producto?->peso_kg
+                            ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
+                            : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
+                        $detallesConsolidados[$productoId]['peso_kg'] += $pesoDetalle;
+                    } else {
+                        // Agregar nuevo producto
+                        $pesoDetalle = $detalleVenta->producto?->peso_kg
+                            ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
+                            : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
+
+                        $detallesConsolidados[$productoId] = [
+                            'reporte_carga_id' => $reporte->id,
+                            'detalle_venta_id' => $detalleVenta->id, // Referencia al primero encontrado
+                            'producto_id' => $productoId,
+                            'cantidad_solicitada' => $detalleVenta->cantidad,
+                            'cantidad_cargada' => 0,
+                            'verificado' => false,
+                            'peso_kg' => $pesoDetalle,
+                            'notas' => "Consolidado de {$venta->numero_venta}",
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                }
+            }
+
+            // Insertar detalles consolidados
+            if (!empty($detallesConsolidados)) {
+                ReporteCargaDetalle::insert(array_values($detallesConsolidados));
+            }
+
+            // ✅ NUEVA: Vincular TODAS las entregas al reporte via tabla pivot (Many-to-Many)
+            // Esto permite que 1 reporte tenga N entregas, cada una con orden e incluida_en_carga
+            foreach ($entregasModels as $idx => $entrega) {
+                $reporte->entregas()->attach($entrega->id, [
+                    'orden' => $idx + 1,  // Posición en el reporte consolidado
+                    'incluida_en_carga' => false,
+                    'notas' => null,
+                ]);
+            }
+
+            // Actualizar estado de todas las entregas (mantener reporte_carga_id para compatibilidad legacy)
+            $entregaIds = collect($entregasModels)->pluck('id')->toArray();
+            Entrega::whereIn('id', $entregaIds)->update([
+                'reporte_carga_id' => $reporte->id,
+                'estado' => Entrega::ESTADO_PREPARACION_CARGA,
+            ]);
+
+            $this->logSuccess('Reporte consolidado generado', [
+                'reporte_id' => $reporte->id,
+                'numero' => $numeroReporte,
+                'entregas_count' => $entregasCount,
+                'productos_count' => count($detallesConsolidados),
+            ]);
+
+            return $reporte;
+        } catch (Exception $e) {
+            Log::error('Error generando reporte consolidado: ' . $e->getMessage(), [
+                'entregas_count' => count($entregas),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**

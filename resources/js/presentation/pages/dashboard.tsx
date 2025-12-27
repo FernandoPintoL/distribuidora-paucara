@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     DollarSign,
     ShoppingCart,
@@ -10,8 +10,12 @@ import {
     Wallet,
     Users,
     FileText,
-    Activity
+    Activity,
+    RefreshCw
 } from 'lucide-react';
+import { useDashboardWebSocket } from '@/application/hooks/use-dashboard-websocket';
+import { useProformaNotifications } from '@/application/hooks/use-proforma-notifications';
+import { Button } from '@/presentation/components/ui/button';
 
 // Componentes del dashboard
 import { MetricCard } from '@/presentation/components/dashboard/metric-card';
@@ -100,7 +104,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Dashboard({
-    metricas,
+    metricas: initialMetricas,
     graficoVentas,
     productosMasVendidos,
     alertasStock,
@@ -109,6 +113,17 @@ export default function Dashboard({
 }: DashboardProps) {
     const [periodo, setPeriodo] = useState(initialPeriodo || 'mes_actual');
     const [loading, setLoading] = useState(false);
+
+    // Hook para WebSocket - maneja actualizaciones en tiempo real
+    const { metricas, lastUpdate, isRefreshing, refresh } = useDashboardWebSocket(initialMetricas);
+
+    // Hook para notificaciones de proformas en tiempo real
+    const { unreadCount, requestNotificationPermission } = useProformaNotifications();
+
+    // Solicitar permisos de notificación al cargar
+    useEffect(() => {
+        requestNotificationPermission();
+    }, [requestNotificationPermission]);
 
     // Valores por defecto para evitar errores de undefined
     const defaultMetricas = {
@@ -186,11 +201,28 @@ export default function Dashboard({
                         <p className="text-neutral-600 dark:text-neutral-400">
                             Resumen general de tu distribuidora
                         </p>
+                        {lastUpdate && (
+                            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+                                Actualizado: {lastUpdate.toLocaleTimeString()}
+                            </p>
+                        )}
                     </div>
-                    <PeriodSelector
-                        value={periodo}
-                        onChange={handlePeriodChange}
-                    />
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={refresh}
+                            disabled={isRefreshing}
+                            className="gap-2"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            Actualizar
+                        </Button>
+                        <PeriodSelector
+                            value={periodo}
+                            onChange={handlePeriodChange}
+                        />
+                    </div>
                 </div>
 
                 {/* Métricas principales */}

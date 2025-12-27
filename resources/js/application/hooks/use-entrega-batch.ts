@@ -6,7 +6,6 @@ import {
     optimizacionEntregasService,
     type CrearLoteRequest,
     type PreviewResponse,
-    type CrearLoteResponse,
 } from '@/application/services/optimizacion-entregas.service';
 
 export interface BatchFormData {
@@ -58,23 +57,33 @@ export function useEntregaBatch() {
 
     /**
      * Agregar/remover venta del lote
+     * ✅ MEJORADO: tipo_reporte se determina automáticamente
      */
     const toggleVenta = (ventaId: Id) => {
-        setState((prev) => ({
-            ...prev,
-            formData: {
-                ...prev.formData,
-                venta_ids: prev.formData.venta_ids.includes(ventaId)
-                    ? prev.formData.venta_ids.filter((id) => id !== ventaId)
-                    : [...prev.formData.venta_ids, ventaId],
-            },
-            preview: null,
-            previewError: null,
-        }));
+        setState((prev) => {
+            const nuevasVentaIds = prev.formData.venta_ids.includes(ventaId)
+                ? prev.formData.venta_ids.filter((id) => id !== ventaId)
+                : [...prev.formData.venta_ids, ventaId];
+
+            // Determinar tipo_reporte automáticamente
+            const nuevoTipoReporte = nuevasVentaIds.length > 1 ? 'consolidado' : 'individual';
+
+            return {
+                ...prev,
+                formData: {
+                    ...prev.formData,
+                    venta_ids: nuevasVentaIds,
+                    tipo_reporte: nuevoTipoReporte,
+                },
+                preview: null,
+                previewError: null,
+            };
+        });
     };
 
     /**
      * Seleccionar todas las ventas
+     * ✅ MEJORADO: tipo_reporte se determina automáticamente
      */
     const selectAllVentas = (ventaIds: Id[]) => {
         setState((prev) => ({
@@ -82,6 +91,7 @@ export function useEntregaBatch() {
             formData: {
                 ...prev.formData,
                 venta_ids: ventaIds,
+                tipo_reporte: ventaIds.length > 1 ? 'consolidado' : 'individual',
             },
             preview: null,
         }));
@@ -89,6 +99,7 @@ export function useEntregaBatch() {
 
     /**
      * Limpiar selección de ventas
+     * ✅ MEJORADO: tipo_reporte vuelve a 'individual' cuando no hay ventas
      */
     const clearVentas = () => {
         setState((prev) => ({
@@ -96,6 +107,7 @@ export function useEntregaBatch() {
             formData: {
                 ...prev.formData,
                 venta_ids: [],
+                tipo_reporte: 'individual', // Reset a default
             },
             preview: null,
         }));

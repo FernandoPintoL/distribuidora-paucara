@@ -714,14 +714,21 @@ class CompraController extends Controller
                 if ($ultimaCompra) {
                     // Extraer el número secuencial del último número de compra
                     $ultimoNumero = $ultimaCompra->numero;
-                    $partes = explode('-', $ultimoNumero);
-                    if (count($partes) >= 2) {
-                        $secuencial = intval($partes[1]) + 1;
+                    // Buscar el último número después del guion
+                    if (preg_match('/(\d+)$/', $ultimoNumero, $matches)) {
+                        $secuencial = intval($matches[1]) + 1;
                     }
                 }
 
-                // Formato: COMP20240915-001
-                $numero = sprintf('COMP%s-%03d', $fecha, $secuencial);
+                // Formato inteligente:
+                // - Si secuencial < 1000: COMP20240915-0001 (4 dígitos con padding)
+                // - Si secuencial >= 1000: COMP20240915-1000 (sin padding)
+                if ($secuencial < 1000) {
+                    $secuencialFormato = str_pad($secuencial, 4, '0', STR_PAD_LEFT);
+                } else {
+                    $secuencialFormato = (string) $secuencial;
+                }
+                $numero = "COMP{$fecha}-{$secuencialFormato}";
 
                 // Verificar que no exista (por si acaso)
                 $existe = Compra::where('numero', $numero)->exists();

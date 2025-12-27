@@ -78,6 +78,84 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     index.form = indexForm
 /**
+* @see \App\Http\Controllers\ProformaController::formatosDisponibles
+ * @see app/Http/Controllers/ProformaController.php:387
+ * @route '/proformas/formatos-disponibles'
+ */
+export const formatosDisponibles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: formatosDisponibles.url(options),
+    method: 'get',
+})
+
+formatosDisponibles.definition = {
+    methods: ["get","head"],
+    url: '/proformas/formatos-disponibles',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ProformaController::formatosDisponibles
+ * @see app/Http/Controllers/ProformaController.php:387
+ * @route '/proformas/formatos-disponibles'
+ */
+formatosDisponibles.url = (options?: RouteQueryOptions) => {
+    return formatosDisponibles.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ProformaController::formatosDisponibles
+ * @see app/Http/Controllers/ProformaController.php:387
+ * @route '/proformas/formatos-disponibles'
+ */
+formatosDisponibles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: formatosDisponibles.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ProformaController::formatosDisponibles
+ * @see app/Http/Controllers/ProformaController.php:387
+ * @route '/proformas/formatos-disponibles'
+ */
+formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: formatosDisponibles.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ProformaController::formatosDisponibles
+ * @see app/Http/Controllers/ProformaController.php:387
+ * @route '/proformas/formatos-disponibles'
+ */
+    const formatosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: formatosDisponibles.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ProformaController::formatosDisponibles
+ * @see app/Http/Controllers/ProformaController.php:387
+ * @route '/proformas/formatos-disponibles'
+ */
+        formatosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: formatosDisponibles.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ProformaController::formatosDisponibles
+ * @see app/Http/Controllers/ProformaController.php:387
+ * @route '/proformas/formatos-disponibles'
+ */
+        formatosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: formatosDisponibles.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    formatosDisponibles.form = formatosDisponiblesForm
+/**
 * @see \App\Http\Controllers\ProformaController::show
  * @see app/Http/Controllers/ProformaController.php:130
  * @route '/proformas/{proforma}'
@@ -397,84 +475,6 @@ convertirVenta.post = (args: { id: string | number } | [id: string | number ] | 
     
     convertirVenta.form = convertirVentaForm
 /**
-* @see \App\Http\Controllers\ProformaController::formatosDisponibles
- * @see app/Http/Controllers/ProformaController.php:387
- * @route '/proformas/formatos-disponibles'
- */
-export const formatosDisponibles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: formatosDisponibles.url(options),
-    method: 'get',
-})
-
-formatosDisponibles.definition = {
-    methods: ["get","head"],
-    url: '/proformas/formatos-disponibles',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\ProformaController::formatosDisponibles
- * @see app/Http/Controllers/ProformaController.php:387
- * @route '/proformas/formatos-disponibles'
- */
-formatosDisponibles.url = (options?: RouteQueryOptions) => {
-    return formatosDisponibles.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\ProformaController::formatosDisponibles
- * @see app/Http/Controllers/ProformaController.php:387
- * @route '/proformas/formatos-disponibles'
- */
-formatosDisponibles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: formatosDisponibles.url(options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\ProformaController::formatosDisponibles
- * @see app/Http/Controllers/ProformaController.php:387
- * @route '/proformas/formatos-disponibles'
- */
-formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: formatosDisponibles.url(options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\ProformaController::formatosDisponibles
- * @see app/Http/Controllers/ProformaController.php:387
- * @route '/proformas/formatos-disponibles'
- */
-    const formatosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: formatosDisponibles.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ProformaController::formatosDisponibles
- * @see app/Http/Controllers/ProformaController.php:387
- * @route '/proformas/formatos-disponibles'
- */
-        formatosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: formatosDisponibles.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ProformaController::formatosDisponibles
- * @see app/Http/Controllers/ProformaController.php:387
- * @route '/proformas/formatos-disponibles'
- */
-        formatosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: formatosDisponibles.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    formatosDisponibles.form = formatosDisponiblesForm
-/**
 * @see \App\Http\Controllers\ProformaController::imprimir
  * @see app/Http/Controllers/ProformaController.php:300
  * @route '/proformas/{proforma}/imprimir'
@@ -680,11 +680,11 @@ preview.head = (args: { proforma: number | { id: number } } | [proforma: number 
     preview.form = previewForm
 const proformas = {
     index,
+formatosDisponibles,
 show,
 aprobar,
 rechazar,
 convertirVenta,
-formatosDisponibles,
 imprimir,
 preview,
 }

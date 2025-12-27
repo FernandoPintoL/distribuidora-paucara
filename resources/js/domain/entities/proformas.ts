@@ -18,6 +18,19 @@ export interface Direccion {
     observaciones?: string;
 }
 
+/**
+ * Datos de pago para aprobación de proforma
+ */
+export interface PaymentData {
+    con_pago: boolean; // Flag indicando si el cliente realizó un pago
+    tipo_pago_id?: number; // ID del tipo de pago (efectivo, transferencia, etc.)
+    politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO';
+    monto_pagado?: number; // Monto pagado por el cliente
+    fecha_pago?: string; // Fecha del pago
+    numero_recibo?: string; // Número de recibo o comprobante
+    numero_transferencia?: string; // Número de transferencia (si aplica)
+}
+
 export interface Proforma extends BaseEntity {
     id: Id;
     numero: string;
@@ -38,12 +51,14 @@ export interface Proforma extends BaseEntity {
     // Solicitud de entrega del cliente (inicial)
     fecha_entrega_solicitada?: string;
     hora_entrega_solicitada?: string;
+    hora_entrega_solicitada_fin?: string; // ✅ Fin del rango de horario solicitado
     direccion_entrega_solicitada_id?: Id;
     direccion_solicitada?: Direccion; // ✅ Relación a dirección solicitada
 
     // Confirmación de entrega del vendedor (después de coordinación)
     fecha_entrega_confirmada?: string;
     hora_entrega_confirmada?: string;
+    hora_entrega_confirmada_fin?: string; // ✅ Fin del rango de horario confirmado
     direccion_entrega_confirmada_id?: Id;
     direccion_confirmada?: Direccion; // ✅ Relación a dirección confirmada
 
@@ -140,6 +155,18 @@ export function getEstadoBadge(estado: string) {
     return PROFORMA_ESTADOS[estado as keyof typeof PROFORMA_ESTADOS]
         || { label: 'Desconocido', variant: 'secondary' as const };
 }
+
+/**
+ * Motivos de rechazo de proformas - Única fuente de verdad
+ */
+export const MOTIVOS_RECHAZO_PROFORMA = [
+    { value: 'cliente_cancelo', label: 'Cliente canceló el pedido' },
+    { value: 'sin_disponibilidad', label: 'No hay disponibilidad para la fecha solicitada' },
+    { value: 'sin_respuesta', label: 'Cliente no contestó llamadas' },
+    { value: 'fuera_cobertura', label: 'Dirección fuera de cobertura' },
+    { value: 'stock_insuficiente', label: 'Stock insuficiente' },
+    { value: 'otro', label: 'Otro motivo (especificar abajo)' },
+];
 
 /**
  * Validaciones de permisos de acciones sobre proformas

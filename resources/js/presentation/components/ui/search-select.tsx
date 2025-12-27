@@ -76,15 +76,22 @@ export default function SearchSelect({
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setSearchQuery('');
       }
     };
 
+    // Usar mousedown para detectar clicks más rápidamente
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // También agregar touchstart para dispositivos móviles
+    document.addEventListener('touchstart', handleClickOutside as EventListener);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside as EventListener);
+    };
   }, []);
 
   // Manejar búsqueda externa (para casos de búsqueda en servidor)
@@ -208,8 +215,8 @@ export default function SearchSelect({
       {/* Dropdown */}
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border border-border rounded-md shadow-lg">
-          {/* Search Input */}
-          <div className="p-2 border-b border-border">
+          {/* Search Input with Close Button */}
+          <div className="p-2 border-b border-border flex gap-2 items-center">
             <Input
               ref={inputRef}
               type="text"
@@ -217,8 +224,23 @@ export default function SearchSelect({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="h-8 text-sm"
+              className="h-8 text-sm flex-1"
             />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-muted rounded-md flex-shrink-0"
+              onClick={() => {
+                setIsOpen(false);
+                setSearchQuery('');
+              }}
+              title="Cerrar"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </Button>
           </div>
 
           {/* Options List */}

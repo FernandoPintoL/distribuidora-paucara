@@ -7,6 +7,8 @@ import { useProformaFilters } from '@/application/hooks/use-proforma-filters';
 import { useProformaUnifiedModal } from '@/application/hooks/use-proforma-unified-modal';
 import { useProformaStats } from '@/application/hooks/use-proforma-stats';
 import { useLogisticaStats } from '@/application/hooks/use-logistica-stats';
+import { useDashboardWebSocket } from '@/application/hooks/use-dashboard-websocket';
+import { useProformaNotifications } from '@/application/hooks/use-proforma-notifications';
 
 // Componentes
 import { DashboardStats } from './components/DashboardStats';
@@ -20,14 +22,8 @@ import type {
     DashboardLogisticaProps,
 } from '@/domain/entities/logistica';
 
-const MOTIVOS_RECHAZO = [
-    { value: 'cliente_cancelo', label: 'Cliente canceló el pedido' },
-    { value: 'sin_disponibilidad', label: 'No hay disponibilidad para la fecha solicitada' },
-    { value: 'sin_respuesta', label: 'Cliente no contestó llamadas' },
-    { value: 'fuera_cobertura', label: 'Dirección fuera de cobertura' },
-    { value: 'stock_insuficiente', label: 'Stock insuficiente' },
-    { value: 'otro', label: 'Otro motivo (especificar abajo)' },
-];
+// Utilidades centralizadas
+import { MOTIVOS_RECHAZO_PROFORMA } from '@/lib/proformas.utils';
 
 export default function LogisticaDashboard({ estadisticas, proformasRecientes }: DashboardLogisticaProps) {
     // Estados principales
@@ -36,6 +32,17 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
 
     // Hooks de filtros
     const proformaFilters = useProformaFilters(proformasRecientes);
+
+    // Hook de WebSocket para dashboard en tiempo real
+    const { metricas: dashboardMetricas, lastUpdate: dashboardLastUpdate, isRefreshing: dashboardIsRefreshing, refresh: refreshDashboard } = useDashboardWebSocket(estadisticas);
+
+    // Hook para notificaciones de proformas en tiempo real
+    const { requestNotificationPermission } = useProformaNotifications();
+
+    // Solicitar permisos de notificación al cargar
+    useEffect(() => {
+        requestNotificationPermission();
+    }, [requestNotificationPermission]);
 
     // Hooks de estadísticas
     const {
@@ -125,10 +132,13 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
                 <DashboardStats
                     logisticaStats={logisticaStats}
                     proformaStats={proformaStats}
-                    stats={stats}
+                    stats={dashboardMetricas || stats}
                     loadingLogisticaStats={loadingLogisticaStats}
                     logisticaLastUpdate={logisticaLastUpdate}
                     refreshLogisticaStats={refreshLogisticaStats}
+                    dashboardLastUpdate={dashboardLastUpdate}
+                    dashboardIsRefreshing={dashboardIsRefreshing}
+                    refreshDashboard={refreshDashboard}
                 />
 
                 {/* Sección de Proformas */}
@@ -163,7 +173,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
                     notasLlamada={notasLlamada}
                     setNotasLlamada={setNotasLlamada}
                     onAprobar={() => aprobarProforma()}
-                    onRechazar={() => rechazarProforma(MOTIVOS_RECHAZO)}
+                    onRechazar={() => rechazarProforma(MOTIVOS_RECHAZO_PROFORMA)}
                     isProcessing={false}
                     cargandoDetalles={cargandoDetalles}
                 />

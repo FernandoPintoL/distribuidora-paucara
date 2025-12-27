@@ -42,6 +42,11 @@ class ApiProformaController extends Controller
             $requestData['hora_entrega_solicitada'] = $request->hora_inicio_preferida;
         }
 
+        // Si viene hora_fin_preferida, usar como hora_entrega_solicitada_fin
+        if ($request->filled('hora_fin_preferida') && !$request->filled('hora_entrega_solicitada_fin')) {
+            $requestData['hora_entrega_solicitada_fin'] = $request->hora_fin_preferida;
+        }
+
         $validator = Validator::make($requestData, [
             'cliente_id' => 'required|exists:clientes,id',
             'productos' => 'required|array|min:1',
@@ -50,6 +55,7 @@ class ApiProformaController extends Controller
             // Solicitud de entrega del cliente (REQUERIDO)
             'fecha_entrega_solicitada' => 'required|date|after_or_equal:today',
             'hora_entrega_solicitada' => 'nullable|date_format:H:i',
+            'hora_entrega_solicitada_fin' => 'nullable|date_format:H:i',
             // Dirección de entrega solicitada (REQUERIDO - debe venir desde Flutter)
             'direccion_entrega_solicitada_id' => 'required|exists:direcciones_cliente,id',
         ]);
@@ -65,6 +71,7 @@ class ApiProformaController extends Controller
         // Usar datos normalizados
         $fechaEntrega = $requestData['fecha_entrega_solicitada'] ?? null;
         $horaEntrega = $requestData['hora_entrega_solicitada'] ?? null;
+        $horaEntregaFin = $requestData['hora_entrega_solicitada_fin'] ?? null;
 
         // Validar que si se proporciona dirección, pertenece al cliente
         if ($request->filled('direccion_entrega_solicitada_id')) {
@@ -156,12 +163,19 @@ class ApiProformaController extends Controller
                 // Solicitud de entrega del cliente (usa campos normalizados)
                 'fecha_entrega_solicitada' => $fechaEntrega,
                 'hora_entrega_solicitada' => $horaEntrega,
+                'hora_entrega_solicitada_fin' => $horaEntregaFin,
                 'direccion_entrega_solicitada_id' => $requestData['direccion_entrega_solicitada_id'],
             ]);
 
             // Crear detalles
             foreach ($productosValidados as $detalle) {
                 $proforma->detalles()->create($detalle);
+            }
+
+            // ✅ RESERVAR STOCK AHORA que los detalles existen
+            $reservaExitosa = $proforma->reservarStock();
+            if (!$reservaExitosa) {
+                \Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
             }
 
             // Cargar relaciones para respuesta
@@ -231,6 +245,39 @@ class ApiProformaController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+
+        // ========================================
+        // VALIDACIÓN MEJORADA DE AUTENTICACIÓN
+        // ========================================
+        if (!$user) {
+            \Log::warning('API Index Proformas: No authenticated user found', [
+                'bearer_token' => $request->bearerToken() ? 'present' : 'missing',
+                'auth_header' => $request->header('Authorization') ? 'present' : 'missing',
+                'user_agent' => $request->userAgent(),
+                'client_ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado. El token de acceso no es válido o ha expirado.',
+                'debug' => [
+                    'token_present' => (bool)$request->bearerToken(),
+                    'auth_method' => auth()->guard(),
+                ],
+            ], 401);
+        }
+
+        if (!$user->activo) {
+            \Log::warning('API Index Proformas: User inactive', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario inactivo. Contacte al administrador.',
+            ], 403);
+        }
 
         // Validar parámetros opcionales
         $validator = Validator::make($request->all(), [
@@ -408,12 +455,43 @@ class ApiProformaController extends Controller
     {
         $user = Auth::user();
 
-        // Verificar autenticación
+        // ========================================
+        // VALIDACIÓN MEJORADA DE AUTENTICACIÓN
+        // ========================================
         if (!$user) {
+            // Log detallado para debugging
+            \Log::warning('API Stats: No authenticated user found', [
+                'bearer_token' => $request->bearerToken() ? 'present' : 'missing',
+                'auth_header' => $request->header('Authorization') ? 'present' : 'missing',
+                'user_agent' => $request->userAgent(),
+                'method' => $request->method(),
+                'path' => $request->path(),
+                'client_ip' => $request->ip(),
+                'timestamp' => now()->toIso8601String(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'No autenticado',
+                'message' => 'No autenticado. El token de acceso no es válido o ha expirado.',
+                'debug' => [
+                    'token_present' => (bool)$request->bearerToken(),
+                    'auth_method' => auth()->guard(),
+                    'timestamp' => now(),
+                ],
             ], 401);
+        }
+
+        // Validación adicional: verificar que el usuario está activo
+        if (!$user->activo) {
+            \Log::warning('API Stats: User inactive', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario inactivo. Contacte al administrador.',
+            ], 403);
         }
 
         // Construir query base
@@ -598,8 +676,14 @@ class ApiProformaController extends Controller
             // Confirmación de entrega del vendedor después de coordinación
             'fecha_entrega_confirmada' => 'nullable|date|after_or_equal:today',
             'hora_entrega_confirmada' => 'nullable|date_format:H:i',
+            'hora_entrega_confirmada_fin' => 'nullable|date_format:H:i',
             'direccion_entrega_confirmada_id' => 'nullable|exists:direcciones_cliente,id',
             'comentario_coordinacion' => 'nullable|string|max:1000',
+            // Datos de intentos de contacto
+            'numero_intentos_contacto' => 'nullable|integer|min:0',
+            'fecha_ultimo_intento' => 'nullable|date',
+            'resultado_ultimo_intento' => 'nullable|string|max:500',
+            'notas_llamada' => 'nullable|string|max:1000',
         ]);
 
         try {
@@ -651,16 +735,30 @@ class ApiProformaController extends Controller
                 }
             }
 
-            // Actualizar proforma con confirmación del vendedor
+            // Actualizar proforma con confirmación del vendedor y datos de contacto
             $proforma->update([
                 'fecha_entrega_confirmada' => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_solicitada,
                 'hora_entrega_confirmada' => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_solicitada,
+                'hora_entrega_confirmada_fin' => $request->hora_entrega_confirmada_fin ?? $proforma->hora_entrega_solicitada_fin,
                 'direccion_entrega_confirmada_id' => $request->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id,
                 'coordinacion_completada' => true,
                 'comentario_coordinacion' => $request->comentario_coordinacion,
+                // Datos de intentos de contacto (se envían desde la pantalla principal)
+                'numero_intentos_contacto' => $request->numero_intentos_contacto ?? $proforma->numero_intentos_contacto,
+                // Si no se proporciona fecha_ultimo_intento, se genera automáticamente la de hoy
+                'fecha_ultimo_intento' => $request->fecha_ultimo_intento ?? ($request->numero_intentos_contacto ? now()->toDateString() : $proforma->fecha_ultimo_intento),
+                'resultado_ultimo_intento' => $request->resultado_ultimo_intento ?? $proforma->resultado_ultimo_intento,
+                'notas_llamada' => $request->notas_llamada ?? $proforma->notas_llamada,
             ]);
 
-            $aprobada = $proforma->aprobar(request()->user(), $request->comentario);
+            // Obtener usuario autenticado
+            $usuario = request()->user();
+            if ($usuario === null) {
+                $usuario = auth()->user();
+            }
+
+            // Aprobar la proforma
+            $aprobada = $proforma->aprobar($usuario, $request->comentario);
 
             if (!$aprobada) {
                 return response()->json([
@@ -671,8 +769,20 @@ class ApiProformaController extends Controller
                 ], 400);
             }
 
-            // ✅ Emitir evento para notificaciones WebSocket
-            event(new ProformaAprobada($proforma, request()->user()->id));
+            // ✅ Emitir eventos para notificaciones y dashboard (envuelto en try-catch para evitar fallos de broadcast)
+            try {
+                event(new ProformaAprobada($proforma, $usuario?->id));
+                // Actualizar métricas del dashboard
+                event(new \App\Events\DashboardMetricsUpdated(
+                    app(\App\Services\DashboardService::class)->getMainMetrics('mes_actual')
+                ));
+            } catch (\Exception $broadcastError) {
+                Log::warning('⚠️  Error al emitir evento de aprobación (no crítico)', [
+                    'proforma_id' => $proforma->id,
+                    'error' => $broadcastError->getMessage(),
+                ]);
+                // El evento falló, pero la aprobación ya fue exitosa, así que continuamos
+            }
 
             return response()->json([
                 'success' => true,
@@ -714,8 +824,19 @@ class ApiProformaController extends Controller
 
             $proforma->rechazar(request()->user(), $request->comentario);
 
-            // ✅ Emitir evento para notificaciones WebSocket
-            event(new ProformaRechazada($proforma, $request->comentario));
+            // ✅ Emitir eventos para notificaciones y dashboard
+            try {
+                event(new ProformaRechazada($proforma, $request->comentario));
+                // Actualizar métricas del dashboard
+                event(new \App\Events\DashboardMetricsUpdated(
+                    app(\App\Services\DashboardService::class)->getMainMetrics('mes_actual')
+                ));
+            } catch (\Exception $broadcastError) {
+                Log::warning('⚠️  Error al emitir evento de rechazo (no crítico)', [
+                    'proforma_id' => $proforma->id,
+                    'error' => $broadcastError->getMessage(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -744,6 +865,7 @@ class ApiProformaController extends Controller
             // Campos existentes
             'fecha_entrega_confirmada' => 'nullable|date|after_or_equal:today',
             'hora_entrega_confirmada' => 'nullable|date_format:H:i',
+            'hora_entrega_confirmada_fin' => 'nullable|date_format:H:i',
             'direccion_entrega_confirmada_id' => 'nullable|exists:direcciones_cliente,id',
             'comentario_coordinacion' => 'nullable|string|max:1000',
             'notas_llamada' => 'nullable|string|max:500',
@@ -782,6 +904,7 @@ class ApiProformaController extends Controller
             $datosActualizar = [
                 'fecha_entrega_confirmada' => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_confirmada,
                 'hora_entrega_confirmada' => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_confirmada,
+                'hora_entrega_confirmada_fin' => $request->hora_entrega_confirmada_fin ?? $proforma->hora_entrega_confirmada_fin,
                 'direccion_entrega_confirmada_id' => $request->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_confirmada_id,
                 'comentario_coordinacion' => $comentarioFinal ?: $proforma->comentario_coordinacion,
                 'coordinacion_completada' => true,
@@ -1714,9 +1837,18 @@ class ApiProformaController extends Controller
      * @param Proforma $proforma
      * @return \Illuminate\Http\JsonResponse
      */
-    public function convertirAVenta(Proforma $proforma)
+    public function convertirAVenta(Proforma $proforma, Request $request)
     {
-        return DB::transaction(function () use ($proforma) {
+        // Validar datos de pago si se proporcionan
+        if ($request->input('con_pago')) {
+            $request->validate([
+                'tipo_pago_id' => 'required|exists:tipos_pago,id',
+                'politica_pago' => 'required|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO',
+                'monto_pagado' => 'nullable|numeric|min:0',
+            ]);
+        }
+
+        return DB::transaction(function () use ($proforma, $request) {
             try {
                 // Validación 1: La proforma debe poder convertirse
                 if (!$proforma->puedeConvertirseAVenta()) {
@@ -1727,34 +1859,56 @@ class ApiProformaController extends Controller
                     ], 422);
                 }
 
-                // Validación 2: Verificar que tenga reservas activas
+                // Validación 2: Si hay reservas activas, verificar que no estén expiradas
                 $reservasActivas = $proforma->reservasActivas()->count();
-                if ($reservasActivas === 0) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'No hay reservas de stock activas para esta proforma',
-                    ], 422);
+
+                if ($reservasActivas > 0) {
+                    // Hay reservas: verificar que NO estén expiradas
+                    if ($proforma->tieneReservasExpiradas()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Las reservas de stock han expirado',
+                        ], 422);
+                    }
+
+                    // Verificar disponibilidad de stock con respecto a reservas
+                    $disponibilidad = $proforma->verificarDisponibilidadStock();
+                    $stockInsuficiente = array_filter($disponibilidad, fn($item) => !$item['disponible']);
+
+                    if (!empty($stockInsuficiente)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Stock insuficiente para algunos productos',
+                            'productos_sin_stock' => $stockInsuficiente,
+                        ], 422);
+                    }
+                } else {
+                    // NO hay reservas: intentar crearlas automáticamente
+                    \Log::info('⚠️  No hay reservas para proforma ' . $proforma->numero . ', intentando crearlas...');
+
+                    $reservasCreadas = $proforma->reservarStock();
+
+                    if (!$reservasCreadas) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'No se pudieron crear reservas de stock. Verifique la disponibilidad de inventario.',
+                        ], 422);
+                    }
+
+                    \Log::info('✅ Reservas creadas automáticamente para proforma ' . $proforma->numero);
                 }
 
-                // Validación 3: Verificar que las reservas NO estén expiradas
-                if ($proforma->tieneReservasExpiradas()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Las reservas de stock han expirado',
-                    ], 422);
-                }
+                // Calcular estado de pago si se proporcionan datos
+                $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
+                $total = (float) $proforma->total;
+                $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
 
-                // Validación 4: Verificar disponibilidad de stock actual
-                $disponibilidad = $proforma->verificarDisponibilidadStock();
-                $stockInsuficiente = array_filter($disponibilidad, fn($item) => !$item['disponible']);
-
-                if (!empty($stockInsuficiente)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Stock insuficiente para algunos productos',
-                        'productos_sin_stock' => $stockInsuficiente,
-                    ], 422);
-                }
+                $estadoPago = match($politica) {
+                    'ANTICIPADO_100' => 'PAGADO',
+                    'MEDIO_MEDIO' => ($montoPagado >= $total) ? 'PAGADO' : 'PARCIAL',
+                    'CONTRA_ENTREGA' => 'PENDIENTE',
+                    default => 'PENDIENTE',
+                };
 
                 // Preparar datos para la venta desde la proforma
                 $datosVenta = [
@@ -1775,8 +1929,21 @@ class ApiProformaController extends Controller
                     'estado_logistico' => $proforma->esDeAppExterna()
                         ? \App\Models\Venta::ESTADO_PENDIENTE_ENVIO
                         : null,
+                    // Campos de entrega comprometida (desde coordinación de proforma)
+                    'direccion_cliente_id' => $proforma->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id,
+                    'fecha_entrega_comprometida' => $proforma->fecha_entrega_confirmada,
+                    'hora_entrega_comprometida' => $proforma->hora_entrega_confirmada, // Hora SLA (inicio del rango)
+                    'ventana_entrega_ini' => $proforma->hora_entrega_confirmada, // Inicio del rango de entrega
+                    'ventana_entrega_fin' => $proforma->hora_entrega_confirmada_fin, // Fin del rango de entrega
+                    'idempotency_key' => \Illuminate\Support\Str::uuid()->toString(),
+                    // Campos de pago
+                    'tipo_pago_id' => $request->input('tipo_pago_id'),
+                    'politica_pago' => $politica,
+                    'estado_pago' => $estadoPago,
+                    'monto_pagado' => $montoPagado,
+                    'monto_pendiente' => $total - $montoPagado,
                     // Estado del documento
-                    'estado_documento_id' => \App\Models\EstadoDocumento::where('nombre', 'PENDIENTE')->first()?->id,
+                    'estado_documento_id' => \App\Models\EstadoDocumento::where('nombre', 'Pendiente')->first()?->id ?? 2,
                 ];
 
                 // Crear la venta
@@ -1803,8 +1970,20 @@ class ApiProformaController extends Controller
                 // Cargar relaciones para la respuesta
                 $venta->load(['cliente', 'detalles.producto', 'moneda', 'estadoDocumento']);
 
-                // ✅ Emitir evento para notificaciones WebSocket
-                event(new ProformaConvertida($proforma, $venta));
+                // ✅ Emitir eventos para notificaciones y dashboard (envuelto en try-catch para evitar fallos de broadcast)
+                try {
+                    event(new ProformaConvertida($proforma, $venta));
+                    // Actualizar métricas del dashboard
+                    event(new \App\Events\DashboardMetricsUpdated(
+                        app(\App\Services\DashboardService::class)->getMainMetrics('mes_actual')
+                    ));
+                } catch (\Exception $broadcastError) {
+                    Log::warning('⚠️  Error al emitir evento de conversión (no crítico)', [
+                        'proforma_id' => $proforma->id,
+                        'error' => $broadcastError->getMessage(),
+                    ]);
+                    // El evento falló, pero la conversión ya fue exitosa, así que continuamos
+                }
 
                 Log::info('Proforma convertida a venta exitosamente (API)', [
                     'proforma_id' => $proforma->id,

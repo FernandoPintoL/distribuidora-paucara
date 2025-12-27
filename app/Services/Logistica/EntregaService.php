@@ -546,13 +546,15 @@ class EntregaService
         string $estadoNuevo,
         string $razon = '',
     ): EntregaEstadoHistorial {
+        // Para operaciones en lote, no asignamos usuario_id ya que es una operación del sistema
+        // El campo es nullable, así evitamos validaciones que podrían fallar dentro de una transacción
+
         return EntregaEstadoHistorial::create([
             'entrega_id' => $entrega->id,
             'estado_anterior' => $estadoAnterior,
             'estado_nuevo' => $estadoNuevo,
-            'razon_cambio' => $razon,
-            'usuario_id' => Auth::id(),
-            'fecha' => now(),
+            'comentario' => $razon,
+            'usuario_id' => null,
         ]);
     }
 
@@ -633,7 +635,8 @@ class EntregaService
 
             // Validar vehículo y chofer
             $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
-            $chofer = \App\Models\Empleado::findOrFail($choferId);
+            // ✅ CORREGIDO: Eager load user para evitar lazy loading dentro de la transacción
+            $chofer = \App\Models\Empleado::with('user')->findOrFail($choferId);
 
             // Validar estado del vehículo (case-insensitive)
             if (strtolower($vehiculo->estado) !== 'disponible') {
@@ -650,16 +653,16 @@ class EntregaService
                     $venta = Venta::with('direccionCliente')->findOrFail($ventaId);
 
                     // Crear una entrega por venta con todos los datos disponibles
+                    // ✅ CORREGIDO: Removido 'usuario_asignado_id' que no existe en el modelo
                     $entrega = Entrega::create([
                         'venta_id'              => $venta->id,
                         'estado'                => 'PROGRAMADO',
                         'direccion_entrega'     => $venta->direccion_entrega ?? $venta->direccionCliente?->direccion,
-                        'direccion_cliente_id'  => $venta->direccion_cliente_id,  // ✅ Asignar dirección del cliente
+                        'direccion_cliente_id'  => $venta->direccion_cliente_id,
                         'fecha_programada'      => $venta->fecha_entrega_programada ?? now()->addDays(3),
                         'peso_kg'               => $venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10,
                         'chofer_id'             => $choferId,
                         'vehiculo_id'           => $vehiculoId,
-                        'usuario_asignado_id'   => Auth::id(),
                     ]);
 
                     // Registrar en historial

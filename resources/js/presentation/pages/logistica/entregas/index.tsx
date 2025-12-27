@@ -15,6 +15,7 @@ import { useEntregas } from '@/application/hooks/use-entregas';
 import { useState } from 'react';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { ModalOptimizacionRutas } from '@/presentation/components/logistica/modal-optimizacion-rutas';
+import { PageHeader } from '@/presentation/components/entrega/PageHeader';
 
 interface Props extends PageProps {
     entregas: Pagination<Entrega>;
@@ -70,40 +71,38 @@ export default function EntregasIndex({ entregas, vehiculos = [], choferes = [] 
             <Head title="Gestión de Entregas" />
 
             <div className="space-y-6 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold">Gestión de Entregas</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {entregasProgramadas.length} entregas programadas disponibles para optimización
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        {entregasSeleccionadas.length > 0 && (
-                            <Button
-                                variant="outline"
-                                onClick={() => setEntregasSeleccionadas([])}
-                            >
-                                Limpiar selección ({entregasSeleccionadas.length})
-                            </Button>
-                        )}
-                        {puedeOptimizar && (
-                            <Button
-                                variant="default"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => setMostrarOptimizacion(true)}
-                            >
-                                <Route className="h-4 w-4 mr-2" />
-                                Optimizar Rutas ({entregasSeleccionadas.length})
-                            </Button>
-                        )}
-                        <Link href="/logistica/entregas/create">
-                            <Button>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Crear Entrega
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
+                <PageHeader
+                    title="Gestión de Entregas"
+                    description={`${entregasProgramadas.length} entregas programadas disponibles para optimización`}
+                    actions={
+                        <>
+                            {entregasSeleccionadas.length > 0 && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setEntregasSeleccionadas([])}
+                                >
+                                    Limpiar selección ({entregasSeleccionadas.length})
+                                </Button>
+                            )}
+                            {puedeOptimizar && (
+                                <Button
+                                    variant="default"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    onClick={() => setMostrarOptimizacion(true)}
+                                >
+                                    <Route className="h-4 w-4 mr-2" />
+                                    Optimizar Rutas ({entregasSeleccionadas.length})
+                                </Button>
+                            )}
+                            <Link href="/logistica/entregas/create">
+                                <Button>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Crear Entrega
+                                </Button>
+                            </Link>
+                        </>
+                    }
+                />
 
                 <Card>
                     <CardHeader>

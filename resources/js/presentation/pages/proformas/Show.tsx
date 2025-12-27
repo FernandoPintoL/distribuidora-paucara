@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Button } from '@/presentation/components/ui/button'
-import { Badge } from '@/presentation/components/ui/badge'
 import { Separator } from '@/presentation/components/ui/separator'
 import {
     Table,
@@ -21,38 +20,33 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/presentation/components/ui/dialog'
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/presentation/components/ui/alert-dialog'
+
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
-import { FileText, Package, Calendar, Clock, MapPin, AlertCircle, Check, X, ChevronUp, ChevronDown, ShoppingCart } from 'lucide-react'
+import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle } from 'lucide-react'
 import MapView from '@/presentation/components/maps/MapView'
 import { FormatoSelector } from '@/presentation/components/impresion'
 
 // DOMAIN LAYER: Importar tipos desde domain
 import type { Proforma } from '@/domain/entities/proformas'
-import { getEstadoBadge } from '@/domain/entities/proformas'
 
-// APPLICATION LAYER: Importar hook de lógica de negocio
+// APPLICATION LAYER: Importar hooks de lógica de negocio
 import { useProformaActions, type CoordinacionData } from '@/application/hooks/use-proforma-actions'
+import { useApprovalFlow } from '@/application/hooks/use-approval-flow'
+
+// PRESENTATION LAYER: Componentes reutilizables
+import { ProformaEstadoBadge } from '@/presentation/components/proforma/ProformaEstadoBadge'
+import { ProformaConvertirModal } from '@/presentation/pages/logistica/components/modals/ProformaConvertirModal'
+import { ApprovalPaymentForm } from './components/ApprovalPaymentForm'
+import { LoadingOverlay } from '@/presentation/components/ui/LoadingOverlay'
+import { ProformaCard } from '@/presentation/components/ui/ProformaCard'
 
 interface Props {
     item: Proforma
 }
 
 export default function ProformasShow({ item: proforma }: Props) {
-    // DOMAIN LAYER: Utilidades del dominio
-    const estado = getEstadoBadge(proforma.estado)
-
     // APPLICATION LAYER: Lógica de negocio desde hook
     const {
         isSubmitting,
@@ -64,7 +58,25 @@ export default function ProformasShow({ item: proforma }: Props) {
         aprobar,
         rechazar,
         convertirAVenta,
-    } = useProformaActions(proforma)
+    } = useProformaActions(proforma, {
+        onSuccess: () => {
+            // Cerrar diálogos cuando la operación sea exitosa
+            // La página se recargaráy mostrará los cambios
+            setShowAprobarDialog(false);
+            setShowRechazarDialog(false);
+            setShowConvertirDialog(false);
+        },
+        onError: (error) => {
+            console.error('Error en acción de proforma:', error);
+            // Cerrar diálogos también en caso de error
+            setShowAprobarDialog(false);
+            setShowRechazarDialog(false);
+            setShowConvertirDialog(false);
+        }
+    })
+
+    // APPROVAL FLOW CONTEXT: Estado del flujo de aprobación (puede ser null si el provider no existe)
+    const approvalFlow = useApprovalFlow();
 
     // PRESENTATION LAYER: Estados locales solo de UI
     const [showAprobarDialog, setShowAprobarDialog] = useState(false)
@@ -72,6 +84,7 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [showConvertirDialog, setShowConvertirDialog] = useState(false)
     const [motivoRechazo, setMotivoRechazo] = useState('')
     const [showCoordinacionForm, setShowCoordinacionForm] = useState(true)
+    const [showMapaEntrega, setShowMapaEntrega] = useState(false)
 
     // Función helper para calcular fecha/hora por defecto (DEBE estar aquí para usarla en useState)
     const defaultDelivery = (() => {
@@ -79,7 +92,8 @@ export default function ProformasShow({ item: proforma }: Props) {
         if (proforma.fecha_entrega_confirmada) {
             return {
                 fecha: proforma.fecha_entrega_confirmada,
-                hora: proforma.hora_entrega_confirmada || '09:00'
+                hora: proforma.hora_entrega_confirmada || '09:00',
+                hora_fin: proforma.hora_entrega_confirmada_fin || '17:00'
             }
         }
 
@@ -92,14 +106,16 @@ export default function ProformasShow({ item: proforma }: Props) {
             // Convertir a formato YYYY-MM-DD
             const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
             const horaDefault = proforma.hora_entrega_solicitada || '09:00'
+            const horaFinDefault = proforma.hora_entrega_solicitada_fin || '17:00'
 
             return {
                 fecha: fechaFormato,
-                hora: horaDefault
+                hora: horaDefault,
+                hora_fin: horaFinDefault
             }
         }
 
-        // Si no hay nada, usar hoy + 1 día a las 09:00
+        // Si no hay nada, usar hoy + 1 día a las 09:00 - 17:00
         const hoy = new Date()
         const manana = new Date(hoy)
         manana.setDate(manana.getDate() + 1)
@@ -107,7 +123,8 @@ export default function ProformasShow({ item: proforma }: Props) {
 
         return {
             fecha: fechaFormato,
-            hora: '09:00'
+            hora: '09:00',
+            hora_fin: '17:00'
         }
     })()
 
@@ -115,6 +132,7 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [coordinacion, setCoordinacion] = useState<CoordinacionData>({
         fecha_entrega_confirmada: defaultDelivery.fecha,
         hora_entrega_confirmada: defaultDelivery.hora,
+        hora_entrega_confirmada_fin: defaultDelivery.hora_fin,
         comentario_coordinacion: proforma.comentario_coordinacion || '',
         notas_llamada: '',
         // Control de intentos
@@ -135,7 +153,8 @@ export default function ProformasShow({ item: proforma }: Props) {
             if (proforma.fecha_entrega_confirmada) {
                 return {
                     fecha: proforma.fecha_entrega_confirmada,
-                    hora: proforma.hora_entrega_confirmada || '09:00'
+                    hora: proforma.hora_entrega_confirmada || '09:00',
+                    hora_fin: proforma.hora_entrega_confirmada_fin || '17:00'
                 }
             }
 
@@ -145,10 +164,12 @@ export default function ProformasShow({ item: proforma }: Props) {
                 fechaSiguiente.setDate(fechaSiguiente.getDate() + 1)
                 const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
                 const horaDefault = proforma.hora_entrega_solicitada || '09:00'
+                const horaFinDefault = proforma.hora_entrega_solicitada_fin || '17:00'
 
                 return {
                     fecha: fechaFormato,
-                    hora: horaDefault
+                    hora: horaDefault,
+                    hora_fin: horaFinDefault
                 }
             }
 
@@ -159,13 +180,15 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             return {
                 fecha: fechaFormato,
-                hora: '09:00'
+                hora: '09:00',
+                hora_fin: '17:00'
             }
         })()
 
         setCoordinacion({
             fecha_entrega_confirmada: defaultDeliveryEffect.fecha,
             hora_entrega_confirmada: defaultDeliveryEffect.hora,
+            hora_entrega_confirmada_fin: defaultDeliveryEffect.hora_fin,
             comentario_coordinacion: proforma.comentario_coordinacion || '',
             notas_llamada: '',
             numero_intentos_contacto: proforma.numero_intentos_contacto || 0,
@@ -178,8 +201,134 @@ export default function ProformasShow({ item: proforma }: Props) {
 
     // PRESENTATION LAYER: Handlers simples que delegan al hook
     const handleAprobar = () => {
-        aprobar(coordinacion)
-        setShowAprobarDialog(false)
+        // Si hay datos de pago (con_pago = true), usar flujo combinado
+        if (coordinacion.payment?.con_pago) {
+            handleAprobarYConvertirConPago();
+            return;
+        }
+
+        console.log('%c📋 Iniciando aprobación simple', 'color: blue; font-weight: bold;');
+
+        // Inicializar flujo de aprobación si el contexto está disponible
+        if (approvalFlow) {
+            approvalFlow.initFlow(proforma);
+            approvalFlow.updateCoordinacion(coordinacion);
+            approvalFlow.setLoading(true, 'approving');
+        }
+
+        // Llamar al endpoint de aprobación
+        aprobar(coordinacion);
+        // El diálogo se cerrará cuando la página se recargue después del onSuccess
+    }
+
+    // Flujo combinado: Aprobar + Convertir con Pago
+    const handleAprobarYConvertirConPago = async () => {
+        console.log('%c📋 Iniciando flujo combinado: Aprobar + Convertir', 'color: blue; font-weight: bold;');
+
+        // Inicializar flujo
+        if (approvalFlow) {
+            approvalFlow.initFlow(proforma);
+            approvalFlow.updateCoordinacion(coordinacion);
+            approvalFlow.updatePayment(coordinacion.payment!);
+            approvalFlow.setLoading(true, 'approving');
+        }
+
+        try {
+            // PASO 1: Aprobar proforma con coordinación
+            console.log('%c⏳ PASO 1: Aprobando proforma...', 'color: blue;');
+
+            const aprobarResponse = await fetch(`/api/proformas/${proforma.id}/aprobar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    fecha_entrega_confirmada: coordinacion.fecha_entrega_confirmada,
+                    hora_entrega_confirmada: coordinacion.hora_entrega_confirmada,
+                    hora_entrega_confirmada_fin: coordinacion.hora_entrega_confirmada_fin,
+                    comentario_coordinacion: coordinacion.comentario_coordinacion,
+                    numero_intentos_contacto: coordinacion.numero_intentos_contacto,
+                    fecha_ultimo_intento: coordinacion.fecha_ultimo_intento || null,
+                    resultado_ultimo_intento: coordinacion.resultado_ultimo_intento,
+                    notas_llamada: coordinacion.notas_llamada || null,
+                }),
+            });
+
+            if (!aprobarResponse.ok) {
+                const errorData = await aprobarResponse.json();
+                throw new Error(errorData.message || 'Error al aprobar proforma');
+            }
+
+            const aprobarData = await aprobarResponse.json();
+            console.log('%c✅ PASO 1 completado: Proforma aprobada', 'color: green;', aprobarData);
+
+            // Actualizar estado del flujo
+            if (approvalFlow) {
+                approvalFlow.setProformaAprobada(aprobarData.data?.proforma || proforma);
+                approvalFlow.setLoading(true, 'converting');
+            }
+
+            // PASO 2: Convertir a venta con datos de pago
+            console.log('%c⏳ PASO 2: Convirtiendo a venta...', 'color: blue;');
+
+            const convertirResponse = await fetch(`/api/proformas/${proforma.id}/convertir-venta`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    con_pago: coordinacion.payment!.con_pago,
+                    tipo_pago_id: coordinacion.payment!.tipo_pago_id,
+                    politica_pago: coordinacion.payment!.politica_pago,
+                    monto_pagado: coordinacion.payment!.monto_pagado,
+                    fecha_pago: coordinacion.payment!.fecha_pago,
+                    numero_recibo: coordinacion.payment!.numero_recibo,
+                    numero_transferencia: coordinacion.payment!.numero_transferencia,
+                }),
+            });
+
+            if (!convertirResponse.ok) {
+                const errorData = await convertirResponse.json();
+                throw new Error(errorData.message || 'Error al convertir a venta');
+            }
+
+            const convertirData = await convertirResponse.json();
+            console.log('%c✅ PASO 2 completado: Proforma convertida a venta', 'color: green;', convertirData);
+
+            // Actualizar estado del flujo con éxito
+            if (approvalFlow) {
+                approvalFlow.setVentaCreada(convertirData.data?.venta || {});
+                approvalFlow.markAsSuccess();
+                approvalFlow.setLoading(false, 'success');
+            }
+
+            // Cerrar diálogo y recargar página
+            setShowAprobarDialog(false);
+
+            // Mostrar notificación de éxito
+            const successMessage = `Proforma aprobada y convertida a venta exitosamente`;
+            console.log('%c🎉 ' + successMessage, 'color: green; font-weight: bold;');
+
+            // Esperar un momento para que el usuario vea el loading, luego recargar
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
+        } catch (error) {
+            console.error('%c❌ Error en flujo combinado:', 'color: red;', error);
+
+            // Actualizar estado de error
+            if (approvalFlow) {
+                const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                approvalFlow.setError(errorMessage);
+                approvalFlow.setLoading(false, 'error');
+            }
+
+            // Mostrar notificación de error
+            alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
     }
 
     const handleRechazar = () => {
@@ -199,28 +348,33 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             <div className="space-y-6 p-4">
                 {/* Header */}
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-4">
-
+                <div className="flex flex-col gap-[var(--space-lg)] md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-[var(--space-md)]">
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">
+                            <h1 className="text-[var(--text-3xl)] font-bold tracking-tight">
                                 Proforma {proforma.numero}
                             </h1>
-                            <p className="text-muted-foreground">
-                                Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
-                            </p>
+                            <div className="space-y-1 mt-2">
+                                <p className="text-[var(--text-sm)] text-muted-foreground">
+                                    Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
+                                </p>
+                                <div>
+                                    <p className="text-[var(--text-xs)] text-muted-foreground font-medium uppercase">Total</p>
+                                    <p className="text-[var(--text-2xl)] font-bold text-[var(--brand-primary)]">
+                                        Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex gap-2 flex-wrap">
-                        <Badge variant={estado.variant} className="text-sm px-3 py-1">
-                            {estado.label}
-                        </Badge>
+                    <div className="flex gap-[var(--space-sm)] flex-wrap items-center">
+                        <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
 
                         {puedeAprobar && (
                             <Button
                                 variant="default"
                                 onClick={() => setShowAprobarDialog(true)}
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white"
                             >
                                 <Check className="mr-2 h-4 w-4" />
                                 Aprobar
@@ -240,7 +394,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                         {puedeConvertir && (
                             <Button
                                 onClick={() => setShowConvertirDialog(true)}
-                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                                className="bg-[var(--brand-secondary)] hover:bg-[var(--brand-secondary-hover)] text-white"
                             >
                                 <ShoppingCart className="mr-2 h-4 w-4" />
                                 Convertir a Venta
@@ -254,251 +408,72 @@ export default function ProformasShow({ item: proforma }: Props) {
                     </div>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-[var(--space-lg)] lg:grid-cols-3">
                     {/* Información principal */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-[var(--space-lg)]">
                         {/* Detalles de la proforma */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Package className="h-5 w-5" />
-                                    Detalles de la Proforma
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
+                        <ProformaCard
+                            variant="default"
+                            title="Detalles de la Proforma"
+                            icon={<Package className="h-5 w-5" />}
+                        >
+                            <Table>
                                     <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Producto</TableHead>
-                                            <TableHead>Cantidad</TableHead>
-                                            <TableHead>Precio Unit.</TableHead>
-                                            <TableHead className="text-right">Subtotal</TableHead>
+                                        <TableRow className="bg-muted/50">
+                                            <TableHead className="font-semibold">Producto</TableHead>
+                                            <TableHead className="font-semibold">Cantidad</TableHead>
+                                            <TableHead className="font-semibold">Precio Unit.</TableHead>
+                                            <TableHead className="text-right font-semibold">Subtotal</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {proforma.detalles.map((detalle) => (
-                                            <TableRow key={detalle.id}>
+                                        {proforma.detalles.map((detalle, index) => (
+                                            <TableRow
+                                                key={detalle.id}
+                                                className={`transition-colors hover:bg-muted/30 ${
+                                                    index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                                                }`}
+                                            >
                                                 <TableCell>
-                                                    <div>
-                                                        <div className="font-medium">
+                                                    <div className="space-y-1">
+                                                        <div className="font-medium text-[var(--text-base)]">
                                                             {detalle.producto?.nombre || 'Producto sin datos'}
                                                         </div>
                                                         {detalle.producto && (
-                                                            <div className="text-sm text-muted-foreground">
+                                                            <div className="text-[var(--text-sm)] text-muted-foreground">
                                                                 {detalle.producto.categoria?.nombre || 'Sin categoría'} - {detalle.producto.marca?.nombre || 'Sin marca'}
                                                             </div>
                                                         )}
                                                         {detalle.producto?.codigo && (
-                                                            <div className="text-xs text-muted-foreground">
+                                                            <div className="text-[var(--text-xs)] text-muted-foreground font-mono">
                                                                 Código: {detalle.producto.codigo}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>{detalle.cantidad}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="font-medium">{detalle.cantidad}</TableCell>
+                                                <TableCell className="font-medium">
                                                     Bs. {(detalle.precio_unitario ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right font-semibold">
                                                     Bs. {(detalle.subtotal ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
-                            </CardContent>
-                        </Card>
+                        </ProformaCard>
 
                         {/* Observaciones */}
                         {proforma.observaciones && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Observaciones</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-muted-foreground">
-                                        {proforma.observaciones}
-                                    </p>
-                                </CardContent>
-                            </Card>
+                            <ProformaCard variant="default" title="Observaciones">
+                                <p className="text-[var(--text-sm)] text-muted-foreground leading-relaxed">
+                                    {proforma.observaciones}
+                                </p>
+                            </ProformaCard>
                         )}
 
-                        {/* Información de Entrega */}
-                        {(proforma.fecha_entrega_solicitada || proforma.fecha_entrega_confirmada) && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <MapPin className="h-5 w-5" />
-                                        Información de Entrega
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    {/* Solicitud del Cliente */}
-                                    <div className="border-l-4 border-blue-500 pl-4 py-2">
-                                        <h4 className="font-semibold text-sm mb-3">Solicitud Original del Cliente</h4>
-                                        <div className="grid md:grid-cols-3 gap-4 text-sm space-y-3">
-                                            {proforma.fecha_entrega_solicitada && (
-                                                <div>
-                                                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                        <Calendar className="h-4 w-4" />
-                                                        <span>Fecha Solicitada</span>
-                                                    </div>
-                                                    <p className="font-medium">
-                                                        {new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES')}
-                                                    </p>
-                                                </div>
-                                            )}
-                                            {proforma.hora_entrega_solicitada && (
-                                                <div>
-                                                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                        <Clock className="h-4 w-4" />
-                                                        <span>Hora Solicitada</span>
-                                                    </div>
-                                                    <p className="font-medium">
-                                                        {proforma.hora_entrega_solicitada}
-                                                    </p>
-                                                </div>
-                                            )}
-                                            {proforma.direccion_solicitada && (
-                                                <div>
-                                                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                        <MapPin className="h-4 w-4" />
-                                                        <span>Dirección Solicitada</span>
-                                                    </div>
-                                                    <p className="font-medium text-xs">
-                                                        {proforma.direccion_solicitada.direccion}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
 
-                                    {/* Confirmación del Vendedor */}
-                                    {proforma.estado === 'APROBADA' && proforma.fecha_entrega_confirmada && (
-                                        <div className="border-l-4 border-green-500 pl-4 py-2">
-                                            <h4 className="font-semibold text-sm mb-3">Confirmación del Vendedor</h4>
-                                            <div className="grid md:grid-cols-3 gap-4 text-sm space-y-3">
-                                                <div>
-                                                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                        <Calendar className="h-4 w-4" />
-                                                        <span>Fecha Confirmada</span>
-                                                    </div>
-                                                    <p className="font-medium">
-                                                        {new Date(proforma.fecha_entrega_confirmada).toLocaleDateString('es-ES')}
-                                                    </p>
-                                                    {proforma.fecha_entrega_confirmada !== proforma.fecha_entrega_solicitada && (
-                                                        <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
-                                                            <AlertCircle className="h-3 w-3" />
-                                                            Cambio detectado
-                                                        </p>
-                                                    )}
-                                                </div>
-
-                                                {proforma.hora_entrega_confirmada && (
-                                                    <div>
-                                                        <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                            <Clock className="h-4 w-4" />
-                                                            <span>Hora Confirmada</span>
-                                                        </div>
-                                                        <p className="font-medium">
-                                                            {proforma.hora_entrega_confirmada}
-                                                        </p>
-                                                        {proforma.hora_entrega_confirmada !== proforma.hora_entrega_solicitada && (
-                                                            <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
-                                                                <AlertCircle className="h-3 w-3" />
-                                                                Cambio detectado
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {proforma.direccion_confirmada && (
-                                                    <div>
-                                                        <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                            <MapPin className="h-4 w-4" />
-                                                            <span>Dirección Confirmada</span>
-                                                        </div>
-                                                        <p className="font-medium text-xs">
-                                                            {proforma.direccion_confirmada.direccion}
-                                                        </p>
-                                                        {proforma.direccion_confirmada.id !== proforma.direccion_solicitada?.id && (
-                                                            <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
-                                                                <AlertCircle className="h-3 w-3" />
-                                                                Cambio detectado
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {proforma.comentario_coordinacion && (
-                                                <div className="mt-4 p-3 bg-muted/50 rounded">
-                                                    <p className="text-xs font-medium mb-1">Notas de Coordinación:</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {proforma.comentario_coordinacion}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Entrega Realizada */}
-                                    {proforma.entregado_en && (
-                                        <div className="border-l-4 border-purple-500 pl-4 py-2">
-                                            <h4 className="font-semibold text-sm mb-3">Entrega Realizada</h4>
-                                            <div className="grid md:grid-cols-3 gap-4 text-sm space-y-3">
-                                                <div>
-                                                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                        <Calendar className="h-4 w-4" />
-                                                        <span>Fecha y Hora</span>
-                                                    </div>
-                                                    <p className="font-medium">
-                                                        {new Date(proforma.entregado_en).toLocaleDateString('es-ES')} a las {new Date(proforma.entregado_en).toLocaleTimeString('es-ES')}
-                                                    </p>
-                                                </div>
-
-                                                {proforma.entregado_a && (
-                                                    <div>
-                                                        <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                                            <MapPin className="h-4 w-4" />
-                                                            <span>Entregado a</span>
-                                                        </div>
-                                                        <p className="font-medium">
-                                                            {proforma.entregado_a}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {proforma.numero_intentos_contacto !== undefined && (
-                                                    <div>
-                                                        <div className="text-xs font-medium text-muted-foreground mb-1">Intentos de Contacto</div>
-                                                        <p className="font-medium">
-                                                            {proforma.numero_intentos_contacto}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {proforma.resultado_ultimo_intento && (
-                                                <div className="mt-3 p-2 bg-purple-50 dark:bg-purple-950 rounded text-sm">
-                                                    <p className="text-xs font-medium mb-1">Resultado Último Intento:</p>
-                                                    <p className="font-medium">{proforma.resultado_ultimo_intento}</p>
-                                                </div>
-                                            )}
-
-                                            {proforma.observaciones_entrega && (
-                                                <div className="mt-3 p-3 bg-muted/50 rounded">
-                                                    <p className="text-xs font-medium mb-1">Observaciones de Entrega:</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {proforma.observaciones_entrega}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
 
                         {/* Coordinación de Entrega - Mostrar cuando está PENDIENTE */}
                         {proforma.estado === 'PENDIENTE' && (
@@ -526,8 +501,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     </div>
                                 </CardHeader>
                                 {showCoordinacionForm && (
-                                    <CardContent className="space-y-4">
-                                        <div className="grid md:grid-cols-2 gap-4">
+                                    <CardContent className="space-y-[var(--space-lg)]">
+                                        <div className="grid md:grid-cols-3 gap-[var(--space-md)]">
                                             {/* Fecha de entrega confirmada */}
                                             <div className="space-y-2">
                                                 <Label htmlFor="fecha_confirmada">
@@ -547,10 +522,10 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                 />
                                             </div>
 
-                                            {/* Hora de entrega confirmada */}
+                                            {/* Hora de entrega confirmada (inicio) */}
                                             <div className="space-y-2">
                                                 <Label htmlFor="hora_confirmada">
-                                                    Hora de Entrega Confirmada
+                                                    Desde (Hora)
                                                 </Label>
                                                 <Input
                                                     id="hora_confirmada"
@@ -565,11 +540,30 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                     disabled={isGuardandoCoordinacion}
                                                 />
                                             </div>
+
+                                            {/* Hora de entrega confirmada (fin) */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="hora_confirmada_fin">
+                                                    Hasta (Hora)
+                                                </Label>
+                                                <Input
+                                                    id="hora_confirmada_fin"
+                                                    type="time"
+                                                    value={coordinacion.hora_entrega_confirmada_fin || ''}
+                                                    onChange={(e) =>
+                                                        setCoordinacion({
+                                                            ...coordinacion,
+                                                            hora_entrega_confirmada_fin: e.target.value || undefined,
+                                                        })
+                                                    }
+                                                    disabled={isGuardandoCoordinacion}
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* Comentario de coordinación */}
                                         <div className="space-y-2">
-                                            <Label htmlFor="comentario">
+                                            <Label htmlFor="comentario" className='mb-2'>
                                                 Comentario de Coordinación
                                             </Label>
                                             <Textarea
@@ -584,7 +578,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                 }
                                                 disabled={isGuardandoCoordinacion}
                                                 rows={3}
-                                                className="resize-none"
+                                                className="resize-none mt-2"
                                             />
                                         </div>
 
@@ -605,16 +599,16 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                 }
                                                 disabled={isGuardandoCoordinacion}
                                                 rows={3}
-                                                className="resize-none"
+                                                className="resize-none mt-2"
                                             />
                                         </div>
 
-                                        <Separator className="my-4" />
+                                        <Separator className="my-[var(--space-md)]" />
 
                                         {/* Control de Intentos de Contacto */}
-                                        <div className="space-y-4">
-                                            <h4 className="font-semibold text-sm">Control de Intentos de Contacto</h4>
-                                            <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="space-y-[var(--space-md)]">
+                                            <h4 className="font-semibold text-[var(--text-sm)]">Control de Intentos de Contacto</h4>
+                                            <div className="grid md:grid-cols-2 gap-[var(--space-md)]">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="numero_intentos">
                                                         Número de Intentos
@@ -734,131 +728,149 @@ export default function ProformasShow({ item: proforma }: Props) {
                     </div>
 
                     {/* Información lateral */}
-                    <div className="space-y-6">
+                    <div className="space-y-[var(--space-lg)]">
                         {/* Cliente */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Información del Cliente</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
+                        <ProformaCard variant="default" title="Información del Cliente">
+                            <div className="space-y-[var(--space-md)]">
                                 {/* Nombre */}
                                 <div>
-                                    <div className="text-xs font-medium text-muted-foreground uppercase">Nombre</div>
-                                    <div className="font-semibold text-base mt-1">{proforma.cliente.nombre}</div>
+                                    <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Nombre</div>
+                                    <div className="font-semibold text-[var(--text-base)] mt-1">{proforma.cliente.nombre}</div>
                                 </div>
 
                                 {/* Email */}
                                 {proforma.cliente.email && (
                                     <div>
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Email</div>
-                                        <div className="text-sm mt-1 break-all">{proforma.cliente.email}</div>
+                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Email</div>
+                                        <div className="text-[var(--text-sm)] mt-1 break-all">{proforma.cliente.email}</div>
                                     </div>
                                 )}
 
                                 {/* Teléfono */}
                                 {proforma.cliente.telefono && (
-                                    <div>
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Teléfono</div>
-                                        <div className="text-sm mt-1">{proforma.cliente.telefono}</div>
+                                    <div className="space-y-2">
+                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Teléfono</div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[var(--text-sm)]">{proforma.cliente.telefono}</span>
+                                            <a
+                                                href={`https://wa.me/${proforma.cliente.telefono.replace(/\D/g, '')}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title="Abrir en WhatsApp"
+                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                                            >
+                                                <MessageCircle className="h-4 w-4" />
+                                            </a>
+                                        </div>
                                     </div>
                                 )}
 
                                 {/* Dirección del cliente */}
                                 {proforma.cliente.direccion && (
-                                    <div className="border-t pt-4">
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Dirección Registrada</div>
-                                        <div className="text-sm mt-1 text-muted-foreground">
+                                    <div className="border-t pt-[var(--space-md)]">
+                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Dirección Registrada</div>
+                                        <div className="text-[var(--text-sm)] mt-1 text-muted-foreground">
                                             {proforma.cliente.direccion}
                                         </div>
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </ProformaCard>
 
                         {/* Dirección de Entrega Solicitada */}
                         {proforma.direccion_solicitada && (
-                            <Card className="border-l-4 border-blue-500">
-                                <CardHeader>
-                                    <CardTitle className="text-base">Dirección de Entrega</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
+                            <ProformaCard variant="info" title="Dirección de Entrega">
+                                <div className="space-y-[var(--space-sm)]">
                                     <div>
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Dirección Solicitada</div>
-                                        <div className="text-sm mt-2 text-muted-foreground">
+                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase">Dirección Solicitada</div>
+                                        <div className="text-[var(--text-sm)] mt-2 text-muted-foreground">
                                             {proforma.direccion_solicitada.direccion}
                                         </div>
                                     </div>
+
                                     {proforma.direccion_solicitada.latitud && proforma.direccion_solicitada.longitud ? (
                                         <>
-                                            <div className="text-xs text-muted-foreground">
+                                            {/* Mostrar coordenadas */}
+                                            <div className="text-[var(--text-xs)] text-muted-foreground">
                                                 <span className="font-medium">Coordenadas:</span> {proforma.direccion_solicitada.latitud.toFixed(4)}, {proforma.direccion_solicitada.longitud.toFixed(4)}
                                             </div>
-                                            {/* Mapa de ubicación */}
-                                            <div className="pt-2">
-                                                <div className="text-xs font-medium text-muted-foreground mb-2">Ubicación en el mapa:</div>
-                                                <MapView
-                                                    latitude={proforma.direccion_solicitada.latitud}
-                                                    longitude={proforma.direccion_solicitada.longitud}
-                                                    height="250px"
-                                                    zoom={15}
-                                                    markerTitle="Ubicación de entrega solicitada"
-                                                />
-                                            </div>
+
+                                            {/* Botón para mostrar mapa - LAZY LOAD */}
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => setShowMapaEntrega(true)}
+                                                className="w-full mt-2 text-sm"
+                                            >
+                                                <MapPin className="h-4 w-4 mr-1" />
+                                                Ver ubicación en mapa
+                                            </Button>
+
+                                            {/* Modal expandible con mapa - Optimizado para mobile */}
+                                            {showMapaEntrega && (
+                                                <div className="pt-[var(--space-sm)] border-t space-y-[var(--space-sm)] animate-in fade-in duration-200">
+                                                    <div className="text-[var(--text-xs)] font-medium text-muted-foreground mb-2">
+                                                        📍 Ubicación en el mapa:
+                                                    </div>
+
+                                                    {/* Contenedor responsive del mapa */}
+                                                    <div className="rounded-lg overflow-hidden border border-border/50">
+                                                        <MapView
+                                                            latitude={proforma.direccion_solicitada.latitud}
+                                                            longitude={proforma.direccion_solicitada.longitud}
+                                                            height="280px"
+                                                            zoom={16}
+                                                            markerTitle="Ubicación de entrega solicitada"
+                                                        />
+                                                    </div>
+
+                                                    {/* Botón para cerrar - Mobile optimizado */}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setShowMapaEntrega(false)}
+                                                        className="w-full text-xs hover:bg-muted"
+                                                    >
+                                                        ✕ Cerrar mapa
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </>
                                     ) : (
-                                        <div className="text-xs text-amber-600 dark:text-amber-400">
+                                        <div className="text-[var(--text-xs)] text-amber-600 dark:text-amber-400">
                                             No hay coordenadas disponibles para esta dirección
                                         </div>
                                     )}
+
                                     {proforma.fecha_entrega_solicitada && (
-                                        <div className="pt-2 border-t">
-                                            <div className="text-xs font-medium text-muted-foreground uppercase mb-1">Fecha Solicitada</div>
-                                            <div className="text-sm font-medium">
+                                        <div className="pt-[var(--space-sm)] border-t">
+                                            <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase mb-1">Fecha Solicitada</div>
+                                            <div className="text-[var(--text-sm)] font-medium">
                                                 {new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES')}
                                             </div>
                                         </div>
                                     )}
                                     {proforma.hora_entrega_solicitada && (
                                         <div>
-                                            <div className="text-xs font-medium text-muted-foreground uppercase mb-1">Hora Solicitada</div>
-                                            <div className="text-sm font-medium">
+                                            <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase mb-1">Hora Solicitada</div>
+                                            <div className="text-[var(--text-sm)] font-medium">
                                                 {proforma.hora_entrega_solicitada}
+                                                {proforma.hora_entrega_solicitada_fin && (
+                                                    <span>
+                                                        {' - '}
+                                                        {proforma.hora_entrega_solicitada_fin}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     )}
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </ProformaCard>
                         )}
 
-                        {/* Resumen */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Resumen</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div className="flex justify-between">
-                                    <span>Subtotal:</span>
-                                    <span>Bs. {proforma.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Descuento:</span>
-                                    <span>Bs. {proforma.descuento.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                {/* Impuesto oculto - por ahora no se requiere */}
-                                <div className="flex justify-between" style={{ display: 'none' }}>
-                                    <span>Impuesto:</span>
-                                    <span>Bs. {proforma.impuesto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <Separator />
-                                <div className="flex justify-between font-bold">
-                                    <span>Total:</span>
-                                    <span>Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
 
                         {/* Información adicional */}
-                        <Card>
+                        {/* <Card>
                             <CardHeader>
                                 <CardTitle>Información y Auditoría</CardTitle>
                             </CardHeader>
@@ -885,33 +897,31 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     </div>
                                 </div>
                             </CardContent>
-                        </Card>
+                        </Card> */}
                     </div>
                 </div>
             </div>
 
-            {/* Diálogo de confirmación para aprobar */}
-            <AlertDialog open={showAprobarDialog} onOpenChange={setShowAprobarDialog}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Aprobar Proforma</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            ¿Estás seguro de que deseas aprobar la proforma {proforma.numero}?
-                            Esta acción reservará el stock de los productos incluidos.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isSubmitting}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleAprobar}
-                            disabled={isSubmitting}
-                            className="bg-green-600 hover:bg-green-700"
-                        >
-                            {isSubmitting ? 'Aprobando...' : 'Aprobar'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Diálogo de aprobación con verificación de pago */}
+            <Dialog open={showAprobarDialog} onOpenChange={setShowAprobarDialog}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Aprobar Proforma con Verificación de Pago</DialogTitle>
+                        <DialogDescription>
+                            Complete los datos de coordinación de entrega y verifique el pago
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <ApprovalPaymentForm
+                        proforma={proforma}
+                        coordinacion={coordinacion}
+                        onCoordinacionChange={setCoordinacion}
+                        onSubmit={handleAprobar}
+                        onCancel={() => setShowAprobarDialog(false)}
+                        isSubmitting={isSubmitting}
+                    />
+                </DialogContent>
+            </Dialog>
 
             {/* Diálogo para rechazar con motivo */}
             <Dialog open={showRechazarDialog} onOpenChange={setShowRechazarDialog}>
@@ -961,36 +971,29 @@ export default function ProformasShow({ item: proforma }: Props) {
                 </DialogContent>
             </Dialog>
 
-            {/* Diálogo de confirmación para convertir a venta */}
-            <AlertDialog open={showConvertirDialog} onOpenChange={setShowConvertirDialog}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Convertir Proforma a Venta</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            ¿Estás seguro de que deseas convertir la proforma {proforma.numero} a una venta?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="space-y-3 text-sm text-foreground px-6">
-                        <p>Esta acción:</p>
-                        <ul className="list-disc list-inside space-y-1 ml-2">
-                            <li>Crearán una nueva venta con los detalles de esta proforma</li>
-                            <li>Consumirán el stock reservado de los productos</li>
-                            <li>Generarán los números de serie correspondientes</li>
-                            <li>Marcarán esta proforma como CONVERTIDA</li>
-                        </ul>
-                    </div>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isConverting}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleConvertir}
-                            disabled={isConverting}
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                        >
-                            {isConverting ? 'Convirtiendo...' : 'Convertir a Venta'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Modal para convertir a venta */}
+            <ProformaConvertirModal
+                isOpen={showConvertirDialog}
+                onClose={() => setShowConvertirDialog(false)}
+                proforma={proforma}
+                onConvertir={handleConvertir}
+                isProcessing={isConverting}
+            />
+
+            {/* Loading Overlay para flujo de aprobación */}
+            {approvalFlow && (
+                <LoadingOverlay
+                    isVisible={approvalFlow.state.loading}
+                    step={approvalFlow.state.step === 'approving' ? 'approval' : approvalFlow.state.step === 'converting' ? 'conversion' : 'processing'}
+                    message={
+                        approvalFlow.state.step === 'approving'
+                            ? 'Aprobando proforma con datos de coordinación...'
+                            : approvalFlow.state.step === 'converting'
+                                ? 'Convirtiendo a venta y registrando pago...'
+                                : 'Procesando solicitud...'
+                    }
+                />
+            )}
         </AppLayout>
     )
 }

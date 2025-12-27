@@ -3,10 +3,12 @@
  * PHASE 2: Integración con API de entregas masivas
  */
 
+import type { Id } from '@/domain/entities/shared';
+
 export interface CrearLoteRequest {
-    venta_ids: number[];
-    vehiculo_id: number;
-    chofer_id: number;
+    venta_ids: Id[];
+    vehiculo_id: Id;
+    chofer_id: Id;
     agrupar_por_zona?: boolean;
     optimizar?: boolean;
     tipo_reporte?: 'individual' | 'consolidado';

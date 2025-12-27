@@ -1,15 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import { Button } from '@/presentation/components/ui/button';
 import { Textarea } from '@/presentation/components/ui/textarea';
-
-const MOTIVOS_RECHAZO = [
-    { value: 'cliente_cancelo', label: 'Cliente canceló el pedido' },
-    { value: 'sin_disponibilidad', label: 'No hay disponibilidad para la fecha solicitada' },
-    { value: 'sin_respuesta', label: 'Cliente no contestó llamadas' },
-    { value: 'fuera_cobertura', label: 'Dirección fuera de cobertura' },
-    { value: 'stock_insuficiente', label: 'Stock insuficiente' },
-    { value: 'otro', label: 'Otro motivo (especificar abajo)' },
-];
+import { MOTIVOS_RECHAZO_PROFORMA } from '@/lib/proformas.utils';
 
 interface ProformaRechazoModalProps {
     isOpen: boolean;
@@ -58,7 +50,7 @@ export function ProformaRechazoModal({
                     <div>
                         <label className="text-sm font-medium mb-3 block">Motivo del rechazo *</label>
                         <div className="space-y-2">
-                            {MOTIVOS_RECHAZO.map((motivo) => (
+                            {MOTIVOS_RECHAZO_PROFORMA.map((motivo) => (
                                 <label
                                     key={motivo.value}
                                     className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${

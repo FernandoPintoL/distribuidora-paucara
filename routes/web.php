@@ -7,7 +7,7 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     if (\Illuminate\Support\Facades\Auth::check()) {
-        return Inertia::render('dashboard');
+        return redirect()->route('dashboard-redirect');
     }
 
     return redirect()->route('login');
@@ -212,9 +212,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // RUTAS DE IMPRESIÓN - VENTAS
     // ==========================================
     Route::prefix('ventas')->name('ventas.')->group(function () {
+        // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
+        Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
+
+        // Rutas con parámetros dinámicos van al final
         Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir');
         Route::get('{venta}/preview', [\App\Http\Controllers\VentaController::class, 'preview'])->name('preview');
-        Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
     });
 
     // Rutas para gestión de stock en ventas
@@ -236,6 +239,13 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // Vista: Lista de proformas (usa ProformaController::index)
         Route::get('/', [\App\Http\Controllers\ProformaController::class, 'index'])->name('index');
 
+        // ==========================================
+        // RUTAS DE IMPRESIÓN - PROFORMAS (SIN PARÁMETROS DINÁMICOS)
+        // ==========================================
+        // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
+        Route::get('formatos-disponibles', [\App\Http\Controllers\ProformaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
+
+        // Rutas con parámetros dinámicos van al final
         // Vista: Detalle de proforma (usa ProformaController::show)
         Route::get('/{proforma}', [\App\Http\Controllers\ProformaController::class, 'show'])->name('show');
 
@@ -244,10 +254,6 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('/{id}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
         Route::post('/{id}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])->name('convertir-venta');
 
-        // ==========================================
-        // RUTAS DE IMPRESIÓN - PROFORMAS
-        // ==========================================
-        Route::get('formatos-disponibles', [\App\Http\Controllers\ProformaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
         Route::get('{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
         Route::get('{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
     });

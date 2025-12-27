@@ -9,6 +9,9 @@ interface DashboardStatsProps {
     loadingLogisticaStats: boolean;
     logisticaLastUpdate: Date | null;
     refreshLogisticaStats: () => void;
+    dashboardLastUpdate?: Date | null;
+    dashboardIsRefreshing?: boolean;
+    refreshDashboard?: () => void;
 }
 
 export function DashboardStats({
@@ -18,6 +21,9 @@ export function DashboardStats({
     loadingLogisticaStats,
     logisticaLastUpdate,
     refreshLogisticaStats,
+    dashboardLastUpdate,
+    dashboardIsRefreshing,
+    refreshDashboard,
 }: DashboardStatsProps) {
     return (
         <>
@@ -25,19 +31,19 @@ export function DashboardStats({
             <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-lg">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard de Logística</h1>
                 <div className="flex items-center gap-2">
-                    {logisticaLastUpdate && (
+                    {(dashboardLastUpdate || logisticaLastUpdate) && (
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                            Actualizado: {logisticaLastUpdate.toLocaleTimeString()}
+                            Actualizado: {(dashboardLastUpdate || logisticaLastUpdate)?.toLocaleTimeString()}
                         </span>
                     )}
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={refreshLogisticaStats}
-                        disabled={loadingLogisticaStats}
+                        onClick={refreshDashboard || refreshLogisticaStats}
+                        disabled={dashboardIsRefreshing || loadingLogisticaStats}
                         className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
-                        <RefreshCw className={`h-4 w-4 ${loadingLogisticaStats ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`h-4 w-4 ${(dashboardIsRefreshing || loadingLogisticaStats) ? 'animate-spin' : ''}`} />
                     </Button>
                 </div>
             </div>

@@ -402,4 +402,56 @@ class ProformaController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener estadísticas de proformas para dashboard
+     *
+     * GET /api/proformas/estadisticas
+     *
+     * @return JsonResponse
+     */
+    public function estadisticas(Request $request): JsonResponse
+    {
+        try {
+            // Usar el modelo Proforma directamente para queries simples de estadísticas
+            $proformaModel = \App\Models\Proforma::class;
+
+            $stats = [
+                'total' => $proformaModel::count(),
+                'por_estado' => [
+                    'pendiente' => $proformaModel::where('estado', 'PENDIENTE')->count(),
+                    'aprobada' => $proformaModel::where('estado', 'APROBADA')->count(),
+                    'rechazada' => $proformaModel::where('estado', 'RECHAZADA')->count(),
+                    'convertida' => $proformaModel::where('estado', 'CONVERTIDA')->count(),
+                    'vencida' => $proformaModel::where('estado', 'VENCIDA')->count(),
+                ],
+                'montos_por_estado' => [
+                    'pendiente' => $proformaModel::where('estado', 'PENDIENTE')->sum('total'),
+                    'aprobada' => $proformaModel::where('estado', 'APROBADA')->sum('total'),
+                    'convertida' => $proformaModel::where('estado', 'CONVERTIDA')->sum('total'),
+                ],
+                'alertas' => [
+                    'vencidas' => $proformaModel::where('estado', 'VENCIDA')->count(),
+                    'por_vencer' => $proformaModel::where('estado', 'PENDIENTE')
+                        ->where('fecha_vencimiento', '<=', now()->addDays(2))
+                        ->count(),
+                ],
+                'monto_total' => $proformaModel::sum('total'),
+            ];
+
+            return response()->json(['success' => true, 'data' => $stats]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener estadísticas de proformas', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener estadísticas',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

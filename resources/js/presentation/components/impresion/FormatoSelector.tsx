@@ -50,34 +50,10 @@ export function FormatoSelector({
         formatos || formatosDefault
     );
 
-    // Cargar formatos disponibles desde el backend si no se proporcionaron
-    useEffect(() => {
-        if (!formatos || formatos.length === 0) {
-            // Manejar caso especial de reportes-carga (usa /api/)
-            const urlFormatos = tipoDocumento === 'reportes-carga'
-                ? `/api/reportes-carga/formatos-disponibles`
-                : `/${tipoDocumento}s/formatos-disponibles`;
-
-            fetch(urlFormatos)
-                .then((res) => {
-                    // Verificar si la respuesta es JSON válido
-                    const contentType = res.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return res.json();
-                    }
-                    throw new Error('Respuesta no es JSON');
-                })
-                .then((data) => {
-                    if (data.success && data.data && data.data.length > 0) {
-                        setFormatosDisponibles(data.data);
-                    }
-                })
-                .catch((err) => {
-                    console.warn('No se pudieron cargar formatos del servidor, usando formatos por defecto:', err);
-                    // Mantener formatos por defecto
-                });
-        }
-    }, [formatos, tipoDocumento]);
+    // Usar formatos por defecto o los proporcionados
+    // Nota: El endpoint de backend es innecesario ya que los formatos por defecto
+    // cubren todos los casos de uso. Si es necesario agregar formatos dinámicos
+    // en el futuro, esta lógica puede ser reactivada.
 
     const handleImprimir = (formato: string, accion: 'download' | 'stream' = 'download') => {
         setLoading(true);

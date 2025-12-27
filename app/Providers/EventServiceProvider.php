@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Events\DashboardMetricsUpdated;
 use App\Events\EntregaAsignada;
 use App\Events\EntregaCompletada;
 use App\Events\EntregaConfirmada;
@@ -17,6 +18,7 @@ use App\Events\ProformaCreada;
 use App\Events\ProformaRechazada;
 use App\Events\RutaPlanificada;
 use App\Events\UbicacionActualizada;
+use App\Listeners\BroadcastDashboardMetrics;
 use App\Listeners\Logistica\BroadcastEntregaAsignada;
 use App\Listeners\Logistica\BroadcastEntregaConfirmada;
 use App\Listeners\Logistica\BroadcastMarcarLlegada;
@@ -55,6 +57,14 @@ class EventServiceProvider extends ServiceProvider
      * @var array
      */
     protected $listen = [
+        // ══════════════════════════════════════════════════════════
+        // DASHBOARD EVENTS
+        // ══════════════════════════════════════════════════════════
+
+        DashboardMetricsUpdated::class => [
+            BroadcastDashboardMetrics::class,
+        ],
+
         // ══════════════════════════════════════════════════════════
         // PROFORMA EVENTS
         // ══════════════════════════════════════════════════════════

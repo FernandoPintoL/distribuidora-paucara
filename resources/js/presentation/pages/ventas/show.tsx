@@ -82,15 +82,69 @@ export default function VentaShow() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+            <div className="grid grid-cols-1 gap-6 p-6">
                 {/* Información principal */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Información de la venta */}
+                <div className="space-y-6">
+                    {/* Información de la venta + Cliente */}
                     <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
-                        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
                             Información de la venta
                         </h2>
 
+                        {/* Foto y datos del cliente */}
+                        <div className="mb-6 pb-6 border-b border-gray-200 dark:border-zinc-700">
+                            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase mb-4">Cliente</h3>
+                            <div className="flex gap-4">
+                                {/* Foto de perfil */}
+                                <div className="flex-shrink-0">
+                                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-zinc-700 flex items-center justify-center bg-gray-100 dark:bg-zinc-800">
+                                        {venta.cliente.foto_perfil && typeof venta.cliente.foto_perfil === 'string' && imagenCargada ? (
+                                            <img
+                                                src={venta.cliente.foto_perfil as string}
+                                                alt={venta.cliente.nombre}
+                                                className="w-full h-full object-cover"
+                                                onError={() => setImagenCargada(false)}
+                                            />
+                                        ) : (
+                                            <User className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Datos del cliente */}
+                                <div className="flex-1 space-y-2">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nombre</label>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                            {venta.cliente.nombre}
+                                        </p>
+                                    </div>
+
+                                    {venta.cliente.nit && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">NIT</label>
+                                            <p className="text-sm text-gray-900 dark:text-white">{venta.cliente.nit}</p>
+                                        </div>
+                                    )}
+
+                                    {venta.cliente.telefono && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Teléfono</label>
+                                            <p className="text-sm text-gray-900 dark:text-white">{venta.cliente.telefono}</p>
+                                        </div>
+                                    )}
+
+                                    {venta.cliente.email && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</label>
+                                            <p className="text-sm text-gray-900 dark:text-white">{venta.cliente.email}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Datos de la venta */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -166,13 +220,13 @@ export default function VentaShow() {
                         )}
                     </div>
 
-                    {/* Productos */}
+                    {/* Productos + Resumen */}
                     <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
                         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                             Productos ({venta.detalles.length})
                         </h2>
 
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto mb-6">
                             <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700">
                                 <thead className="bg-gray-50 dark:bg-zinc-800">
                                     <tr>
@@ -216,6 +270,36 @@ export default function VentaShow() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Resumen en el mismo card */}
+                        <div className="border-t border-gray-200 dark:border-zinc-700 pt-6">
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
+                                    <span className="text-sm text-gray-900 dark:text-white">
+                                        {formatCurrency(venta.subtotal, venta.moneda.codigo)}
+                                    </span>
+                                </div>
+
+                                {venta.descuento > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Descuento</span>
+                                        <span className="text-sm text-red-600 dark:text-red-400">
+                                            -{formatCurrency(venta.descuento, venta.moneda.codigo)}
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-gray-200 dark:border-zinc-700 pt-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
+                                        <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                            {formatCurrency(venta.total, venta.moneda.codigo)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -261,110 +345,6 @@ export default function VentaShow() {
                             </div>
                         </div>
                     )}
-                </div>
-
-                {/* Sidebar */}
-                <div className="space-y-6">
-                    {/* Cliente */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                            Cliente
-                        </h3>
-
-                        {/* Foto de perfil o icono */}
-                        <div className="mb-4 flex justify-center">
-                            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gray-200 dark:border-zinc-700 shadow-md flex items-center justify-center bg-gray-100 dark:bg-zinc-800">
-                                {venta.cliente.foto_perfil && typeof venta.cliente.foto_perfil === 'string' && imagenCargada ? (
-                                    <img
-                                        src={venta.cliente.foto_perfil as string}
-                                        alt={venta.cliente.nombre}
-                                        className="w-full h-full object-cover"
-                                        onError={() => setImagenCargada(false)}
-                                    />
-                                ) : (
-                                    <User className="w-12 h-12 text-gray-400 dark:text-gray-500" />
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
-                                    Nombre
-                                </label>
-                                <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                    {venta.cliente.nombre}
-                                </p>
-                            </div>
-
-                            {venta.cliente.nit && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        NIT
-                                    </label>
-                                    <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                        {venta.cliente.nit}
-                                    </p>
-                                </div>
-                            )}
-
-                            {venta.cliente.telefono && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        Teléfono
-                                    </label>
-                                    <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                        {venta.cliente.telefono}
-                                    </p>
-                                </div>
-                            )}
-
-                            {venta.cliente.email && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        Email
-                                    </label>
-                                    <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                        {venta.cliente.email}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Resumen financiero */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                            Resumen
-                        </h3>
-
-                        <div className="space-y-3">
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
-                                <span className="text-sm text-gray-900 dark:text-white">
-                                    {formatCurrency(venta.subtotal, venta.moneda.codigo)}
-                                </span>
-                            </div>
-
-                            {venta.descuento > 0 && (
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Descuento</span>
-                                    <span className="text-sm text-red-600 dark:text-red-400">
-                                        -{formatCurrency(venta.descuento, venta.moneda.codigo)}
-                                    </span>
-                                </div>
-                            )}
-
-                            <div className="border-t border-gray-200 dark:border-zinc-700 pt-3">
-                                <div className="flex justify-between">
-                                    <span className="text-base font-medium text-gray-900 dark:text-white">Total</span>
-                                    <span className="text-base font-medium text-gray-900 dark:text-white">
-                                        {formatCurrency(venta.total, venta.moneda.codigo)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     {/* Cuenta por cobrar si existe */}
                     {venta.cuenta_por_cobrar && (
@@ -405,7 +385,6 @@ export default function VentaShow() {
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         </AppLayout>

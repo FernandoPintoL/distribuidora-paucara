@@ -33,10 +33,12 @@ class Proforma extends Model
         // Solicitud de entrega del cliente
         'fecha_entrega_solicitada',
         'hora_entrega_solicitada',
+        'hora_entrega_solicitada_fin',
         'direccion_entrega_solicitada_id',
         // Confirmación de entrega del vendedor
         'fecha_entrega_confirmada',
         'hora_entrega_confirmada',
+        'hora_entrega_confirmada_fin',
         'direccion_entrega_confirmada_id',
         // Auditoría de coordinación
         'coordinacion_completada',
@@ -67,9 +69,11 @@ class Proforma extends Model
             // Solicitud de entrega del cliente
             'fecha_entrega_solicitada' => 'date',
             'hora_entrega_solicitada' => 'datetime:H:i',
+            'hora_entrega_solicitada_fin' => 'datetime:H:i',
             // Confirmación de entrega del vendedor
             'fecha_entrega_confirmada' => 'date',
             'hora_entrega_confirmada' => 'datetime:H:i',
+            'hora_entrega_confirmada_fin' => 'datetime:H:i',
             'coordinacion_completada' => 'boolean',
             // Auditoría de coordinación
             'coordinacion_actualizada_en' => 'datetime',
@@ -312,7 +316,10 @@ class Proforma extends Model
     // Marcar como convertida
     public function marcarComoConvertida(): bool
     {
-        if (! $this->puedeConvertirseAVenta()) {
+        // Solo verificar que esté en estado APROBADA
+        // No verificamos si existe venta, ya que en el nuevo flujo la venta se crea
+        // justo antes de marcar como CONVERTIDA (dentro de la misma transacción)
+        if ($this->estado !== self::APROBADA) {
             return false;
         }
 

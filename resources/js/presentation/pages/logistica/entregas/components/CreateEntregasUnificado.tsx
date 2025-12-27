@@ -357,60 +357,15 @@ export default function CreateEntregasUnificado({
                     </Card> */}
                 </div>
 
-                {/* Tipo de Reporte de Carga */}
-                <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-                        Tipo de Reporte de Carga
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Selecciona cómo deseas generar los reportes de carga para estas entregas
+                {/* Tipo de Reporte de Carga - Automático */}
+                <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        {selectedCount === 1
+                            ? `Se creará 1 reporte individual para esta entrega`
+                            : `Se creará 1 reporte consolidado para las ${selectedCount} entregas`
+                        }
                     </p>
-
-                    <div className="space-y-3">
-                        {/* Opción Individual */}
-                        <label className="flex items-start gap-3 cursor-pointer p-3 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-                            <input
-                                type="radio"
-                                name="tipo_reporte"
-                                value="individual"
-                                checked={formData.tipo_reporte === 'individual'}
-                                onChange={(e) => updateFormData({ tipo_reporte: 'individual' })}
-                                className="mt-1"
-                            />
-                            <div className="flex-1">
-                                <p className="font-medium text-gray-900 dark:text-white">
-                                    Individual - 1 reporte por entrega
-                                </p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                    Genera un reporte de carga separado para cada entrega.
-                                    Ejemplo: {selectedCount} entregas = {selectedCount} reportes.
-                                    Permite seguimiento granular por entrega.
-                                </p>
-                            </div>
-                        </label>
-
-                        {/* Opción Consolidada */}
-                        <label className="flex items-start gap-3 cursor-pointer p-3 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-                            <input
-                                type="radio"
-                                name="tipo_reporte"
-                                value="consolidado"
-                                checked={formData.tipo_reporte === 'consolidado'}
-                                onChange={(e) => updateFormData({ tipo_reporte: 'consolidado' })}
-                                className="mt-1"
-                            />
-                            <div className="flex-1">
-                                <p className="font-medium text-gray-900 dark:text-white">
-                                    Consolidado - 1 reporte para todas
-                                </p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                    Genera un solo reporte que incluye todos los productos de todas las entregas.
-                                    Ejemplo: {selectedCount} entregas = 1 reporte consolidado.
-                                    Simplifica el proceso de carga.
-                                </p>
-                            </div>
-                        </label>
-                    </div>
                 </Card>
 
                 {/* Opciones de optimización */}

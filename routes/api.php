@@ -49,6 +49,13 @@ Route::get('/tipos-ajuste-inventario', [TipoAjusteInventarioController::class, '
 Route::get('/tipo-operaciones', function () {
     return \App\Models\TipoOperacion::activos()->get();
 });
+// ✅ NUEVO: Endpoint para cargar tipos de pago en ApprovalPaymentForm
+Route::get('/tipos-pago', function () {
+    return response()->json([
+        'success' => true,
+        'data' => \App\Models\TipoPago::where('activo', true)->get()
+    ]);
+});
 
 // Procesar ajustes masivos (requiere autenticación)
 // ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma

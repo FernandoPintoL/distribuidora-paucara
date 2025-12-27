@@ -4,7 +4,6 @@ import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Button } from '@/presentation/components/ui/button'
 import { Input } from '@/presentation/components/ui/input'
-import { Badge } from '@/presentation/components/ui/badge'
 import {
     Table,
     TableBody,
@@ -17,8 +16,11 @@ import { Search, Eye, CheckCircle, XCircle, FileText } from 'lucide-react'
 
 // DOMAIN LAYER: Importar tipos desde domain
 import type { Proforma } from '@/domain/entities/proformas'
-import { getEstadoBadge } from '@/domain/entities/proformas'
 import type { Pagination, Id } from '@/domain/entities/shared'
+
+// PRESENTATION LAYER: Componentes reutilizables
+import { PageHeader } from '@/presentation/components/entrega/PageHeader'
+import { ProformaEstadoBadge } from '@/presentation/components/proforma/ProformaEstadoBadge'
 
 interface Props {
     proformas: Pagination<Proforma>
@@ -54,22 +56,18 @@ export default function ProformasIndex({ proformas }: Props) {
 
             <div className="space-y-6 p-4">
                 {/* Header */}
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Proformas</h1>
-                        <p className="text-muted-foreground">
-                            Gestiona las proformas del sistema
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
+                <PageHeader
+                    title="Proformas"
+                    description="Gestiona las proformas del sistema"
+                    actions={
                         <Button asChild>
                             <Link href="/proformas/create">
                                 <FileText className="mr-2 h-4 w-4" />
                                 Nueva Proforma
                             </Link>
                         </Button>
-                    </div>
-                </div>
+                    }
+                />
 
                 {/* Filters */}
                 <Card>
@@ -114,75 +112,69 @@ export default function ProformasIndex({ proformas }: Props) {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredProformas.map((proforma) => {
-                                        const estado = getEstadoBadge(proforma.estado)
+                                    filteredProformas.map((proforma) => (
+                                        <TableRow key={proforma.id}>
+                                            <TableCell className="font-medium">
+                                                {proforma.numero}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div>
+                                                    <div className="font-medium">{proforma.cliente.nombre}</div>
+                                                    {proforma.cliente.email && (
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {proforma.cliente.email}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {new Date(proforma.fecha).toLocaleDateString('es-ES')}
+                                            </TableCell>
+                                            <TableCell>
+                                                Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                            </TableCell>
+                                            <TableCell>
+                                                <ProformaEstadoBadge estado={proforma.estado} />
+                                            </TableCell>
+                                            <TableCell>
+                                                {proforma.usuarioCreador?.name || 'Sin asignar'}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleView(proforma.id)}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
 
-                                        return (
-                                            <TableRow key={proforma.id}>
-                                                <TableCell className="font-medium">
-                                                    {proforma.numero}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div>
-                                                        <div className="font-medium">{proforma.cliente.nombre}</div>
-                                                        {proforma.cliente.email && (
-                                                            <div className="text-sm text-muted-foreground">
-                                                                {proforma.cliente.email}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {new Date(proforma.fecha).toLocaleDateString('es-ES')}
-                                                </TableCell>
-                                                <TableCell>
-                                                    Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant={estado.variant}>
-                                                        {estado.label}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {proforma.usuarioCreador?.name || 'Sin asignar'}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleView(proforma.id)}
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-
-                                                        {proforma.estado === 'PENDIENTE' && (
-                                                            <>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => handleAction('aprobar', proforma.id)}
-                                                                    disabled={isLoading}
-                                                                    className="text-green-600 hover:text-green-700"
-                                                                >
-                                                                    <CheckCircle className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => handleAction('rechazar', proforma.id)}
-                                                                    disabled={isLoading}
-                                                                    className="text-red-600 hover:text-red-700"
-                                                                >
-                                                                    <XCircle className="h-4 w-4" />
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    })
+                                                    {proforma.estado === 'PENDIENTE' && (
+                                                        <>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleAction('aprobar', proforma.id)}
+                                                                disabled={isLoading}
+                                                                className="text-green-600 hover:text-green-700"
+                                                            >
+                                                                <CheckCircle className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleAction('rechazar', proforma.id)}
+                                                                disabled={isLoading}
+                                                                className="text-red-600 hover:text-red-700"
+                                                            >
+                                                                <XCircle className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
                                 )}
                             </TableBody>
                         </Table>

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import logisticaService from '@/infrastructure/services/logistica.service';
 
+/**
+ * Interfaz de estadísticas de proformas
+ * Actualizada para usar el nuevo endpoint /api/proformas/estadisticas
+ */
 export interface ProformaStats {
     total: number;
     por_estado: {
@@ -13,14 +16,7 @@ export interface ProformaStats {
     montos_por_estado: {
         pendiente: number;
         aprobada: number;
-        rechazada: number;
         convertida: number;
-        vencida: number;
-    };
-    por_canal: {
-        app_externa: number;
-        web: number;
-        presencial: number;
     };
     alertas: {
         vencidas: number;
@@ -53,18 +49,20 @@ export function useProformaStats(options: UseProformaStatsOptions = {}) {
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
     /**
-     * Cargar estadísticas desde el endpoint
+     * Cargar estadísticas desde el nuevo endpoint /api/proformas/estadisticas
      */
     const fetchStats = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const response = await logisticaService.obtenerEstadisticasProformas();
+            const response = await fetch('/api/proformas/estadisticas');
+            const data = await response.json();
 
-            if (response.success) {
-                setStats(response.data);
+            if (data.success && data.data) {
+                setStats(data.data);
                 setLastUpdate(new Date());
+                console.log('✅ Proforma stats loaded:', data.data);
             } else {
                 throw new Error('Error en la respuesta del servidor');
             }
