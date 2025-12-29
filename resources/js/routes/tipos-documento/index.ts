@@ -309,7 +309,7 @@ show.head = (args: { tipoDocumento: string | number } | [tipoDocumento: string |
     show.form = showForm
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::edit
- * @see app/Http/Controllers/TipoDocumentoController.php:203
+ * @see app/Http/Controllers/TipoDocumentoController.php:72
  * @route '/tipos-documento/{tipoDocumento}/edit'
  */
 export const edit = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -324,7 +324,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::edit
- * @see app/Http/Controllers/TipoDocumentoController.php:203
+ * @see app/Http/Controllers/TipoDocumentoController.php:72
  * @route '/tipos-documento/{tipoDocumento}/edit'
  */
 edit.url = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -352,7 +352,7 @@ edit.url = (args: { tipoDocumento: string | number } | [tipoDocumento: string | 
 
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::edit
- * @see app/Http/Controllers/TipoDocumentoController.php:203
+ * @see app/Http/Controllers/TipoDocumentoController.php:72
  * @route '/tipos-documento/{tipoDocumento}/edit'
  */
 edit.get = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -361,7 +361,7 @@ edit.get = (args: { tipoDocumento: string | number } | [tipoDocumento: string | 
 })
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::edit
- * @see app/Http/Controllers/TipoDocumentoController.php:203
+ * @see app/Http/Controllers/TipoDocumentoController.php:72
  * @route '/tipos-documento/{tipoDocumento}/edit'
  */
 edit.head = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -371,7 +371,7 @@ edit.head = (args: { tipoDocumento: string | number } | [tipoDocumento: string |
 
     /**
 * @see \App\Http\Controllers\TipoDocumentoController::edit
- * @see app/Http/Controllers/TipoDocumentoController.php:203
+ * @see app/Http/Controllers/TipoDocumentoController.php:72
  * @route '/tipos-documento/{tipoDocumento}/edit'
  */
     const editForm = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -381,7 +381,7 @@ edit.head = (args: { tipoDocumento: string | number } | [tipoDocumento: string |
 
             /**
 * @see \App\Http\Controllers\TipoDocumentoController::edit
- * @see app/Http/Controllers/TipoDocumentoController.php:203
+ * @see app/Http/Controllers/TipoDocumentoController.php:72
  * @route '/tipos-documento/{tipoDocumento}/edit'
  */
         editForm.get = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -390,7 +390,7 @@ edit.head = (args: { tipoDocumento: string | number } | [tipoDocumento: string |
         })
             /**
 * @see \App\Http\Controllers\TipoDocumentoController::edit
- * @see app/Http/Controllers/TipoDocumentoController.php:203
+ * @see app/Http/Controllers/TipoDocumentoController.php:72
  * @route '/tipos-documento/{tipoDocumento}/edit'
  */
         editForm.head = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

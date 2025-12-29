@@ -65,4 +65,17 @@ class TipoDocumentoController extends Controller
             'filters' => ['q' => $q],
         ]);
     }
+
+    /**
+     * Override: mostrar formulario de edición con prop name camelCase
+     */
+    public function edit($id)
+    {
+        $modelClass = $this->getModel();
+        $item = $modelClass::findOrFail($id);
+
+        return inertia($this->getViewPath() . '/form', [
+            'tipoDocumento' => $item,
+        ]);
+    }
 }

@@ -72,4 +72,17 @@ class TipoPagoController extends Controller
             'filters' => ['q' => $q],
         ]);
     }
+
+    /**
+     * Override: mostrar formulario de edición con prop name camelCase
+     */
+    public function edit($id): Response
+    {
+        $modelClass = $this->getModel();
+        $item = $modelClass::findOrFail($id);
+
+        return inertia($this->getViewPath() . '/form', [
+            'tipoPago' => $item,
+        ]);
+    }
 }
