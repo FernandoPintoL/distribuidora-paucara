@@ -25,4 +25,12 @@ class TipoDocumento extends Model
         'activo' => 'boolean',
         'siguiente_numero' => 'integer',
     ];
+
+    /**
+     * Scope para obtener solo tipos de documento activos
+     */
+    public function scopeActivos($query)
+    {
+        return $query->where('activo', true);
+    }
 }

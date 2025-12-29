@@ -33,4 +33,12 @@ class TipoPago extends Model
     {
         return $this->hasMany(Compra::class, 'tipo_pago_id');
     }
+
+    /**
+     * Scope para obtener solo tipos de pago activos
+     */
+    public function scopeActivos($query)
+    {
+        return $query->where('activo', true);
+    }
 }
