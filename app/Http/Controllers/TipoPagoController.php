@@ -41,7 +41,7 @@ class TipoPagoController extends Controller
     protected function getValidationRules(): array
     {
         return [
-            'codigo' => ['required', 'string', 'max:255', 'unique:tipos_pago,codigo,{id}'],
+            'codigo' => ['required', 'string', 'max:255'],
             'nombre' => ['required', 'string', 'max:255'],
             'activo' => ['sometimes', 'boolean'],
         ];
@@ -84,5 +84,25 @@ class TipoPagoController extends Controller
         return inertia($this->getViewPath() . '/form', [
             'tipoPago' => $item,
         ]);
+    }
+
+    /**
+     * Override: actualizar con validación correcta del código único
+     */
+    public function update(Request $request, $id)
+    {
+        $modelClass = $this->getModel();
+        $item = $modelClass::findOrFail($id);
+
+        // Validar datos con unique constraint excluyendo el ID actual
+        $data = $request->validate([
+            'codigo' => ['required', 'string', 'max:255', 'unique:tipos_pago,codigo,' . $id . ',id'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'activo' => ['sometimes', 'boolean'],
+        ]);
+
+        $item->update($data);
+
+        return $this->redirectToIndexWithSuccess('actualizada');
     }
 }

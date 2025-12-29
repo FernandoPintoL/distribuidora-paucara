@@ -406,7 +406,7 @@ edit.head = (args: { tipoDocumento: string | number } | [tipoDocumento: string |
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::update
- * @see app/Http/Controllers/TipoDocumentoController.php:222
+ * @see app/Http/Controllers/TipoDocumentoController.php:85
  * @route '/tipos-documento/{tipoDocumento}'
  */
 export const update = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -421,7 +421,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::update
- * @see app/Http/Controllers/TipoDocumentoController.php:222
+ * @see app/Http/Controllers/TipoDocumentoController.php:85
  * @route '/tipos-documento/{tipoDocumento}'
  */
 update.url = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -449,7 +449,7 @@ update.url = (args: { tipoDocumento: string | number } | [tipoDocumento: string 
 
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::update
- * @see app/Http/Controllers/TipoDocumentoController.php:222
+ * @see app/Http/Controllers/TipoDocumentoController.php:85
  * @route '/tipos-documento/{tipoDocumento}'
  */
 update.put = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -458,7 +458,7 @@ update.put = (args: { tipoDocumento: string | number } | [tipoDocumento: string 
 })
 /**
 * @see \App\Http\Controllers\TipoDocumentoController::update
- * @see app/Http/Controllers/TipoDocumentoController.php:222
+ * @see app/Http/Controllers/TipoDocumentoController.php:85
  * @route '/tipos-documento/{tipoDocumento}'
  */
 update.patch = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -468,7 +468,7 @@ update.patch = (args: { tipoDocumento: string | number } | [tipoDocumento: strin
 
     /**
 * @see \App\Http\Controllers\TipoDocumentoController::update
- * @see app/Http/Controllers/TipoDocumentoController.php:222
+ * @see app/Http/Controllers/TipoDocumentoController.php:85
  * @route '/tipos-documento/{tipoDocumento}'
  */
     const updateForm = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -483,7 +483,7 @@ update.patch = (args: { tipoDocumento: string | number } | [tipoDocumento: strin
 
             /**
 * @see \App\Http\Controllers\TipoDocumentoController::update
- * @see app/Http/Controllers/TipoDocumentoController.php:222
+ * @see app/Http/Controllers/TipoDocumentoController.php:85
  * @route '/tipos-documento/{tipoDocumento}'
  */
         updateForm.put = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -497,7 +497,7 @@ update.patch = (args: { tipoDocumento: string | number } | [tipoDocumento: strin
         })
             /**
 * @see \App\Http\Controllers\TipoDocumentoController::update
- * @see app/Http/Controllers/TipoDocumentoController.php:222
+ * @see app/Http/Controllers/TipoDocumentoController.php:85
  * @route '/tipos-documento/{tipoDocumento}'
  */
         updateForm.patch = (args: { tipoDocumento: string | number } | [tipoDocumento: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

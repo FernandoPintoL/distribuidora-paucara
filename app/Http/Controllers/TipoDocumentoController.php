@@ -33,7 +33,7 @@ class TipoDocumentoController extends Controller
     public function getValidationRules(): array
     {
         return [
-            'codigo' => 'required|string|max:10|unique:tipos_documento,codigo,' . ($this->getModel() ?? 0),
+            'codigo' => 'required|string|max:10',
             'nombre' => 'required|string|max:100',
             'descripcion' => 'nullable|string|max:255',
             'genera_inventario' => 'sometimes|boolean',
@@ -77,5 +77,30 @@ class TipoDocumentoController extends Controller
         return inertia($this->getViewPath() . '/form', [
             'tipoDocumento' => $item,
         ]);
+    }
+
+    /**
+     * Override: actualizar con validación correcta del código único
+     */
+    public function update(Request $request, $id)
+    {
+        $modelClass = $this->getModel();
+        $item = $modelClass::findOrFail($id);
+
+        // Validar datos con unique constraint excluyendo el ID actual
+        $data = $request->validate([
+            'codigo' => ['required', 'string', 'max:10', 'unique:tipos_documento,codigo,' . $id . ',id'],
+            'nombre' => ['required', 'string', 'max:100'],
+            'descripcion' => ['nullable', 'string', 'max:255'],
+            'genera_inventario' => ['sometimes', 'boolean'],
+            'requiere_autorizacion' => ['sometimes', 'boolean'],
+            'formato_numeracion' => ['nullable', 'string', 'max:50'],
+            'siguiente_numero' => ['nullable', 'integer', 'min:1'],
+            'activo' => ['sometimes', 'boolean'],
+        ]);
+
+        $item->update($data);
+
+        return $this->redirectToIndexWithSuccess('actualizada');
     }
 }

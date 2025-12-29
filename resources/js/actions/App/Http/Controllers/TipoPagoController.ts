@@ -406,7 +406,7 @@ edit.head = (args: { tipoPago: string | number } | [tipoPago: string | number ] 
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:222
+ * @see app/Http/Controllers/TipoPagoController.php:92
  * @route '/tipos-pago/{tipoPago}'
  */
 export const update = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -421,7 +421,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:222
+ * @see app/Http/Controllers/TipoPagoController.php:92
  * @route '/tipos-pago/{tipoPago}'
  */
 update.url = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -449,7 +449,7 @@ update.url = (args: { tipoPago: string | number } | [tipoPago: string | number ]
 
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:222
+ * @see app/Http/Controllers/TipoPagoController.php:92
  * @route '/tipos-pago/{tipoPago}'
  */
 update.put = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -458,7 +458,7 @@ update.put = (args: { tipoPago: string | number } | [tipoPago: string | number ]
 })
 /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:222
+ * @see app/Http/Controllers/TipoPagoController.php:92
  * @route '/tipos-pago/{tipoPago}'
  */
 update.patch = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -468,7 +468,7 @@ update.patch = (args: { tipoPago: string | number } | [tipoPago: string | number
 
     /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:222
+ * @see app/Http/Controllers/TipoPagoController.php:92
  * @route '/tipos-pago/{tipoPago}'
  */
     const updateForm = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -483,7 +483,7 @@ update.patch = (args: { tipoPago: string | number } | [tipoPago: string | number
 
             /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:222
+ * @see app/Http/Controllers/TipoPagoController.php:92
  * @route '/tipos-pago/{tipoPago}'
  */
         updateForm.put = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -497,7 +497,7 @@ update.patch = (args: { tipoPago: string | number } | [tipoPago: string | number
         })
             /**
 * @see \App\Http\Controllers\TipoPagoController::update
- * @see app/Http/Controllers/TipoPagoController.php:222
+ * @see app/Http/Controllers/TipoPagoController.php:92
  * @route '/tipos-pago/{tipoPago}'
  */
         updateForm.patch = (args: { tipoPago: string | number } | [tipoPago: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
