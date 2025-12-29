@@ -367,8 +367,8 @@ export default function VentaForm() {
                             {errors.fecha && <p className="mt-1 text-sm text-red-600">{errors.fecha}</p>}
                         </div>
                         <div className="flex gap-4">
-                            {/* Cliente - 75% del ancho */}
-                            <div className="flex-grow">
+                            {/* Cliente - 3/4 del ancho */}
+                            <div className="flex-[3]">
                                 {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                     Cliente *
                                 </label> */}
@@ -402,8 +402,8 @@ export default function VentaForm() {
                                 {errors.cliente_id && <p className="mt-1 text-sm text-red-600">{errors.cliente_id}</p>}
                             </div>
 
-                            {/* Requiere Envío - 25% del ancho */}
-                            <div className="w-1/4">
+                            {/* Requiere Envío - 1/4 del ancho */}
+                            <div className="flex-[1]">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                     Requiere Envío
                                 </label>
