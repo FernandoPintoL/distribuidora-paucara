@@ -277,12 +277,21 @@ export interface DetalleVentaShow extends DetalleVenta {
     producto: Producto; // Obligatorio en show
 }
 
+export interface DireccionCliente extends BaseEntity {
+    id: Id;
+    direccion: string;
+    referencias?: string;
+    localidad?: string;
+}
+
 export interface VentaShow extends Venta {
     cliente: Cliente; // Obligatorio en show
     usuario: Usuario; // Obligatorio en show
     estado_documento: EstadoDocumento; // Obligatorio en show
     moneda: Moneda; // Obligatorio en show
     detalles: DetalleVentaShow[]; // Obligatorio en show con productos completos
+    tipo_pago?: TipoPago;
+    direccion_cliente?: DireccionCliente;
 }
 
 export interface VentaShowPageProps {
