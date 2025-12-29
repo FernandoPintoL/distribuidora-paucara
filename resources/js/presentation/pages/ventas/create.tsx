@@ -354,7 +354,7 @@ export default function VentaForm() {
                         />
 
 
-                        <div className='hidden'>
+                        {/* <div className='hidden'>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Fecha *
                             </label>
@@ -365,7 +365,7 @@ export default function VentaForm() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                             />
                             {errors.fecha && <p className="mt-1 text-sm text-red-600">{errors.fecha}</p>}
-                        </div>
+                        </div> */}
                         <div className="flex gap-4">
                             {/* Cliente - 3/4 del ancho */}
                             <div className="flex-[3]">

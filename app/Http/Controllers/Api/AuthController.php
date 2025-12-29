@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PreventistStatisticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -58,7 +59,13 @@ class AuthController extends Controller
             $clienteId = $user->cliente->id;
         }
 
-        return response()->json([
+        // ✅ NUEVO: Obtener estadísticas del preventista si aplica
+        $preventistStats = null;
+        if ($user->empleado && $user->empleado->esPreventista()) {
+            $preventistStats = PreventistStatisticsService::getStatsForLogin($user->empleado);
+        }
+
+        $responseData = [
             'success' => true,
             'user' => [
                 'id' => $user->id,
@@ -79,7 +86,14 @@ class AuthController extends Controller
             // ✅ NUEVO: TTL para caché en app móvil
             'cache_ttl' => 24 * 60 * 60, // 24 horas en segundos
             'permissions_updated_at' => now()->timestamp,
-        ]);
+        ];
+
+        // ✅ NUEVO: Incluir estadísticas del preventista en respuesta
+        if ($preventistStats) {
+            $responseData['preventista_stats'] = $preventistStats;
+        }
+
+        return response()->json($responseData);
     }
 
     /**
@@ -160,7 +174,7 @@ class AuthController extends Controller
             $clienteId = $user->cliente->id;
         }
 
-        return response()->json([
+        $responseData = [
             'success' => true,
             'user' => [
                 'id' => $user->id,
@@ -174,7 +188,14 @@ class AuthController extends Controller
             'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
             'cache_ttl' => 24 * 60 * 60,
             'permissions_updated_at' => now()->timestamp,
-        ]);
+        ];
+
+        // ✅ NUEVO: Incluir estadísticas del preventista si aplica
+        if ($user->empleado && $user->empleado->esPreventista()) {
+            $responseData['preventista_stats'] = PreventistStatisticsService::getStatsForLogin($user->empleado);
+        }
+
+        return response()->json($responseData);
     }
 
     /**
