@@ -345,7 +345,7 @@ export default function VentaForm() {
                         Información básica
                     </h2>
 
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
                         {/* Campo número oculto - se genera automáticamente */}
                         <input
                             type="hidden"
@@ -353,7 +353,8 @@ export default function VentaForm() {
                             onChange={(e) => setData('numero', e.target.value)}
                         />
 
-                        <div>
+
+                        <div className='hidden'>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Fecha *
                             </label>
@@ -365,38 +366,60 @@ export default function VentaForm() {
                             />
                             {errors.fecha && <p className="mt-1 text-sm text-red-600">{errors.fecha}</p>}
                         </div>
-                        <div>
-                            {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Cliente *
-                            </label> */}
-                            <InputSearch
-                                id="cliente_search"
-                                label="Cliente"
-                                value={clienteValue}
-                                displayValue={clienteDisplay}
-                                onSearch={searchClientes}
-                                onChange={(value, option) => {
-                                    setData('cliente_id', value || 0);
-                                    setClienteValue(value);
-                                    if (option) {
-                                        setClienteDisplay(option.label);
-                                    } else {
-                                        setClienteDisplay('');
-                                    }
-                                }}
-                                placeholder="Buscar cliente por nombre, NIT o teléfono..."
-                                emptyText="No se encontraron clientes"
-                                error={errors.cliente_id}
-                                required={true}
-                                allowScanner={false}
-                                showCreateButton={true}
-                                onCreateClick={handleCreateCliente}
-                                createButtonText="Crear Cliente"
-                                showCreateIconButton={true}
-                                createIconButtonTitle="Crear nuevo cliente"
-                                className="w-full"
-                            />
-                            {errors.cliente_id && <p className="mt-1 text-sm text-red-600">{errors.cliente_id}</p>}
+                        <div className="flex gap-4">
+                            {/* Cliente - 75% del ancho */}
+                            <div className="flex-grow">
+                                {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Cliente *
+                                </label> */}
+                                <InputSearch
+                                    id="cliente_search"
+                                    label="Cliente"
+                                    value={clienteValue}
+                                    displayValue={clienteDisplay}
+                                    onSearch={searchClientes}
+                                    onChange={(value, option) => {
+                                        setData('cliente_id', value || 0);
+                                        setClienteValue(value);
+                                        if (option) {
+                                            setClienteDisplay(option.label);
+                                        } else {
+                                            setClienteDisplay('');
+                                        }
+                                    }}
+                                    placeholder="Buscar cliente por nombre, NIT o teléfono..."
+                                    emptyText="No se encontraron clientes"
+                                    error={errors.cliente_id}
+                                    required={true}
+                                    allowScanner={false}
+                                    showCreateButton={true}
+                                    onCreateClick={handleCreateCliente}
+                                    createButtonText="Crear Cliente"
+                                    showCreateIconButton={true}
+                                    createIconButtonTitle="Crear nuevo cliente"
+                                    className="w-full"
+                                />
+                                {errors.cliente_id && <p className="mt-1 text-sm text-red-600">{errors.cliente_id}</p>}
+                            </div>
+
+                            {/* Requiere Envío - 25% del ancho */}
+                            <div className="w-1/4">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Requiere Envío
+                                </label>
+                                <div className="flex items-center h-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.requiere_envio || false}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('requiere_envio', e.target.checked)}
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                                        Sí
+                                    </span>
+                                </div>
+                                {errors.requiere_envio && <p className="mt-1 text-sm text-red-600">{errors.requiere_envio}</p>}
+                            </div>
                         </div>
 
                         {/* Campo moneda oculto - se establece automáticamente a BOB */}
@@ -405,7 +428,7 @@ export default function VentaForm() {
                             value={data.moneda_id}
                             onChange={(e) => setData('moneda_id', Number(e.target.value))}
                         />
-                        <div>
+                        {/* <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Observaciones
                             </label>
@@ -416,7 +439,7 @@ export default function VentaForm() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                                 placeholder="Observaciones adicionales..."
                             />
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Campos adicionales */}
@@ -466,23 +489,7 @@ export default function VentaForm() {
                                     emptyText="No se encontraron canales"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Requiere Envío
-                                </label>
-                                <div className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={data.requiere_envio || false}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('requiere_envio', e.target.checked)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    />
-                                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                                        Esta venta requiere envío
-                                    </span>
-                                </div>
-                                {errors.requiere_envio && <p className="mt-1 text-sm text-red-600">{errors.requiere_envio}</p>}
-                            </div>
+
                         </div>
                     </div>
                 </div>
