@@ -7,6 +7,7 @@ export interface TipoPago extends BaseEntity {
   codigo: string;
   nombre: string;
   activo: boolean;
+  icono?: string; // Nombre del icono de Lucide React
 }
 
 export interface TipoPagoFormData extends BaseFormData {

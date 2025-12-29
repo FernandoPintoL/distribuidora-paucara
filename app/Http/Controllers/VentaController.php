@@ -111,13 +111,20 @@ class VentaController extends Controller
      */
     public function create(): InertiaResponse
     {
+        // Obtener tipos de pago con sus iconos
+        $tiposPago = TipoPago::activos()->select('id', 'nombre', 'codigo')->get()->map(fn($tipo) => [
+            'id' => $tipo->id,
+            'nombre' => $tipo->nombre,
+            'icono' => $tipo->getIcon(),
+        ])->toArray();
+
         return Inertia::render('ventas/create', [
             'clientes' => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
             'productos' => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
             'almacenes' => Almacen::activos()->select('id', 'nombre')->get(),
             'monedas' => Moneda::activos()->select('id', 'codigo', 'nombre', 'simbolo')->get(),
             'tipos_documento' => TipoDocumento::activos()->select('id', 'codigo', 'nombre')->get(),
-            'tipos_pago' => TipoPago::activos()->select('id', 'nombre')->get(),
+            'tipos_pago' => $tiposPago,
         ]);
     }
 

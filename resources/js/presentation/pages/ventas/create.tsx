@@ -58,11 +58,21 @@ export default function VentaForm() {
     const tiposPagoSeguro = useMemo(() => tipos_pago || [], [tipos_pago]);
     const tiposDocumentoSeguro = useMemo(() => tipos_documento || [], [tipos_documento]);
 
+    // Mapeo de iconos para tipos de pago
+    const getIconoEmoji = (icono?: string): string => {
+        return {
+            'Banknote': '💵',
+            'Send': '📤',
+            'CreditCard': '💳',
+            'DollarSign': '💰',
+        }[icono || ''] || '💰';
+    };
+
     // Opciones para SearchSelect
     const tiposPagoOptions: SelectOption[] = useMemo(() =>
         tiposPagoSeguro.map(tipo => ({
             value: tipo.id,
-            label: tipo.nombre,
+            label: `${getIconoEmoji(tipo.icono)} ${tipo.nombre}`,
             description: tipo.codigo
         })), [tiposPagoSeguro]
     );

@@ -41,4 +41,28 @@ class TipoPago extends Model
     {
         return $query->where('activo', true);
     }
+
+    /**
+     * Obtener el icono asociado al tipo de pago
+     *
+     * @return string Nombre del icono de Lucide React
+     */
+    public function getIcon(): string
+    {
+        return match($this->codigo) {
+            'EFECTIVO' => 'Banknote',
+            'TRANSFERENCIA' => 'Send',
+            'CREDITO' => 'CreditCard',
+            'TARJETA' => 'CreditCard',
+            default => 'DollarSign',
+        };
+    }
+
+    /**
+     * Obtener el icono con su información formateada para la API
+     */
+    public function getIconAttribute(): string
+    {
+        return $this->getIcon();
+    }
 }
