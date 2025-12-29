@@ -1,35 +1,34 @@
-// Pages: Marcas form page using generic components
+// Pages: Tipos de Pago form page using generic components
 import AppLayout from '@/layouts/app-layout';
 import GenericFormContainer from '@/presentation/components/generic/generic-form-container';
-import { marcasConfig } from '@/config/modules/marcas.config';
-import marcasService from '@/infrastructure/services/marcas.service';
-import type { Marca, MarcaFormData } from '@/domain/entities/marcas';
+import { tiposPagoConfig } from '@/config/modules/tipos-pago.config';
+import tiposPagoService from '@/infrastructure/services/tipos-pago.service';
+import type { TipoPago, TipoPagoFormData } from '@/domain/entities/tipos-pago';
 
-interface MarcasFormProps {
-  marca?: Marca | null;
+interface TiposPagoFormProps {
+  tipoPago?: TipoPago | null;
 }
 
-const initialMarcaData: MarcaFormData = {
+const initialTipoPagoData: TipoPagoFormData = {
   codigo: '',
   nombre: '',
-  descripcion: '',
   activo: true,
 };
 
-export default function MarcasForm({ marca }: MarcasFormProps) {
-  const isEditing = !!marca;
+export default function TiposPagoForm({ tipoPago }: TiposPagoFormProps) {
+  const isEditing = !!tipoPago;
 
   return (
     <AppLayout breadcrumbs={[
-      { title: 'Dashboard', href: marcasService.indexUrl() },
-      { title: 'Marcas', href: marcasService.indexUrl() },
-      { title: isEditing ? 'Editar' : 'Nueva', href: '#' }
+      { title: 'Dashboard', href: tiposPagoService.indexUrl() },
+      { title: 'Tipos de Pago', href: tiposPagoService.indexUrl() },
+      { title: isEditing ? 'Editar' : 'Nuevo', href: '#' }
     ]}>
-      <GenericFormContainer<Marca, MarcaFormData>
-        entity={marca}
-        config={marcasConfig}
-        service={marcasService}
-        initialData={initialMarcaData}
+      <GenericFormContainer<TipoPago, TipoPagoFormData>
+        entity={tipoPago}
+        config={tiposPagoConfig}
+        service={tiposPagoService}
+        initialData={initialTipoPagoData}
       />
     </AppLayout>
   );
