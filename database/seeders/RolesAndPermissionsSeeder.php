@@ -103,9 +103,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'configuracion-global.index', 'configuracion-global.store', 'configuracion-global.show', 'configuracion-global.update',
             'configuracion-global.reset', 'configuracion-global.ganancias', 'configuracion-global.ganancias.update',
 
-            // Maestros: categorias, marcas, almacenes, proveedores, clientes, productos, unidades, tipos-precio, tipos-pago, monedas, localidades
+            // Maestros: categorias, marcas, almacenes, proveedores, clientes, productos, unidades, tipos-precio, tipos-pago, monedas, localidades, tipos-documento
             'categorias.manage', 'marcas.manage', 'almacenes.manage', 'proveedores.manage', 'clientes.manage', 'productos.manage',
-            'unidades.manage', 'tipos-precio.manage', 'tipos-pago.manage', 'monedas.manage', 'localidades.manage',
+            'unidades.manage', 'tipos-precio.manage', 'tipos-pago.manage', 'tipos_documento.manage', 'monedas.manage', 'localidades.manage',
 
             // Admin específicos
             'admin.config', 'admin.system', 'admin.image-backup.manage',

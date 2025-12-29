@@ -403,6 +403,15 @@ class ModuloSidebarSeeder extends Seeder
                 'categoria'   => 'Configuración',
                 'permisos'    => ['tipos-pago.manage'],
             ],
+            [
+                'titulo'      => 'Tipos de Documento',
+                'ruta'        => '/tipos-documento',
+                'icono'       => 'FileText',
+                'descripcion' => 'Gestión de tipos de documento',
+                'orden'       => 17,
+                'categoria'   => 'Configuración',
+                'permisos'    => ['tipos_documento.manage'],
+            ],
         ];
 
         foreach ($modulosPrincipales as $modulo) {
@@ -425,7 +434,7 @@ class ModuloSidebarSeeder extends Seeder
             [
                 'icono'       => 'Settings',
                 'descripcion' => 'Configuración del sistema',
-                'orden'       => 17,
+                'orden'       => 18,
                 'categoria'   => 'Administración',
                 'activo'      => true,
                 'permisos'    => ['usuarios.index'],
