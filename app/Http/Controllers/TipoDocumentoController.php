@@ -22,7 +22,7 @@ class TipoDocumentoController extends Controller
 
     public function getViewPath(): string
     {
-        return 'tipos-documento.index';
+        return 'tipos-documento';
     }
 
     public function getResourceName(): string
