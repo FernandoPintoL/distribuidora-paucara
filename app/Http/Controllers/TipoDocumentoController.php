@@ -46,20 +46,23 @@ class TipoDocumentoController extends Controller
 
     public function index()
     {
-        $query = $this->getModel()::query();
+        $modelClass = $this->getModel();
+        $q = request()->string('q');
 
-        if (request('search')) {
-            $search = request('search');
-            $query->where('codigo', 'like', "%{$search}%")
-                  ->orWhere('nombre', 'like', "%{$search}%")
-                  ->orWhere('descripcion', 'like', "%{$search}%");
-        }
+        // Construir query con búsqueda opcional
+        $items = $modelClass::query()
+            ->when($q, function ($query) use ($q) {
+                return $query->where('codigo', 'like', "%{$q}%")
+                           ->orWhere('nombre', 'like', "%{$q}%")
+                           ->orWhere('descripcion', 'like', "%{$q}%");
+            })
+            ->orderBy('id', 'desc')
+            ->paginate(10)
+            ->withQueryString();
 
-        $items = $query->paginate(10);
-
-        return view($this->getViewPath(), [
+        return inertia($this->getViewPath() . '/index', [
             $this->getResourceName() => $items,
-            'filters' => request()->all(),
+            'filters' => ['q' => $q],
         ]);
     }
 }
