@@ -47,7 +47,7 @@ class ReporteCargoListController extends Controller
                 'entregas' => function ($q) {
                     $q->orderBy('reporte_carga_entregas.orden');
                 },
-                'entregas.venta.cliente',
+                'entregas.ventas.cliente',
                 'vehiculo',
             ])
             ->withCount('entregas');
@@ -79,7 +79,7 @@ class ReporteCargoListController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('numero_reporte', 'like', "%{$search}%")
                     ->orWhere('descripcion', 'like', "%{$search}%")
-                    ->orWhereHas('entregas.venta.cliente', function ($q2) use ($search) {
+                    ->orWhereHas('entregas.ventas.cliente', function ($q2) use ($search) {
                         $q2->where('nombre', 'like', "%{$search}%");
                     });
             });

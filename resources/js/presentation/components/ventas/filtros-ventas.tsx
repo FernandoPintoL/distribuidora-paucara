@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, Calendar, User, FileText, DollarSign } from 'lucide-react';
 import type { FiltrosVentas, DatosParaFiltrosVentas } from '@/domain/entities/ventas';
 import ventasService from '@/infrastructure/services/ventas.service';
+import SearchSelect from '@/presentation/components/ui/search-select';
 
 interface FiltrosVentasProps {
     filtros: FiltrosVentas;
@@ -107,18 +108,18 @@ export default function FiltrosVentasComponent({
 
                 {/* Cliente */}
                 <div>
-                    <select
+                    <SearchSelect
+                        placeholder="Seleccionar cliente..."
                         value={filtros.cliente_id || ''}
-                        onChange={(e) => handleFiltroChange('cliente_id', e.target.value ? Number(e.target.value) : null)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    >
-                        <option value="">Todos los clientes</option>
-                        {datosSeguros.clientes.map((cliente) => (
-                            <option key={cliente.id} value={cliente.id}>
-                                {cliente.nombre} {cliente.nit ? `(${cliente.nit})` : ''}
-                            </option>
-                        ))}
-                    </select>
+                        options={datosSeguros.clientes.map((cliente) => ({
+                            value: cliente.id,
+                            label: cliente.nombre,
+                            description: cliente.nit ? `NIT: ${cliente.nit}` : undefined
+                        }))}
+                        onChange={(value) => handleFiltroChange('cliente_id', value ? Number(value) : null)}
+                        allowClear={true}
+                        className="w-full"
+                    />
                 </div>
 
                 {/* Estado */}
@@ -134,6 +135,19 @@ export default function FiltrosVentasComponent({
                                 {estado.nombre}
                             </option>
                         ))}
+                    </select>
+                </div>
+
+                {/* Tipo de Venta */}
+                <div>
+                    <select
+                        value={filtros.tipo_venta || ''}
+                        onChange={(e) => handleFiltroChange('tipo_venta', e.target.value || null)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                    >
+                        <option value="">Todos los tipos</option>
+                        <option value="presencial">🏪 Presencial</option>
+                        <option value="delivery">🚚 Delivery</option>
                     </select>
                 </div>
             </div>
@@ -182,23 +196,17 @@ export default function FiltrosVentasComponent({
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Usuario
                             </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <User className="h-4 w-4 text-gray-400" />
-                                </div>
-                                <select
-                                    value={filtros.usuario_id || ''}
-                                    onChange={(e) => handleFiltroChange('usuario_id', e.target.value ? Number(e.target.value) : null)}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                >
-                                    <option value="">Todos los usuarios</option>
-                                    {datosSeguros.usuarios.map((usuario) => (
-                                        <option key={usuario.id} value={usuario.id}>
-                                            {usuario.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                            <SearchSelect
+                                placeholder="Seleccionar usuario..."
+                                value={filtros.usuario_id || ''}
+                                options={datosSeguros.usuarios.map((usuario) => ({
+                                    value: usuario.id,
+                                    label: usuario.name
+                                }))}
+                                onChange={(value) => handleFiltroChange('usuario_id', value ? Number(value) : null)}
+                                allowClear={true}
+                                className="w-full"
+                            />
                         </div>
 
                         {/* Rango de montos */}

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { Eye, Edit, Trash2, MoreHorizontal, FileText, Download } from 'lucide-react';
+import { Eye, Edit, Trash2, MoreHorizontal, FileText, Download, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { Venta, FiltrosVentas } from '@/domain/entities/ventas';
 import type { Pagination } from '@/domain/entities/shared';
 import ventasService from '@/infrastructure/services/ventas.service';
+import AnularVentaModal from './AnularVentaModal';
+import { toast } from 'react-toastify';
 
 interface TablaVentasProps {
     ventas: Pagination<Venta>;
@@ -13,6 +15,88 @@ interface TablaVentasProps {
 }
 
 export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVentasProps) {
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+    const [anularModal, setAnularModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
+    const [isAnulando, setIsAnulando] = useState(false);
+
+    const toggleRowExpanded = (ventaId: number) => {
+        const newExpanded = new Set(expandedRows);
+        if (newExpanded.has(ventaId)) {
+            newExpanded.delete(ventaId);
+        } else {
+            newExpanded.add(ventaId);
+        }
+        setExpandedRows(newExpanded);
+    };
+
+    const openAnularModal = (venta: Venta) => {
+        setAnularModal({ isOpen: true, venta });
+    };
+
+    const closeAnularModal = () => {
+        setAnularModal({ isOpen: false });
+    };
+
+    const handleAnularVenta = async (motivo?: string) => {
+        if (!anularModal.venta) return;
+
+        setIsAnulando(true);
+        try {
+            const response = await fetch(`/ventas/${anularModal.venta.id}/anular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ motivo }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                toast.error(data.message || 'Error al anular la venta');
+                return;
+            }
+
+            toast.success('Venta anulada exitosamente');
+            closeAnularModal();
+
+            // Recargar la página
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (error) {
+            console.error('Error al anular venta:', error);
+            toast.error('Error al anular la venta');
+        } finally {
+            setIsAnulando(false);
+        }
+    };
+
+    const getEstadoLogisticoColor = (estado: string) => {
+        const colorMap: { [key: string]: string } = {
+            'SIN_ENTREGA': 'gray',
+            'PROGRAMADO': 'blue',
+            'EN_PREPARACION': 'yellow',
+            'EN_TRANSITO': 'purple',
+            'ENTREGADA': 'green',
+            'PROBLEMAS': 'red',
+            'CANCELADA': 'dark'
+        };
+        return colorMap[estado] || 'gray';
+    };
+
+    const getEstadoLogisticoLabel = (estado: string) => {
+        const labelMap: { [key: string]: string } = {
+            'SIN_ENTREGA': 'Sin Entrega',
+            'PROGRAMADO': 'Programado',
+            'EN_PREPARACION': 'En Preparación',
+            'EN_TRANSITO': 'En Tránsito',
+            'ENTREGADA': 'Entregada',
+            'PROBLEMAS': 'Con Problemas',
+            'CANCELADA': 'Cancelada'
+        };
+        return labelMap[estado] || 'Desconocido';
+    };
+
     const handleDelete = (venta: Venta) => {
         ventasService.destroy(venta.id, {
             onSuccess: () => {
@@ -151,6 +235,13 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                             </th>
                             <th
                                 scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
+                                onClick={() => handleSort('requiere_envio')}
+                            >
+                                Tipo {getSortIcon('requiere_envio')}
+                            </th>
+                            <th
+                                scope="col"
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                             >
                                 Usuario
@@ -162,10 +253,8 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                     </thead>
                     <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-700">
                         {ventas.data.map((venta) => (
-                            <tr
-                                key={venta.id}
-                                className="hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
-                            >
+                            <React.Fragment key={venta.id}>
+                                <tr className="hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                                         {venta.numero}
@@ -208,6 +297,37 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center space-x-2">
+                                        {venta.requiere_envio ? (
+                                            <>
+                                                <Truck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                                    Delivery
+                                                </span>
+                                                <button
+                                                    onClick={() => toggleRowExpanded(venta.id)}
+                                                    className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                                    title="Ver detalles de entrega"
+                                                >
+                                                    {expandedRows.has(venta.id) ? (
+                                                        <ChevronUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                    ) : (
+                                                        <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                    )}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Store className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                                <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                                    Presencial
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </td>
+
+                                <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-900 dark:text-white">
                                         {venta.usuario?.name || 'Usuario desconocido'}
                                     </div>
@@ -224,23 +344,25 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                             <Eye className="w-4 h-4" />
                                         </Link>
 
-                                        {/* Editar */}
-                                        <Link
-                                            href={ventasService.editUrl(venta.id)}
-                                            className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                                            title="Editar venta"
+                                        {/* Editar - Deshabilitado por ahora */}
+                                        <button
+                                            disabled
+                                            className="text-gray-300 dark:text-gray-600 p-1 rounded cursor-not-allowed"
+                                            title="Editar venta (próximamente)"
                                         >
                                             <Edit className="w-4 h-4" />
-                                        </Link>
-
-                                        {/* Eliminar */}
-                                        <button
-                                            onClick={() => handleDelete(venta)}
-                                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                            title="Eliminar venta"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
                                         </button>
+
+                                        {/* Anular */}
+                                        {venta.estado !== 'ANULADA' && (
+                                            <button
+                                                onClick={() => openAnularModal(venta)}
+                                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                title="Anular venta"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
 
                                         {/* Menú más opciones */}
                                         <div className="relative group">
@@ -270,7 +392,72 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                         </div>
                                     </div>
                                 </td>
-                            </tr>
+                                </tr>
+
+                                {/* Fila expandible para detalles de delivery */}
+                                {venta.requiere_envio && expandedRows.has(venta.id) && (
+                                    <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
+                                        <td colSpan={8} className="px-6 py-4">
+                                            <div className="space-y-4">
+                                                {/* Dirección de entrega */}
+                                                <div className="flex items-start space-x-3">
+                                                    <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                                            Dirección de Entrega
+                                                        </h4>
+                                                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                                                            {venta.direccionCliente?.direccion || 'No especificada'}
+                                                        </p>
+                                                        {venta.direccionCliente?.referencias && (
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                                📌 {venta.direccionCliente.referencias}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Estado logístico */}
+                                                <div className="flex items-start space-x-3">
+                                                    <Package className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                                            Estado Logístico
+                                                        </h4>
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'blue' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'purple' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
+                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                                                                'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+                                                            }`}>
+                                                                {getEstadoLogisticoLabel(venta.estado_logistico || 'SIN_ENTREGA')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Fecha de entrega prometida */}
+                                                {venta.fecha_entrega_comprometida && (
+                                                    <div className="flex items-start space-x-3">
+                                                        <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                                                Fecha Prometida de Entrega
+                                                            </h4>
+                                                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                                                                {formatDate(venta.fecha_entrega_comprometida)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>
@@ -291,15 +478,22 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
 
                             <div className="flex items-center space-x-1">
                                 {/* Renderizar números de página */}
-                                {Array.from({ length: Math.min(5, ventas.last_page) }, (_, i) => {
-                                    const pageNum = Math.max(1, Math.min(
-                                        ventas.current_page - 2 + i,
-                                        ventas.last_page - 4 + i
-                                    ));
+                                {(() => {
+                                    const maxButtons = 5;
+                                    let startPage = Math.max(1, ventas.current_page - Math.floor(maxButtons / 2));
+                                    const endPage = Math.min(ventas.last_page, startPage + maxButtons - 1);
 
-                                    if (pageNum > ventas.last_page) return null;
+                                    // Ajustar si estamos cerca del final
+                                    if (endPage - startPage < maxButtons - 1) {
+                                        startPage = Math.max(1, endPage - maxButtons + 1);
+                                    }
 
-                                    return (
+                                    const pages = [];
+                                    for (let i = startPage; i <= endPage; i++) {
+                                        pages.push(i);
+                                    }
+
+                                    return pages.map((pageNum) => (
                                         <button
                                             key={pageNum}
                                             onClick={() => ventasService.goToPage(pageNum)}
@@ -310,8 +504,8 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                         >
                                             {pageNum}
                                         </button>
-                                    );
-                                })}
+                                    ));
+                                })()}
                             </div>
 
                             <button
@@ -329,6 +523,15 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                     </div>
                 </div>
             )}
+
+            {/* Modal de anulación */}
+            <AnularVentaModal
+                isOpen={anularModal.isOpen}
+                onClose={closeAnularModal}
+                ventaNumero={anularModal.venta?.numero || ''}
+                onConfirm={handleAnularVenta}
+                isLoading={isAnulando}
+            />
         </div>
     );
 }

@@ -61,24 +61,6 @@ export default function VentaShow() {
                         documentoId={venta.id}
                         tipoDocumento="venta"
                     />
-
-                    {/* Botón Editar - Solo visible si la venta está PENDIENTE */}
-                    {venta.estado_documento?.codigo === 'PENDIENTE' ? (
-                        <Link
-                            href={`/ventas/${venta.id}/edit`}
-                            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors"
-                        >
-                            Editar
-                        </Link>
-                    ) : (
-                        <button
-                            disabled
-                            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 border border-transparent rounded-md cursor-not-allowed dark:bg-gray-700 dark:text-gray-400"
-                            title={`No se puede editar una venta en estado ${venta.estado_documento?.nombre}`}
-                        >
-                            Editar
-                        </button>
-                    )}
                 </div>
             </div>
 
@@ -218,6 +200,126 @@ export default function VentaShow() {
                                 </p>
                             </div>
                         )}
+
+                        {/* Información adicional */}
+                        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-700">
+                            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase mb-4">
+                                Información adicional
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Tipo de Pago */}
+                                {venta.tipo_pago && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                            Tipo de Pago
+                                        </label>
+                                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                            {venta.tipo_pago.nombre}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Canal de Origen */}
+                                {venta.canal_origen && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                            Canal de Origen
+                                        </label>
+                                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                            {venta.canal_origen === 'APP_EXTERNA' && '📱 App Externa'}
+                                            {venta.canal_origen === 'WEB' && '🌐 Web'}
+                                            {venta.canal_origen === 'PRESENCIAL' && '🏪 Presencial'}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Requiere Envío */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                        Tipo de Entrega
+                                    </label>
+                                    <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                        {venta.requiere_envio ? '🚚 Delivery' : '🏪 Presencial'}
+                                    </p>
+                                </div>
+
+                                {/* Estado Logístico */}
+                                {venta.requiere_envio && venta.estado_logistico && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                            Estado de Envío
+                                        </label>
+                                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                            {venta.estado_logistico === 'PENDIENTE_ENVIO' && '⏳ Pendiente envío'}
+                                            {venta.estado_logistico === 'PREPARANDO' && '📦 Preparando'}
+                                            {venta.estado_logistico === 'ENVIADO' && '🚚 Enviado'}
+                                            {venta.estado_logistico === 'ENTREGADO' && '✅ Entregado'}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Última Actualización */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                        Última Actualización
+                                    </label>
+                                    <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                        {new Date(venta.updated_at).toLocaleDateString('es-ES')} {new Date(venta.updated_at).toLocaleTimeString('es-ES')}
+                                    </p>
+                                </div>
+
+                                {/* Proforma de Origen */}
+                                {venta.proforma && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                            Proforma de Origen
+                                        </label>
+                                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                            {venta.proforma.numero}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Dirección de Entrega (si requiere envío) */}
+                            {venta.requiere_envio && venta.direccion_cliente && (
+                                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-700">
+                                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase mb-4">
+                                        Dirección de Entrega
+                                    </h3>
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                                Dirección
+                                            </label>
+                                            <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                                {venta.direccion_cliente.direccion}
+                                            </p>
+                                        </div>
+                                        {venta.direccion_cliente.referencias && (
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                                    Referencias
+                                                </label>
+                                                <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                                    {venta.direccion_cliente.referencias}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {venta.direccion_cliente.localidad && (
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                                    Localidad
+                                                </label>
+                                                <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                                    {venta.direccion_cliente.localidad}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Productos + Resumen */}

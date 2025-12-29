@@ -511,11 +511,19 @@ class Proforma extends Model
 
         // Validación: Las reservas NO deben estar expiradas
         if ($this->tieneReservasExpiradas()) {
+            $reservasExpiradas = $this->reservas()->expiradas()->count();
+
             \Illuminate\Support\Facades\Log::error('Intento de consumir reservas expiradas', [
                 'proforma_id' => $this->id,
                 'numero' => $this->numero,
+                'reservas_expiradas' => $reservasExpiradas,
             ]);
-            throw new \Exception('No se pueden consumir reservas expiradas');
+
+            throw new \App\Exceptions\Proforma\ReservasExpirasException(
+                $this->id,
+                $reservasExpiradas,
+                'No se pueden consumir reservas expiradas. Por favor, renueva las reservas primero.'
+            );
         }
 
         $reservasConsumidas = 0;
@@ -575,6 +583,96 @@ class Proforma extends Model
     public function tieneReservasExpiradas(): bool
     {
         return $this->reservas()->expiradas()->count() > 0;
+    }
+
+    /**
+     * Renovar reservas expiradas de esta proforma
+     *
+     * Flujo:
+     * 1. Busca todas las reservas expiradas
+     * 2. Las libera (devuelve stock a disponible)
+     * 3. Crea nuevas reservas con nueva fecha de expiración (7 días)
+     * 4. Retorna true si todo fue exitoso
+     *
+     * @return bool
+     * @throws \Exception
+     */
+    public function renovarReservas(): bool
+    {
+        \Illuminate\Support\Facades\Log::info('🔄 [Proforma] Iniciando renovación de reservas', [
+            'proforma_id' => $this->id,
+            'numero' => $this->numero,
+        ]);
+
+        try {
+            // 1. Obtener las reservas expiradas
+            $reservasExpiradas = $this->reservas()->expiradas()->get();
+
+            if ($reservasExpiradas->isEmpty()) {
+                \Illuminate\Support\Facades\Log::warning('⚠️ No hay reservas expiradas para renovar', [
+                    'proforma_id' => $this->id,
+                ]);
+                return false;
+            }
+
+            $nuevaFechaVencimiento = now()->addDays(7); // Renovar por 7 días
+            $reservasRenovadas = 0;
+
+            // 2. Procesar cada reserva expirada
+            foreach ($reservasExpiradas as $reservaVieja) {
+                // Paso 1: Marcar la reserva vieja como LIBERADA
+                // Esto devuelve el stock a disponible automáticamente
+                $reservaVieja->update(['estado' => ReservaProforma::LIBERADA]);
+
+                \Illuminate\Support\Facades\Log::info('✅ Reserva antigua liberada', [
+                    'reserva_vieja_id' => $reservaVieja->id,
+                    'stock_producto_id' => $reservaVieja->stock_producto_id,
+                ]);
+
+                // Paso 2: Crear nueva reserva con fecha extendida
+                // El stock ya está disponible, simplemente creamos la nueva reserva
+                $nuevaReserva = ReservaProforma::create([
+                    'proforma_id' => $this->id,
+                    'stock_producto_id' => $reservaVieja->stock_producto_id,
+                    'cantidad_reservada' => $reservaVieja->cantidad_reservada,
+                    'fecha_reserva' => now(),
+                    'fecha_expiracion' => $nuevaFechaVencimiento,
+                    'estado' => ReservaProforma::ACTIVA,
+                ]);
+
+                $reservasRenovadas++;
+
+                \Illuminate\Support\Facades\Log::info('✅ Nueva reserva creada', [
+                    'reserva_vieja_id' => $reservaVieja->id,
+                    'reserva_nueva_id' => $nuevaReserva->id,
+                    'stock_producto_id' => $reservaVieja->stock_producto_id,
+                    'cantidad' => $reservaVieja->cantidad_reservada,
+                    'nueva_fecha_vencimiento' => $nuevaFechaVencimiento,
+                ]);
+            }
+
+            // 3. Validar que se renovaron todas las reservas
+            if ($reservasRenovadas === 0) {
+                throw new \Exception("No se pudo renovar ninguna reserva");
+            }
+
+            \Illuminate\Support\Facades\Log::info('✅ Renovación de reservas completada', [
+                'proforma_id' => $this->id,
+                'numero' => $this->numero,
+                'reservas_renovadas' => $reservasRenovadas,
+                'nueva_fecha_vencimiento' => $nuevaFechaVencimiento->toIso8601String(),
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error al renovar reservas', [
+                'proforma_id' => $this->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     public function verificarDisponibilidadStock(): array

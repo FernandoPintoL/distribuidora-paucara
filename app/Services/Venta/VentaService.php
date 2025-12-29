@@ -296,7 +296,16 @@ class VentaService
      */
     public function obtener(int $ventaId): VentaResponseDTO
     {
-        $venta = $this->read(fn() => Venta::with(['detalles', 'cliente'])->findOrFail($ventaId));
+        $venta = $this->read(fn() => Venta::with([
+            'detalles',
+            'cliente',
+            'usuario',
+            'estadoDocumento',
+            'moneda',
+            'tipoPago',
+            'proforma',
+            'direccionCliente'
+        ])->findOrFail($ventaId));
 
         return VentaResponseDTO::fromModel($venta);
     }
@@ -305,23 +314,54 @@ class VentaService
      * Listar ventas con paginación
      *
      * @param int $perPage
-     * @param array $filtros Puede incluir: estado, cliente_id, fecha_desde, fecha_hasta
+     * @param array $filtros Puede incluir: estado, estado_documento_id, cliente_id, usuario_id, fecha_desde, fecha_hasta, numero, search, monto_min, monto_max, moneda_id
      */
     public function listar(int $perPage = 15, array $filtros = []): LengthAwarePaginator
     {
         return $this->read(function () use ($perPage, $filtros) {
-            $query = Venta::with(['cliente', 'detalles'])
+            $query = Venta::with(['cliente', 'estadoDocumento', 'usuario', 'moneda', 'direccionCliente'])
                 ->when($filtros['estado'] ?? null, fn($q, $estado) =>
                     $q->where('estado', $estado)
                 )
+                ->when($filtros['estado_documento_id'] ?? null, fn($q, $estadoId) =>
+                    $q->where('estado_documento_id', $estadoId)
+                )
                 ->when($filtros['cliente_id'] ?? null, fn($q, $clienteId) =>
                     $q->where('cliente_id', $clienteId)
+                )
+                ->when($filtros['usuario_id'] ?? null, fn($q, $usuarioId) =>
+                    $q->where('usuario_id', $usuarioId)
                 )
                 ->when($filtros['fecha_desde'] ?? null, fn($q, $fecha) =>
                     $q->where('fecha', '>=', $fecha)
                 )
                 ->when($filtros['fecha_hasta'] ?? null, fn($q, $fecha) =>
                     $q->where('fecha', '<=', $fecha)
+                )
+                ->when($filtros['numero'] ?? null, fn($q, $numero) =>
+                    $q->where('numero', 'like', '%' . $numero . '%')
+                )
+                ->when($filtros['search'] ?? null, fn($q, $search) =>
+                    $q->where(function ($subQuery) use ($search) {
+                        $subQuery->where('numero', 'like', '%' . $search . '%')
+                                ->orWhereHas('cliente', fn($qCli) =>
+                                    $qCli->where('nombre', 'like', '%' . $search . '%')
+                                );
+                    })
+                )
+                ->when($filtros['monto_min'] ?? null, fn($q, $monto) =>
+                    $q->where('total', '>=', $monto)
+                )
+                ->when($filtros['monto_max'] ?? null, fn($q, $monto) =>
+                    $q->where('total', '<=', $monto)
+                )
+                ->when($filtros['moneda_id'] ?? null, fn($q, $monedaId) =>
+                    $q->where('moneda_id', $monedaId)
+                )
+                ->when($filtros['tipo_venta'] ?? null, fn($q, $tipoVenta) =>
+                    $tipoVenta === 'delivery'
+                        ? $q->where('requiere_envio', true)
+                        : ($tipoVenta === 'presencial' ? $q->where('requiere_envio', false) : $q)
                 );
 
             return $query

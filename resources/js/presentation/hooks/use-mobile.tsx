@@ -3,7 +3,15 @@ import { useEffect, useState } from 'react';
 const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-    const [isMobile, setIsMobile] = useState<boolean>();
+    // Inicializar con el valor correcto desde el cliente
+    const [isMobile, setIsMobile] = useState<boolean>(() => {
+        // Solo se ejecuta en el cliente
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < MOBILE_BREAKPOINT;
+        }
+        // Fallback: asumir desktop en el servidor
+        return false;
+    });
 
     useEffect(() => {
         const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
@@ -18,5 +26,5 @@ export function useIsMobile() {
         return () => mql.removeEventListener('change', onChange);
     }, []);
 
-    return !!isMobile;
+    return isMobile;
 }

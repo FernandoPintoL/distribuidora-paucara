@@ -256,6 +256,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('/{id}/aprobar', [\App\Http\Controllers\ProformaController::class, 'aprobar'])->name('aprobar');
         Route::post('/{id}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
         Route::post('/{id}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])->name('convertir-venta');
+        Route::post('/{id}/renovar-reservas', [\App\Http\Controllers\ProformaController::class, 'renovarReservas'])->name('renovar-reservas');
 
         Route::get('{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
         Route::get('{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');

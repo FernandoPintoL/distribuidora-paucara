@@ -24,7 +24,7 @@ import {
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
-import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle } from 'lucide-react'
+import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle } from 'lucide-react'
 import MapView from '@/presentation/components/maps/MapView'
 import { FormatoSelector } from '@/presentation/components/impresion'
 
@@ -52,12 +52,14 @@ export default function ProformasShow({ item: proforma }: Props) {
         isSubmitting,
         isConverting,
         isGuardandoCoordinacion,
+        isRenovandoReservas,
         puedeAprobar,
         puedeRechazar,
         puedeConvertir,
         aprobar,
         rechazar,
         convertirAVenta,
+        renovarReservas,
     } = useProformaActions(proforma, {
         onSuccess: () => {
             // Cerrar diálogos cuando la operación sea exitosa
@@ -65,13 +67,33 @@ export default function ProformasShow({ item: proforma }: Props) {
             setShowAprobarDialog(false);
             setShowRechazarDialog(false);
             setShowConvertirDialog(false);
+            setConvertErrorState(null);
         },
-        onError: (error) => {
+        onError: (error: any) => {
             console.error('Error en acción de proforma:', error);
-            // Cerrar diálogos también en caso de error
-            setShowAprobarDialog(false);
-            setShowRechazarDialog(false);
-            setShowConvertirDialog(false);
+            console.log('📋 Error code:', error.code);
+            console.log('📋 Error message:', error.message);
+            console.log('📋 Error reservasExpiradas:', error.reservasExpiradas);
+
+            // Detectar si es error de reservas expiradas
+            if (error.code === 'RESERVAS_EXPIRADAS') {
+                console.log('⚠️ Detectado error de reservas expiradas - ESTABLECIENDO ESTADO');
+                const newErrorState = {
+                    code: 'RESERVAS_EXPIRADAS',
+                    message: error.message,
+                    reservasExpiradas: error.reservasExpiradas,
+                };
+                console.log('📋 Nuevo error state:', newErrorState);
+                setConvertErrorState(newErrorState);
+                console.log('✅ Error state establecido, showConvertirDialog debería estar true');
+                // Mantener el diálogo abierto para que muestre las opciones
+            } else {
+                // Cerrar diálogos para otros errores
+                setShowAprobarDialog(false);
+                setShowRechazarDialog(false);
+                setShowConvertirDialog(false);
+                setConvertErrorState(null);
+            }
         }
     })
 
@@ -85,6 +107,7 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [motivoRechazo, setMotivoRechazo] = useState('')
     const [showCoordinacionForm, setShowCoordinacionForm] = useState(true)
     const [showMapaEntrega, setShowMapaEntrega] = useState(false)
+    const [convertErrorState, setConvertErrorState] = useState<{ code?: string; message?: string; reservasExpiradas?: number } | null>(null)
 
     // Función helper para calcular fecha/hora por defecto (DEBE estar aquí para usarla en useState)
     const defaultDelivery = (() => {
@@ -338,8 +361,15 @@ export default function ProformasShow({ item: proforma }: Props) {
     }
 
     const handleConvertir = () => {
-        convertirAVenta()
-        setShowConvertirDialog(false)
+        // Resetear estado de error previo
+        setConvertErrorState(null);
+
+        // Llamar a convertirAVenta
+        // NO cerrar el modal aún - dejaremos que el callback onError lo maneje
+        convertirAVenta();
+
+        // El modal se cerrará desde el callback onSuccess o onError
+        // si NO es RESERVAS_EXPIRADAS
     }
 
     return (
@@ -347,6 +377,24 @@ export default function ProformasShow({ item: proforma }: Props) {
             <Head title={`Proforma ${proforma.numero}`} />
 
             <div className="space-y-6 p-4">
+                {/* Banner de advertencia si hay error de reservas */}
+                {convertErrorState?.code === 'RESERVAS_EXPIRADAS' && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                                    ⚠️ Reservas Expiradas
+                                </h3>
+                                <p className="text-sm text-amber-800 dark:text-amber-300">
+                                    {convertErrorState.reservasExpiradas} reserva(s) de esta proforma han expirado.
+                                    Para convertir a venta, necesitas renovar las reservas primero.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex flex-col gap-[var(--space-lg)] md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-[var(--space-md)]">
@@ -974,10 +1022,25 @@ export default function ProformasShow({ item: proforma }: Props) {
             {/* Modal para convertir a venta */}
             <ProformaConvertirModal
                 isOpen={showConvertirDialog}
-                onClose={() => setShowConvertirDialog(false)}
+                onClose={() => {
+                    setShowConvertirDialog(false);
+                    setConvertErrorState(null);
+                }}
                 proforma={proforma}
                 onConvertir={handleConvertir}
                 isProcessing={isConverting}
+                onRenovarReservas={() => {
+                    renovarReservas(() => {
+                        // Después de renovar, reintentar conversión automáticamente
+                        console.log('✅ Reservas renovadas, reintentando conversión...');
+                        setConvertErrorState(null);
+                        setTimeout(() => {
+                            convertirAVenta();
+                        }, 1500);
+                    });
+                }}
+                isRenovando={isRenovandoReservas}
+                errorState={convertErrorState}
             />
 
             {/* Loading Overlay para flujo de aprobación */}

@@ -311,46 +311,73 @@ export function useProformaActions(
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRF-Token': csrfToken,
             },
             body: JSON.stringify({}),
         })
             .then(response => {
-                if (!response.ok) {
-                    return response.json().then(error => {
-                        throw new Error(error?.message || 'Error al convertir la proforma');
-                    });
-                }
-                return response.json();
+                return response.json().then(data => {
+                    return { ok: response.ok, status: response.status, data };
+                });
             })
-            .then((data) => {
+            .then((response) => {
+                if (!response.ok) {
+                    // Crear error con información adicional
+                    const error = new Error(response.data?.message || 'Error al convertir la proforma') as any;
+                    error.code = response.data?.code;
+                    error.action = response.data?.action;
+                    error.responseData = response.data;
+                    throw error;
+                }
+
                 console.log('✅ [CONVERTIR A VENTA] Conversión exitosa', {
                     timestamp: new Date().toISOString(),
-                    data: data?.data,
-                    redirectTo: data?.redirect_to,
+                    data: response.data?.data,
+                    redirectTo: response.data?.redirect_to,
                 });
                 NotificationService.success('Proforma convertida a venta exitosamente');
                 options?.onSuccess?.();
                 setIsConverting(false);
 
                 // Redirigir a la venta creada
-                if (data?.redirect_to) {
-                    console.log('📍 [CONVERTIR A VENTA] Redirigiendo a:', data.redirect_to);
+                if (response.data?.redirect_to) {
+                    console.log('📍 [CONVERTIR A VENTA] Redirigiendo a:', response.data.redirect_to);
                     setTimeout(() => {
-                        router.visit(data.redirect_to);
+                        router.visit(response.data.redirect_to);
                     }, 1000);
                 }
             })
             .catch((error) => {
                 console.log('❌ [CONVERTIR A VENTA] Error en la conversión', {
                     error: error.message,
+                    code: error.code,
                     timestamp: new Date().toISOString(),
                 });
 
-                NotificationService.error(error.message || 'Error al convertir la proforma');
-                console.error('Convert error:', error);
-                options?.onError?.(error);
+                // Manejar error específico de reservas expiradas
+                if (error.code === 'RESERVAS_EXPIRADAS') {
+                    console.log('⚠️ [CONVERTIR A VENTA] Las reservas han expirado', {
+                        proformaId: error.responseData?.data?.proforma_id,
+                        reservasExpiradas: error.responseData?.data?.reservas_expiradas,
+                    });
+
+                    // Notificar al callback con información especial
+                    const customError = new Error(error.message) as any;
+                    customError.code = 'RESERVAS_EXPIRADAS';
+                    customError.reservasExpiradas = error.responseData?.data?.reservas_expiradas;
+                    customError.endpointRenovacion = error.responseData?.data?.endpoint_renovacion;
+                    options?.onError?.(customError);
+
+                    // Mostrar notificación no tan agresiva (es un error "recuperable")
+                    NotificationService.warning(error.message);
+                } else {
+                    NotificationService.error(error.message || 'Error al convertir la proforma');
+                    console.error('Convert error:', error);
+                    options?.onError?.(error);
+                }
+
                 setIsConverting(false);
             });
     }, [proforma.id, puedeConvertir, options]);
@@ -392,6 +419,64 @@ export function useProformaActions(
     }, [proforma.id, puedeCoordinar, options]);
 
     // ============================================
+    // ACCIÓN: RENOVAR RESERVAS EXPIRADAS
+    // ============================================
+    const [isRenovandoReservas, setIsRenovandoReservas] = useState(false);
+
+    const renovarReservas = useCallback((onSuccess?: () => void) => {
+        if (!proforma.id) {
+            NotificationService.error('ID de proforma no disponible');
+            return;
+        }
+
+        setIsRenovandoReservas(true);
+
+        console.log('🔄 [RENOVAR RESERVAS] Iniciando renovación para proforma #' + proforma.id);
+
+        // Obtener token CSRF del meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        fetch(`/proformas/${proforma.id}/renovar-reservas`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({}),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(error => {
+                        throw new Error(error?.message || 'Error al renovar reservas');
+                    });
+                }
+                return response.json();
+            })
+            .then((data) => {
+                console.log('✅ [RENOVAR RESERVAS] Renovación exitosa', {
+                    timestamp: new Date().toISOString(),
+                    data: data?.data,
+                });
+
+                NotificationService.success('Reservas renovadas exitosamente. Válidas por 7 días más.');
+                setIsRenovandoReservas(false);
+                onSuccess?.();
+            })
+            .catch((error) => {
+                console.log('❌ [RENOVAR RESERVAS] Error en la renovación', {
+                    error: error.message,
+                    timestamp: new Date().toISOString(),
+                });
+
+                NotificationService.error(error.message || 'Error al renovar las reservas');
+                console.error('Renovar error:', error);
+                setIsRenovandoReservas(false);
+            });
+    }, [proforma.id]);
+
+    // ============================================
     // RETORNO PÚBLICO
     // ============================================
     return {
@@ -399,6 +484,7 @@ export function useProformaActions(
         isSubmitting,
         isConverting,
         isGuardandoCoordinacion,
+        isRenovandoReservas,
 
         // Permisos/Validaciones
         puedeAprobar,
@@ -411,6 +497,7 @@ export function useProformaActions(
         rechazar,
         convertirAVenta,
         guardarCoordinacion,
+        renovarReservas,
     };
 }
 

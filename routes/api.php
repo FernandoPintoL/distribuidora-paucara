@@ -318,6 +318,7 @@ Route::group(['prefix' => 'ventas'], function () {
     Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);
     Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
     Route::get('{venta}/resumen-stock', [VentaController::class, 'obtenerResumenStock']);
+    Route::post('{venta}/anular', [VentaController::class, 'anular']);
 });
 
 // Rutas API para contabilidad

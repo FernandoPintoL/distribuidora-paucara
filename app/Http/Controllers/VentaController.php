@@ -10,6 +10,7 @@ use App\Http\Requests\StoreVentaRequest;
 use App\Http\Traits\ApiInertiaUnifiedResponse;
 use App\Models\Almacen;
 use App\Models\Cliente;
+use App\Models\EstadoDocumento;
 use App\Models\Moneda;
 use App\Models\Producto;
 use App\Models\User;
@@ -66,9 +67,17 @@ class VentaController extends Controller
             // Extraer filtros del request
             $filtros = [
                 'estado' => $request->input('estado'),
+                'estado_documento_id' => $request->input('estado_documento_id'),
                 'cliente_id' => $request->input('cliente_id'),
+                'usuario_id' => $request->input('usuario_id'),
                 'fecha_desde' => $request->input('fecha_desde'),
                 'fecha_hasta' => $request->input('fecha_hasta'),
+                'numero' => $request->input('numero'),
+                'search' => $request->input('search'),
+                'monto_min' => $request->input('monto_min'),
+                'monto_max' => $request->input('monto_max'),
+                'moneda_id' => $request->input('moneda_id'),
+                'tipo_venta' => $request->input('tipo_venta'),
             ];
 
             // Delegar al Service
@@ -83,7 +92,9 @@ class VentaController extends Controller
                 'filtros' => $filtros,
                 'estadisticas' => null, // TODO: Implementar estadísticas completas cuando sea necesario
                 'datosParaFiltros' => [
-                    'clientes' => Cliente::activos()->select('id', 'nombre')->get(),
+                    'clientes' => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+                    'estados_documento' => EstadoDocumento::select('id', 'nombre', 'codigo')->get(),
+                    'usuarios' => User::select('id', 'name')->orderBy('name')->get(),
                     'monedas' => Moneda::activos()->select('id', 'codigo', 'nombre')->get(),
                 ],
             ]);
@@ -271,6 +282,54 @@ class VentaController extends Controller
 
         } catch (\Exception $e) {
             return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Anular una venta (cambiar estado a ANULADA)
+     *
+     * POST /ventas/{id}/anular
+     */
+    public function anular(Request $request, int $id): JsonResponse
+    {
+        try {
+            // Verificar permiso
+            if (!auth()->user()->hasRole('admin')) {
+                return $this->respondForbidden('No tienes permiso para anular ventas');
+            }
+
+            $venta = Venta::findOrFail($id);
+
+            // Validar que la venta pueda ser anulada
+            if ($venta->estado === 'ANULADA') {
+                return $this->respondError('Esta venta ya está anulada', 422);
+            }
+
+            // Actualizar estado
+            $venta->update([
+                'estado' => 'ANULADA',
+                'observaciones' => ($venta->observaciones ?? '') . "\n[ANULADA] " . ($request->input('motivo') ?? 'Sin motivo especificado') . " - " . now()->toDateTimeString()
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('Venta anulada', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'usuario_id' => auth()->id(),
+                'motivo' => $request->input('motivo'),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Venta anulada exitosamente',
+                'data' => $venta
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al anular venta', [
+                'venta_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->respondError('Error al anular venta: ' . $e->getMessage());
         }
     }
 

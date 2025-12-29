@@ -10,6 +10,7 @@ use App\Http\Traits\ApiInertiaUnifiedResponse;
 use App\Models\Almacen;
 use App\Models\Cliente;
 use App\Models\Producto;
+use App\Models\Proforma;
 use App\Services\Venta\ProformaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -232,6 +233,28 @@ class ProformaController extends Controller
                 'X-Inertia-Version' => \Illuminate\Support\Facades\Session::token(),
             ]);
 
+        } catch (\App\Exceptions\Proforma\ReservasExpirasException $e) {
+            Log::warning('⚠️ [ProformaController::convertirAVenta] Reservas expiradas', [
+                'proforma_id' => $id,
+                'reservas_expiradas' => $e->getReservasExpiradas(),
+                'error'       => $e->getMessage(),
+                'timestamp'   => now()->toIso8601String(),
+            ]);
+
+            // Retornar respuesta especial para reservas expiradas con opción de renovación
+            return response()->json([
+                'success'     => false,
+                'message'     => $e->getMessage(),
+                'code'        => 'RESERVAS_EXPIRADAS',
+                'action'      => 'renovar_reservas',
+                'data'        => [
+                    'proforma_id' => $e->getProformaId(),
+                    'reservas_expiradas' => $e->getReservasExpiradas(),
+                    'endpoint_renovacion' => route('proformas.renovar-reservas', $id),
+                    'instrucciones' => 'Usa el endpoint de renovación para extender las reservas 7 días más',
+                ],
+            ], 422);
+
         } catch (EstadoInvalidoException $e) {
             Log::warning('⚠️ [ProformaController::convertirAVenta] Estado inválido', [
                 'proforma_id' => $id,
@@ -251,6 +274,94 @@ class ProformaController extends Controller
                 'timestamp'   => now()->toIso8601String(),
             ]);
             return $this->respondError($e->getMessage());
+        }
+    }
+
+    /**
+     * Renovar reservas expiradas de una proforma
+     *
+     * POST /proformas/{id}/renovar-reservas
+     *
+     * FLUJO:
+     * 1. Valida que la proforma exista
+     * 2. Valida que tenga reservas expiradas
+     * 3. Llama a renovarReservas() en el modelo
+     * 4. Retorna respuesta con status actualizado
+     */
+    public function renovarReservas(string $id): JsonResponse | RedirectResponse
+    {
+        try {
+            Log::info('🔄 [ProformaController::renovarReservas] Iniciando renovación de reservas', [
+                'proforma_id' => $id,
+                'timestamp'   => now()->toIso8601String(),
+            ]);
+
+            $proforma = Proforma::findOrFail((int) $id);
+
+            // Validar permisos
+            // Permitir si:
+            // 1. Es administrador
+            // 2. Es cliente y la proforma es suya
+            // 3. Es cualquier empleado de la distribuidora (can view proformas)
+            $user = auth()->user();
+            $isOwnProforma = $proforma->cliente_id === $user->cliente_id;
+            $isAdmin = $user->hasRole('admin');
+
+            // Si llega aquí es porque pudo ver/acceder a la proforma
+            // Si es cliente y no es suya, rechazar
+            if ($user->hasRole('cliente') && !$isOwnProforma) {
+                return $this->respondForbidden('No tienes permiso para renovar reservas de esta proforma');
+            }
+
+            // Validar que tenga reservas expiradas
+            if (!$proforma->tieneReservasExpiradas()) {
+                Log::warning('⚠️ Intento de renovar proforma sin reservas expiradas', [
+                    'proforma_id' => $id,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta proforma no tiene reservas expiradas que renovar',
+                    'code' => 'NO_EXPIRED_RESERVATIONS',
+                ], 422);
+            }
+
+            // Renovar las reservas
+            $proforma->renovarReservas();
+
+            Log::info('✅ [ProformaController::renovarReservas] Renovación exitosa', [
+                'proforma_id'  => $id,
+                'proforma_numero' => $proforma->numero,
+                'timestamp'    => now()->toIso8601String(),
+            ]);
+
+            // Retornar respuesta con información actualizada
+            return response()->json([
+                'success'     => true,
+                'message'     => 'Reservas renovadas exitosamente',
+                'data'        => [
+                    'proforma_id' => $proforma->id,
+                    'proforma_numero' => $proforma->numero,
+                    'reservas_activas' => $proforma->reservasActivas()->count(),
+                ],
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::warning('⚠️ [ProformaController::renovarReservas] Proforma no encontrada', [
+                'proforma_id' => $id,
+            ]);
+            return $this->respondNotFound('Proforma no encontrada');
+
+        } catch (\Exception $e) {
+            Log::error('❌ [ProformaController::renovarReservas] Error general', [
+                'proforma_id' => $id,
+                'error'       => $e->getMessage(),
+                'error_class' => get_class($e),
+                'file'        => $e->getFile(),
+                'line'        => $e->getLine(),
+                'trace'       => $e->getTraceAsString(),
+                'timestamp'   => now()->toIso8601String(),
+            ]);
+            return $this->respondError('Error al renovar reservas: ' . $e->getMessage());
         }
     }
 
