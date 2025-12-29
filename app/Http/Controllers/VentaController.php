@@ -13,6 +13,8 @@ use App\Models\Cliente;
 use App\Models\EstadoDocumento;
 use App\Models\Moneda;
 use App\Models\Producto;
+use App\Models\TipoDocumento;
+use App\Models\TipoPago;
 use App\Models\User;
 use App\Models\Venta;
 use App\Services\Venta\VentaService;
@@ -114,6 +116,8 @@ class VentaController extends Controller
             'productos' => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
             'almacenes' => Almacen::activos()->select('id', 'nombre')->get(),
             'monedas' => Moneda::activos()->select('id', 'codigo', 'nombre', 'simbolo')->get(),
+            'tipos_documento' => TipoDocumento::activos()->select('id', 'codigo', 'nombre')->get(),
+            'tipos_pago' => TipoPago::activos()->select('id', 'nombre')->get(),
         ]);
     }
 

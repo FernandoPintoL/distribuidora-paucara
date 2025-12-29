@@ -32,6 +32,12 @@ class VentaResponseDTO extends BaseDTO
         public array $detalles = [],
         public string $created_at = '',
         public string $updated_at = '',
+        public ?bool $requiere_envio = null,
+        public ?string $estado_logistico = null,
+        public ?string $canal_origen = null,
+        public ?array $tipo_pago = null,
+        public ?array $proforma = null,
+        public ?array $direccion_cliente = null,
     ) {}
 
     /**
@@ -48,6 +54,15 @@ class VentaResponseDTO extends BaseDTO
         }
         if (!isset($venta->usuario)) {
             $venta->load('usuario');
+        }
+        if (!isset($venta->tipoPago)) {
+            $venta->load('tipoPago');
+        }
+        if (!isset($venta->proforma)) {
+            $venta->load('proforma');
+        }
+        if (!isset($venta->direccionCliente)) {
+            $venta->load('direccionCliente');
         }
 
         return new self(
@@ -101,6 +116,23 @@ class VentaResponseDTO extends BaseDTO
             ])->toArray(),
             created_at: $venta->created_at->toIso8601String(),
             updated_at: $venta->updated_at->toIso8601String(),
+            requiere_envio: $venta->requiere_envio,
+            estado_logistico: $venta->estado_logistico,
+            canal_origen: $venta->canal_origen,
+            tipo_pago: $venta->tipoPago ? [
+                'id' => $venta->tipoPago->id,
+                'nombre' => $venta->tipoPago->nombre,
+            ] : null,
+            proforma: $venta->proforma ? [
+                'id' => $venta->proforma->id,
+                'numero' => $venta->proforma->numero,
+            ] : null,
+            direccion_cliente: $venta->direccionCliente ? [
+                'id' => $venta->direccionCliente->id,
+                'direccion' => $venta->direccionCliente->direccion,
+                'referencias' => $venta->direccionCliente->observaciones ?? null,
+                'localidad' => $venta->direccionCliente->localidad?->nombre ?? null,
+            ] : null,
         );
     }
 

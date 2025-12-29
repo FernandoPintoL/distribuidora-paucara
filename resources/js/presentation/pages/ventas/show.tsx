@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { formatCurrency } from '@/lib/utils';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
@@ -14,6 +14,12 @@ interface PageProps extends InertiaPageProps {
 export default function VentaShow() {
     const { venta } = usePage<PageProps>().props;
     const [imagenCargada, setImagenCargada] = useState(true);
+
+    // Debug: Verificar datos que llegan
+    console.log('🔍 VentaShow - Venta cargada:', venta.numero);
+    console.log('  requiere_envio:', venta.requiere_envio, '(tipo:', typeof venta.requiere_envio + ')');
+    console.log('  estado_logistico:', venta.estado_logistico);
+    console.log('  canal_origen:', venta.canal_origen);
 
     const getEstadoColor = (estado: EstadoDocumento) => {
         switch (estado.nombre.toLowerCase()) {
@@ -51,7 +57,7 @@ export default function VentaShow() {
         ]}>
             <Head title={`Venta ${venta.numero}`} />
 
-            <div className="flex items-center justify-between mb-6 p-6">
+            <div className="flex items-center justify-between mb-2 px-6 pt-6">
                 <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
                     Venta {venta.numero}
                 </h1>
