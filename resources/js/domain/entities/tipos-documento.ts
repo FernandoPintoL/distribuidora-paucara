@@ -1,4 +1,4 @@
-import { BaseEntity, BaseFormData } from './base';
+import type { BaseEntity, BaseFormData } from './generic';
 
 export interface TipoDocumento extends BaseEntity {
   codigo: string;
