@@ -39,12 +39,14 @@ export function NavMain({ items }: NavMainProps) {
     const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
     // Función para verificar si una URL está activa
+    // Solo marca como activo si es exacta coincidencia o es el padre de un hijo activo
     const isActive = (href: NonNullable<InertiaLinkProps['href']> | undefined) => {
         if (!href) return false;
         const urlString = getUrlString(href);
         if (!urlString) return false;
         if (urlString === '/') return url === '/';
-        return url.startsWith(urlString);
+        // Exact match only - prevents parent items from being marked as active by child URLs
+        return url === urlString;
     };
 
     // Función para verificar si un item padre debe estar activo
@@ -65,7 +67,8 @@ export function NavMain({ items }: NavMainProps) {
                 const childUrlString = getUrlString(child.href);
                 if (!childUrlString) return false;
                 if (childUrlString === '/') return url === '/';
-                return url.startsWith(childUrlString);
+                // Exact match only
+                return url === childUrlString;
             })) {
                 activeParents.add(item.title);
             }

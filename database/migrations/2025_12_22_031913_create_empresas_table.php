@@ -11,7 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('empresas', function (Blueprint $table) {
+        // Solo crear si no existe
+        if (!Schema::hasTable('empresas')) {
+            Schema::create('empresas', function (Blueprint $table) {
             $table->id();
 
             // Datos básicos
@@ -51,7 +53,8 @@ return new class extends Migration
             // Índices
             $table->index('es_principal');
             $table->index('activo');
-        });
+            });
+        }
     }
 
     /**

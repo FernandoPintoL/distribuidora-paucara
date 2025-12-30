@@ -260,6 +260,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // === NUEVO FLUJO DE ENTREGAS Y REPORTES DE CARGA ===
             'entregas.index', 'entregas.create', 'entregas.store', 'entregas.show', 'entregas.view', 'entregas.edit', 'entregas.update',
+            'entregas.asignar', // Permite asignar choferes y vehículos
             'entregas.confirmar-carga', 'entregas.listo-para-entrega', 'entregas.iniciar-transito', 'entregas.actualizar-ubicacion',
             'reportes-carga.crear', 'reportes-carga.show', 'reportes-carga.view', 'reportes-carga.actualizar-detalle', 'reportes-carga.verificar-detalle',
             'reportes-carga.confirmar', 'reportes-carga.listo-para-entrega',
@@ -288,11 +289,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
 
             // === NUEVAS ENTREGAS - FLUJO DE CARGA ===
-            'entregas.index', 'entregas.show', 'entregas.view',
-            'entregas.listo-para-entrega', 'entregas.iniciar-transito', 'entregas.actualizar-ubicacion',
+            'entregas.index', 'entregas.show', 'entregas.view', 'entregas.edit',
+            'entregas.update', // FASE 2: Permite confirmar ventas cargadas
+            'entregas.confirmar-carga', // Marcar entrega en carga
+            'entregas.listo-para-entrega', // Transición a listo para entrega
+            'entregas.iniciar-transito', // Iniciar tránsito
+            'entregas.actualizar-ubicacion', // Actualizar GPS
 
             // === REPORTES DE CARGA (READ & UPDATE) ===
             'reportes-carga.show', 'reportes-carga.view', 'reportes-carga.actualizar-detalle', 'reportes-carga.verificar-detalle',
+            'reportes-carga.confirmar', // Permitir confirmar reportes de carga
 
             // === GESTIÓN DE CAJA PROPIA ===
             'cajas.index', 'cajas.show', 'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones',

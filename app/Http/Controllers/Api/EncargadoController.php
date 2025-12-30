@@ -368,8 +368,12 @@ class EncargadoController extends Controller
     {
         try {
             $entregas = Entrega::whereIn('estado', [
+                // Sistema antiguo
                 Entrega::ESTADO_EN_CAMINO,
                 Entrega::ESTADO_LLEGO,
+                // Sistema nuevo - Flujo de Carga
+                Entrega::ESTADO_LISTO_PARA_ENTREGA,
+                Entrega::ESTADO_EN_TRANSITO,
             ])
                 ->with([
                     'ventas.cliente',

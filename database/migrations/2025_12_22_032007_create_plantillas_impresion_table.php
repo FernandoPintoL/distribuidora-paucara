@@ -11,7 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('plantillas_impresion', function (Blueprint $table) {
+        // Solo crear si no existe
+        if (!Schema::hasTable('plantillas_impresion')) {
+            Schema::create('plantillas_impresion', function (Blueprint $table) {
             $table->id();
 
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
@@ -39,7 +41,8 @@ return new class extends Migration
             $table->index(['tipo_documento', 'formato']);
             $table->index('activo');
             $table->unique(['empresa_id', 'tipo_documento', 'formato']);
-        });
+            });
+        }
     }
 
     /**
