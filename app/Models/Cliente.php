@@ -176,6 +176,40 @@ class Cliente extends Model
                 $cliente->saveQuietly();
             }
         });
+
+        // Regenerar código si la localidad cambia
+        static::updating(function ($cliente) {
+            \Log::info("📝 Evento updating disparado para cliente {$cliente->id}", [
+                'isDirty' => $cliente->isDirty(),
+                'dirty_attributes' => $cliente->getDirty(),
+                'localidad_id_actual' => $cliente->localidad_id,
+                'localidad_id_original' => $cliente->getOriginal('localidad_id'),
+            ]);
+
+            if ($cliente->isDirty('localidad_id')) {
+                $localidadAnterior = $cliente->getOriginal('localidad_id');
+                $localidadNueva = $cliente->localidad_id;
+
+                \Log::info("🔄 Localidad cambió en cliente {$cliente->id}", [
+                    'anterior' => $localidadAnterior,
+                    'nueva' => $localidadNueva,
+                    'codigo_anterior' => $cliente->getOriginal('codigo_cliente'),
+                    'codigo_actual' => $cliente->codigo_cliente,
+                ]);
+
+                // Regenerar el código con la nueva localidad (incluso si es NULL)
+                if ($localidadNueva) {
+                    $codigoAnterior = $cliente->codigo_cliente;
+                    $cliente->codigo_cliente = $cliente->generateCodigoCliente();
+
+                    \Log::info("✅ Código de cliente regenerado", [
+                        'cliente_id' => $cliente->id,
+                        'codigo_anterior' => $codigoAnterior ?? 'NULL',
+                        'codigo_nuevo' => $cliente->codigo_cliente,
+                    ]);
+                }
+            }
+        });
     }
 
     public function generateCodigoCliente(): string

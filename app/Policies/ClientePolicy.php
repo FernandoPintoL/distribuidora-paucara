@@ -90,7 +90,8 @@ class ClientePolicy
 
         // Preventista con permiso
         if ($user->hasRole(['Preventista', 'preventista'])) {
-            return $user->hasPermissionTo('clientes.create');
+            return $user->hasPermissionTo('clientes.create') ||
+                   $user->hasPermissionTo('clientes.manage');
         }
 
         // Admin NO puede crear
@@ -106,8 +107,14 @@ class ClientePolicy
     {
         // Preventista: editar solo SUS clientes
         if ($user->hasRole(['Preventista', 'preventista'])) {
-            return $user->hasPermissionTo('clientes.edit-own') &&
-                   $user->empleado?->id === $cliente->preventista_id;
+            // Verificar que sea el preventista asignado al cliente
+            if ($user->empleado?->id !== $cliente->preventista_id) {
+                return false;
+            }
+
+            // Verificar permisos: clientes.edit-own O clientes.manage
+            return $user->hasPermissionTo('clientes.edit-own') ||
+                   $user->hasPermissionTo('clientes.manage');
         }
 
         // Admin NO puede editar
@@ -126,8 +133,11 @@ class ClientePolicy
     {
         // Preventista: eliminar solo SUS clientes
         if ($user->hasRole(['Preventista', 'preventista'])) {
-            return $user->hasPermissionTo('clientes.delete-own') &&
-                   $user->empleado?->id === $cliente->preventista_id;
+            if ($user->empleado?->id !== $cliente->preventista_id) {
+                return false;
+            }
+            return $user->hasPermissionTo('clientes.delete-own') ||
+                   $user->hasPermissionTo('clientes.manage');
         }
 
         return false;
@@ -140,8 +150,11 @@ class ClientePolicy
     {
         // Preventista: bloquear solo SUS clientes
         if ($user->hasRole(['Preventista', 'preventista'])) {
-            return $user->hasPermissionTo('clientes.block-own') &&
-                   $user->empleado?->id === $cliente->preventista_id;
+            if ($user->empleado?->id !== $cliente->preventista_id) {
+                return false;
+            }
+            return $user->hasPermissionTo('clientes.block-own') ||
+                   $user->hasPermissionTo('clientes.manage');
         }
 
         return false;
@@ -154,8 +167,11 @@ class ClientePolicy
     {
         // Preventista: ver auditoría solo de SUS clientes
         if ($user->hasRole(['Preventista', 'preventista'])) {
-            return $user->hasPermissionTo('clientes.audit-own') &&
-                   $user->empleado?->id === $cliente->preventista_id;
+            if ($user->empleado?->id !== $cliente->preventista_id) {
+                return false;
+            }
+            return $user->hasPermissionTo('clientes.audit-own') ||
+                   $user->hasPermissionTo('clientes.manage');
         }
 
         // Admin: ver auditoría de cualquiera

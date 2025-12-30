@@ -345,14 +345,26 @@ class ClienteController extends Controller
 
             // Sincronizar direcciones si vienen en la petición
             if ($request->has('direcciones')) {
+                // DEBUG: Log dirección data para verificar observaciones
+                \Log::info('🔍 Direcciones recibidas en update:', [
+                    'direcciones' => $data['direcciones'] ?? [],
+                ]);
+
                 // Eliminar direcciones existentes
                 $cliente->direcciones()->delete();
 
                 // Crear nuevas direcciones
                 if (is_array($data['direcciones']) && count($data['direcciones']) > 0) {
-                    foreach ($data['direcciones'] as $direccionData) {
+                    foreach ($data['direcciones'] as $index => $direccionData) {
+                        \Log::info("📍 Procesando dirección $index:", ['data' => $direccionData]);
+
                         $direccionData['activa'] = $direccionData['activa'] ?? true;
-                        $cliente->direcciones()->create($direccionData);
+                        $createdDireccion = $cliente->direcciones()->create($direccionData);
+
+                        \Log::info("✅ Dirección creada:", [
+                            'id' => $createdDireccion->id,
+                            'observaciones' => $createdDireccion->observaciones,
+                        ]);
                     }
                 }
             }
