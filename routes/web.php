@@ -71,6 +71,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
     Route::get('productos/crear/moderno', [\App\Http\Controllers\ProductoController::class, 'createModerno'])->middleware('permission:productos.manage')->name('productos.create.moderno');
     Route::get('productos/{producto}/historial-precios', [\App\Http\Controllers\ProductoController::class, 'historialPrecios'])->middleware('permission:productos.manage')->name('productos.historial-precios');
+
+    // Rutas para carga masiva de productos
+    Route::get('productos/carga-masiva', fn() => \Inertia\Inertia::render('productos/carga-masiva'))->middleware('permission:productos.manage')->name('productos.carga-masiva');
+    Route::get('productos/historial-cargas', fn() => \Inertia\Inertia::render('productos/historial-cargas'))->middleware('permission:productos.manage')->name('productos.historial-cargas');
+
     Route::resource('unidades', \App\Http\Controllers\UnidadMedidaController::class)->parameters(['unidades' => 'unidad'])->middleware('permission:unidades.manage');
 
     // Rutas para gestión de tipos de precio

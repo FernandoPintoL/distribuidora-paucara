@@ -1,138 +1,141 @@
-import { defineComponent, h } from 'vue';
 import { ResultadoProductosMasivos } from '@/domain/entities/productos-masivos';
 
-export default defineComponent({
-  name: 'ProgresoProductos',
-  props: {
-    progreso: Number,
-    resultado: Object as () => ResultadoProductosMasivos | null,
-    cargando: Boolean,
-    error: String,
-  },
-  emits: ['nuevamente', 'ir-historial'],
-  setup(props, { emit }) {
-    const mostrarResultado = !props.cargando && props.resultado;
-    const exitoso = props.resultado?.cantidad_procesados === props.resultado?.cantidad_total;
+interface ProgresoProductosProps {
+  progreso?: number;
+  resultado?: ResultadoProductosMasivos | null;
+  cargando?: boolean;
+  error?: string;
+  onNuevamente?: () => void;
+  onIrHistorial?: () => void;
+}
 
-    return () =>
-      h('div', { class: 'space-y-6' }, [
-        props.cargando &&
-          h('div', { class: 'space-y-4' }, [
-            h('h2', { class: 'text-xl font-bold text-gray-900' }, 'Procesando carga masiva...'),
-            h('div', { class: 'space-y-2' }, [
-              h('div', { class: 'flex justify-between text-sm' }, [
-                h('span', { class: 'text-gray-700' }, 'Progreso'),
-                h('span', { class: 'font-medium' }, `${props.progreso}%`),
-              ]),
-              h('div', { class: 'w-full bg-gray-200 rounded-full h-4 overflow-hidden' }, [
-                h('div', {
-                  class: 'bg-blue-600 h-4 rounded-full transition-all duration-300',
-                  style: `width: ${props.progreso}%`,
-                }),
-              ]),
-            ]),
-            h('p', { class: 'text-center text-gray-600 text-sm mt-4' }, [
-              '⏳ Esto puede tomar unos momentos...',
-            ]),
-          ]),
+export default function ProgresoProductos({
+  progreso = 0,
+  resultado = null,
+  cargando = false,
+  error,
+  onNuevamente,
+  onIrHistorial,
+}: ProgresoProductosProps) {
+  const mostrarResultado = !cargando && resultado;
+  const exitoso = resultado?.cantidad_procesados === resultado?.cantidad_total;
 
-        mostrarResultado &&
-          h('div', { class: 'space-y-4' }, [
-            exitoso
-              ? h('div', { class: 'bg-green-50 border border-green-200 rounded-lg p-6' }, [
-                  h('div', { class: 'flex items-center gap-3 mb-4' }, [
-                    h('span', { class: 'text-3xl' }, '✅'),
-                    h('h2', { class: 'text-xl font-bold text-green-900' }, 'Carga completada exitosamente'),
-                  ]),
-                  h('div', { class: 'space-y-2 text-sm text-green-800' }, [
-                    h('p', [
-                      h('span', { class: 'font-medium' }, `${props.resultado!.cantidad_procesados} productos`),
-                      ' fueron importados exitosamente',
-                    ]),
-                  ]),
-                ])
-              : h('div', { class: 'bg-yellow-50 border border-yellow-200 rounded-lg p-6' }, [
-                  h('div', { class: 'flex items-center gap-3 mb-4' }, [
-                    h('span', { class: 'text-3xl' }, '⚠️'),
-                    h('h2', { class: 'text-xl font-bold text-yellow-900' }, 'Carga completada con errores'),
-                  ]),
-                  h('div', { class: 'space-y-3 text-sm text-yellow-800' }, [
-                    h('div', { class: 'flex justify-between' }, [
-                      h('span', {}, 'Procesados correctamente:'),
-                      h('span', { class: 'font-bold' }, props.resultado!.cantidad_procesados),
-                    ]),
-                    h('div', { class: 'flex justify-between' }, [
-                      h('span', {}, 'Con errores:'),
-                      h('span', { class: 'font-bold text-red-600' }, props.resultado!.cantidad_errores),
-                    ]),
-                  ]),
-                ]),
+  return (
+    <div className="space-y-6">
+      {cargando && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-gray-900">Procesando carga masiva...</h2>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-700">Progreso</span>
+              <span className="font-medium">{progreso}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div
+                className="bg-blue-600 h-4 rounded-full transition-all duration-300"
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
+          </div>
+          <p className="text-center text-gray-600 text-sm mt-4">⏳ Esto puede tomar unos momentos...</p>
+        </div>
+      )}
 
-            props.resultado!.cantidad_errores > 0 &&
-              h('div', { class: 'bg-red-50 border border-red-200 rounded-lg p-4' }, [
-                h('h3', { class: 'font-bold text-red-900 mb-2' }, 'Errores detectados:'),
-                h(
-                  'ul',
-                  { class: 'space-y-1 text-sm text-red-800' },
-                  props.resultado!.errores.slice(0, 5).map((error) =>
-                    h('li', { class: 'flex gap-2' }, [
-                      h('span', {}, '•'),
-                      h('span', {}, `Fila ${error.fila}: ${error.mensaje}`),
-                    ])
-                  )
-                ),
-                props.resultado!.cantidad_errores > 5 &&
-                  h('p', { class: 'text-sm text-red-700 mt-2' }, [
-                    `...y ${props.resultado!.cantidad_errores - 5} errores más`,
-                  ]),
-              ]),
+      {mostrarResultado && (
+        <div className="space-y-4">
+          {exitoso ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">✅</span>
+                <h2 className="text-xl font-bold text-green-900">Carga completada exitosamente</h2>
+              </div>
+              <div className="space-y-2 text-sm text-green-800">
+                <p>
+                  <span className="font-medium">{resultado!.cantidad_procesados} productos</span> fueron importados
+                  exitosamente
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">⚠️</span>
+                <h2 className="text-xl font-bold text-yellow-900">Carga completada con errores</h2>
+              </div>
+              <div className="space-y-3 text-sm text-yellow-800">
+                <div className="flex justify-between">
+                  <span>Procesados correctamente:</span>
+                  <span className="font-bold">{resultado!.cantidad_procesados}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Con errores:</span>
+                  <span className="font-bold text-red-600">{resultado!.cantidad_errores}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
-            h('div', { class: 'bg-blue-50 border border-blue-200 rounded-lg p-4' }, [
-              h('p', { class: 'text-sm text-blue-700' }, [
-                '📌 ID de carga: ',
-                h('span', { class: 'font-mono font-bold' }, props.resultado!.cargo_id),
-              ]),
-            ]),
+          {resultado!.cantidad_errores > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <h3 className="font-bold text-red-900 mb-2">Errores detectados:</h3>
+              <ul className="space-y-1 text-sm text-red-800">
+                {resultado!.errores.slice(0, 5).map((error, idx) => (
+                  <li key={idx} className="flex gap-2">
+                    <span>•</span>
+                    <span>
+                      Fila {error.fila}: {error.mensaje}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {resultado!.cantidad_errores > 5 && (
+                <p className="text-sm text-red-700 mt-2">...y {resultado!.cantidad_errores - 5} errores más</p>
+              )}
+            </div>
+          )}
 
-            // Botones
-            h('div', { class: 'flex gap-3 justify-end' }, [
-              h(
-                'button',
-                {
-                  type: 'button',
-                  class:
-                    'px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium',
-                  onClick: () => emit('nuevamente'),
-                },
-                'Cargar más productos'
-              ),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  class:
-                    'px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium',
-                  onClick: () => emit('ir-historial'),
-                },
-                'Ver historial de cargas'
-              ),
-            ]),
-          ]),
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-700">
+              📌 ID de carga: <span className="font-mono font-bold">{resultado!.cargo_id}</span>
+            </p>
+          </div>
 
-        props.error &&
-          h('div', { class: 'bg-red-50 border border-red-200 rounded-lg p-6' }, [
-            h('div', { class: 'flex items-center gap-3 mb-4' }, [
-              h('span', { class: 'text-3xl' }, '❌'),
-              h('h2', { class: 'text-xl font-bold text-red-900' }, 'Error en la carga'),
-            ]),
-            h('p', { class: 'text-red-700 mb-4' }, props.error),
-            h('button', {
-              type: 'button',
-              class: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium',
-              onClick: () => emit('nuevamente'),
-            },
-            'Intentar nuevamente'),
-          ]),
-      ]);
-  },
-});
+          {/* Botones */}
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium"
+              onClick={onNuevamente}
+            >
+              Cargar más productos
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              onClick={onIrHistorial}
+            >
+              Ver historial de cargas
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">❌</span>
+            <h2 className="text-xl font-bold text-red-900">Error en la carga</h2>
+          </div>
+          <p className="text-red-700 mb-4">{error}</p>
+          <button
+            type="button"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+            onClick={onNuevamente}
+          >
+            Intentar nuevamente
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -6,8 +6,8 @@ import {
   ResultadoProductosMasivos,
   ResultadoValidacion,
 } from '@/domain/entities/productos-masivos';
-import { router } from '@inertiajs/vue3';
-import { usePage } from '@inertiajs/vue3';
+import { router } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 
 /**
  * Servicio para procesar CSVs de productos

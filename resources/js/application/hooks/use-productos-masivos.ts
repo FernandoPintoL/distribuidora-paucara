@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { useState, useCallback, useMemo } from 'react';
 import {
   DatosProductosMasivos,
   FilaProductoCSV,
@@ -10,54 +10,43 @@ import { productosCSVService } from '@/infrastructure/services/productosCSV.serv
 
 export function useProductosMasivos() {
   // Estado
-  const archivo = ref<File | null>(null);
-  const contenidoCSV = ref<string>('');
-  const filas = ref<FilaProductoValidada[]>([]);
-  const paso = ref<'carga' | 'validacion' | 'confirmacion' | 'procesando' | 'resultado'>(
-    'carga'
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [contenidoCSV, setContenidoCSV] = useState<string>('');
+  const [filas, setFilas] = useState<FilaProductoValidada[]>([]);
+  const [paso, setPaso] = useState<'carga' | 'validacion' | 'confirmacion' | 'procesando' | 'resultado'>('carga');
+  const [progreso, setProgreso] = useState(0);
+  const [erroresGlobales, setErroresGlobales] = useState<string[]>([]);
+  const [resultadoProcesamiento, setResultadoProcesamiento] = useState<ResultadoProductosMasivos | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [mensajeError, setMensajeError] = useState<string | null>(null);
+
+  // Computed values
+  const puedeValidar = useMemo(() => !cargando && filas.length > 0, [cargando, filas]);
+
+  const puedeConfirmar = useMemo(
+    () => paso === 'validacion' && filas.some((f) => f.validacion.es_valido) && !cargando,
+    [paso, filas, cargando]
   );
-  const progreso = ref(0);
-  const erroresGlobales = ref<string[]>([]);
-  const resultadoProcesamiento = ref<ResultadoProductosMasivos | null>(null);
-  const cargando = ref(false);
-  const mensajeError = ref<string | null>(null);
 
-  // Computed
-  const puedeValidar = computed(() => {
-    return !cargando.value && filas.value.length > 0;
-  });
+  const filasValidas = useMemo(() => filas.filter((f) => f.validacion.es_valido), [filas]);
 
-  const puedeConfirmar = computed(() => {
-    return (
-      paso.value === 'validacion' &&
-      filas.value.some((f) => f.validacion.es_valido) &&
-      !cargando.value
-    );
-  });
+  const filasConErrores = useMemo(() => filas.filter((f) => !f.validacion.es_valido), [filas]);
 
-  const filasValidas = computed(() => {
-    return filas.value.filter((f) => f.validacion.es_valido);
-  });
+  const porcentajeValidez = useMemo(() => {
+    if (filas.length === 0) return 0;
+    return Math.round((filasValidas.length / filas.length) * 100);
+  }, [filas, filasValidas]);
 
-  const filasConErrores = computed(() => {
-    return filas.value.filter((f) => !f.validacion.es_valido);
-  });
-
-  const porcentajeValidez = computed(() => {
-    if (filas.value.length === 0) return 0;
-    return Math.round((filasValidas.value.length / filas.value.length) * 100);
-  });
-
-  const resumenValidacion = computed(() => {
-    const sinProveedor = filas.value.filter((f) => !f.proveedor_nombre).length;
-    const sinUnidad = filas.value.filter((f) => !f.unidad_medida_nombre).length;
-    const sinPrecio = filas.value.filter((f) => !f.precio_costo && !f.precio_venta).length;
-    const sinCodigoBarras = filas.value.filter((f) => !f.codigo_barra).length;
+  const resumenValidacion = useMemo(() => {
+    const sinProveedor = filas.filter((f) => !f.proveedor_nombre).length;
+    const sinUnidad = filas.filter((f) => !f.unidad_medida_nombre).length;
+    const sinPrecio = filas.filter((f) => !f.precio_costo && !f.precio_venta).length;
+    const sinCodigoBarras = filas.filter((f) => !f.codigo_barra).length;
 
     return {
-      total: filas.value.length,
-      validas: filasValidas.value.length,
-      conErrores: filasConErrores.value.length,
+      total: filas.length,
+      validas: filasValidas.length,
+      conErrores: filasConErrores.length,
       advertencias: {
         sinProveedor,
         sinUnidad,
@@ -65,74 +54,77 @@ export function useProductosMasivos() {
         sinCodigoBarras,
       },
     };
-  });
+  }, [filas, filasValidas, filasConErrores]);
 
   // Métodos
-  async function validarArchivo(file: File): Promise<void> {
-    try {
-      cargando.value = true;
-      mensajeError.value = null;
-      erroresGlobales.value = [];
+  const validarArchivo = useCallback(
+    async (file: File): Promise<void> => {
+      try {
+        setCargando(true);
+        setMensajeError(null);
+        setErroresGlobales([]);
 
-      archivo.value = file;
+        setArchivo(file);
 
-      // Validar tamaño (máx 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('El archivo no puede exceder 10MB');
+        // Validar tamaño (máx 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error('El archivo no puede exceder 10MB');
+        }
+
+        // Validar extensión
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        const extensionesValidas = ['csv', 'xlsx', 'xls', 'ods'];
+        if (!ext || !extensionesValidas.includes(ext)) {
+          throw new Error(`Formato no válido. Usa: ${extensionesValidas.join(', ')}`);
+        }
+
+        // Leer archivo
+        const texto = await file.text();
+        if (!texto.trim()) {
+          throw new Error('El archivo está vacío');
+        }
+
+        setContenidoCSV(texto);
+
+        // Validar estructura
+        const validacionEstructura = productosCSVService.validarEstructura(texto);
+        if (!validacionEstructura.valido) {
+          setErroresGlobales(validacionEstructura.errores);
+          throw new Error('Estructura del CSV inválida');
+        }
+
+        // Parsear CSV
+        const filasRaw = productosCSVService.parsearCSV(texto);
+        if (filasRaw.length === 0) {
+          throw new Error('El CSV no contiene datos');
+        }
+
+        if (filasRaw.length > 5000) {
+          throw new Error('El archivo contiene más de 5000 filas');
+        }
+
+        // Validar filas
+        const resultadoValidacion = await productosCSVService.validarFilas(filasRaw);
+        setFilas(resultadoValidacion.filas_validadas);
+
+        // Ir al paso de validación
+        setPaso('validacion');
+      } catch (error: any) {
+        setMensajeError(error.message || 'Error procesando archivo');
+        setPaso('carga');
+      } finally {
+        setCargando(false);
       }
+    },
+    []
+  );
 
-      // Validar extensión
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      const extensionesValidas = ['csv', 'xlsx', 'xls', 'ods'];
-      if (!ext || !extensionesValidas.includes(ext)) {
-        throw new Error(`Formato no válido. Usa: ${extensionesValidas.join(', ')}`);
-      }
-
-      // Leer archivo
-      const texto = await file.text();
-      if (!texto.trim()) {
-        throw new Error('El archivo está vacío');
-      }
-
-      contenidoCSV.value = texto;
-
-      // Validar estructura
-      const validacionEstructura = productosCSVService.validarEstructura(texto);
-      if (!validacionEstructura.valido) {
-        erroresGlobales.value = validacionEstructura.errores;
-        throw new Error('Estructura del CSV inválida');
-      }
-
-      // Parsear CSV
-      const filasRaw = productosCSVService.parsearCSV(texto);
-      if (filasRaw.length === 0) {
-        throw new Error('El CSV no contiene datos');
-      }
-
-      if (filasRaw.length > 5000) {
-        throw new Error('El archivo contiene más de 5000 filas');
-      }
-
-      // Validar filas
-      const resultadoValidacion = await productosCSVService.validarFilas(filasRaw);
-      filas.value = resultadoValidacion.filas_validadas;
-
-      // Ir al paso de validación
-      paso.value = 'validacion';
-    } catch (error: any) {
-      mensajeError.value = error.message || 'Error procesando archivo';
-      paso.value = 'carga';
-    } finally {
-      cargando.value = false;
-    }
-  }
-
-  function detectarDuplicados(): FilaProductoValidada[] {
+  const detectarDuplicados = useCallback((): FilaProductoValidada[] => {
     const nombres = new Map<string, FilaProductoValidada[]>();
     const codigosBarras = new Map<string, FilaProductoValidada[]>();
 
     // Agrupar por nombre y código
-    for (const fila of filas.value) {
+    for (const fila of filas) {
       const nombreNorm = productosCSVService.normalizarTexto(fila.nombre);
       if (nombreNorm) {
         if (!nombres.has(nombreNorm)) {
@@ -163,84 +155,96 @@ export function useProductosMasivos() {
     }
 
     return duplicados;
-  }
+  }, [filas]);
 
-  async function procesarProductos(): Promise<void> {
-    try {
-      cargando.value = true;
-      mensajeError.value = null;
-      paso.value = 'procesando';
-      progreso.value = 0;
+  const procesarProductos = useCallback(
+    async (): Promise<void> => {
+      try {
+        setCargando(true);
+        setMensajeError(null);
+        setPaso('procesando');
+        setProgreso(0);
 
-      // Preparar datos
-      const productosParaProcesar = filasValidas.value.map((fila) => ({
-        nombre: fila.nombre,
-        descripcion: fila.descripcion,
-        sku: fila.sku,
-        codigo_barra: fila.codigo_barra,
-        proveedor_nombre: fila.proveedor_nombre,
-        unidad_medida_nombre: fila.unidad_medida_nombre,
-        cantidad: fila.cantidad,
-        precio_costo: fila.precio_costo,
-        precio_venta: fila.precio_venta,
-        lote: fila.lote,
-        fecha_vencimiento: fila.fecha_vencimiento,
-        categoria_nombre: fila.categoria_nombre,
-        marca_nombre: fila.marca_nombre,
-      }));
+        // Preparar datos
+        const productosParaProcesar = filasValidas.map((fila) => ({
+          nombre: fila.nombre,
+          descripcion: fila.descripcion,
+          sku: fila.sku,
+          codigo_barra: fila.codigo_barra,
+          proveedor_nombre: fila.proveedor_nombre,
+          unidad_medida_nombre: fila.unidad_medida_nombre,
+          cantidad: fila.cantidad,
+          precio_costo: fila.precio_costo,
+          precio_venta: fila.precio_venta,
+          lote: fila.lote,
+          fecha_vencimiento: fila.fecha_vencimiento,
+          categoria_nombre: fila.categoria_nombre,
+          marca_nombre: fila.marca_nombre,
+        }));
 
-      const datos: DatosProductosMasivos = {
-        nombre_archivo: archivo.value?.name || 'plantilla_productos.csv',
-        datos_csv: contenidoCSV.value,
-        productos: productosParaProcesar,
-      };
+        const datos: DatosProductosMasivos = {
+          nombre_archivo: archivo?.name || 'plantilla_productos.csv',
+          datos_csv: contenidoCSV,
+          productos: productosParaProcesar,
+        };
 
-      // Enviar al servidor
-      progreso.value = 50;
+        // Enviar al servidor
+        setProgreso(50);
 
-      const resultado = await productosCSVService.procesarProductosMasivos(datos);
-      resultadoProcesamiento.value = resultado;
+        const resultado = await productosCSVService.procesarProductosMasivos(datos);
+        setResultadoProcesamiento(resultado);
 
-      progreso.value = 100;
-      paso.value = 'resultado';
-    } catch (error: any) {
-      mensajeError.value = error.message || 'Error procesando productos';
-      paso.value = 'confirmacion';
-    } finally {
-      cargando.value = false;
-    }
-  }
+        setProgreso(100);
+        setPaso('resultado');
+      } catch (error: any) {
+        setMensajeError(error.message || 'Error procesando productos');
+        setPaso('confirmacion');
+      } finally {
+        setCargando(false);
+      }
+    },
+    [filasValidas, archivo, contenidoCSV]
+  );
 
-  function limpiar(): void {
-    archivo.value = null;
-    contenidoCSV.value = '';
-    filas.value = [];
-    paso.value = 'carga';
-    progreso.value = 0;
-    erroresGlobales.value = [];
-    resultadoProcesamiento.value = null;
-    mensajeError.value = null;
-  }
+  const limpiar = useCallback((): void => {
+    setArchivo(null);
+    setContenidoCSV('');
+    setFilas([]);
+    setPaso('carga');
+    setProgreso(0);
+    setErroresGlobales([]);
+    setResultadoProcesamiento(null);
+    setMensajeError(null);
+  }, []);
 
-  function volverAlPaso(nuevoPaso: 'carga' | 'validacion' | 'confirmacion'): void {
-    paso.value = nuevoPaso;
+  const volverAlPaso = useCallback((nuevoPaso: 'carga' | 'validacion' | 'confirmacion'): void => {
+    setPaso(nuevoPaso);
     if (nuevoPaso === 'carga') {
       limpiar();
     }
-    mensajeError.value = null;
-  }
+    setMensajeError(null);
+  }, [limpiar]);
 
   return {
     // Estado
     archivo,
+    setArchivo,
     contenidoCSV,
+    setContenidoCSV,
     filas,
+    setFilas,
     paso,
+    setPaso,
     progreso,
+    setProgreso,
     erroresGlobales,
+    setErroresGlobales,
     resultadoProcesamiento,
+    setResultadoProcesamiento,
     cargando,
+    setCargando,
     mensajeError,
+    setMensajeError,
 
     // Computed
     puedeValidar,

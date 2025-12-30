@@ -1,101 +1,97 @@
-import { defineComponent, h } from 'vue';
+interface ConfirmacionProductosProps {
+  resumenValidacion: any;
+  cargando?: boolean;
+  onConfirmar?: () => void;
+  onVolver?: () => void;
+}
 
-export default defineComponent({
-  name: 'ConfirmacionProductos',
-  props: {
-    resumenValidacion: {
-      type: Object as () => any,
-      required: true,
-    },
-    cargando: Boolean,
-  },
-  emits: ['confirmar', 'volver'],
-  setup(props, { emit }) {
-    const resumen = props.resumenValidacion;
+export default function ConfirmacionProductos({
+  resumenValidacion,
+  cargando = false,
+  onConfirmar,
+  onVolver,
+}: ConfirmacionProductosProps) {
+  const resumen = resumenValidacion;
 
-    return () =>
-      h('div', { class: 'space-y-6' }, [
-        h('h2', { class: 'text-xl font-bold text-gray-900' }, 'Resumen de Carga'),
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-900">Resumen de Carga</h2>
 
-        // Estadísticas
-        h('div', { class: 'bg-gray-50 rounded-lg p-6 border border-gray-200 space-y-4' }, [
-          h('div', { class: 'flex justify-between py-2 border-b' }, [
-            h('span', { class: 'text-gray-700' }, 'Total de filas'),
-            h('span', { class: 'font-bold text-gray-900' }, resumen.total),
-          ]),
-          h('div', { class: 'flex justify-between py-2 border-b' }, [
-            h('span', { class: 'text-green-700' }, '✓ Filas válidas'),
-            h('span', { class: 'font-bold text-green-600' }, resumen.validas),
-          ]),
-          h('div', { class: 'flex justify-between py-2' }, [
-            h('span', { class: 'text-red-700' }, '✗ Filas con errores'),
-            h('span', { class: 'font-bold text-red-600' }, resumen.conErrores),
-          ]),
-        ]),
+      {/* Estadísticas */}
+      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 space-y-4">
+        <div className="flex justify-between py-2 border-b">
+          <span className="text-gray-700">Total de filas</span>
+          <span className="font-bold text-gray-900">{resumen.total}</span>
+        </div>
+        <div className="flex justify-between py-2 border-b">
+          <span className="text-green-700">✓ Filas válidas</span>
+          <span className="font-bold text-green-600">{resumen.validas}</span>
+        </div>
+        <div className="flex justify-between py-2">
+          <span className="text-red-700">✗ Filas con errores</span>
+          <span className="font-bold text-red-600">{resumen.conErrores}</span>
+        </div>
+      </div>
 
-        // Advertencias/Info
-        h('div', { class: 'space-y-2' }, [
-          resumen.advertencias.sinProveedor > 0 &&
-            h('div', { class: 'bg-yellow-50 border border-yellow-200 rounded p-3' }, [
-              h('p', { class: 'text-sm text-yellow-700' }, [
-                `⚠️ ${resumen.advertencias.sinProveedor} fila(s) sin proveedor - se crearán automáticamente`,
-              ]),
-            ]),
-          resumen.advertencias.sinUnidad > 0 &&
-            h('div', { class: 'bg-yellow-50 border border-yellow-200 rounded p-3' }, [
-              h('p', { class: 'text-sm text-yellow-700' }, [
-                `⚠️ ${resumen.advertencias.sinUnidad} fila(s) sin unidad de medida - se crearán automáticamente`,
-              ]),
-            ]),
-          resumen.advertencias.sinPrecio > 0 &&
-            h('div', { class: 'bg-blue-50 border border-blue-200 rounded p-3' }, [
-              h('p', { class: 'text-sm text-blue-700' }, [
-                `ℹ️ ${resumen.advertencias.sinPrecio} fila(s) sin precio - puede ser actualizado después`,
-              ]),
-            ]),
-          resumen.advertencias.sinCodigoBarras > 0 &&
-            h('div', { class: 'bg-blue-50 border border-blue-200 rounded p-3' }, [
-              h('p', { class: 'text-sm text-blue-700' }, [
-                `ℹ️ ${resumen.advertencias.sinCodigoBarras} fila(s) sin código de barras`,
-              ]),
-            ]),
-        ]),
+      {/* Advertencias/Info */}
+      <div className="space-y-2">
+        {resumen.advertencias?.sinProveedor > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+            <p className="text-sm text-yellow-700">
+              ⚠️ {resumen.advertencias.sinProveedor} fila(s) sin proveedor - se crearán automáticamente
+            </p>
+          </div>
+        )}
+        {resumen.advertencias?.sinUnidad > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+            <p className="text-sm text-yellow-700">
+              ⚠️ {resumen.advertencias.sinUnidad} fila(s) sin unidad de medida - se crearán automáticamente
+            </p>
+          </div>
+        )}
+        {resumen.advertencias?.sinPrecio > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+            <p className="text-sm text-blue-700">
+              ℹ️ {resumen.advertencias.sinPrecio} fila(s) sin precio - puede ser actualizado después
+            </p>
+          </div>
+        )}
+        {resumen.advertencias?.sinCodigoBarras > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+            <p className="text-sm text-blue-700">
+              ℹ️ {resumen.advertencias.sinCodigoBarras} fila(s) sin código de barras
+            </p>
+          </div>
+        )}
+      </div>
 
-        // Acción
-        h('div', { class: 'bg-blue-50 border border-blue-200 rounded p-4' }, [
-          h('p', { class: 'text-sm text-blue-900' }, [
-            '📋 Se procesarán ',
-            h('span', { class: 'font-bold' }, `${resumen.validas} filas`),
-            ' de un total de ',
-            h('span', { class: 'font-bold' }, `${resumen.total}`),
-          ]),
-        ]),
+      {/* Acción */}
+      <div className="bg-blue-50 border border-blue-200 rounded p-4">
+        <p className="text-sm text-blue-900">
+          📋 Se procesarán <span className="font-bold">{resumen.validas} filas</span> de un total de{' '}
+          <span className="font-bold">{resumen.total}</span>
+        </p>
+      </div>
 
-        // Botones
-        h('div', { class: 'flex gap-3 justify-end' }, [
-          h(
-            'button',
-            {
-              type: 'button',
-              class:
-                'px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium',
-              onClick: () => emit('volver'),
-              disabled: props.cargando,
-            },
-            'Volver'
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              class:
-                'px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-bold',
-              onClick: () => emit('confirmar'),
-              disabled: props.cargando || resumen.validas === 0,
-            },
-            'Procesar Carga'
-          ),
-        ]),
-      ]);
-  },
-});
+      {/* Botones */}
+      <div className="flex gap-3 justify-end">
+        <button
+          type="button"
+          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={onVolver}
+          disabled={cargando}
+        >
+          Volver
+        </button>
+        <button
+          type="button"
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={onConfirmar}
+          disabled={cargando || resumen.validas === 0}
+        >
+          Procesar Carga
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,223 +1,206 @@
-import { defineComponent, h } from 'vue';
 import { CargoCSVProducto } from '@/domain/entities/productos-masivos';
 
-export default defineComponent({
-  name: 'DetalleCarga',
-  props: {
-    cargo: {
-      type: Object as () => CargoCSVProducto,
-      required: true,
-    },
-  },
-  emits: ['cerrar', 'revertir'],
-  setup(props, { emit }) {
-    const porcentajeValidez = () => {
-      if (props.cargo.cantidad_filas === 0) return 0;
-      return Math.round((props.cargo.cantidad_validas / props.cargo.cantidad_filas) * 100);
-    };
+interface DetalleCargaProps {
+  cargo: CargoCSVProducto;
+  onCerrar?: () => void;
+  onRevertir?: (cargo: CargoCSVProducto) => void;
+}
 
-    const formatFecha = (fecha: string) => {
-      return new Date(fecha).toLocaleDateString('es-AR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    };
+export default function DetalleCarga({ cargo, onCerrar, onRevertir }: DetalleCargaProps) {
+  const porcentajeValidez = () => {
+    if (cargo.cantidad_filas === 0) return 0;
+    return Math.round((cargo.cantidad_validas / cargo.cantidad_filas) * 100);
+  };
 
-    return () =>
-      h('div', { class: 'space-y-6' }, [
-        // Encabezado
-        h('div', { class: 'flex justify-between items-start' }, [
-          h('div', [
-            h('h2', { class: 'text-2xl font-bold text-gray-900' }, props.cargo.nombre_archivo),
-            h('p', { class: 'text-gray-600 mt-1' }, [
-              'ID: ',
-              h('span', { class: 'font-mono font-bold' }, props.cargo.id),
-              ' • ',
-              formatFecha(props.cargo.created_at),
-            ]),
-          ]),
-          h(
-            'button',
-            {
-              type: 'button',
-              class: 'text-gray-400 hover:text-gray-600',
-              onClick: () => emit('cerrar'),
-            },
-            '✕'
-          ),
-        ]),
+  const formatFecha = (fecha: string) => {
+    return new Date(fecha).toLocaleDateString('es-AR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
-        // Estadísticas
-        h('div', { class: 'grid grid-cols-4 gap-4' }, [
-          h('div', { class: 'bg-blue-50 rounded-lg p-4 border border-blue-200' }, [
-            h('p', { class: 'text-2xl font-bold text-blue-600' }, props.cargo.cantidad_filas),
-            h('p', { class: 'text-sm text-gray-600' }, 'Total filas'),
-          ]),
-          h('div', { class: 'bg-green-50 rounded-lg p-4 border border-green-200' }, [
-            h('p', { class: 'text-2xl font-bold text-green-600' }, props.cargo.cantidad_validas),
-            h('p', { class: 'text-sm text-gray-600' }, 'Válidas'),
-          ]),
-          h('div', { class: 'bg-red-50 rounded-lg p-4 border border-red-200' }, [
-            h('p', { class: 'text-2xl font-bold text-red-600' }, props.cargo.cantidad_errores),
-            h('p', { class: 'text-sm text-gray-600' }, 'Errores'),
-          ]),
-          h('div', { class: 'bg-purple-50 rounded-lg p-4 border border-purple-200' }, [
-            h('p', { class: 'text-2xl font-bold text-purple-600' }, `${porcentajeValidez()}%`),
-            h('p', { class: 'text-sm text-gray-600' }, 'Validez'),
-          ]),
-        ]),
+  return (
+    <div className="space-y-6">
+      {/* Encabezado */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{cargo.nombre_archivo}</h2>
+          <p className="text-gray-600 mt-1">
+            ID: <span className="font-mono font-bold">{cargo.id}</span> • {formatFecha(cargo.created_at)}
+          </p>
+        </div>
+        <button type="button" className="text-gray-400 hover:text-gray-600" onClick={onCerrar}>
+          ✕
+        </button>
+      </div>
 
-        // Barra de progreso
-        h('div', { class: 'space-y-2' }, [
-          h('div', { class: 'flex justify-between text-sm' }, [
-            h('span', { class: 'text-gray-700 font-medium' }, 'Distribución'),
-            h('span', { class: 'text-gray-600' }, `${porcentajeValidez()}% válido`),
-          ]),
-          h('div', { class: 'w-full bg-gray-200 rounded-full h-3 overflow-hidden flex' }, [
-            h('div', {
-              class: 'bg-green-600',
-              style: `width: ${porcentajeValidez()}%`,
-            }),
-            h('div', {
-              class: 'bg-red-600',
-              style: `width: ${100 - porcentajeValidez()}%`,
-            }),
-          ]),
-        ]),
+      {/* Estadísticas */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <p className="text-2xl font-bold text-blue-600">{cargo.cantidad_filas}</p>
+          <p className="text-sm text-gray-600">Total filas</p>
+        </div>
+        <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+          <p className="text-2xl font-bold text-green-600">{cargo.cantidad_validas}</p>
+          <p className="text-sm text-gray-600">Válidas</p>
+        </div>
+        <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+          <p className="text-2xl font-bold text-red-600">{cargo.cantidad_errores}</p>
+          <p className="text-sm text-gray-600">Errores</p>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+          <p className="text-2xl font-bold text-purple-600">{porcentajeValidez()}%</p>
+          <p className="text-sm text-gray-600">Validez</p>
+        </div>
+      </div>
 
-        // Información del usuario
-        h('div', { class: 'bg-gray-50 rounded-lg p-4 border border-gray-200' }, [
-          h('h3', { class: 'font-semibold text-gray-900 mb-2' }, 'Información de carga'),
-          h('div', { class: 'grid grid-cols-2 gap-4 text-sm' }, [
-            h('div', [
-              h('p', { class: 'text-gray-600' }, 'Cargado por:'),
-              h('p', { class: 'font-medium text-gray-900' }, props.cargo.usuario?.nombre || '-'),
-            ]),
-            h('div', [
-              h('p', { class: 'text-gray-600' }, 'Email:'),
-              h('p', { class: 'font-medium text-gray-900' }, props.cargo.usuario?.email || '-'),
-            ]),
-            h('div', [
-              h('p', { class: 'text-gray-600' }, 'Estado:'),
-              h('span', {
-                class: `inline-block px-2 py-1 rounded text-xs font-medium ${
-                  props.cargo.estado === 'procesado'
-                    ? 'bg-green-100 text-green-800'
-                    : props.cargo.estado === 'revertido'
-                      ? 'bg-gray-100 text-gray-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                }`,
-              }, props.cargo.estado),
-            ]),
-            props.cargo.estado === 'revertido' &&
-              h('div', [
-                h('p', { class: 'text-gray-600' }, 'Revertido por:'),
-                h('p', { class: 'font-medium text-gray-900' }, props.cargo.usuarioReversion?.nombre || '-'),
-              ]),
-          ]),
-        ]),
+      {/* Barra de progreso */}
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-700 font-medium">Distribución</span>
+          <span className="text-gray-600">{porcentajeValidez()}% válido</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden flex">
+          <div className="bg-green-600" style={{ width: `${porcentajeValidez()}%` }} />
+          <div className="bg-red-600" style={{ width: `${100 - porcentajeValidez()}%` }} />
+        </div>
+      </div>
 
-        // Errores si los hay
-        props.cargo.errores_json && props.cargo.errores_json.length > 0 &&
-          h('div', { class: 'bg-red-50 rounded-lg p-4 border border-red-200' }, [
-            h('h3', { class: 'font-semibold text-red-900 mb-2' }, 'Errores detectados:'),
-            h(
-              'ul',
-              { class: 'space-y-1 text-sm text-red-700' },
-              props.cargo.errores_json.slice(0, 10).map((error: any) =>
-                h('li', { class: 'flex gap-2' }, [
-                  h('span', {}, '•'),
-                  h('span', {}, `Fila ${error.fila}: ${error.mensaje}`),
-                ])
-              )
-            ),
-            props.cargo.errores_json.length > 10 &&
-              h('p', { class: 'text-sm text-red-700 mt-2 font-medium' }, [
-                `...y ${props.cargo.errores_json.length - 10} errores más`,
-              ]),
-          ]),
+      {/* Información del usuario */}
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <h3 className="font-semibold text-gray-900 mb-2">Información de carga</h3>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-gray-600">Cargado por:</p>
+            <p className="font-medium text-gray-900">{cargo.usuario?.nombre || '-'}</p>
+          </div>
+          <div>
+            <p className="text-gray-600">Email:</p>
+            <p className="font-medium text-gray-900">{cargo.usuario?.email || '-'}</p>
+          </div>
+          <div>
+            <p className="text-gray-600">Estado:</p>
+            <span
+              className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                cargo.estado === 'procesado'
+                  ? 'bg-green-100 text-green-800'
+                  : cargo.estado === 'revertido'
+                  ? 'bg-gray-100 text-gray-800'
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}
+            >
+              {cargo.estado}
+            </span>
+          </div>
+          {cargo.estado === 'revertido' && (
+            <div>
+              <p className="text-gray-600">Revertido por:</p>
+              <p className="font-medium text-gray-900">{cargo.usuarioReversion?.nombre || '-'}</p>
+            </div>
+          )}
+        </div>
+      </div>
 
-        // Cambios realizados
-        props.cargo.cambios_json && props.cargo.cambios_json.length > 0 &&
-          h('div', { class: 'bg-blue-50 rounded-lg p-4 border border-blue-200' }, [
-            h('h3', { class: 'font-semibold text-blue-900 mb-3' }, 'Productos afectados:'),
-            h(
-              'div',
-              { class: 'space-y-2' },
-              props.cargo.cambios_json.slice(0, 10).map((cambio: any) =>
-                h('div', { class: 'bg-white rounded p-2 text-sm' }, [
-                  h('div', { class: 'flex justify-between items-start' }, [
-                    h('div', [
-                      h('p', { class: 'font-medium text-gray-900' }, cambio.producto_nombre),
-                      h('p', { class: 'text-xs text-gray-500' }, `Fila ${cambio.fila}`),
-                    ]),
-                    h('span', {
-                      class: `inline-block px-2 py-1 rounded text-xs font-medium ${
-                        cambio.accion === 'creado'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`,
-                    }, cambio.accion),
-                  ]),
-                  h('div', { class: 'mt-2 text-xs text-gray-600' }, [
-                    h('p', {}, [
-                      'Stock anterior: ',
-                      h('span', { class: 'font-medium' }, cambio.stock_anterior),
-                      ' → Nuevo: ',
-                      h('span', { class: 'font-medium' }, cambio.stock_nuevo),
-                    ]),
-                  ]),
-                ])
-              )
-            ),
-            props.cargo.cambios_json.length > 10 &&
-              h('p', { class: 'text-sm text-blue-700 mt-2 font-medium' }, [
-                `...y ${props.cargo.cambios_json.length - 10} productos más`,
-              ]),
-          ]),
+      {/* Errores si los hay */}
+      {cargo.errores_json && cargo.errores_json.length > 0 && (
+        <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+          <h3 className="font-semibold text-red-900 mb-2">Errores detectados:</h3>
+          <ul className="space-y-1 text-sm text-red-700">
+            {cargo.errores_json.slice(0, 10).map((error: any, idx: number) => (
+              <li key={idx} className="flex gap-2">
+                <span>•</span>
+                <span>
+                  Fila {error.fila}: {error.mensaje}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {cargo.errores_json.length > 10 && (
+            <p className="text-sm text-red-700 mt-2 font-medium">
+              ...y {cargo.errores_json.length - 10} errores más
+            </p>
+          )}
+        </div>
+      )}
 
-        // Información de reversión
-        props.cargo.estado === 'revertido' &&
-          h('div', { class: 'bg-gray-100 rounded-lg p-4 border border-gray-300' }, [
-            h('h3', { class: 'font-semibold text-gray-900 mb-2' }, 'Reversión'),
-            h('div', { class: 'text-sm space-y-2' }, [
-              h('p', [
-                h('span', { class: 'text-gray-600' }, 'Fecha: '),
-                h('span', { class: 'font-medium' }, formatFecha(props.cargo.fecha_reversion!)),
-              ]),
-              props.cargo.motivo_reversion &&
-                h('p', [
-                  h('span', { class: 'text-gray-600' }, 'Motivo: '),
-                  h('span', { class: 'font-medium' }, props.cargo.motivo_reversion),
-                ]),
-            ]),
-          ]),
+      {/* Cambios realizados */}
+      {cargo.cambios_json && cargo.cambios_json.length > 0 && (
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <h3 className="font-semibold text-blue-900 mb-3">Productos afectados:</h3>
+          <div className="space-y-2">
+            {cargo.cambios_json.slice(0, 10).map((cambio: any, idx: number) => (
+              <div key={idx} className="bg-white rounded p-2 text-sm">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium text-gray-900">{cambio.producto_nombre}</p>
+                    <p className="text-xs text-gray-500">Fila {cambio.fila}</p>
+                  </div>
+                  <span
+                    className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                      cambio.accion === 'creado' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {cambio.accion}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-gray-600">
+                  <p>
+                    Stock anterior: <span className="font-medium">{cambio.stock_anterior}</span> → Nuevo:{' '}
+                    <span className="font-medium">{cambio.stock_nuevo}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {cargo.cambios_json.length > 10 && (
+            <p className="text-sm text-blue-700 mt-2 font-medium">
+              ...y {cargo.cambios_json.length - 10} productos más
+            </p>
+          )}
+        </div>
+      )}
 
-        // Botones
-        h('div', { class: 'flex gap-3 justify-end' }, [
-          h(
-            'button',
-            {
-              type: 'button',
-              class: 'px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium',
-              onClick: () => emit('cerrar'),
-            },
-            'Cerrar'
-          ),
-          props.cargo.estado === 'procesado' &&
-            h(
-              'button',
-              {
-                type: 'button',
-                class: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium',
-                onClick: () => emit('revertir', props.cargo),
-              },
-              'Revertir carga'
-            ),
-        ]),
-      ]);
-  },
-});
+      {/* Información de reversión */}
+      {cargo.estado === 'revertido' && (
+        <div className="bg-gray-100 rounded-lg p-4 border border-gray-300">
+          <h3 className="font-semibold text-gray-900 mb-2">Reversión</h3>
+          <div className="text-sm space-y-2">
+            <p>
+              <span className="text-gray-600">Fecha: </span>
+              <span className="font-medium">{formatFecha(cargo.fecha_reversion!)}</span>
+            </p>
+            {cargo.motivo_reversion && (
+              <p>
+                <span className="text-gray-600">Motivo: </span>
+                <span className="font-medium">{cargo.motivo_reversion}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Botones */}
+      <div className="flex gap-3 justify-end">
+        <button
+          type="button"
+          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium"
+          onClick={onCerrar}
+        >
+          Cerrar
+        </button>
+        {cargo.estado === 'procesado' && (
+          <button
+            type="button"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+            onClick={() => onRevertir?.(cargo)}
+          >
+            Revertir carga
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
