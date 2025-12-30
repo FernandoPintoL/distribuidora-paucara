@@ -50,6 +50,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Entregas (Flujo de carga)
             'entregas.index', 'entregas.create', 'entregas.store', 'entregas.show', 'entregas.view', 'entregas.edit', 'entregas.update', 'entregas.delete', 'entregas.destroy',
+            'entregas.asignar', 'entregas.manage', 'entregas.tracking',
             'entregas.confirmar-carga', 'entregas.listo-para-entrega', 'entregas.iniciar-transito', 'entregas.actualizar-ubicacion',
 
             // Reportes de Carga

@@ -5,19 +5,25 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\StoreProductoRequest;
 use App\Http\Requests\UpdateProductoRequest;
 use App\Models\Almacen;
+use App\Models\CargoCSVProducto;
 use App\Models\Categoria;
 use App\Models\CodigoBarra;
 use App\Models\ImagenProducto;
 use App\Models\Marca;
+use App\Models\MovimientoInventario;
 use App\Models\PrecioProducto;
 use App\Models\Producto;
+use App\Models\Proveedor;
 use App\Models\StockProducto;
+use App\Models\TipoAjusteInventario;
 use App\Models\TipoPrecio;
 use App\Models\UnidadMedida;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -1236,5 +1242,549 @@ class ProductoController extends Controller
             });
 
         return ApiResponse::success($productos);
+    }
+
+    /**
+     * Importar productos masivamente desde CSV
+     */
+    public function importarProductosMasivos(Request $request): JsonResponse
+    {
+        try {
+            // Validar request
+            $validated = $request->validate([
+                'nombre_archivo' => 'required|string|max:255',
+                'datos_csv' => 'required|string',
+                'productos' => 'required|array|min:1|max:5000',
+                'productos.*.nombre' => 'required|string|max:255',
+                'productos.*.cantidad' => 'required|numeric|min:0',
+                'productos.*.precio_costo' => 'nullable|numeric|min:0',
+                'productos.*.precio_venta' => 'nullable|numeric|min:0',
+                'productos.*.codigo_barra' => 'nullable|string|max:50',
+                'productos.*.sku' => 'nullable|string|max:20',
+                'productos.*.proveedor_nombre' => 'nullable|string|max:255',
+                'productos.*.unidad_medida_nombre' => 'nullable|string|max:100',
+                'productos.*.lote' => 'nullable|string|max:50',
+                'productos.*.fecha_vencimiento' => 'nullable|date',
+                'productos.*.descripcion' => 'nullable|string|max:500',
+                'productos.*.categoria_nombre' => 'nullable|string|max:100',
+                'productos.*.marca_nombre' => 'nullable|string|max:100',
+            ]);
+
+            // Generar hash del CSV para deduplicación
+            $hashArchivo = hash('sha256', $validated['datos_csv']);
+
+            // Verificar si el archivo ya fue procesado
+            $cargaExistente = CargoCSVProducto::where('hash_archivo', $hashArchivo)->first();
+            if ($cargaExistente) {
+                return ApiResponse::error(
+                    'Este archivo ya fue procesado',
+                    409,
+                    ['cargo_id' => $cargaExistente->id]
+                );
+            }
+
+            // Crear registro de carga
+            $cargo = CargoCSVProducto::create([
+                'usuario_id' => Auth::id(),
+                'nombre_archivo' => $validated['nombre_archivo'],
+                'hash_archivo' => $hashArchivo,
+                'cantidad_filas' => count($validated['productos']),
+                'estado' => 'pendiente',
+                'datos_json' => $validated['datos_csv'],
+            ]);
+
+            // Iniciar transacción
+            DB::beginTransaction();
+
+            try {
+                $cambios = [];
+                $errores = [];
+                $cantidadValidas = 0;
+
+                $almacenPrincipalId = config('inventario.almacen_principal_id', 1);
+                $tipoAjuste = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->first();
+
+                // Crear tipo de ajuste si no existe
+                if (!$tipoAjuste) {
+                    $tipoAjuste = TipoAjusteInventario::create([
+                        'clave' => 'INVENTARIO_INICIAL',
+                        'label' => 'Inventario Inicial',
+                        'descripcion' => 'Carga inicial de inventario al importar productos',
+                        'color' => 'purple',
+                        'activo' => true,
+                    ]);
+                }
+
+                // Procesar cada producto
+                foreach ($validated['productos'] as $index => $datosFila) {
+                    try {
+                        // Buscar/crear proveedor
+                        $proveedor = null;
+                        if (!empty($datosFila['proveedor_nombre'])) {
+                            $proveedor = $this->buscarOCrearProveedor($datosFila['proveedor_nombre']);
+                        }
+
+                        // Buscar/crear unidad de medida
+                        $unidadMedida = null;
+                        if (!empty($datosFila['unidad_medida_nombre'])) {
+                            $unidadMedida = $this->buscarOCrearUnidadMedida($datosFila['unidad_medida_nombre']);
+                        }
+
+                        // Buscar/crear categoría
+                        $categoria = null;
+                        if (!empty($datosFila['categoria_nombre'])) {
+                            $categoria = Categoria::where('nombre', $datosFila['categoria_nombre'])->first();
+                            if (!$categoria) {
+                                $categoria = Categoria::create([
+                                    'nombre' => $datosFila['categoria_nombre'],
+                                    'activo' => true,
+                                ]);
+                            }
+                        }
+
+                        // Buscar/crear marca
+                        $marca = null;
+                        if (!empty($datosFila['marca_nombre'])) {
+                            $marca = Marca::where('nombre', $datosFila['marca_nombre'])->first();
+                            if (!$marca) {
+                                $marca = Marca::create([
+                                    'nombre' => $datosFila['marca_nombre'],
+                                    'activo' => true,
+                                ]);
+                            }
+                        }
+
+                        // Buscar producto por código de barra o nombre
+                        $producto = null;
+                        $esNuevo = true;
+
+                        if (!empty($datosFila['codigo_barra'])) {
+                            $producto = Producto::whereHas('codigosBarra', function ($q) use ($datosFila) {
+                                $q->where('codigo', $datosFila['codigo_barra'])->where('activo', true);
+                            })->first();
+                        }
+
+                        if (!$producto && !empty($datosFila['nombre'])) {
+                            $nombreNormalizado = $this->normalizarTexto($datosFila['nombre']);
+                            $producto = Producto::whereRaw('LOWER(nombre) = ?', [$nombreNormalizado])->first();
+                        }
+
+                        if ($producto) {
+                            $esNuevo = false;
+                            // Actualizar precios si existe
+                            if (!empty($datosFila['precio_costo']) || !empty($datosFila['precio_venta'])) {
+                                $this->actualizarPreciosProducto($producto, $datosFila);
+                            }
+                        } else {
+                            // Crear nuevo producto
+                            $producto = Producto::create([
+                                'nombre' => $datosFila['nombre'],
+                                'descripcion' => $datosFila['descripcion'] ?? null,
+                                'sku' => $datosFila['sku'] ?? null, // Se genera automáticamente si es null
+                                'categoria_id' => $categoria?->id,
+                                'marca_id' => $marca?->id,
+                                'proveedor_id' => $proveedor?->id,
+                                'unidad_medida_id' => $unidadMedida?->id,
+                                'activo' => true,
+                            ]);
+
+                            // Crear precios
+                            if (!empty($datosFila['precio_costo']) || !empty($datosFila['precio_venta'])) {
+                                $this->crearPreciosProducto($producto, $datosFila);
+                            }
+                        }
+
+                        // Crear/actualizar código de barra
+                        if (!empty($datosFila['codigo_barra'])) {
+                            $codigoBarra = CodigoBarra::where('codigo', $datosFila['codigo_barra'])
+                                ->where('producto_id', $producto->id)
+                                ->first();
+
+                            if (!$codigoBarra) {
+                                // Marcar otros códigos como no principal
+                                CodigoBarra::where('producto_id', $producto->id)
+                                    ->update(['es_principal' => false]);
+
+                                // Crear nuevo código
+                                CodigoBarra::create([
+                                    'producto_id' => $producto->id,
+                                    'codigo' => $datosFila['codigo_barra'],
+                                    'tipo' => 'EAN',
+                                    'es_principal' => true,
+                                    'activo' => true,
+                                ]);
+                            }
+                        }
+
+                        // Crear/actualizar stock en almacén principal
+                        $stockAnterior = 0;
+                        $stock = StockProducto::where('producto_id', $producto->id)
+                            ->where('almacen_id', $almacenPrincipalId)
+                            ->where('lote', $datosFila['lote'] ?? null)
+                            ->first();
+
+                        if ($stock) {
+                            $stockAnterior = $stock->cantidad;
+                            // Sumar cantidad al stock existente
+                            $stock->cantidad += $datosFila['cantidad'];
+                            $stock->cantidad_disponible = $stock->cantidad - ($stock->cantidad_reservada ?? 0);
+                            $stock->fecha_actualizacion = now();
+                            $stock->save();
+                        } else {
+                            // Crear nuevo registro de stock
+                            $stock = StockProducto::create([
+                                'producto_id' => $producto->id,
+                                'almacen_id' => $almacenPrincipalId,
+                                'cantidad' => $datosFila['cantidad'],
+                                'cantidad_reservada' => 0,
+                                'cantidad_disponible' => $datosFila['cantidad'],
+                                'lote' => $datosFila['lote'] ?? null,
+                                'fecha_vencimiento' => $datosFila['fecha_vencimiento'] ?? null,
+                            ]);
+                        }
+
+                        // Crear movimiento de inventario
+                        MovimientoInventario::create([
+                            'stock_producto_id' => $stock->id,
+                            'cantidad_anterior' => $stockAnterior,
+                            'cantidad' => $datosFila['cantidad'],
+                            'cantidad_posterior' => $stock->cantidad,
+                            'fecha' => now(),
+                            'observacion' => "Carga masiva: {$validated['nombre_archivo']}",
+                            'tipo' => 'ENTRADA_AJUSTE',
+                            'user_id' => Auth::id(),
+                            'tipo_ajuste_inventario_id' => $tipoAjuste->id,
+                            'referencia_tipo' => 'CARGA_CSV_PRODUCTOS',
+                            'referencia_id' => $cargo->id,
+                        ]);
+
+                        // Registrar cambio
+                        $cambios[] = [
+                            'fila' => $index + 2, // +2 porque fila 1 es encabezado
+                            'producto_id' => $producto->id,
+                            'producto_nombre' => $producto->nombre,
+                            'accion' => $esNuevo ? 'creado' : 'actualizado',
+                            'stock_anterior' => $stockAnterior,
+                            'stock_nuevo' => $stock->cantidad,
+                        ];
+
+                        $cantidadValidas++;
+                    } catch (\Exception $e) {
+                        $errores[] = [
+                            'fila' => $index + 2,
+                            'mensaje' => "Error procesando fila: {$e->getMessage()}",
+                        ];
+                        Log::error("Error procesando producto en carga CSV: {$e->getMessage()}", [
+                            'cargo_id' => $cargo->id,
+                            'fila' => $index + 2,
+                            'datos' => $datosFila,
+                        ]);
+                    }
+                }
+
+                // Actualizar cargo con resultados
+                $cargo->update([
+                    'cantidad_validas' => $cantidadValidas,
+                    'cantidad_errores' => count($errores),
+                    'estado' => 'procesado',
+                    'cambios_json' => $cambios,
+                    'errores_json' => $errores,
+                ]);
+
+                DB::commit();
+
+                return ApiResponse::success([
+                    'cargo_id' => $cargo->id,
+                    'cantidad_total' => $validated['productos']->count(),
+                    'cantidad_procesados' => $cantidadValidas,
+                    'cantidad_errores' => count($errores),
+                    'errores' => $errores,
+                    'mensaje' => "Se procesaron {$cantidadValidas} productos con éxito",
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error("Error en importación de productos: {$e->getMessage()}", [
+                    'cargo_id' => $cargo->id,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                $cargo->update([
+                    'estado' => 'cancelado',
+                    'errores_json' => [['mensaje' => "Error crítico: {$e->getMessage()}"]],
+                ]);
+
+                return ApiResponse::error(
+                    "Error procesando carga masiva: {$e->getMessage()}",
+                    500
+                );
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponse::error('Validación fallida', 422, $e->errors());
+        } catch (\Exception $e) {
+            Log::error("Error en importarProductosMasivos: {$e->getMessage()}");
+            return ApiResponse::error("Error inesperado: {$e->getMessage()}", 500);
+        }
+    }
+
+    /**
+     * Listar cargas masivas con historial
+     */
+    public function listarCargasMasivas(Request $request): JsonResponse
+    {
+        try {
+            $estado = $request->string('estado')->toString();
+            $pagina = $request->integer('page', 1);
+            $porPagina = $request->integer('per_page', 15);
+
+            $query = CargoCSVProducto::with(['usuario', 'usuarioReversion'])
+                ->orderByDesc('created_at');
+
+            if (!empty($estado) && in_array($estado, ['pendiente', 'procesado', 'cancelado', 'revertido'])) {
+                $query->where('estado', $estado);
+            }
+
+            $cargas = $query->paginate($porPagina, ['*'], 'page', $pagina);
+
+            return ApiResponse::success($cargas);
+        } catch (\Exception $e) {
+            Log::error("Error listando cargas masivas: {$e->getMessage()}");
+            return ApiResponse::error("Error listando cargas: {$e->getMessage()}", 500);
+        }
+    }
+
+    /**
+     * Ver detalle de una carga masiva
+     */
+    public function verCargaMasiva(CargoCSVProducto $cargo): JsonResponse
+    {
+        try {
+            $cargo->load(['usuario', 'usuarioReversion']);
+
+            return ApiResponse::success($cargo);
+        } catch (\Exception $e) {
+            Log::error("Error viendo carga masiva: {$e->getMessage()}");
+            return ApiResponse::error("Error obteniendo carga: {$e->getMessage()}", 500);
+        }
+    }
+
+    /**
+     * Revertir una carga masiva de productos
+     */
+    public function revertirCargaMasiva(Request $request, CargoCSVProducto $cargo): JsonResponse
+    {
+        try {
+            // Validar que pueda revertirse
+            if (!$cargo->puedeRevertir()) {
+                $razon = $cargo->obtenerRazonNoRevertible();
+                return ApiResponse::error($razon ?? 'No se puede revertir esta carga', 422);
+            }
+
+            $motivo = $request->string('motivo', 'Sin motivo especificado')->toString();
+
+            DB::beginTransaction();
+
+            try {
+                $productosAfectados = $cargo->obtenerProductosAfectados();
+
+                foreach ($productosAfectados as $cambio) {
+                    $producto = Producto::find($cambio['id']);
+                    if (!$producto) {
+                        continue;
+                    }
+
+                    if ($cambio['accion'] === 'creado') {
+                        // Eliminar movimientos de inventario
+                        MovimientoInventario::where('referencia_tipo', 'CARGA_CSV_PRODUCTOS')
+                            ->where('referencia_id', $cargo->id)
+                            ->delete();
+
+                        // Eliminar stock
+                        StockProducto::where('producto_id', $producto->id)->delete();
+
+                        // Eliminar precios
+                        PrecioProducto::where('producto_id', $producto->id)->delete();
+
+                        // Eliminar códigos de barra
+                        CodigoBarra::where('producto_id', $producto->id)->delete();
+
+                        // Eliminar producto
+                        $producto->delete();
+                    } else if ($cambio['accion'] === 'actualizado') {
+                        // Revertir stock a valor anterior
+                        $movimientos = MovimientoInventario::where('referencia_tipo', 'CARGA_CSV_PRODUCTOS')
+                            ->where('referencia_id', $cargo->id)
+                            ->get();
+
+                        foreach ($movimientos as $movimiento) {
+                            $stock = StockProducto::find($movimiento->stock_producto_id);
+                            if ($stock) {
+                                $stock->cantidad = $cambio['stock_anterior'];
+                                $stock->cantidad_disponible = $cambio['stock_anterior'] - ($stock->cantidad_reservada ?? 0);
+                                $stock->save();
+                            }
+                            $movimiento->delete();
+                        }
+                    }
+                }
+
+                // Marcar como revertida
+                $cargo->marcarComoRevertida(Auth::user(), $motivo);
+
+                DB::commit();
+
+                return ApiResponse::success([
+                    'mensaje' => 'Carga revertida exitosamente',
+                    'cargo_id' => $cargo->id,
+                    'productos_afectados' => count($productosAfectados),
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            Log::error("Error revirtiendo carga masiva: {$e->getMessage()}");
+            return ApiResponse::error("Error revirtiendo carga: {$e->getMessage()}", 500);
+        }
+    }
+
+    /**
+     * Métodos helper privados
+     */
+
+    /**
+     * Normalizar texto para búsqueda (eliminar acentos)
+     */
+    private function normalizarTexto(string $texto): string
+    {
+        return strtolower(trim(
+            (string) preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);~i', '$1',
+                htmlentities($texto, ENT_QUOTES, 'UTF-8'))
+        ));
+    }
+
+    /**
+     * Buscar o crear proveedor por nombre
+     */
+    private function buscarOCrearProveedor(string $nombre): Proveedor
+    {
+        $nombreNormalizado = $this->normalizarTexto($nombre);
+
+        $proveedor = Proveedor::whereRaw('LOWER(nombre) = ?', [$nombreNormalizado])->first();
+
+        if (!$proveedor) {
+            $proveedor = Proveedor::create([
+                'nombre' => $nombre,
+                'activo' => true,
+                'fecha_registro' => now(),
+            ]);
+        }
+
+        return $proveedor;
+    }
+
+    /**
+     * Buscar o crear unidad de medida
+     */
+    private function buscarOCrearUnidadMedida(string $nombre): UnidadMedida
+    {
+        $nombreNormalizado = $this->normalizarTexto($nombre);
+
+        $unidad = UnidadMedida::where(function ($q) use ($nombreNormalizado) {
+            $q->whereRaw('LOWER(codigo) = ?', [$nombreNormalizado])
+              ->orWhereRaw('LOWER(nombre) = ?', [$nombreNormalizado]);
+        })->first();
+
+        if (!$unidad) {
+            // Generar código: primeras 3 letras en mayúsculas
+            $codigo = strtoupper(substr($nombre, 0, 3));
+
+            $unidad = UnidadMedida::create([
+                'codigo' => $codigo,
+                'nombre' => $nombre,
+                'activo' => true,
+            ]);
+        }
+
+        return $unidad;
+    }
+
+    /**
+     * Crear precios para un producto
+     */
+    private function crearPreciosProducto(Producto $producto, array $datosFila): void
+    {
+        // Precio de costo (tipo_precio id=1)
+        if (!empty($datosFila['precio_costo'])) {
+            PrecioProducto::create([
+                'producto_id' => $producto->id,
+                'tipo_precio_id' => 1, // COSTO
+                'nombre' => 'Precio de Costo',
+                'precio' => (float) $datosFila['precio_costo'],
+                'es_precio_base' => true,
+                'activo' => true,
+                'fecha_inicio' => now()->toDateString(),
+            ]);
+        }
+
+        // Precio de venta (tipo_precio id=2)
+        if (!empty($datosFila['precio_venta'])) {
+            PrecioProducto::create([
+                'producto_id' => $producto->id,
+                'tipo_precio_id' => 2, // VENTA
+                'nombre' => 'Precio de Venta',
+                'precio' => (float) $datosFila['precio_venta'],
+                'es_precio_base' => false,
+                'activo' => true,
+                'fecha_inicio' => now()->toDateString(),
+            ]);
+        }
+    }
+
+    /**
+     * Actualizar precios de un producto existente
+     */
+    private function actualizarPreciosProducto(Producto $producto, array $datosFila): void
+    {
+        // Actualizar/crear precio de costo
+        if (!empty($datosFila['precio_costo'])) {
+            $precioCosto = PrecioProducto::where('producto_id', $producto->id)
+                ->where('tipo_precio_id', 1)
+                ->first();
+
+            if ($precioCosto) {
+                $precioCosto->update(['precio' => (float) $datosFila['precio_costo']]);
+            } else {
+                PrecioProducto::create([
+                    'producto_id' => $producto->id,
+                    'tipo_precio_id' => 1,
+                    'nombre' => 'Precio de Costo',
+                    'precio' => (float) $datosFila['precio_costo'],
+                    'es_precio_base' => true,
+                    'activo' => true,
+                    'fecha_inicio' => now()->toDateString(),
+                ]);
+            }
+        }
+
+        // Actualizar/crear precio de venta
+        if (!empty($datosFila['precio_venta'])) {
+            $precioVenta = PrecioProducto::where('producto_id', $producto->id)
+                ->where('tipo_precio_id', 2)
+                ->first();
+
+            if ($precioVenta) {
+                $precioVenta->update(['precio' => (float) $datosFila['precio_venta']]);
+            } else {
+                PrecioProducto::create([
+                    'producto_id' => $producto->id,
+                    'tipo_precio_id' => 2,
+                    'nombre' => 'Precio de Venta',
+                    'precio' => (float) $datosFila['precio_venta'],
+                    'es_precio_base' => false,
+                    'activo' => true,
+                    'fecha_inicio' => now()->toDateString(),
+                ]);
+            }
+        }
     }
 }

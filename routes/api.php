@@ -364,6 +364,12 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::put('{producto}', [ProductoController::class, 'updateApi']);
         Route::delete('{producto}', [ProductoController::class, 'destroyApi']);
         Route::get('{producto}/historial-precios', [ProductoController::class, 'historialPrecios']);
+
+        // Rutas para carga masiva de productos
+        Route::post('importar-masivo', [ProductoController::class, 'importarProductosMasivos']);
+        Route::get('cargas-masivas', [ProductoController::class, 'listarCargasMasivas']);
+        Route::get('cargas-masivas/{cargo}', [ProductoController::class, 'verCargaMasiva']);
+        Route::post('cargas-masivas/{cargo}/revertir', [ProductoController::class, 'revertirCargaMasiva']);
     });
 
     // Rutas API para vehículos

@@ -19,6 +19,7 @@ export const monedasConfig: ModuleConfig<Moneda, MonedaFormData> = {
     { key: 'nombre', label: 'Nombre', type: 'text' },
     { key: 'codigo', label: 'Código', type: 'text' },
     { key: 'simbolo', label: 'Símbolo', type: 'text' },
+    { key: 'tasa_cambio', label: 'Tasa de Cambio', type: 'number' },
     { key: 'es_moneda_base', label: 'Moneda Base', type: 'boolean' },
     { key: 'activo', label: 'Estado', type: 'boolean' },
   ],
@@ -48,6 +49,19 @@ export const monedasConfig: ModuleConfig<Moneda, MonedaFormData> = {
       required: true,
       placeholder: 'Ej: $',
       validation: { maxLength: 5 }
+    },
+    {
+      key: 'tasa_cambio',
+      label: 'Tasa de Cambio',
+      type: 'number',
+      required: true,
+      placeholder: 'Ej: 1.000000',
+      step: 0.000001,
+      min: 0.000001,
+      validation: {
+        min: 0.000001,
+        pattern: /^\d+(\.\d{1,6})?$/ // Máximo 6 decimales
+      }
     },
     {
       key: 'es_moneda_base',
