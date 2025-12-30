@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    public $withouTransactions = true;
+
     /**
      * Run the migrations.
      *
@@ -33,88 +35,54 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Paso 1: Migrar datos existentes de entregas.venta_id → entrega_venta pivot
-        // Solo si hay datos que migrar
-        try {
-            DB::statement('
-                INSERT INTO entrega_venta (entrega_id, venta_id, orden, created_at, updated_at)
-                SELECT id, venta_id, 1, NOW(), NOW()
-                FROM entregas
-                WHERE venta_id IS NOT NULL
-                AND id NOT IN (
-                    SELECT DISTINCT entrega_id
-                    FROM entrega_venta
-                    WHERE venta_id = entregas.venta_id
-                )
-            ');
-        } catch (\Exception $e) {
-            // Si hay error (por ejemplo, duplicados), loguear pero continuar
-            \Log::warning('Error migrando datos a entrega_venta: ' . $e->getMessage());
-        }
+        \Log::info('Migrando: 2025_12_27_refactor_entregas_remove_redundant_fks');
 
-        // Paso 2: Eliminar FK de entregas.venta_id
-        Schema::table('entregas', function (Blueprint $table) {
-            // Eliminar constraint de FK primero
+        // NOTA: Los cambios de refactorización ya fueron hechos parcialmente en migraciones anteriores
+        // Esta migración verifica el estado actual y solo hace los pasos necesarios
+
+        // Verificar estado actual
+        $venta_id_existe = Schema::hasColumn('entregas', 'venta_id');
+        $proforma_id_existe = Schema::hasColumn('entregas', 'proforma_id');
+        $entrega_venta_existe = Schema::hasTable('entrega_venta');
+
+        \Log::info("Estado: venta_id=$venta_id_existe, proforma_id=$proforma_id_existe, entrega_venta=$entrega_venta_existe");
+
+        if ($venta_id_existe && $entrega_venta_existe) {
+            // Paso 1: Migrar datos si aún existen
             try {
-                $table->dropForeign(['venta_id']);
+                DB::statement('
+                    INSERT INTO entrega_venta (entrega_id, venta_id, orden, created_at, updated_at)
+                    SELECT id, venta_id, 1, NOW(), NOW()
+                    FROM entregas
+                    WHERE venta_id IS NOT NULL
+                    ON CONFLICT (entrega_id, venta_id) DO NOTHING
+                ');
+                \Log::info('Datos migrados a pivot');
             } catch (\Exception $e) {
-                \Log::warning('FK venta_id no existe o ya fue eliminada');
+                \Log::warning('Error migrando datos: ' . $e->getMessage());
             }
-        });
 
-        // Paso 3: Eliminar columna venta_id de entregas
-        Schema::table('entregas', function (Blueprint $table) {
-            if (Schema::hasColumn('entregas', 'venta_id')) {
-                $table->dropColumn('venta_id');
-            }
-        });
-
-        // Paso 4: Eliminar FK de reporte_cargas.entrega_id
-        // NOTA: Mantenemos la columna por compatibilidad, pero sin FK
-        Schema::table('reporte_cargas', function (Blueprint $table) {
-            // Primero verificar que la FK existe
+            // Paso 2-3: Eliminar venta_id
             try {
-                $table->dropForeign(['entrega_id']);
+                // Primero FK
+                DB::statement('ALTER TABLE entregas DROP CONSTRAINT IF EXISTS entregas_venta_id_foreign');
+                // Luego columna
+                DB::statement('ALTER TABLE entregas DROP COLUMN IF EXISTS venta_id');
+                \Log::info('venta_id y su FK eliminadas');
             } catch (\Exception $e) {
-                \Log::warning('FK entrega_id en reporte_cargas no existe');
+                \Log::warning('Error eliminando venta_id: ' . $e->getMessage());
             }
-        });
-
-        // Paso 5: Convertir entrega_id en reporte_cargas a nullable
-        // para poder usarlo como referencia opcional (legacy support)
-        // Sin embargo, usaremos pivot reporte_carga_entregas como fuente de verdad
-
-        // Nota: Ya está nullable por defecto en la migración anterior
-        // Solo agregamos comentario (syntax compatible con PostgreSQL y MySQL)
-        try {
-            DB::statement('
-                COMMENT ON COLUMN reporte_cargas.entrega_id IS
-                \'DEPRECATED - usar pivot reporte_carga_entregas. Mantenido para compatibilidad.\'
-            ');
-        } catch (\Exception $e) {
-            // Si la syntax de comentarios no funciona, ignorar
-            \Log::warning('No se pudo agregar comentario a entrega_id: ' . $e->getMessage());
         }
 
-        // Paso 6: Mantener proforma_id para compatibilidad con datos legacy
-        // pero documentar que es deprecated
+        // Paso 4: Eliminar FK de reporte_cargas si existe
         try {
-            DB::statement('
-                COMMENT ON COLUMN entregas.proforma_id IS
-                \'DEPRECATED - usar venta_id. Mantenido para compatibilidad con entregas legacy.\'
-            ');
+            DB::statement('ALTER TABLE reporte_cargas DROP CONSTRAINT IF EXISTS reporte_cargas_entrega_id_foreign');
+            \Log::info('FK reporte_cargas.entrega_id eliminada');
         } catch (\Exception $e) {
-            // Si la syntax de comentarios no funciona, ignorar
-            \Log::warning('No se pudo agregar comentario a proforma_id: ' . $e->getMessage());
+            \Log::warning('FK reporte_cargas no existe o ya eliminada: ' . $e->getMessage());
         }
 
-        // Paso 7: Crear índices de performance en pivot
-        Schema::table('entrega_venta', function (Blueprint $table) {
-            // Ya están creados en la migración anterior, pero confirmar
-            if (!Schema::hasIndex('entrega_venta', 'entrega_venta_entrega_id_orden_index')) {
-                $table->index(['entrega_id', 'orden']);
-            }
-        });
+        \Log::info('Migración completada');
     }
 
     /**
