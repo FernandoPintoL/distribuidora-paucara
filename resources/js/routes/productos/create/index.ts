@@ -77,8 +77,3 @@ moderno.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     moderno.form = modernoForm
-const create = {
-    moderno,
-}
-
-export default create

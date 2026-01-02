@@ -20,6 +20,8 @@ export interface FilaProductoCSV {
   fecha_vencimiento?: string;
   categoria_nombre?: string;
   marca_nombre?: string;
+  almacen_id?: number;
+  almacen_nombre?: string;
 }
 
 /**
@@ -72,6 +74,8 @@ export interface ProductoParaProcesar {
   fecha_vencimiento?: string;
   categoria_nombre?: string;
   marca_nombre?: string;
+  almacen_id?: number;
+  almacen_nombre?: string;
 }
 
 /**

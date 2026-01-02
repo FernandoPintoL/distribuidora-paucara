@@ -7,6 +7,7 @@ import {
   ResultadoValidacion,
 } from '@/domain/entities/productos-masivos';
 import { productosCSVService } from '@/infrastructure/services/productosCSV.service';
+import { busquedaInteligente } from '@/infrastructure/services/busquedaInteligente.service';
 
 export function useProductosMasivos() {
   // Estado
@@ -119,6 +120,77 @@ export function useProductosMasivos() {
     []
   );
 
+  /**
+   * Resolver referencias inteligentemente usando búsqueda por ID, código, nombre (case-insensitive)
+   */
+  const resolverReferencias = useCallback(
+    (
+      filasParaResolver: FilaProductoValidada[],
+      categorias: any[],
+      marcas: any[],
+      unidades: any[],
+      almacenes: any[]
+    ): FilaProductoValidada[] => {
+      return filasParaResolver.map((fila) => {
+        const filaResuelta = { ...fila };
+
+        // Resolver categoría
+        if (fila.categoria_nombre) {
+          const catResuelta = busquedaInteligente.resolver(
+            fila.categoria_nombre,
+            categorias
+          );
+          if (catResuelta) {
+            filaResuelta.categoria_nombre = catResuelta.nombre;
+          }
+        }
+
+        // Resolver marca
+        if (fila.marca_nombre) {
+          const marcaResuelta = busquedaInteligente.resolver(
+            fila.marca_nombre,
+            marcas
+          );
+          if (marcaResuelta) {
+            filaResuelta.marca_nombre = marcaResuelta.nombre;
+          }
+        }
+
+        // Resolver unidad de medida
+        if (fila.unidad_medida_nombre) {
+          const unidadResuelta = busquedaInteligente.resolver(
+            fila.unidad_medida_nombre,
+            unidades
+          );
+          if (unidadResuelta) {
+            filaResuelta.unidad_medida_nombre = unidadResuelta.nombre;
+          }
+        }
+
+        // Resolver almacén
+        if (fila.almacen_nombre) {
+          const almacenResuelta = busquedaInteligente.resolver(
+            fila.almacen_nombre,
+            almacenes
+          );
+          if (almacenResuelta) {
+            filaResuelta.almacen_id = almacenResuelta.id;
+            filaResuelta.almacen_nombre = almacenResuelta.nombre;
+          }
+        }
+        if (fila.almacen_id && !fila.almacen_nombre) {
+          const almacen = almacenes.find((a) => a.id === fila.almacen_id);
+          if (almacen) {
+            filaResuelta.almacen_nombre = almacen.nombre;
+          }
+        }
+
+        return filaResuelta;
+      });
+    },
+    []
+  );
+
   const detectarDuplicados = useCallback((): FilaProductoValidada[] => {
     const nombres = new Map<string, FilaProductoValidada[]>();
     const codigosBarras = new Map<string, FilaProductoValidada[]>();
@@ -180,6 +252,8 @@ export function useProductosMasivos() {
           fecha_vencimiento: fila.fecha_vencimiento,
           categoria_nombre: fila.categoria_nombre,
           marca_nombre: fila.marca_nombre,
+          almacen_id: fila.almacen_id,
+          almacen_nombre: fila.almacen_nombre,
         }));
 
         const datos: DatosProductosMasivos = {
@@ -225,6 +299,36 @@ export function useProductosMasivos() {
     setMensajeError(null);
   }, [limpiar]);
 
+  // Método para editar una fila
+  const editarFila = useCallback((filaIndex: number, campo: keyof FilaProductoValidada, valor: any): void => {
+    setFilas((filasActuales) => {
+      const nuevasFilas = [...filasActuales];
+      const fila = nuevasFilas[filaIndex];
+
+      if (fila) {
+        // Actualizar el campo
+        (fila as any)[campo] = valor;
+
+        // Revalidar la fila
+        if (campo === 'cantidad' || campo === 'nombre' || campo === 'precio_costo' || campo === 'precio_venta') {
+          // Validaciones básicas
+          if (campo === 'cantidad') {
+            fila.validacion.es_valido = fila.nombre && fila.cantidad >= 0;
+          } else if (campo === 'nombre') {
+            fila.validacion.es_valido = valor && valor.trim().length > 0 && fila.cantidad >= 0;
+          }
+        }
+      }
+
+      return nuevasFilas;
+    });
+  }, []);
+
+  // Método para eliminar una fila
+  const eliminarFila = useCallback((filaIndex: number): void => {
+    setFilas((filasActuales) => filasActuales.filter((_, idx) => idx !== filaIndex));
+  }, []);
+
   return {
     // Estado
     archivo,
@@ -256,9 +360,12 @@ export function useProductosMasivos() {
 
     // Métodos
     validarArchivo,
+    resolverReferencias,
     detectarDuplicados,
     procesarProductos,
     limpiar,
     volverAlPaso,
+    editarFila,
+    eliminarFila,
   };
 }

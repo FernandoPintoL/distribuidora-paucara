@@ -1268,6 +1268,8 @@ class ProductoController extends Controller
                 'productos.*.descripcion' => 'nullable|string|max:500',
                 'productos.*.categoria_nombre' => 'nullable|string|max:100',
                 'productos.*.marca_nombre' => 'nullable|string|max:100',
+                'productos.*.almacen_id' => 'nullable|integer|min:1',
+                'productos.*.almacen_nombre' => 'nullable|string|max:255',
             ]);
 
             // Generar hash del CSV para deduplicación
@@ -1330,27 +1332,29 @@ class ProductoController extends Controller
                             $unidadMedida = $this->buscarOCrearUnidadMedida($datosFila['unidad_medida_nombre']);
                         }
 
-                        // Buscar/crear categoría
+                        // Buscar/crear categoría (con búsqueda inteligente por ID, nombre)
                         $categoria = null;
                         if (!empty($datosFila['categoria_nombre'])) {
-                            $categoria = Categoria::where('nombre', $datosFila['categoria_nombre'])->first();
-                            if (!$categoria) {
-                                $categoria = Categoria::create([
-                                    'nombre' => $datosFila['categoria_nombre'],
-                                    'activo' => true,
-                                ]);
-                            }
+                            $categoria = $this->buscarOCrearCategoria($datosFila['categoria_nombre']);
                         }
 
-                        // Buscar/crear marca
+                        // Buscar/crear marca (con búsqueda inteligente por ID, nombre)
                         $marca = null;
                         if (!empty($datosFila['marca_nombre'])) {
-                            $marca = Marca::where('nombre', $datosFila['marca_nombre'])->first();
-                            if (!$marca) {
-                                $marca = Marca::create([
-                                    'nombre' => $datosFila['marca_nombre'],
-                                    'activo' => true,
-                                ]);
+                            $marca = $this->buscarOCrearMarca($datosFila['marca_nombre']);
+                        }
+
+                        // Buscar almacén (con búsqueda inteligente por ID, nombre)
+                        $almacenId = $almacenPrincipalId;
+                        if (!empty($datosFila['almacen_id'])) {
+                            $almacenBuscado = $this->buscarAlmacen((string) $datosFila['almacen_id']);
+                            if ($almacenBuscado) {
+                                $almacenId = $almacenBuscado->id;
+                            }
+                        } elseif (!empty($datosFila['almacen_nombre'])) {
+                            $almacenBuscado = $this->buscarAlmacen($datosFila['almacen_nombre']);
+                            if ($almacenBuscado) {
+                                $almacenId = $almacenBuscado->id;
                             }
                         }
 
@@ -1416,10 +1420,10 @@ class ProductoController extends Controller
                             }
                         }
 
-                        // Crear/actualizar stock en almacén principal
+                        // Crear/actualizar stock en almacén seleccionado
                         $stockAnterior = 0;
                         $stock = StockProducto::where('producto_id', $producto->id)
-                            ->where('almacen_id', $almacenPrincipalId)
+                            ->where('almacen_id', $almacenId)
                             ->where('lote', $datosFila['lote'] ?? null)
                             ->first();
 
@@ -1434,7 +1438,7 @@ class ProductoController extends Controller
                             // Crear nuevo registro de stock
                             $stock = StockProducto::create([
                                 'producto_id' => $producto->id,
-                                'almacen_id' => $almacenPrincipalId,
+                                'almacen_id' => $almacenId,
                                 'cantidad' => $datosFila['cantidad'],
                                 'cantidad_reservada' => 0,
                                 'cantidad_disponible' => $datosFila['cantidad'],
@@ -1683,29 +1687,146 @@ class ProductoController extends Controller
     }
 
     /**
-     * Buscar o crear unidad de medida
+     * Buscar o crear unidad de medida (inteligencia: ID, código, nombre)
      */
-    private function buscarOCrearUnidadMedida(string $nombre): UnidadMedida
+    private function buscarOCrearUnidadMedida(string $valor): ?UnidadMedida
     {
-        $nombreNormalizado = $this->normalizarTexto($nombre);
-
-        $unidad = UnidadMedida::where(function ($q) use ($nombreNormalizado) {
-            $q->whereRaw('LOWER(codigo) = ?', [$nombreNormalizado])
-              ->orWhereRaw('LOWER(nombre) = ?', [$nombreNormalizado]);
-        })->first();
-
-        if (!$unidad) {
-            // Generar código: primeras 3 letras en mayúsculas
-            $codigo = strtoupper(substr($nombre, 0, 3));
-
-            $unidad = UnidadMedida::create([
-                'codigo' => $codigo,
-                'nombre' => $nombre,
-                'activo' => true,
-            ]);
+        if (empty($valor)) {
+            return null;
         }
 
+        $valorNormalizado = $this->normalizarTexto($valor);
+
+        // Intentar buscar por ID si es numérico
+        if (is_numeric($valor)) {
+            $unidad = UnidadMedida::find((int) $valor);
+            if ($unidad && $unidad->activo) {
+                return $unidad;
+            }
+        }
+
+        // Buscar por código o nombre (case-insensitive)
+        $unidad = UnidadMedida::where(function ($q) use ($valorNormalizado) {
+            $q->whereRaw('LOWER(codigo) = ?', [$valorNormalizado])
+              ->orWhereRaw('LOWER(nombre) = ?', [$valorNormalizado]);
+        })->where('activo', true)->first();
+
+        if ($unidad) {
+            return $unidad;
+        }
+
+        // Crear nueva unidad de medida
+        $codigo = strtoupper(substr($valor, 0, 3));
+        $unidad = UnidadMedida::create([
+            'codigo' => $codigo,
+            'nombre' => $valor,
+            'activo' => true,
+        ]);
+
         return $unidad;
+    }
+
+    /**
+     * Buscar o crear categoría (inteligencia: ID, nombre)
+     */
+    private function buscarOCrearCategoria(string $valor): ?Categoria
+    {
+        if (empty($valor)) {
+            return null;
+        }
+
+        $valorNormalizado = $this->normalizarTexto($valor);
+
+        // Intentar buscar por ID si es numérico
+        if (is_numeric($valor)) {
+            $categoria = Categoria::find((int) $valor);
+            if ($categoria && $categoria->activo) {
+                return $categoria;
+            }
+        }
+
+        // Buscar por nombre (case-insensitive)
+        $categoria = Categoria::whereRaw('LOWER(nombre) = ?', [$valorNormalizado])
+            ->where('activo', true)
+            ->first();
+
+        if ($categoria) {
+            return $categoria;
+        }
+
+        // Crear nueva categoría
+        $categoria = Categoria::create([
+            'nombre' => $valor,
+            'activo' => true,
+        ]);
+
+        return $categoria;
+    }
+
+    /**
+     * Buscar o crear marca (inteligencia: ID, nombre)
+     */
+    private function buscarOCrearMarca(string $valor): ?Marca
+    {
+        if (empty($valor)) {
+            return null;
+        }
+
+        $valorNormalizado = $this->normalizarTexto($valor);
+
+        // Intentar buscar por ID si es numérico
+        if (is_numeric($valor)) {
+            $marca = Marca::find((int) $valor);
+            if ($marca && $marca->activo) {
+                return $marca;
+            }
+        }
+
+        // Buscar por nombre (case-insensitive)
+        $marca = Marca::whereRaw('LOWER(nombre) = ?', [$valorNormalizado])
+            ->where('activo', true)
+            ->first();
+
+        if ($marca) {
+            return $marca;
+        }
+
+        // Crear nueva marca
+        $marca = Marca::create([
+            'nombre' => $valor,
+            'activo' => true,
+        ]);
+
+        return $marca;
+    }
+
+    /**
+     * Buscar almacén (inteligencia: ID, nombre) - NO CREA
+     */
+    private function buscarAlmacen(string $valor): ?Almacen
+    {
+        if (empty($valor)) {
+            return null;
+        }
+
+        $valorNormalizado = $this->normalizarTexto($valor);
+
+        // Intentar buscar por ID si es numérico
+        if (is_numeric($valor)) {
+            $almacen = Almacen::where('id', (int) $valor)
+                ->where('activo', true)
+                ->first();
+            if ($almacen) {
+                return $almacen;
+            }
+        }
+
+        // Buscar por nombre (case-insensitive)
+        $almacen = Almacen::whereRaw('LOWER(nombre) = ?', [$valorNormalizado])
+            ->where('activo', true)
+            ->first();
+
+        return $almacen;
     }
 
     /**

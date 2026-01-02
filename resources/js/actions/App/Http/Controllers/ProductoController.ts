@@ -1033,7 +1033,7 @@ importarProductosMasivos.post = (options?: RouteQueryOptions): RouteDefinition<'
     importarProductosMasivos.form = importarProductosMasivosForm
 /**
 * @see \App\Http\Controllers\ProductoController::listarCargasMasivas
- * @see app/Http/Controllers/ProductoController.php:1532
+ * @see app/Http/Controllers/ProductoController.php:1536
  * @route '/api/productos/cargas-masivas'
  */
 export const listarCargasMasivas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1048,7 +1048,7 @@ listarCargasMasivas.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductoController::listarCargasMasivas
- * @see app/Http/Controllers/ProductoController.php:1532
+ * @see app/Http/Controllers/ProductoController.php:1536
  * @route '/api/productos/cargas-masivas'
  */
 listarCargasMasivas.url = (options?: RouteQueryOptions) => {
@@ -1057,7 +1057,7 @@ listarCargasMasivas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ProductoController::listarCargasMasivas
- * @see app/Http/Controllers/ProductoController.php:1532
+ * @see app/Http/Controllers/ProductoController.php:1536
  * @route '/api/productos/cargas-masivas'
  */
 listarCargasMasivas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1066,7 +1066,7 @@ listarCargasMasivas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
 })
 /**
 * @see \App\Http\Controllers\ProductoController::listarCargasMasivas
- * @see app/Http/Controllers/ProductoController.php:1532
+ * @see app/Http/Controllers/ProductoController.php:1536
  * @route '/api/productos/cargas-masivas'
  */
 listarCargasMasivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1076,7 +1076,7 @@ listarCargasMasivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
     /**
 * @see \App\Http\Controllers\ProductoController::listarCargasMasivas
- * @see app/Http/Controllers/ProductoController.php:1532
+ * @see app/Http/Controllers/ProductoController.php:1536
  * @route '/api/productos/cargas-masivas'
  */
     const listarCargasMasivasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1086,7 +1086,7 @@ listarCargasMasivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
             /**
 * @see \App\Http\Controllers\ProductoController::listarCargasMasivas
- * @see app/Http/Controllers/ProductoController.php:1532
+ * @see app/Http/Controllers/ProductoController.php:1536
  * @route '/api/productos/cargas-masivas'
  */
         listarCargasMasivasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1095,7 +1095,7 @@ listarCargasMasivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
             /**
 * @see \App\Http\Controllers\ProductoController::listarCargasMasivas
- * @see app/Http/Controllers/ProductoController.php:1532
+ * @see app/Http/Controllers/ProductoController.php:1536
  * @route '/api/productos/cargas-masivas'
  */
         listarCargasMasivasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1111,7 +1111,7 @@ listarCargasMasivas.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     listarCargasMasivas.form = listarCargasMasivasForm
 /**
 * @see \App\Http\Controllers\ProductoController::verCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1558
+ * @see app/Http/Controllers/ProductoController.php:1562
  * @route '/api/productos/cargas-masivas/{cargo}'
  */
 export const verCargaMasiva = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1126,7 +1126,7 @@ verCargaMasiva.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductoController::verCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1558
+ * @see app/Http/Controllers/ProductoController.php:1562
  * @route '/api/productos/cargas-masivas/{cargo}'
  */
 verCargaMasiva.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1159,7 +1159,7 @@ verCargaMasiva.url = (args: { cargo: number | { id: number } } | [cargo: number 
 
 /**
 * @see \App\Http\Controllers\ProductoController::verCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1558
+ * @see app/Http/Controllers/ProductoController.php:1562
  * @route '/api/productos/cargas-masivas/{cargo}'
  */
 verCargaMasiva.get = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1168,7 +1168,7 @@ verCargaMasiva.get = (args: { cargo: number | { id: number } } | [cargo: number 
 })
 /**
 * @see \App\Http\Controllers\ProductoController::verCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1558
+ * @see app/Http/Controllers/ProductoController.php:1562
  * @route '/api/productos/cargas-masivas/{cargo}'
  */
 verCargaMasiva.head = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1178,7 +1178,7 @@ verCargaMasiva.head = (args: { cargo: number | { id: number } } | [cargo: number
 
     /**
 * @see \App\Http\Controllers\ProductoController::verCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1558
+ * @see app/Http/Controllers/ProductoController.php:1562
  * @route '/api/productos/cargas-masivas/{cargo}'
  */
     const verCargaMasivaForm = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1188,7 +1188,7 @@ verCargaMasiva.head = (args: { cargo: number | { id: number } } | [cargo: number
 
             /**
 * @see \App\Http\Controllers\ProductoController::verCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1558
+ * @see app/Http/Controllers/ProductoController.php:1562
  * @route '/api/productos/cargas-masivas/{cargo}'
  */
         verCargaMasivaForm.get = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1197,7 +1197,7 @@ verCargaMasiva.head = (args: { cargo: number | { id: number } } | [cargo: number
         })
             /**
 * @see \App\Http\Controllers\ProductoController::verCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1558
+ * @see app/Http/Controllers/ProductoController.php:1562
  * @route '/api/productos/cargas-masivas/{cargo}'
  */
         verCargaMasivaForm.head = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1213,7 +1213,7 @@ verCargaMasiva.head = (args: { cargo: number | { id: number } } | [cargo: number
     verCargaMasiva.form = verCargaMasivaForm
 /**
 * @see \App\Http\Controllers\ProductoController::revertirCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1573
+ * @see app/Http/Controllers/ProductoController.php:1577
  * @route '/api/productos/cargas-masivas/{cargo}/revertir'
  */
 export const revertirCargaMasiva = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1228,7 +1228,7 @@ revertirCargaMasiva.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductoController::revertirCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1573
+ * @see app/Http/Controllers/ProductoController.php:1577
  * @route '/api/productos/cargas-masivas/{cargo}/revertir'
  */
 revertirCargaMasiva.url = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1261,7 +1261,7 @@ revertirCargaMasiva.url = (args: { cargo: number | { id: number } } | [cargo: nu
 
 /**
 * @see \App\Http\Controllers\ProductoController::revertirCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1573
+ * @see app/Http/Controllers/ProductoController.php:1577
  * @route '/api/productos/cargas-masivas/{cargo}/revertir'
  */
 revertirCargaMasiva.post = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1271,7 +1271,7 @@ revertirCargaMasiva.post = (args: { cargo: number | { id: number } } | [cargo: n
 
     /**
 * @see \App\Http\Controllers\ProductoController::revertirCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1573
+ * @see app/Http/Controllers/ProductoController.php:1577
  * @route '/api/productos/cargas-masivas/{cargo}/revertir'
  */
     const revertirCargaMasivaForm = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1281,7 +1281,7 @@ revertirCargaMasiva.post = (args: { cargo: number | { id: number } } | [cargo: n
 
             /**
 * @see \App\Http\Controllers\ProductoController::revertirCargaMasiva
- * @see app/Http/Controllers/ProductoController.php:1573
+ * @see app/Http/Controllers/ProductoController.php:1577
  * @route '/api/productos/cargas-masivas/{cargo}/revertir'
  */
         revertirCargaMasivaForm.post = (args: { cargo: number | { id: number } } | [cargo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1290,6 +1290,84 @@ revertirCargaMasiva.post = (args: { cargo: number | { id: number } } | [cargo: n
         })
     
     revertirCargaMasiva.form = revertirCargaMasivaForm
+/**
+* @see \App\Http\Controllers\ProductoController::createModerno
+ * @see app/Http/Controllers/ProductoController.php:223
+ * @route '/productos/crear/moderno'
+ */
+export const createModerno = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: createModerno.url(options),
+    method: 'get',
+})
+
+createModerno.definition = {
+    methods: ["get","head"],
+    url: '/productos/crear/moderno',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ProductoController::createModerno
+ * @see app/Http/Controllers/ProductoController.php:223
+ * @route '/productos/crear/moderno'
+ */
+createModerno.url = (options?: RouteQueryOptions) => {
+    return createModerno.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ProductoController::createModerno
+ * @see app/Http/Controllers/ProductoController.php:223
+ * @route '/productos/crear/moderno'
+ */
+createModerno.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: createModerno.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ProductoController::createModerno
+ * @see app/Http/Controllers/ProductoController.php:223
+ * @route '/productos/crear/moderno'
+ */
+createModerno.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: createModerno.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ProductoController::createModerno
+ * @see app/Http/Controllers/ProductoController.php:223
+ * @route '/productos/crear/moderno'
+ */
+    const createModernoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: createModerno.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ProductoController::createModerno
+ * @see app/Http/Controllers/ProductoController.php:223
+ * @route '/productos/crear/moderno'
+ */
+        createModernoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: createModerno.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ProductoController::createModerno
+ * @see app/Http/Controllers/ProductoController.php:223
+ * @route '/productos/crear/moderno'
+ */
+        createModernoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: createModerno.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    createModerno.form = createModernoForm
 /**
 * @see \App\Http\Controllers\ProductoController::index
  * @see app/Http/Controllers/ProductoController.php:60
@@ -1804,84 +1882,6 @@ destroy.delete = (args: { producto: number | { id: number } } | [producto: numbe
         })
     
     destroy.form = destroyForm
-/**
-* @see \App\Http\Controllers\ProductoController::createModerno
- * @see app/Http/Controllers/ProductoController.php:223
- * @route '/productos/crear/moderno'
- */
-export const createModerno = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: createModerno.url(options),
-    method: 'get',
-})
-
-createModerno.definition = {
-    methods: ["get","head"],
-    url: '/productos/crear/moderno',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\ProductoController::createModerno
- * @see app/Http/Controllers/ProductoController.php:223
- * @route '/productos/crear/moderno'
- */
-createModerno.url = (options?: RouteQueryOptions) => {
-    return createModerno.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\ProductoController::createModerno
- * @see app/Http/Controllers/ProductoController.php:223
- * @route '/productos/crear/moderno'
- */
-createModerno.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: createModerno.url(options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\ProductoController::createModerno
- * @see app/Http/Controllers/ProductoController.php:223
- * @route '/productos/crear/moderno'
- */
-createModerno.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: createModerno.url(options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\ProductoController::createModerno
- * @see app/Http/Controllers/ProductoController.php:223
- * @route '/productos/crear/moderno'
- */
-    const createModernoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: createModerno.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ProductoController::createModerno
- * @see app/Http/Controllers/ProductoController.php:223
- * @route '/productos/crear/moderno'
- */
-        createModernoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: createModerno.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ProductoController::createModerno
- * @see app/Http/Controllers/ProductoController.php:223
- * @route '/productos/crear/moderno'
- */
-        createModernoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: createModerno.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    createModerno.form = createModernoForm
-const ProductoController = { indexApi, showApi, buscarApi, storeApi, updateApi, destroyApi, historialPrecios, importarProductosMasivos, listarCargasMasivas, verCargaMasiva, revertirCargaMasiva, index, create, store, edit, update, destroy, createModerno }
+const ProductoController = { indexApi, showApi, buscarApi, storeApi, updateApi, destroyApi, historialPrecios, importarProductosMasivos, listarCargasMasivas, verCargaMasiva, revertirCargaMasiva, createModerno, index, create, store, edit, update, destroy }
 
 export default ProductoController

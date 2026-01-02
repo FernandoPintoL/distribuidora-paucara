@@ -113,6 +113,14 @@ export const productosCSVService = {
           fila.fecha_vencimiento = this.convertirFecha(valor) || undefined;
         if (col === 'categoría' || col === 'categoria') fila.categoria_nombre = valor || undefined;
         if (col === 'marca') fila.marca_nombre = valor || undefined;
+        if (col === 'almacén' || col === 'almacen') {
+          // Intentar parsear como ID si es numérico, sino como nombre
+          if (/^\d+$/.test(valor)) {
+            fila.almacen_id = parseInt(valor, 10);
+          } else {
+            fila.almacen_nombre = valor || undefined;
+          }
+        }
       }
 
       filas.push(fila);
@@ -385,6 +393,7 @@ export const productosCSVService = {
       'Descripción',
       'SKU',
       'Código Barras',
+      'Almacén',
       'Proveedor',
       'Unidad Medida',
       'Cantidad',
@@ -401,6 +410,7 @@ export const productosCSVService = {
       'Gaseosa sabor cola',
       '',
       '7501234567890',
+      'Almacén Central',
       'Embotelladora Coca Cola',
       'UN',
       '100',

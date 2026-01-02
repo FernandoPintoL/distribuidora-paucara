@@ -68,13 +68,22 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::put('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'update'])->name('clientes.fotos.update');
     Route::delete('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'destroy'])->name('clientes.fotos.destroy');
 
-    Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
-    Route::get('productos/crear/moderno', [\App\Http\Controllers\ProductoController::class, 'createModerno'])->middleware('permission:productos.manage')->name('productos.create.moderno');
-    Route::get('productos/{producto}/historial-precios', [\App\Http\Controllers\ProductoController::class, 'historialPrecios'])->middleware('permission:productos.manage')->name('productos.historial-precios');
-
+    // ⚠️ RUTAS ESPECÍFICAS DEBEN IR ANTES DEL RESOURCE
     // Rutas para carga masiva de productos
-    Route::get('productos/carga-masiva', fn() => \Inertia\Inertia::render('productos/carga-masiva'))->middleware('permission:productos.manage')->name('productos.carga-masiva');
+    Route::get('productos/carga-masiva', function () {
+        return \Inertia\Inertia::render('productos/carga-masiva', [
+            'categorias' => \App\Models\Categoria::where('activo', true)->get(['id', 'nombre'])->toArray(),
+            'marcas' => \App\Models\Marca::where('activo', true)->get(['id', 'nombre'])->toArray(),
+            'unidades' => \App\Models\UnidadMedida::where('activo', true)->get(['id', 'codigo', 'nombre'])->toArray(),
+            'almacenes' => \App\Models\Almacen::where('activo', true)->orderBy('id')->get(['id', 'nombre'])->toArray(),
+        ]);
+    })->middleware('permission:productos.manage')->name('productos.carga-masiva');
     Route::get('productos/historial-cargas', fn() => \Inertia\Inertia::render('productos/historial-cargas'))->middleware('permission:productos.manage')->name('productos.historial-cargas');
+    Route::get('productos/crear/moderno', [\App\Http\Controllers\ProductoController::class, 'createModerno'])->middleware('permission:productos.manage')->name('productos.create.moderno');
+
+    // Resource route DESPUÉS de las rutas específicas
+    Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
+    Route::get('productos/{producto}/historial-precios', [\App\Http\Controllers\ProductoController::class, 'historialPrecios'])->middleware('permission:productos.manage')->name('productos.historial-precios');
 
     Route::resource('unidades', \App\Http\Controllers\UnidadMedidaController::class)->parameters(['unidades' => 'unidad'])->middleware('permission:unidades.manage');
 

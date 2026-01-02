@@ -1,5 +1,146 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
-import create from './create'
+/**
+ * @see routes/web.php:73
+ * @route '/productos/carga-masiva'
+ */
+export const cargaMasiva = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: cargaMasiva.url(options),
+    method: 'get',
+})
+
+cargaMasiva.definition = {
+    methods: ["get","head"],
+    url: '/productos/carga-masiva',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see routes/web.php:73
+ * @route '/productos/carga-masiva'
+ */
+cargaMasiva.url = (options?: RouteQueryOptions) => {
+    return cargaMasiva.definition.url + queryParams(options)
+}
+
+/**
+ * @see routes/web.php:73
+ * @route '/productos/carga-masiva'
+ */
+cargaMasiva.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: cargaMasiva.url(options),
+    method: 'get',
+})
+/**
+ * @see routes/web.php:73
+ * @route '/productos/carga-masiva'
+ */
+cargaMasiva.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: cargaMasiva.url(options),
+    method: 'head',
+})
+
+    /**
+ * @see routes/web.php:73
+ * @route '/productos/carga-masiva'
+ */
+    const cargaMasivaForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: cargaMasiva.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:73
+ * @route '/productos/carga-masiva'
+ */
+        cargaMasivaForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: cargaMasiva.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:73
+ * @route '/productos/carga-masiva'
+ */
+        cargaMasivaForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: cargaMasiva.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    cargaMasiva.form = cargaMasivaForm
+/**
+ * @see routes/web.php:81
+ * @route '/productos/historial-cargas'
+ */
+export const historialCargas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: historialCargas.url(options),
+    method: 'get',
+})
+
+historialCargas.definition = {
+    methods: ["get","head"],
+    url: '/productos/historial-cargas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see routes/web.php:81
+ * @route '/productos/historial-cargas'
+ */
+historialCargas.url = (options?: RouteQueryOptions) => {
+    return historialCargas.definition.url + queryParams(options)
+}
+
+/**
+ * @see routes/web.php:81
+ * @route '/productos/historial-cargas'
+ */
+historialCargas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: historialCargas.url(options),
+    method: 'get',
+})
+/**
+ * @see routes/web.php:81
+ * @route '/productos/historial-cargas'
+ */
+historialCargas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: historialCargas.url(options),
+    method: 'head',
+})
+
+    /**
+ * @see routes/web.php:81
+ * @route '/productos/historial-cargas'
+ */
+    const historialCargasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: historialCargas.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:81
+ * @route '/productos/historial-cargas'
+ */
+        historialCargasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: historialCargas.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:81
+ * @route '/productos/historial-cargas'
+ */
+        historialCargasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: historialCargas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    historialCargas.form = historialCargasForm
 /**
 * @see \App\Http\Controllers\ProductoController::index
  * @see app/Http/Controllers/ProductoController.php:60
@@ -616,158 +757,16 @@ historialPrecios.head = (args: { producto: number | { id: number } } | [producto
         })
     
     historialPrecios.form = historialPreciosForm
-/**
- * @see routes/web.php:76
- * @route '/productos/carga-masiva'
- */
-export const cargaMasiva = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: cargaMasiva.url(options),
-    method: 'get',
-})
-
-cargaMasiva.definition = {
-    methods: ["get","head"],
-    url: '/productos/carga-masiva',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
- * @see routes/web.php:76
- * @route '/productos/carga-masiva'
- */
-cargaMasiva.url = (options?: RouteQueryOptions) => {
-    return cargaMasiva.definition.url + queryParams(options)
-}
-
-/**
- * @see routes/web.php:76
- * @route '/productos/carga-masiva'
- */
-cargaMasiva.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: cargaMasiva.url(options),
-    method: 'get',
-})
-/**
- * @see routes/web.php:76
- * @route '/productos/carga-masiva'
- */
-cargaMasiva.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: cargaMasiva.url(options),
-    method: 'head',
-})
-
-    /**
- * @see routes/web.php:76
- * @route '/productos/carga-masiva'
- */
-    const cargaMasivaForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: cargaMasiva.url(options),
-        method: 'get',
-    })
-
-            /**
- * @see routes/web.php:76
- * @route '/productos/carga-masiva'
- */
-        cargaMasivaForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: cargaMasiva.url(options),
-            method: 'get',
-        })
-            /**
- * @see routes/web.php:76
- * @route '/productos/carga-masiva'
- */
-        cargaMasivaForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: cargaMasiva.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    cargaMasiva.form = cargaMasivaForm
-/**
- * @see routes/web.php:77
- * @route '/productos/historial-cargas'
- */
-export const historialCargas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: historialCargas.url(options),
-    method: 'get',
-})
-
-historialCargas.definition = {
-    methods: ["get","head"],
-    url: '/productos/historial-cargas',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
- * @see routes/web.php:77
- * @route '/productos/historial-cargas'
- */
-historialCargas.url = (options?: RouteQueryOptions) => {
-    return historialCargas.definition.url + queryParams(options)
-}
-
-/**
- * @see routes/web.php:77
- * @route '/productos/historial-cargas'
- */
-historialCargas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: historialCargas.url(options),
-    method: 'get',
-})
-/**
- * @see routes/web.php:77
- * @route '/productos/historial-cargas'
- */
-historialCargas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: historialCargas.url(options),
-    method: 'head',
-})
-
-    /**
- * @see routes/web.php:77
- * @route '/productos/historial-cargas'
- */
-    const historialCargasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: historialCargas.url(options),
-        method: 'get',
-    })
-
-            /**
- * @see routes/web.php:77
- * @route '/productos/historial-cargas'
- */
-        historialCargasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: historialCargas.url(options),
-            method: 'get',
-        })
-            /**
- * @see routes/web.php:77
- * @route '/productos/historial-cargas'
- */
-        historialCargasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: historialCargas.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    historialCargas.form = historialCargasForm
 const productos = {
-    index,
+    cargaMasiva,
+historialCargas,
 create,
+index,
 store,
 edit,
 update,
 destroy,
 historialPrecios,
-cargaMasiva,
-historialCargas,
 }
 
 export default productos
