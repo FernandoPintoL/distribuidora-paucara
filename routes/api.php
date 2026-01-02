@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EntregaBatchController;
 use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
+use App\Http\Controllers\Api\EstadoLogisticoController;
 use App\Http\Controllers\Api\ReporteCargoController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\ReporteCargaPdfController;
@@ -797,4 +798,33 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 // ✅ Rutas API de auditoría de cajas (Sprint 4)
 Route::middleware(['auth', 'permission:admin.auditoria'])->prefix('cajas/auditoria')->group(function () {
     Route::get('/estadisticas', [\App\Http\Controllers\AuditoriaCajaController::class, 'estadisticas'])->name('api.cajas.auditoria.estadisticas');
+});
+
+// ========================================
+// 📊 RUTAS API ESTADOS LOGÍSTICA (Q1 2026)
+// ========================================
+// Endpoints públicos para obtener estados (sin autenticación)
+Route::prefix('estados')->group(function () {
+    // Obtener todas las categorías disponibles
+    Route::get('/categorias', [EstadoLogisticoController::class, 'categorias']);
+
+    // Buscar estados por término
+    Route::get('/buscar', [EstadoLogisticoController::class, 'buscar']);
+
+    // Obtener estados de una categoría específica
+    Route::get('/{categoria}', [EstadoLogisticoController::class, 'porCategoria']);
+
+    // Obtener un estado específico
+    Route::get('/{categoria}/{codigo}', [EstadoLogisticoController::class, 'porCodigo']);
+
+    // Obtener estadísticas de una categoría
+    Route::get('/{categoria}/estadisticas', [EstadoLogisticoController::class, 'estadisticas']);
+
+    // Obtener transiciones válidas desde un estado
+    Route::get('/{categoria}/{codigo}/transiciones', [EstadoLogisticoController::class, 'transicionesDisponibles']);
+});
+
+// Obtener mapeos entre estados de diferentes categorías
+Route::prefix('mapeos')->group(function () {
+    Route::get('/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}', [EstadoLogisticoController::class, 'obtenerMapeo']);
 });

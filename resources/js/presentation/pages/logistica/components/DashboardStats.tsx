@@ -1,3 +1,16 @@
+/**
+ * Dashboard Statistics Component (Fase 3.6)
+ *
+ * Componente que muestra estadísticas del dashboard de logística.
+ * Combina datos de proformas (via backend stats) y envíos.
+ *
+ * Nota: Este componente muestra KPIs específicos del negocio (PENDIENTE, APROBADA, VENCIDA, PROGRAMADO, EN_TRANSITO, ENTREGADO)
+ * que provienen de cálculos específicos del backend, no de la lista genérica de estados.
+ *
+ * @phase Fase 3.6: Dashboard modernizado con estado dinámico
+ * @future Fase 3.7: Refactorizar para usar hooks dinámicos cuando el API proporcione definiciones de KPI
+ */
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import { RefreshCw, Clock, CheckCircle, AlertCircle, TrendingUp, Package, Truck } from 'lucide-react';
@@ -57,7 +70,7 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold dark:text-white">
-                            {loadingLogisticaStats ? '...' : logisticaStats?.proformas.pendientes ?? stats.proformas_pendientes}
+                            {loadingLogisticaStats ? '...' : stats?.proformas_pendientes ?? 0}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Esperando aprobación</p>
                     </CardContent>
@@ -70,7 +83,7 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {loadingLogisticaStats ? '...' : logisticaStats?.proformas.aprobadas ?? 0}
+                            {loadingLogisticaStats ? '...' : proformaStats?.por_estado?.aprobada ?? 0}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Listas para convertir</p>
                     </CardContent>
@@ -83,7 +96,7 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                            {loadingLogisticaStats ? '...' : proformaStats?.alertas.vencidas ?? 0}
+                            {loadingLogisticaStats ? '...' : proformaStats?.alertas?.vencidas ?? 0}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Requieren atención</p>
                     </CardContent>
@@ -96,7 +109,7 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                            {loadingLogisticaStats ? '...' : proformaStats?.alertas.por_vencer ?? 0}
+                            {loadingLogisticaStats ? '...' : proformaStats?.alertas?.por_vencer ?? 0}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Atención priorizada</p>
                     </CardContent>
@@ -104,7 +117,7 @@ export function DashboardStats({
             </div>
 
             {/* Card de Monto Total */}
-            {proformaStats && (
+            {proformaStats && proformaStats.monto_total && (
                 <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 dark:border-blue-800">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium dark:text-blue-200">Monto Total en Proformas</CardTitle>
@@ -112,25 +125,25 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                            Bs {proformaStats.monto_total.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            Bs {(proformaStats.monto_total || 0).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                             <div>
                                 <p className="text-gray-600 dark:text-gray-400">Pendientes</p>
                                 <p className="font-semibold dark:text-white">
-                                    Bs {proformaStats.montos_por_estado.pendiente.toLocaleString('es-BO', { maximumFractionDigits: 0 })}
+                                    Bs {(proformaStats.montos_por_estado?.pendiente || 0).toLocaleString('es-BO', { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-gray-600 dark:text-gray-400">Aprobadas</p>
                                 <p className="font-semibold text-green-600 dark:text-green-400">
-                                    Bs {proformaStats.montos_por_estado.aprobada.toLocaleString('es-BO', { maximumFractionDigits: 0 })}
+                                    Bs {(proformaStats.montos_por_estado?.aprobada || 0).toLocaleString('es-BO', { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-gray-600 dark:text-gray-400">Convertidas</p>
                                 <p className="font-semibold text-blue-600 dark:text-blue-400">
-                                    Bs {proformaStats.montos_por_estado.convertida.toLocaleString('es-BO', { maximumFractionDigits: 0 })}
+                                    Bs {(proformaStats.montos_por_estado?.convertida || 0).toLocaleString('es-BO', { maximumFractionDigits: 0 })}
                                 </p>
                             </div>
                         </div>
@@ -147,7 +160,7 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold dark:text-white">
-                            {loadingLogisticaStats ? '...' : logisticaStats?.envios.programados ?? stats.envios_programados}
+                            {loadingLogisticaStats ? '...' : stats?.entregas_programadas ?? 0}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Listos para despacho</p>
                     </CardContent>
@@ -160,7 +173,7 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold dark:text-white">
-                            {loadingLogisticaStats ? '...' : logisticaStats?.envios.en_ruta ?? stats.envios_en_transito}
+                            {loadingLogisticaStats ? '...' : stats?.entregas_en_transito ?? 0}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">En camino</p>
                     </CardContent>
@@ -173,7 +186,7 @@ export function DashboardStats({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold dark:text-white">
-                            {loadingLogisticaStats ? '...' : logisticaStats?.envios.entregados_hoy ?? stats.envios_entregados_hoy}
+                            {loadingLogisticaStats ? '...' : stats?.entregas_entregadas_hoy ?? 0}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Completados</p>
                     </CardContent>

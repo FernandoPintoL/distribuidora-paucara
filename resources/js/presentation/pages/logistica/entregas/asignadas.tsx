@@ -160,21 +160,13 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
                 />
 
                 {/* Filtros */}
+                {/* Fase 3.6: Usar hook dinámico en EntregaListFilters para estado options */}
                 <EntregaListFilters
                     filtros={filtros}
                     onFiltroChange={handleFiltroChange}
                     onLimpiar={limpiarFiltros}
                     showFilters={showFilters}
                     onToggleFilters={() => setShowFilters(!showFilters)}
-                    estadoOptions={[
-                        { value: '', label: 'Todos' },
-                        { value: 'ASIGNADA', label: 'Asignada' },
-                        { value: 'EN_CAMINO', label: 'En Camino' },
-                        { value: 'LLEGO', label: 'Llegó' },
-                        { value: 'ENTREGADO', label: 'Entregado' },
-                        { value: 'NOVEDAD', label: 'Novedad' },
-                        { value: 'CANCELADA', label: 'Cancelada' },
-                    ]}
                 />
 
                 {/* Entregas */}

@@ -13,6 +13,7 @@ import { createRoot } from 'react-dom/client';
 import { ToastContainer } from 'react-toastify';
 import { initializeTheme } from '@/presentation/hooks/use-appearance';
 import { configureAxios } from '@/infrastructure/config/axios.config';
+import { EstadosProvider } from '@/application/contexts/EstadosContext';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -27,7 +28,9 @@ createInertiaApp({
 
         root.render(
             <>
-                <App {...props} />
+                <EstadosProvider>
+                    <App {...props} />
+                </EstadosProvider>
                 <ToastContainer
                     position="top-right"
                     autoClose={5000}

@@ -7,6 +7,7 @@ import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { ProformaAppExterna } from '@/domain/entities/logistica';
+import { useEstadosProformas } from '@/application/hooks';
 
 type SortField = 'numero' | 'cliente' | 'estado' | 'monto' | 'fecha' | null;
 type SortDirection = 'asc' | 'desc' | null;
@@ -48,7 +49,14 @@ export function ProformasSection({
     const [amountFrom, setAmountFrom] = useState<string>('');
     const [amountTo, setAmountTo] = useState<string>('');
 
-    const estados = ['TODOS', 'PENDIENTE', 'APROBADA', 'RECHAZADA', 'CONVERTIDA', 'VENCIDA'] as const;
+    // Fase 3: Usar hook de estados centralizados para obtener estados dinámicamente
+    const { estados: estadosAPI, isLoading, error } = useEstadosProformas();
+
+    // Crear array de opciones: TODOS + estados del API
+    const estados = useMemo(() => {
+        const estadosCodigos = estadosAPI.map(e => e.codigo);
+        return ['TODOS' as const, ...estadosCodigos];
+    }, [estadosAPI]);
 
     // Función para manejar el click en headers para ordenar
     const handleSort = (field: SortField) => {
@@ -135,8 +143,9 @@ export function ProformasSection({
         return filtered;
     }, [proformas, sortField, sortDirection, dateFrom, dateTo, amountFrom, amountTo]);
 
-    // Función para obtener badge con iconos
+    // Función para obtener badge con iconos (Fase 3: Mejorada con datos del API)
     const getEstadoIcon = (estado: string) => {
+        // Fallback a iconos hardcodeados si el API no está disponible
         switch (estado) {
             case 'PENDIENTE':
                 return <Clock className="w-4 h-4" />;
@@ -148,6 +157,8 @@ export function ProformasSection({
                 return <FileCheck className="w-4 h-4" />;
             case 'VENCIDA':
                 return <AlertCircle className="w-4 h-4" />;
+            case 'TODOS':
+                return <Filter className="w-4 h-4" />;
             default:
                 return null;
         }
@@ -247,9 +258,12 @@ export function ProformasSection({
                         />
                     </div>
 
-                    {/* Filtro de estado */}
+                    {/* Filtro de estado - Fase 3: Dinámico desde API */}
                     <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Filtrar por Estado</label>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">
+                            Filtrar por Estado
+                            {isLoading && <span className="text-xs text-gray-500 ml-2">(cargando...)</span>}
+                        </label>
                         <div className="flex flex-wrap gap-2">
                             {estados.map((estado) => (
                                 <button

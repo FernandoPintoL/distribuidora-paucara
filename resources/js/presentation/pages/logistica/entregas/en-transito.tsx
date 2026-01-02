@@ -122,18 +122,13 @@ export default function EntregasEnTransito({ entregas: initialEntregas = [] }: P
                 />
 
                 {/* Filtros */}
+                {/* Fase 3.7: Usar hook dinámico en EntregaListFilters para estado options */}
                 <EntregaListFilters
                     filtros={filtros}
                     onFiltroChange={handleFiltroChange}
                     onLimpiar={limpiarFiltros}
                     showFilters={showFilters}
                     onToggleFilters={() => setShowFilters(!showFilters)}
-                    estadoOptions={[
-                        { value: '', label: 'Todos' },
-                        { value: 'EN_CAMINO', label: 'En Camino' },
-                        { value: 'LLEGO', label: 'Llegó' },
-                        { value: 'ENTREGADO', label: 'Entregado' },
-                    ]}
                 />
 
                 {/* Vista Tabs: Mapa y Lista */}

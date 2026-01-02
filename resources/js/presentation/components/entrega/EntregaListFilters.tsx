@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Input } from '@/presentation/components/ui/input';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import { Filter, X } from 'lucide-react';
 import type { FiltrosEntregas } from '@/infrastructure/services/logistica.service';
+import { useEstadosEntregas } from '@/application/hooks';
 
 interface EntregaListFiltersProps {
   filtros: FiltrosEntregas;
@@ -21,18 +23,29 @@ export function EntregaListFilters({
   onLimpiar,
   showFilters,
   onToggleFilters,
-  estadoOptions = [
-    { value: '', label: 'Todos' },
-    { value: 'PROGRAMADO', label: 'Programado' },
-    { value: 'ASIGNADA', label: 'Asignada' },
-    { value: 'EN_CAMINO', label: 'En Camino' },
-    { value: 'LLEGO', label: 'Llegó' },
-    { value: 'ENTREGADO', label: 'Entregado' },
-    { value: 'NOVEDAD', label: 'Novedad' },
-    { value: 'CANCELADA', label: 'Cancelada' },
-  ],
+  estadoOptions,
   className = ''
 }: EntregaListFiltersProps) {
+  // Fase 3: Usar hook de estados centralizados para obtener opciones dinámicamente
+  const { estados: estadosAPI, isLoading } = useEstadosEntregas();
+
+  // Generar opciones de estado desde el API, con fallback a parámetro si es necesario
+  const estadoOptionsCalculadas = useMemo(() => {
+    // Si se pasaron opciones específicamente, usar esas (backward compatibility)
+    if (estadoOptions && estadoOptions.length > 0) {
+      return estadoOptions;
+    }
+
+    // Generar desde el API
+    return [
+      { value: '', label: 'Todos' },
+      ...estadosAPI.map(estado => ({
+        value: estado.codigo,
+        label: estado.nombre
+      }))
+    ];
+  }, [estadoOptions, estadosAPI]);
+
   const hasFilters = Object.keys(filtros).length > 0;
 
   return (
@@ -67,12 +80,13 @@ export function EntregaListFilters({
               <div>
                 <SearchSelect
                   label="Estado"
-                  placeholder="Todos los estados"
+                  placeholder={isLoading ? 'Cargando estados...' : 'Todos los estados'}
                   value={filtros.estado || ''}
-                  options={estadoOptions}
+                  options={estadoOptionsCalculadas}
                   onChange={(value) =>
                     onFiltroChange('estado', value as string)
                   }
+                  disabled={isLoading}
                 />
               </div>
 

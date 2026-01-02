@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent } from '@/presentation/components/ui/card';
@@ -22,6 +22,8 @@ import {
 import logisticaService, { type Proforma, type FiltrosProformas } from '@/infrastructure/services/logistica.service';
 import type { Id } from '@/domain/entities/shared';
 import { MOTIVOS_RECHAZO_PROFORMA } from '@/lib/proformas.utils';
+import { useProformaEstadoBadge } from '@/application/hooks';
+import { ProformaEstadoBadge } from '@/presentation/components/proforma/ProformaEstadoBadge';
 
 interface Props {
     proformas?: Proforma[];
@@ -268,9 +270,8 @@ export default function ProformasPendientes({ proformas: initialProformas = [] }
                                                     </p>
                                                 </div>
                                             </div>
-                                            <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200">
-                                                Pendiente
-                                            </Badge>
+                                            {/* Fase 3: Usar hook para mostrar estado dinámicamente */}
+                                            <ProformaEstadoBadge estado={proforma.estado} />
                                         </div>
 
                                         {/* Información detallada */}

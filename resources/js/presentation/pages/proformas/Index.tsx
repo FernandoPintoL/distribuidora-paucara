@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Head, Link, router } from '@inertiajs/react'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
@@ -12,11 +12,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/presentation/components/ui/table'
-import { Search, Eye, CheckCircle, XCircle, FileText } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select'
+import { Search, Eye, CheckCircle, XCircle, FileText, Filter } from 'lucide-react'
 
 // DOMAIN LAYER: Importar tipos desde domain
 import type { Proforma } from '@/domain/entities/proformas'
 import type { Pagination, Id } from '@/domain/entities/shared'
+
+// APPLICATION LAYER: Hooks para estados centralizados
+import { useEstadosProformas } from '@/application/hooks'
 
 // PRESENTATION LAYER: Componentes reutilizables
 import { PageHeader } from '@/presentation/components/entrega/PageHeader'
@@ -27,13 +31,29 @@ interface Props {
 }
 
 export default function ProformasIndex({ proformas }: Props) {
+    // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
+    const { estados: estadosAPI, isLoading: estadosLoading } = useEstadosProformas()
+
     const [search, setSearch] = useState('')
+    const [filtroEstado, setFiltroEstado] = useState<string>('TODOS')
     const [isLoading, setIsLoading] = useState(false)
 
-    const filteredProformas = proformas.data.filter(proforma =>
-        proforma.numero.toLowerCase().includes(search.toLowerCase()) ||
-        proforma.cliente.nombre.toLowerCase().includes(search.toLowerCase())
-    )
+    // Generar opciones de estado desde el API
+    const estadoOptions = useMemo(() => {
+        return estadosAPI.map(estado => ({
+            value: estado.codigo,
+            label: estado.nombre
+        }))
+    }, [estadosAPI])
+
+    const filteredProformas = proformas.data.filter(proforma => {
+        const cumpleFiltroEstado = filtroEstado === 'TODOS' || proforma.estado === filtroEstado
+        const cumpleBusqueda =
+            proforma.numero.toLowerCase().includes(search.toLowerCase()) ||
+            proforma.cliente.nombre.toLowerCase().includes(search.toLowerCase())
+
+        return cumpleFiltroEstado && cumpleBusqueda
+    })
 
     const handleSearch = (value: string) => {
         setSearch(value)
@@ -72,11 +92,28 @@ export default function ProformasIndex({ proformas }: Props) {
                 {/* Filters */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Filtros</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <Filter className="h-5 w-5" />
+                            Filtros
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex gap-4">
-                            <div className="relative flex-1">
+                        <div className="flex flex-wrap gap-4">
+                            <Select value={filtroEstado} onValueChange={setFiltroEstado} disabled={estadosLoading}>
+                                <SelectTrigger className="w-[180px] bg-background">
+                                    <SelectValue placeholder={estadosLoading ? "Cargando..." : "Estado"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="TODOS">Todos los estados</SelectItem>
+                                    {estadoOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <div className="relative flex-1 min-w-[200px] max-w-md">
                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     placeholder="Buscar por número o cliente..."

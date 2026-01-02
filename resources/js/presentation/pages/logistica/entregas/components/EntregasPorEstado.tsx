@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import {
     Chart as ChartJS,
@@ -7,6 +8,7 @@ import {
 } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import type { EntregaEstado } from '@/application/hooks/use-entregas-dashboard-stats';
+import { useEstadosEntregas } from '@/application/hooks';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -19,7 +21,10 @@ export function EntregasPorEstado({
     estados,
     loading,
 }: EntregasPorEstadoProps) {
-    if (loading) {
+    // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
+    const { estados: estadosAPI, isLoading: estadosLoading } = useEstadosEntregas();
+
+    if (loading || estadosLoading) {
         return (
             <Card>
                 <CardHeader>
@@ -34,7 +39,8 @@ export function EntregasPorEstado({
         );
     }
 
-    const estadoLabels = [
+    // Fallback a datos hardcodeados si el API no está disponible
+    const estadoLabelsFallback = [
         'Programada',
         'Asignada',
         'En Camino',
@@ -44,7 +50,7 @@ export function EntregasPorEstado({
         'Cancelada',
     ];
 
-    const estadoColors = [
+    const estadoColorsFallback = [
         '#3b82f6', // blue
         '#a855f7', // purple
         '#f97316', // orange
@@ -54,21 +60,36 @@ export function EntregasPorEstado({
         '#ef4444', // red
     ];
 
+    // Generar labels y colores desde el API
+    const chartConfig = useMemo(() => {
+        if (estadosAPI.length === 0) {
+            // Fallback si no hay datos del API
+            return {
+                labels: estadoLabelsFallback,
+                colors: estadoColorsFallback,
+                estadoCodigos: ['PROGRAMADO', 'ASIGNADA', 'EN_CAMINO', 'LLEGO', 'ENTREGADO', 'NOVEDAD', 'CANCELADA']
+            };
+        }
+
+        return {
+            labels: estadosAPI.map(e => e.nombre),
+            colors: estadosAPI.map(e => e.color || '#6b7280'),
+            estadoCodigos: estadosAPI.map(e => e.codigo)
+        };
+    }, [estadosAPI]);
+
+    // Mapear datos de estados a los códigos en orden
+    const chartDataValues = chartConfig.estadoCodigos.map(codigo => {
+        return (estados as any)[codigo] || 0;
+    });
+
     const chartData = {
-        labels: estadoLabels,
+        labels: chartConfig.labels,
         datasets: [
             {
                 label: 'Cantidad de Entregas',
-                data: [
-                    estados.PROGRAMADO,
-                    estados.ASIGNADA,
-                    estados.EN_CAMINO,
-                    estados.LLEGO,
-                    estados.ENTREGADO,
-                    estados.NOVEDAD,
-                    estados.CANCELADA,
-                ],
-                backgroundColor: estadoColors,
+                data: chartDataValues,
+                backgroundColor: chartConfig.colors,
                 borderColor: '#fff',
                 borderWidth: 2,
             },

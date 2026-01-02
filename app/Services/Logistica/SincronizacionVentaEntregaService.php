@@ -12,21 +12,25 @@ use Illuminate\Support\Facades\Log;
  * Responsable de mantener sincronizado el estado logístico de las ventas
  * con los estados de las entregas asociadas.
  *
- * Mapeo de Estados:
+ * NOTA: A partir de la refactorización de Fase 3 (Q1 2026), el mapeo de estados
+ * está centralizado en la tabla `mapeos_estado` de la BD y se accede a través
+ * de `EstadoLogisticoService::mapearEstado()`.
+ *
+ * Mapeo de Estados (Centralizado en BD):
  * ┌─────────────────────────────────────────────────────────────┐
- * │ ESTADO VENTA → DESENCADENANTE → ESTADO ENTREGA              │
+ * │ ESTADO ENTREGA → (mapeo BD) → ESTADO VENTA LOGÍSTICA        │
  * ├─────────────────────────────────────────────────────────────┤
- * │ SIN_ENTREGA → Se crea entrega → PROGRAMADO                 │
- * │ EN_PREPARACION → Entrega pasa a EN_CARGA → EN_PREPARACION  │
- * │ EN_TRANSITO → Entrega pasa a EN_TRANSITO → EN_TRANSITO     │
- * │ ENTREGADA → Entrega es ENTREGADA → ENTREGADA               │
- * │ PROBLEMAS → Entrega es RECHAZADA/NOVEDAD → PROBLEMAS       │
- * │ CANCELADA → Entrega es CANCELADA → CANCELADA               │
+ * │ PROGRAMADO/ASIGNADA → PROGRAMADO                            │
+ * │ PREPARACION_CARGA/EN_CARGA/LISTO → EN_PREPARACION           │
+ * │ EN_CAMINO/EN_TRANSITO/LLEGO → EN_TRANSITO                   │
+ * │ ENTREGADO → ENTREGADA                                        │
+ * │ NOVEDAD/RECHAZADO → PROBLEMAS                               │
+ * │ CANCELADA → CANCELADA                                        │
  * └─────────────────────────────────────────────────────────────┘
  *
- * Estados Logísticos de Venta:
+ * Estados Logísticos de Venta (7 estados finales):
  * - SIN_ENTREGA: No tiene entregas asignadas
- * - PROGRAMADO: Tiene entregas en estado PROGRAMADO
+ * - PROGRAMADO: Tiene entregas programadas
  * - EN_PREPARACION: Tiene entregas en preparación de carga
  * - EN_TRANSITO: Tiene entregas en tránsito
  * - ENTREGADA: Todas las entregas han sido entregadas
@@ -35,8 +39,16 @@ use Illuminate\Support\Facades\Log;
  */
 class SincronizacionVentaEntregaService
 {
+    protected EstadoLogisticoService $estadoService;
+
+    public function __construct(EstadoLogisticoService $estadoService)
+    {
+        $this->estadoService = $estadoService;
+    }
+
     /**
      * Estados válidos de logística en venta
+     * (Mantiene referencia local por backward-compatibility)
      */
     private const ESTADOS_LOGISTICOS = [
         'SIN_ENTREGA',          // Sin entregas
@@ -46,25 +58,6 @@ class SincronizacionVentaEntregaService
         'ENTREGADA',            // Entregada exitosamente
         'PROBLEMAS',            // Con novedad o rechazo
         'CANCELADA',            // Cancelada
-    ];
-
-    /**
-     * Mapeo de estados de entrega a estados logísticos de venta
-     */
-    private static array $mapeoEstados = [
-        'PROGRAMADO' => 'PROGRAMADO',
-        'ASIGNADA' => 'PROGRAMADO',
-        'PREPARACION_CARGA' => 'EN_PREPARACION',
-        'EN_CARGA' => 'EN_PREPARACION',
-        'LISTO_PARA_ENTREGA' => 'EN_PREPARACION',
-        'EN_CAMINO' => 'EN_TRANSITO',
-        'EN_TRANSITO' => 'EN_TRANSITO',
-        'LLEGO' => 'EN_TRANSITO',
-        'ENTREGADO' => 'ENTREGADA',
-        'NOVEDAD' => 'PROBLEMAS',
-        'RECHAZADO' => 'PROBLEMAS',
-        'CANCELADA' => 'CANCELADA',
-        'PENDIENTE' => 'PROGRAMADO',
     ];
 
     /**

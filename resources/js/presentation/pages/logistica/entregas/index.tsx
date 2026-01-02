@@ -12,7 +12,8 @@ import type { Entrega } from '@/domain/entities/entregas';
 import type { Pagination } from '@/domain/entities/shared';
 import { getEstadoBadgeVariant, getEstadoLabel, formatearFecha } from '@/lib/entregas.utils';
 import { useEntregas } from '@/application/hooks/use-entregas';
-import { useState } from 'react';
+import { useEstadosEntregas } from '@/application/hooks';
+import { useState, useMemo } from 'react';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { ModalOptimizacionRutas } from '@/presentation/components/logistica/modal-optimizacion-rutas';
 import { PageHeader } from '@/presentation/components/entrega/PageHeader';
@@ -26,11 +27,22 @@ interface Props extends PageProps {
 export default function EntregasIndex({ entregas, vehiculos = [], choferes = [] }: Props) {
     const { handleVerEntrega, handlePaginaAnterior, handlePaginaSiguiente } = useEntregas();
 
+    // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
+    const { estados: estadosAPI, isLoading: estadosLoading } = useEstadosEntregas();
+
     // Estados para filtros
     const [filtroEstado, setFiltroEstado] = useState<string>('TODOS');
     const [busqueda, setBusqueda] = useState<string>('');
     const [entregasSeleccionadas, setEntregasSeleccionadas] = useState<number[]>([]);
     const [mostrarOptimizacion, setMostrarOptimizacion] = useState(false);
+
+    // Generar opciones de estado desde el API
+    const estadoOptions = useMemo(() => {
+        return estadosAPI.map(estado => ({
+            value: estado.codigo,
+            label: estado.nombre
+        }));
+    }, [estadosAPI]);
 
     // Filtrar entregas localmente
     const entregasFiltradas = entregas.data.filter(entrega => {
@@ -119,19 +131,17 @@ export default function EntregasIndex({ entregas, vehiculos = [], choferes = [] 
                                 <span className="text-sm font-medium">Filtros:</span>
                             </div>
 
-                            <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+                            <Select value={filtroEstado} onValueChange={setFiltroEstado} disabled={estadosLoading}>
                                 <SelectTrigger className="w-[180px] bg-background">
-                                    <SelectValue placeholder="Estado" />
+                                    <SelectValue placeholder={estadosLoading ? "Cargando..." : "Estado"} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="TODOS">Todos los estados</SelectItem>
-                                    <SelectItem value="PROGRAMADO">Programado</SelectItem>
-                                    <SelectItem value="ASIGNADA">Asignada</SelectItem>
-                                    <SelectItem value="EN_CAMINO">En Camino</SelectItem>
-                                    <SelectItem value="LLEGO">Llegó</SelectItem>
-                                    <SelectItem value="ENTREGADO">Entregado</SelectItem>
-                                    <SelectItem value="NOVEDAD">Con Novedad</SelectItem>
-                                    <SelectItem value="CANCELADA">Cancelada</SelectItem>
+                                    {estadoOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
 

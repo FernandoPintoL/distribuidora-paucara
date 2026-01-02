@@ -15,6 +15,7 @@ import EncargadoController from './EncargadoController'
 import EntregaBatchController from './EntregaBatchController'
 import VentaLogisticaController from './VentaLogisticaController'
 import ReporteCargoController from './ReporteCargoController'
+import EstadoLogisticoController from './EstadoLogisticoController'
 const Api = {
     AuthController,
 EmpleadoApiController,
@@ -33,6 +34,7 @@ EncargadoController,
 EntregaBatchController,
 VentaLogisticaController,
 ReporteCargoController,
+EstadoLogisticoController,
 }
 
 export default Api

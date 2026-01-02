@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import {
@@ -10,6 +11,7 @@ import {
     Clock,
 } from 'lucide-react';
 import type { EntregaEstado } from '@/application/hooks/use-entregas-dashboard-stats';
+import { useEstadosEntregas } from '@/application/hooks';
 
 interface DashboardEntregasStatsProps {
     estados: EntregaEstado;
@@ -19,63 +21,30 @@ interface DashboardEntregasStatsProps {
     onRefresh: () => void;
 }
 
-const estadoConfig = {
-    PROGRAMADO: {
-        label: 'Programada',
-        icon: Clock,
-        bgColor: 'bg-blue-50 dark:bg-blue-950',
-        borderColor: 'border-blue-200 dark:border-blue-800',
-        textColor: 'text-blue-600 dark:text-blue-400',
-        iconColor: 'text-blue-600',
-    },
-    ASIGNADA: {
-        label: 'Asignada',
-        icon: Package,
-        bgColor: 'bg-purple-50 dark:bg-purple-950',
-        borderColor: 'border-purple-200 dark:border-purple-800',
-        textColor: 'text-purple-600 dark:text-purple-400',
-        iconColor: 'text-purple-600',
-    },
-    EN_CAMINO: {
-        label: 'En Camino',
-        icon: Truck,
-        bgColor: 'bg-orange-50 dark:bg-orange-950',
-        borderColor: 'border-orange-200 dark:border-orange-800',
-        textColor: 'text-orange-600 dark:text-orange-400',
-        iconColor: 'text-orange-600',
-    },
-    LLEGO: {
-        label: 'Llegó',
-        icon: MapPin,
-        bgColor: 'bg-cyan-50 dark:bg-cyan-950',
-        borderColor: 'border-cyan-200 dark:border-cyan-800',
-        textColor: 'text-cyan-600 dark:text-cyan-400',
-        iconColor: 'text-cyan-600',
-    },
-    ENTREGADO: {
-        label: 'Entregada',
-        icon: CheckCircle2,
-        bgColor: 'bg-green-50 dark:bg-green-950',
-        borderColor: 'border-green-200 dark:border-green-800',
-        textColor: 'text-green-600 dark:text-green-400',
-        iconColor: 'text-green-600',
-    },
-    NOVEDAD: {
-        label: 'Novedad',
-        icon: AlertCircle,
-        bgColor: 'bg-yellow-50 dark:bg-yellow-950',
-        borderColor: 'border-yellow-200 dark:border-yellow-800',
-        textColor: 'text-yellow-600 dark:text-yellow-400',
-        iconColor: 'text-yellow-600',
-    },
-    CANCELADA: {
-        label: 'Cancelada',
-        icon: AlertCircle,
-        bgColor: 'bg-red-50 dark:bg-red-950',
-        borderColor: 'border-red-200 dark:border-red-800',
-        textColor: 'text-red-600 dark:text-red-400',
-        iconColor: 'text-red-600',
-    },
+// Mapeo de estado código a ícono (no disponible en API)
+const estadoIconMap: Record<string, any> = {
+    PROGRAMADO: Clock,
+    ASIGNADA: Package,
+    EN_CAMINO: Truck,
+    LLEGO: MapPin,
+    ENTREGADO: CheckCircle2,
+    NOVEDAD: AlertCircle,
+    CANCELADA: AlertCircle,
+};
+
+// Helper para convertir color hex a clases tailwind
+const colorToTailwind = (hexColor: string | undefined): { bgColor: string; textColor: string; borderColor: string; iconColor: string } => {
+    // Fallback colors si no hay color en API
+    const colorMap: Record<string, { bgColor: string; textColor: string; borderColor: string; iconColor: string }> = {
+        '#3b82f6': { bgColor: 'bg-blue-50 dark:bg-blue-950', textColor: 'text-blue-600 dark:text-blue-400', borderColor: 'border-blue-200 dark:border-blue-800', iconColor: 'text-blue-600' },
+        '#a855f7': { bgColor: 'bg-purple-50 dark:bg-purple-950', textColor: 'text-purple-600 dark:text-purple-400', borderColor: 'border-purple-200 dark:border-purple-800', iconColor: 'text-purple-600' },
+        '#f97316': { bgColor: 'bg-orange-50 dark:bg-orange-950', textColor: 'text-orange-600 dark:text-orange-400', borderColor: 'border-orange-200 dark:border-orange-800', iconColor: 'text-orange-600' },
+        '#06b6d4': { bgColor: 'bg-cyan-50 dark:bg-cyan-950', textColor: 'text-cyan-600 dark:text-cyan-400', borderColor: 'border-cyan-200 dark:border-cyan-800', iconColor: 'text-cyan-600' },
+        '#10b981': { bgColor: 'bg-green-50 dark:bg-green-950', textColor: 'text-green-600 dark:text-green-400', borderColor: 'border-green-200 dark:border-green-800', iconColor: 'text-green-600' },
+        '#eab308': { bgColor: 'bg-yellow-50 dark:bg-yellow-950', textColor: 'text-yellow-600 dark:text-yellow-400', borderColor: 'border-yellow-200 dark:border-yellow-800', iconColor: 'text-yellow-600' },
+        '#ef4444': { bgColor: 'bg-red-50 dark:bg-red-950', textColor: 'text-red-600 dark:text-red-400', borderColor: 'border-red-200 dark:border-red-800', iconColor: 'text-red-600' },
+    };
+    return colorMap[hexColor?.toLowerCase() || ''] || colorMap['#6b7280'];
 };
 
 export function DashboardEntregasStats({
@@ -85,6 +54,27 @@ export function DashboardEntregasStats({
     lastUpdate,
     onRefresh,
 }: DashboardEntregasStatsProps) {
+    // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
+    const { estados: estadosAPI } = useEstadosEntregas();
+
+    // Generar configuración dinámica desde el API
+    const estadoConfig = useMemo(() => {
+        const config: Record<string, any> = {};
+
+        estadosAPI.forEach(estado => {
+            const Icon = estadoIconMap[estado.codigo] || AlertCircle;
+            const colors = colorToTailwind(estado.color);
+
+            config[estado.codigo] = {
+                label: estado.nombre,
+                icon: Icon,
+                ...colors,
+            };
+        });
+
+        return config;
+    }, [estadosAPI]);
+
     const estadoEntries = Object.entries(estados) as Array<
         [keyof EntregaEstado, number]
     >;
@@ -120,6 +110,12 @@ export function DashboardEntregasStats({
                         estadoConfig[
                             estado as keyof typeof estadoConfig
                         ];
+
+                    // Fallback si el estado no está en la configuración
+                    if (!config) {
+                        return null;
+                    }
+
                     const IconComponent = config.icon;
 
                     return (

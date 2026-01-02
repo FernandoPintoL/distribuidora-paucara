@@ -23,6 +23,12 @@ interface EstadoConfig {
 
 /**
  * Mapeo de estados a configuración visual
+ *
+ * @deprecated Use useEstadosEntregas() or useEntregaEstadoBadge() hooks instead
+ * Este objeto se mantiene por compatibilidad backward, pero los estados deberían
+ * obtenerse dinámicamente desde la API usando los hooks especializados.
+ *
+ * Ver: @/application/hooks/use-estados-entregas.ts
  */
 export const ESTADOS_CONFIG: Record<EstadoEntrega, EstadoConfig> = {
     'PROGRAMADO': {
@@ -117,6 +123,10 @@ export const ESTADOS_CONFIG: Record<EstadoEntrega, EstadoConfig> = {
 
 /**
  * Obtiene la configuración visual para un estado de entrega
+ *
+ * @deprecated Use useEstadosEntregas() o useEntregaEstadoBadge() hooks instead
+ * Esta función devuelve valores hardcodeados. Para obtener estados dinámicos
+ * desde la API, utiliza los hooks especializados.
  */
 export const getEstadoConfig = (estado: string | EstadoEntrega): EstadoConfig => {
     return ESTADOS_CONFIG[estado as EstadoEntrega] || ESTADOS_CONFIG['PROGRAMADO'];
@@ -124,6 +134,8 @@ export const getEstadoConfig = (estado: string | EstadoEntrega): EstadoConfig =>
 
 /**
  * Obtiene el tipo de badge para un estado
+ *
+ * @deprecated Use useEntregaEstadoBadge() hook instead
  */
 export const getEstadoBadgeVariant = (estado: string | EstadoEntrega): 'default' | 'destructive' | 'outline' | 'secondary' => {
     return getEstadoConfig(estado).badge;
@@ -131,6 +143,8 @@ export const getEstadoBadgeVariant = (estado: string | EstadoEntrega): 'default'
 
 /**
  * Obtiene el color del estado
+ *
+ * @deprecated Use useEstadosEntregas() hook to get estado.color instead
  */
 export const getEstadoColor = (estado: string | EstadoEntrega): string => {
     return getEstadoConfig(estado).color;
@@ -138,6 +152,8 @@ export const getEstadoColor = (estado: string | EstadoEntrega): string => {
 
 /**
  * Obtiene el color de fondo del estado
+ *
+ * @deprecated Use useEstadosEntregas() hook para obtener colores dinámicos
  */
 export const getEstadoBgColor = (estado: string | EstadoEntrega): string => {
     return getEstadoConfig(estado).bgColor;
@@ -145,6 +161,8 @@ export const getEstadoBgColor = (estado: string | EstadoEntrega): string => {
 
 /**
  * Obtiene el ícono del estado
+ *
+ * @deprecated Use useEstadosEntregas() hook para obtener iconos dinámicos
  */
 export const getEstadoIcon = (estado: string | EstadoEntrega): ReactNode => {
     return getEstadoConfig(estado).icon;
@@ -152,6 +170,8 @@ export const getEstadoIcon = (estado: string | EstadoEntrega): ReactNode => {
 
 /**
  * Obtiene la etiqueta legible del estado
+ *
+ * @deprecated Use useEstadosEntregas().getEstadoLabel() o estado.nombre from API
  */
 export const getEstadoLabel = (estado: string | EstadoEntrega): string => {
     return getEstadoConfig(estado).label;
@@ -159,6 +179,8 @@ export const getEstadoLabel = (estado: string | EstadoEntrega): string => {
 
 /**
  * Obtiene la descripción del estado
+ *
+ * @deprecated Use useEstadosEntregas() para obtener descripción dinámica desde API
  */
 export const getEstadoDescripcion = (estado: string | EstadoEntrega): string => {
     return getEstadoConfig(estado).descripcion;

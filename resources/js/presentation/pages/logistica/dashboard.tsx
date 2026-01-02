@@ -104,6 +104,9 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
     };
 
     // Badge de estado
+    // Fase 3.7: Este función muestra emojis + texto
+    // Nota: En Fase 3.8+, considerar refactorizar para usar ProformaEstadoBadge component
+    // que ahora tiene integración completa con hooks dinámicos
     const getEstadoBadge = (estado: string) => {
         const emojis: Record<string, string> = {
             'PENDIENTE': '🟡',
