@@ -37,8 +37,9 @@ COPY package.json package-lock.json ./
 # Install Node dependencies
 RUN npm ci
 
-# Copy application code
+# Copy application code (excluding .env which will be provided by Railway at runtime)
 COPY . /app/
+RUN rm -f /app/.env
 
 # Configure Nginx and Supervisor
 RUN mkdir -p /run/nginx /var/log/nginx /etc/nginx/http.d \

@@ -15,7 +15,17 @@ import { initializeTheme } from '@/presentation/hooks/use-appearance';
 import { configureAxios } from '@/infrastructure/config/axios.config';
 import { EstadosProvider } from '@/application/contexts/EstadosContext';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+// Get appName from window props injected by Laravel, fallback to env, then 'Laravel'
+const getAppName = (): string => {
+    // First, try to get from window.__APP_NAME__ (will be set in the HTML template)
+    if (typeof window !== 'undefined' && (window as any).__APP_NAME__) {
+        return (window as any).__APP_NAME__;
+    }
+    // Fallback to environment variable
+    return import.meta.env.VITE_APP_NAME || 'Laravel';
+};
+
+const appName = getAppName();
 
 // Configurar axios con interceptadores para autenticación
 configureAxios();
