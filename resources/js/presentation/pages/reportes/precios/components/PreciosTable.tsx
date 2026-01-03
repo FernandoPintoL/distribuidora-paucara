@@ -38,7 +38,7 @@ export function PreciosTable({ precios }: PreciosTableProps) {
           <TableBody>
             {precios.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
                   No se encontraron precios con los filtros seleccionados
                 </TableCell>
               </TableRow>
@@ -48,14 +48,14 @@ export function PreciosTable({ precios }: PreciosTableProps) {
                   <TableCell>
                     <Link
                       href={`/productos/${precio.producto.id}/edit`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-medium"
                     >
                       {precio.producto.nombre}
                     </Link>
                   </TableCell>
 
                   <TableCell>
-                    <span className="text-gray-600">
+                    <span className="text-gray-600 dark:text-gray-400">
                       {precio.producto.categoria?.nombre || 'Sin categoría'}
                     </span>
                   </TableCell>
@@ -70,14 +70,14 @@ export function PreciosTable({ precios }: PreciosTableProps) {
                   </TableCell>
 
                   <TableCell>
-                    <span className="text-gray-900">{precio.nombre}</span>
+                    <span className="text-gray-900 dark:text-gray-100">{precio.nombre}</span>
                   </TableCell>
 
                   <TableCell className="text-right font-semibold">
                     {formatCurrency(precio.precio)}
                   </TableCell>
 
-                  <TableCell className="text-center text-gray-600">
+                  <TableCell className="text-center text-gray-600 dark:text-gray-400">
                     {precio.fecha_ultima_actualizacion
                       ? formatDateOnly(precio.fecha_ultima_actualizacion)
                       : 'N/A'

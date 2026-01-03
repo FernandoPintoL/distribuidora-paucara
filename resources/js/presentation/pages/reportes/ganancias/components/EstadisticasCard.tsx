@@ -16,8 +16,8 @@ export function EstadisticasCard({ estadisticas }: EstadisticasCardProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{estadisticas.total_productos}</p>
-            <p className="text-sm text-gray-600">Productos</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{estadisticas.total_productos}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Productos</p>
           </div>
         </CardContent>
       </Card>
@@ -26,10 +26,10 @@ export function EstadisticasCard({ estadisticas }: EstadisticasCardProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
               {formatCurrency(estadisticas.ganancia_total)}
             </p>
-            <p className="text-sm text-gray-600">Ganancia Total</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Ganancia Total</p>
           </div>
         </CardContent>
       </Card>
@@ -38,10 +38,10 @@ export function EstadisticasCard({ estadisticas }: EstadisticasCardProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-green-500">
+            <p className="text-2xl font-bold text-green-500 dark:text-green-300">
               {formatCurrency(estadisticas.ganancia_promedio)}
             </p>
-            <p className="text-sm text-gray-600">Ganancia Promedio</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Ganancia Promedio</p>
           </div>
         </CardContent>
       </Card>
@@ -50,10 +50,10 @@ export function EstadisticasCard({ estadisticas }: EstadisticasCardProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-purple-600">
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {formatPercentage(estadisticas.porcentaje_promedio)}
             </p>
-            <p className="text-sm text-gray-600">% Promedio</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">% Promedio</p>
           </div>
         </CardContent>
       </Card>
@@ -62,10 +62,10 @@ export function EstadisticasCard({ estadisticas }: EstadisticasCardProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-green-700">
+            <p className="text-2xl font-bold text-green-700 dark:text-green-300">
               {formatCurrency(estadisticas.mejor_ganancia)}
             </p>
-            <p className="text-sm text-gray-600">Mejor Ganancia</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Mejor Ganancia</p>
           </div>
         </CardContent>
       </Card>
@@ -75,11 +75,11 @@ export function EstadisticasCard({ estadisticas }: EstadisticasCardProps) {
         <CardContent className="p-4">
           <div className="text-center">
             <p className={`text-2xl font-bold ${
-              estadisticas.peor_ganancia >= 0 ? 'text-orange-600' : 'text-red-600'
+              estadisticas.peor_ganancia >= 0 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
             }`}>
               {formatCurrency(estadisticas.peor_ganancia)}
             </p>
-            <p className="text-sm text-gray-600">Peor Ganancia</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Peor Ganancia</p>
           </div>
         </CardContent>
       </Card>

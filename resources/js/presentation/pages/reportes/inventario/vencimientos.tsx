@@ -44,10 +44,10 @@ export default function VencimientosInventario({
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                             Vencimientos de Inventario
                         </h1>
-                        <p className="text-gray-600 mt-1">
+                        <p className="text-gray-600 dark:text-gray-400 mt-1">
                             Control de productos vencidos y próximos a vencer
                         </p>
                     </div>
@@ -132,14 +132,14 @@ export default function VencimientosInventario({
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">
+                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                                         Productos Vencidos
                                     </p>
-                                    <p className="text-2xl font-bold text-red-600">
+                                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                                         {formatNumber(estadisticas.productos_vencidos)}
                                     </p>
                                 </div>
-                                <AlertTriangle className="h-8 w-8 text-red-500" />
+                                <AlertTriangle className="h-8 w-8 text-red-500 dark:text-red-400" />
                             </div>
                         </CardContent>
                     </Card>
@@ -148,14 +148,14 @@ export default function VencimientosInventario({
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">
+                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                                         Próximos a Vencer
                                     </p>
-                                    <p className="text-2xl font-bold text-yellow-600">
+                                    <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                                         {formatNumber(estadisticas.productos_proximos_vencer)}
                                     </p>
                                 </div>
-                                <Clock className="h-8 w-8 text-yellow-500" />
+                                <Clock className="h-8 w-8 text-yellow-500 dark:text-yellow-400" />
                             </div>
                         </CardContent>
                     </Card>
@@ -164,14 +164,14 @@ export default function VencimientosInventario({
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">
+                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                                         Valor Productos Vencidos
                                     </p>
-                                    <p className="text-2xl font-bold text-red-600">
+                                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                                         {formatCurrency(estadisticas.valor_productos_vencidos)}
                                     </p>
                                 </div>
-                                <TrendingDown className="h-8 w-8 text-red-500" />
+                                <TrendingDown className="h-8 w-8 text-red-500 dark:text-red-400" />
                             </div>
                         </CardContent>
                     </Card>
@@ -243,8 +243,8 @@ export default function VencimientosInventario({
                                         <TableRow>
                                             <TableCell colSpan={7} className="text-center py-8">
                                                 <div className="flex flex-col items-center gap-2">
-                                                    <Package className="h-8 w-8 text-gray-400" />
-                                                    <p className="text-gray-500">
+                                                    <Package className="h-8 w-8 text-gray-400 dark:text-gray-600" />
+                                                    <p className="text-gray-500 dark:text-gray-400">
                                                         No se encontraron productos con fechas de vencimiento
                                                     </p>
                                                 </div>
@@ -258,7 +258,7 @@ export default function VencimientosInventario({
                         {/* Paginación */}
                         {productos.last_page > 1 && (
                             <div className="flex items-center justify-between px-2 py-4">
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
                                     Mostrando {((productos.current_page - 1) * productos.per_page) + 1} a{' '}
                                     {Math.min(productos.current_page * productos.per_page, productos.total)} de{' '}
                                     {formatNumber(productos.total)} resultados

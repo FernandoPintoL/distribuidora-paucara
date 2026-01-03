@@ -31,7 +31,7 @@ export function GananciasTable({ ganancias, isLoading = false }: GananciasTableP
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <p className="text-gray-600">Cargando datos...</p>
+          <p className="text-gray-600 dark:text-gray-400">Cargando datos...</p>
         </CardContent>
       </Card>
     );
@@ -60,7 +60,7 @@ export function GananciasTable({ ganancias, isLoading = false }: GananciasTableP
             <TableBody>
               {ganancias.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500 dark:text-gray-400">
                     No se encontraron datos de ganancia con los filtros seleccionados
                   </TableCell>
                 </TableRow>
@@ -74,7 +74,7 @@ export function GananciasTable({ ganancias, isLoading = false }: GananciasTableP
                       <TableCell>
                         <Link
                           href={`/productos/${item.producto.id}/edit`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-medium"
                         >
                           {item.producto.nombre}
                         </Link>
@@ -82,7 +82,7 @@ export function GananciasTable({ ganancias, isLoading = false }: GananciasTableP
 
                       {/* Categoría */}
                       <TableCell>
-                        <span className="text-gray-600">
+                        <span className="text-gray-600 dark:text-gray-400">
                           {item.producto.categoria?.nombre || 'Sin categoría'}
                         </span>
                       </TableCell>
@@ -110,7 +110,7 @@ export function GananciasTable({ ganancias, isLoading = false }: GananciasTableP
                       {/* Ganancia */}
                       <TableCell
                         className={`text-right font-semibold ${
-                          item.ganancia >= 0 ? 'text-green-600' : 'text-red-600'
+                          item.ganancia >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         }`}
                       >
                         {formatCurrency(item.ganancia)}

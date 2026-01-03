@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import AuthLayout from '@/presentation/layouts/AuthLayout';
+import AppLayout from '@/layouts/app-layout';
 import HistorialTabla from './components/historial-tabla';
 import DetalleCarga from './components/detalle-carga';
 import ModalRevertir from './components/modal-revertir';
@@ -79,29 +79,27 @@ export default function HistorialCargas() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AppLayout breadcrumbs={[
+      { title: 'Dashboard', href: '/dashboard' },
+      { title: 'Productos', href: '/productos' },
+      { title: 'Historial de Cargas', href: '#' }
+    ]}>
       <Head title="Historial de Cargas de Productos" />
 
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Historial de Cargas</h1>
-              <p className="text-gray-600 mt-1">Consulta todas las importaciones de productos</p>
-            </div>
-            <Link
-              href="/productos/carga-masiva"
-              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-            >
-              + Nueva carga
-            </Link>
+      <div className="space-y-6 p-4">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Historial de Cargas</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Consulta todas las importaciones de productos</p>
           </div>
+          <Link
+            href="/productos/carga-masiva"
+            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+          >
+            + Nueva carga
+          </Link>
         </div>
-      </div>
-
-      {/* Contenido */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Mensaje */}
         {mensaje && (
           <div

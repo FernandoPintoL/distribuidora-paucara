@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
         // $this->call(SupervisoresSeeder::class);
         $this->call(EstadoDocumentoSeeder::class);
         $this->call(EstadoMermaSeeder::class);
+        $this->call(EstadosLogisticaSeeder::class);
         $this->call(ImpuestoSeeder::class);
         $this->call(ModuloSidebarSeeder::class);
         $this->call(MonedaSeeder::class);
