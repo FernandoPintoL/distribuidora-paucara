@@ -19,29 +19,32 @@ class DashboardService
 {
     /**
      * Obtener métricas principales del dashboard
+     * @param string $periodo Período a consultar
+     * @param int|null $cajaId ID de la caja abierta (opcional). Si se proporciona, filtra datos solo de esta caja
      */
-    public function getMainMetrics(string $periodo = 'mes_actual'): array
+    public function getMainMetrics(string $periodo = 'mes_actual', ?int $cajaId = null): array
     {
         $fechas = $this->getFechasPeriodo($periodo);
 
         return [
-            'ventas' => $this->getMetricasVentas($fechas),
+            'ventas' => $this->getMetricasVentas($fechas, $cajaId),
             'compras' => $this->getMetricasCompras($fechas),
             'inventario' => $this->getMetricasInventario(),
-            'caja' => $this->getMetricasCaja($fechas),
+            'caja' => $this->getMetricasCaja($fechas, $cajaId),
             'clientes' => $this->getMetricasClientes($fechas),
-            'proformas' => $this->getMetricasProformas($fechas),
+            'proformas' => $this->getMetricasProformas($fechas, $cajaId),
         ];
     }
 
     /**
      * Obtener datos para gráficos de ventas por período
+     * @param int|null $cajaId Filtra por caja abierta (opcional)
      */
-    public function getGraficoVentas(string $tipo = 'diario', int $dias = 30): array
+    public function getGraficoVentas(string $tipo = 'diario', int $dias = 30, ?int $cajaId = null): array
     {
         $fechaInicio = Carbon::now()->subDays($dias);
 
-        $ventas = Venta::select(
+        $query = Venta::select(
             DB::raw('DATE(fecha) as fecha'),
             DB::raw('COUNT(*) as total_ventas'),
             DB::raw('SUM(total) as monto_total'),
@@ -50,8 +53,15 @@ class DashboardService
             ->where('fecha', '>=', $fechaInicio)
             ->whereHas('estadoDocumento', function ($query) {
                 $query->where('es_estado_final', true);
-            })
-            ->groupBy(DB::raw('DATE(fecha)'))
+            });
+
+        if ($cajaId) {
+            $query->whereHas('movimientoCaja', function($q) use ($cajaId) {
+                $q->where('caja_id', $cajaId);
+            });
+        }
+
+        $ventas = $query->groupBy(DB::raw('DATE(fecha)'))
             ->orderBy('fecha')
             ->get();
 
@@ -81,14 +91,21 @@ class DashboardService
 
     /**
      * Obtener productos más vendidos
+     * @param int|null $cajaId Filtra por caja abierta (opcional). Usa JOIN con movimientos_caja
      */
-    public function getProductosMasVendidos(int $limite = 10): array
+    public function getProductosMasVendidos(int $limite = 10, ?int $cajaId = null): array
     {
-        return DB::table('detalle_ventas')
+        $query = DB::table('detalle_ventas')
             ->join('productos', 'detalle_ventas.producto_id', '=', 'productos.id')
             ->join('ventas', 'detalle_ventas.venta_id', '=', 'ventas.id')
-            ->whereDate('ventas.fecha', '>=', Carbon::now()->subDays(30))
-            ->select(
+            ->whereDate('ventas.fecha', '>=', Carbon::now()->subDays(30));
+
+        if ($cajaId) {
+            $query->join('movimientos_caja', 'ventas.numero', '=', 'movimientos_caja.numero_documento')
+                  ->where('movimientos_caja.caja_id', $cajaId);
+        }
+
+        return $query->select(
                 'productos.nombre',
                 DB::raw('SUM(detalle_ventas.cantidad) as total_vendido'),
                 DB::raw('SUM(detalle_ventas.subtotal) as ingresos_total')
@@ -152,18 +169,46 @@ class DashboardService
 
     /**
      * Obtener métricas de ventas
+     * @param int|null $cajaId Filtra por caja abierta (opcional). Usa whereHas para filtrar por MovimientoCaja.caja_id
      */
-    private function getMetricasVentas(array $fechas): array
+    private function getMetricasVentas(array $fechas, ?int $cajaId = null): array
     {
-        $ventasActuales = Venta::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->sum('total');
-        $ventasAnteriores = Venta::whereBetween('fecha', [$fechas['inicio_anterior'], $fechas['fin_anterior']])->sum('total');
+        $query = Venta::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        if ($cajaId) {
+            $query->whereHas('movimientoCaja', function($q) use ($cajaId) {
+                $q->where('caja_id', $cajaId);
+            });
+        }
+        $ventasActuales = $query->sum('total');
+
+        $queryAnterior = Venta::whereBetween('fecha', [$fechas['inicio_anterior'], $fechas['fin_anterior']]);
+        if ($cajaId) {
+            $queryAnterior->whereHas('movimientoCaja', function($q) use ($cajaId) {
+                $q->where('caja_id', $cajaId);
+            });
+        }
+        $ventasAnteriores = $queryAnterior->sum('total');
 
         $cambio = $ventasAnteriores > 0 ? (($ventasActuales - $ventasAnteriores) / $ventasAnteriores) * 100 : 0;
 
+        $queryCount = Venta::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        if ($cajaId) {
+            $queryCount->whereHas('movimientoCaja', function($q) use ($cajaId) {
+                $q->where('caja_id', $cajaId);
+            });
+        }
+
+        $queryAvg = Venta::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        if ($cajaId) {
+            $queryAvg->whereHas('movimientoCaja', function($q) use ($cajaId) {
+                $q->where('caja_id', $cajaId);
+            });
+        }
+
         return [
             'total' => $ventasActuales,
-            'cantidad' => Venta::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count(),
-            'promedio' => Venta::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->avg('total') ?? 0,
+            'cantidad' => $queryCount->count(),
+            'promedio' => $queryAvg->avg('total') ?? 0,
             'cambio_porcentual' => round($cambio, 2),
         ];
     }
@@ -212,24 +257,36 @@ class DashboardService
 
     /**
      * Obtener métricas de caja
+     * @param int|null $cajaId Filtra por caja abierta (opcional)
      */
-    private function getMetricasCaja(array $fechas): array
+    private function getMetricasCaja(array $fechas, ?int $cajaId = null): array
     {
-        $ingresos = MovimientoCaja::join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+        $queryIngresos = MovimientoCaja::join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
             ->where('tipo_operacion_caja.codigo', 'INGRESO')
-            ->whereBetween('movimientos_caja.fecha', [$fechas['inicio'], $fechas['fin']])
-            ->sum('movimientos_caja.monto');
+            ->whereBetween('movimientos_caja.fecha', [$fechas['inicio'], $fechas['fin']]);
+        if ($cajaId) {
+            $queryIngresos->where('movimientos_caja.caja_id', $cajaId);
+        }
+        $ingresos = $queryIngresos->sum('movimientos_caja.monto');
 
-        $egresos = MovimientoCaja::join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+        $queryEgresos = MovimientoCaja::join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
             ->where('tipo_operacion_caja.codigo', 'EGRESO')
-            ->whereBetween('movimientos_caja.fecha', [$fechas['inicio'], $fechas['fin']])
-            ->sum('movimientos_caja.monto');
+            ->whereBetween('movimientos_caja.fecha', [$fechas['inicio'], $fechas['fin']]);
+        if ($cajaId) {
+            $queryEgresos->where('movimientos_caja.caja_id', $cajaId);
+        }
+        $egresos = $queryEgresos->sum('movimientos_caja.monto');
+
+        $queryCount = MovimientoCaja::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        if ($cajaId) {
+            $queryCount->where('caja_id', $cajaId);
+        }
 
         return [
             'ingresos' => $ingresos,
             'egresos' => $egresos,
             'saldo' => $ingresos - $egresos,
-            'total_movimientos' => MovimientoCaja::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count(),
+            'total_movimientos' => $queryCount->count(),
         ];
     }
 
@@ -253,14 +310,24 @@ class DashboardService
 
     /**
      * Obtener métricas de proformas
+     * @param int|null $cajaId NO se usa (proformas no tienen relación con caja)
+     *
+     * Nota: Las proformas NO tienen relación directa con cajas.
+     * Se puede extender en el futuro para obtener el usuario_id del empleado de la caja.
      */
-    private function getMetricasProformas(array $fechas): array
+    private function getMetricasProformas(array $fechas, ?int $cajaId = null): array
     {
-        $total = Proforma::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
-        $convertidas = Proforma::where('estado', 'CONVERTIDA')->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
+        // Por ahora, sin filtro específico (retorna todas las proformas)
+        // Si se necesita filtrar por usuario (creador), se requeriría pasar el user_id explícitamente
+        $query = Proforma::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        $total = $query->count();
+
+        $queryConvertidas = Proforma::where('estado', 'CONVERTIDA')->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        $convertidas = $queryConvertidas->count();
 
         // Contar proformas que NO han sido convertidas (pendientes)
-        $pendientes = Proforma::whereNotIn('estado', ['CONVERTIDA'])->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
+        $queryPendientes = Proforma::whereNotIn('estado', ['CONVERTIDA'])->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        $pendientes = $queryPendientes->count();
 
         return [
             'total' => $total,

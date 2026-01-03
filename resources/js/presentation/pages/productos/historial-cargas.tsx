@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import HistorialTabla from './components/historial-tabla';
@@ -19,7 +19,7 @@ export default function HistorialCargas() {
   const [tipo, setTipo] = useState<'success' | 'error'>('success');
 
   // Métodos
-  const obtenerCargas = async () => {
+  const obtenerCargas = useCallback(async () => {
     try {
       setCargando(true);
       const resultado = await productosCSVService.obtenerHistorialCargas(paginaActual, filtroEstado);
@@ -30,7 +30,7 @@ export default function HistorialCargas() {
     } finally {
       setCargando(false);
     }
-  };
+  }, [paginaActual, filtroEstado]);
 
   const verDetalle = async (cargo: CargoCSVProducto) => {
     try {
@@ -76,7 +76,7 @@ export default function HistorialCargas() {
   // Montar
   useEffect(() => {
     obtenerCargas();
-  }, []);
+  }, [obtenerCargas]);
 
   return (
     <AppLayout breadcrumbs={[
@@ -182,6 +182,6 @@ export default function HistorialCargas() {
           onCancelar={() => setCargaParaRevertir(null)}
         />
       )}
-    </div>
+    </AppLayout>
   );
 }

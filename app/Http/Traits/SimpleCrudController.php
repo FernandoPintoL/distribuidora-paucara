@@ -243,13 +243,40 @@ trait SimpleCrudController
      */
     public function destroy($id): RedirectResponse
     {
-        // Eliminar recurso
         $modelClass = $this->getModel();
         $item = $modelClass::findOrFail($id);
-        $item->delete();
+        $itemName = isset($item->nombre) ? $item->nombre : "#$id";
 
-        // Redirigir con mensaje de éxito
-        return $this->redirectToIndexWithSuccess('eliminada');
+        try {
+            $item->delete();
+
+            // Redirigir con mensaje de éxito
+            return $this->redirectToIndexWithSuccess('eliminada');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Detectar si es una violación de clave foránea
+            if (strpos($e->getMessage(), 'FOREIGN KEY') !== false ||
+                strpos($e->getMessage(), 'foreign key') !== false ||
+                $e->getCode() == '23503') {
+
+                $errorMessage = "{$this->getSingularResourceNameText()} \"{$itemName}\" está siendo usado en otras partes del sistema y no puede ser eliminado.";
+
+                // Extraer información de qué tabla tiene la relación (si es posible)
+                if (strpos($e->getMessage(), 'transferencia_inventarios') !== false) {
+                    $errorMessage .= " Aún hay transferencias vinculadas.";
+                } elseif (strpos($e->getMessage(), 'movimientos_inventario') !== false) {
+                    $errorMessage .= " Aún hay movimientos de inventario vinculados.";
+                } elseif (strpos($e->getMessage(), 'stock_productos') !== false) {
+                    $errorMessage .= " Aún hay stock de productos en este almacén.";
+                }
+
+                return redirect()
+                    ->back()
+                    ->with('error', $errorMessage);
+            }
+
+            // Si es otro tipo de error, lanzarlo
+            throw $e;
+        }
     }
 
     /**
@@ -269,7 +296,30 @@ trait SimpleCrudController
      */
     protected function getSingularResourceName(): string
     {
-        return rtrim($this->getResourceName(), 's');
+        $plural = $this->getResourceName();
+
+        // Mapa de plurales a singulares en español
+        $singularMap = [
+            'almacenes' => 'almacen',
+            'categorias' => 'categoria',
+            'marcas' => 'marca',
+            'unidades' => 'unidad',
+            'tipos_pago' => 'tipo_pago',
+            'clientes' => 'cliente',
+            'empleados' => 'empleado',
+            'proveedores' => 'proveedor',
+            'productos' => 'producto',
+            'ventas' => 'venta',
+            'compras' => 'compra',
+        ];
+
+        // Si está en el mapa, usar el singular correspondiente
+        if (isset($singularMap[$plural])) {
+            return $singularMap[$plural];
+        }
+
+        // Fallback: quitar 's' final si no está en el mapa
+        return rtrim($plural, 's');
     }
 
     /**

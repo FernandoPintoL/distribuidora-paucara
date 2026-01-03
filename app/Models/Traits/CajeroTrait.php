@@ -36,7 +36,7 @@ trait CajeroTrait
      */
     public function aperturasCaja(): HasMany
     {
-        return $this->hasMany(AperturaCaja::class, 'cajero_id');
+        return $this->hasMany(AperturaCaja::class, 'user_id', 'user_id');
     }
 
     /**
@@ -44,7 +44,7 @@ trait CajeroTrait
      */
     public function cierresCaja(): HasMany
     {
-        return $this->hasMany(CierreCaja::class, 'cajero_id');
+        return $this->hasMany(CierreCaja::class, 'user_id', 'user_id');
     }
 
     /**
@@ -52,7 +52,7 @@ trait CajeroTrait
      */
     public function movimientosCaja(): HasMany
     {
-        return $this->hasMany(MovimientoCaja::class, 'cajero_id');
+        return $this->hasMany(MovimientoCaja::class, 'user_id', 'user_id');
     }
 
     /**
@@ -69,7 +69,7 @@ trait CajeroTrait
     public function tieneCajaAbierta(): bool
     {
         return $this->aperturasCaja()
-            ->whereDoesntHave('cierreCaja')
+            ->whereDoesntHave('cierre')
             ->exists();
     }
 
@@ -79,7 +79,7 @@ trait CajeroTrait
     public function cajaAbierta()
     {
         $apertura = $this->aperturasCaja()
-            ->whereDoesntHave('cierreCaja')
+            ->whereDoesntHave('cierre')
             ->latest()
             ->first();
 

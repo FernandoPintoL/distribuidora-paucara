@@ -77,7 +77,18 @@ export default function TransferenciasIndex() {
     };
 
     const enviarTransferencia = async (transferencia: TransferenciaInventario) => {
-        if (!confirm('¿Confirmas el envío de esta transferencia?')) return;
+        const confirmed = await NotificationService.confirm(
+            '¿Deseas enviar esta transferencia? El stock se deducirá del almacén origen.',
+            {
+                title: 'Enviar Transferencia',
+                confirmText: 'Enviar',
+                cancelText: 'Cancelar',
+            }
+        );
+
+        if (!confirmed) return;
+
+        const toastId = NotificationService.loading('Enviando transferencia...');
 
         try {
             const response = await fetch(`/inventario/transferencias/${transferencia.id}/enviar`, {
@@ -91,18 +102,29 @@ export default function TransferenciasIndex() {
             const result = await response.json();
 
             if (result.success) {
-                NotificationService.success('Transferencia enviada exitosamente');
-                router.reload({ only: ['transferencias'] });
+                NotificationService.update(toastId, 'Transferencia enviada exitosamente', 'success');
+                setTimeout(() => router.reload({ only: ['transferencias'] }), 1000);
             } else {
-                NotificationService.error(result.message || 'Error al enviar transferencia');
+                NotificationService.update(toastId, result.message || 'Error al enviar transferencia', 'error');
             }
         } catch {
-            NotificationService.error('Error al procesar la solicitud');
+            NotificationService.update(toastId, 'Error al procesar la solicitud', 'error');
         }
     };
 
     const recibirTransferencia = async (transferencia: TransferenciaInventario) => {
-        if (!confirm('¿Confirmas la recepción de esta transferencia?')) return;
+        const confirmed = await NotificationService.confirm(
+            '¿Confirmas la recepción de esta transferencia? El stock se añadirá al almacén destino.',
+            {
+                title: 'Recibir Transferencia',
+                confirmText: 'Recibir',
+                cancelText: 'Cancelar',
+            }
+        );
+
+        if (!confirmed) return;
+
+        const toastId = NotificationService.loading('Procesando recepción...');
 
         try {
             const response = await fetch(`/inventario/transferencias/${transferencia.id}/recibir`, {
@@ -116,19 +138,36 @@ export default function TransferenciasIndex() {
             const result = await response.json();
 
             if (result.success) {
-                NotificationService.success('Transferencia recibida exitosamente');
-                router.reload({ only: ['transferencias'] });
+                NotificationService.update(toastId, 'Transferencia recibida exitosamente', 'success');
+                setTimeout(() => router.reload({ only: ['transferencias'] }), 1000);
             } else {
-                NotificationService.error(result.message || 'Error al recibir transferencia');
+                NotificationService.update(toastId, result.message || 'Error al recibir transferencia', 'error');
             }
         } catch {
-            NotificationService.error('Error al procesar la solicitud');
+            NotificationService.update(toastId, 'Error al procesar la solicitud', 'error');
         }
     };
 
     const cancelarTransferencia = async (transferencia: TransferenciaInventario) => {
-        const motivo = prompt('Motivo de cancelación:');
-        if (!motivo || motivo.trim() === '') return;
+        const motivo = prompt('Ingresa el motivo de cancelación:');
+
+        if (!motivo || motivo.trim() === '') {
+            NotificationService.warning('Debes proporcionar un motivo para cancelar la transferencia');
+            return;
+        }
+
+        const confirmed = await NotificationService.confirm(
+            `Motivo: "${motivo}"\n\n¿Estás seguro de cancelar esta transferencia?`,
+            {
+                title: 'Cancelar Transferencia',
+                confirmText: 'Cancelar Transferencia',
+                cancelText: 'Volver',
+            }
+        );
+
+        if (!confirmed) return;
+
+        const toastId = NotificationService.loading('Cancelando transferencia...');
 
         try {
             const response = await fetch(`/inventario/transferencias/${transferencia.id}/cancelar`, {
@@ -143,13 +182,13 @@ export default function TransferenciasIndex() {
             const result = await response.json();
 
             if (result.success) {
-                NotificationService.success('Transferencia cancelada exitosamente');
-                router.reload({ only: ['transferencias'] });
+                NotificationService.update(toastId, 'Transferencia cancelada exitosamente', 'success');
+                setTimeout(() => router.reload({ only: ['transferencias'] }), 1000);
             } else {
-                NotificationService.error(result.message || 'Error al cancelar transferencia');
+                NotificationService.update(toastId, result.message || 'Error al cancelar transferencia', 'error');
             }
         } catch {
-            NotificationService.error('Error al procesar la solicitud');
+            NotificationService.update(toastId, 'Error al procesar la solicitud', 'error');
         }
     };
 

@@ -38,6 +38,13 @@ export function DashboardStats({
     dashboardIsRefreshing,
     refreshDashboard,
 }: DashboardStatsProps) {
+    // Debug: Log component props
+    console.log('=== DASHBOARD STATS COMPONENT ===');
+    console.log('Received proformaStats:', proformaStats);
+    console.log('Received stats:', stats);
+    console.log('loadingLogisticaStats:', loadingLogisticaStats);
+    console.log('==================================');
+
     return (
         <>
             {/* Header con refresh */}
@@ -60,6 +67,13 @@ export function DashboardStats({
                     </Button>
                 </div>
             </div>
+
+            {/* Debug info */}
+            {!proformaStats && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
+                    ℹ️ Cargando estadísticas de proformas... Si esto persiste, revisa la consola del navegador (F12).
+                </div>
+            )}
 
             {/* Estadísticas de proformas */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

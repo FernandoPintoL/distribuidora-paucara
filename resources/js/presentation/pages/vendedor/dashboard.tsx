@@ -5,7 +5,7 @@
 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     DollarSign,
@@ -21,6 +21,8 @@ import { ProductosMasVendidos } from '@/presentation/components/dashboard/produc
 import { PeriodSelector } from '@/presentation/components/dashboard/period-selector';
 
 interface VendedorDashboardProps {
+    sin_caja_abierta?: boolean;
+    mensaje?: string;
     metricas: {
         ventas: {
             total: number;
@@ -90,6 +92,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function VendedorDashboard({
+    sin_caja_abierta = false,
+    mensaje = '',
     metricas,
     graficoVentas,
     productosMasVendidos,
@@ -100,6 +104,48 @@ export default function VendedorDashboard({
 }: VendedorDashboardProps) {
     const [periodo, setPeriodo] = useState(initialPeriodo);
     const [loading, setLoading] = useState(false);
+
+    // Mostrar mensaje si no hay caja abierta
+    if (sin_caja_abierta) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Dashboard Vendedor" />
+                <div className="flex h-full flex-1 items-center justify-center p-6">
+                    <div className="text-center">
+                        <div className="mb-4 flex justify-center">
+                            <div className="rounded-full bg-amber-100 p-4">
+                                <svg
+                                    className="h-12 w-12 text-amber-600"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 9v3.75m-9.303 3.376c.866-1.5 2.845-2.496 4.903-2.496s4.037.996 4.903 2.496m0 0A.75.75 0 1 1 15.75 16.5M12 16.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                            Caja no abierta
+                        </h2>
+                        <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+                            {mensaje || 'Debes abrir una caja para ver el dashboard'}
+                        </p>
+                        <Link
+                            href="/cajas"
+                            className="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+                        >
+                            Abrir caja
+                        </Link>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
 
     // Valores por defecto
     const defaultMetricas = {

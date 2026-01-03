@@ -57,10 +57,23 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
 
     const {
         stats: proformaStats,
+        loading: loadingProformaStats,
+        error: proformaError,
     } = useProformaStats({
         autoRefresh: true,
         refreshInterval: 30,
     });
+
+    // Debug: Log datos recibidos
+    useEffect(() => {
+        console.log('=== LOGISTICA DASHBOARD DEBUG ===');
+        console.log('Stats from Inertia (estadisticas):', stats);
+        console.log('Proforma Stats from API:', proformaStats);
+        console.log('Proforma Loading:', loadingProformaStats);
+        console.log('Proforma Error:', proformaError);
+        console.log('Logistica Stats:', logisticaStats);
+        console.log('================================');
+    }, [stats, proformaStats, loadingProformaStats, proformaError, logisticaStats]);
 
     // Hook de modal unificado
     const {

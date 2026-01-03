@@ -130,7 +130,7 @@ class TransferenciaInventario extends Model
                 MovimientoInventario::registrar(
                     $stockProducto,
                     -$detalle->cantidad,
-                    MovimientoInventario::TIPO_TRANSFERENCIA_SALIDA,
+                    'SALIDA_TRANSFERENCIA',
                     "Transferencia {$this->numero} - Envío a {$this->almacenDestino->nombre}",
                     $this->numero,
                     $this->usuario_id
@@ -177,7 +177,7 @@ class TransferenciaInventario extends Model
                 MovimientoInventario::registrar(
                     $stockDestino,
                     $detalle->cantidad,
-                    MovimientoInventario::TIPO_TRANSFERENCIA_ENTRADA,
+                    'ENTRADA_TRANSFERENCIA',
                     "Transferencia {$this->numero} - Recepción desde {$this->almacenOrigen->nombre}",
                     $this->numero,
                     $this->usuario_id

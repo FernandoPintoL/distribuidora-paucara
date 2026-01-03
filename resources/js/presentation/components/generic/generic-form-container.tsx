@@ -24,6 +24,11 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
   loadOptions,
   extraData
 }: GenericFormContainerProps<T, F>) {
+  // Logs para debuggear
+  console.log('===== GENERIC FORM CONTAINER DEBUG =====');
+  console.log('entity recibida:', entity);
+  console.log('initialData recibida:', initialData);
+
   // 🆕 Aplicar valores por defecto solo en modo creación (cuando no hay entity)
   const dataWithDefaults = !entity
     ? config.formFields.reduce((acc, field) => {
@@ -35,6 +40,8 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
       }, { ...initialData } as F)
     : initialData;
 
+  console.log('dataWithDefaults:', dataWithDefaults);
+
   const {
     data,
     errors,
@@ -44,6 +51,9 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
     handleReset,
     isEditing
   } = useGenericForm(entity, service, dataWithDefaults);
+
+  console.log('data del formulario (hook):', data);
+  console.log('========================================');
 
   const pageTitle = isEditing ? `Editar ${config.singularName}` : `Nuevo ${config.singularName}`;
   const submitButtonText = isEditing ? 'Actualizar' : 'Crear';

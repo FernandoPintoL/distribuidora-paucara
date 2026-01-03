@@ -3,6 +3,7 @@ namespace App\Models;
 
 use App\Models\Traits\HasActiveScope;
 use App\Models\Traits\RolesFuncionalesTrait;
+use App\Models\Traits\CajeroTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Empleado extends Model
 {
-    use HasFactory, RolesFuncionalesTrait, HasActiveScope;
+    use HasFactory, RolesFuncionalesTrait, HasActiveScope, CajeroTrait;
 
     protected $fillable = [
         'user_id',

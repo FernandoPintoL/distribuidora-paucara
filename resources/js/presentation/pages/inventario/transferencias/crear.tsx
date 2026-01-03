@@ -84,10 +84,12 @@ export default function CrearTransferencia({ almacenes, vehiculos, choferes, pro
         label: `${vehiculo.placa}${vehiculo.marca ? ` - ${vehiculo.marca}` : ''}${vehiculo.modelo ? ` ${vehiculo.modelo}` : ''}`,
     }));
 
-    const choferesOptions = choferes.map(chofer => ({
-        value: chofer.id,
-        label: `${chofer.user.name} - ${chofer.licencia}`,
-    }));
+    const choferesOptions = choferes
+        .filter(chofer => chofer.user && chofer.user.name)
+        .map(chofer => ({
+            value: chofer.id,
+            label: `${chofer.user.name} - ${chofer.licencia || 'Sin licencia'}`,
+        }));
 
     const agregarProducto = () => {
         // Validaciones previas básicas

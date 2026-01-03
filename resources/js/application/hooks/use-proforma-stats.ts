@@ -56,20 +56,37 @@ export function useProformaStats(options: UseProformaStatsOptions = {}) {
             setLoading(true);
             setError(null);
 
-            const response = await fetch('/api/proformas/estadisticas');
+            console.log('🔄 Fetching proforma stats from /api/proformas/estadisticas...');
+            const response = await fetch('/api/proformas/estadisticas', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            console.log(`📊 Response status: ${response.status}`);
             const data = await response.json();
+
+            if (!response.ok) {
+                console.error('❌ API Error response:', data);
+                throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
+            }
 
             if (data.success && data.data) {
                 setStats(data.data);
                 setLastUpdate(new Date());
-                console.log('✅ Proforma stats loaded:', data.data);
+                console.log('✅ Proforma stats loaded successfully:', data.data);
             } else {
+                console.error('❌ Invalid response format:', data);
                 throw new Error('Error en la respuesta del servidor');
             }
         } catch (err: any) {
             const errorMessage = err.message || 'Error al cargar estadísticas';
             setError(errorMessage);
-            console.error('Error cargando estadísticas de proformas:', err);
+            console.error('❌ Error cargando estadísticas de proformas:', errorMessage, err);
+            setStats(null);
         } finally {
             setLoading(false);
         }
