@@ -1,5 +1,158 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FilaProductoValidada } from '@/domain/entities/productos-masivos';
+import SearchSelect, { type SelectOption } from '@/presentation/components/ui/search-select';
+
+/**
+ * Componente para mostrar información de producto existente
+ */
+function ProductoExistenteInfo({
+  fila,
+  filaIndex,
+  onCambiarAccion,
+  cargando,
+}: {
+  fila: FilaProductoValidada;
+  filaIndex: number;
+  onCambiarAccion?: (filaIndex: number, accion: 'sumar' | 'reemplazar') => void;
+  cargando?: boolean;
+}) {
+  const [detallesExpandido, setDetallesExpandido] = useState(false);
+  const producto = fila.producto_existente;
+
+  // Si no hay producto existente, no mostrar nada
+  if (!producto) return null;
+
+  const accionActual = fila.accion_stock || 'sumar';
+  const stockAnterior = producto.stock_total || 0;
+  const cantidad = fila.cantidad || 0;
+  const previewSuma = (producto.preview_suma ?? 0);
+  const previewReemplazo = (producto.preview_reemplazo ?? cantidad);
+
+  return (
+    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 space-y-3 mt-4">
+      {/* Header: Producto Existente + SKU */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-block px-2 py-1 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded text-xs font-bold">
+            ✓ PRODUCTO EXISTENTE
+          </span>
+          {producto.sku && (
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              SKU: {producto.sku}
+            </span>
+          )}
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            ({producto.criterio_deteccion === 'codigo_barra' ? '📦 Código' : '🏷️ Nombre'})
+          </span>
+        </div>
+      </div>
+
+      {/* Stock Info: Actual + Nuevo */}
+      <div className="bg-white dark:bg-gray-800 rounded p-3 space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-700 dark:text-gray-300">Stock total actual:</span>
+          <span className="font-semibold text-gray-900 dark:text-white">{stockAnterior} unidades</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-700 dark:text-gray-300">Cantidad a procesar:</span>
+          <span className="font-semibold text-blue-600 dark:text-blue-400">{cantidad} unidades</span>
+        </div>
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+          <div className="flex justify-between text-sm font-medium">
+            <span className="text-gray-700 dark:text-gray-300">Stock resultante:</span>
+            <span className="text-blue-700 dark:text-blue-400">
+              {accionActual === 'sumar' ? previewSuma : previewReemplazo} unidades
+            </span>
+          </div>
+          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            {accionActual === 'sumar'
+              ? `${stockAnterior} + ${cantidad} = ${previewSuma}`
+              : `Reemplazar ${stockAnterior} por ${previewReemplazo}`
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* Detalles por Almacén (Expandible) */}
+      {producto.detalles_por_almacen && producto.detalles_por_almacen.length > 0 && (
+        <div className="border-t border-blue-200 dark:border-blue-700 pt-3">
+          <button
+            type="button"
+            onClick={() => setDetallesExpandido(!detallesExpandido)}
+            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition flex items-center gap-1"
+          >
+            {detallesExpandido ? '▼' : '▶'} Detalles por almacén ({producto.detalles_por_almacen.length})
+          </button>
+
+          {detallesExpandido && (
+            <div className="mt-2 space-y-2 pl-4 border-l-2 border-blue-300 dark:border-blue-600">
+              {producto.detalles_por_almacen.map((detalle, idx) => (
+                <div key={idx} className="text-sm text-gray-700 dark:text-gray-300">
+                  <div className="font-medium">{detalle.almacen}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    • Cantidad: {detalle.cantidad}
+                    {detalle.lotes > 0 && ` • ${detalle.lotes} lote(s)`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Radio buttons: Sumar vs Reemplazar */}
+      <div className="border-t border-blue-200 dark:border-blue-700 pt-3 space-y-2">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Acción con stock:</p>
+        <div className="space-y-2">
+          <label className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 transition">
+            <input
+              type="radio"
+              name={`accion_${filaIndex}`}
+              value="sumar"
+              checked={accionActual === 'sumar'}
+              onChange={() => onCambiarAccion?.(filaIndex, 'sumar')}
+              disabled={cargando}
+              className="w-4 h-4 accent-green-600"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-900 dark:text-white">Sumar al stock existente</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">
+                {stockAnterior} + {cantidad} = {previewSuma} unidades
+              </div>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-orange-100 dark:hover:bg-orange-800/30 transition">
+            <input
+              type="radio"
+              name={`accion_${filaIndex}`}
+              value="reemplazar"
+              checked={accionActual === 'reemplazar'}
+              onChange={() => onCambiarAccion?.(filaIndex, 'reemplazar')}
+              disabled={cargando}
+              className="w-4 h-4 accent-orange-600"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-900 dark:text-white">Reemplazar stock existente</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">
+                Cambiar de {stockAnterior} a {previewReemplazo} unidades
+              </div>
+            </div>
+          </label>
+        </div>
+
+        {/* Advertencia si hay reservas */}
+        {producto.stock_almacen_destino !== undefined && producto.stock_almacen_destino > 0 && accionActual === 'reemplazar' && (
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded p-2 mt-2">
+            <p className="text-xs text-orange-700 dark:text-orange-300">
+              ⚠️ <strong>Advertencia:</strong> Estás reemplazando stock. Asegúrate de que no hay reservas activas.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface VistaPreviewaProductosProps {
   filas: FilaProductoValidada[];
@@ -11,6 +164,9 @@ interface VistaPreviewaProductosProps {
   onCancelar?: () => void;
   onEditarFila?: (filaIndex: number, campo: string, valor: any) => void;
   onEliminarFila?: (filaIndex: number) => void;
+  onCambiarAccionStock?: (filaIndex: number, accion: 'sumar' | 'reemplazar') => void;
+  onDetectarSKUsDuplicados?: () => { [sku: string]: FilaProductoValidada[] };
+  onUnificarSKUsDuplicados?: () => void;
   categorias?: Array<{ id: number; nombre: string }>;
   marcas?: Array<{ id: number; nombre: string }>;
   unidades?: Array<{ id: number; codigo: string; nombre: string }>;
@@ -27,6 +183,9 @@ export default function VistaPreviewaProductos({
   onCancelar,
   onEditarFila,
   onEliminarFila,
+  onCambiarAccionStock,
+  onDetectarSKUsDuplicados,
+  onUnificarSKUsDuplicados,
   categorias = [],
   marcas = [],
   unidades = [],
@@ -35,6 +194,37 @@ export default function VistaPreviewaProductos({
   const [buscadorSelect, setBuscadorSelect] = useState<{ [key: string]: string }>({});
   const [expandida, setExpandida] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [skusDuplicados, setSkusDuplicados] = useState<{ [sku: string]: FilaProductoValidada[] }>({});
+
+  // Detectar SKUs duplicados automáticamente
+  useEffect(() => {
+    if (onDetectarSKUsDuplicados) {
+      const duplicados = onDetectarSKUsDuplicados();
+      setSkusDuplicados(duplicados);
+    }
+  }, [filas, onDetectarSKUsDuplicados]);
+
+  // Convertir arrays a formato SelectOption
+  const categoriasOptions: SelectOption[] = categorias.map(c => ({
+    value: c.nombre,
+    label: c.nombre,
+  }));
+
+  const marcasOptions: SelectOption[] = marcas.map(m => ({
+    value: m.nombre,
+    label: m.nombre,
+  }));
+
+  const unidadesOptions: SelectOption[] = unidades.map(u => ({
+    value: u.nombre,
+    label: `${u.nombre} (${u.codigo})`,
+    description: u.codigo,
+  }));
+
+  const almacenesOptions: SelectOption[] = almacenes.map(a => ({
+    value: a.id,
+    label: a.nombre,
+  }));
 
   // Debug: mostrar datos recibidos en vista-previa
   console.log('📋 Datos recibidos en vista-previa:', {
@@ -64,8 +254,6 @@ export default function VistaPreviewaProductos({
           fila.descripcion?.toLowerCase().includes(termino)
         );
       });
-
-  const filasAMostrar = filasFiltradas.slice(0, 10);
   const filasValidas = filas.filter((f) => f.validacion.es_valido).length;
   const filasConErrores = filas.filter((f) => !f.validacion.es_valido).length;
 
@@ -102,6 +290,40 @@ export default function VistaPreviewaProductos({
           />
         </div>
       </div>
+
+      {/* Alerta de SKUs duplicados */}
+      {Object.keys(skusDuplicados).length > 0 && (
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4 space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-bold text-orange-900 dark:text-orange-200 mb-2">
+                ⚠️ Se detectaron {Object.keys(skusDuplicados).length} SKUs duplicados
+              </h3>
+              <div className="space-y-1 text-sm text-orange-800 dark:text-orange-300">
+                {Object.entries(skusDuplicados).map(([sku, filasConSKU]) => (
+                  <div key={sku} className="flex items-center gap-2">
+                    <span className="font-medium">SKU "{sku}":</span>
+                    <span>
+                      {filasConSKU.length} productos ({filasConSKU.reduce((sum, f) => sum + (f.cantidad || 0), 0)} unidades)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onUnificarSKUsDuplicados}
+              disabled={cargando}
+              className="px-4 py-2 bg-orange-600 dark:bg-orange-700 text-white rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap ml-4"
+            >
+              Unificar SKUs
+            </button>
+          </div>
+          <p className="text-xs text-orange-700 dark:text-orange-400 italic">
+            Los productos con el mismo SKU serán agrupados en uno solo, sumando sus cantidades.
+          </p>
+        </div>
+      )}
 
       {/* Tabla de preview - Editable */}
       <div className="space-y-3">
@@ -149,16 +371,23 @@ export default function VistaPreviewaProductos({
                 </tr>
               </thead>
               <tbody>
-                {filasAMostrar.map((fila) => (
+                {filasFiltradas.map((fila, idx) => (
                   <tr key={fila.fila} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{fila.fila}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold text-xs">
+                          {idx + 1}
+                        </span>
+                        <span className="text-gray-600 dark:text-gray-400">{fila.fila}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-2">
                       <div className="font-medium text-gray-900 dark:text-gray-100">{fila.nombre}</div>
                       {fila.codigo_barra && <div className="text-xs text-gray-500 dark:text-gray-400">📦 {fila.codigo_barra}</div>}
                     </td>
                     <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{fila.cantidad}</td>
                     <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{fila.proveedor_nombre || '-'}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 space-y-1">
                       {fila.validacion.es_valido ? (
                         <span className="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
                           ✓ Válida
@@ -167,6 +396,13 @@ export default function VistaPreviewaProductos({
                         <span className="inline-block px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-medium">
                           ✗ Error
                         </span>
+                      )}
+                      {fila.producto_existente && (
+                        <div>
+                          <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">
+                            📦 Existente: {fila.producto_existente.stock_total} {fila.accion_stock === 'reemplazar' ? '→ ' + fila.cantidad : '+ ' + fila.cantidad}
+                          </span>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -190,6 +426,10 @@ export default function VistaPreviewaProductos({
               <div key={idx} className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold text-sm">
+                      {idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{filasFiltradas.length > 1 ? `de ${filasFiltradas.length}` : ''}</span>
                     <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Fila {fila.fila}</span>
                     {fila.validacion.es_valido ? (
                       <span className="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
@@ -240,25 +480,16 @@ export default function VistaPreviewaProductos({
 
                   {/* Almacén */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Almacén *</label>
-                    <select
-                      value={
-                        fila.almacen_id
-                          ? fila.almacen_id
-                          : fila.almacen_nombre
-                          ? almacenes.find((a) => a.nombre === fila.almacen_nombre)?.id || almacenes[0]?.id || 1
-                          : almacenes[0]?.id || 1
-                      }
-                      onChange={(e) => onEditarFila?.(indiceReal, 'almacen_id', Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    <SearchSelect
+                      label="Almacén *"
+                      placeholder="Selecciona un almacén"
+                      searchPlaceholder="Buscar almacén..."
+                      value={fila.almacen_id || ''}
+                      options={almacenesOptions}
+                      onChange={(value) => onEditarFila?.(indiceReal, 'almacen_id', value ? Number(value) : null)}
                       disabled={cargando}
-                    >
-                      {almacenes.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre}
-                        </option>
-                      ))}
-                    </select>
+                      allowClear={true}
+                    />
                     {fila.almacen_nombre && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         📌 Desde CSV: {fila.almacen_nombre}
@@ -307,20 +538,16 @@ export default function VistaPreviewaProductos({
 
                   {/* Unidad de medida */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unidad medida</label>
-                    <select
+                    <SearchSelect
+                      label="Unidad medida"
+                      placeholder="Selecciona una unidad"
+                      searchPlaceholder="Buscar unidad..."
                       value={fila.unidad_medida_nombre || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'unidad_medida_nombre', e.target.value || null)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      options={unidadesOptions}
+                      onChange={(value) => onEditarFila?.(indiceReal, 'unidad_medida_nombre', value || null)}
                       disabled={cargando}
-                    >
-                      <option value="">-- Seleccionar --</option>
-                      {unidades.map((u) => (
-                        <option key={u.id} value={u.nombre}>
-                          {u.nombre} ({u.codigo})
-                        </option>
-                      ))}
-                    </select>
+                      allowClear={true}
+                    />
                     {fila.unidad_medida_nombre && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         📌 Desde CSV: {fila.unidad_medida_nombre}
@@ -356,20 +583,16 @@ export default function VistaPreviewaProductos({
 
                   {/* Categoría */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoría</label>
-                    <select
+                    <SearchSelect
+                      label="Categoría"
+                      placeholder="Selecciona una categoría"
+                      searchPlaceholder="Buscar categoría..."
                       value={fila.categoria_nombre || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'categoria_nombre', e.target.value || null)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      options={categoriasOptions}
+                      onChange={(value) => onEditarFila?.(indiceReal, 'categoria_nombre', value || null)}
                       disabled={cargando}
-                    >
-                      <option value="">-- Seleccionar --</option>
-                      {categorias.map((c) => (
-                        <option key={c.id} value={c.nombre}>
-                          {c.nombre}
-                        </option>
-                      ))}
-                    </select>
+                      allowClear={true}
+                    />
                     {fila.categoria_nombre && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         📌 Desde CSV: {fila.categoria_nombre}
@@ -379,20 +602,16 @@ export default function VistaPreviewaProductos({
 
                   {/* Marca */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Marca</label>
-                    <select
+                    <SearchSelect
+                      label="Marca"
+                      placeholder="Selecciona una marca"
+                      searchPlaceholder="Buscar marca..."
                       value={fila.marca_nombre || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'marca_nombre', e.target.value || null)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      options={marcasOptions}
+                      onChange={(value) => onEditarFila?.(indiceReal, 'marca_nombre', value || null)}
                       disabled={cargando}
-                    >
-                      <option value="">-- Seleccionar --</option>
-                      {marcas.map((m) => (
-                        <option key={m.id} value={m.nombre}>
-                          {m.nombre}
-                        </option>
-                      ))}
-                    </select>
+                      allowClear={true}
+                    />
                     {fila.marca_nombre && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         📌 Desde CSV: {fila.marca_nombre}
@@ -436,6 +655,14 @@ export default function VistaPreviewaProductos({
                     />
                   </div>
                 </div>
+
+                {/* Información de Producto Existente */}
+                <ProductoExistenteInfo
+                  fila={fila}
+                  filaIndex={indiceReal}
+                  onCambiarAccion={onCambiarAccionStock}
+                  cargando={cargando}
+                />
               </div>
                 );
               })
@@ -444,7 +671,13 @@ export default function VistaPreviewaProductos({
         )}
       </div>
 
-      {filas.length > 10 && <p className="text-sm text-gray-500 dark:text-gray-400 text-center">...y {filas.length - 10} filas más</p>}
+      {/* Resumen de registros mostrados */}
+      {filasFiltradas.length > 0 && (
+        <div className="text-sm text-gray-600 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+          Mostrando <span className="font-semibold">{filasFiltradas.length}</span> de <span className="font-semibold">{filas.length}</span> registros
+          {busqueda && ` (filtrados por "${busqueda}")`}
+        </div>
+      )}
 
       {/* Botones de acción */}
       <div className="flex gap-3 justify-end">

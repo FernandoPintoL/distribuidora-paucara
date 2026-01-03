@@ -106,7 +106,39 @@ export function useProductosMasivos() {
 
         // Validar filas
         const resultadoValidacion = await productosCSVService.validarFilas(filasRaw);
-        setFilas(resultadoValidacion.filas_validadas);
+        let filasEnriquecidas = resultadoValidacion.filas_validadas;
+
+        // Validar con backend para detectar productos existentes
+        try {
+          const validacionBackend = await productosCSVService.validarConBackend(filasRaw);
+          if (validacionBackend.success && validacionBackend.resultados) {
+            // Enriquecer filas con información de backend
+            filasEnriquecidas = filasEnriquecidas.map((fila, index) => {
+              const resultadoBackend = validacionBackend.resultados[index];
+              if (resultadoBackend?.existe && resultadoBackend.producto_existente) {
+                return {
+                  ...fila,
+                  producto_existente: resultadoBackend.producto_existente,
+                  accion_stock: 'sumar' as const, // Default a sumar
+                };
+              }
+              return {
+                ...fila,
+                accion_stock: 'sumar' as const,
+              };
+            });
+          }
+        } catch (error: any) {
+          // Si falla validación con backend, continuar con validación local solamente
+          console.warn('Validación backend falló, continuando con validación local:', error.message);
+          // Agregar accion_stock default a las filas
+          filasEnriquecidas = filasEnriquecidas.map((fila) => ({
+            ...fila,
+            accion_stock: 'sumar' as const,
+          }));
+        }
+
+        setFilas(filasEnriquecidas);
 
         // Ir al paso de validación
         setPaso('validacion');
@@ -254,6 +286,7 @@ export function useProductosMasivos() {
           marca_nombre: fila.marca_nombre,
           almacen_id: fila.almacen_id,
           almacen_nombre: fila.almacen_nombre,
+          accion_stock: fila.accion_stock || 'sumar',
         }));
 
         const datos: DatosProductosMasivos = {
@@ -264,6 +297,7 @@ export function useProductosMasivos() {
 
         // Enviar al servidor
         setProgreso(50);
+        setMensajeError(null); // Limpiar errores previos
 
         const resultado = await productosCSVService.procesarProductosMasivos(datos);
         setResultadoProcesamiento(resultado);
@@ -271,8 +305,19 @@ export function useProductosMasivos() {
         setProgreso(100);
         setPaso('resultado');
       } catch (error: any) {
-        setMensajeError(error.message || 'Error procesando productos');
+        // Capturar mensaje de error del backend o del cliente
+        const mensajeError = error.message || 'Error procesando productos';
+        setMensajeError(mensajeError);
+
+        // Si es un error 409 (archivo duplicado), mantener en confirmación
+        // Si es otro error, también mantener en confirmación para que el usuario pueda revisar
         setPaso('confirmacion');
+
+        console.error('Error en procesamiento:', {
+          mensaje: mensajeError,
+          status: error.status,
+          datos: error.data,
+        });
       } finally {
         setCargando(false);
       }
@@ -329,6 +374,104 @@ export function useProductosMasivos() {
     setFilas((filasActuales) => filasActuales.filter((_, idx) => idx !== filaIndex));
   }, []);
 
+  // Cambiar acción de stock (sumar o reemplazar)
+  const cambiarAccionStock = useCallback((filaIndex: number, accion: 'sumar' | 'reemplazar'): void => {
+    setFilas((filasActuales) => {
+      const nuevasFilas = [...filasActuales];
+      if (nuevasFilas[filaIndex]) {
+        nuevasFilas[filaIndex].accion_stock = accion;
+      }
+      return nuevasFilas;
+    });
+  }, []);
+
+  /**
+   * Aplicar acción de stock a TODOS los productos
+   */
+  const cambiarAccionStockGlobal = useCallback((accion: 'sumar' | 'reemplazar'): void => {
+    setFilas((filasActuales) => {
+      return filasActuales.map((fila) => ({
+        ...fila,
+        accion_stock: accion,
+      }));
+    });
+  }, []);
+
+  /**
+   * Detectar SKUs duplicados en las filas válidas
+   */
+  const detectarSKUsDuplicados = useCallback((): { [sku: string]: FilaProductoValidada[] } => {
+    const skuDuplicados: { [sku: string]: FilaProductoValidada[] } = {};
+
+    filasValidas.forEach((fila) => {
+      if (fila.sku) {
+        if (!skuDuplicados[fila.sku]) {
+          skuDuplicados[fila.sku] = [];
+        }
+        skuDuplicados[fila.sku].push(fila);
+      }
+    });
+
+    // Retornar solo los que aparecen más de una vez
+    return Object.entries(skuDuplicados)
+      .filter(([_, filas]) => filas.length > 1)
+      .reduce((acc, [sku, filas]) => {
+        acc[sku] = filas;
+        return acc;
+      }, {} as { [sku: string]: FilaProductoValidada[] });
+  }, [filasValidas]);
+
+  /**
+   * Unificar productos con el mismo SKU agrupando cantidades
+   */
+  const unificarSKUsDuplicados = useCallback((): void => {
+    const skuDuplicados = detectarSKUsDuplicados();
+
+    if (Object.keys(skuDuplicados).length === 0) {
+      setMensajeError('No hay SKUs duplicados para unificar');
+      return;
+    }
+
+    setFilas((filasActuales) => {
+      const filasUnificadas: FilaProductoValidada[] = [];
+      const skusProcessados = new Set<string>();
+
+      filasActuales.forEach((fila) => {
+        // Si este SKU ya fue procesado (unificado), omitir
+        if (fila.sku && skusProcessados.has(fila.sku)) {
+          return;
+        }
+
+        if (fila.sku && skuDuplicados[fila.sku]) {
+          // Este SKU es duplicado, unificar todas sus instancias
+          const filasConEsteSKU = filasActuales.filter((f) => f.sku === fila.sku);
+          const cantidadTotal = filasConEsteSKU.reduce((sum, f) => sum + (f.cantidad || 0), 0);
+
+          // Usar la primera fila como base y actualizar cantidad
+          const filaUnificada = { ...filasConEsteSKU[0] };
+          filaUnificada.cantidad = cantidadTotal;
+          filaUnificada.validacion = {
+            ...filaUnificada.validacion,
+            advertencias: [
+              ...(filaUnificada.validacion.advertencias || []),
+              `SKU unificado: ${filasConEsteSKU.length} productos agrupados (total: ${cantidadTotal} unidades)`,
+            ],
+          };
+
+          filasUnificadas.push(filaUnificada);
+          skusProcessados.add(fila.sku);
+        } else {
+          // No es duplicado, agregar tal cual
+          filasUnificadas.push(fila);
+        }
+      });
+
+      return filasUnificadas;
+    });
+
+    setMensajeError(null);
+  }, [detectarSKUsDuplicados]);
+
   return {
     // Estado
     archivo,
@@ -367,5 +510,9 @@ export function useProductosMasivos() {
     volverAlPaso,
     editarFila,
     eliminarFila,
+    cambiarAccionStock,
+    cambiarAccionStockGlobal,
+    detectarSKUsDuplicados,
+    unificarSKUsDuplicados,
   };
 }

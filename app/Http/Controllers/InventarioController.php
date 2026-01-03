@@ -8,8 +8,8 @@ use App\Http\Requests\StoreMermaRequest;
 use App\Http\Requests\StoreTransferenciaInventarioRequest;
 use App\Models\Almacen;
 use App\Models\Categoria;
-use App\Models\Chofer;
 use App\Models\DetalleTransferenciaInventario;
+use App\Models\User;
 use App\Models\EstadoMerma;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
@@ -118,7 +118,7 @@ class InventarioController extends Controller
             ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
             ->whereBetween('movimientos_inventario.fecha', [now()->startOfMonth(), now()])
             ->groupBy('stock_productos.producto_id')
-            ->orderByDesc('total_movimientos')
+            ->orderByRaw('COUNT(*) DESC')
             ->limit(10)
             ->get();
 
@@ -330,7 +330,10 @@ class InventarioController extends Controller
         $tipo        = $request->filled('tipo') ? $request->string('tipo') : null;
         $almacenId   = $request->filled('almacen_id') ? $request->integer('almacen_id') : null;
         $productoId  = $request->filled('producto_id') ? $request->integer('producto_id') : null;
+        $page        = $request->integer('page', 1);
+        $perPage     = 15;
 
+        // Construir query con filtros
         $query = MovimientoInventario::with([
             'stockProducto.producto:id,nombre',
             'stockProducto.almacen:id,nombre',
@@ -349,34 +352,66 @@ class InventarioController extends Controller
             $query->porProducto($productoId);
         }
 
-        $movimientos = $query->orderByDesc('fecha')
-            ->get()
-            ->map(function ($movimiento) {
-                return [
-                    'id'             => $movimiento->id,
-                    'tipo'           => $this->mapearTipoMovimiento($movimiento->tipo),
-                    'tipo_ajuste_id' => $movimiento->tipo_ajuste_inventario_id,
-                    'motivo'         => $this->obtenerMotivoMovimiento($movimiento->tipo),
-                    'cantidad'       => $movimiento->cantidad,
-                    'stock_anterior' => $movimiento->cantidad_anterior,
-                    'stock_nuevo'    => $movimiento->cantidad_posterior,
-                    'fecha'          => $movimiento->fecha->toISOString(),
-                    'usuario'        => [
-                        'name' => $movimiento->user->name ?? 'Sistema',
+        // Obtener total para estadísticas
+        $totalMovimientos = $query->count();
+        $totalEntradas    = (clone $query)->where('tipo', 'like', 'ENTRADA%')->count();
+        $totalSalidas     = (clone $query)->where('tipo', 'like', 'SALIDA%')->count();
+
+        // Paginar resultados
+        $movimientosPaginados = $query->orderByDesc('fecha')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Mapear datos de movimientos
+        $movimientos = $movimientosPaginados->map(function ($movimiento) {
+            return [
+                'id'             => $movimiento->id,
+                'tipo'           => $this->mapearTipoMovimiento($movimiento->tipo),
+                'tipo_ajuste_id' => $movimiento->tipo_ajuste_inventario_id,
+                'motivo'         => $this->obtenerMotivoMovimiento($movimiento->tipo),
+                'cantidad'       => $movimiento->cantidad,
+                'stock_anterior' => $movimiento->cantidad_anterior,
+                'stock_nuevo'    => $movimiento->cantidad_posterior,
+                'fecha'          => $movimiento->fecha->toISOString(),
+                'usuario'        => [
+                    'name' => $movimiento->user->name ?? 'Sistema',
+                ],
+                'producto'       => [
+                    'nombre'    => $movimiento->stockProducto->producto->nombre,
+                    'categoria' => [
+                        'nombre' => 'General',
                     ],
-                    'producto'       => [
-                        'nombre'    => $movimiento->stockProducto->producto->nombre,
-                        'categoria' => [
-                            'nombre' => 'General', // Simplificado por ahora
-                        ],
-                    ],
-                    'almacen'        => [
-                        'nombre' => $movimiento->stockProducto->almacen->nombre,
-                    ],
-                    'referencia'     => $movimiento->numero_documento,
-                    'observaciones'  => $movimiento->observacion,
-                ];
-            });
+                ],
+                'almacen'        => [
+                    'nombre' => $movimiento->stockProducto->almacen->nombre,
+                ],
+                'referencia'     => $movimiento->numero_documento,
+                'observaciones'  => $movimiento->observacion,
+            ];
+        });
+
+        // Estadísticas
+        $stats = [
+            'total_movimientos'      => $totalMovimientos,
+            'total_entradas'         => $totalEntradas,
+            'total_salidas'          => $totalSalidas,
+            'total_transferencias'   => 0,
+            'total_mermas'           => 0,
+            'total_ajustes'          => 0,
+            'valor_total_entradas'   => 0,
+            'valor_total_salidas'    => 0,
+            'valor_total_mermas'     => 0,
+            'productos_afectados'    => 0,
+            'almacenes_activos'      => 0,
+            'movimientos_pendientes' => 0,
+            'tendencia_semanal'      => [],
+        ];
+
+        // Datos para filtros
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+        $productos = Producto::where('activo', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre'])
+            ->take(100); // Limitar para performance
 
         $tipo_mermas              = TipoMerma::all();
         $tipos_ajueste_inventario = TipoAjusteInventario::where('activo', true)
@@ -384,14 +419,18 @@ class InventarioController extends Controller
             ->orderBy('label')
             ->get();
         $estado_mermas = EstadoMerma::all();
-        $almacenes     = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/movimientos', [
-            'movimientos'             => $movimientos,
-            'tipo_mermas'             => $tipo_mermas,
-            'tipos_ajuste_inventario' => $tipos_ajueste_inventario,
-            'estado_mermas'           => $estado_mermas,
-            'almacenes'               => $almacenes,
+            'movimientos' => [
+                'data'         => $movimientos,
+                'current_page' => $movimientosPaginados->currentPage(),
+                'per_page'     => $movimientosPaginados->perPage(),
+                'total'        => $movimientosPaginados->total(),
+                'last_page'    => $movimientosPaginados->lastPage(),
+                'from'         => $movimientosPaginados->firstItem(),
+                'to'           => $movimientosPaginados->lastItem(),
+            ],
+            'stats'                   => $stats,
             'filtros'                 => [
                 'fecha_inicio' => $fechaInicio->toDateString(),
                 'fecha_fin'    => $fechaFin->toDateString(),
@@ -399,6 +438,11 @@ class InventarioController extends Controller
                 'almacen_id'   => $almacenId,
                 'producto_id'  => $productoId,
             ],
+            'almacenes'               => $almacenes,
+            'productos'               => $productos,
+            'tipo_mermas'             => $tipo_mermas,
+            'tipos_ajuste_inventario' => $tipos_ajueste_inventario,
+            'estado_mermas'           => $estado_mermas,
         ]);
     }
 
@@ -696,7 +740,7 @@ class InventarioController extends Controller
 
         $almacenes = Almacen::where('activo', true)->get(['id', 'nombre']);
         $vehiculos = Vehiculo::activos()->get(['id', 'placa']);
-        $choferes  = Chofer::activos()->with('user:id,name')->get();
+        $choferes  = User::role('Chofer')->get(['id', 'name'])->map(fn($user) => ['id' => $user->id, 'name' => $user->name]);
         $estados   = TransferenciaInventario::getEstados();
 
         return Inertia::render('inventario/transferencias/index', [
@@ -808,7 +852,7 @@ class InventarioController extends Controller
             ->select('id', 'nombre', 'direccion', 'ubicacion_fisica', 'requiere_transporte_externo')
             ->get();
         $vehiculos = Vehiculo::activos()->get();
-        $choferes  = Chofer::with('user')->get();
+        $choferes  = User::role('Chofer')->get(['id', 'name'])->map(fn($user) => ['id' => $user->id, 'name' => $user->name]);
         $productos = Producto::where('activo', true)
             ->with(['codigoPrincipal', 'stock' => function ($query) {
                 $query->select('producto_id', 'almacen_id', 'cantidad')
@@ -977,14 +1021,11 @@ class InventarioController extends Controller
      */
     public function apiChoferes(): JsonResponse
     {
-        $choferes = Chofer::with('user')->get()->map(function ($chofer) {
+        $choferes = User::role('Chofer')->get(['id', 'name'])->map(function ($user) {
             return [
-                'id'       => $chofer->id,
-                'user_id'  => $chofer->user_id,
-                'nombre'   => $chofer->user->name,
-                'licencia' => $chofer->licencia,
-                'telefono' => $chofer->telefono,
-                'activo'   => $chofer->activo,
+                'id'       => $user->id,
+                'nombre'   => $user->name,
+                'activo'   => true, // Los usuarios en el sistema están activos
             ];
         });
 
@@ -1000,7 +1041,7 @@ class InventarioController extends Controller
 
         $almacenes = Almacen::where('activo', true)->get();
         $vehiculos = Vehiculo::where('activo', true)->get();
-        $choferes  = Chofer::with('user')->get();
+        $choferes  = User::role('Chofer')->get(['id', 'name'])->map(fn($user) => ['id' => $user->id, 'name' => $user->name]);
 
         return Inertia::render('inventario/transferencias/editar', [
             'transferencia' => $transferencia,

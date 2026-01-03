@@ -64,11 +64,16 @@ const useSidebarModules = () => {
         const fetchModules = async () => {
             try {
                 const response = await fetch('/api/modulos-sidebar', { credentials: 'include' });
-                console.log(response);
+                console.log('📡 Response status:', response.status, response.statusText);
+
                 if (!response.ok) {
-                    throw new Error('Error al cargar módulos del sidebar');
+                    const responseText = await response.text();
+                    console.error('❌ Response body:', responseText.substring(0, 500));
+                    throw new Error(`Error al cargar módulos del sidebar (Status: ${response.status})`);
                 }
+
                 const data: ModuloAPI[] = await response.json();
+                console.log('✅ Módulos cargados:', data.length);
 
                 const processedModules = processModules(data);
                 setModules(processedModules);

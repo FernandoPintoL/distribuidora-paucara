@@ -13,11 +13,12 @@ export function PeriodSelector({ value, onChange, className = '' }: PeriodSelect
     const periods = [
         { value: 'hoy', label: 'Hoy' },
         { value: 'semana_actual', label: 'Esta semana' },
+        { value: 'ultimos_30_dias', label: 'Últimos 30 días' },
         { value: 'mes_actual', label: 'Este mes' },
         { value: 'año_actual', label: 'Este año' },
     ];
 
-    const currentPeriod = periods.find(p => p.value === value)?.label || 'Este mes';
+    const currentPeriod = periods.find(p => p.value === value)?.label || 'Últimos 30 días';
 
     return (
         <div className={`relative ${className}`}>

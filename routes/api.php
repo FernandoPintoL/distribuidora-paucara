@@ -368,6 +368,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 
         // Rutas para carga masiva de productos
         Route::post('importar-masivo', [ProductoController::class, 'importarProductosMasivos']);
+        Route::post('validar-csv', [ProductoController::class, 'validarProductosCSV']);
         Route::get('cargas-masivas', [ProductoController::class, 'listarCargasMasivas']);
         Route::get('cargas-masivas/{cargo}', [ProductoController::class, 'verCargaMasiva']);
         Route::post('cargas-masivas/{cargo}/revertir', [ProductoController::class, 'revertirCargaMasiva']);

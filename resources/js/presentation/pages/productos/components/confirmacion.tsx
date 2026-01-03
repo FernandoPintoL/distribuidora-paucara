@@ -3,6 +3,7 @@ interface ConfirmacionProductosProps {
   cargando?: boolean;
   onConfirmar?: () => void;
   onVolver?: () => void;
+  onCambiarAccionStockGlobal?: (accion: 'sumar' | 'reemplazar') => void;
 }
 
 export default function ConfirmacionProductos({
@@ -10,6 +11,7 @@ export default function ConfirmacionProductos({
   cargando = false,
   onConfirmar,
   onVolver,
+  onCambiarAccionStockGlobal,
 }: ConfirmacionProductosProps) {
   const resumen = resumenValidacion;
 
@@ -63,6 +65,37 @@ export default function ConfirmacionProductos({
             </p>
           </div>
         )}
+      </div>
+
+      {/* Opciones Globales de Stock */}
+      <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4 space-y-3">
+        <h3 className="font-bold text-purple-900 dark:text-purple-200 mb-3">
+          ⚙️ Acciones Globales de Stock
+        </h3>
+        <p className="text-sm text-purple-800 dark:text-purple-300 mb-3">
+          Aplica la misma acción a todos los productos válidos:
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onCambiarAccionStockGlobal?.('sumar')}
+            disabled={cargando}
+            className="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 rounded-md hover:bg-green-200 dark:hover:bg-green-900/50 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            ✓ Sumar a Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => onCambiarAccionStockGlobal?.('reemplazar')}
+            disabled={cargando}
+            className="px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-700 rounded-md hover:bg-orange-200 dark:hover:bg-orange-900/50 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            ⟳ Reemplazar Todos
+          </button>
+        </div>
+        <p className="text-xs text-purple-700 dark:text-purple-400 italic mt-2">
+          💡 Sugerencia: Utiliza estas opciones para aplicar la acción a todos los productos de una vez.
+        </p>
       </div>
 
       {/* Acción */}

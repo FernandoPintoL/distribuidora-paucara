@@ -38,15 +38,15 @@ export default defineConfig({
                 formVariants: true,
             }),
     ],
-    /* server: {
-        host: "10.210.173.22",
+    server: {
+        host: "192.168.5.44",
         port: 5173,
         strictPort: false,
         cors: true,
         hmr: {
             port: 5174,
         },
-    }, */
+    },
     esbuild: {
         jsx: 'automatic',
     },

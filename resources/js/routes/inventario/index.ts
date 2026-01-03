@@ -477,7 +477,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     movimientos.form = movimientosForm
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:657
+ * @see app/Http/Controllers/InventarioController.php:701
  * @route '/inventario/reportes'
  */
 export const reportes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -492,7 +492,7 @@ reportes.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:657
+ * @see app/Http/Controllers/InventarioController.php:701
  * @route '/inventario/reportes'
  */
 reportes.url = (options?: RouteQueryOptions) => {
@@ -501,7 +501,7 @@ reportes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:657
+ * @see app/Http/Controllers/InventarioController.php:701
  * @route '/inventario/reportes'
  */
 reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -510,7 +510,7 @@ reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:657
+ * @see app/Http/Controllers/InventarioController.php:701
  * @route '/inventario/reportes'
  */
 reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -520,7 +520,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:657
+ * @see app/Http/Controllers/InventarioController.php:701
  * @route '/inventario/reportes'
  */
     const reportesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -530,7 +530,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:657
+ * @see app/Http/Controllers/InventarioController.php:701
  * @route '/inventario/reportes'
  */
         reportesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -539,7 +539,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::reportes
- * @see app/Http/Controllers/InventarioController.php:657
+ * @see app/Http/Controllers/InventarioController.php:701
  * @route '/inventario/reportes'
  */
         reportesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

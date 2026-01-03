@@ -5,6 +5,8 @@ import {
   FilaProductoValidada,
   ResultadoProductosMasivos,
   ResultadoValidacion,
+  ValidacionBackendRequest,
+  ValidacionBackendResponse,
 } from '@/domain/entities/productos-masivos';
 import { router } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
@@ -296,18 +298,32 @@ export const productosCSVService = {
    */
   async procesarProductosMasivos(datos: DatosProductosMasivos): Promise<ResultadoProductosMasivos> {
     try {
-      const response = await router.post('/api/productos/importar-masivo', datos, {
-        // No usar reload automático
-        replace: false,
-      } as any);
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-      return response as ResultadoProductosMasivos;
-    } catch (error: any) {
-      if (error.response?.status === 409) {
-        throw new Error(
-          `Este archivo ya fue procesado (Carga ID: ${error.response.data.cargo_id})`
-        );
+      const response = await fetch('/api/productos/importar-masivo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+        },
+        body: JSON.stringify(datos),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        // Capturar el mensaje de error del backend
+        const errorMessage = responseData.message || 'Error procesando carga masiva';
+        const error = new Error(errorMessage);
+        (error as any).status = response.status;
+        (error as any).data = responseData.data;
+        throw error;
       }
+
+      return responseData as ResultadoProductosMasivos;
+    } catch (error: any) {
+      console.error('Error en procesarProductosMasivos:', error.message);
       throw error;
     }
   },
@@ -439,5 +455,45 @@ export const productosCSVService = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  /**
+   * Validar productos con el backend - Detectar existentes + Stock
+   */
+  async validarConBackend(filas: FilaProductoCSV[]): Promise<ValidacionBackendResponse> {
+    try {
+      const payload: ValidacionBackendRequest = {
+        productos: filas.map(fila => ({
+          nombre: fila.nombre,
+          codigo_barra: fila.codigo_barra,
+          cantidad: fila.cantidad,
+          almacen_id: fila.almacen_id,
+          almacen_nombre: fila.almacen_nombre,
+          lote: fila.lote,
+        })),
+      };
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+      const response = await fetch('/api/productos/validar-csv', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error en validación backend');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error en validarConBackend:', error);
+      throw error;
+    }
   },
 };

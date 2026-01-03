@@ -38,7 +38,20 @@ export interface FilaProductoValidada extends FilaProductoCSV {
     nombre: string;
     sku: string;
     accion: 'crear' | 'actualizar';
+    // Nuevos campos para detalle de producto existente
+    criterio_deteccion?: 'codigo_barra' | 'nombre';
+    stock_total?: number;
+    stock_almacen_destino?: number;
+    detalles_por_almacen?: Array<{
+      almacen: string;
+      cantidad: number;
+      lotes: number;
+    }>;
+    preview_suma?: number;
+    preview_reemplazo?: number;
   };
+  // Acción de stock elegida por el usuario
+  accion_stock?: 'sumar' | 'reemplazar';
 }
 
 /**
@@ -188,4 +201,44 @@ export interface ErroresDetectados {
     mensaje: string;
     tipo: 'precio_bajo' | 'vencimiento_proximo' | 'sin_codigo' | 'otra';
   }[];
+}
+
+/**
+ * Request para validación con backend
+ */
+export interface ValidacionBackendRequest {
+  productos: Array<{
+    nombre: string;
+    codigo_barra?: string;
+    cantidad: number;
+    almacen_id?: number;
+    almacen_nombre?: string;
+    lote?: string;
+  }>;
+}
+
+/**
+ * Response de validación backend
+ */
+export interface ValidacionBackendResponse {
+  success: boolean;
+  resultados: Array<{
+    index: number;
+    existe: boolean;
+    producto_existente?: {
+      id: number;
+      nombre: string;
+      sku: string;
+      criterio_deteccion: 'codigo_barra' | 'nombre';
+      stock_total: number;
+      stock_almacen_destino: number;
+      detalles_por_almacen: Array<{
+        almacen: string;
+        cantidad: number;
+        lotes: number;
+      }>;
+      preview_suma: number;
+      preview_reemplazo: number;
+    };
+  }>;
 }

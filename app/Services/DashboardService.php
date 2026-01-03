@@ -257,14 +257,16 @@ class DashboardService
     private function getMetricasProformas(array $fechas): array
     {
         $total = Proforma::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
-        $aprobadas = Proforma::where('estado', 'APROBADA')->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
-        $pendientes = Proforma::where('estado', 'PENDIENTE')->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
+        $convertidas = Proforma::where('estado', 'CONVERTIDA')->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
+
+        // Contar proformas que NO han sido convertidas (pendientes)
+        $pendientes = Proforma::whereNotIn('estado', ['CONVERTIDA'])->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count();
 
         return [
             'total' => $total,
-            'aprobadas' => $aprobadas,
+            'aprobadas' => $convertidas,  // Las "aprobadas" son las CONVERTIDAS
             'pendientes' => $pendientes,
-            'tasa_aprobacion' => $total > 0 ? round(($aprobadas / $total) * 100, 2) : 0,
+            'tasa_aprobacion' => $total > 0 ? round(($convertidas / $total) * 100, 2) : 0,
         ];
     }
 
@@ -477,8 +479,14 @@ class DashboardService
                 $finAnterior = Carbon::now()->subWeek()->endOfWeek();
                 break;
 
+            case 'ultimos_30_dias':
+                $inicio = Carbon::now()->subDays(30);
+                $fin = Carbon::now();
+                $inicioAnterior = Carbon::now()->subDays(60);
+                $finAnterior = Carbon::now()->subDays(30);
+                break;
+
             case 'mes_actual':
-            default:
                 $inicio = Carbon::now()->startOfMonth();
                 $fin = Carbon::now()->endOfMonth();
                 $inicioAnterior = Carbon::now()->subMonth()->startOfMonth();
@@ -490,6 +498,14 @@ class DashboardService
                 $fin = Carbon::now()->endOfYear();
                 $inicioAnterior = Carbon::now()->subYear()->startOfYear();
                 $finAnterior = Carbon::now()->subYear()->endOfYear();
+                break;
+
+            default:
+                // Default: últimos 30 días para mostrar datos reales
+                $inicio = Carbon::now()->subDays(30);
+                $fin = Carbon::now();
+                $inicioAnterior = Carbon::now()->subDays(60);
+                $finAnterior = Carbon::now()->subDays(30);
                 break;
         }
 

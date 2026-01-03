@@ -1270,6 +1270,7 @@ class ProductoController extends Controller
                 'productos.*.marca_nombre' => 'nullable|string|max:100',
                 'productos.*.almacen_id' => 'nullable|integer|min:1',
                 'productos.*.almacen_nombre' => 'nullable|string|max:255',
+                'productos.*.accion_stock' => 'nullable|in:sumar,reemplazar',
             ]);
 
             // Generar hash del CSV para deduplicación
@@ -1319,6 +1320,10 @@ class ProductoController extends Controller
 
                 // Procesar cada producto
                 foreach ($validated['productos'] as $index => $datosFila) {
+                    // Crear savepoint para cada fila (permite rollback parcial)
+                    $savepointName = 'producto_' . $index;
+                    DB::statement("SAVEPOINT {$savepointName}");
+
                     try {
                         // Buscar/crear proveedor
                         $proveedor = null;
@@ -1427,10 +1432,27 @@ class ProductoController extends Controller
                             ->where('lote', $datosFila['lote'] ?? null)
                             ->first();
 
+                        // Obtener acción de stock (default: sumar)
+                        $accionStock = $datosFila['accion_stock'] ?? 'sumar';
+
                         if ($stock) {
                             $stockAnterior = $stock->cantidad;
-                            // Sumar cantidad al stock existente
-                            $stock->cantidad += $datosFila['cantidad'];
+
+                            if ($accionStock === 'reemplazar') {
+                                // Validar que no hay reservas mayores a la nueva cantidad
+                                if ($stock->cantidad_reservada > 0 && $datosFila['cantidad'] < $stock->cantidad_reservada) {
+                                    throw new \Exception(
+                                        "No se puede reemplazar el stock del producto '{$producto->nombre}' " .
+                                        "porque tiene {$stock->cantidad_reservada} unidades reservadas " .
+                                        "y el nuevo stock ({$datosFila['cantidad']}) es menor."
+                                    );
+                                }
+                                $stock->cantidad = $datosFila['cantidad'];
+                            } else {
+                                // Sumar cantidad al stock existente (comportamiento por defecto)
+                                $stock->cantidad += $datosFila['cantidad'];
+                            }
+
                             $stock->cantidad_disponible = $stock->cantidad - ($stock->cantidad_reservada ?? 0);
                             $stock->fecha_actualizacion = now();
                             $stock->save();
@@ -1445,16 +1467,23 @@ class ProductoController extends Controller
                                 'lote' => $datosFila['lote'] ?? null,
                                 'fecha_vencimiento' => $datosFila['fecha_vencimiento'] ?? null,
                             ]);
+                            $stockAnterior = 0;
                         }
 
                         // Crear movimiento de inventario
+                        $observacionAccion = $accionStock === 'reemplazar'
+                            ? " (Reemplazo: {$stockAnterior} → {$stock->cantidad})"
+                            : " (Suma: {$stockAnterior} + {$datosFila['cantidad']} = {$stock->cantidad})";
+
                         MovimientoInventario::create([
                             'stock_producto_id' => $stock->id,
                             'cantidad_anterior' => $stockAnterior,
-                            'cantidad' => $datosFila['cantidad'],
+                            'cantidad' => $accionStock === 'reemplazar'
+                                ? ($stock->cantidad - $stockAnterior)
+                                : $datosFila['cantidad'],
                             'cantidad_posterior' => $stock->cantidad,
                             'fecha' => now(),
-                            'observacion' => "Carga masiva: {$validated['nombre_archivo']}",
+                            'observacion' => "Carga masiva: {$validated['nombre_archivo']}" . $observacionAccion,
                             'tipo' => 'ENTRADA_AJUSTE',
                             'user_id' => Auth::id(),
                             'tipo_ajuste_inventario_id' => $tipoAjuste->id,
@@ -1473,7 +1502,12 @@ class ProductoController extends Controller
                         ];
 
                         $cantidadValidas++;
+                        // Confirmar savepoint si todo va bien
+                        DB::statement("RELEASE SAVEPOINT {$savepointName}");
                     } catch (\Exception $e) {
+                        // Rollback al savepoint en caso de error
+                        DB::statement("ROLLBACK TO SAVEPOINT {$savepointName}");
+
                         $errores[] = [
                             'fila' => $index + 2,
                             'mensaje' => "Error procesando fila: {$e->getMessage()}",
@@ -1499,7 +1533,7 @@ class ProductoController extends Controller
 
                 return ApiResponse::success([
                     'cargo_id' => $cargo->id,
-                    'cantidad_total' => $validated['productos']->count(),
+                    'cantidad_total' => count($validated['productos']),
                     'cantidad_procesados' => $cantidadValidas,
                     'cantidad_errores' => count($errores),
                     'errores' => $errores,
@@ -1528,6 +1562,127 @@ class ProductoController extends Controller
             Log::error("Error en importarProductosMasivos: {$e->getMessage()}");
             return ApiResponse::error("Error inesperado: {$e->getMessage()}", 500);
         }
+    }
+
+    /**
+     * Validar productos CSV - Detectar existentes + Stock
+     */
+    public function validarProductosCSV(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'productos' => 'required|array',
+                'productos.*.nombre' => 'required|string',
+                'productos.*.codigo_barra' => 'nullable|string',
+                'productos.*.cantidad' => 'required|numeric|min:0',
+                'productos.*.almacen_id' => 'nullable|integer',
+                'productos.*.almacen_nombre' => 'nullable|string',
+                'productos.*.lote' => 'nullable|string',
+            ]);
+
+            $resultados = [];
+
+            foreach ($validated['productos'] as $index => $datosFila) {
+                // 1. Detectar producto existente (mismo criterio que importación)
+                $producto = null;
+                $criterioDeteccion = null;
+
+                // Buscar por código de barra primero
+                if (!empty($datosFila['codigo_barra'])) {
+                    $producto = Producto::whereHas('codigosBarra', function ($q) use ($datosFila) {
+                        $q->where('codigo', $datosFila['codigo_barra'])->where('activo', true);
+                    })->first();
+                    if ($producto) {
+                        $criterioDeteccion = 'codigo_barra';
+                    }
+                }
+
+                // Buscar por nombre si no encontró por código
+                if (!$producto && !empty($datosFila['nombre'])) {
+                    $nombreNormalizado = $this->normalizarTexto($datosFila['nombre']);
+                    $producto = Producto::whereRaw('LOWER(nombre) = ?', [$nombreNormalizado])->first();
+                    if ($producto) {
+                        $criterioDeteccion = 'nombre';
+                    }
+                }
+
+                $resultado = [
+                    'index' => $index,
+                    'existe' => (bool) $producto,
+                ];
+
+                if ($producto) {
+                    // 2. Calcular stock total en todos los almacenes
+                    $stockTotal = $producto->stock()->sum('cantidad');
+
+                    // 3. Calcular stock en el almacén específico (si aplica)
+                    $almacenId = $this->resolverAlmacenIdValidacion($datosFila);
+                    $stockEnAlmacen = 0;
+
+                    if ($almacenId) {
+                        $stockEnAlmacen = $producto->stock()
+                            ->where('almacen_id', $almacenId)
+                            ->sum('cantidad');
+                    }
+
+                    // 4. Detalles por almacén
+                    $detallesPorAlmacen = $producto->stock()
+                        ->with('almacen:id,nombre')
+                        ->get()
+                        ->groupBy('almacen_id')
+                        ->map(function ($stocks) {
+                            return [
+                                'almacen' => $stocks->first()->almacen?->nombre ?? 'Almacén Desconocido',
+                                'cantidad' => (int) $stocks->sum('cantidad'),
+                                'lotes' => $stocks->count(),
+                            ];
+                        })
+                        ->values();
+
+                    $resultado['producto_existente'] = [
+                        'id' => $producto->id,
+                        'nombre' => $producto->nombre,
+                        'sku' => $producto->sku,
+                        'criterio_deteccion' => $criterioDeteccion,
+                        'stock_total' => (int) $stockTotal,
+                        'stock_almacen_destino' => (int) $stockEnAlmacen,
+                        'detalles_por_almacen' => $detallesPorAlmacen->toArray(),
+                        // Valores para preview
+                        'preview_suma' => (int) ($stockTotal + $datosFila['cantidad']),
+                        'preview_reemplazo' => (int) $datosFila['cantidad'],
+                    ];
+                }
+
+                $resultados[] = $resultado;
+            }
+
+            return response()->json([
+                'success' => true,
+                'resultados' => $resultados,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Resolver ID del almacén para validación
+     */
+    private function resolverAlmacenIdValidacion(array $datosFila): ?int
+    {
+        if (!empty($datosFila['almacen_id'])) {
+            return (int) $datosFila['almacen_id'];
+        }
+
+        if (!empty($datosFila['almacen_nombre'])) {
+            $almacen = Almacen::where('nombre', $datosFila['almacen_nombre'])->first();
+            return $almacen?->id;
+        }
+
+        return config('inventario.almacen_principal_id', 1);
     }
 
     /**
