@@ -173,7 +173,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     {errors.codigo && (
                       <p className="text-red-500 text-sm mt-1">{errors.codigo}</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Código único para identificar este tipo (solo letras y números)
                     </p>
                   </div>
@@ -222,7 +222,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                     {errors.orden && (
                       <p className="text-red-500 text-sm mt-1">{errors.orden}</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Número menor = aparece primero en las listas
                     </p>
                   </div>
@@ -264,9 +264,9 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                           key={icono}
                           type="button"
                           onClick={() => setData('configuracion', { ...data.configuracion, icono })}
-                          className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-lg hover:bg-gray-50 transition-colors ${data.configuracion.icono === icono
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200'
+                          className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-lg transition-colors ${data.configuracion.icono === icono
+                              ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
+                              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50'
                             }`}
                         >
                           {icono}
@@ -305,13 +305,13 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                         onChange={e => setData('porcentaje_ganancia', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         placeholder="Ej: 25"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Si se especifica, se usará este porcentaje para calcular el precio cuando se cree un producto.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Si se especifica, se usará este porcentaje para calcular el precio cuando se cree un producto.</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="border-t pt-6">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <h3 className="text-lg font-medium mb-4">Configuración</h3>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
@@ -325,7 +325,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                       <Label htmlFor="es_ganancia" className="font-medium">
                         Es precio de ganancia
                       </Label>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Si está marcado, se considerará para cálculos de ganancia
                       </p>
                     </div>
@@ -342,7 +342,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                       <Label htmlFor="es_precio_base" className="font-medium">
                         Es precio base (costo)
                       </Label>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Solo puede haber un tipo marcado como precio base
                       </p>
                     </div>
@@ -358,7 +358,7 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
                       <Label htmlFor="activo" className="font-medium">
                         Activo
                       </Label>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Solo los tipos activos aparecen en los formularios
                       </p>
                     </div>
@@ -367,12 +367,12 @@ export default function TipoPrecioForm({ tipo_precio, colores_disponibles, puede
               </div>
 
               {tipo_precio?.es_sistema && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <div className="text-amber-500 mt-0.5">⚠️</div>
+                    <div className="text-amber-500 dark:text-amber-400 mt-0.5">⚠️</div>
                     <div>
-                      <h4 className="font-medium text-amber-800">Tipo de Sistema</h4>
-                      <p className="text-sm text-amber-700 mt-1">
+                      <h4 className="font-medium text-amber-800 dark:text-amber-200">Tipo de Sistema</h4>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
                         Este es un tipo de precio del sistema. Algunas opciones están bloqueadas
                         para mantener la integridad del sistema.
                       </p>

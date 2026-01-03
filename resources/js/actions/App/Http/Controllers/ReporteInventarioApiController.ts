@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::estadisticasGenerales
- * @see app/Http/Controllers/ReporteInventarioApiController.php:30
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:42
  * @route '/api/inventario/reportes/estadisticas'
  */
 export const estadisticasGenerales = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ estadisticasGenerales.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::estadisticasGenerales
- * @see app/Http/Controllers/ReporteInventarioApiController.php:30
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:42
  * @route '/api/inventario/reportes/estadisticas'
  */
 estadisticasGenerales.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ estadisticasGenerales.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::estadisticasGenerales
- * @see app/Http/Controllers/ReporteInventarioApiController.php:30
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:42
  * @route '/api/inventario/reportes/estadisticas'
  */
 estadisticasGenerales.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ estadisticasGenerales.get = (options?: RouteQueryOptions): RouteDefinition<'get'
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::estadisticasGenerales
- * @see app/Http/Controllers/ReporteInventarioApiController.php:30
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:42
  * @route '/api/inventario/reportes/estadisticas'
  */
 estadisticasGenerales.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ estadisticasGenerales.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::estadisticasGenerales
- * @see app/Http/Controllers/ReporteInventarioApiController.php:30
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:42
  * @route '/api/inventario/reportes/estadisticas'
  */
     const estadisticasGeneralesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ estadisticasGenerales.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::estadisticasGenerales
- * @see app/Http/Controllers/ReporteInventarioApiController.php:30
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:42
  * @route '/api/inventario/reportes/estadisticas'
  */
         estadisticasGeneralesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ estadisticasGenerales.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::estadisticasGenerales
- * @see app/Http/Controllers/ReporteInventarioApiController.php:30
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:42
  * @route '/api/inventario/reportes/estadisticas'
  */
         estadisticasGeneralesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ estadisticasGenerales.head = (options?: RouteQueryOptions): RouteDefinition<'hea
     estadisticasGenerales.form = estadisticasGeneralesForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::stockBajo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:58
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:70
  * @route '/api/inventario/reportes/stock-bajo'
  */
 export const stockBajo = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ stockBajo.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::stockBajo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:58
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:70
  * @route '/api/inventario/reportes/stock-bajo'
  */
 stockBajo.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ stockBajo.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::stockBajo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:58
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:70
  * @route '/api/inventario/reportes/stock-bajo'
  */
 stockBajo.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ stockBajo.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::stockBajo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:58
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:70
  * @route '/api/inventario/reportes/stock-bajo'
  */
 stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::stockBajo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:58
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:70
  * @route '/api/inventario/reportes/stock-bajo'
  */
     const stockBajoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::stockBajo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:58
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:70
  * @route '/api/inventario/reportes/stock-bajo'
  */
         stockBajoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::stockBajo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:58
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:70
  * @route '/api/inventario/reportes/stock-bajo'
  */
         stockBajoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ stockBajo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     stockBajo.form = stockBajoForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::proximosVencer
- * @see app/Http/Controllers/ReporteInventarioApiController.php:87
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:99
  * @route '/api/inventario/reportes/proximos-vencer'
  */
 export const proximosVencer = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -172,7 +172,7 @@ proximosVencer.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::proximosVencer
- * @see app/Http/Controllers/ReporteInventarioApiController.php:87
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:99
  * @route '/api/inventario/reportes/proximos-vencer'
  */
 proximosVencer.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ proximosVencer.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::proximosVencer
- * @see app/Http/Controllers/ReporteInventarioApiController.php:87
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:99
  * @route '/api/inventario/reportes/proximos-vencer'
  */
 proximosVencer.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -190,7 +190,7 @@ proximosVencer.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::proximosVencer
- * @see app/Http/Controllers/ReporteInventarioApiController.php:87
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:99
  * @route '/api/inventario/reportes/proximos-vencer'
  */
 proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -200,7 +200,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::proximosVencer
- * @see app/Http/Controllers/ReporteInventarioApiController.php:87
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:99
  * @route '/api/inventario/reportes/proximos-vencer'
  */
     const proximosVencerForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -210,7 +210,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::proximosVencer
- * @see app/Http/Controllers/ReporteInventarioApiController.php:87
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:99
  * @route '/api/inventario/reportes/proximos-vencer'
  */
         proximosVencerForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -219,7 +219,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::proximosVencer
- * @see app/Http/Controllers/ReporteInventarioApiController.php:87
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:99
  * @route '/api/inventario/reportes/proximos-vencer'
  */
         proximosVencerForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -235,7 +235,7 @@ proximosVencer.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     proximosVencer.form = proximosVencerForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::vencidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:116
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:128
  * @route '/api/inventario/reportes/vencidos'
  */
 export const vencidos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -250,7 +250,7 @@ vencidos.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::vencidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:116
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:128
  * @route '/api/inventario/reportes/vencidos'
  */
 vencidos.url = (options?: RouteQueryOptions) => {
@@ -259,7 +259,7 @@ vencidos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::vencidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:116
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:128
  * @route '/api/inventario/reportes/vencidos'
  */
 vencidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -268,7 +268,7 @@ vencidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::vencidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:116
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:128
  * @route '/api/inventario/reportes/vencidos'
  */
 vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -278,7 +278,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::vencidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:116
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:128
  * @route '/api/inventario/reportes/vencidos'
  */
     const vencidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -288,7 +288,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::vencidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:116
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:128
  * @route '/api/inventario/reportes/vencidos'
  */
         vencidosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -297,7 +297,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::vencidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:116
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:128
  * @route '/api/inventario/reportes/vencidos'
  */
         vencidosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -313,7 +313,7 @@ vencidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     vencidos.form = vencidosForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::movimientosPorPeriodo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:145
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:157
  * @route '/api/inventario/reportes/movimientos-periodo'
  */
 export const movimientosPorPeriodo = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -328,7 +328,7 @@ movimientosPorPeriodo.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::movimientosPorPeriodo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:145
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:157
  * @route '/api/inventario/reportes/movimientos-periodo'
  */
 movimientosPorPeriodo.url = (options?: RouteQueryOptions) => {
@@ -337,7 +337,7 @@ movimientosPorPeriodo.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::movimientosPorPeriodo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:145
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:157
  * @route '/api/inventario/reportes/movimientos-periodo'
  */
 movimientosPorPeriodo.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -346,7 +346,7 @@ movimientosPorPeriodo.get = (options?: RouteQueryOptions): RouteDefinition<'get'
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::movimientosPorPeriodo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:145
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:157
  * @route '/api/inventario/reportes/movimientos-periodo'
  */
 movimientosPorPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -356,7 +356,7 @@ movimientosPorPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::movimientosPorPeriodo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:145
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:157
  * @route '/api/inventario/reportes/movimientos-periodo'
  */
     const movimientosPorPeriodoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -366,7 +366,7 @@ movimientosPorPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::movimientosPorPeriodo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:145
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:157
  * @route '/api/inventario/reportes/movimientos-periodo'
  */
         movimientosPorPeriodoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -375,7 +375,7 @@ movimientosPorPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::movimientosPorPeriodo
- * @see app/Http/Controllers/ReporteInventarioApiController.php:145
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:157
  * @route '/api/inventario/reportes/movimientos-periodo'
  */
         movimientosPorPeriodoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -391,7 +391,7 @@ movimientosPorPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'hea
     movimientosPorPeriodo.form = movimientosPorPeriodoForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::productosMasMovidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:192
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:204
  * @route '/api/inventario/reportes/productos-mas-movidos'
  */
 export const productosMasMovidos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -406,7 +406,7 @@ productosMasMovidos.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::productosMasMovidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:192
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:204
  * @route '/api/inventario/reportes/productos-mas-movidos'
  */
 productosMasMovidos.url = (options?: RouteQueryOptions) => {
@@ -415,7 +415,7 @@ productosMasMovidos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::productosMasMovidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:192
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:204
  * @route '/api/inventario/reportes/productos-mas-movidos'
  */
 productosMasMovidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -424,7 +424,7 @@ productosMasMovidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::productosMasMovidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:192
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:204
  * @route '/api/inventario/reportes/productos-mas-movidos'
  */
 productosMasMovidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -434,7 +434,7 @@ productosMasMovidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::productosMasMovidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:192
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:204
  * @route '/api/inventario/reportes/productos-mas-movidos'
  */
     const productosMasMovidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -444,7 +444,7 @@ productosMasMovidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::productosMasMovidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:192
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:204
  * @route '/api/inventario/reportes/productos-mas-movidos'
  */
         productosMasMovidosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -453,7 +453,7 @@ productosMasMovidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::productosMasMovidos
- * @see app/Http/Controllers/ReporteInventarioApiController.php:192
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:204
  * @route '/api/inventario/reportes/productos-mas-movidos'
  */
         productosMasMovidosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -469,7 +469,7 @@ productosMasMovidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'
     productosMasMovidos.form = productosMasMovidosForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::valorizacionInventario
- * @see app/Http/Controllers/ReporteInventarioApiController.php:229
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:241
  * @route '/api/inventario/reportes/valorizacion'
  */
 export const valorizacionInventario = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -484,7 +484,7 @@ valorizacionInventario.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::valorizacionInventario
- * @see app/Http/Controllers/ReporteInventarioApiController.php:229
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:241
  * @route '/api/inventario/reportes/valorizacion'
  */
 valorizacionInventario.url = (options?: RouteQueryOptions) => {
@@ -493,7 +493,7 @@ valorizacionInventario.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::valorizacionInventario
- * @see app/Http/Controllers/ReporteInventarioApiController.php:229
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:241
  * @route '/api/inventario/reportes/valorizacion'
  */
 valorizacionInventario.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -502,7 +502,7 @@ valorizacionInventario.get = (options?: RouteQueryOptions): RouteDefinition<'get
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::valorizacionInventario
- * @see app/Http/Controllers/ReporteInventarioApiController.php:229
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:241
  * @route '/api/inventario/reportes/valorizacion'
  */
 valorizacionInventario.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -512,7 +512,7 @@ valorizacionInventario.head = (options?: RouteQueryOptions): RouteDefinition<'he
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::valorizacionInventario
- * @see app/Http/Controllers/ReporteInventarioApiController.php:229
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:241
  * @route '/api/inventario/reportes/valorizacion'
  */
     const valorizacionInventarioForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -522,7 +522,7 @@ valorizacionInventario.head = (options?: RouteQueryOptions): RouteDefinition<'he
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::valorizacionInventario
- * @see app/Http/Controllers/ReporteInventarioApiController.php:229
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:241
  * @route '/api/inventario/reportes/valorizacion'
  */
         valorizacionInventarioForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -531,7 +531,7 @@ valorizacionInventario.head = (options?: RouteQueryOptions): RouteDefinition<'he
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioApiController::valorizacionInventario
- * @see app/Http/Controllers/ReporteInventarioApiController.php:229
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:241
  * @route '/api/inventario/reportes/valorizacion'
  */
         valorizacionInventarioForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -545,6 +545,84 @@ valorizacionInventario.head = (options?: RouteQueryOptions): RouteDefinition<'he
         })
     
     valorizacionInventario.form = valorizacionInventarioForm
-const ReporteInventarioApiController = { estadisticasGenerales, stockBajo, proximosVencer, vencidos, movimientosPorPeriodo, productosMasMovidos, valorizacionInventario }
+/**
+* @see \App\Http\Controllers\ReporteInventarioApiController::generar
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:292
+ * @route '/api/inventario/reportes/generar'
+ */
+export const generar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: generar.url(options),
+    method: 'get',
+})
+
+generar.definition = {
+    methods: ["get","head"],
+    url: '/api/inventario/reportes/generar',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteInventarioApiController::generar
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:292
+ * @route '/api/inventario/reportes/generar'
+ */
+generar.url = (options?: RouteQueryOptions) => {
+    return generar.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteInventarioApiController::generar
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:292
+ * @route '/api/inventario/reportes/generar'
+ */
+generar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: generar.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteInventarioApiController::generar
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:292
+ * @route '/api/inventario/reportes/generar'
+ */
+generar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: generar.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteInventarioApiController::generar
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:292
+ * @route '/api/inventario/reportes/generar'
+ */
+    const generarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: generar.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteInventarioApiController::generar
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:292
+ * @route '/api/inventario/reportes/generar'
+ */
+        generarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: generar.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteInventarioApiController::generar
+ * @see app/Http/Controllers/ReporteInventarioApiController.php:292
+ * @route '/api/inventario/reportes/generar'
+ */
+        generarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: generar.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    generar.form = generarForm
+const ReporteInventarioApiController = { estadisticasGenerales, stockBajo, proximosVencer, vencidos, movimientosPorPeriodo, productosMasMovidos, valorizacionInventario, generar }
 
 export default ReporteInventarioApiController

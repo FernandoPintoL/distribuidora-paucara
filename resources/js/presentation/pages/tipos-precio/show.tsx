@@ -77,16 +77,16 @@ interface PageProps {
 export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadisticas }: PageProps) {
   const getColorClass = (color: string) => {
     const colorMap = {
-      blue: 'bg-blue-100 text-blue-800 border-blue-200',
-      green: 'bg-green-100 text-green-800 border-green-200',
-      purple: 'bg-purple-100 text-purple-800 border-purple-200',
-      orange: 'bg-orange-100 text-orange-800 border-orange-200',
-      red: 'bg-red-100 text-red-800 border-red-200',
-      indigo: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      pink: 'bg-pink-100 text-pink-800 border-pink-200',
-      yellow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      gray: 'bg-gray-100 text-gray-800 border-gray-200',
-      teal: 'bg-teal-100 text-teal-800 border-teal-200',
+      blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800',
+      green: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800',
+      purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-800',
+      orange: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800',
+      red: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800',
+      indigo: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800',
+      pink: 'bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-200 border-pink-200 dark:border-pink-800',
+      yellow: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800',
+      gray: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+      teal: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200 border-teal-200 dark:border-teal-800',
     };
     return colorMap[color as keyof typeof colorMap] || colorMap.gray;
   };
@@ -107,8 +107,8 @@ export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadis
               <span className="text-2xl">{tipo_precio.configuracion.icono || '💰'}</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{tipo_precio.nombre}</h1>
-              <p className="text-gray-600">{tipo_precio.descripcion}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{tipo_precio.nombre}</h1>
+              <p className="text-gray-600 dark:text-gray-400">{tipo_precio.descripcion}</p>
             </div>
           </div>
 
@@ -139,29 +139,29 @@ export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadis
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-900">Código</h4>
-                  <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Código</h4>
+                  <code className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono text-gray-900 dark:text-gray-100">
                     {tipo_precio.codigo}
                   </code>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">Orden</h4>
-                  <p className="text-gray-600">{tipo_precio.orden}</p>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Orden</h4>
+                  <p className="text-gray-600 dark:text-gray-400">{tipo_precio.orden}</p>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-medium text-gray-900">Color</h4>
+                <h4 className="font-medium text-gray-900 dark:text-gray-100">Color</h4>
                 <div className="flex items-center gap-2 mt-1">
                   <div className={`w-6 h-6 rounded-full border ${getColorClass(tipo_precio.color)}`}></div>
-                  <span className="text-gray-600 capitalize">{tipo_precio.color}</span>
+                  <span className="text-gray-600 dark:text-gray-400 capitalize">{tipo_precio.color}</span>
                 </div>
               </div>
 
               {tipo_precio.configuracion.tooltip && (
                 <div>
-                  <h4 className="font-medium text-gray-900">Tooltip</h4>
-                  <p className="text-gray-600">{tipo_precio.configuracion.tooltip}</p>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Tooltip</h4>
+                  <p className="text-gray-600 dark:text-gray-400">{tipo_precio.configuracion.tooltip}</p>
                 </div>
               )}
             </CardContent>
@@ -197,12 +197,12 @@ export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadis
               </div>
 
               {tipo_precio.es_sistema && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mt-4">
                   <div className="flex items-start gap-2">
-                    <span className="text-amber-500">⚠️</span>
+                    <span className="text-amber-500 dark:text-amber-400">⚠️</span>
                     <div>
-                      <h5 className="font-medium text-amber-800">Tipo del Sistema</h5>
-                      <p className="text-sm text-amber-700 mt-1">
+                      <h5 className="font-medium text-amber-800 dark:text-amber-200">Tipo del Sistema</h5>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
                         Este tipo de precio es parte del sistema y tiene restricciones de edición.
                       </p>
                     </div>
@@ -218,14 +218,14 @@ export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadis
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total de Precios</p>
-                  <p className="text-2xl font-bold text-gray-900">{estadisticas.total_precios}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total de Precios</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{estadisticas.total_precios}</p>
                 </div>
               </div>
             </CardContent>
@@ -234,14 +234,14 @@ export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadis
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Productos</p>
-                  <p className="text-2xl font-bold text-gray-900">{estadisticas.productos_con_precio}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Productos</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{estadisticas.productos_con_precio}</p>
                 </div>
               </div>
             </CardContent>
@@ -250,14 +250,14 @@ export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadis
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                  <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Configuraciones</p>
-                  <p className="text-2xl font-bold text-gray-900">{estadisticas.total_configuraciones}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Configuraciones</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{estadisticas.total_configuraciones}</p>
                 </div>
               </div>
             </CardContent>
@@ -286,7 +286,7 @@ export default function TipoPrecioShow({ tipo_precio, precios_recientes, estadis
                       <TableCell>
                         <Link
                           href={route('productos.edit', precio.producto.id)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                         >
                           {precio.producto.nombre}
                         </Link>

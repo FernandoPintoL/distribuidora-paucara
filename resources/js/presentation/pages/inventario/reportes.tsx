@@ -164,7 +164,7 @@ export default function Reportes() {
         }));
     };
 
-    const generarReporte = async (formato: 'pdf' | 'excel' | 'csv') => {
+    const generarReporte = async (formato: 'excel' | 'csv' | '80mm' | '58mm') => {
         if (!filtros.tipo_reporte) {
             alert('Por favor selecciona un tipo de reporte');
             return;
@@ -172,14 +172,19 @@ export default function Reportes() {
 
         setGenerandoReporte(true);
         try {
-            const params = new URLSearchParams({
-                ...filtros,
-                formato,
-                incluir_sin_movimientos: filtros.incluir_sin_movimientos.toString(),
-                solo_con_stock: filtros.solo_con_stock.toString()
-            });
+            // Preparar parámetros, solo incluir los que tienen valor
+            const params = new URLSearchParams();
+            params.append('tipo_reporte', filtros.tipo_reporte);
+            params.append('formato', formato);
 
-            const response = await fetch(`/inventario/reportes/generar?${params}`);
+            if (filtros.almacen_id) params.append('almacen_id', filtros.almacen_id);
+            if (filtros.categoria_id) params.append('categoria_id', filtros.categoria_id);
+            if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
+            if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+            params.append('incluir_sin_movimientos', filtros.incluir_sin_movimientos.toString());
+            params.append('solo_con_stock', filtros.solo_con_stock.toString());
+
+            const response = await fetch(`/api/inventario/reportes/generar?${params}`);
 
             if (response.ok) {
                 const blob = await response.blob();
@@ -187,12 +192,23 @@ export default function Reportes() {
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `reporte_inventario_${filtros.tipo_reporte}_${new Date().toISOString().split('T')[0]}.${formato}`;
+
+                // Determinar extensión según formato
+                const extension = formato === 'excel' ? 'xlsx' : formato === 'csv' ? 'csv' : 'pdf';
+                a.download = `reporte_inventario_${filtros.tipo_reporte}_${new Date().toISOString().split('T')[0]}.${extension}`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
             } else {
-                alert('Error al generar el reporte');
+                try {
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                    alert(`Error ${response.status}: ${errorData.message || JSON.stringify(errorData.errors || 'Error desconocido')}`);
+                } catch (e) {
+                    const errorText = await response.text();
+                    console.error('Error response text:', errorText);
+                    alert(`Error ${response.status}: ${errorText}`);
+                }
             }
         } catch (error) {
             console.error('Error:', error);
@@ -470,13 +486,22 @@ export default function Reportes() {
 
                                             <div className="space-y-3">
                                                 <Button
-                                                    onClick={() => generarReporte('pdf')}
+                                                    onClick={() => generarReporte('80mm')}
                                                     disabled={generandoReporte}
                                                     className="w-full"
                                                     variant="destructive"
                                                 >
                                                     <FileText className="w-4 h-4 mr-2" />
-                                                    {generandoReporte ? 'Generando...' : 'Descargar PDF'}
+                                                    {generandoReporte ? 'Generando...' : 'Descargar Impresión 80mm'}
+                                                </Button>
+
+                                                <Button
+                                                    onClick={() => generarReporte('58mm')}
+                                                    disabled={generandoReporte}
+                                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                                >
+                                                    <FileText className="w-4 h-4 mr-2" />
+                                                    {generandoReporte ? 'Generando...' : 'Descargar Impresión 58mm'}
                                                 </Button>
 
                                                 <Button

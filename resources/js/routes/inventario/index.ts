@@ -554,7 +554,8 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     reportes.form = reportesForm
 const inventario = {
-    index,
+    reportes,
+index,
 dashboard,
 stockBajo,
 proximosVencer,
@@ -563,7 +564,6 @@ movimientos,
 ajuste,
 ajusteMasivo,
 historialCargas,
-reportes,
 tiposAjusteInventario,
 vehiculos,
 transferencias,

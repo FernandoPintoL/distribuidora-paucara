@@ -47,6 +47,17 @@ export default function MapView({
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [mapType, setMapType] = useState<string>('roadmap');
 
+    // Debug: Log API key availability
+    React.useEffect(() => {
+        console.log('[MapView] Environment Check:', {
+            hasApiKey: !!apiKey,
+            apiKeyLength: apiKey ? apiKey.length : 0,
+            apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'undefined',
+            environment: process.env.NODE_ENV,
+            url: typeof window !== 'undefined' ? window.location.origin : 'server-side'
+        });
+    }, [apiKey]);
+
     // Usar useLoadScript hook en lugar de LoadScript component
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: apiKey || '',
@@ -75,10 +86,21 @@ export default function MapView({
     }
 
     if (loadError) {
+        console.error('[MapView] Load Error Details:', {
+            error: loadError,
+            message: loadError?.message,
+            apiKeyExists: !!apiKey,
+        });
         return (
-            <div className="flex items-center justify-center p-4 border border-destructive rounded-lg bg-destructive/10">
-                <p className="text-sm text-destructive">
+            <div className="flex flex-col items-center justify-center p-4 border border-destructive rounded-lg bg-destructive/10 gap-2">
+                <p className="text-sm text-destructive font-semibold">
                     Error al cargar Google Maps
+                </p>
+                <p className="text-xs text-destructive/80">
+                    {loadError?.message || 'API key inválida o error de permisos'}
+                </p>
+                <p className="text-xs text-destructive/60 mt-2">
+                    Verifica la consola del navegador para más detalles
                 </p>
             </div>
         );

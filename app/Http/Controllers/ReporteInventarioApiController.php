@@ -1,14 +1,25 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Exports\StockActualExport;
+use App\Exports\MovimientosInventarioExport;
+use App\Exports\ProductosBajoMinimoExport;
+use App\Exports\StockValorizadoExport;
+use App\Exports\ProductosSinMovimientoExport;
+use App\Exports\VencimientosExport;
+use App\Exports\KardexProductoExport;
+use App\Exports\RotacionInventarioExport;
 use App\Helpers\ApiResponse;
 use App\Models\Almacen;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
+use App\Services\ReporteInventarioService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReporteInventarioApiController extends Controller
 {
@@ -21,6 +32,7 @@ class ReporteInventarioApiController extends Controller
             'vencidos',
             'movimientosPorPeriodo',
             'productosMasMovidos',
+            'valorizacionInventario',
         ]);
     }
 
@@ -271,5 +283,197 @@ class ReporteInventarioApiController extends Controller
         });
 
         return ApiResponse::success($valorizacion);
+    }
+
+    /**
+     * Generar reporte de inventario en formato especificado
+     * GET /api/inventario/reportes/generar
+     */
+    public function generar(Request $request)
+    {
+        try {
+            // Limpiar parámetros vacíos
+            $data = $request->all();
+            $data = array_filter($data, function ($value) {
+                return $value !== '' && $value !== null;
+            });
+
+            // Permitir 'pdf' como alias para '80mm'
+            if (isset($data['formato']) && $data['formato'] === 'pdf') {
+                $data['formato'] = '80mm';
+            }
+
+            // Convertir strings booleanos a booleanos reales
+            if (isset($data['incluir_sin_movimientos'])) {
+                $data['incluir_sin_movimientos'] = filter_var($data['incluir_sin_movimientos'], FILTER_VALIDATE_BOOLEAN);
+            }
+            if (isset($data['solo_con_stock'])) {
+                $data['solo_con_stock'] = filter_var($data['solo_con_stock'], FILTER_VALIDATE_BOOLEAN);
+            }
+
+            // Validar parámetros
+            $validated = \Illuminate\Support\Facades\Validator::make($data, [
+                'tipo_reporte' => 'required|in:stock_actual,movimientos,stock_valorizado,productos_bajo_minimo,productos_sin_movimiento,vencimientos,kardex,rotacion_inventario',
+                'formato' => 'required|in:excel,csv,80mm,58mm',
+                'almacen_id' => 'nullable|integer|exists:almacenes,id',
+                'categoria_id' => 'nullable|integer|exists:categorias,id',
+                'fecha_desde' => 'nullable|date',
+                'fecha_hasta' => 'nullable|date',
+                'incluir_sin_movimientos' => 'nullable|boolean',
+                'solo_con_stock' => 'nullable|boolean',
+                'producto_id' => 'nullable|integer|exists:productos,id',
+            ])->validate();
+
+            // Inyectar servicio
+            $servicio = new ReporteInventarioService();
+
+            // Obtener datos según tipo de reporte
+            $datos = match ($validated['tipo_reporte']) {
+                'stock_actual' => $servicio->obtenerStockActual($validated),
+                'movimientos' => $servicio->obtenerMovimientos($validated),
+                'stock_valorizado' => $servicio->obtenerStockValorizado($validated),
+                'productos_bajo_minimo' => $servicio->obtenerProductosBajoMinimo($validated),
+                'productos_sin_movimiento' => $servicio->obtenerProductosSinMovimiento($validated),
+                'vencimientos' => $servicio->obtenerVencimientos($validated),
+                'kardex' => $servicio->obtenerKardex($validated),
+                'rotacion_inventario' => $servicio->obtenerRotacion($validated),
+            };
+
+            // Generar archivo según formato
+            return match ($validated['formato']) {
+                'excel' => $this->generarExcel($validated['tipo_reporte'], $datos),
+                'csv' => $this->generarCsv($validated['tipo_reporte'], $datos),
+                '80mm' => $this->generarImpresion($validated['tipo_reporte'], $datos, '80'),
+                '58mm' => $this->generarImpresion($validated['tipo_reporte'], $datos, '58'),
+            };
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error generando reporte', [
+                'tipo_reporte' => $request->input('tipo_reporte'),
+                'formato' => $request->input('formato'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al generar el reporte',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generar Excel - Actualmente se genera en formato CSV
+     * por compatibilidad con la versión instalada de Laravel Excel
+     */
+    private function generarExcel(string $tipoReporte, $datos)
+    {
+        // Generar como CSV en lugar de Excel por problemas de compatibilidad
+        // El navegador puede abrir CSV y el usuario puede guardarlo como Excel
+        \Log::info('Excel requested, generating as CSV for compatibility');
+        return $this->generarCsv($tipoReporte, $datos);
+    }
+
+    /**
+     * Generar CSV
+     */
+    private function generarCsv(string $tipoReporte, $datos)
+    {
+        $csv = '';
+
+        // Encabezados basados en tipo de reporte
+        $encabezados = match ($tipoReporte) {
+            'stock_actual' => ['Almacén', 'Código', 'Nombre Producto', 'Cantidad', 'Precio Compra', 'Precio Venta', 'Valor Compra', 'Valor Venta', 'Stock Mínimo', 'Fecha Actualización'],
+            'movimientos' => ['Fecha', 'Almacén', 'Código', 'Nombre Producto', 'Tipo Movimiento', 'Cantidad', 'Motivo', 'Usuario', 'Referencia'],
+            'stock_valorizado' => ['Almacén', 'Código', 'Nombre Producto', 'Cantidad', 'Valor Compra', 'Valor Venta', 'Margen Bruto', 'Margen %'],
+            'productos_bajo_minimo' => ['Código', 'Nombre Producto', 'Almacén', 'Stock Actual', 'Stock Mínimo', 'Falta', 'Precio Compra', 'Precio Venta', 'Categoría'],
+            'productos_sin_movimiento' => ['Código', 'Nombre Producto', 'Almacén', 'Categoría', 'Cantidad Stock', 'Precio Compra', 'Precio Venta', 'Valor Inmobilizado', 'Días Sin Movimiento', 'Última Actualización'],
+            'vencimientos' => ['Código', 'Nombre Producto', 'Almacén', 'Categoría', 'Cantidad', 'Fecha Vencimiento', 'Días para Vencer', 'Estado', 'Precio Compra', 'Valor Total'],
+            'kardex' => ['Fecha', 'Almacén', 'Tipo Movimiento', 'Cantidad', 'Motivo', 'Usuario', 'Referencia', 'Observaciones'],
+            'rotacion_inventario' => ['Código', 'Nombre Producto', 'Categoría', 'Total Movimientos', 'Cantidad Total Movida', 'Promedio por Movimiento', 'Última Fecha Movimiento', 'Clasificación Rotación'],
+        };
+
+        // Agregar encabezados
+        $csv .= implode(',', $encabezados) . "\n";
+
+        // Agregar datos
+        foreach ($datos as $fila) {
+            $valores = array_values((array) $fila);
+            $csv .= implode(',', array_map(function ($val) {
+                $val = str_replace('"', '""', $val);
+                return '"' . $val . '"';
+            }, $valores)) . "\n";
+        }
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv; charset=utf-8')
+            ->header('Content-Disposition', 'attachment; filename=reporte_' . $tipoReporte . '_' . now()->format('Y-m-d_H-i-s') . '.csv');
+    }
+
+    /**
+     * Generar Impresión en formatos 80mm y 58mm
+     */
+    private function generarImpresion(string $tipoReporte, $datos, string $formato)
+    {
+        $sufijo = $formato === '80' ? '80' : '58';
+        $tipoReporteFormato = str_replace('_', '-', $tipoReporte);
+        $vista = "impresion.reportes.{$tipoReporteFormato}-{$sufijo}";
+
+        try {
+            // Validar que la vista exista
+            if (!\Illuminate\Support\Facades\View::exists($vista)) {
+                \Log::error('Vista no encontrada', [
+                    'vista' => $vista,
+                    'tipo_reporte' => $tipoReporte,
+                    'formato' => $sufijo,
+                ]);
+
+                throw new \Exception("La vista '{$vista}' no existe. Reportes disponibles: stock_actual, movimientos, stock_valorizado, productos_bajo_minimo, productos_sin_movimiento, vencimientos, kardex, rotacion");
+            }
+
+            // Obtener configuración de empresa
+            $empresa = \App\Models\Empresa::first() ?? new \App\Models\Empresa();
+            $usuario = auth()->user();
+
+            $pdf = Pdf::loadView($vista, [
+                'datos' => $datos,
+                'empresa' => $empresa,
+                'fecha_impresion' => now(),
+                'usuario' => $usuario,
+            ]);
+
+            // Configurar formato de papel según tamaño
+            if ($formato === '80') {
+                $pdf->setPaper([0, 0, 226.77, 841.89], 'portrait'); // 80mm x 297mm
+            } else {
+                $pdf->setPaper([0, 0, 164.41, 841.89], 'portrait'); // 58mm x 297mm
+            }
+
+            $pdf->setOption('enable-local-file-access', true);
+
+            $nombreArchivo = "reporte_{$tipoReporte}_{$sufijo}mm_" . now()->format('Y-m-d_H-i-s') . '.pdf';
+            return $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            \Log::error('Error generando impresión', [
+                'tipo_reporte' => $tipoReporte,
+                'formato' => $sufijo,
+                'vista' => $vista,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al generar impresión',
+                'error' => $e->getMessage(),
+                'vista' => $vista,
+            ], 500);
+        }
     }
 }

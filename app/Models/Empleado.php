@@ -206,6 +206,59 @@ class Empleado extends Model
     }
 
     /**
+     * Valida que un empleado NO tenga el rol 'Cliente'
+     * Los empleados deben tener roles de empleados (Gerente, Vendedor, Chofer, etc.)
+     * NO deben tener el rol Cliente que está destinado a usuarios en la tabla clientes
+     *
+     * @return bool
+     */
+    public function tienRolClienteIncorrecto(): bool
+    {
+        if (!$this->user) {
+            return false;
+        }
+
+        return $this->user->roles()->where('name', 'Cliente')->exists();
+    }
+
+    /**
+     * Obtiene los roles que NO son permitidos para empleados
+     *
+     * @return array Array de nombres de roles prohibidos para empleados
+     */
+    public static function rolesProhibidosParaEmpleados(): array
+    {
+        return ['Cliente']; // Solo Cliente está prohibido para empleados
+    }
+
+    /**
+     * Validación para asegurar que empleados no tengan roles de cliente
+     * Se ejecuta automaticamente cuando se guardan cambios
+     */
+    protected static function booted(): void
+    {
+        static::created(function (Empleado $empleado) {
+            if ($empleado->tienRolClienteIncorrecto()) {
+                \Log::warning('Empleado creado con rol Cliente incorrecto', [
+                    'empleado_id' => $empleado->id,
+                    'user_id' => $empleado->user_id,
+                    'nombre' => $empleado->nombre,
+                ]);
+            }
+        });
+
+        static::updated(function (Empleado $empleado) {
+            if ($empleado->tienRolClienteIncorrecto()) {
+                \Log::warning('Empleado actualizado con rol Cliente incorrecto', [
+                    'empleado_id' => $empleado->id,
+                    'user_id' => $empleado->user_id,
+                    'nombre' => $empleado->nombre,
+                ]);
+            }
+        });
+    }
+
+    /**
      * Relación con Zona (para preventistas)
      */
     public function zona()

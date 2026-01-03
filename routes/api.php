@@ -351,6 +351,7 @@ Route::group(['prefix' => 'inventario'], function () {
         Route::get('movimientos-periodo', [ReporteInventarioApiController::class, 'movimientosPorPeriodo']);
         Route::get('productos-mas-movidos', [ReporteInventarioApiController::class, 'productosMasMovidos']);
         Route::get('valorizacion', [ReporteInventarioApiController::class, 'valorizacionInventario']);
+        Route::get('generar', [ReporteInventarioApiController::class, 'generar'])->name('inventario.reportes.generar');
     });
 });
 

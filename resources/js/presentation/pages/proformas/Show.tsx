@@ -25,7 +25,7 @@ import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
 import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle } from 'lucide-react'
-import MapView from '@/presentation/components/maps/MapView'
+import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallback'
 import { FormatoSelector } from '@/presentation/components/impresion'
 
 // DOMAIN LAYER: Importar tipos desde domain
@@ -863,7 +863,7 @@ export default function ProformasShow({ item: proforma }: Props) {
 
                                                     {/* Contenedor responsive del mapa */}
                                                     <div className="rounded-lg overflow-hidden border border-border/50">
-                                                        <MapView
+                                                        <MapViewWithFallback
                                                             latitude={proforma.direccion_solicitada.latitud}
                                                             longitude={proforma.direccion_solicitada.longitud}
                                                             height="280px"
