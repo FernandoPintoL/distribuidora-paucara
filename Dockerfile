@@ -55,12 +55,9 @@ COPY package.json package-lock.json ./
 # Install Node dependencies
 RUN npm ci
 
-# Copy application code (excluding .env which will be provided by Railway at runtime)
-COPY . /app/
-RUN rm -f /app/.env
-
-# Create a temporary .env for the build with Vite variables
-RUN cat > /app/.env.build << EOF
+# Create .env from environment variables (Railway provides these at build time)
+# This allows Vite to interpolate variables correctly during npm run build
+RUN cat > /app/.env << EOF
 VITE_APP_NAME=${VITE_APP_NAME}
 VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
 VITE_WEBSOCKET_URL=${VITE_WEBSOCKET_URL}
@@ -70,16 +67,19 @@ VITE_LOGO_PNG=${VITE_LOGO_PNG}
 VITE_LOGO_ALT=${VITE_LOGO_ALT}
 EOF
 
+# Copy application code
+COPY . /app/
+
 # Configure Nginx and Supervisor
 RUN mkdir -p /run/nginx /var/log/nginx /etc/nginx/http.d \
     && cp /app/nginx.conf /etc/nginx/http.d/default.conf \
     && cp /app/supervisord.conf /etc/supervisord.conf
 
-# Build assets with environment variables
+# Build assets with .env available
 RUN cd /app && npm run build
 
-# Remove the temporary build .env
-RUN rm -f /app/.env.build
+# Remove .env after build (Railway will provide a new one at runtime)
+RUN rm -f /app/.env
 
 # Clear any prebuilt caches (env will be provided at runtime on Railway)
 RUN php artisan package:discover --ansi || true && \
