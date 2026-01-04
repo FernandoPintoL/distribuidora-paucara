@@ -51,8 +51,16 @@ class CodigoBarraController extends Controller
     /**
      * Mostrar formulario de creación
      */
-    public function create(Producto $producto): Response
+    public function create(): Response
     {
+        $productoId = request()->query('producto_id');
+
+        if (!$productoId) {
+            abort(400, 'El parámetro producto_id es requerido');
+        }
+
+        $producto = Producto::findOrFail($productoId);
+
         return inertia('CodigosBarra/Create', [
             'producto' => $producto->only('id', 'nombre', 'sku'),
             'tipos' => TipoCodigoBarraEnum::paraSelects(),

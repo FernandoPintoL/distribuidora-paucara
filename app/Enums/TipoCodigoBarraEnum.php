@@ -67,7 +67,10 @@ enum TipoCodigoBarraEnum: string
     public static function paraSelects(): array
     {
         return collect(self::cases())
-            ->mapWithKeys(fn ($tipo) => [$tipo->value => $tipo->getDescripcion()])
+            ->map(fn ($tipo) => [
+                'value' => $tipo->value,
+                'label' => $tipo->getDescripcion(),
+            ])
             ->toArray();
     }
 }
