@@ -68,7 +68,7 @@ class ClienteController extends Controller
 
         // Construir query
         $query = ClienteModel::query()
-            ->forCurrentUser()  // ✅ NUEVO: Filtrar por usuario actual (Preventista ve solo sus clientes)
+            ->forCurrentUser() // ✅ NUEVO: Filtrar por usuario actual (Preventista ve solo sus clientes)
             ->leftJoin('localidades', 'clientes.localidad_id', '=', 'localidades.id')
             ->when($q, function ($query) use ($q, $options) {
                 // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
@@ -234,7 +234,7 @@ class ClienteController extends Controller
                 return $this->resourceResponse(
                     $cliente->load('localidad'),
                     'Cliente creado exitosamente',
-                    'clientes.index',
+                    route('clientes.index'),
                     [],
                     201
                 );
@@ -339,14 +339,48 @@ class ClienteController extends Controller
                 $updates['ci_reverso'] = $path;
             }
 
+            // ✅ CRÉDITO: Capturar valores anteriores para auditoría de crédito
+            $creditoAnterior = [
+                'puede_tener_credito' => $cliente->getOriginal('puede_tener_credito'),
+                'limite_credito'      => $cliente->getOriginal('limite_credito'),
+            ];
+
             // Actualizar el cliente
             $cliente->update($data);
             $cliente->refresh();
 
+            // ✅ CRÉDITO: Registrar cambios de crédito en auditoría
+            if (isset($data['puede_tener_credito']) || isset($data['limite_credito'])) {
+                $creditoActual = [
+                    'puede_tener_credito' => $cliente->puede_tener_credito,
+                    'limite_credito'      => $cliente->limite_credito,
+                ];
+
+                // Verificar si hay cambios en los campos de crédito
+                if ($creditoAnterior['puede_tener_credito'] !== $creditoActual['puede_tener_credito'] ||
+                    $creditoAnterior['limite_credito'] != $creditoActual['limite_credito']) {
+
+                    $cliente->registrarCambio(
+                        'actualizar_credito',
+                        [
+                            'puede_tener_credito' => [
+                                'anterior' => (bool) $creditoAnterior['puede_tener_credito'],
+                                'actual'   => (bool) $creditoActual['puede_tener_credito'],
+                            ],
+                            'limite_credito'      => [
+                                'anterior' => (float) $creditoAnterior['limite_credito'],
+                                'actual'   => (float) $creditoActual['limite_credito'],
+                            ],
+                        ],
+                        null// Motivo opcional
+                    );
+                }
+            }
+
             // Sincronizar direcciones si vienen en la petición
             if ($request->has('direcciones')) {
                 // DEBUG: Log dirección data para verificar observaciones
-                \Log::info('🔍 Direcciones recibidas en update:', [
+                Log::info('🔍 Direcciones recibidas en update:', [
                     'direcciones' => $data['direcciones'] ?? [],
                 ]);
 
@@ -356,13 +390,15 @@ class ClienteController extends Controller
                 // Crear nuevas direcciones
                 if (is_array($data['direcciones']) && count($data['direcciones']) > 0) {
                     foreach ($data['direcciones'] as $index => $direccionData) {
-                        \Log::info("📍 Procesando dirección $index:", ['data' => $direccionData]);
+                        Log::info("📍 Procesando dirección $index:", ['data' => $direccionData]);
 
                         $direccionData['activa'] = $direccionData['activa'] ?? true;
-                        $createdDireccion = $cliente->direcciones()->create($direccionData);
+                        // Asignar localidad_id del cliente a la dirección
+                        $direccionData['localidad_id'] = $cliente->localidad_id;
+                        $createdDireccion              = $cliente->direcciones()->create($direccionData);
 
-                        \Log::info("✅ Dirección creada:", [
-                            'id' => $createdDireccion->id,
+                        Log::info("✅ Dirección creada:", [
+                            'id'            => $createdDireccion->id,
                             'observaciones' => $createdDireccion->observaciones,
                         ]);
                     }
@@ -388,7 +424,7 @@ class ClienteController extends Controller
                 return $this->resourceResponse(
                     $cliente->load('localidad'),
                     'Cliente actualizado exitosamente',
-                    'clientes.index'
+                    route('clientes.index')
                 );
             }
 
@@ -519,6 +555,43 @@ class ClienteController extends Controller
     }
 
     /**
+     * ✅ CRÉDITO: API: Obtener historial de auditoría de crédito del cliente
+     * Endpoint: GET /api/clientes/{id}/auditoria-credito
+     * Retorna: Lista de cambios realizados en configuración de crédito
+     */
+    public function obtenerAuditoriaCreditoApi(ClienteModel $cliente): JsonResponse
+    {
+        // ✅ Autorizar: Solo roles que pueden ver este cliente
+        $this->authorize('view', $cliente);
+
+        $auditorias = \App\Models\ClienteAudit::where('cliente_id', $cliente->id)
+            ->where('accion', 'actualizar_credito')
+            ->orderByDesc('created_at')
+            ->with([
+                'preventista.user:id,name,usernick',
+                'usuario:id,name,email',
+            ])
+            ->get()
+            ->map(function ($auditoria) {
+                return [
+                    'id'          => $auditoria->id,
+                    'fecha'       => $auditoria->created_at->format('Y-m-d H:i:s'),
+                    'accion'      => $auditoria->accion,
+                    'responsable' => $auditoria->getResponsableAttribute(),
+                    'cambios'     => $auditoria->cambios,
+                    'motivo'      => $auditoria->motivo,
+                    'ip'          => $auditoria->ip_address,
+                ];
+            });
+
+        return ApiResponse::success([
+            'cliente_id' => $cliente->id,
+            'nombre'     => $cliente->nombre,
+            'auditoria'  => $auditorias,
+        ]);
+    }
+
+    /**
      * Método privado para manejar la creación de clientes con lógica compartida
      */
     private function handleClientCreation(Request $request, array $data, bool $requireNitTelefono = false, bool $handleDirecciones = false, bool $processFiles = true): ClienteModel
@@ -591,6 +664,8 @@ class ClienteController extends Controller
             foreach ($data['direcciones'] as $direccionData) {
                 // Asegurar que tenga el campo activa con valor por defecto
                 $direccionData['activa'] = $direccionData['activa'] ?? true;
+                // Asignar localidad_id del cliente a la dirección
+                $direccionData['localidad_id'] = $cliente->localidad_id;
 
                 $cliente->direcciones()->create($direccionData);
             }
@@ -601,8 +676,8 @@ class ClienteController extends Controller
             $updates = [];
 
             Log::info('📸 Procesando archivos del cliente', [
-                'cliente_id'   => $cliente->id,
-                'has_foto'     => $request->hasFile('foto_perfil'),
+                'cliente_id'     => $cliente->id,
+                'has_foto'       => $request->hasFile('foto_perfil'),
                 'has_ci_anverso' => $request->hasFile('ci_anverso'),
                 'has_ci_reverso' => $request->hasFile('ci_reverso'),
             ]);
@@ -650,7 +725,7 @@ class ClienteController extends Controller
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = strtolower($q);
-        $clientes    = ClienteModel::forCurrentUser()  // ✅ NUEVO: Filtrar por usuario actual
+        $clientes    = ClienteModel::forCurrentUser() // ✅ NUEVO: Filtrar por usuario actual
             ->select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email'])
             ->where('activo', true)
             ->where(function ($query) use ($searchLower) {

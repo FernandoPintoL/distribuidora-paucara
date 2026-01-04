@@ -78,6 +78,7 @@ export default function GenericFormFields<F extends BaseFormData>({
       return field.render({
         value,
         onChange: (v: unknown) => onChange(field.key, v),
+        setFieldValue: (v: unknown) => onChange(field.key, v), // 🆕 Alias para onChange para componentes que necesiten setFieldValue
         label: field.label,
         error,
         disabled: fieldDisabled,

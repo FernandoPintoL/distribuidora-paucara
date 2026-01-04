@@ -1,6 +1,7 @@
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import Step1DatosProducto from './steps/Step1DatosProducto';
 import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
+import Step3Conversiones from './steps/Step3Conversiones'; // ✨ NUEVO
 import Step4Imagenes from './steps/Step4Imagenes';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
@@ -30,6 +31,7 @@ const initialProductoData: ProductoFormData = {
   marca_id: '',
   proveedor_id: '',
   activo: true,
+  es_fraccionado: false, // ✨ NUEVO
   stock_minimo: 0,
   stock_maximo: 50,
   precios: [
@@ -37,9 +39,19 @@ const initialProductoData: ProductoFormData = {
     { monto: 0, tipo_precio_id: 2 },
   ],
   codigos: [{ codigo: '' }],
+  conversiones: [], // ✨ NUEVO
 };
 
-export default function ProductoForm({ producto, categorias, marcas, unidades, tipos_precio, configuraciones_ganancias, historial_precios }: ProductoFormPageProps) {
+export default function ProductoForm({
+  producto,
+  categorias,
+  marcas,
+  unidades,
+  tipos_precio,
+  configuraciones_ganancias,
+  historial_precios,
+  permite_productos_fraccionados // ✨ NUEVO
+}: ProductoFormPageProps) {
   // 🔍 LOGS PARA DEBUG
   console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
   console.log('👤 Proveedor en producto:', producto?.proveedor);
@@ -80,10 +92,12 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
       marca_id: producto.marca_id ? Number(producto.marca_id) : '',
       proveedor_id: producto.proveedor_id ? Number(producto.proveedor_id) : '',
       activo: producto.activo ?? true,
+      es_fraccionado: producto.es_fraccionado ?? false, // ✨ NUEVO
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
       precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
       codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
+      conversiones: producto.conversiones?.length ? producto.conversiones : [], // ✨ NUEVO
     } : initialProductoData
   );
 
@@ -418,9 +432,14 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
 
           <CardContent>
             <Tabs defaultValue="datos" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className={`grid w-full ${permite_productos_fraccionados ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
                 <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
+                {permite_productos_fraccionados && (
+                  <TabsTrigger value="conversiones" disabled={!data.es_fraccionado}>
+                    ✨ Conversiones
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="imagenes">Imágenes</TabsTrigger>
               </TabsList>
 
@@ -434,6 +453,7 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
                     unidadesOptions={unidadesSelect.filteredOptions}
                     setData={setData}
                     getInputClassName={getInputClassName}
+                    permite_productos_fraccionados={permite_productos_fraccionados} // ✨ NUEVO
                   />
                 </TabsContent>
 
@@ -458,6 +478,23 @@ export default function ProductoForm({ producto, categorias, marcas, unidades, t
                     historial_precios={historial_precios}
                   />
                 </TabsContent>
+
+                {/* ✨ NUEVA PESTAÑA: Conversiones de Unidades */}
+                {permite_productos_fraccionados && (
+                  <TabsContent value="conversiones" className="space-y-6 mt-6">
+                    {data.es_fraccionado && (
+                      <Step3Conversiones
+                        data={data}
+                        unidadesOptions={unidadesSelect.filteredOptions}
+                        unidadBase={
+                          unidades.find(u => u.id === Number(data.unidad_medida_id))
+                        }
+                        setData={setData}
+                        errors={errors}
+                      />
+                    )}
+                  </TabsContent>
+                )}
 
                 <TabsContent value="imagenes" className="space-y-6 mt-6">
                   <Step4Imagenes

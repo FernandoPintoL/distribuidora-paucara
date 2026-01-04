@@ -31,6 +31,9 @@ class UpdateClienteRequest extends FormRequest
             if ($this->has('crear_usuario')) {
                 $data['crear_usuario'] = $this->convertToBoolean($this->input('crear_usuario'));
             }
+            if ($this->has('puede_tener_credito')) {
+                $data['puede_tener_credito'] = $this->convertToBoolean($this->input('puede_tener_credito'));
+            }
 
             // Convertir booleanos en direcciones
             if ($this->has('direcciones') && is_array($this->direcciones)) {
@@ -114,6 +117,7 @@ class UpdateClienteRequest extends FormRequest
             'email'                          => 'nullable|email|max:255',
             'telefono'                       => 'nullable|string|max:20',
             'limite_credito'                 => 'nullable|numeric|min:0',
+            'puede_tener_credito'            => 'nullable|boolean',
             'localidad_id'                   => 'nullable|exists:localidades,id',
             'activo'                         => 'nullable|boolean',
             'observaciones'                  => 'nullable|string',
@@ -169,6 +173,7 @@ class UpdateClienteRequest extends FormRequest
             'nit.max'                                   => 'El NIT no puede exceder 50 caracteres.',
             'limite_credito.numeric'                    => 'El límite de crédito debe ser un número.',
             'limite_credito.min'                        => 'El límite de crédito no puede ser negativo.',
+            'puede_tener_credito.boolean'               => 'El campo habilitación de crédito debe ser verdadero o falso.',
 
             'foto_perfil.image'                         => 'La foto de perfil debe ser una imagen válida.',
             'foto_perfil.mimes'                         => 'La foto de perfil debe ser JPEG, PNG o GIF.',
@@ -219,6 +224,7 @@ class UpdateClienteRequest extends FormRequest
             'email'                            => 'correo electrónico',
             'telefono'                         => 'teléfono',
             'limite_credito'                   => 'límite de crédito',
+            'puede_tener_credito'              => 'habilitación de crédito',
             'localidad_id'                     => 'localidad',
             'activo'                           => 'estado activo',
             'observaciones'                    => 'observaciones',

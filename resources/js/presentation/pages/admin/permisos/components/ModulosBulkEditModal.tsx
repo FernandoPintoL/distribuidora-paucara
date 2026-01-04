@@ -58,12 +58,12 @@ export function ModulosBulkEditModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+    <div className="fixed inset-0 bg-black dark:bg-black bg-opacity-50 dark:bg-opacity-70 z-50 flex items-center justify-center">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6 border border-gray-200 dark:border-slate-700">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Editar {cantidad} módulo{cantidad !== 1 ? 's' : ''}
         </h2>
-        <p className="text-sm text-gray-600 mb-6">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           Selecciona la operación que deseas aplicar a los módulos seleccionados
         </p>
 
@@ -85,10 +85,10 @@ export function ModulosBulkEditModal({
 
         {/* Estado */}
         {operacion === 'estado' && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <Label htmlFor="estado">Estado</Label>
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <Label htmlFor="estado" className="dark:text-gray-300">Estado</Label>
             <Select value={estadoValor} onValueChange={(value) => setEstadoValor(value as 'activar' | 'desactivar')}>
-              <SelectTrigger>
+              <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-gray-100">
                 <SelectValue placeholder="Seleccionar estado" />
               </SelectTrigger>
               <SelectContent>
@@ -96,7 +96,7 @@ export function ModulosBulkEditModal({
                 <SelectItem value="desactivar">Desactivar Todos</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-blue-700 mt-2">
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
               Esto {estadoValor === 'activar' ? 'activará' : 'desactivará'} todos los {cantidad} módulos seleccionados
             </p>
           </div>
@@ -104,16 +104,16 @@ export function ModulosBulkEditModal({
 
         {/* Categoría */}
         {operacion === 'categoria' && (
-          <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-            <Label htmlFor="categoria">Nueva Categoría</Label>
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <Label htmlFor="categoria" className="dark:text-gray-300">Nueva Categoría</Label>
             <Input
               id="categoria"
               placeholder="ej: Inventario, Comercial, Reportes..."
               value={categoriaValor}
               onChange={(e) => setCategoriaValor(e.target.value)}
-              className="mt-2"
+              className="mt-2 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-100"
             />
-            <p className="text-xs text-green-700 mt-2">
+            <p className="text-xs text-green-700 dark:text-green-300 mt-2">
               Asignará la categoría "{categoriaValor || '(sin especificar)'}" a todos los {cantidad} módulos
             </p>
           </div>
@@ -121,13 +121,13 @@ export function ModulosBulkEditModal({
 
         {/* Visibilidad en Dashboard */}
         {operacion === 'visible_dashboard' && (
-          <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <Label htmlFor="dashboard">Visibilidad en Dashboard</Label>
+          <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+            <Label htmlFor="dashboard" className="dark:text-gray-300">Visibilidad en Dashboard</Label>
             <Select
               value={dashboardValor}
               onValueChange={(value) => setDashboardValor(value as 'mostrar' | 'ocultar')}
             >
-              <SelectTrigger>
+              <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-gray-100">
                 <SelectValue placeholder="Seleccionar visibilidad" />
               </SelectTrigger>
               <SelectContent>
@@ -135,7 +135,7 @@ export function ModulosBulkEditModal({
                 <SelectItem value="ocultar">Ocultar en Dashboard</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-purple-700 mt-2">
+            <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
               Los módulos se {dashboardValor === 'mostrar' ? 'mostrarán' : 'ocultarán'} en el dashboard
             </p>
           </div>

@@ -46,5 +46,6 @@ class AppServiceProvider extends ServiceProvider
         Proforma::observe(ProformaObserver::class);
         Ruta::observe(RutaObserver::class);
         RutaDetalle::observe(RutaDetalleObserver::class);
+        \App\Models\CodigoBarra::observe(\App\Observers\CodigoBarraObserver::class);
     }
 }

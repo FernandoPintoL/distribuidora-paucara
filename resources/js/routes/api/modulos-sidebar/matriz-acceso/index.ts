@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
 export const bulkUpdate = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ bulkUpdate.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
 bulkUpdate.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ bulkUpdate.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
 bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
     const bulkUpdateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
         bulkUpdateForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -308,67 +308,85 @@ class ModuloSidebarController extends Controller
      */
     public function getMatrizAcceso()
     {
-        // Obtener todos los roles
-        $roles = \Spatie\Permission\Models\Role::all()
-            ->sortBy('name')
-            ->values();
+        try {
+            // Obtener todos los roles
+            $roles = \Spatie\Permission\Models\Role::all()
+                ->sortBy('name')
+                ->values();
 
-        // Obtener todos los módulos principales (no submódulos)
-        $modulos = ModuloSidebar::where('activo', true)
-            ->whereNull('modulo_padre_id')
-            ->orderBy('orden')
-            ->with('submodulos')
-            ->get();
+            // Obtener todos los módulos principales (no submódulos)
+            $modulos = ModuloSidebar::where('activo', true)
+                ->whereNull('modulo_padre_id')
+                ->orderBy('orden')
+                ->with('submodulos')
+                ->get();
 
-        // Construir la matriz de acceso
-        $matriz = [];
+            // Construir la matriz de acceso
+            $matriz = [];
 
-        foreach ($modulos as $modulo) {
-            $moduloData = [
-                'id'                  => $modulo->id,
-                'titulo'              => $modulo->titulo,
-                'ruta'                => $modulo->ruta,
-                'categoria'           => $modulo->categoria,
-                'permisos_requeridos' => $modulo->permisos ?? [],
-                'roles_acceso'        => [],
-                'submodulos'          => [],
-            ];
-
-            // Verificar acceso de cada rol a este módulo
-            foreach ($roles as $role) {
-                $tieneAcceso = $this->rolTieneAccesoAlModulo($role, $modulo);
-                if ($tieneAcceso) {
-                    $moduloData['roles_acceso'][] = $role->name;
-                }
-            }
-
-            // Procesar submódulos
-            foreach ($modulo->submodulos as $submodulo) {
-                $submoduloData = [
-                    'id'                  => $submodulo->id,
-                    'titulo'              => $submodulo->titulo,
-                    'ruta'                => $submodulo->ruta,
-                    'permisos_requeridos' => $submodulo->permisos ?? [],
+            foreach ($modulos as $modulo) {
+                $moduloData = [
+                    'id'                  => $modulo->id,
+                    'titulo'              => $modulo->titulo,
+                    'ruta'                => $modulo->ruta,
+                    'categoria'           => $modulo->categoria,
+                    'permisos_requeridos' => $modulo->permisos ?? [],
                     'roles_acceso'        => [],
+                    'submodulos'          => [],
                 ];
 
+                // Verificar acceso de cada rol a este módulo
                 foreach ($roles as $role) {
-                    $tieneAcceso = $this->rolTieneAccesoAlModulo($role, $submodulo);
-                    if ($tieneAcceso) {
-                        $submoduloData['roles_acceso'][] = $role->name;
+                    try {
+                        $tieneAcceso = $this->rolTieneAccesoAlModulo($role, $modulo);
+                        if ($tieneAcceso) {
+                            $moduloData['roles_acceso'][] = $role->name;
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning("Error verificando acceso del rol {$role->name} al módulo {$modulo->id}: {$e->getMessage()}");
                     }
                 }
 
-                $moduloData['submodulos'][] = $submoduloData;
+                // Procesar submódulos
+                if ($modulo->submodulos) {
+                    foreach ($modulo->submodulos as $submodulo) {
+                        $submoduloData = [
+                            'id'                  => $submodulo->id,
+                            'titulo'              => $submodulo->titulo,
+                            'ruta'                => $submodulo->ruta,
+                            'permisos_requeridos' => $submodulo->permisos ?? [],
+                            'roles_acceso'        => [],
+                        ];
+
+                        foreach ($roles as $role) {
+                            try {
+                                $tieneAcceso = $this->rolTieneAccesoAlModulo($role, $submodulo);
+                                if ($tieneAcceso) {
+                                    $submoduloData['roles_acceso'][] = $role->name;
+                                }
+                            } catch (\Exception $e) {
+                                \Log::warning("Error verificando acceso del rol {$role->name} al submódulo {$submodulo->id}: {$e->getMessage()}");
+                            }
+                        }
+
+                        $moduloData['submodulos'][] = $submoduloData;
+                    }
+                }
+
+                $matriz[] = $moduloData;
             }
 
-            $matriz[] = $moduloData;
+            return response()->json([
+                'roles'   => $roles->pluck('name')->toArray(),
+                'modulos' => $matriz,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Error en getMatrizAcceso: {$e->getMessage()}", ['exception' => $e]);
+            return response()->json([
+                'error'   => 'Error al cargar la matriz de acceso',
+                'message' => $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json([
-            'roles'   => $roles->pluck('name')->toArray(),
-            'modulos' => $matriz,
-        ]);
     }
 
     /**
@@ -376,21 +394,37 @@ class ModuloSidebarController extends Controller
      */
     private function rolTieneAccesoAlModulo($role, $modulo)
     {
-        $permisosRequeridos = $modulo->permisos ?? [];
+        try {
+            // Validar que el rol exista y sea válido
+            if (!$role || !method_exists($role, 'hasPermissionTo')) {
+                return false;
+            }
 
-        // Si no hay permisos requeridos, todos tienen acceso
-        if (empty($permisosRequeridos)) {
-            return true;
-        }
+            $permisosRequeridos = $modulo->permisos ?? [];
 
-        // Verificar si el rol tiene al menos uno de los permisos requeridos
-        foreach ($permisosRequeridos as $permiso) {
-            if ($role->hasPermissionTo($permiso)) {
+            // Si no hay permisos requeridos, todos tienen acceso
+            if (empty($permisosRequeridos)) {
                 return true;
             }
-        }
 
-        return false;
+            // Verificar si el rol tiene al menos uno de los permisos requeridos
+            foreach ($permisosRequeridos as $permiso) {
+                try {
+                    if ($role->hasPermissionTo($permiso)) {
+                        return true;
+                    }
+                } catch (\Exception $e) {
+                    \Log::debug("Error verificando permiso {$permiso} para rol {$role->name}: {$e->getMessage()}");
+                    // Continuar con el siguiente permiso
+                    continue;
+                }
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            \Log::warning("Error en rolTieneAccesoAlModulo: {$e->getMessage()}");
+            return false;
+        }
     }
 
     /**
@@ -398,58 +432,82 @@ class ModuloSidebarController extends Controller
      */
     public function previewPorRol($rolName)
     {
-        $role = \Spatie\Permission\Models\Role::where('name', $rolName)->first();
+        try {
+            $role = \Spatie\Permission\Models\Role::where('name', $rolName)->first();
 
-        if (! $role) {
-            return response()->json(['error' => 'Rol no encontrado'], 404);
+            if (! $role) {
+                return response()->json(['error' => 'Rol no encontrado'], 404);
+            }
+
+            // Obtener módulos activos para el dashboard
+            $modulos = ModuloSidebar::where('activo', true)
+                ->where('visible_dashboard', true)
+                ->with(['submodulos' => function ($query) {
+                    $query->where('activo', true)
+                        ->where('visible_dashboard', true)
+                        ->orderBy('orden');
+                }])
+                ->whereNull('modulo_padre_id')
+                ->orderBy('orden')
+                ->get()
+                ->filter(function ($modulo) use ($role) {
+                    try {
+                        return $this->rolTieneAccesoAlModulo($role, $modulo);
+                    } catch (\Exception $e) {
+                        \Log::warning("Error filtrando módulo {$modulo->id}: {$e->getMessage()}");
+                        return false;
+                    }
+                })
+                ->map(function ($modulo) use ($role) {
+                    try {
+                        $navItem = $modulo->toNavItem();
+
+                        // Filtrar submódulos por permisos del rol
+                        if (isset($navItem['children']) && is_array($navItem['children'])) {
+                            $navItem['children'] = collect($navItem['children'])
+                                ->filter(function ($child) use ($role) {
+                                    try {
+                                        // Encontrar el módulo original para verificar permisos
+                                        $submodulo = ModuloSidebar::find($child['id'] ?? null);
+                                        if (! $submodulo) {
+                                            return false;
+                                        }
+
+                                        return $this->rolTieneAccesoAlModulo($role, $submodulo);
+                                    } catch (\Exception $e) {
+                                        \Log::warning("Error filtrando submódulo: {$e->getMessage()}");
+                                        return false;
+                                    }
+                                })
+                                ->values()
+                                ->toArray();
+                        }
+
+                        return $navItem;
+                    } catch (\Exception $e) {
+                        \Log::warning("Error procesando módulo {$modulo->id}: {$e->getMessage()}");
+                        return null;
+                    }
+                })
+                ->filter(fn($item) => $item !== null)
+                ->values()
+                ->toArray();
+
+            return response()->json([
+                'rol'           => [
+                    'name'         => $role->name,
+                    'display_name' => $role->display_order ?? $role->name,
+                ],
+                'modulos'       => $modulos,
+                'total_modulos' => count($modulos),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Error en previewPorRol para rol {$rolName}: {$e->getMessage()}", ['exception' => $e]);
+            return response()->json([
+                'error'   => 'Error al cargar la vista previa del sidebar',
+                'message' => $e->getMessage(),
+            ], 500);
         }
-
-        // Obtener módulos activos para el dashboard
-        $modulos = ModuloSidebar::where('activo', true)
-            ->where('visible_dashboard', true)
-            ->with(['submodulos' => function ($query) {
-                $query->where('activo', true)
-                    ->where('visible_dashboard', true)
-                    ->orderBy('orden');
-            }])
-            ->whereNull('modulo_padre_id')
-            ->orderBy('orden')
-            ->get()
-            ->filter(function ($modulo) use ($role) {
-                return $this->rolTieneAccesoAlModulo($role, $modulo);
-            })
-            ->map(function ($modulo) use ($role) {
-                $navItem = $modulo->toNavItem();
-
-                // Filtrar submódulos por permisos del rol
-                if (isset($navItem['children']) && is_array($navItem['children'])) {
-                    $navItem['children'] = collect($navItem['children'])
-                        ->filter(function ($child) use ($role) {
-                            // Encontrar el módulo original para verificar permisos
-                            $submodulo = ModuloSidebar::find($child['id'] ?? null);
-                            if (! $submodulo) {
-                                return false;
-                            }
-
-                            return $this->rolTieneAccesoAlModulo($role, $submodulo);
-                        })
-                        ->values()
-                        ->toArray();
-                }
-
-                return $navItem;
-            })
-            ->values()
-            ->toArray();
-
-        return response()->json([
-            'rol'           => [
-                'name'         => $role->name,
-                'display_name' => $role->display_order ?? $role->name,
-            ],
-            'modulos'       => $modulos,
-            'total_modulos' => count($modulos),
-        ]);
     }
 
     /**

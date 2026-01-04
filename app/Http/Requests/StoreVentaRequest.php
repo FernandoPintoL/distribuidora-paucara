@@ -42,7 +42,8 @@ class StoreVentaRequest extends FormRequest
             // Validación de detalles
             'detalles'                   => 'required|array|min:1',
             'detalles.*.producto_id'     => 'required|exists:productos,id',
-            'detalles.*.cantidad'        => 'required|integer|min:1',
+            'detalles.*.cantidad'        => 'required|numeric|min:0.000001',
+            'detalles.*.unidad_medida_id' => 'nullable|exists:unidades_medida,id',
             'detalles.*.precio_unitario' => 'required|numeric|min:0.01|max:999999.99', // Problema #10: > 0 y razonable
             'detalles.*.descuento'       => 'nullable|numeric|min:0',
             'detalles.*.subtotal'        => 'required|numeric|min:0.01',
@@ -80,8 +81,9 @@ class StoreVentaRequest extends FormRequest
             'detalles.*.producto_id.required'     => 'El producto es requerido en cada detalle.',
             'detalles.*.producto_id.exists'       => 'El producto seleccionado no existe.',
             'detalles.*.cantidad.required'        => 'La cantidad es requerida en cada detalle.',
-            'detalles.*.cantidad.integer'         => 'La cantidad debe ser un número entero.',
+            'detalles.*.cantidad.numeric'         => 'La cantidad debe ser un número válido.',
             'detalles.*.cantidad.min'             => 'La cantidad debe ser mayor a 0.',
+            'detalles.*.unidad_medida_id.exists'  => 'La unidad de medida seleccionada no existe.',
             'detalles.*.precio_unitario.required' => 'El precio unitario es requerido.',
             'detalles.*.precio_unitario.numeric'  => 'El precio unitario debe ser numérico.',
             'detalles.*.precio_unitario.min'      => 'El precio unitario debe ser mayor a 0.',
@@ -172,6 +174,70 @@ class StoreVentaRequest extends FormRequest
                         'moneda_id',
                         "La moneda '{$moneda->nombre}' está desactivada. Active la moneda antes de continuar."
                     );
+                }
+            }
+
+            // ✅ Validar que el cliente esté habilitado para crédito si la venta es a crédito
+            // Y que tenga saldo disponible para el monto de la venta
+            if (isset($data['cliente_id']) && isset($data['tipo_pago_id']) && isset($data['total'])) {
+                $tipoPago = \App\Models\TipoPago::find($data['tipo_pago_id']);
+
+                if ($tipoPago && strtoupper($tipoPago->codigo) === 'CREDITO') {
+                    $cliente = \App\Models\Cliente::find($data['cliente_id']);
+
+                    if ($cliente) {
+                        // Usar el método de validación del cliente
+                        $validacion = $cliente->esCreditoValido((float)$data['total']);
+
+                        if (!$validacion['valido']) {
+                            // Agregar todos los errores de validación
+                            foreach ($validacion['errores'] as $error) {
+                                $validator->errors()->add('cliente_id', $error);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // NUEVO: Validar conversiones de unidad para productos fraccionados
+            if (isset($data['detalles']) && is_array($data['detalles'])) {
+                foreach ($data['detalles'] as $index => $detalle) {
+                    $producto = \App\Models\Producto::find($detalle['producto_id'] ?? null);
+
+                    if ($producto) {
+                        $unidadId = $detalle['unidad_medida_id'] ?? $producto->unidad_medida_id;
+
+                        // Si NO es fraccionado y la unidad es diferente a la base
+                        if (!$producto->es_fraccionado && $unidadId != $producto->unidad_medida_id) {
+                            $validator->errors()->add(
+                                "detalles.{$index}.unidad_medida_id",
+                                "El producto '{$producto->nombre}' no es fraccionado y solo puede venderse en su unidad base"
+                            );
+                        }
+
+                        // Si ES fraccionado, validar que existe conversión
+                        if ($producto->es_fraccionado && $unidadId != $producto->unidad_medida_id) {
+                            $existe = \App\Models\ConversionUnidadProducto::where('producto_id', $producto->id)
+                                ->where(function($q) use ($unidadId, $producto) {
+                                    $q->where(function($q2) use ($unidadId, $producto) {
+                                        $q2->where('unidad_base_id', $producto->unidad_medida_id)
+                                           ->where('unidad_destino_id', $unidadId);
+                                    })->orWhere(function($q2) use ($unidadId, $producto) {
+                                        $q2->where('unidad_base_id', $unidadId)
+                                           ->where('unidad_destino_id', $producto->unidad_medida_id);
+                                    });
+                                })
+                                ->where('activo', true)
+                                ->exists();
+
+                            if (!$existe) {
+                                $validator->errors()->add(
+                                    "detalles.{$index}.unidad_medida_id",
+                                    "No existe conversión de unidad configurada para el producto '{$producto->nombre}'"
+                                );
+                            }
+                        }
+                    }
                 }
             }
         });

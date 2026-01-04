@@ -313,7 +313,7 @@ getMatrizAcceso.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =>
     getMatrizAcceso.form = getMatrizAccesoForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
- * @see app/Http/Controllers/ModuloSidebarController.php:458
+ * @see app/Http/Controllers/ModuloSidebarController.php:516
  * @route '/api/modulos-sidebar/roles'
  */
 export const obtenerRoles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -328,7 +328,7 @@ obtenerRoles.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
- * @see app/Http/Controllers/ModuloSidebarController.php:458
+ * @see app/Http/Controllers/ModuloSidebarController.php:516
  * @route '/api/modulos-sidebar/roles'
  */
 obtenerRoles.url = (options?: RouteQueryOptions) => {
@@ -337,7 +337,7 @@ obtenerRoles.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
- * @see app/Http/Controllers/ModuloSidebarController.php:458
+ * @see app/Http/Controllers/ModuloSidebarController.php:516
  * @route '/api/modulos-sidebar/roles'
  */
 obtenerRoles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -346,7 +346,7 @@ obtenerRoles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
- * @see app/Http/Controllers/ModuloSidebarController.php:458
+ * @see app/Http/Controllers/ModuloSidebarController.php:516
  * @route '/api/modulos-sidebar/roles'
  */
 obtenerRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -356,7 +356,7 @@ obtenerRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
- * @see app/Http/Controllers/ModuloSidebarController.php:458
+ * @see app/Http/Controllers/ModuloSidebarController.php:516
  * @route '/api/modulos-sidebar/roles'
  */
     const obtenerRolesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -366,7 +366,7 @@ obtenerRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
- * @see app/Http/Controllers/ModuloSidebarController.php:458
+ * @see app/Http/Controllers/ModuloSidebarController.php:516
  * @route '/api/modulos-sidebar/roles'
  */
         obtenerRolesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -375,7 +375,7 @@ obtenerRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerRoles
- * @see app/Http/Controllers/ModuloSidebarController.php:458
+ * @see app/Http/Controllers/ModuloSidebarController.php:516
  * @route '/api/modulos-sidebar/roles'
  */
         obtenerRolesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -391,7 +391,7 @@ obtenerRoles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     obtenerRoles.form = obtenerRolesForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
- * @see app/Http/Controllers/ModuloSidebarController.php:399
+ * @see app/Http/Controllers/ModuloSidebarController.php:433
  * @route '/api/modulos-sidebar/preview/{rolName}'
  */
 export const previewPorRol = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -406,7 +406,7 @@ previewPorRol.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
- * @see app/Http/Controllers/ModuloSidebarController.php:399
+ * @see app/Http/Controllers/ModuloSidebarController.php:433
  * @route '/api/modulos-sidebar/preview/{rolName}'
  */
 previewPorRol.url = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -434,7 +434,7 @@ previewPorRol.url = (args: { rolName: string | number } | [rolName: string | num
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
- * @see app/Http/Controllers/ModuloSidebarController.php:399
+ * @see app/Http/Controllers/ModuloSidebarController.php:433
  * @route '/api/modulos-sidebar/preview/{rolName}'
  */
 previewPorRol.get = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -443,7 +443,7 @@ previewPorRol.get = (args: { rolName: string | number } | [rolName: string | num
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
- * @see app/Http/Controllers/ModuloSidebarController.php:399
+ * @see app/Http/Controllers/ModuloSidebarController.php:433
  * @route '/api/modulos-sidebar/preview/{rolName}'
  */
 previewPorRol.head = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -453,7 +453,7 @@ previewPorRol.head = (args: { rolName: string | number } | [rolName: string | nu
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
- * @see app/Http/Controllers/ModuloSidebarController.php:399
+ * @see app/Http/Controllers/ModuloSidebarController.php:433
  * @route '/api/modulos-sidebar/preview/{rolName}'
  */
     const previewPorRolForm = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -463,7 +463,7 @@ previewPorRol.head = (args: { rolName: string | number } | [rolName: string | nu
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
- * @see app/Http/Controllers/ModuloSidebarController.php:399
+ * @see app/Http/Controllers/ModuloSidebarController.php:433
  * @route '/api/modulos-sidebar/preview/{rolName}'
  */
         previewPorRolForm.get = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -472,7 +472,7 @@ previewPorRol.head = (args: { rolName: string | number } | [rolName: string | nu
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::previewPorRol
- * @see app/Http/Controllers/ModuloSidebarController.php:399
+ * @see app/Http/Controllers/ModuloSidebarController.php:433
  * @route '/api/modulos-sidebar/preview/{rolName}'
  */
         previewPorRolForm.head = (args: { rolName: string | number } | [rolName: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -488,7 +488,7 @@ previewPorRol.head = (args: { rolName: string | number } | [rolName: string | nu
     previewPorRol.form = previewPorRolForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerHistorial
- * @see app/Http/Controllers/ModuloSidebarController.php:530
+ * @see app/Http/Controllers/ModuloSidebarController.php:588
  * @route '/api/modulos-sidebar/historial'
  */
 export const obtenerHistorial = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -503,7 +503,7 @@ obtenerHistorial.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerHistorial
- * @see app/Http/Controllers/ModuloSidebarController.php:530
+ * @see app/Http/Controllers/ModuloSidebarController.php:588
  * @route '/api/modulos-sidebar/historial'
  */
 obtenerHistorial.url = (options?: RouteQueryOptions) => {
@@ -512,7 +512,7 @@ obtenerHistorial.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerHistorial
- * @see app/Http/Controllers/ModuloSidebarController.php:530
+ * @see app/Http/Controllers/ModuloSidebarController.php:588
  * @route '/api/modulos-sidebar/historial'
  */
 obtenerHistorial.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -521,7 +521,7 @@ obtenerHistorial.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => 
 })
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerHistorial
- * @see app/Http/Controllers/ModuloSidebarController.php:530
+ * @see app/Http/Controllers/ModuloSidebarController.php:588
  * @route '/api/modulos-sidebar/historial'
  */
 obtenerHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -531,7 +531,7 @@ obtenerHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerHistorial
- * @see app/Http/Controllers/ModuloSidebarController.php:530
+ * @see app/Http/Controllers/ModuloSidebarController.php:588
  * @route '/api/modulos-sidebar/historial'
  */
     const obtenerHistorialForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -541,7 +541,7 @@ obtenerHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerHistorial
- * @see app/Http/Controllers/ModuloSidebarController.php:530
+ * @see app/Http/Controllers/ModuloSidebarController.php:588
  * @route '/api/modulos-sidebar/historial'
  */
         obtenerHistorialForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -550,7 +550,7 @@ obtenerHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
         })
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::obtenerHistorial
- * @see app/Http/Controllers/ModuloSidebarController.php:530
+ * @see app/Http/Controllers/ModuloSidebarController.php:588
  * @route '/api/modulos-sidebar/historial'
  */
         obtenerHistorialForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -566,7 +566,7 @@ obtenerHistorial.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
     obtenerHistorial.form = obtenerHistorialForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdateMatrizAcceso
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
 export const bulkUpdateMatrizAcceso = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -581,7 +581,7 @@ bulkUpdateMatrizAcceso.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdateMatrizAcceso
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
 bulkUpdateMatrizAcceso.url = (options?: RouteQueryOptions) => {
@@ -590,7 +590,7 @@ bulkUpdateMatrizAcceso.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdateMatrizAcceso
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
 bulkUpdateMatrizAcceso.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -600,7 +600,7 @@ bulkUpdateMatrizAcceso.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdateMatrizAcceso
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
     const bulkUpdateMatrizAccesoForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -610,7 +610,7 @@ bulkUpdateMatrizAcceso.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdateMatrizAcceso
- * @see app/Http/Controllers/ModuloSidebarController.php:477
+ * @see app/Http/Controllers/ModuloSidebarController.php:535
  * @route '/api/modulos-sidebar/matriz-acceso/bulk-update'
  */
         bulkUpdateMatrizAccesoForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1381,7 +1381,7 @@ toggleActivo.patch = (args: { moduloSidebar: number | { id: number } } | [modulo
     toggleActivo.form = toggleActivoForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
 export const bulkUpdate = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1396,7 +1396,7 @@ bulkUpdate.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
 bulkUpdate.url = (options?: RouteQueryOptions) => {
@@ -1405,7 +1405,7 @@ bulkUpdate.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
 bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1415,7 +1415,7 @@ bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
     const bulkUpdateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1425,7 +1425,7 @@ bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
         bulkUpdateForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

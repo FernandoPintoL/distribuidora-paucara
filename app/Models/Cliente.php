@@ -23,6 +23,7 @@ class Cliente extends Model
         'activo',
         'fecha_registro',
         'limite_credito',
+        'puede_tener_credito',      // ← NUEVO
         'foto_perfil',
         'ci_anverso',
         'ci_reverso',
@@ -39,9 +40,10 @@ class Cliente extends Model
     protected function casts(): array
     {
         return [
-            'activo'         => 'boolean',
-            'fecha_registro' => 'datetime',
-            'limite_credito' => 'decimal:2',
+            'activo'                => 'boolean',
+            'puede_tener_credito'   => 'boolean',
+            'fecha_registro'        => 'datetime',
+            'limite_credito'        => 'decimal:2',
         ];
     }
 
@@ -234,5 +236,61 @@ class Cliente extends Model
 
         // A partir de 1000, se usa el número tal cual (PS1000, PS1001, ...)
         return $codigoLocalidad . $numero;
+    }
+
+    /**
+     * ✅ CRÉDITO: Calcular saldo disponible = limite_credito - sum(saldo_pendiente de cuentas pendientes)
+     *
+     * @return float Saldo disponible para comprar a crédito
+     */
+    public function calcularSaldoDisponible(): float
+    {
+        // Si el cliente no está habilitado para crédito o no tiene límite, retorna 0
+        if (!$this->puede_tener_credito || $this->limite_credito <= 0) {
+            return 0.0;
+        }
+
+        // Sumar el saldo pendiente de todas las cuentas pendientes del cliente
+        $saldoUtilizado = $this->cuentasPorCobrar()
+            ->where('estado', 'pendiente')
+            ->sum('saldo_pendiente');
+
+        // Calcular saldo disponible (no puede ser negativo)
+        return max(0.0, (float)$this->limite_credito - $saldoUtilizado);
+    }
+
+    /**
+     * ✅ CRÉDITO: Validar si el cliente puede hacer una compra a crédito por el monto especificado
+     *
+     * @param float $monto Monto de la compra a validar
+     * @return array ['valido' => bool, 'errores' => string[], 'saldo_disponible' => float]
+     */
+    public function esCreditoValido(float $monto): array
+    {
+        $errores = [];
+
+        // Validar que el cliente esté habilitado para crédito
+        if (!$this->puede_tener_credito) {
+            $errores[] = "Cliente no está habilitado para crédito.";
+        }
+
+        // Validar que el cliente esté activo
+        if (!$this->activo) {
+            $errores[] = "Cliente inactivo.";
+        }
+
+        // Calcular saldo disponible
+        $saldoDisponible = $this->calcularSaldoDisponible();
+
+        // Validar que el monto no exceda el saldo disponible
+        if ($monto > $saldoDisponible) {
+            $errores[] = "Monto excede saldo disponible. Disponible: Bs " . number_format($saldoDisponible, 2);
+        }
+
+        return [
+            'valido' => empty($errores),
+            'errores' => $errores,
+            'saldo_disponible' => $saldoDisponible,
+        ];
     }
 }

@@ -302,7 +302,7 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
                       <TableCell className="text-center">
                         <Badge
                           variant={modulo.activo ? 'default' : 'secondary'}
-                          className={modulo.activo ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}
+                          className={modulo.activo ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'}
                         >
                           {modulo.activo ? (
                             <>

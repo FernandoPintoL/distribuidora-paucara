@@ -22,6 +22,7 @@ export interface DireccionData {
     longitud: number;
     observaciones: string;
     es_principal: boolean;
+    localidad_id?: number | null;
 }
 
 interface LocationModalProps {

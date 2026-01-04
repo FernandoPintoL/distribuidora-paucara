@@ -7,6 +7,7 @@ import { Label } from '@/presentation/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { MapPin, Search, Loader2, Navigation, Trash2, Edit, Star } from 'lucide-react';
 import LocationModal, { DireccionData } from './LocationModal';
+import GeocodingService from '@/infrastructure/services/geocoding.service';
 
 interface MapPickerWithLocationsProps {
     addresses?: DireccionData[];
@@ -15,6 +16,8 @@ interface MapPickerWithLocationsProps {
     description?: string;
     disabled?: boolean;
     height?: string;
+    localidadId?: number | null;
+    onLocalidadDetected?: (localidadId: number, nombre: string) => void;
 }
 
 // Coordenadas por defecto - Santa Cruz, Bolivia
@@ -46,7 +49,9 @@ export default function MapPickerWithLocations({
     label = 'Ubicaciones del cliente',
     description = 'Haz clic en el mapa para agregar una nueva ubicación o en un marcador para editarla',
     disabled = false,
-    height = '450px'
+    height = '450px',
+    localidadId = null,
+    onLocalidadDetected
 }: MapPickerWithLocationsProps) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -57,6 +62,7 @@ export default function MapPickerWithLocations({
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
+    const [initialLocationRequested, setInitialLocationRequested] = useState(false);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,22 +74,6 @@ export default function MapPickerWithLocations({
     // InfoWindow state
     const [selectedMarker, setSelectedMarker] = useState<DireccionData | null>(null);
 
-    // Centrar mapa en la primera dirección o en la ubicación por defecto
-    useEffect(() => {
-        if (addresses.length > 0) {
-            const firstAddress = addresses[0];
-            setMapCenter({ lat: firstAddress.latitud, lng: firstAddress.longitud });
-
-            // Ajustar el zoom del mapa cuando se cargan direcciones existentes
-            if (map) {
-                map.panTo({ lat: firstAddress.latitud, lng: firstAddress.longitud });
-                map.setZoom(17); // Zoom más cercano al punto de referencia
-            }
-        }
-        // Si no hay direcciones, simplemente mantener el centro por defecto (Santa Cruz)
-        // NO llamar a getCurrentLocation() automáticamente
-    }, [addresses, map]);
-
     // Callback cuando el mapa se carga
     const onLoad = useCallback((map: google.maps.Map) => {
         setMap(map);
@@ -93,6 +83,85 @@ export default function MapPickerWithLocations({
     const onUnmount = useCallback(() => {
         setMap(null);
     }, []);
+
+    // Solicitar ubicación inicial sin abrir modal (solo centrar el mapa)
+    const requestInitialLocation = useCallback(() => {
+        // Verificar si ya se solicitó
+        if (initialLocationRequested) return;
+
+        // Verificar soporte de geolocalización
+        if (!navigator.geolocation) {
+            setInitialLocationRequested(true);
+            return;
+        }
+
+        // Verificar HTTPS/localhost
+        const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+        if (!isSecure) {
+            setInitialLocationRequested(true);
+            return;
+        }
+
+        // Marcar como solicitado para evitar múltiples llamadas
+        setInitialLocationRequested(true);
+
+        // Solicitar ubicación
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                console.log('✅ Ubicación inicial obtenida:', { lat, lng });
+
+                // Solo centrar el mapa, NO abrir modal
+                setMapCenter({ lat, lng });
+                if (map) {
+                    map.panTo({ lat, lng });
+                    map.setZoom(17);
+                }
+
+                // ✨ NUEVO: Detectar localidad automáticamente si no hay una seleccionada
+                if (!localidadId && onLocalidadDetected) {
+                    console.log('🔍 Detectando localidad desde coordenadas iniciales...');
+                    const result = await GeocodingService.detectLocalidad(lat, lng);
+                    if (result?.success && result.data?.localidad) {
+                        onLocalidadDetected(result.data.localidad.id, result.data.localidad.nombre);
+                    }
+                }
+            },
+            () => {
+                // Error silencioso - mantener ubicación por defecto (Santa Cruz)
+                // No mostrar mensaje de error para no interrumpir la UX
+                console.log('ℹ️ Geolocalización no disponible, usando ubicación por defecto');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }, [initialLocationRequested, map, localidadId, onLocalidadDetected]);
+
+    // Centrar mapa en la primera dirección o solicitar ubicación actual
+    useEffect(() => {
+        if (!map) return;
+
+        // Si hay direcciones (modo edición), centrar en la primera
+        if (addresses.length > 0) {
+            const firstAddress = addresses[0];
+            setMapCenter({ lat: firstAddress.latitud, lng: firstAddress.longitud });
+
+            // Ajustar el zoom del mapa cuando se cargan direcciones existentes
+            if (map) {
+                map.panTo({ lat: firstAddress.latitud, lng: firstAddress.longitud });
+                map.setZoom(17); // Zoom más cercano al punto de referencia
+            }
+            return;
+        }
+
+        // Si NO hay direcciones (modo creación), intentar usar ubicación actual
+        requestInitialLocation();
+    }, [map, addresses, requestInitialLocation]);
 
     // Obtener ubicación actual del usuario y abrir modal directamente
     const getCurrentLocation = async () => {
@@ -130,6 +199,17 @@ export default function MapPickerWithLocations({
 
                 // Hacer geocodificación inversa para obtener la dirección
                 const address = await reverseGeocode(lat, lng);
+
+                // ✨ NUEVO: Detectar localidad automáticamente si no hay una seleccionada
+                let detectedLocalidadId = localidadId;
+                if (!localidadId && onLocalidadDetected) {
+                    console.log('🔍 Detectando localidad desde ubicación actual...');
+                    const result = await GeocodingService.detectLocalidad(lat, lng);
+                    if (result?.success && result.data?.localidad) {
+                        detectedLocalidadId = result.data.localidad.id;
+                        onLocalidadDetected(result.data.localidad.id, result.data.localidad.nombre);
+                    }
+                }
 
                 setIsGettingLocation(false);
 
@@ -247,20 +327,26 @@ export default function MapPickerWithLocations({
 
     // Manejar guardar ubicación desde el modal
     const handleSaveLocation = (direccion: DireccionData) => {
+        // Agregar localidad_id a la dirección
+        const direccionConLocalidad = {
+            ...direccion,
+            localidad_id: localidadId
+        };
+
         if (editingAddress) {
             // Editar ubicación existente
             const updatedAddresses = addresses.map((addr) =>
-                addr.id === editingAddress.id ? { ...direccion, id: addr.id } : addr
+                addr.id === editingAddress.id ? { ...direccionConLocalidad, id: addr.id } : addr
             );
             onAddressesChange(updatedAddresses);
         } else {
             // Agregar nueva ubicación
             // Si se marca como principal, desmarcar las demás
-            const newAddresses = direccion.es_principal
+            const newAddresses = direccionConLocalidad.es_principal
                 ? addresses.map((addr) => ({ ...addr, es_principal: false }))
                 : addresses;
 
-            onAddressesChange([...newAddresses, direccion]);
+            onAddressesChange([...newAddresses, direccionConLocalidad]);
         }
 
         setIsModalOpen(false);
@@ -469,7 +555,7 @@ export default function MapPickerWithLocations({
                                 {addresses.map((address, index) => (
                                     <div
                                         key={address.id || index}
-                                        className="flex items-start gap-2 p-2 border rounded-lg bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                                        className="flex items-start gap-2 p-2 border rounded-lg bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer border-gray-200 dark:border-neutral-700"
                                         onClick={() => {
                                             setMapCenter({ lat: address.latitud, lng: address.longitud });
                                             if (map) {
@@ -479,15 +565,15 @@ export default function MapPickerWithLocations({
                                             setSelectedMarker(address);
                                         }}
                                     >
-                                        <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <p className="text-sm font-medium truncate">Dirección #{index + 1}</p>
+                                                <p className="text-sm font-medium truncate text-gray-900 dark:text-white">Dirección #{index + 1}</p>
                                                 {address.es_principal && (
                                                     <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
                                                 )}
                                             </div>
-                                            <p className="text-xs text-gray-500 truncate">{address.direccion}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{address.direccion}</p>
                                         </div>
                                     </div>
                                 ))}

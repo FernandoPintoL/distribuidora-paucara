@@ -78,7 +78,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     index.form = indexForm
 /**
- * @see routes/web.php:376
+ * @see routes/web.php:402
  * @route '/logistica/entregas/asignadas'
  */
 export const asignadas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -92,7 +92,7 @@ asignadas.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:376
+ * @see routes/web.php:402
  * @route '/logistica/entregas/asignadas'
  */
 asignadas.url = (options?: RouteQueryOptions) => {
@@ -100,7 +100,7 @@ asignadas.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:376
+ * @see routes/web.php:402
  * @route '/logistica/entregas/asignadas'
  */
 asignadas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -108,7 +108,7 @@ asignadas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/web.php:376
+ * @see routes/web.php:402
  * @route '/logistica/entregas/asignadas'
  */
 asignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -117,7 +117,7 @@ asignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/web.php:376
+ * @see routes/web.php:402
  * @route '/logistica/entregas/asignadas'
  */
     const asignadasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -126,7 +126,7 @@ asignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/web.php:376
+ * @see routes/web.php:402
  * @route '/logistica/entregas/asignadas'
  */
         asignadasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -134,7 +134,7 @@ asignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/web.php:376
+ * @see routes/web.php:402
  * @route '/logistica/entregas/asignadas'
  */
         asignadasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -149,7 +149,7 @@ asignadas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     asignadas.form = asignadasForm
 /**
- * @see routes/web.php:377
+ * @see routes/web.php:403
  * @route '/logistica/entregas/en-transito'
  */
 export const enTransito = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -163,7 +163,7 @@ enTransito.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:377
+ * @see routes/web.php:403
  * @route '/logistica/entregas/en-transito'
  */
 enTransito.url = (options?: RouteQueryOptions) => {
@@ -171,7 +171,7 @@ enTransito.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:377
+ * @see routes/web.php:403
  * @route '/logistica/entregas/en-transito'
  */
 enTransito.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -179,7 +179,7 @@ enTransito.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/web.php:377
+ * @see routes/web.php:403
  * @route '/logistica/entregas/en-transito'
  */
 enTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -188,7 +188,7 @@ enTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/web.php:377
+ * @see routes/web.php:403
  * @route '/logistica/entregas/en-transito'
  */
     const enTransitoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -197,7 +197,7 @@ enTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/web.php:377
+ * @see routes/web.php:403
  * @route '/logistica/entregas/en-transito'
  */
         enTransitoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -205,7 +205,7 @@ enTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/web.php:377
+ * @see routes/web.php:403
  * @route '/logistica/entregas/en-transito'
  */
         enTransitoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -220,7 +220,7 @@ enTransito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     enTransito.form = enTransitoForm
 /**
- * @see routes/web.php:378
+ * @see routes/web.php:404
  * @route '/logistica/entregas/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -234,7 +234,7 @@ dashboard.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:378
+ * @see routes/web.php:404
  * @route '/logistica/entregas/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -242,7 +242,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:378
+ * @see routes/web.php:404
  * @route '/logistica/entregas/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -250,7 +250,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/web.php:378
+ * @see routes/web.php:404
  * @route '/logistica/entregas/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -259,7 +259,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/web.php:378
+ * @see routes/web.php:404
  * @route '/logistica/entregas/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -268,7 +268,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/web.php:378
+ * @see routes/web.php:404
  * @route '/logistica/entregas/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -276,7 +276,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/web.php:378
+ * @see routes/web.php:404
  * @route '/logistica/entregas/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

@@ -1,6 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import codigosBarra from './codigos-barra'
 import precios from './precios'
 import ganancias from './ganancias'
+import credito from './credito'
 import inventario from './inventario'
 /**
 * @see \App\Http\Controllers\ReporteCargoListController::estadisticas
@@ -138,8 +140,10 @@ exportarZip.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 const reportes = {
     estadisticas,
 exportarZip,
+codigosBarra,
 precios,
 ganancias,
+credito,
 inventario,
 }
 

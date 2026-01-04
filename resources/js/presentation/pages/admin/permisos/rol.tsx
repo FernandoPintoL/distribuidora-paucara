@@ -22,7 +22,7 @@ export default function RolEdit({ rol, permisosActuales, todosLosPermisos }: Rol
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    patch(`/permisos/rol/${rol.id}/actualizar`, {
+    patch(`/permisos/rol/${rol.id}`, {
       onSuccess: () => {
         NotificationService.success('Permisos del rol actualizados correctamente');
         router.visit('/permisos');
@@ -41,12 +41,12 @@ export default function RolEdit({ rol, permisosActuales, todosLosPermisos }: Rol
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Editar Permisos de Rol</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Editar Permisos de Rol</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
               Gestiona los permisos para el rol <span className="font-semibold">{rol.display_name || rol.name}</span>
             </p>
             {rol.description && (
-              <p className="mt-1 text-sm text-gray-500">{rol.description}</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{rol.description}</p>
             )}
           </div>
 
@@ -64,14 +64,14 @@ export default function RolEdit({ rol, permisosActuales, todosLosPermisos }: Rol
               <button
                 type="submit"
                 disabled={processing}
-                className="rounded-md bg-purple-600 px-4 py-2 font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                className="rounded-md bg-purple-600 dark:bg-purple-700 px-4 py-2 font-medium text-white hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50 transition-colors"
               >
                 {processing ? 'Guardando...' : 'Guardar Cambios'}
               </button>
               <button
                 type="button"
                 onClick={() => router.visit('/permisos')}
-                className="rounded-md border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancelar
               </button>

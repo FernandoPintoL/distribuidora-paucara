@@ -22,6 +22,7 @@ export interface Step1Props {
     activo?: boolean;
     stock_minimo?: number | null;
     stock_maximo?: number | null;
+    es_fraccionado?: boolean; // ✨ NUEVO
   };
   errors: Record<string, string>;
   categoriasOptions: Option[];
@@ -29,9 +30,19 @@ export interface Step1Props {
   unidadesOptions: Option[];
   setData: (key: string, value: unknown) => void; // follows useForm API used in parent
   getInputClassName: (fieldName: keyof Record<string, string>) => string;
+  permite_productos_fraccionados?: boolean; // ✨ NUEVO: Control de empresa
 }
 
-export default function Step1DatosProducto({ data, errors, categoriasOptions, marcasOptions, unidadesOptions, setData, getInputClassName }: Step1Props) {
+export default function Step1DatosProducto({
+  data,
+  errors,
+  categoriasOptions,
+  marcasOptions,
+  unidadesOptions,
+  setData,
+  getInputClassName,
+  permite_productos_fraccionados // ✨ NUEVO
+}: Step1Props) {
   // Estados para controlar la búsqueda de proveedores
   const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
   const [searchResultsFound, setSearchResultsFound] = useState<boolean>(false);
@@ -341,6 +352,36 @@ export default function Step1DatosProducto({ data, errors, categoriasOptions, ma
           </div>
         </div>
       </div>
+
+      {/* ✨ NUEVA SECCIÓN: Productos Fraccionados */}
+      {permite_productos_fraccionados && (
+        <div className="space-y-3 mt-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="es_fraccionado"
+              checked={!!data.es_fraccionado}
+              onCheckedChange={(v) => setData('es_fraccionado', !!v)}
+            />
+            <div className="flex-1">
+              <Label htmlFor="es_fraccionado" className="font-semibold cursor-pointer">
+                ✨ Permitir Conversiones de Unidades
+              </Label>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                Activa esta opción si el producto puede venderse en diferentes unidades de medida.
+                <br/>Ejemplo: Compra en CAJAS pero vende en TABLETAS individuales.
+              </p>
+            </div>
+          </div>
+          {data.es_fraccionado && (
+            <div className="ml-6 p-3 bg-white dark:bg-slate-900 rounded border border-amber-300 dark:border-amber-700">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                📌 <strong>Nota:</strong> Una vez que actives esto, podrás configurar las conversiones de unidad
+                en la pestaña <strong>"Conversiones"</strong> (Ej: 1 Caja = 100 Tabletas)
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -24,7 +24,7 @@ export default function UsuarioEdit({ usuario, permisosActuales, rolesActuales, 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    patch(`/permisos/usuario/${usuario.id}/actualizar`, {
+    patch(`/permisos/usuario/${usuario.id}`, {
       onSuccess: () => {
         NotificationService.success('Permisos actualizados correctamente');
         router.visit('/permisos');

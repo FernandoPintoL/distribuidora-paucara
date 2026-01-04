@@ -13,9 +13,15 @@ class AssignReportesPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create the permission if it doesn't exist
-        $permission = Permission::firstOrCreate(
+        // Create the reportes-carga.index permission if it doesn't exist
+        $permissionCarga = Permission::firstOrCreate(
             ['name' => 'reportes-carga.index'],
+            ['guard_name' => 'web']
+        );
+
+        // Create the reportes.view permission if it doesn't exist (for barcode reports)
+        $permissionReportes = Permission::firstOrCreate(
+            ['name' => 'reportes.view'],
             ['guard_name' => 'web']
         );
 
@@ -23,19 +29,27 @@ class AssignReportesPermissionsSeeder extends Seeder
         $adminRole = Role::where('name', 'Admin')->first();
         $cajeroRole = Role::where('name', 'Cajero')->first();
 
-        // Assign permission to Admin role
+        // Assign permissions to Admin role
         if ($adminRole) {
-            if (!$adminRole->hasPermissionTo($permission)) {
-                $adminRole->givePermissionTo($permission);
-                echo "✓ Permiso asignado a Admin\n";
+            if (!$adminRole->hasPermissionTo($permissionCarga)) {
+                $adminRole->givePermissionTo($permissionCarga);
+                echo "✓ Permiso 'reportes-carga.index' asignado a Admin\n";
+            }
+            if (!$adminRole->hasPermissionTo($permissionReportes)) {
+                $adminRole->givePermissionTo($permissionReportes);
+                echo "✓ Permiso 'reportes.view' asignado a Admin\n";
             }
         }
 
-        // Assign permission to Cajero role
+        // Assign permissions to Cajero role
         if ($cajeroRole) {
-            if (!$cajeroRole->hasPermissionTo($permission)) {
-                $cajeroRole->givePermissionTo($permission);
-                echo "✓ Permiso asignado a Cajero\n";
+            if (!$cajeroRole->hasPermissionTo($permissionCarga)) {
+                $cajeroRole->givePermissionTo($permissionCarga);
+                echo "✓ Permiso 'reportes-carga.index' asignado a Cajero\n";
+            }
+            if (!$cajeroRole->hasPermissionTo($permissionReportes)) {
+                $cajeroRole->givePermissionTo($permissionReportes);
+                echo "✓ Permiso 'reportes.view' asignado a Cajero\n";
             }
         }
     }

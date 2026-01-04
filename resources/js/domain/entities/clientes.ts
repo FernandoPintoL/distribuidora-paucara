@@ -26,6 +26,8 @@ export interface Cliente extends BaseEntity {
     localidad_id?: Id | null;
     codigo_cliente?: string | null;
     activo: boolean;
+    limite_credito?: number | null;
+    puede_tener_credito?: boolean;
     localidad?: {
         id: Id;
         nombre: string;
@@ -55,6 +57,8 @@ export interface ClienteFormData extends BaseFormData {
     ci_reverso?: File | string | null;
     localidad_id?: Id | null;
     activo?: boolean;
+    limite_credito?: number | null;
+    puede_tener_credito?: boolean;
     // Direcciones anidadas del cliente
     direcciones?: Array<{
         id?: Id;

@@ -8,6 +8,7 @@ import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
 import TipoOperacionController from './TipoOperacionController'
+import GeocodingController from './GeocodingController'
 import RutaApiController from './RutaApiController'
 import EntregaController from './EntregaController'
 import TrackingController from './TrackingController'
@@ -27,6 +28,7 @@ TipoMermaController,
 EstadoMermaController,
 ApiProformaController,
 TipoOperacionController,
+GeocodingController,
 RutaApiController,
 EntregaController,
 TrackingController,

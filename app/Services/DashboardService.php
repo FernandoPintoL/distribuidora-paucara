@@ -885,4 +885,62 @@ class DashboardService
     {
         return $this->roleRoutes;
     }
+
+    /**
+     * ✅ CRÉDITO: Obtener métricas de crédito de clientes para el dashboard
+     */
+    public function getMetricasCreditoClientes(): array
+    {
+        // Total de clientes activos
+        $totalClientes = Cliente::where('activo', true)->count();
+
+        // Clientes con crédito habilitado
+        $clientesConCredito = Cliente::where('activo', true)
+            ->where('puede_tener_credito', true)
+            ->count();
+
+        // Calcular crédito total disponible y utilizado
+        $clientesConCredito = Cliente::where('activo', true)
+            ->where('puede_tener_credito', true)
+            ->with(['cuentasPorCobrar' => function ($q) {
+                $q->where('estado', 'pendiente');
+            }])
+            ->get();
+
+        $limiteTotalCredito = 0;
+        $saldoUtilizado = 0;
+        $clientesCercaLimite = 0;
+
+        foreach ($clientesConCredito as $cliente) {
+            $limiteTotalCredito += $cliente->limite_credito;
+            $saldoPendiente = $cliente->cuentasPorCobrar->sum('saldo_pendiente');
+            $saldoUtilizado += $saldoPendiente;
+
+            // Contar clientes que están usando >80% de su crédito
+            if ($cliente->limite_credito > 0) {
+                $porcentajeUtilizacion = ($saldoPendiente / $cliente->limite_credito) * 100;
+                if ($porcentajeUtilizacion > 80) {
+                    $clientesCercaLimite++;
+                }
+            }
+        }
+
+        $saldoDisponible = $limiteTotalCredito - $saldoUtilizado;
+        $porcentajeUtilizacion = $limiteTotalCredito > 0
+            ? round(($saldoUtilizado / $limiteTotalCredito) * 100, 1)
+            : 0;
+
+        return [
+            'total_clientes' => $totalClientes,
+            'clientes_con_credito' => $clientesConCredito->count(),
+            'porcentaje_clientes_credito' => $totalClientes > 0
+                ? round(($clientesConCredito->count() / $totalClientes) * 100, 1)
+                : 0,
+            'limite_total_credito' => (float)$limiteTotalCredito,
+            'saldo_utilizado' => (float)$saldoUtilizado,
+            'saldo_disponible' => (float)$saldoDisponible,
+            'porcentaje_utilizacion' => $porcentajeUtilizacion,
+            'clientes_cerca_limite' => $clientesCercaLimite,
+        ];
+    }
 }

@@ -25,22 +25,28 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             order: 1,
         },
         {
+            id: 'Configuración de Crédito',
+            title: 'Configuración de Crédito',
+            description: 'Control de crédito y límites',
+            order: 2,
+        },
+        {
             id: 'Direcciones',
             title: 'Direcciones',
             description: 'Localidad y dirección de entrega',
-            order: 2,
+            order: 3,
         },
         {
             id: 'Dias de visitas',
             title: 'Días de Visita',
             description: 'Días y horarios en que el cliente prefiere recibir visitas',
-            order: 3,
+            order: 4,
         },
         {
             id: 'Fotos',
             title: 'Fotos',
             description: 'Imágenes y documentos del cliente',
-            order: 4,
+            order: 5,
         },
     ],
 
@@ -106,6 +112,18 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
         { key: 'telefono', label: 'Teléfono', type: 'text' },
         { key: 'email', label: 'Email', type: 'text' },
         { key: 'localidad.nombre', label: 'Localidad', type: 'text' },
+        {
+            key: 'puede_tener_credito',
+            label: 'Crédito',
+            type: 'boolean',
+            render: (value: unknown, row: any) => {
+                if (!value) return createElement('span', { className: 'text-gray-400 text-sm' }, '❌ Deshabilitado');
+                return createElement('div', { className: 'flex items-center space-x-1' },
+                    createElement('span', { className: 'text-green-600 text-sm' }, '✅ Habilitado'),
+                    row.limite_credito ? createElement('span', { className: 'text-blue-600 text-xs' }, `(${row.limite_credito})`) : null
+                );
+            }
+        },
         { key: 'activo', label: 'Estado', type: 'boolean' },
     ],
 
@@ -184,6 +202,31 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             section: 'Información Personal',
             description: 'Marcar como activo para poder realizar ventas',
         },
+        // 💳 SECCIÓN DE CONFIGURACIÓN DE CRÉDITO
+        {
+            key: 'puede_tener_credito',
+            label: 'Habilitar crédito',
+            type: 'boolean',
+            defaultValue: false,
+            colSpan: 1,
+            section: 'Configuración de Crédito',
+            description: 'Marca esta opción para permitir que el cliente realice compras a crédito',
+        },
+        {
+            key: 'limite_credito',
+            label: 'Límite de crédito',
+            type: 'number',
+            placeholder: 'Ej: 10000',
+            colSpan: 2,
+            section: 'Configuración de Crédito',
+            description: 'Monto máximo que el cliente puede comprar a crédito',
+            visible: (data) => data.puede_tener_credito === true,
+            validation: {
+                minValue: 0,
+                step: '0.01'
+            },
+            prefix: '💰',
+        },
         // 📍 SECCIÓN DE DIRECCIONES
         {
             key: 'localidad_id',
@@ -204,9 +247,11 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             type: 'custom',
             fullWidth: true, // Ocupa TODO el ancho de la pantalla
             section: 'Direcciones',
-            render: ({ value, onChange, disabled }) => {
+            render: ({ value, onChange, disabled, formData, setFieldValue }) => {
                 // value es un array de DireccionData
                 const addresses = Array.isArray(value) ? value : [];
+                // Obtener localidad_id del formulario actual
+                const localidadId = formData?.localidad_id || null;
 
                 return createElement(MapPickerWithLocations, {
                     addresses: addresses,
@@ -216,7 +261,15 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                     label: 'Ubicaciones del cliente',
                     description: 'Haz clic en el mapa para agregar una nueva ubicación o en un marcador para editarla',
                     disabled: Boolean(disabled),
-                    height: '450px'
+                    height: '450px',
+                    localidadId: localidadId,
+                    // ✨ NUEVO: Callback para auto-rellenar localidad cuando se detecta
+                    onLocalidadDetected: (id: number, nombre: string) => {
+                        if (setFieldValue) {
+                            setFieldValue('localidad_id', id);
+                            console.log(`✅ Localidad auto-detectada: ${nombre} (ID: ${id})`);
+                        }
+                    }
                 });
             }
         },
@@ -226,7 +279,7 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             label: 'Días y horarios de visita',
             type: 'custom',
             fullWidth: true,
-            section: 'Ventanas de Entrega',
+            section: 'Dias de visitas',
             render: ({ value, onChange, disabled }) => {
                 const ventanas = Array.isArray(value) ? value : [];
 
@@ -318,6 +371,13 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                 width: 'sm'
             },
             {
+                key: 'puede_tener_credito',
+                label: 'Habilitación de crédito',
+                type: 'boolean',
+                placeholder: 'Todos los tipos',
+                width: 'sm'
+            },
+            {
                 key: 'localidad_id',
                 label: 'Localidad del cliente',
                 type: 'select',
@@ -330,6 +390,8 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             { value: 'id', label: 'ID' },
             { value: 'nombre', label: 'Nombre' },
             { value: 'razon_social', label: 'Razón Social' },
+            { value: 'puede_tener_credito', label: 'Habilitación de crédito' },
+            { value: 'limite_credito', label: 'Límite de crédito' },
             { value: 'created_at', label: 'Fecha registro' },
             { value: 'updated_at', label: 'Última actualización' }
         ],

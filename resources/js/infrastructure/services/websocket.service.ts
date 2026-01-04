@@ -329,6 +329,159 @@ class WebSocketService {
     this.subscribeTo('admin.pedidos');
     this.on('admin.pedidos', callback);
   }
+
+  // ==================== PROFORMA EVENTS ====================
+  onProformaCreada(callback: (data: any) => void): void {
+    this.on('proforma.creada', callback);
+  }
+
+  onProformaCoordinacionActualizada(callback: (data: any) => void): void {
+    this.on('proforma.coordinacion-actualizada', callback);
+  }
+
+  // ==================== ENTREGA EVENTS ====================
+  onEntregaAsignada(callback: (data: any) => void): void {
+    this.on('entrega.asignada', callback);
+  }
+
+  onEntregaEnCamino(callback: (data: any) => void): void {
+    this.on('entrega.en-camino', callback);
+  }
+
+  onEntregaConfirmada(callback: (data: any) => void): void {
+    this.on('entrega.confirmada', callback);
+  }
+
+  onEntregaCompletada(callback: (data: any) => void): void {
+    this.on('entrega.completada', callback);
+  }
+
+  onEntregaCreada(callback: (data: any) => void): void {
+    this.on('entrega.creada', callback);
+  }
+
+  onEntregaRechazada(callback: (data: any) => void): void {
+    this.on('entrega.rechazada', callback);
+  }
+
+  // ==================== UBICACION EVENTS ====================
+  onUbicacionActualizada(callback: (data: any) => void): void {
+    this.on('ubicacion.actualizada', callback);
+  }
+
+  onUbicacionLlegadaConfirmada(callback: (data: any) => void): void {
+    this.on('ubicacion.llegada-confirmada', callback);
+  }
+
+  // ==================== RUTA EVENTS ====================
+  onRutaPlanificada(callback: (data: any) => void): void {
+    this.on('ruta.planificada', callback);
+  }
+
+  onRutaDetalleActualizado(callback: (data: any) => void): void {
+    this.on('ruta.detalle-actualizado', callback);
+  }
+
+  onRutaModificada(callback: (data: any) => void): void {
+    this.on('ruta.modificada', callback);
+  }
+
+  // ==================== NOVEDAD EVENTS ====================
+  onNovedadEntregaReportada(callback: (data: any) => void): void {
+    this.on('novedad.entrega-reportada', callback);
+  }
+
+  // ==================== CHOFER EVENTS ====================
+  onChoferLlego(callback: (data: any) => void): void {
+    this.on('chofer.llego', callback);
+  }
+
+  // ==================== PEDIDO EVENTS ====================
+  // Already has onPedidoEntregado above
+
+  // ==================== DASHBOARD EVENTS ====================
+  onDashboardMetricsUpdated(callback: (data: any) => void): void {
+    this.on('dashboard.metrics-updated', callback);
+  }
+
+  // ==================== CHANNEL-SPECIFIC LISTENERS ====================
+
+  /**
+   * Subscribe to specific entrega channel and listen to all its events
+   */
+  subscribeToEntrega(entregaId: number): void {
+    this.subscribeTo(`entrega.${entregaId}`);
+  }
+
+  /**
+   * Subscribe to specific pedido channel and listen to all its events
+   */
+  subscribeToPedido(pedidoId: number): void {
+    this.subscribeTo(`pedido.${pedidoId}`);
+  }
+
+  /**
+   * Subscribe to specific chofer channel and listen to all its events
+   */
+  subscribeToChofer(choferId: number): void {
+    this.subscribeTo(`chofer.${choferId}`);
+  }
+
+  /**
+   * Subscribe to specific ruta channel and listen to all its events
+   */
+  subscribeToRuta(rutaId: number): void {
+    this.subscribeTo(`ruta.${rutaId}`);
+  }
+
+  /**
+   * Subscribe to organization-level notifications
+   */
+  subscribeToOrganization(orgId: number): void {
+    this.subscribeTo(`private.org.${orgId}`);
+  }
+
+  /**
+   * Subscribe to user-specific notifications
+   */
+  subscribeToUser(userId: number): void {
+    this.subscribeTo(`private.user.${userId}`);
+  }
+
+  /**
+   * Subscribe to public sales channel
+   */
+  subscribeToPublicSales(): void {
+    this.subscribeTo('public.ventas.created');
+  }
+
+  /**
+   * Subscribe to public proformas channel
+   */
+  subscribeToPublicProformas(): void {
+    this.subscribeTo('public.proformas.created');
+  }
+
+  /**
+   * Subscribe to public deliveries channel
+   */
+  subscribeToPublicDeliveries(): void {
+    this.subscribeTo('public.entregas.assigned');
+  }
+
+  /**
+   * Subscribe to public routes channel
+   */
+  subscribeToPublicRoutes(): void {
+    this.subscribeTo('public.rutas.planned');
+  }
+
+  /**
+   * Subscribe to tracking channel
+   */
+  subscribeToTracking(): void {
+    this.subscribeTo('public.tracking.active');
+  }
 }
 
 // Singleton instance

@@ -16,6 +16,8 @@ const initialClienteData: ClienteFormData = {
   ci_reverso: null,
   localidad_id: null,
   activo: true,
+  limite_credito: null,
+  puede_tener_credito: false,
   // Inicializar direcciones como array vacío
   direcciones: [],
   // Inicializar ventanas de entrega como array vacío

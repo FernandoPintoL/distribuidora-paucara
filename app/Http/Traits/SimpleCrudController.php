@@ -305,6 +305,7 @@ trait SimpleCrudController
             'marcas' => 'marca',
             'unidades' => 'unidad',
             'tipos_pago' => 'tipo_pago',
+            'tipos_documento' => 'tipo_documento',
             'clientes' => 'cliente',
             'empleados' => 'empleado',
             'proveedores' => 'proveedor',

@@ -85,6 +85,32 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
     Route::get('productos/{producto}/historial-precios', [\App\Http\Controllers\ProductoController::class, 'historialPrecios'])->middleware('permission:productos.manage')->name('productos.historial-precios');
 
+    // Rutas para gestión de códigos de barra
+    Route::resource('codigos-barra', \App\Http\Controllers\CodigoBarraController::class)->middleware('permission:productos.manage');
+    Route::put('codigos-barra/{codigo_barra}/principal', [\App\Http\Controllers\CodigoBarraController::class, 'marcarPrincipal'])->middleware('permission:productos.manage')->name('codigos-barra.principal');
+    Route::get('api/codigos-barra/buscar/{codigo}', [\App\Http\Controllers\CodigoBarraController::class, 'buscarPorCodigo'])->name('api.codigos-barra.buscar');
+    Route::get('api/codigos-barra/validar/{codigo}', [\App\Http\Controllers\CodigoBarraController::class, 'validar'])->name('api.codigos-barra.validar');
+    Route::post('api/codigos-barra/generar', [\App\Http\Controllers\CodigoBarraController::class, 'generar'])->name('api.codigos-barra.generar');
+    Route::get('api/codigos-barra/producto/{producto}', [\App\Http\Controllers\CodigoBarraController::class, 'codigosProducto'])->name('api.codigos-barra.producto');
+
+    // APIs avanzadas de códigos de barra (caché, imágenes, estadísticas)
+    Route::prefix('api/codigos-barra')->name('api.codigos-barra.')->group(function () {
+        Route::get('imagen/{codigo}', [\App\Http\Controllers\CodigoBarraController::class, 'obtenerImagen'])->name('imagen');
+        Route::get('imagen-svg/{codigo}', [\App\Http\Controllers\CodigoBarraController::class, 'obtenerImagenSVG'])->name('imagen-svg');
+        Route::get('buscar-rapido/{codigo}', [\App\Http\Controllers\CodigoBarraController::class, 'buscarProductoPorCodigoRapido'])->name('buscar-rapido');
+        Route::post('precalentar-cache', [\App\Http\Controllers\CodigoBarraController::class, 'precalentarCache'])->middleware('permission:productos.manage')->name('precalentar-cache');
+        Route::get('estadisticas-cache', [\App\Http\Controllers\CodigoBarraController::class, 'estadisticasCache'])->name('estadisticas-cache');
+    });
+
+    // Reportes de códigos de barra
+    Route::prefix('reportes/codigos-barra')->name('reportes.codigos-barra.')->middleware('permission:reportes.view')->group(function () {
+        Route::get('productos-sin-codigo', [\App\Http\Controllers\ReporteCodigosBarraController::class, 'productosSinCodigo'])->name('productos-sin-codigo');
+        Route::get('duplicados-inactivos', [\App\Http\Controllers\ReporteCodigosBarraController::class, 'codigosDuplicadosInactivos'])->name('duplicados-inactivos');
+        Route::get('historial-cambios', [\App\Http\Controllers\ReporteCodigosBarraController::class, 'historialCambios'])->name('historial-cambios');
+        Route::get('descargar/productos-sin-codigo', [\App\Http\Controllers\ReporteCodigosBarraController::class, 'descargarProductosSinCodigo'])->name('descargar-productos-sin-codigo');
+        Route::get('descargar/historial', [\App\Http\Controllers\ReporteCodigosBarraController::class, 'descargarHistorial'])->name('descargar-historial');
+    });
+
     Route::resource('unidades', \App\Http\Controllers\UnidadMedidaController::class)->parameters(['unidades' => 'unidad'])->middleware('permission:unidades.manage');
 
     // Rutas para gestión de tipos de precio
@@ -464,6 +490,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('precios/export', [\App\Http\Controllers\ReportePreciosController::class, 'export'])->name('precios.export');
         Route::get('ganancias', [\App\Http\Controllers\ReportePreciosController::class, 'ganancias'])->name('ganancias.index');
         Route::get('ganancias/export', [\App\Http\Controllers\ReportePreciosController::class, 'exportGanancias'])->name('ganancias.export');
+
+        // Reportes de crédito
+        Route::get('credito', [\App\Http\Controllers\ReporteCreditoController::class, 'index'])->middleware('permission:reportes.credito.index')->name('credito.index');
+        Route::get('credito/graficos', [\App\Http\Controllers\ReporteCreditoController::class, 'obtenerGraficosCreditoApi'])->name('credito.graficos');
+        Route::get('credito/vencidos', [\App\Http\Controllers\ReporteCreditoController::class, 'obtenerClientesVencidosApi'])->name('credito.vencidos');
 
         // Reportes de inventario
         Route::prefix('inventario')->name('inventario.')->group(function () {

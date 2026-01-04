@@ -8,6 +8,7 @@ use App\Models\Almacen;
 use App\Models\CargoCSVProducto;
 use App\Models\Categoria;
 use App\Models\CodigoBarra;
+use App\Models\Empresa;
 use App\Models\ImagenProducto;
 use App\Models\Marca;
 use App\Models\MovimientoInventario;
@@ -96,9 +97,11 @@ class ProductoController extends Controller
                 $searchLower = strtolower($q);
                 $qq->where(function ($sub) use ($searchLower) {
                     $sub->whereRaw('LOWER(productos.nombre) like ?', ["%$searchLower%"])
-                        ->orWhereRaw('LOWER(productos.codigo_barras) like ?', ["%$searchLower%"])
                         ->orWhereRaw('LOWER(productos.sku) like ?', ["%$searchLower%"])
-                        ->orWhereRaw('LOWER(productos.descripcion) like ?', ["%$searchLower%"]);
+                        ->orWhereRaw('LOWER(productos.descripcion) like ?', ["%$searchLower%"])
+                        ->orWhereHas('codigosBarra', function ($q) use ($searchLower) {
+                            $q->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
+                        });
                 });
             })
             ->when($categoriaId, fn($qq) => $qq->where('productos.categoria_id', $categoriaId))
@@ -205,15 +208,18 @@ class ProductoController extends Controller
 
     public function create(): Response
     {
+        $empresa = auth()->user()?->empresa;
+
         return Inertia::render('productos/form', [
-            'producto'                  => null,
-            'categorias'                => Categoria::orderBy('nombre')->get(['id', 'nombre']),
-            'marcas'                    => Marca::orderBy('nombre')->get(['id', 'nombre']),
-            'proveedores'               => \App\Models\Proveedor::orderBy('nombre')->get(['id', 'nombre', 'razon_social']),
-            'unidades'                  => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
-            'tipos_precio'              => TipoPrecio::getOptions(),
-            'configuraciones_ganancias' => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
-            'almacenes'                 => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'producto'                      => null,
+            'categorias'                    => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'marcas'                        => Marca::orderBy('nombre')->get(['id', 'nombre']),
+            'proveedores'                   => \App\Models\Proveedor::orderBy('nombre')->get(['id', 'nombre', 'razon_social']),
+            'unidades'                      => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
+            'tipos_precio'                  => TipoPrecio::getOptions(),
+            'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
+            'almacenes'                     => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
         ]);
     }
 
@@ -497,15 +503,18 @@ class ProductoController extends Controller
             'historial_precios' => $historialPrecios,
         ];
 
+        $empresa = auth()->user()?->empresa;
+
         return Inertia::render('productos/form', [
-            'producto'                  => $payload,
-            'categorias'                => Categoria::orderBy('nombre')->get(['id', 'nombre']),
-            'marcas'                    => Marca::orderBy('nombre')->get(['id', 'nombre']),
-            'proveedores'               => \App\Models\Proveedor::orderBy('nombre')->get(['id', 'nombre', 'razon_social']),
-            'unidades'                  => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
-            'tipos_precio'              => TipoPrecio::getOptions(),
-            'configuraciones_ganancias' => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
-            'almacenes'                 => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'producto'                      => $payload,
+            'categorias'                    => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'marcas'                        => Marca::orderBy('nombre')->get(['id', 'nombre']),
+            'proveedores'                   => \App\Models\Proveedor::orderBy('nombre')->get(['id', 'nombre', 'razon_social']),
+            'unidades'                      => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
+            'tipos_precio'                  => TipoPrecio::getOptions(),
+            'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
+            'almacenes'                     => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
         ]);
     }
 
@@ -760,11 +769,15 @@ class ProductoController extends Controller
         $activo      = $request->boolean('activo', true);
         $conStock    = $request->boolean('con_stock', false);
 
-        // Almacén dinámico: desde request o config
-        // Nota: $request->integer() retorna 0 si no existe, no null, así que usamos has()
-        $almacenId = $request->has('almacen_id')
-            ? $request->integer('almacen_id')
-            : config('inventario.almacen_principal_id', 1);
+        // Obtener almacén: desde request > empresa autenticada > empresa principal > config
+        // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
+        if ($request->has('almacen_id')) {
+            $almacenId = $request->integer('almacen_id');
+        } else {
+            // Obtener empresa del contexto (usuario autenticado o empresa principal)
+            $empresa = $this->obtenerEmpresa($request);
+            $almacenId = $empresa?->almacen_id_principal ?? config('inventario.almacen_principal_id', 1);
+        }
 
         // Precargar el almacén para evitar N+1 queries (consulta de una sola vez)
         $almacenPrincipal = Almacen::find($almacenId);
@@ -1156,11 +1169,15 @@ class ProductoController extends Controller
         $q      = $request->string('q');
         $limite = $request->integer('limite', 10);
 
-        // Almacén dinámico: desde request o config
-        // Nota: $request->integer() retorna 0 si no existe, no null, así que usamos has()
-        $almacenId = $request->has('almacen_id')
-            ? $request->integer('almacen_id')
-            : config('inventario.almacen_principal_id', 1);
+        // Obtener almacén: desde request > empresa autenticada > empresa principal > config
+        // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
+        if ($request->has('almacen_id')) {
+            $almacenId = $request->integer('almacen_id');
+        } else {
+            // Obtener empresa del contexto (usuario autenticado o empresa principal)
+            $empresa = $this->obtenerEmpresa($request);
+            $almacenId = $empresa?->almacen_id_principal ?? config('inventario.almacen_principal_id', 1);
+        }
 
         if (! $q || strlen($q) < 2) {
             return ApiResponse::success([]);
@@ -1304,7 +1321,27 @@ class ProductoController extends Controller
                 $errores = [];
                 $cantidadValidas = 0;
 
-                $almacenPrincipalId = config('inventario.almacen_principal_id', 1);
+                // Obtener almacén principal con fallback inteligente
+                $empresa = $this->obtenerEmpresa($request);
+                $almacenPrincipalId = $empresa?->almacen_id_principal;
+
+                if (!$almacenPrincipalId) {
+                    // Fallback 1: buscar almacén llamado "Almacén Principal"
+                    $almacenPrincipal = Almacen::whereRaw('LOWER(nombre) = ?', ['almacén principal'])
+                        ->where('activo', true)
+                        ->first();
+
+                    if ($almacenPrincipal) {
+                        $almacenPrincipalId = $almacenPrincipal->id;
+                    } else {
+                        // Fallback 2: obtener el primer almacén activo ordenado por ID
+                        $almacenFallback = Almacen::where('activo', true)
+                            ->orderBy('id')
+                            ->first();
+                        $almacenPrincipalId = $almacenFallback?->id;
+                    }
+                }
+
                 $tipoAjuste = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->first();
 
                 // Crear tipo de ajuste si no existe
@@ -2062,5 +2099,38 @@ class ProductoController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Obtener la empresa del contexto actual
+     *
+     * Prioridad de obtención:
+     * 1. Parámetro empresa_id en request
+     * 2. Usuario autenticado (si existe)
+     * 3. Empresa principal del sistema
+     * 4. null si no hay empresa disponible
+     *
+     * @param Request $request
+     * @return Empresa|null
+     */
+    private function obtenerEmpresa(Request $request): ?Empresa
+    {
+        // 1. Buscar empresa_id explícito en request
+        if ($request->has('empresa_id')) {
+            $empresaId = $request->integer('empresa_id');
+            return Empresa::find($empresaId);
+        }
+
+        // 2. Si hay usuario autenticado, obtener su empresa (si está disponible)
+        $user = Auth::user();
+        if ($user) {
+            // Si el usuario tiene una empresa asignada (relación custom), usarla
+            // Por ahora asumimos que usa la empresa principal
+            // TODO: Implementar relación user-empresa si es necesario
+            return Empresa::principal();
+        }
+
+        // 3. Retornar empresa principal como fallback
+        return Empresa::principal();
     }
 }

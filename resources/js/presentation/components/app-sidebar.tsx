@@ -64,7 +64,7 @@ const useSidebarModules = () => {
         const fetchModules = async () => {
             try {
                 const response = await fetch('/api/modulos-sidebar', { credentials: 'include' });
-                console.log('📡 Response status:', response.status, response.statusText);
+                // console.log('📡 Response status:', response.status, response.statusText);
 
                 if (!response.ok) {
                     const responseText = await response.text();
@@ -73,7 +73,7 @@ const useSidebarModules = () => {
                 }
 
                 const data: ModuloAPI[] = await response.json();
-                console.log('✅ Módulos cargados:', data.length);
+                // console.log('✅ Módulos cargados:', data.length);
 
                 const processedModules = processModules(data);
                 setModules(processedModules);

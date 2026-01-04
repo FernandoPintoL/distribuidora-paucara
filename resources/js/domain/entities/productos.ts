@@ -48,6 +48,7 @@ export interface Producto extends BaseEntity {
   activo: boolean;
   fecha_creacion?: string | null;
   es_alquilable?: boolean;
+  es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   categoria_id?: Id;
   marca_id?: Id;
   proveedor_id?: Id;
@@ -66,6 +67,19 @@ export interface Producto extends BaseEntity {
   precios?: Precio[];
   codigos?: CodigoBarra[];
   almacenes?: StockAlmacen[];
+  conversiones?: ConversionUnidad[]; // ✨ NUEVO: Conversiones de unidad
+}
+
+export interface ConversionUnidad {
+  id?: Id;
+  producto_id?: Id;
+  unidad_base_id: Id;
+  unidad_destino_id: Id;
+  factor_conversion: number;
+  activo: boolean;
+  es_conversion_principal: boolean;
+  unidad_base?: { id: Id; codigo: string; nombre: string };
+  unidad_destino?: { id: Id; codigo: string; nombre: string };
 }
 
 export interface ProductoFormData extends BaseFormData {
@@ -83,9 +97,11 @@ export interface ProductoFormData extends BaseFormData {
   stock_minimo?: number | null;
   stock_maximo?: number | null;
   activo?: boolean;
+  es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   precios: Precio[];
   codigos: CodigoBarra[];
   almacenes?: StockAlmacen[];
+  conversiones?: ConversionUnidad[]; // ✨ NUEVO: Conversiones de unidad (frontend only)
 }
 
 // ✅ PageProps para el formulario de producto
@@ -98,6 +114,8 @@ export interface ProductoFormPageProps {
   tipos_precio: TipoPrecio[];
   configuraciones_ganancias?: { porcentaje_interes_general?: number; tipo_precio_ganancia_id?: number };
   historial_precios?: HistorialPrecio[];
+  conversiones?: ConversionUnidad[]; // ✨ NUEVO: Conversiones existentes (si está editando)
+  permite_productos_fraccionados?: boolean; // ✨ NUEVO: Indicador de empresa para mostrar/ocultar sección
 }
 
 export interface HistorialPrecio {

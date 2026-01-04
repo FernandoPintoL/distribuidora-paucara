@@ -59,7 +59,21 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         <span className="text-muted-foreground/40 italic text-xs">—</span>
       )
     },
-    { key: 'codigo_barras', label: 'Código de Barra', type: 'text', sortable: true },
+    {
+      key: 'codigo_barras',
+      label: 'Código Principal',
+      type: 'custom',
+      sortable: false,
+      render: (value) => value ? (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 font-mono text-xs font-semibold border border-green-200 dark:border-green-700">
+          ★ {value}
+        </span>
+      ) : (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 text-xs font-semibold border border-amber-200 dark:border-amber-700">
+          ⚠️ Sin código
+        </span>
+      )
+    },
     { key: 'marca', label: 'Marca', type: 'text' },
     { key: 'categoria', label: 'Categoría', type: 'text' },
     { key: 'proveedor', label: 'Proveedor', type: 'text' },
@@ -300,6 +314,9 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         {(!p.precio_base || p.precio_base === 0) && (
           <span className="absolute bottom-2 left-2 bg-amber-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">⚠️ Sin precio</span>
         )}
+        {!p.codigo_barras && (
+          <span className="absolute bottom-2 right-2 bg-orange-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">📦 Sin código</span>
+        )}
       </div>
       <div className="p-3 flex flex-col gap-2">
         <div className="space-y-0.5">
@@ -308,7 +325,7 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
             {p.sku && <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono font-semibold">{p.sku}</span>}
             {p.marca?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.marca.nombre}</span>}
             {p.categoria?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.categoria.nombre}</span>}
-            {p.codigo_barras && <span className="bg-secondary px-1.5 py-0.5 rounded font-mono">{p.codigo_barras}</span>}
+            {p.codigo_barras && <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 px-1.5 py-0.5 rounded font-mono font-semibold">★ {p.codigo_barras}</span>}
           </div>
         </div>
         <div className="flex items-end justify-between mt-auto">
@@ -333,7 +350,11 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
               </div>
             )}
           </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
+            <a href={`/codigos-barra?producto_id=${p.id}`} className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1 text-[10px] font-medium">
+              <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              Códigos
+            </a>
             <button onClick={() => onEdit(p)} className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 text-[10px] font-medium">
               <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
               Editar

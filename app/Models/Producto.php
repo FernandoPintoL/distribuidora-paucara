@@ -26,6 +26,7 @@ class Producto extends Model
         'activo',
         'fecha_creacion',
         'es_alquilable',
+        'es_fraccionado',
         'categoria_id',
         'marca_id',
         'proveedor_id',
@@ -39,6 +40,7 @@ class Producto extends Model
             'stock_maximo' => 'integer',
             'activo' => 'boolean',
             'es_alquilable' => 'boolean',
+            'es_fraccionado' => 'boolean',
             'fecha_creacion' => 'datetime',
         ];
     }
@@ -96,6 +98,24 @@ class Producto extends Model
     public function configuracionesGanancias()
     {
         return $this->hasMany(ConfiguracionGanancia::class);
+    }
+
+    /**
+     * Relación: Todas las conversiones de unidad para este producto
+     */
+    public function conversiones()
+    {
+        return $this->hasMany(ConversionUnidadProducto::class, 'producto_id');
+    }
+
+    /**
+     * Relación: Conversión principal (por defecto) para este producto
+     */
+    public function conversionPrincipal()
+    {
+        return $this->hasOne(ConversionUnidadProducto::class, 'producto_id')
+            ->where('activo', true)
+            ->where('es_conversion_principal', true);
     }
 
     /**
@@ -763,5 +783,144 @@ class Producto extends Model
     public function scopeAlquilables($query)
     {
         return $query->where('es_alquilable', true);
+    }
+
+    /**
+     * Scope: Productos fraccionados
+     */
+    public function scopeFraccionados($query)
+    {
+        return $query->where('es_fraccionado', true);
+    }
+
+    // ======================== MÉTODOS DE CONVERSIÓN ========================
+
+    /**
+     * Convertir cantidad entre dos unidades
+     *
+     * @param float $cantidad
+     * @param int $unidadOrigenId
+     * @param int $unidadDestinoId
+     * @return float
+     * @throws \Exception
+     */
+    public function convertirCantidad(float $cantidad, int $unidadOrigenId, int $unidadDestinoId): float
+    {
+        // Si las unidades son iguales, retornar sin cambios
+        if ($unidadOrigenId === $unidadDestinoId) {
+            return $cantidad;
+        }
+
+        // Si el producto no es fraccionado, no permitir conversiones
+        if (!$this->es_fraccionado) {
+            throw new \Exception("Producto no fraccionado no permite conversiones entre unidades");
+        }
+
+        // Buscar conversión directa (origen → destino)
+        $conversion = $this->conversiones()
+            ->where('unidad_base_id', $unidadOrigenId)
+            ->where('unidad_destino_id', $unidadDestinoId)
+            ->where('activo', true)
+            ->first();
+
+        if ($conversion) {
+            return $conversion->convertirADestino($cantidad);
+        }
+
+        // Buscar conversión inversa (destino → origen)
+        $conversionInversa = $this->conversiones()
+            ->where('unidad_base_id', $unidadDestinoId)
+            ->where('unidad_destino_id', $unidadOrigenId)
+            ->where('activo', true)
+            ->first();
+
+        if ($conversionInversa) {
+            return $conversionInversa->convertirABase($cantidad);
+        }
+
+        throw new \Exception("No existe conversión entre unidades para este producto");
+    }
+
+    /**
+     * Convertir cantidad a la unidad base del producto
+     *
+     * @param float $cantidad
+     * @param int $unidadOrigenId
+     * @return float
+     * @throws \Exception
+     */
+    public function convertirAUnidadBase(float $cantidad, int $unidadOrigenId): float
+    {
+        if ($unidadOrigenId === $this->unidad_medida_id) {
+            return $cantidad;
+        }
+
+        return $this->convertirCantidad($cantidad, $unidadOrigenId, $this->unidad_medida_id);
+    }
+
+    /**
+     * Obtener conversión entre dos unidades específicas
+     *
+     * @param int $unidadBaseId
+     * @param int $unidadDestinoId
+     * @return ConversionUnidadProducto|null
+     */
+    public function obtenerConversion(int $unidadBaseId, int $unidadDestinoId): ?ConversionUnidadProducto
+    {
+        // Buscar conversión directa
+        $conversion = $this->conversiones()
+            ->where('unidad_base_id', $unidadBaseId)
+            ->where('unidad_destino_id', $unidadDestinoId)
+            ->where('activo', true)
+            ->first();
+
+        if ($conversion) {
+            return $conversion;
+        }
+
+        // Buscar conversión inversa
+        return $this->conversiones()
+            ->where('unidad_base_id', $unidadDestinoId)
+            ->where('unidad_destino_id', $unidadBaseId)
+            ->where('activo', true)
+            ->first();
+    }
+
+    /**
+     * Calcular precio por unidad específica
+     *
+     * @param string $tipoPrecio Tipo de precio (ej: 'VENTA_MOSTRADOR', 'VENTA_DISTRIBUIDOR')
+     * @param int|null $unidadMedidaId ID de la unidad (si es null usa la unidad base)
+     * @return float|null
+     * @throws \Exception
+     */
+    public function calcularPrecioPorUnidad(string $tipoPrecio, ?int $unidadMedidaId = null): ?float
+    {
+        $precioProducto = $this->obtenerPrecio($tipoPrecio);
+
+        if (!$precioProducto) {
+            return null;
+        }
+
+        // Si no especifica unidad o es la unidad base, retornar precio directo
+        if (!$unidadMedidaId || $unidadMedidaId === $this->unidad_medida_id) {
+            return (float) $precioProducto->precio;
+        }
+
+        // Si el producto no es fraccionado, solo tiene precio en unidad base
+        if (!$this->es_fraccionado) {
+            throw new \Exception("Producto no fraccionado solo tiene precio en su unidad base");
+        }
+
+        // Buscar la conversión para calcular precio proporcional
+        $conversion = $this->obtenerConversion($this->unidad_medida_id, $unidadMedidaId);
+
+        if (!$conversion) {
+            throw new \Exception("No existe conversión para calcular precio en esa unidad");
+        }
+
+        // Precio proporcional: precio_base / factor_conversion
+        // Ej: 150 Bs/caja ÷ 100 = 1.50 Bs/tableta
+        return (float) $precioProducto->precio / (float) $conversion->factor_conversion;
     }
 }

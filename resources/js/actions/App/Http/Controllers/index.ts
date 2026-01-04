@@ -28,6 +28,8 @@ import MarcaController from './MarcaController'
 import AlmacenController from './AlmacenController'
 import ConfiguracionGlobalController from './ConfiguracionGlobalController'
 import EmpresaController from './EmpresaController'
+import CodigoBarraController from './CodigoBarraController'
+import ReporteCodigosBarraController from './ReporteCodigosBarraController'
 import UnidadMedidaController from './UnidadMedidaController'
 import TipoPrecioController from './TipoPrecioController'
 import MonedaController from './MonedaController'
@@ -52,6 +54,7 @@ import PreventistController from './PreventistController'
 import AdminController from './AdminController'
 import RutaController from './RutaController'
 import ReportePreciosController from './ReportePreciosController'
+import ReporteCreditoController from './ReporteCreditoController'
 import ReporteInventarioController from './ReporteInventarioController'
 import ReservaStockController from './ReservaStockController'
 import ConteoFisicoController from './ConteoFisicoController'
@@ -88,6 +91,8 @@ MarcaController,
 AlmacenController,
 ConfiguracionGlobalController,
 EmpresaController,
+CodigoBarraController,
+ReporteCodigosBarraController,
 UnidadMedidaController,
 TipoPrecioController,
 MonedaController,
@@ -112,6 +117,7 @@ PreventistController,
 AdminController,
 RutaController,
 ReportePreciosController,
+ReporteCreditoController,
 ReporteInventarioController,
 ReservaStockController,
 ConteoFisicoController,

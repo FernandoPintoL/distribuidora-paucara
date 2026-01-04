@@ -4,10 +4,12 @@ import proformas from './proformas'
 import ventas from './ventas'
 import compras from './compras'
 import productos from './productos'
+import geocoding from './geocoding'
 import entregas from './entregas'
 import proveedores from './proveedores'
 import cajas from './cajas'
 import dashboard from './dashboard'
+import codigosBarra from './codigos-barra'
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
  * @see app/Http/Controllers/ModuloSidebarController.php:234
@@ -171,10 +173,12 @@ proformas,
 ventas,
 compras,
 productos,
+geocoding,
 entregas,
 proveedores,
 cajas,
 dashboard,
+codigosBarra,
 }
 
 export default api

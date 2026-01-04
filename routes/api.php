@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\EntregaBatchController;
 use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\EstadoLogisticoController;
+use App\Http\Controllers\Api\GeocodingController;
 use App\Http\Controllers\Api\ReporteCargoController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\ReporteCargaPdfController;
@@ -422,6 +423,11 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('{localidad}', [LocalidadController::class, 'showApi']);
         Route::put('{localidad}', [LocalidadController::class, 'updateApi']);
         Route::delete('{localidad}', [LocalidadController::class, 'destroyApi']);
+    });
+
+    // Geocoding / Reverse Geocoding - Auto-detección de localidad por GPS
+    Route::group(['prefix' => 'geocoding'], function () {
+        Route::post('/reverse', [GeocodingController::class, 'reverseGeocode'])->name('api.geocoding.reverse');
     });
 
     Route::group(['prefix' => 'categorias-cliente'], function () {

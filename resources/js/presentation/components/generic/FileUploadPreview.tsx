@@ -95,8 +95,8 @@ export default function FileUploadPreview({
           'text-center ' +
           (
           previewType === 'circle'
-            ? 'group w-20 h-20 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-gray-500 bg-gray-50 hover:bg-gray-100 cursor-pointer relative overflow-hidden'
-            : 'group w-44 h-28 rounded-md border border-dashed border-gray-300 flex items-center justify-center text-gray-500 bg-gray-50 hover:bg-gray-100 cursor-pointer relative overflow-hidden'
+            ? 'group w-20 h-20 rounded-full border border-dashed border-gray-300 dark:border-neutral-700 flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-neutral-900 hover:bg-gray-100 dark:hover:bg-neutral-800 cursor-pointer relative overflow-hidden transition-colors'
+            : 'group w-44 h-28 rounded-md border border-dashed border-gray-300 dark:border-neutral-700 flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-neutral-900 hover:bg-gray-100 dark:hover:bg-neutral-800 cursor-pointer relative overflow-hidden transition-colors'
           )
       }
       >
@@ -106,7 +106,7 @@ export default function FileUploadPreview({
             <div className="absolute inset-0 hidden items-center justify-center bg-black/30 text-white text-xs group-hover:flex">Cambiar imagen</div>
           </>
         ) : (
-          <span className="text-xs">Cargar imagen</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Cargar imagen</span>
         )}
       </div>
 
@@ -114,14 +114,14 @@ export default function FileUploadPreview({
         <button
           type="button"
           onClick={handleRemove}
-          className="text-xs text-red-500 hover:underline mt-1 self-start"
+          className="text-xs text-red-500 dark:text-red-400 hover:underline mt-1 self-start"
           disabled={disabled}
         >
           Quitar imagen
         </button>
       )}
 
-      <span className="text-xs text-gray-500">{helperText}</span>
+      <span className="text-xs text-gray-500 dark:text-gray-400">{helperText}</span>
     </div>
   );
 }

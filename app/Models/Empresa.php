@@ -30,6 +30,9 @@ class Empresa extends Model
         'mensaje_legal',
         'activo',
         'es_principal',
+        'almacen_id_principal',
+        'almacen_id_venta',
+        'permite_productos_fraccionados', // ✨ NUEVO
     ];
 
     protected function casts(): array
@@ -38,6 +41,7 @@ class Empresa extends Model
             'configuracion_impresion' => 'array',
             'activo' => 'boolean',
             'es_principal' => 'boolean',
+            'permite_productos_fraccionados' => 'boolean', // ✨ NUEVO
         ];
     }
 
@@ -47,6 +51,22 @@ class Empresa extends Model
     public function plantillasImpresion()
     {
         return $this->hasMany(PlantillaImpresion::class);
+    }
+
+    /**
+     * Almacén principal de la empresa (para búsquedas de stock generales)
+     */
+    public function almacenPrincipal()
+    {
+        return $this->belongsTo(Almacen::class, 'almacen_id_principal');
+    }
+
+    /**
+     * Almacén de venta de la empresa (Sala de Ventas o equivalente)
+     */
+    public function almacenVenta()
+    {
+        return $this->belongsTo(Almacen::class, 'almacen_id_venta');
     }
 
     /**
@@ -100,6 +120,44 @@ class Empresa extends Model
         $config = $value ? json_decode($value, true) : [];
 
         return array_merge($defaults, $config);
+    }
+
+    /**
+     * Obtener el almacén principal de la empresa
+     *
+     * @return Almacen|null
+     */
+    public function getPrincipalAlmacen(): ?Almacen
+    {
+        return $this->almacenPrincipal;
+    }
+
+    /**
+     * Obtener el almacén de venta (Sala de Ventas) de la empresa
+     *
+     * @return Almacen|null
+     */
+    public function getVentaAlmacen(): ?Almacen
+    {
+        return $this->almacenVenta;
+    }
+
+    /**
+     * Obtener el almacén actual según el contexto
+     *
+     * En la app móvil, retorna el almacén de venta si está disponible.
+     * En la web, retorna el almacén principal.
+     *
+     * @param bool $paraVenta Indica si es para búsqueda de venta (true) o general (false)
+     * @return Almacen|null
+     */
+    public function getAlmacenActual(bool $paraVenta = false): ?Almacen
+    {
+        if ($paraVenta) {
+            return $this->getVentaAlmacen() ?? $this->getPrincipalAlmacen();
+        }
+
+        return $this->getPrincipalAlmacen();
     }
 
     /**

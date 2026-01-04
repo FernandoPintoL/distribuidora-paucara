@@ -14,11 +14,16 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(CoreCatalogSeeder::class);
         $this->call(AlmacenesUbicacionSeeder::class);
+        // Asignar almacenes a empresas (antes de que se usen para búsquedas)
+        $this->call(AssignAlmacenesToEmpresasSeeder::class);
         // Seed roles and permissions FIRST
         $this->call(RolesAndPermissionsSeeder::class);
 
         // NUEVO: Permisos específicos del Sidebar
         $this->call(SidebarPermissionsSeeder::class);
+
+        // Asignar permisos de reportes
+        $this->call(AssignReportesPermissionsSeeder::class);
 
         // COMENTADO: Mapeo de Capacidades a Permisos reales
         // Nota: Este seeder crea roles duplicados (preventista, chofer, cajero, etc.)
@@ -38,6 +43,13 @@ class DatabaseSeeder extends Seeder
         $this->call(EstadosLogisticaSeeder::class);
         $this->call(ImpuestoSeeder::class);
         $this->call(ModuloSidebarSeeder::class);
+
+        // ✅ NUEVO: Limpiar módulos duplicados del sidebar
+        $this->call(CleanupDuplicateModulesSeeder::class);
+
+        // ✅ NUEVO: Actualizar permisos del sidebar para Cajero
+        $this->call(UpdateSidebarPermissionsSeeder::class);
+
         $this->call(MonedaSeeder::class);
         // $this->call(ProformaAppExternaSeeder::class);
         $this->call(TipoAjustInventarioSeeder::class);
@@ -77,7 +89,16 @@ class DatabaseSeeder extends Seeder
         // Crear usuario chofer de prueba
         $this->call(ChoferTestSeeder::class);
 
+        // Crear usuarios cajero de prueba
+        $this->call(CajeroTestSeeder::class);
+
+        // ✅ NUEVO: Actualizar permisos de logística para el Cajero
+        $this->call(UpdateCajeroLogisticsPermissionsSeeder::class);
+
         // ✅ NUEVO: Validar y crear datos críticos que puedan faltar
         $this->call(ValidateAndCreateRequiredDataSeeder::class);
+
+        // Precalentar caché de códigos de barra (después de que los datos estén listos)
+        $this->call(CodigosBarraCachePrecalentarSeeder::class);
     }
 }

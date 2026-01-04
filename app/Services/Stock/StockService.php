@@ -37,7 +37,9 @@ class StockService
      * Validar disponibilidad de stock para múltiples productos
      *
      * IMPORTANTE: No consume nada, solo valida
+     * NUEVO: Soporta unidad_medida_id para productos fraccionados
      *
+     * @param array $productos Array con estructura: { producto_id, cantidad, unidad_medida_id? }
      * @return ValidacionStockDTO
      */
     public function validarDisponible(
@@ -49,7 +51,8 @@ class StockService
 
         foreach ($productos as $item) {
             $productoId         = $item['producto_id'] ?? $item['id'];
-            $cantidadSolicitada = $item['cantidad'];
+            $cantidadSolicitada = (float) $item['cantidad'];
+            $unidadMedidaId     = $item['unidad_medida_id'] ?? null;
 
             // Validar que el producto exista y esté activo
             $producto = Producto::find($productoId);
@@ -78,21 +81,44 @@ class StockService
                 continue;
             }
 
-            $stockDisponible = $this->obtenerDisponible($productoId, $almacenId);
+            // Si no se especificó unidad, usar la unidad base del producto
+            if (!$unidadMedidaId) {
+                $unidadMedidaId = $producto->unidad_medida_id;
+            }
 
-            $suficiente = $stockDisponible >= $cantidadSolicitada;
+            // Convertir cantidad a unidad base si es necesario
+            try {
+                $cantidadSolicitadaBase = $producto->convertirAUnidadBase($cantidadSolicitada, $unidadMedidaId);
+            } catch (\Exception $e) {
+                $errores[] = "Producto '{$producto->nombre}': Error de conversión - {$e->getMessage()}";
+                $resultados[] = [
+                    'producto_id'         => $productoId,
+                    'unidad_medida_id'    => $unidadMedidaId,
+                    'cantidad_solicitada' => $cantidadSolicitada,
+                    'stock_disponible'    => 0,
+                    'suficiente'          => false,
+                    'error'               => 'Error de conversión de unidad',
+                ];
+                continue;
+            }
+
+            $stockDisponibleBase = $this->obtenerDisponible($productoId, $almacenId);
+
+            $suficiente = $stockDisponibleBase >= $cantidadSolicitadaBase;
 
             $resultado = [
-                'producto_id'         => $productoId,
-                'producto_nombre'     => $producto->nombre,
-                'cantidad_solicitada' => $cantidadSolicitada,
-                'stock_disponible'    => $stockDisponible,
-                'suficiente'          => $suficiente,
+                'producto_id'              => $productoId,
+                'producto_nombre'          => $producto->nombre,
+                'unidad_medida_id'         => $unidadMedidaId,
+                'cantidad_solicitada'      => $cantidadSolicitada,
+                'cantidad_solicitada_base' => $cantidadSolicitadaBase,
+                'stock_disponible_base'    => $stockDisponibleBase,
+                'suficiente'               => $suficiente,
             ];
 
             if (! $suficiente) {
                 $errores[] = "Producto '{$producto->nombre}': Stock insuficiente. " .
-                    "Disponible: {$stockDisponible}, Solicitado: {$cantidadSolicitada}";
+                    "Disponible: {$stockDisponibleBase} (base), Solicitado: {$cantidadSolicitadaBase} (base)";
             }
 
             $resultados[] = $resultado;
@@ -111,10 +137,11 @@ class StockService
      * Fórmula: cantidad_física - reservas_activas
      *
      * IMPORTANTE: Usa cantidad_disponible campo calculado en BD
+     * RETORNA: float (soporta productos fraccionados)
      */
-    public function obtenerDisponible(int $productoId, int $almacenId = 1): int
+    public function obtenerDisponible(int $productoId, int $almacenId = 1): float
     {
-        return StockProducto::where('producto_id', $productoId)
+        return (float) StockProducto::where('producto_id', $productoId)
             ->where('almacen_id', $almacenId)
             ->sum('cantidad_disponible');
     }
@@ -123,11 +150,12 @@ class StockService
      * Consumir stock por venta
      *
      * DEBE ser llamado DENTRO de una transacción
+     * NUEVO: Soporta unidad_medida_id para productos fraccionados
      *
-     * @param array $productos Array de { producto_id, cantidad }
+     * @param array $productos Array de { producto_id, cantidad, unidad_medida_id? }
      * @param string $referencia Identificador de la operación (VENTA#123)
      * @param int $almacenId
-     * @throws Exception Si hay stock insuficiente
+     * @throws Exception Si hay stock insuficiente o error de conversión
      */
     public function procesarSalidaVenta(
         array $productos,
@@ -139,7 +167,21 @@ class StockService
         try {
             foreach ($productos as $item) {
                 $productoId        = $item['producto_id'] ?? $item['id'];
-                $cantidadNecesaria = $item['cantidad'];
+                $cantidadOriginal  = (float) $item['cantidad'];
+                $unidadMedidaId    = $item['unidad_medida_id'] ?? null;
+
+                $producto = Producto::find($productoId);
+                if (!$producto) {
+                    throw new Exception("Producto ID {$productoId} no encontrado");
+                }
+
+                // Si no se especificó unidad, usar la unidad base del producto
+                if (!$unidadMedidaId) {
+                    $unidadMedidaId = $producto->unidad_medida_id;
+                }
+
+                // Convertir cantidad a unidad base
+                $cantidadNecesaria = $producto->convertirAUnidadBase($cantidadOriginal, $unidadMedidaId);
 
                 // Obtener stock con LOCK pesimista (FIFO)
                 $stocks = StockProducto::where('producto_id', $productoId)
@@ -154,7 +196,8 @@ class StockService
                 $stockTotal = $stocks->sum('cantidad_disponible');
                 if ($stockTotal < $cantidadNecesaria) {
                     throw new Exception(
-                        "Stock insuficiente para producto ID {$productoId}"
+                        "Stock insuficiente para producto ID {$productoId}: " .
+                        "Disponible: {$stockTotal}, Necesario: {$cantidadNecesaria}"
                     );
                 }
 
@@ -173,6 +216,8 @@ class StockService
                     $stock->decrement('cantidad', $cantidadTomar);
 
                     // Registrar movimiento
+                    $observacion = "Venta: {$cantidadOriginal} {$unidadMedidaId} = {$cantidadNecesaria} base";
+
                     $movimiento = MovimientoInventario::create([
                         'stock_producto_id'  => $stock->id,
                         'cantidad'           => -$cantidadTomar,
@@ -180,6 +225,7 @@ class StockService
                         'cantidad_posterior' => $stock->cantidad,
                         'tipo'               => MovimientoInventario::TIPO_SALIDA_VENTA,
                         'numero_documento'   => $referencia,
+                        'observacion'        => $observacion,
                         'fecha'              => now(),
                         'user_id'            => Auth::id(),
                     ]);

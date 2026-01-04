@@ -28,6 +28,8 @@ export default function ModalCrearCliente({
         telefono: null,
         email: null,
         activo: true,
+        limite_credito: null,
+        puede_tener_credito: false,
     });
 
     // Pre-llenar campos basado en la búsqueda
@@ -217,6 +219,46 @@ export default function ModalCrearCliente({
                         <Label htmlFor="activo" className="text-sm">
                             Cliente activo
                         </Label>
+                    </div>
+
+                    {/* Sección de crédito */}
+                    <div className="border-t pt-6">
+                        <h3 className="text-sm font-semibold mb-4 flex items-center space-x-2">
+                            <span>💳</span>
+                            <span>Configuración de Crédito</span>
+                        </h3>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="puede_tener_credito"
+                                    checked={data.puede_tener_credito ?? false}
+                                    onCheckedChange={(checked) => setData('puede_tener_credito', checked === true)}
+                                />
+                                <Label htmlFor="puede_tener_credito" className="text-sm">
+                                    Habilitar crédito para este cliente
+                                </Label>
+                            </div>
+
+                            {data.puede_tener_credito && (
+                                <div>
+                                    <Label htmlFor="limite_credito" className="text-sm font-medium">
+                                        Límite de crédito
+                                    </Label>
+                                    <Input
+                                        id="limite_credito"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={data.limite_credito || ''}
+                                        onChange={(e) => setData('limite_credito', e.target.value ? parseFloat(e.target.value) : null)}
+                                        placeholder="Ej: 10000"
+                                        className={errors.limite_credito ? 'border-red-500' : ''}
+                                    />
+                                    {errors.limite_credito && <p className="text-red-600 text-xs mt-1">{errors.limite_credito}</p>}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <DialogFooter className="flex justify-end space-x-3 pt-6 border-t">

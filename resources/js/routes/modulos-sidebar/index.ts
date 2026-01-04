@@ -761,7 +761,7 @@ toggleActivo.patch = (args: { moduloSidebar: number | { id: number } } | [modulo
     toggleActivo.form = toggleActivoForm
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
 export const bulkUpdate = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -776,7 +776,7 @@ bulkUpdate.definition = {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
 bulkUpdate.url = (options?: RouteQueryOptions) => {
@@ -785,7 +785,7 @@ bulkUpdate.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
 bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -795,7 +795,7 @@ bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
     const bulkUpdateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -805,7 +805,7 @@ bulkUpdate.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\ModuloSidebarController::bulkUpdate
- * @see app/Http/Controllers/ModuloSidebarController.php:580
+ * @see app/Http/Controllers/ModuloSidebarController.php:638
  * @route '/modulos-sidebar/bulk-update'
  */
         bulkUpdateForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

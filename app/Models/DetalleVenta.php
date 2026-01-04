@@ -16,12 +16,13 @@ class DetalleVenta extends Model
         'precio_unitario',
         'descuento',
         'subtotal',
+        'unidad_medida_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'cantidad' => 'integer',
+            'cantidad' => 'decimal:6',
             'precio_unitario' => 'decimal:2',
             'descuento' => 'decimal:2',
             'subtotal' => 'decimal:2',
@@ -37,5 +38,10 @@ class DetalleVenta extends Model
     public function producto()
     {
         return $this->belongsTo(Producto::class);
+    }
+
+    public function unidadMedida()
+    {
+        return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id');
     }
 }

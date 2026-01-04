@@ -28,9 +28,9 @@ class StockProducto extends Model
     protected function casts(): array
     {
         return [
-            'cantidad' => 'integer',
-            'cantidad_reservada' => 'integer',
-            'cantidad_disponible' => 'integer',
+            'cantidad' => 'decimal:6',
+            'cantidad_reservada' => 'decimal:6',
+            'cantidad_disponible' => 'decimal:6',
             'fecha_actualizacion' => 'datetime',
             'fecha_vencimiento' => 'date',
             'deleted_at' => 'datetime', // ✓ Para SoftDeletes
