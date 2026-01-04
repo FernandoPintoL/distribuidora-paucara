@@ -60,10 +60,13 @@ class CodigoBarraController extends Controller
         }
 
         $producto = Producto::findOrFail($productoId);
+        $codigos = $this->service->obtenerCodigosProducto($producto->id);
+        $codigosDTO = $codigos->map(fn (CodigoBarra $c) => $this->service->toDTO($c))->toArray();
 
         return inertia('CodigosBarra/Create', [
             'producto' => $producto->only('id', 'nombre', 'sku'),
             'tipos' => TipoCodigoBarraEnum::paraSelects(),
+            'codigosExistentes' => $codigosDTO,
         ]);
     }
 

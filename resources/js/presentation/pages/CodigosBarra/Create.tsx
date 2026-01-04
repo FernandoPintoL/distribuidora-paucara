@@ -5,7 +5,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
-import { Barcode, ArrowLeft, Zap, Loader } from 'lucide-react';
+import { Barcode, ArrowLeft, Zap, Loader, Trash2, Star, Check } from 'lucide-react';
 
 // Helper para generar rutas
 const route = (name: string, params?: Record<string, unknown> | number | string) => {
@@ -38,16 +38,26 @@ interface TipoCodigoBarraOption {
     value: string;
 }
 
+interface CodigoBarraDTO {
+    id: number;
+    codigo: string;
+    tipo: string;
+    es_principal: boolean;
+    created_at: string;
+}
+
 interface PageProps {
     producto: Producto;
     tipos: TipoCodigoBarraOption[];
+    codigosExistentes: CodigoBarraDTO[];
     [key: string]: any;
 }
 
 export default function CodigosBarraCreate() {
-    const { producto, tipos } = usePage<PageProps>().props;
+    const { producto, tipos, codigosExistentes: initialCodigos } = usePage<PageProps>().props;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [codigos, setCodigos] = useState<CodigoBarraDTO[]>(initialCodigos || []);
 
     const { data, setData, post, errors } = useForm({
         producto_id: producto.id,
@@ -87,18 +97,53 @@ export default function CodigosBarraCreate() {
         }
     };
 
+    const handleResetForm = () => {
+        setData({
+            producto_id: producto.id,
+            codigo: '',
+            tipo: tipos[0]?.value || 'ean13',
+            es_principal: false,
+        });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        post(route('codigos-barra.store'), {
-            onSuccess: () => {
+
+        // Hacer petición fetch en lugar de post() para controlar mejor la respuesta
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch(route('codigos-barra.store'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken || '',
+            },
+            body: JSON.stringify(data),
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Error al guardar el código');
+                }
+                return response.json();
+            })
+            .then((result) => {
+                // Agregar el nuevo código a la lista
+                if (result.codigo) {
+                    setCodigos([...codigos, result.codigo]);
+                }
                 toast.success('Código de barra guardado exitosamente');
-            },
-            onError: () => {
-                toast.error('Error al guardar el código de barra');
-            },
-            onFinish: () => setIsSubmitting(false),
-        });
+                handleResetForm();
+            })
+            .catch((error) => {
+                const message = error instanceof Error ? error.message : 'Error desconocido';
+                toast.error(`Error: ${message}`);
+            })
+            .finally(() => {
+                setIsSubmitting(false);
+            });
     };
 
     return (
@@ -109,12 +154,12 @@ export default function CodigosBarraCreate() {
             { title: 'Códigos de Barra', href: route('codigos-barra.index', { producto_id: producto.id }) },
             { title: 'Crear Nuevo', href: '#' },
         ]}>
-            <div className="space-y-6 p-6 max-w-2xl bg-white dark:bg-slate-950 rounded-lg">
+            <div className="space-y-6 p-6 max-w-4xl bg-white dark:bg-slate-950 rounded-lg">
                 {/* Encabezado */}
                 <div>
-                    <h1 className="text-4xl font-bold text-slate-900 dark:text-white">🔲 Nuevo Código de Barra</h1>
+                    <h1 className="text-4xl font-bold text-slate-900 dark:text-white">🔲 Gestionar Códigos de Barra</h1>
                     <p className="text-gray-600 dark:text-gray-400 mt-2">
-                        Registra un nuevo código de barra para <span className="font-semibold text-slate-900 dark:text-white">{producto.nombre}</span>
+                        Gestiona los códigos de barra para <span className="font-semibold text-slate-900 dark:text-white">{producto.nombre}</span>
                     </p>
                 </div>
 
@@ -136,6 +181,57 @@ export default function CodigosBarraCreate() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Códigos Existentes */}
+                {codigos.length > 0 && (
+                    <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800">
+                        <CardHeader className="border-b border-gray-200 dark:border-slate-800">
+                            <CardTitle className="text-slate-900 dark:text-white">
+                                Códigos Existentes ({codigos.length})
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="space-y-3">
+                                {codigos.map((codigo) => (
+                                    <div
+                                        key={codigo.id}
+                                        className="flex items-center justify-between p-4 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition"
+                                    >
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <code className="font-mono text-lg font-semibold text-slate-900 dark:text-white">
+                                                    {codigo.codigo}
+                                                </code>
+                                                {codigo.es_principal && (
+                                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" title="Código principal" />
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                                                    {codigo.tipo}
+                                                </span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {new Date(codigo.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {!codigo.es_principal && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="border-gray-300 dark:border-slate-600 text-slate-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-600"
+                                                title="Marcar como principal"
+                                            >
+                                                <Star className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Formulario */}
                 <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800">
@@ -221,13 +317,11 @@ export default function CodigosBarraCreate() {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    asChild
+                                    onClick={handleResetForm}
                                     className="border-gray-300 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800"
                                 >
-                                    <a href={route('codigos-barra.index', { producto_id: producto.id })}>
-                                        <ArrowLeft className="w-4 h-4 mr-2" />
-                                        Cancelar
-                                    </a>
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Limpiar
                                 </Button>
                                 <Button
                                     type="submit"
