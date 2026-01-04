@@ -58,29 +58,29 @@ export default function CodigosBarraIndex() {
             { title: producto.nombre, href: '#' },
             { title: 'Códigos de Barra', href: '#' },
         ]}>
-            <div className="space-y-6 p-6">
+            <div className="space-y-6 p-6 bg-white dark:bg-slate-950 rounded-lg">
                 {/* Encabezado */}
                 <div>
-                    <h1 className="text-4xl font-bold">🔲 Códigos de Barra</h1>
-                    <p className="text-gray-600 mt-2">
-                        Gestión de códigos de barra para {producto.nombre}
+                    <h1 className="text-4xl font-bold text-slate-900 dark:text-white">🔲 Códigos de Barra</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mt-2">
+                        Gestión de códigos de barra para <span className="font-semibold text-slate-900 dark:text-white">{producto.nombre}</span>
                     </p>
                 </div>
 
                 {/* Información del producto */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Información del Producto</CardTitle>
+                <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800">
+                    <CardHeader className="border-b border-gray-200 dark:border-slate-800">
+                        <CardTitle className="text-slate-900 dark:text-white">Información del Producto</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm text-gray-600">Nombre</p>
-                                <p className="text-lg font-semibold">{producto.nombre}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Nombre</p>
+                                <p className="text-lg font-semibold text-slate-900 dark:text-white">{producto.nombre}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-600">SKU</p>
-                                <p className="text-lg font-semibold">{producto.sku}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">SKU</p>
+                                <p className="text-lg font-semibold text-slate-900 dark:text-white">{producto.sku}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -101,59 +101,59 @@ export default function CodigosBarraIndex() {
 
                 {/* Código principal */}
                 {codigo_principal && (
-                    <Card className="border-blue-200 bg-blue-50">
+                    <Card className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30">
                         <CardHeader>
-                            <CardTitle className="text-blue-900">Código Principal</CardTitle>
+                            <CardTitle className="text-blue-900 dark:text-blue-300">Código Principal</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center gap-4">
-                                <Barcode className="w-8 h-8 text-blue-600" />
+                                <Barcode className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                                 <div>
-                                    <p className="text-2xl font-bold font-mono">{codigo_principal.codigo}</p>
-                                    <p className="text-sm text-gray-600">Tipo: {codigo_principal.tipo}</p>
+                                    <p className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{codigo_principal.codigo}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Tipo: {codigo_principal.tipo}</p>
                                 </div>
-                                <Badge className="ml-auto bg-blue-600">Principal</Badge>
+                                <Badge className="ml-auto bg-blue-600 dark:bg-blue-700">Principal</Badge>
                             </div>
                         </CardContent>
                     </Card>
                 )}
 
                 {/* Lista de códigos */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>
+                <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800">
+                    <CardHeader className="border-b border-gray-200 dark:border-slate-800">
+                        <CardTitle className="text-slate-900 dark:text-white">
                             Códigos de Barra ({total_codigos})
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         {codigos.length > 0 ? (
                             <div className="space-y-3">
                                 {codigos.map((codigo) => (
                                     <div
                                         key={codigo.id}
-                                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition"
+                                        className="flex items-center justify-between p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition bg-white dark:bg-slate-800/50"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <Barcode className="w-6 h-6 text-gray-400" />
+                                            <Barcode className="w-6 h-6 text-gray-400 dark:text-gray-600" />
                                             <div>
-                                                <p className="font-mono font-semibold text-lg">{codigo.codigo}</p>
-                                                <p className="text-sm text-gray-600">Tipo: {codigo.tipo}</p>
+                                                <p className="font-mono font-semibold text-lg text-slate-900 dark:text-white">{codigo.codigo}</p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">Tipo: {codigo.tipo}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {codigo.es_principal && (
-                                                <Badge className="bg-green-600">Principal</Badge>
+                                                <Badge className="bg-green-600 dark:bg-green-700">Principal</Badge>
                                             )}
                                             {!codigo.activo && (
-                                                <Badge variant="outline" className="text-gray-600">Inactivo</Badge>
+                                                <Badge variant="outline" className="text-gray-600 dark:text-gray-400 dark:border-gray-600">Inactivo</Badge>
                                             )}
                                             {codigo.activo && (
-                                                <Badge variant="outline" className="text-green-600">Activo</Badge>
+                                                <Badge variant="outline" className="text-green-600 dark:text-green-400 dark:border-green-500">Activo</Badge>
                                             )}
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
@@ -163,12 +163,12 @@ export default function CodigosBarraIndex() {
                             </div>
                         ) : (
                             <div className="text-center py-8">
-                                <Barcode className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-500">No hay códigos de barra registrados</p>
+                                <Barcode className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+                                <p className="text-gray-500 dark:text-gray-400">No hay códigos de barra registrados</p>
                                 <Button
                                     asChild
                                     variant="outline"
-                                    className="mt-4"
+                                    className="mt-4 border-gray-300 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800"
                                 >
                                     <a href={route('codigos-barra.create', { producto_id: producto.id })}>
                                         <Plus className="w-4 h-4 mr-2" />
