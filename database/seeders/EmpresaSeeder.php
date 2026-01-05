@@ -14,36 +14,95 @@ class EmpresaSeeder extends Seeder
      */
     public function run(): void
     {
-        // Crear empresa principal
-        /* $empresa = Empresa::create([
-            'nombre_comercial' => 'Distribuidora Paucara',
-            'razon_social' => 'Distribuidora Paucara S.R.L.',
-            'nit' => '123456789',
-            'telefono' => '+591 2 1234567',
-            'email' => 'info@distribuidorapaucara.com',
-            'sitio_web' => 'www.distribuidorapaucara.com',
-            'direccion' => 'Av. Principal #123',
-            'ciudad' => 'La Paz',
-            'pais' => 'Bolivia',
-            'mensaje_footer' => 'Gracias por su preferencia',
-            'mensaje_legal' => 'Este documento es una representación impresa de un documento electrónico.',
-            'activo' => true,
-            'es_principal' => true,
-            'configuracion_impresion' => [
-                'formatos_soportados' => ['A4', 'TICKET_58', 'TICKET_80'],
-                'formato_default' => 'A4',
-                'margen_ticket' => '2mm',
-                'margen_hoja' => '10mm',
-                'mostrar_logo_ticket' => true,
-                'mostrar_logo_hoja' => true,
-                'fuente_ticket' => 'Courier New',
-                'fuente_hoja' => 'Arial',
-                'tamaño_fuente_ticket' => '8px',
-                'tamaño_fuente_hoja' => '10px',
-            ],
-        ]); */
+        $this->command->info('🏢 Configurando empresas y plantillas de impresión...');
+        $this->command->info('');
 
-        $empresa = Empresa::create([
+        // PASO 1: Crear/actualizar empresa principal
+        $empresa = $this->crearOActualizarEmpresa();
+
+        // PASO 2: Crear/actualizar plantillas de impresión
+        $this->crearOActualizarPlantillas($empresa);
+
+        $this->command->info('');
+        $this->command->info('=================================================');
+        $this->command->info('✅ Seeder completado exitosamente');
+        $this->command->info('=================================================');
+    }
+
+    /**
+     * Crear o actualizar empresa principal
+     * Usa updateOrCreate para evitar errores de duplicidad
+     */
+    private function crearOActualizarEmpresa(): Empresa
+    {
+        $this->command->info('📋 Procesando empresa...');
+
+        $empresaConfig = $this->getEmpresaConfiguration();
+
+        $empresa = Empresa::updateOrCreate(
+            ['nit' => $empresaConfig['nit']],
+            [
+                'nombre_comercial' => $empresaConfig['nombre_comercial'],
+                'razon_social' => $empresaConfig['razon_social'],
+                'telefono' => $empresaConfig['telefono'],
+                'email' => $empresaConfig['email'],
+                'sitio_web' => $empresaConfig['sitio_web'],
+                'direccion' => $empresaConfig['direccion'],
+                'ciudad' => $empresaConfig['ciudad'],
+                'pais' => $empresaConfig['pais'],
+                'mensaje_footer' => $empresaConfig['mensaje_footer'],
+                'mensaje_legal' => $empresaConfig['mensaje_legal'],
+                'activo' => $empresaConfig['activo'],
+                'es_principal' => $empresaConfig['es_principal'],
+                'configuracion_impresion' => $empresaConfig['configuracion_impresion'],
+            ]
+        );
+
+        $this->command->info('  ✓ Empresa: ' . $empresa->nombre_comercial . ' (NIT: ' . $empresa->nit . ')');
+
+        return $empresa;
+    }
+
+    /**
+     * Crear o actualizar plantillas de impresión
+     */
+    private function crearOActualizarPlantillas(Empresa $empresa): void
+    {
+        $this->command->info('🎨 Procesando plantillas de impresión...');
+
+        $todasPlantillas = $this->getPlantillasConfiguration();
+
+        foreach ($todasPlantillas as $plantilla) {
+            PlantillaImpresion::updateOrCreate(
+                [
+                    'codigo' => $plantilla['codigo'],
+                    'empresa_id' => $empresa->id,
+                ],
+                [
+                    'nombre' => $plantilla['nombre'],
+                    'tipo_documento' => $plantilla['tipo_documento'],
+                    'formato' => $plantilla['formato'],
+                    'vista_blade' => $plantilla['vista_blade'],
+                    'es_default' => $plantilla['es_default'],
+                    'orden' => $plantilla['orden'],
+                    'activo' => true,
+                ]
+            );
+
+            $this->command->info('  ✓ Plantilla: ' . $plantilla['nombre']);
+        }
+
+        $this->command->info('');
+        $this->command->info('📊 Resumen:');
+        $this->command->info('  - ' . count($todasPlantillas) . ' Plantillas de impresión procesadas');
+    }
+
+    /**
+     * Configuración centralizada de empresa
+     */
+    private function getEmpresaConfiguration(): array
+    {
+        return [
             'nombre_comercial' => 'Farmacia Orellana',
             'razon_social' => 'Farmacia Orellana',
             'nit' => '123456789',
@@ -69,12 +128,16 @@ class EmpresaSeeder extends Seeder
                 'tamaño_fuente_ticket' => '8px',
                 'tamaño_fuente_hoja' => '10px',
             ],
-        ]);
+        ];
+    }
 
-        $this->command->info('✓ Empresa creada: ' . $empresa->nombre_comercial);
-
-        // Crear plantillas para VENTAS
-        $plantillasVentas = [
+    /**
+     * Configuración centralizada de plantillas de impresión
+     */
+    private function getPlantillasConfiguration(): array
+    {
+        return [
+            // Plantillas de VENTAS
             [
                 'codigo' => 'VENTA_A4',
                 'nombre' => 'Factura Hoja Completa A4',
@@ -102,10 +165,8 @@ class EmpresaSeeder extends Seeder
                 'es_default' => false,
                 'orden' => 3,
             ],
-        ];
 
-        // Crear plantillas para PROFORMAS
-        $plantillasProformas = [
+            // Plantillas de PROFORMAS
             [
                 'codigo' => 'PROFORMA_A4',
                 'nombre' => 'Proforma Hoja Completa A4',
@@ -124,10 +185,8 @@ class EmpresaSeeder extends Seeder
                 'es_default' => false,
                 'orden' => 2,
             ],
-        ];
 
-        // Crear plantillas para ENVÍOS
-        $plantillasEnvios = [
+            // Plantillas de ENVÍOS
             [
                 'codigo' => 'ENVIO_A4',
                 'nombre' => 'Guía de Remisión A4',
@@ -146,12 +205,8 @@ class EmpresaSeeder extends Seeder
                 'es_default' => false,
                 'orden' => 2,
             ],
-        ];
 
-        // Crear plantillas para REPORTES
-        // NOTA: Cada tipo_documento + formato debe ser único por empresa
-        // Por eso separamos los reportes en tipos diferentes
-        $plantillasReportes = [
+            // Plantillas de REPORTES
             [
                 'codigo' => 'REPORTE_INVENTARIO_A4',
                 'nombre' => 'Reporte de Inventario A4',
@@ -171,30 +226,5 @@ class EmpresaSeeder extends Seeder
                 'orden' => 1,
             ],
         ];
-
-        // Unir todas las plantillas
-        $todasPlantillas = array_merge(
-            $plantillasVentas,
-            $plantillasProformas,
-            $plantillasEnvios,
-            $plantillasReportes
-        );
-
-        // Crear todas las plantillas
-        foreach ($todasPlantillas as $plantilla) {
-            PlantillaImpresion::create(array_merge($plantilla, [
-                'empresa_id' => $empresa->id,
-                'activo' => true,
-            ]));
-
-            $this->command->info('  ✓ Plantilla creada: ' . $plantilla['nombre']);
-        }
-
-        $this->command->info('');
-        $this->command->info('=================================================');
-        $this->command->info('✓ Seeder completado exitosamente');
-        $this->command->info('  - 1 Empresa creada');
-        $this->command->info('  - ' . count($todasPlantillas) . ' Plantillas de impresión creadas');
-        $this->command->info('=================================================');
     }
 }
