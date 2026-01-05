@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
@@ -119,30 +119,74 @@ export default function Reportes() {
 
     const [generandoReporte, setGenerandoReporte] = useState(false);
 
-    // Datos mock para estadísticas (en producción vendrían del backend)
-    const [estadisticas] = useState<EstadisticasMovimientos>({
-        total_movimientos: 1247,
-        total_entradas: 483,
-        total_salidas: 592,
-        total_transferencias: 85,
-        total_mermas: 87,
-        total_ajustes: 25,
-        valor_total_entradas: 125680.50,
-        valor_total_salidas: 98750.25,
-        valor_total_mermas: 8450.75,
-        productos_afectados: 156,
-        almacenes_activos: 8,
-        movimientos_pendientes: 15, // Campo requerido que faltaba
-        tendencia_semanal: [
-            { fecha: '2024-01-08', entradas: 45, salidas: 62, transferencias: 8, mermas: 12 },
-            { fecha: '2024-01-09', entradas: 38, salidas: 55, transferencias: 12, mermas: 7 },
-            { fecha: '2024-01-10', entradas: 52, salidas: 48, transferencias: 15, mermas: 9 },
-            { fecha: '2024-01-11', entradas: 41, salidas: 67, transferencias: 6, mermas: 14 },
-            { fecha: '2024-01-12', entradas: 59, salidas: 71, transferencias: 11, mermas: 8 },
-            { fecha: '2024-01-13', entradas: 46, salidas: 39, transferencias: 9, mermas: 13 },
-            { fecha: '2024-01-14', entradas: 33, salidas: 42, transferencias: 7, mermas: 5 },
-        ]
+    // Estado para estadísticas reales del backend
+    const [estadisticas, setEstadisticas] = useState<EstadisticasMovimientos>({
+        total_movimientos: 0,
+        total_entradas: 0,
+        total_salidas: 0,
+        total_transferencias: 0,
+        total_mermas: 0,
+        total_ajustes: 0,
+        valor_total_entradas: 0,
+        valor_total_salidas: 0,
+        valor_total_mermas: 0,
+        productos_afectados: 0,
+        almacenes_activos: 0,
+        movimientos_pendientes: 0,
+        tendencia_semanal: []
     });
+
+    // Cargar estadísticas cuando se monta el componente
+    useEffect(() => {
+        cargarEstadisticas();
+    }, []);
+
+    const cargarEstadisticas = async () => {
+        setCargandoEstadisticas(true);
+        try {
+            // Construir parámetros de filtro
+            const params = new URLSearchParams();
+            if (filtros.almacen_id) params.append('almacen_id', filtros.almacen_id);
+            if (filtros.categoria_id) params.append('categoria_id', filtros.categoria_id);
+            if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
+            if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+
+            const response = await fetch(`/api/inventario/estadisticas?${params}`);
+
+            if (!response.ok) {
+                throw new Error('Error al cargar estadísticas');
+            }
+
+            const data = await response.json();
+
+            // Asume que el API devuelve { success: true, data: {...} }
+            if (data.data) {
+                setEstadisticas(data.data);
+            } else if (data.estadisticas) {
+                setEstadisticas(data.estadisticas);
+            }
+        } catch (error) {
+            console.error('Error al actualizar estadísticas:', error);
+            // Usar valores por defecto en caso de error
+            setEstadisticas({
+                total_movimientos: 0,
+                total_entradas: 0,
+                total_salidas: 0,
+                total_transferencias: 0,
+                total_mermas: 0,
+                total_ajustes: 0,
+                valor_total_entradas: 0,
+                valor_total_salidas: 0,
+                valor_total_mermas: 0,
+                productos_afectados: 0,
+                almacenes_activos: 0,
+                movimientos_pendientes: 0,
+                tendencia_semanal: []
+            });
+        } finally {
+            setCargandoEstadisticas(false);
+        }
+    };
 
     if (!can('inventario.reportes')) {
         return (
@@ -205,6 +249,7 @@ export default function Reportes() {
                     console.error('Error response:', errorData);
                     alert(`Error ${response.status}: ${errorData.message || JSON.stringify(errorData.errors || 'Error desconocido')}`);
                 } catch (e) {
+                    console.log('No se pudo parsear la respuesta de error como JSON:', e);
                     const errorText = await response.text();
                     console.error('Error response text:', errorText);
                     alert(`Error ${response.status}: ${errorText}`);
@@ -215,24 +260,6 @@ export default function Reportes() {
             alert('Error al generar el reporte');
         } finally {
             setGenerandoReporte(false);
-        }
-    };
-
-    const actualizarEstadisticas = async () => {
-        setCargandoEstadisticas(true);
-        try {
-            // Simular llamada API - en producción sería una llamada real
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Aquí iría la lógica real para obtener estadísticas del backend
-            // const response = await fetch('/inventario/estadisticas');
-            // const data = await response.json();
-            // setEstadisticas(data);
-
-        } catch (error) {
-            console.error('Error al actualizar estadísticas:', error);
-        } finally {
-            setCargandoEstadisticas(false);
         }
     };
 
@@ -258,7 +285,7 @@ export default function Reportes() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={actualizarEstadisticas}
+                            onClick={cargarEstadisticas}
                             disabled={cargandoEstadisticas}
                             className="flex items-center gap-2"
                         >
@@ -530,24 +557,6 @@ export default function Reportes() {
                         </div>
                     </TabsContent>
                 </Tabs>
-
-                {/* Información adicional */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start">
-                        <svg className="w-5 h-5 text-blue-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                Reportes y Análisis Avanzados
-                            </h3>
-                            <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-                                Dashboard integrado con métricas en tiempo real, análisis de tendencias y generación de reportes en múltiples formatos.
-                                Los datos se actualizan automáticamente y ofrecen insights profundos sobre el rendimiento del inventario.
-                            </p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </AppLayout>
     );

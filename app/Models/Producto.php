@@ -6,6 +6,7 @@ use App\Models\Traits\GeneratesSequentialCode;
 use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Producto extends Model
 {
@@ -30,6 +31,7 @@ class Producto extends Model
         'categoria_id',
         'marca_id',
         'proveedor_id',
+        'empresa_id',
     ];
 
     protected function casts(): array
@@ -43,6 +45,11 @@ class Producto extends Model
             'es_fraccionado' => 'boolean',
             'fecha_creacion' => 'datetime',
         ];
+    }
+
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class);
     }
 
     public function categoria()
@@ -116,6 +123,14 @@ class Producto extends Model
         return $this->hasOne(ConversionUnidadProducto::class, 'producto_id')
             ->where('activo', true)
             ->where('es_conversion_principal', true);
+    }
+
+    /**
+     * Relación: Rangos de cantidad con precios especiales
+     */
+    public function rangosPrecios()
+    {
+        return $this->hasMany(PrecioRangoCantidadProducto::class, 'producto_id');
     }
 
     /**
@@ -218,6 +233,96 @@ class Producto extends Model
         }
 
         return $precioVenta->precio - $precioCosto->precio;
+    }
+
+    /**
+     * Obtener el precio considerando rangos de cantidad
+     * Si existe un rango configurado para esta cantidad y empresa, usa ese precio
+     * Si no, usa el precio normal del producto
+     */
+    public function obtenerPrecioConRango(int $cantidad, ?int $empresaId = null): ?float
+    {
+        $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
+
+        // Buscar rango aplicable para esta cantidad
+        $rango = PrecioRangoCantidadProducto::obtenerRangoParaCantidad(
+            $this->id,
+            $cantidad,
+            $empresaId
+        );
+
+        if ($rango) {
+            // Usar el precio del tipo asociado al rango
+            return $this->obtenerPrecio($rango->tipo_precio_id)?->precio;
+        }
+
+        // Fallback: usar precio normal sin rango (VENTA_NORMAL o el primer precio activo)
+        return $this->obtenerPrecio('VENTA_NORMAL')?->precio ?? $this->precios()->activos()->first()?->precio;
+    }
+
+    /**
+     * Obtener información completa del precio con rango
+     * Devuelve: precio unitario, subtotal, rango aplicado, próximo rango y ahorro
+     */
+    public function obtenerPrecioConDetallesRango(int $cantidad, ?int $empresaId = null): array
+    {
+        $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
+        $precioUnitario = $this->obtenerPrecioConRango($cantidad, $empresaId);
+        $subtotal = $cantidad * ($precioUnitario ?? 0);
+
+        $rangoActual = PrecioRangoCantidadProducto::obtenerRangoParaCantidad(
+            $this->id,
+            $cantidad,
+            $empresaId
+        );
+
+        $proximoRango = PrecioRangoCantidadProducto::obtenerProximoRango(
+            $this->id,
+            $cantidad,
+            $empresaId
+        );
+
+        $ahorro = null;
+        if ($proximoRango) {
+            $precioProximo = $this->obtenerPrecio($proximoRango->tipo_precio_id)?->precio;
+            if ($precioProximo && $precioProximo < ($precioUnitario ?? 0)) {
+                // Ahorro total al llegar al siguiente rango
+                $diferenciaPorUnidad = ($precioUnitario ?? 0) - $precioProximo;
+                $ahorro = $diferenciaPorUnidad * $proximoRango->cantidad_minima;
+            }
+        }
+
+        return [
+            'precio_unitario' => $precioUnitario,
+            'subtotal' => $subtotal,
+            'rango_aplicado' => $rangoActual ? [
+                'id' => $rangoActual->id,
+                'cantidad_minima' => $rangoActual->cantidad_minima,
+                'cantidad_maxima' => $rangoActual->cantidad_maxima,
+                'tipo_precio_id' => $rangoActual->tipo_precio_id,
+                'tipo_precio_nombre' => $rangoActual->tipoPrecio->nombre,
+            ] : null,
+            'proximo_rango' => $proximoRango ? [
+                'cantidad_minima' => $proximoRango->cantidad_minima,
+                'cantidad_maxima' => $proximoRango->cantidad_maxima,
+                'tipo_precio_nombre' => $proximoRango->tipoPrecio->nombre,
+                'falta_cantidad' => $proximoRango->cantidad_minima - $cantidad,
+            ] : null,
+            'ahorro_proximo' => $ahorro,
+        ];
+    }
+
+    /**
+     * Obtener todos los rangos activos para este producto en una empresa
+     */
+    public function obtenerRangosActivos(int $empresaId): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->rangosPrecios()
+            ->where('empresa_id', $empresaId)
+            ->activos()
+            ->vigentes()
+            ->ordenadoPorCantidad()
+            ->get();
     }
 
     /**
@@ -661,8 +766,21 @@ class Producto extends Model
      */
     public function scopeStockBajo($query)
     {
+        // Usar AMBOS criterios:
+        // 1. Producto con stock bajo en ALGÚN almacén específico
+        // 2. O producto con stock bajo en total consolidado
         return $query->where('stock_minimo', '>', 0)
-            ->whereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos WHERE producto_id = productos.id) < stock_minimo');
+            ->where(function ($q) {
+                // Criterio 1: Stock bajo en algún almacén específico
+                $q->whereRaw('EXISTS (
+                    SELECT 1 FROM stock_productos
+                    WHERE producto_id = productos.id
+                    AND cantidad <= productos.stock_minimo
+                    AND cantidad > 0
+                )')
+                // Criterio 2: O stock bajo en total consolidado
+                ->orWhereRaw('(SELECT COALESCE(SUM(cantidad), 0) FROM stock_productos WHERE producto_id = productos.id) < stock_minimo');
+            });
     }
 
     public function scopeStockAlto($query)

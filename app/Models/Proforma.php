@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Traits\GeneratesSequentialCode;
+use App\Models\Traits\ManageEstadosLogisticos;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Proforma extends Model
 {
-    use HasFactory, GeneratesSequentialCode;
+    use HasFactory, GeneratesSequentialCode, ManageEstadosLogisticos;
 
     protected $fillable = [
         'numero',
@@ -23,8 +24,9 @@ class Proforma extends Model
         'total',
         'observaciones',
         'observaciones_rechazo',
-        'estado',
+        'estado_proforma_id',
         'canal_origen',
+        'tipo_entrega',  // NUEVO: DELIVERY o PICKUP
         'cliente_id',
         'usuario_creador_id',
         'usuario_aprobador_id',
@@ -68,18 +70,27 @@ class Proforma extends Model
             'total' => 'decimal:2',
             // Solicitud de entrega del cliente
             'fecha_entrega_solicitada' => 'date',
-            'hora_entrega_solicitada' => 'datetime:H:i',
-            'hora_entrega_solicitada_fin' => 'datetime:H:i',
+            'hora_entrega_solicitada' => 'string', // 🔧 Cambiar a string para evitar issues con datetime
+            'hora_entrega_solicitada_fin' => 'string', // 🔧 Cambiar a string para evitar issues con datetime
             // Confirmación de entrega del vendedor
             'fecha_entrega_confirmada' => 'date',
-            'hora_entrega_confirmada' => 'datetime:H:i',
-            'hora_entrega_confirmada_fin' => 'datetime:H:i',
+            'hora_entrega_confirmada' => 'string', // 🔧 Cambiar a string para evitar issues con datetime
+            'hora_entrega_confirmada_fin' => 'string', // 🔧 Cambiar a string para evitar issues con datetime
             'coordinacion_completada' => 'boolean',
             // Auditoría de coordinación
             'coordinacion_actualizada_en' => 'datetime',
             'fecha_ultimo_intento' => 'datetime',
             'entregado_en' => 'datetime',
         ];
+    }
+
+    /**
+     * Accessor para obtener el código del estado actual
+     * Permite usar $proforma->estado en lugar de $proforma->estadoLogistica->codigo
+     */
+    public function getEstadoAttribute()
+    {
+        return $this->estadoLogistica?->codigo;
     }
 
     // Estados de la proforma
@@ -99,6 +110,11 @@ class Proforma extends Model
     const CANAL_WEB = 'WEB';
 
     const CANAL_PRESENCIAL = 'PRESENCIAL';
+
+    // Tipos de entrega
+    const TIPO_DELIVERY = 'DELIVERY';
+
+    const TIPO_PICKUP = 'PICKUP';
 
     // Relaciones
     public function cliente(): BelongsTo
@@ -167,6 +183,14 @@ class Proforma extends Model
         return $this->hasOne(Entrega::class);
     }
 
+    /**
+     * Relación con el estado logístico (FK)
+     */
+    public function estadoLogistica(): BelongsTo
+    {
+        return $this->belongsTo(EstadoLogistica::class, 'estado_proforma_id');
+    }
+
     // Métodos de utilidad
     public function puedeAprobarse(): bool
     {
@@ -195,6 +219,21 @@ class Proforma extends Model
         return $this->canal_origen === self::CANAL_APP_EXTERNA;
     }
 
+    public function esPickup(): bool
+    {
+        return $this->tipo_entrega === self::TIPO_PICKUP;
+    }
+
+    public function esDelivery(): bool
+    {
+        return $this->tipo_entrega === self::TIPO_DELIVERY;
+    }
+
+    public function requiereDireccion(): bool
+    {
+        return $this->esDelivery();
+    }
+
     /**
      * Generar número de proforma con protección contra race conditions
      * ✅ CONSOLIDADO: Usa GeneratesSequentialCode trait
@@ -209,12 +248,12 @@ class Proforma extends Model
     // Scopes
     public function scopePendientes($query)
     {
-        return $query->where('estado', self::PENDIENTE);
+        return $query->where('estado_proforma_id', 1); // ID del estado PENDIENTE
     }
 
     public function scopeAprobadas($query)
     {
-        return $query->where('estado', self::APROBADA);
+        return $query->where('estado_proforma_id', 2); // ID del estado APROBADA
     }
 
     public function scopeDeAppExterna($query)
@@ -239,7 +278,7 @@ class Proforma extends Model
 
         // Si la proforma está vencida, extender automáticamente 7 días desde ahora
         $updateData = [
-            'estado' => self::APROBADA,
+            'estado_proforma_id' => 2, // ID = 2 para APROBADA
             'usuario_aprobador_id' => $usuario->id,
             'fecha_aprobacion' => now(),
             'observaciones' => $observaciones ?? $this->observaciones,
@@ -274,7 +313,7 @@ class Proforma extends Model
         }
 
         $this->update([
-            'estado' => self::RECHAZADA,
+            'estado_proforma_id' => 3, // ID = 3 para RECHAZADA
             'usuario_aprobador_id' => $usuario->id,
             'fecha_aprobacion' => now(),
             'observaciones_rechazo' => $motivo,
@@ -323,7 +362,7 @@ class Proforma extends Model
             return false;
         }
 
-        $this->update(['estado' => self::CONVERTIDA]);
+        $this->update(['estado_proforma_id' => 4]); // ID = 4 para CONVERTIDA
 
         return true;
     }
@@ -346,12 +385,33 @@ class Proforma extends Model
             return true;
         }
 
+        // 🔧 Obtener el almacén de la empresa del usuario autenticado
+        $user = auth()->user();
+        if (!$user || !$user->empresa) {
+            \Illuminate\Support\Facades\Log::error('No se encontró empresa para el usuario', [
+                'proforma_id' => $this->id,
+                'user_id' => $user?->id,
+            ]);
+            return false;
+        }
+
+        $almacenId = $user->empresa->almacen_id;
+        if (!$almacenId) {
+            \Illuminate\Support\Facades\Log::error('La empresa no tiene almacén definido', [
+                'proforma_id' => $this->id,
+                'empresa_id' => $user->empresa->id,
+            ]);
+            return false;
+        }
+
         \Illuminate\Support\Facades\DB::beginTransaction();
 
         try {
             foreach ($this->detalles as $detalle) {
                 // Buscar stock disponible con BLOQUEO PESIMISTA para evitar race conditions
+                // 🔧 Filtrar por almacén_id de la empresa
                 $stocksDisponibles = StockProducto::where('producto_id', $detalle->producto_id)
+                    ->where('almacen_id', $almacenId)  // ← NUEVO: Filtrar por almacén
                     ->where('cantidad_disponible', '>', 0)
                     ->orderBy('fecha_vencimiento', 'asc')
                     ->orderBy('id', 'asc') // FIFO como criterio secundario
@@ -679,9 +739,19 @@ class Proforma extends Model
     {
         $disponibilidad = [];
 
+        // 🔧 Obtener el almacén de la empresa del usuario autenticado
+        $user = auth()->user();
+        $almacenId = $user?->empresa?->almacen_id;
+
         foreach ($this->detalles as $detalle) {
-            $stockTotal = StockProducto::where('producto_id', $detalle->producto_id)
-                ->sum('cantidad_disponible');
+            // 🔧 Filtrar por almacén_id si está disponible
+            $query = StockProducto::where('producto_id', $detalle->producto_id);
+
+            if ($almacenId) {
+                $query->where('almacen_id', $almacenId);
+            }
+
+            $stockTotal = $query->sum('cantidad_disponible');
 
             $disponibilidad[] = [
                 'producto_id' => $detalle->producto_id,
@@ -689,6 +759,7 @@ class Proforma extends Model
                 'cantidad_requerida' => $detalle->cantidad,
                 'cantidad_disponible' => $stockTotal,
                 'disponible' => $stockTotal >= $detalle->cantidad,
+                'almacen_id' => $almacenId,  // Para debugging
             ];
         }
 

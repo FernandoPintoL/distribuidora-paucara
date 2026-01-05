@@ -400,5 +400,16 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
     },
 
     // Legacy support (deprecated)
+    // Custom row actions for clients
+    rowActions: [
+        {
+            label: "Ver Crédito",
+            icon: "💳",
+            action: "view-credit",
+            href: (row) => `/clientes/${row.id}/credito`,
+            color: "info",
+            show: (row) => row.puede_tener_credito === true
+        },
+    ],
     showIndexFilters: true,
 };

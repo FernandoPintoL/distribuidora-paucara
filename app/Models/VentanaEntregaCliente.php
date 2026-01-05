@@ -23,8 +23,8 @@ class VentanaEntregaCliente extends Model
     {
         return [
             'activo' => 'boolean',
-            'hora_inicio' => 'datetime:H:i',
-            'hora_fin' => 'datetime:H:i',
+            'hora_inicio' => 'string', // 🔧 Cambiar a string para evitar issues con datetime
+            'hora_fin' => 'string', // 🔧 Cambiar a string para evitar issues con datetime
         ];
     }
 

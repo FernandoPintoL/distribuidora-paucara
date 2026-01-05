@@ -682,6 +682,84 @@ crearMovimiento.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
     
     crearMovimiento.form = crearMovimientoForm
 /**
+* @see \App\Http\Controllers\InventarioController::estadisticasApi
+ * @see app/Http/Controllers/InventarioController.php:1656
+ * @route '/api/inventario/estadisticas'
+ */
+export const estadisticasApi = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: estadisticasApi.url(options),
+    method: 'get',
+})
+
+estadisticasApi.definition = {
+    methods: ["get","head"],
+    url: '/api/inventario/estadisticas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\InventarioController::estadisticasApi
+ * @see app/Http/Controllers/InventarioController.php:1656
+ * @route '/api/inventario/estadisticas'
+ */
+estadisticasApi.url = (options?: RouteQueryOptions) => {
+    return estadisticasApi.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\InventarioController::estadisticasApi
+ * @see app/Http/Controllers/InventarioController.php:1656
+ * @route '/api/inventario/estadisticas'
+ */
+estadisticasApi.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: estadisticasApi.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\InventarioController::estadisticasApi
+ * @see app/Http/Controllers/InventarioController.php:1656
+ * @route '/api/inventario/estadisticas'
+ */
+estadisticasApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: estadisticasApi.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\InventarioController::estadisticasApi
+ * @see app/Http/Controllers/InventarioController.php:1656
+ * @route '/api/inventario/estadisticas'
+ */
+    const estadisticasApiForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: estadisticasApi.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\InventarioController::estadisticasApi
+ * @see app/Http/Controllers/InventarioController.php:1656
+ * @route '/api/inventario/estadisticas'
+ */
+        estadisticasApiForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadisticasApi.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\InventarioController::estadisticasApi
+ * @see app/Http/Controllers/InventarioController.php:1656
+ * @route '/api/inventario/estadisticas'
+ */
+        estadisticasApiForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadisticasApi.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    estadisticasApi.form = estadisticasApiForm
+/**
 * @see \App\Http\Controllers\InventarioController::dashboard
  * @see app/Http/Controllers/InventarioController.php:80
  * @route '/inventario'
@@ -2719,6 +2797,6 @@ rechazarMerma.post = (args: { merma: string | number } | [merma: string | number
         })
     
     rechazarMerma.form = rechazarMermaForm
-const InventarioController = { importarAjustesMasivos, listarCargosCsv, obtenerDetalleCargo, revertirCargo, buscarProductos, stockProducto, procesarAjusteApi, movimientosApi, crearMovimiento, dashboard, stockBajo, proximosVencer, vencidos, movimientos, ajusteForm, procesarAjuste, ajusteMasivoForm, historialCargasForm, reportes, transferencias, formularioCrearTransferencia, crearTransferencia, verTransferencia, editarTransferencia, actualizarTransferencia, enviarTransferencia, recibirTransferencia, cancelarTransferencia, mermas, formularioRegistrarMerma, registrarMerma, verMerma, aprobarMerma, rechazarMerma }
+const InventarioController = { importarAjustesMasivos, listarCargosCsv, obtenerDetalleCargo, revertirCargo, buscarProductos, stockProducto, procesarAjusteApi, movimientosApi, crearMovimiento, estadisticasApi, dashboard, stockBajo, proximosVencer, vencidos, movimientos, ajusteForm, procesarAjuste, ajusteMasivoForm, historialCargasForm, reportes, transferencias, formularioCrearTransferencia, crearTransferencia, verTransferencia, editarTransferencia, actualizarTransferencia, enviarTransferencia, recibirTransferencia, cancelarTransferencia, mermas, formularioRegistrarMerma, registrarMerma, verMerma, aprobarMerma, rechazarMerma }
 
 export default InventarioController

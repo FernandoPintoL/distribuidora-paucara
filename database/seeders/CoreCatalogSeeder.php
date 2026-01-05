@@ -33,7 +33,7 @@ class CoreCatalogSeeder extends Seeder
         // Tipos de pago
         $tiposPago = [
             ['codigo' => 'EFECTIVO', 'nombre' => 'Efectivo'],
-            ['codigo' => 'TRANSFERENCIA', 'nombre' => 'Transferencia'],
+            ['codigo' => 'TRANSFERENCIA/QR', 'nombre' => 'Transferencia / QR'],
             ['codigo' => 'CREDITO', 'nombre' => 'Crédito'],
             ['codigo' => 'TARJETA', 'nombre' => 'Tarjeta'],
         ];
@@ -41,7 +41,7 @@ class CoreCatalogSeeder extends Seeder
 
         // Tipos de documento
         $tiposDocumento = [
-            [
+            /*[
                 'codigo'                => 'FAC',
                 'nombre'                => 'Factura',
                 'descripcion'           => 'Documento fiscal de venta',
@@ -60,7 +60,7 @@ class CoreCatalogSeeder extends Seeder
                 'formato_numeracion'    => 'BOL-{YYYY}-{####}',
                 'siguiente_numero'      => 1,
                 'activo'                => true,
-            ],
+            ],*/
             [
                 'codigo'                => 'REC',
                 'nombre'                => 'Recibo',
@@ -71,7 +71,7 @@ class CoreCatalogSeeder extends Seeder
                 'siguiente_numero'      => 1,
                 'activo'                => true,
             ],
-            [
+            /*[
                 'codigo'                => 'NC',
                 'nombre'                => 'Nota de Crédito',
                 'descripcion'           => 'Documento que reduce deuda al cliente',
@@ -90,7 +90,7 @@ class CoreCatalogSeeder extends Seeder
                 'formato_numeracion'    => 'ND-{YYYY}-{####}',
                 'siguiente_numero'      => 1,
                 'activo'                => true,
-            ],
+            ],*/
         ];
         DB::table('tipos_documento')->upsert($tiposDocumento, ['codigo'], [
             'nombre',
@@ -133,19 +133,19 @@ class CoreCatalogSeeder extends Seeder
         DB::table('almacenes')->upsert($almacenes, ['nombre'], ['activo', 'direccion']);
 
         // marcas para COCA COLA y PEPSI
-        $marcas = [
+        /*$marcas = [
             ['nombre' => 'Coca Cola', 'activo' => true],
             ['nombre' => 'Pepsi', 'activo' => true],
         ];
-        DB::table('marcas')->upsert($marcas, ['nombre'], ['activo']);
+        DB::table('marcas')->upsert($marcas, ['nombre'], ['activo']);*/
 
         // categorias para CERVEZAS, GASEOSA, AGUAS
-        $categorias = [
+        /*$categorias = [
             ['nombre' => 'Cervezas', 'activo' => true],
             ['nombre' => 'Gaseosa', 'activo' => true],
             ['nombre' => 'Aguas', 'activo' => true],
         ];
-        DB::table('categorias')->upsert($categorias, ['nombre'], ['activo']);
+        DB::table('categorias')->upsert($categorias, ['nombre'], ['activo']);*/
         // Monedas básicas
         /*$monedas = [
 

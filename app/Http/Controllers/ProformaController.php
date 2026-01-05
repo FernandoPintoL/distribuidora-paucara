@@ -525,25 +525,25 @@ class ProformaController extends Controller
     {
         try {
             // Usar el modelo Proforma directamente para queries simples de estadísticas
-            $proformaModel = \App\Models\Proforma::class;
+            $proformaModel = Proforma::class;
 
             $stats = [
                 'total' => $proformaModel::count(),
                 'por_estado' => [
-                    'pendiente' => $proformaModel::where('estado', 'PENDIENTE')->count(),
-                    'aprobada' => $proformaModel::where('estado', 'APROBADA')->count(),
-                    'rechazada' => $proformaModel::where('estado', 'RECHAZADA')->count(),
-                    'convertida' => $proformaModel::where('estado', 'CONVERTIDA')->count(),
-                    'vencida' => $proformaModel::where('estado', 'VENCIDA')->count(),
+                    'pendiente' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma'); })->count(),
+                    'aprobada' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'APROBADA')->where('categoria', 'proforma'); })->count(),
+                    'rechazada' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'RECHAZADA')->where('categoria', 'proforma'); })->count(),
+                    'convertida' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'CONVERTIDA')->where('categoria', 'proforma'); })->count(),
+                    'vencida' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'VENCIDA')->where('categoria', 'proforma'); })->count(),
                 ],
                 'montos_por_estado' => [
-                    'pendiente' => $proformaModel::where('estado', 'PENDIENTE')->sum('total'),
-                    'aprobada' => $proformaModel::where('estado', 'APROBADA')->sum('total'),
-                    'convertida' => $proformaModel::where('estado', 'CONVERTIDA')->sum('total'),
+                    'pendiente' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma'); })->sum('total'),
+                    'aprobada' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'APROBADA')->where('categoria', 'proforma'); })->sum('total'),
+                    'convertida' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'CONVERTIDA')->where('categoria', 'proforma'); })->sum('total'),
                 ],
                 'alertas' => [
-                    'vencidas' => $proformaModel::where('estado', 'VENCIDA')->count(),
-                    'por_vencer' => $proformaModel::where('estado', 'PENDIENTE')
+                    'vencidas' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'VENCIDA')->where('categoria', 'proforma'); })->count(),
+                    'por_vencer' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma'); })
                         ->where('fecha_vencimiento', '<=', now()->addDays(2))
                         ->count(),
                 ],

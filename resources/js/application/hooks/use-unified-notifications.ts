@@ -187,7 +187,7 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
         console.log(`📬 Notificación recibida: ${eventName}`, notification);
 
         // Play notification sound
-        playNotificationSound();
+        // playNotificationSound();  // Desactivado temporalmente
 
         // Call user callback
         if (onNotification) {
@@ -315,8 +315,9 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
   const playNotificationSound = useCallback(() => {
     try {
       const audio = new Audio('/sounds/notification.mp3');
-      audio.play().catch(() => {
-        console.log('No se pudo reproducir sonido de notificación');
+      audio.volume = 0.5; // Set volume to 50%
+      audio.play().catch((error) => {
+        console.log('No se pudo reproducir sonido de notificación:', error);
       });
     } catch (error) {
       console.log('Error reproduciendo sonido:', error);

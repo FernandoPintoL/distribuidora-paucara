@@ -10,6 +10,7 @@ use App\Events\ProformaCreada;
 use App\Events\ProformaAprobada;
 use App\Events\ProformaRechazada;
 use App\Events\ProformaConvertida;
+use App\Services\Venta\PrecioRangoProductoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,11 @@ class ApiProformaController extends Controller
     {
         // Primero normalizar los campos del Flutter ANTES de validar
         $requestData = $request->all();
+
+        // NUEVO: Normalizar tipo_entrega (default: DELIVERY si no viene)
+        if (!isset($requestData['tipo_entrega'])) {
+            $requestData['tipo_entrega'] = 'DELIVERY';
+        }
 
         // Si viene fecha_programada (timestamp ISO8601), convertir a fecha
         if ($request->filled('fecha_programada') && !$request->filled('fecha_entrega_solicitada')) {
@@ -52,12 +58,14 @@ class ApiProformaController extends Controller
             'productos' => 'required|array|min:1',
             'productos.*.producto_id' => 'required|exists:productos,id',
             'productos.*.cantidad' => 'required|numeric|min:1',
+            // NUEVO: tipo_entrega es requerido
+            'tipo_entrega' => 'required|in:DELIVERY,PICKUP',
             // Solicitud de entrega del cliente (REQUERIDO)
             'fecha_entrega_solicitada' => 'required|date|after_or_equal:today',
             'hora_entrega_solicitada' => 'nullable|date_format:H:i',
             'hora_entrega_solicitada_fin' => 'nullable|date_format:H:i',
-            // Dirección de entrega solicitada (REQUERIDO - debe venir desde Flutter)
-            'direccion_entrega_solicitada_id' => 'required|exists:direcciones_cliente,id',
+            // MODIFICADO: Dirección solo requerida para DELIVERY
+            'direccion_entrega_solicitada_id' => 'required_if:tipo_entrega,DELIVERY|nullable|exists:direcciones_cliente,id',
         ]);
 
         if ($validator->fails()) {
@@ -73,8 +81,17 @@ class ApiProformaController extends Controller
         $horaEntrega = $requestData['hora_entrega_solicitada'] ?? null;
         $horaEntregaFin = $requestData['hora_entrega_solicitada_fin'] ?? null;
 
-        // Validar que si se proporciona dirección, pertenece al cliente
-        if ($request->filled('direccion_entrega_solicitada_id')) {
+        // MODIFICADO: Validación condicional de dirección según tipo_entrega
+        if ($requestData['tipo_entrega'] === 'DELIVERY') {
+            // Para DELIVERY, la dirección es OBLIGATORIA
+            if (!$request->filled('direccion_entrega_solicitada_id')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La dirección de entrega es requerida para pedidos de tipo DELIVERY',
+                ], 422);
+            }
+
+            // Validar que la dirección pertenece al cliente
             $direccion = \App\Models\DireccionCliente::findOrFail($request->direccion_entrega_solicitada_id);
             if ($direccion->cliente_id !== $request->cliente_id) {
                 return response()->json([
@@ -83,6 +100,7 @@ class ApiProformaController extends Controller
                 ], 422);
             }
         }
+        // Para PICKUP, no se valida dirección (es null)
 
         DB::beginTransaction();
         try {
@@ -93,21 +111,30 @@ class ApiProformaController extends Controller
             // IMPORTANTE: usuario_creador_id debe ser el user_id del cliente, NO el cliente_id
             $usuarioCreador = $cliente->user_id; // El usuario que representa al cliente
 
+            // ✅ NUEVO: Instanciar servicio de precios con rangos
+            $precioRangoService = app(PrecioRangoProductoService::class);
+            $empresaId = $cliente->empresa_id ?? auth()->user()->empresa_id ?? 1;
+
             // Calcular totales y verificar stock
             $subtotal = 0;
             $productosValidados = [];
             $stockInsuficiente = [];
+            $detallesConRangos = [];
 
             foreach ($requestData['productos'] as $item) {
                 $producto = Producto::with('stock')->findOrFail($item['producto_id']);
-                $cantidad = $item['cantidad'];
+                $cantidad = (int) $item['cantidad'];
 
-                // El precio viene desde el Flutter app
-                $precio = $item['precio_unitario'] ?? 0;
+                // ✅ NUEVO: CALCULAR PRECIO EN BACKEND, considerando rangos de cantidad
+                // El precio NO viene del cliente, se calcula en backend por seguridad
+                $precioUnitario = $producto->obtenerPrecioConRango($cantidad, $empresaId);
 
-                if ($precio <= 0) {
-                    throw new \Exception("El producto {$producto->nombre} no tiene precio definido");
+                if (!$precioUnitario || $precioUnitario <= 0) {
+                    throw new \Exception("El producto {$producto->nombre} no tiene precio definido para esta cantidad");
                 }
+
+                // Obtener información completa del rango (para logging y auditoría)
+                $detallesRango = $producto->obtenerPrecioConDetallesRango($cantidad, $empresaId);
 
                 // Verificar disponibilidad de stock
                 $stockDisponible = $producto->stock()->sum('cantidad_disponible');
@@ -121,15 +148,20 @@ class ApiProformaController extends Controller
                     ];
                 }
 
-                $subtotalItem = $cantidad * $precio;
+                $subtotalItem = $cantidad * $precioUnitario;
                 $subtotal += $subtotalItem;
 
                 $productosValidados[] = [
                     'producto_id' => $producto->id,
                     'cantidad' => $cantidad,
-                    'precio_unitario' => $precio,
+                    'precio_unitario' => $precioUnitario,
                     'subtotal' => $subtotalItem,
                 ];
+
+                // ✅ Guardar detalles del rango para auditoría
+                $detallesConRangos[] = array_merge($detallesRango, [
+                    'producto_nombre' => $producto->nombre,
+                ]);
             }
 
             // Si hay productos con stock insuficiente, retornar error
@@ -151,8 +183,9 @@ class ApiProformaController extends Controller
                 'fecha' => now(),
                 'fecha_vencimiento' => now()->addDays(7),
                 'cliente_id' => $requestData['cliente_id'],
-                'estado' => Proforma::PENDIENTE,
+                'estado_proforma_id' => 1, // ID del estado PENDIENTE en estados_logistica
                 'canal_origen' => Proforma::CANAL_APP_EXTERNA,
+                'tipo_entrega' => $requestData['tipo_entrega'], // NUEVO: DELIVERY o PICKUP
                 'subtotal' => $subtotal,
                 'impuesto' => $impuesto,
                 'total' => $total,
@@ -164,7 +197,10 @@ class ApiProformaController extends Controller
                 'fecha_entrega_solicitada' => $fechaEntrega,
                 'hora_entrega_solicitada' => $horaEntrega,
                 'hora_entrega_solicitada_fin' => $horaEntregaFin,
-                'direccion_entrega_solicitada_id' => $requestData['direccion_entrega_solicitada_id'],
+                // MODIFICADO: Dirección solo para DELIVERY (null para PICKUP)
+                'direccion_entrega_solicitada_id' => $requestData['tipo_entrega'] === 'DELIVERY'
+                    ? $requestData['direccion_entrega_solicitada_id']
+                    : null,
             ]);
 
             // Crear detalles
@@ -186,6 +222,7 @@ class ApiProformaController extends Controller
             // ✅ Emitir evento para notificaciones WebSocket
             event(new ProformaCreada($proforma));
 
+            // ✅ NUEVO: Incluir información de rangos de precios en la respuesta
             return response()->json([
                 'success' => true,
                 'message' => 'Proforma creada exitosamente. Será revisada por nuestro equipo.',
@@ -194,6 +231,9 @@ class ApiProformaController extends Controller
                     'numero' => $proforma->numero,
                     'total' => $proforma->total,
                     'estado' => $proforma->estado,
+                    'detalles_rangos' => $detallesConRangos,  // ✅ Información de rangos aplicados
+                    'subtotal' => $subtotal,
+                    'impuesto' => $impuesto,
                 ],
             ], 201);
 
@@ -370,6 +410,7 @@ class ApiProformaController extends Controller
         $query->with([
             'cliente',
             'usuarioCreador',
+            'estadoLogistica',
             'detalles.producto.categoria',
             'detalles.producto.marca',
             'direccionSolicitada',
@@ -539,12 +580,13 @@ class ApiProformaController extends Controller
             // Total general
             $total = $query->count();
 
-            // Por estado
+            // Por estado (usando FK estado_proforma_id)
             $porEstado = (clone $query)
-                ->selectRaw('estado, COUNT(*) as cantidad, SUM(total) as monto_total')
-                ->groupBy('estado')
+                ->selectRaw('estado_proforma_id, COUNT(*) as cantidad, SUM(total) as monto_total')
+                ->groupBy('estado_proforma_id')
+                ->with('estadoLogistica')
                 ->get()
-                ->keyBy('estado');
+                ->keyBy('estado_proforma_id');
 
             // Por canal origen
             $porCanal = (clone $query)
@@ -553,38 +595,54 @@ class ApiProformaController extends Controller
                 ->get()
                 ->keyBy('canal_origen');
 
+            // Obtener IDs de estados PENDIENTE y APROBADA
+            $estadoPendiente = Proforma::obtenerIdEstado('PENDIENTE', 'proforma');
+            $estadoAprobada = Proforma::obtenerIdEstado('APROBADA', 'proforma');
+
+            // Construir array de estados válidos (filtrar nulls)
+            $estadosActivos = array_filter([$estadoPendiente, $estadoAprobada]);
+
             // proformas vencidas (PENDIENTE o APROBADA con fecha_vencimiento < now)
             $vencidas = (clone $query)
-                ->whereIn('estado', [Proforma::PENDIENTE, Proforma::APROBADA])
+                ->whereIn('estado_proforma_id', $estadosActivos)
                 ->where('fecha_vencimiento', '<', now())
                 ->count();
 
             // proformas por vencer (próximos 2 días)
             $porVencer = (clone $query)
-                ->whereIn('estado', [Proforma::PENDIENTE, Proforma::APROBADA])
+                ->whereIn('estado_proforma_id', $estadosActivos)
                 ->whereBetween('fecha_vencimiento', [now(), now()->addDays(2)])
                 ->count();
 
             // Monto total por estado
             $montoTotal = $query->sum('total');
 
+            // Obtener IDs de estados para mapeo
+            $estadoIds = [
+                'pendiente' => Proforma::obtenerIdEstado('PENDIENTE', 'proforma'),
+                'aprobada' => Proforma::obtenerIdEstado('APROBADA', 'proforma'),
+                'rechazada' => Proforma::obtenerIdEstado('RECHAZADA', 'proforma'),
+                'convertida' => Proforma::obtenerIdEstado('CONVERTIDA', 'proforma'),
+                'vencida' => Proforma::obtenerIdEstado('VENCIDA', 'proforma'),
+            ];
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'total' => $total,
                     'por_estado' => [
-                        'pendiente' => $porEstado->get(Proforma::PENDIENTE)?->cantidad ?? 0,
-                        'aprobada' => $porEstado->get(Proforma::APROBADA)?->cantidad ?? 0,
-                        'rechazada' => $porEstado->get(Proforma::RECHAZADA)?->cantidad ?? 0,
-                        'convertida' => $porEstado->get(Proforma::CONVERTIDA)?->cantidad ?? 0,
-                        'vencida' => $porEstado->get(Proforma::VENCIDA)?->cantidad ?? 0,
+                        'pendiente' => $porEstado->get($estadoIds['pendiente'])?->cantidad ?? 0,
+                        'aprobada' => $porEstado->get($estadoIds['aprobada'])?->cantidad ?? 0,
+                        'rechazada' => $porEstado->get($estadoIds['rechazada'])?->cantidad ?? 0,
+                        'convertida' => $porEstado->get($estadoIds['convertida'])?->cantidad ?? 0,
+                        'vencida' => $porEstado->get($estadoIds['vencida'])?->cantidad ?? 0,
                     ],
                     'montos_por_estado' => [
-                        'pendiente' => (float) ($porEstado->get(Proforma::PENDIENTE)?->monto_total ?? 0),
-                        'aprobada' => (float) ($porEstado->get(Proforma::APROBADA)?->monto_total ?? 0),
-                        'rechazada' => (float) ($porEstado->get(Proforma::RECHAZADA)?->monto_total ?? 0),
-                        'convertida' => (float) ($porEstado->get(Proforma::CONVERTIDA)?->monto_total ?? 0),
-                        'vencida' => (float) ($porEstado->get(Proforma::VENCIDA)?->monto_total ?? 0),
+                        'pendiente' => (float) ($porEstado->get($estadoIds['pendiente'])?->monto_total ?? 0),
+                        'aprobada' => (float) ($porEstado->get($estadoIds['aprobada'])?->monto_total ?? 0),
+                        'rechazada' => (float) ($porEstado->get($estadoIds['rechazada'])?->monto_total ?? 0),
+                        'convertida' => (float) ($porEstado->get($estadoIds['convertida'])?->monto_total ?? 0),
+                        'vencida' => (float) ($porEstado->get($estadoIds['vencida'])?->monto_total ?? 0),
                     ],
                     'por_canal' => [
                         'app_externa' => $porCanal->get(Proforma::CANAL_APP_EXTERNA)?->cantidad ?? 0,
@@ -619,7 +677,9 @@ class ApiProformaController extends Controller
             'success' => true,
             'data' => [
                 'numero' => $proforma->numero,
-                'estado' => $proforma->estado,
+                'estado_codigo' => $proforma->estadoLogistica?->codigo,
+                'estado_nombre' => $proforma->estadoLogistica?->nombre,
+                'estado_id' => $proforma->estado_proforma_id,
                 'fecha' => $proforma->fecha,
                 'total' => $proforma->total,
                 'observaciones' => $proforma->observaciones,
@@ -671,6 +731,9 @@ class ApiProformaController extends Controller
      */
     public function aprobar(Proforma $proforma, Request $request)
     {
+        // 🔧 Cargar la relación estadoLogistica para el accessor
+        $proforma->load('estadoLogistica');
+
         $request->validate([
             'comentario' => 'nullable|string|max:500',
             // Confirmación de entrega del vendedor después de coordinación
@@ -707,7 +770,9 @@ class ApiProformaController extends Controller
 
             // Validar que la hora confirmada está dentro de las ventanas del cliente (si existen)
             if ($request->filled('hora_entrega_confirmada') && $request->filled('fecha_entrega_confirmada')) {
-                $horaConfirmada = \Carbon\Carbon::createFromFormat('H:i', $request->hora_entrega_confirmada);
+                // 🔧 Soportar ambos formatos H:i y H:i:s
+                $horaRequestFormat = str_contains($request->hora_entrega_confirmada, ':') && substr_count($request->hora_entrega_confirmada, ':') == 2 ? 'H:i:s' : 'H:i';
+                $horaConfirmada = \Carbon\Carbon::createFromFormat($horaRequestFormat, $request->hora_entrega_confirmada);
                 $fechaConfirmada = \Carbon\Carbon::parse($request->fecha_entrega_confirmada);
                 $diaSemana = $fechaConfirmada->dayOfWeek;
 
@@ -718,8 +783,11 @@ class ApiProformaController extends Controller
                     ->first();
 
                 if ($ventanas) {
-                    $horaInicio = \Carbon\Carbon::createFromFormat('H:i', $ventanas->hora_inicio);
-                    $horaFin = \Carbon\Carbon::createFromFormat('H:i', $ventanas->hora_fin);
+                    // Los campos hora_inicio y hora_fin ahora vienen como string en formato 'H:i:s'
+                    // Usar 'H:i:s' para soportar segundos, o 'H:i' si no los tiene
+                    $format = str_contains($ventanas->hora_inicio, ':') && substr_count($ventanas->hora_inicio, ':') == 2 ? 'H:i:s' : 'H:i';
+                    $horaInicio = \Carbon\Carbon::createFromFormat($format, $ventanas->hora_inicio);
+                    $horaFin = \Carbon\Carbon::createFromFormat($format, $ventanas->hora_fin);
 
                     if (!($horaConfirmada->gte($horaInicio) && $horaConfirmada->lte($horaFin))) {
                         return response()->json([
@@ -787,7 +855,7 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Proforma aprobada exitosamente',
-                'data' => $proforma->fresh(['detalles.producto', 'cliente', 'direccionConfirmada', 'direccionSolicitada']),
+                'data' => $proforma->fresh(['detalles.producto', 'cliente', 'direccionConfirmada', 'direccionSolicitada', 'estadoLogistica']),
             ]);
 
         } catch (\Exception $e) {
@@ -810,6 +878,9 @@ class ApiProformaController extends Controller
      */
     public function rechazar(Proforma $proforma, Request $request)
     {
+        // 🔧 Cargar la relación estadoLogistica para el accessor
+        $proforma->load('estadoLogistica');
+
         $request->validate([
             'comentario' => 'required|string|max:500',
         ]);
@@ -1268,7 +1339,7 @@ class ApiProformaController extends Controller
                 'fecha' => now(),
                 'fecha_vencimiento' => now()->addDays(7), // 7 días para aprobar
                 'cliente_id' => $cliente->id,
-                'estado' => Proforma::PENDIENTE,
+                'estado_proforma_id' => 1, // ID = 1 para PENDIENTE
                 'canal_origen' => Proforma::CANAL_APP_EXTERNA,
                 'subtotal' => $subtotal,
                 'impuesto' => $impuesto,
@@ -1652,6 +1723,9 @@ class ApiProformaController extends Controller
      */
     public function confirmarProforma(Proforma $proforma, Request $request)
     {
+        // 🔧 Cargar la relación estadoLogistica para el accessor
+        $proforma->load('estadoLogistica');
+
         // Validar parámetros de entrada
         $validator = Validator::make($request->all(), [
             'politica_pago' => 'required|in:ANTICIPADO_100,MEDIO_MEDIO,CONTRA_ENTREGA',
@@ -1839,6 +1913,9 @@ class ApiProformaController extends Controller
      */
     public function convertirAVenta(Proforma $proforma, Request $request)
     {
+        // 🔧 Cargar la relación estadoLogistica para el accessor
+        $proforma->load('estadoLogistica');
+
         // Validar datos de pago si se proporcionan
         if ($request->input('con_pago')) {
             $request->validate([
@@ -1910,6 +1987,22 @@ class ApiProformaController extends Controller
                     default => 'PENDIENTE',
                 };
 
+                // NUEVO: Determinar requiere_envio y estado_logistico según tipo_entrega
+                $tipoEntrega = $proforma->tipo_entrega ?? 'DELIVERY';
+                $requiereEnvio = $tipoEntrega === 'DELIVERY';
+
+                // REFACTORIZADO: Obtener IDs de estados en lugar de strings ENUM
+                if ($tipoEntrega === 'PICKUP') {
+                    $estadoLogisticoId = \App\Models\Venta::obtenerIdEstado('PENDIENTE_RETIRO', 'venta_logistica');
+                } else {
+                    // DELIVERY
+                    $estadoLogisticoId = \App\Models\Venta::obtenerIdEstado('PENDIENTE_ENVIO', 'venta_logistica');
+                }
+
+                if (!$estadoLogisticoId) {
+                    throw new \Exception('No se encontraron los estados logísticos requeridos en la base de datos');
+                }
+
                 // Preparar datos para la venta desde la proforma
                 $datosVenta = [
                     'numero' => \App\Models\Venta::generarNumero(),
@@ -1924,13 +2017,15 @@ class ApiProformaController extends Controller
                     'moneda_id' => $proforma->moneda_id,
                     'proforma_id' => $proforma->id,
                     // Campos de logística
-                    'requiere_envio' => $proforma->esDeAppExterna(),
+                    'tipo_entrega' => $tipoEntrega, // NUEVO
+                    'requiere_envio' => $requiereEnvio, // MODIFICADO
                     'canal_origen' => $proforma->canal_origen,
-                    'estado_logistico' => $proforma->esDeAppExterna()
-                        ? \App\Models\Venta::ESTADO_PENDIENTE_ENVIO
-                        : null,
+                    'estado_logistico_id' => $estadoLogisticoId, // REFACTORIZADO: Ahora es FK
                     // Campos de entrega comprometida (desde coordinación de proforma)
-                    'direccion_cliente_id' => $proforma->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id,
+                    // MODIFICADO: Solo para DELIVERY (null para PICKUP)
+                    'direccion_cliente_id' => $tipoEntrega === 'DELIVERY'
+                        ? ($proforma->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id)
+                        : null,
                     'fecha_entrega_comprometida' => $proforma->fecha_entrega_confirmada,
                     'hora_entrega_comprometida' => $proforma->hora_entrega_confirmada, // Hora SLA (inicio del rango)
                     'ventana_entrega_ini' => $proforma->hora_entrega_confirmada, // Inicio del rango de entrega
@@ -2247,5 +2342,124 @@ class ApiProformaController extends Controller
         return Inertia::render('proformas/Show', [
             'proforma' => $proforma,
         ]);
+    }
+
+    /**
+     * API: Actualizar detalles de una proforma y recalcular totales
+     *
+     * POST /api/proformas/{proforma}/actualizar-detalles
+     *
+     * Body:
+     * {
+     *   "detalles": [
+     *     { "id": 1, "producto_id": 137, "cantidad": 2, "precio_unitario": 12, "subtotal": 24 },
+     *     { "id": 2, "producto_id": 2, "cantidad": 3, "precio_unitario": 32.4, "subtotal": 97.2 }
+     *   ]
+     * }
+     */
+    public function actualizarDetalles(Proforma $proforma, Request $request)
+    {
+        // 🔧 Cargar la relación estadoLogistica para el accessor
+        $proforma->load('estadoLogistica');
+
+        $request->validate([
+            'detalles' => 'required|array|min:1',
+            'detalles.*.producto_id' => 'required|exists:productos,id',
+            'detalles.*.cantidad' => 'required|numeric|min:0.01',
+            'detalles.*.precio_unitario' => 'required|numeric|min:0',
+            'detalles.*.subtotal' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            // Solo se pueden actualizar proformas en estado PENDIENTE
+            if ($proforma->estado !== 'PENDIENTE') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden actualizar detalles de proformas pendientes',
+                ], 400);
+            }
+
+            // Obtener los detalles enviados
+            $detallesActualizados = $request->input('detalles', []);
+
+            // Inicializar contadores
+            $subtotalNuevo = 0;
+            $detallesGuardados = [];
+
+            // Procesar cada detalle
+            foreach ($detallesActualizados as $detalleData) {
+                $producto_id = $detalleData['producto_id'];
+                $cantidad = (float) $detalleData['cantidad'];
+                $precio_unitario = (float) $detalleData['precio_unitario'];
+                $subtotal = (float) $detalleData['subtotal'];
+
+                // Validar que el producto existe
+                $producto = \App\Models\Producto::findOrFail($producto_id);
+
+                // Validar que el subtotal es cantidad * precio_unitario
+                $subtotalCalculado = $cantidad * $precio_unitario;
+                if (abs($subtotal - $subtotalCalculado) > 0.01) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El subtotal del producto {$producto->nombre} no coincide con cantidad × precio",
+                    ], 422);
+                }
+
+                $subtotalNuevo += $subtotal;
+                $detallesGuardados[] = [
+                    'producto_id' => $producto_id,
+                    'cantidad' => $cantidad,
+                    'precio_unitario' => $precio_unitario,
+                    'descuento' => 0,
+                    'subtotal' => $subtotal,
+                ];
+            }
+
+            // Calcular totales
+            $impuestoOriginal = $proforma->total > 0 ? ($proforma->impuesto / $proforma->subtotal) : 0.13;
+            $impuestoNuevo = $subtotalNuevo * $impuestoOriginal;
+            $totalNuevo = $subtotalNuevo + $impuestoNuevo;
+
+            // Eliminar detalles antiguos
+            $proforma->detalles()->delete();
+
+            // Crear nuevos detalles
+            foreach ($detallesGuardados as $detalle) {
+                $proforma->detalles()->create($detalle);
+            }
+
+            // Actualizar la proforma con los nuevos totales
+            $proforma->update([
+                'subtotal' => $subtotalNuevo,
+                'impuesto' => $impuestoNuevo,
+                'total' => $totalNuevo,
+            ]);
+
+            // Recargar relaciones
+            $proforma->load(['detalles.producto', 'cliente', 'estadoLogistica']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Detalles actualizados correctamente',
+                'data' => [
+                    'proforma' => $proforma,
+                    'subtotal_anterior' => $proforma->getOriginal('subtotal'),
+                    'subtotal_nuevo' => $subtotalNuevo,
+                    'total_anterior' => $proforma->getOriginal('total'),
+                    'total_nuevo' => $totalNuevo,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error('Error actualizando detalles de proforma:', [
+                'proforma_id' => $proforma->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar detalles: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

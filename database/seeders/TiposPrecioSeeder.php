@@ -44,7 +44,7 @@ class TiposPrecioSeeder extends Seeder
                     'tooltip' => 'Precio de venta al público',
                 ]),
             ],
-            [
+            /*[
                 'codigo'              => 'POR_MAYOR',
                 'nombre'              => 'Precio por Mayor',
                 'descripcion'         => 'Precio especial para ventas al por mayor',
@@ -111,7 +111,7 @@ class TiposPrecioSeeder extends Seeder
                     'tooltip'  => 'Precio promocional',
                     'temporal' => true,
                 ]),
-            ],
+            ],*/
         ];
 
         foreach ($tiposPrecios as $tipoPrecio) {

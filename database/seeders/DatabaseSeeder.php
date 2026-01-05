@@ -30,10 +30,10 @@ class DatabaseSeeder extends Seeder
         // Usamos solo RolesAndPermissionsSeeder para roles y el sistema de Capabilities para UI
         // $this->call(CapabilityToRolePermissionsSeeder::class);
 
-        $this->call(CajaSeeder::class);
+        // $this->call(CajaSeeder::class);
         // $this->call(ClienteTestSeeder::class);
         $this->call(ClientesConUsuariosSeeder::class);
-        $this->call(CuentaContableSeeder::class);
+        // $this->call(CuentaContableSeeder::class);
         $this->call(EmpleadoRolesSeeder::class);
         // $this->call(EmpleadosTestSeeder::class);
         // $this->call(EmpleadosSinUsuarioSeeder::class);
@@ -61,14 +61,18 @@ class DatabaseSeeder extends Seeder
         // $this->call(ProductosEjemploSeeder::class);
         $this->call(CategoriaClienteSeeder::class);
         $this->call(LocalidadSeeder::class);
+        $this->call(EstadosLogisticaSeeder::class);
+        $this->call(EstadosLogisticaPickupSeeder::class);
+        $this->call(EmpresaSeeder::class);
         // Create a default admin user if not exists
-        $admin = User::query()->where('email', 'admin@paucara.test')->first();
+        $admin = User::query()->where('email', 'admin@admin.com')->first();
         if (! $admin) {
             $admin = User::factory()->create([
                 'name' => 'Administrador',
                 'usernick' => 'admin',
-                'email' => 'admin@paucara.test',
+                'email' => 'admin@admin.com',
                 'password' => Hash::make('password'),
+                'empresa_id' => 1,
             ]);
         } else {
             // Ensure usernick is set for legacy records
@@ -87,7 +91,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // Crear usuario chofer de prueba
-        $this->call(ChoferTestSeeder::class);
+        // $this->call(ChoferTestSeeder::class);
 
         // Crear usuarios cajero de prueba
         $this->call(CajeroTestSeeder::class);

@@ -30,9 +30,8 @@ class Empresa extends Model
         'mensaje_legal',
         'activo',
         'es_principal',
-        'almacen_id_principal',
-        'almacen_id_venta',
-        'permite_productos_fraccionados', // ✨ NUEVO
+        'almacen_id',
+        'permite_productos_fraccionados',
     ];
 
     protected function casts(): array
@@ -54,19 +53,29 @@ class Empresa extends Model
     }
 
     /**
-     * Almacén principal de la empresa (para búsquedas de stock generales)
+     * Almacén de la empresa (para búsquedas de stock y ventas)
      */
-    public function almacenPrincipal()
+    public function almacen()
     {
-        return $this->belongsTo(Almacen::class, 'almacen_id_principal');
+        return $this->belongsTo(Almacen::class, 'almacen_id');
     }
 
     /**
-     * Almacén de venta de la empresa (Sala de Ventas o equivalente)
+     * DEPRECADO: Usar almacen() en su lugar
+     * Se mantiene para compatibilidad histórica
+     */
+    public function almacenPrincipal()
+    {
+        return $this->almacen();
+    }
+
+    /**
+     * DEPRECADO: Usar almacen() en su lugar
+     * Se mantiene para compatibilidad histórica
      */
     public function almacenVenta()
     {
-        return $this->belongsTo(Almacen::class, 'almacen_id_venta');
+        return $this->almacen();
     }
 
     /**
@@ -123,41 +132,40 @@ class Empresa extends Model
     }
 
     /**
-     * Obtener el almacén principal de la empresa
+     * Obtener el almacén de la empresa
      *
      * @return Almacen|null
+     */
+    public function getAlmacen(): ?Almacen
+    {
+        return $this->almacen;
+    }
+
+    /**
+     * DEPRECADO: Usar getAlmacen() en su lugar
      */
     public function getPrincipalAlmacen(): ?Almacen
     {
-        return $this->almacenPrincipal;
+        return $this->getAlmacen();
     }
 
     /**
-     * Obtener el almacén de venta (Sala de Ventas) de la empresa
-     *
-     * @return Almacen|null
+     * DEPRECADO: Usar getAlmacen() en su lugar
      */
     public function getVentaAlmacen(): ?Almacen
     {
-        return $this->almacenVenta;
+        return $this->getAlmacen();
     }
 
     /**
-     * Obtener el almacén actual según el contexto
+     * Obtener el almacén actual de la empresa
      *
-     * En la app móvil, retorna el almacén de venta si está disponible.
-     * En la web, retorna el almacén principal.
-     *
-     * @param bool $paraVenta Indica si es para búsqueda de venta (true) o general (false)
+     * @param bool $paraVenta No se usa más, se mantiene para compatibilidad
      * @return Almacen|null
      */
     public function getAlmacenActual(bool $paraVenta = false): ?Almacen
     {
-        if ($paraVenta) {
-            return $this->getVentaAlmacen() ?? $this->getPrincipalAlmacen();
-        }
-
-        return $this->getPrincipalAlmacen();
+        return $this->getAlmacen();
     }
 
     /**

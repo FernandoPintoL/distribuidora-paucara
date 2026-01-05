@@ -611,6 +611,101 @@ destroy.delete = (args: { cliente: number | { id: number } } | [cliente: number 
         })
     
     destroy.form = destroyForm
+/**
+ * @see [serialized-closure]:2
+ * @route '/clientes/{cliente}/credito'
+ */
+export const credito = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: credito.url(args, options),
+    method: 'get',
+})
+
+credito.definition = {
+    methods: ["get","head"],
+    url: '/clientes/{cliente}/credito',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see [serialized-closure]:2
+ * @route '/clientes/{cliente}/credito'
+ */
+credito.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { cliente: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { cliente: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    cliente: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        cliente: typeof args.cliente === 'object'
+                ? args.cliente.id
+                : args.cliente,
+                }
+
+    return credito.definition.url
+            .replace('{cliente}', parsedArgs.cliente.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+ * @see [serialized-closure]:2
+ * @route '/clientes/{cliente}/credito'
+ */
+credito.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: credito.url(args, options),
+    method: 'get',
+})
+/**
+ * @see [serialized-closure]:2
+ * @route '/clientes/{cliente}/credito'
+ */
+credito.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: credito.url(args, options),
+    method: 'head',
+})
+
+    /**
+ * @see [serialized-closure]:2
+ * @route '/clientes/{cliente}/credito'
+ */
+    const creditoForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: credito.url(args, options),
+        method: 'get',
+    })
+
+            /**
+ * @see [serialized-closure]:2
+ * @route '/clientes/{cliente}/credito'
+ */
+        creditoForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: credito.url(args, options),
+            method: 'get',
+        })
+            /**
+ * @see [serialized-closure]:2
+ * @route '/clientes/{cliente}/credito'
+ */
+        creditoForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: credito.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    credito.form = creditoForm
 const clientes = {
     index,
 create,
@@ -620,6 +715,7 @@ edit,
 update,
 destroy,
 fotos,
+credito,
 }
 
 export default clientes

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscar
- * @see app/Http/Controllers/CodigoBarraController.php:188
+ * @see app/Http/Controllers/CodigoBarraController.php:199
  * @route '/api/codigos-barra/buscar/{codigo}'
  */
 export const buscar = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ buscar.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscar
- * @see app/Http/Controllers/CodigoBarraController.php:188
+ * @see app/Http/Controllers/CodigoBarraController.php:199
  * @route '/api/codigos-barra/buscar/{codigo}'
  */
 buscar.url = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ buscar.url = (args: { codigo: string | number } | [codigo: string | number ] | s
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscar
- * @see app/Http/Controllers/CodigoBarraController.php:188
+ * @see app/Http/Controllers/CodigoBarraController.php:199
  * @route '/api/codigos-barra/buscar/{codigo}'
  */
 buscar.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -53,7 +53,7 @@ buscar.get = (args: { codigo: string | number } | [codigo: string | number ] | s
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscar
- * @see app/Http/Controllers/CodigoBarraController.php:188
+ * @see app/Http/Controllers/CodigoBarraController.php:199
  * @route '/api/codigos-barra/buscar/{codigo}'
  */
 buscar.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -63,7 +63,7 @@ buscar.head = (args: { codigo: string | number } | [codigo: string | number ] | 
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::buscar
- * @see app/Http/Controllers/CodigoBarraController.php:188
+ * @see app/Http/Controllers/CodigoBarraController.php:199
  * @route '/api/codigos-barra/buscar/{codigo}'
  */
     const buscarForm = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -73,7 +73,7 @@ buscar.head = (args: { codigo: string | number } | [codigo: string | number ] | 
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::buscar
- * @see app/Http/Controllers/CodigoBarraController.php:188
+ * @see app/Http/Controllers/CodigoBarraController.php:199
  * @route '/api/codigos-barra/buscar/{codigo}'
  */
         buscarForm.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ buscar.head = (args: { codigo: string | number } | [codigo: string | number ] | 
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::buscar
- * @see app/Http/Controllers/CodigoBarraController.php:188
+ * @see app/Http/Controllers/CodigoBarraController.php:199
  * @route '/api/codigos-barra/buscar/{codigo}'
  */
         buscarForm.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -98,7 +98,7 @@ buscar.head = (args: { codigo: string | number } | [codigo: string | number ] | 
     buscar.form = buscarForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::validar
- * @see app/Http/Controllers/CodigoBarraController.php:216
+ * @see app/Http/Controllers/CodigoBarraController.php:227
  * @route '/api/codigos-barra/validar/{codigo}'
  */
 export const validar = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -113,7 +113,7 @@ validar.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::validar
- * @see app/Http/Controllers/CodigoBarraController.php:216
+ * @see app/Http/Controllers/CodigoBarraController.php:227
  * @route '/api/codigos-barra/validar/{codigo}'
  */
 validar.url = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -141,7 +141,7 @@ validar.url = (args: { codigo: string | number } | [codigo: string | number ] | 
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::validar
- * @see app/Http/Controllers/CodigoBarraController.php:216
+ * @see app/Http/Controllers/CodigoBarraController.php:227
  * @route '/api/codigos-barra/validar/{codigo}'
  */
 validar.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -150,7 +150,7 @@ validar.get = (args: { codigo: string | number } | [codigo: string | number ] | 
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::validar
- * @see app/Http/Controllers/CodigoBarraController.php:216
+ * @see app/Http/Controllers/CodigoBarraController.php:227
  * @route '/api/codigos-barra/validar/{codigo}'
  */
 validar.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -160,7 +160,7 @@ validar.head = (args: { codigo: string | number } | [codigo: string | number ] |
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::validar
- * @see app/Http/Controllers/CodigoBarraController.php:216
+ * @see app/Http/Controllers/CodigoBarraController.php:227
  * @route '/api/codigos-barra/validar/{codigo}'
  */
     const validarForm = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -170,7 +170,7 @@ validar.head = (args: { codigo: string | number } | [codigo: string | number ] |
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::validar
- * @see app/Http/Controllers/CodigoBarraController.php:216
+ * @see app/Http/Controllers/CodigoBarraController.php:227
  * @route '/api/codigos-barra/validar/{codigo}'
  */
         validarForm.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -179,7 +179,7 @@ validar.head = (args: { codigo: string | number } | [codigo: string | number ] |
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::validar
- * @see app/Http/Controllers/CodigoBarraController.php:216
+ * @see app/Http/Controllers/CodigoBarraController.php:227
  * @route '/api/codigos-barra/validar/{codigo}'
  */
         validarForm.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -195,7 +195,7 @@ validar.head = (args: { codigo: string | number } | [codigo: string | number ] |
     validar.form = validarForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::generar
- * @see app/Http/Controllers/CodigoBarraController.php:240
+ * @see app/Http/Controllers/CodigoBarraController.php:251
  * @route '/api/codigos-barra/generar'
  */
 export const generar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -210,7 +210,7 @@ generar.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::generar
- * @see app/Http/Controllers/CodigoBarraController.php:240
+ * @see app/Http/Controllers/CodigoBarraController.php:251
  * @route '/api/codigos-barra/generar'
  */
 generar.url = (options?: RouteQueryOptions) => {
@@ -219,7 +219,7 @@ generar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::generar
- * @see app/Http/Controllers/CodigoBarraController.php:240
+ * @see app/Http/Controllers/CodigoBarraController.php:251
  * @route '/api/codigos-barra/generar'
  */
 generar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -229,7 +229,7 @@ generar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::generar
- * @see app/Http/Controllers/CodigoBarraController.php:240
+ * @see app/Http/Controllers/CodigoBarraController.php:251
  * @route '/api/codigos-barra/generar'
  */
     const generarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -239,7 +239,7 @@ generar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::generar
- * @see app/Http/Controllers/CodigoBarraController.php:240
+ * @see app/Http/Controllers/CodigoBarraController.php:251
  * @route '/api/codigos-barra/generar'
  */
         generarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -250,7 +250,7 @@ generar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     generar.form = generarForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::producto
- * @see app/Http/Controllers/CodigoBarraController.php:285
+ * @see app/Http/Controllers/CodigoBarraController.php:296
  * @route '/api/codigos-barra/producto/{producto}'
  */
 export const producto = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -265,7 +265,7 @@ producto.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::producto
- * @see app/Http/Controllers/CodigoBarraController.php:285
+ * @see app/Http/Controllers/CodigoBarraController.php:296
  * @route '/api/codigos-barra/producto/{producto}'
  */
 producto.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -298,7 +298,7 @@ producto.url = (args: { producto: number | { id: number } } | [producto: number 
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::producto
- * @see app/Http/Controllers/CodigoBarraController.php:285
+ * @see app/Http/Controllers/CodigoBarraController.php:296
  * @route '/api/codigos-barra/producto/{producto}'
  */
 producto.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -307,7 +307,7 @@ producto.get = (args: { producto: number | { id: number } } | [producto: number 
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::producto
- * @see app/Http/Controllers/CodigoBarraController.php:285
+ * @see app/Http/Controllers/CodigoBarraController.php:296
  * @route '/api/codigos-barra/producto/{producto}'
  */
 producto.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -317,7 +317,7 @@ producto.head = (args: { producto: number | { id: number } } | [producto: number
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::producto
- * @see app/Http/Controllers/CodigoBarraController.php:285
+ * @see app/Http/Controllers/CodigoBarraController.php:296
  * @route '/api/codigos-barra/producto/{producto}'
  */
     const productoForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -327,7 +327,7 @@ producto.head = (args: { producto: number | { id: number } } | [producto: number
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::producto
- * @see app/Http/Controllers/CodigoBarraController.php:285
+ * @see app/Http/Controllers/CodigoBarraController.php:296
  * @route '/api/codigos-barra/producto/{producto}'
  */
         productoForm.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -336,7 +336,7 @@ producto.head = (args: { producto: number | { id: number } } | [producto: number
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::producto
- * @see app/Http/Controllers/CodigoBarraController.php:285
+ * @see app/Http/Controllers/CodigoBarraController.php:296
  * @route '/api/codigos-barra/producto/{producto}'
  */
         productoForm.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -352,7 +352,7 @@ producto.head = (args: { producto: number | { id: number } } | [producto: number
     producto.form = productoForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagen
- * @see app/Http/Controllers/CodigoBarraController.php:308
+ * @see app/Http/Controllers/CodigoBarraController.php:319
  * @route '/api/codigos-barra/imagen/{codigo}'
  */
 export const imagen = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -367,7 +367,7 @@ imagen.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagen
- * @see app/Http/Controllers/CodigoBarraController.php:308
+ * @see app/Http/Controllers/CodigoBarraController.php:319
  * @route '/api/codigos-barra/imagen/{codigo}'
  */
 imagen.url = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -395,7 +395,7 @@ imagen.url = (args: { codigo: string | number } | [codigo: string | number ] | s
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagen
- * @see app/Http/Controllers/CodigoBarraController.php:308
+ * @see app/Http/Controllers/CodigoBarraController.php:319
  * @route '/api/codigos-barra/imagen/{codigo}'
  */
 imagen.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -404,7 +404,7 @@ imagen.get = (args: { codigo: string | number } | [codigo: string | number ] | s
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagen
- * @see app/Http/Controllers/CodigoBarraController.php:308
+ * @see app/Http/Controllers/CodigoBarraController.php:319
  * @route '/api/codigos-barra/imagen/{codigo}'
  */
 imagen.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -414,7 +414,7 @@ imagen.head = (args: { codigo: string | number } | [codigo: string | number ] | 
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::imagen
- * @see app/Http/Controllers/CodigoBarraController.php:308
+ * @see app/Http/Controllers/CodigoBarraController.php:319
  * @route '/api/codigos-barra/imagen/{codigo}'
  */
     const imagenForm = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -424,7 +424,7 @@ imagen.head = (args: { codigo: string | number } | [codigo: string | number ] | 
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::imagen
- * @see app/Http/Controllers/CodigoBarraController.php:308
+ * @see app/Http/Controllers/CodigoBarraController.php:319
  * @route '/api/codigos-barra/imagen/{codigo}'
  */
         imagenForm.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -433,7 +433,7 @@ imagen.head = (args: { codigo: string | number } | [codigo: string | number ] | 
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::imagen
- * @see app/Http/Controllers/CodigoBarraController.php:308
+ * @see app/Http/Controllers/CodigoBarraController.php:319
  * @route '/api/codigos-barra/imagen/{codigo}'
  */
         imagenForm.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -449,7 +449,7 @@ imagen.head = (args: { codigo: string | number } | [codigo: string | number ] | 
     imagen.form = imagenForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagenSvg
- * @see app/Http/Controllers/CodigoBarraController.php:327
+ * @see app/Http/Controllers/CodigoBarraController.php:338
  * @route '/api/codigos-barra/imagen-svg/{codigo}'
  */
 export const imagenSvg = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -464,7 +464,7 @@ imagenSvg.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagenSvg
- * @see app/Http/Controllers/CodigoBarraController.php:327
+ * @see app/Http/Controllers/CodigoBarraController.php:338
  * @route '/api/codigos-barra/imagen-svg/{codigo}'
  */
 imagenSvg.url = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -492,7 +492,7 @@ imagenSvg.url = (args: { codigo: string | number } | [codigo: string | number ] 
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagenSvg
- * @see app/Http/Controllers/CodigoBarraController.php:327
+ * @see app/Http/Controllers/CodigoBarraController.php:338
  * @route '/api/codigos-barra/imagen-svg/{codigo}'
  */
 imagenSvg.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -501,7 +501,7 @@ imagenSvg.get = (args: { codigo: string | number } | [codigo: string | number ] 
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::imagenSvg
- * @see app/Http/Controllers/CodigoBarraController.php:327
+ * @see app/Http/Controllers/CodigoBarraController.php:338
  * @route '/api/codigos-barra/imagen-svg/{codigo}'
  */
 imagenSvg.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -511,7 +511,7 @@ imagenSvg.head = (args: { codigo: string | number } | [codigo: string | number ]
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::imagenSvg
- * @see app/Http/Controllers/CodigoBarraController.php:327
+ * @see app/Http/Controllers/CodigoBarraController.php:338
  * @route '/api/codigos-barra/imagen-svg/{codigo}'
  */
     const imagenSvgForm = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -521,7 +521,7 @@ imagenSvg.head = (args: { codigo: string | number } | [codigo: string | number ]
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::imagenSvg
- * @see app/Http/Controllers/CodigoBarraController.php:327
+ * @see app/Http/Controllers/CodigoBarraController.php:338
  * @route '/api/codigos-barra/imagen-svg/{codigo}'
  */
         imagenSvgForm.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -530,7 +530,7 @@ imagenSvg.head = (args: { codigo: string | number } | [codigo: string | number ]
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::imagenSvg
- * @see app/Http/Controllers/CodigoBarraController.php:327
+ * @see app/Http/Controllers/CodigoBarraController.php:338
  * @route '/api/codigos-barra/imagen-svg/{codigo}'
  */
         imagenSvgForm.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -546,7 +546,7 @@ imagenSvg.head = (args: { codigo: string | number } | [codigo: string | number ]
     imagenSvg.form = imagenSvgForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscarRapido
- * @see app/Http/Controllers/CodigoBarraController.php:346
+ * @see app/Http/Controllers/CodigoBarraController.php:357
  * @route '/api/codigos-barra/buscar-rapido/{codigo}'
  */
 export const buscarRapido = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -561,7 +561,7 @@ buscarRapido.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscarRapido
- * @see app/Http/Controllers/CodigoBarraController.php:346
+ * @see app/Http/Controllers/CodigoBarraController.php:357
  * @route '/api/codigos-barra/buscar-rapido/{codigo}'
  */
 buscarRapido.url = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -589,7 +589,7 @@ buscarRapido.url = (args: { codigo: string | number } | [codigo: string | number
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscarRapido
- * @see app/Http/Controllers/CodigoBarraController.php:346
+ * @see app/Http/Controllers/CodigoBarraController.php:357
  * @route '/api/codigos-barra/buscar-rapido/{codigo}'
  */
 buscarRapido.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -598,7 +598,7 @@ buscarRapido.get = (args: { codigo: string | number } | [codigo: string | number
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::buscarRapido
- * @see app/Http/Controllers/CodigoBarraController.php:346
+ * @see app/Http/Controllers/CodigoBarraController.php:357
  * @route '/api/codigos-barra/buscar-rapido/{codigo}'
  */
 buscarRapido.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -608,7 +608,7 @@ buscarRapido.head = (args: { codigo: string | number } | [codigo: string | numbe
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::buscarRapido
- * @see app/Http/Controllers/CodigoBarraController.php:346
+ * @see app/Http/Controllers/CodigoBarraController.php:357
  * @route '/api/codigos-barra/buscar-rapido/{codigo}'
  */
     const buscarRapidoForm = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -618,7 +618,7 @@ buscarRapido.head = (args: { codigo: string | number } | [codigo: string | numbe
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::buscarRapido
- * @see app/Http/Controllers/CodigoBarraController.php:346
+ * @see app/Http/Controllers/CodigoBarraController.php:357
  * @route '/api/codigos-barra/buscar-rapido/{codigo}'
  */
         buscarRapidoForm.get = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -627,7 +627,7 @@ buscarRapido.head = (args: { codigo: string | number } | [codigo: string | numbe
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::buscarRapido
- * @see app/Http/Controllers/CodigoBarraController.php:346
+ * @see app/Http/Controllers/CodigoBarraController.php:357
  * @route '/api/codigos-barra/buscar-rapido/{codigo}'
  */
         buscarRapidoForm.head = (args: { codigo: string | number } | [codigo: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -643,7 +643,7 @@ buscarRapido.head = (args: { codigo: string | number } | [codigo: string | numbe
     buscarRapido.form = buscarRapidoForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::precalentarCache
- * @see app/Http/Controllers/CodigoBarraController.php:376
+ * @see app/Http/Controllers/CodigoBarraController.php:387
  * @route '/api/codigos-barra/precalentar-cache'
  */
 export const precalentarCache = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -658,7 +658,7 @@ precalentarCache.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::precalentarCache
- * @see app/Http/Controllers/CodigoBarraController.php:376
+ * @see app/Http/Controllers/CodigoBarraController.php:387
  * @route '/api/codigos-barra/precalentar-cache'
  */
 precalentarCache.url = (options?: RouteQueryOptions) => {
@@ -667,7 +667,7 @@ precalentarCache.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::precalentarCache
- * @see app/Http/Controllers/CodigoBarraController.php:376
+ * @see app/Http/Controllers/CodigoBarraController.php:387
  * @route '/api/codigos-barra/precalentar-cache'
  */
 precalentarCache.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -677,7 +677,7 @@ precalentarCache.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::precalentarCache
- * @see app/Http/Controllers/CodigoBarraController.php:376
+ * @see app/Http/Controllers/CodigoBarraController.php:387
  * @route '/api/codigos-barra/precalentar-cache'
  */
     const precalentarCacheForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -687,7 +687,7 @@ precalentarCache.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::precalentarCache
- * @see app/Http/Controllers/CodigoBarraController.php:376
+ * @see app/Http/Controllers/CodigoBarraController.php:387
  * @route '/api/codigos-barra/precalentar-cache'
  */
         precalentarCacheForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -698,7 +698,7 @@ precalentarCache.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
     precalentarCache.form = precalentarCacheForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::estadisticasCache
- * @see app/Http/Controllers/CodigoBarraController.php:397
+ * @see app/Http/Controllers/CodigoBarraController.php:408
  * @route '/api/codigos-barra/estadisticas-cache'
  */
 export const estadisticasCache = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -713,7 +713,7 @@ estadisticasCache.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::estadisticasCache
- * @see app/Http/Controllers/CodigoBarraController.php:397
+ * @see app/Http/Controllers/CodigoBarraController.php:408
  * @route '/api/codigos-barra/estadisticas-cache'
  */
 estadisticasCache.url = (options?: RouteQueryOptions) => {
@@ -722,7 +722,7 @@ estadisticasCache.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::estadisticasCache
- * @see app/Http/Controllers/CodigoBarraController.php:397
+ * @see app/Http/Controllers/CodigoBarraController.php:408
  * @route '/api/codigos-barra/estadisticas-cache'
  */
 estadisticasCache.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -731,7 +731,7 @@ estadisticasCache.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =>
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::estadisticasCache
- * @see app/Http/Controllers/CodigoBarraController.php:397
+ * @see app/Http/Controllers/CodigoBarraController.php:408
  * @route '/api/codigos-barra/estadisticas-cache'
  */
 estadisticasCache.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -741,7 +741,7 @@ estadisticasCache.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::estadisticasCache
- * @see app/Http/Controllers/CodigoBarraController.php:397
+ * @see app/Http/Controllers/CodigoBarraController.php:408
  * @route '/api/codigos-barra/estadisticas-cache'
  */
     const estadisticasCacheForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -751,7 +751,7 @@ estadisticasCache.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::estadisticasCache
- * @see app/Http/Controllers/CodigoBarraController.php:397
+ * @see app/Http/Controllers/CodigoBarraController.php:408
  * @route '/api/codigos-barra/estadisticas-cache'
  */
         estadisticasCacheForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -760,7 +760,7 @@ estadisticasCache.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::estadisticasCache
- * @see app/Http/Controllers/CodigoBarraController.php:397
+ * @see app/Http/Controllers/CodigoBarraController.php:408
  * @route '/api/codigos-barra/estadisticas-cache'
  */
         estadisticasCacheForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

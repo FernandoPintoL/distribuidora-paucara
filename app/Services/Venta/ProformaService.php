@@ -327,7 +327,8 @@ class ProformaService
                     subtotal: $proforma->subtotal,
                     impuesto: $proforma->impuesto,
                     total: $proforma->total,
-                    almacen_id: $proforma->almacen_id ?? 2,
+                    // 🔧 Obtener almacén del usuario autenticado (no de la proforma)
+                    almacen_id: auth()->user()?->empresa?->almacen_id ?? 2,
                     observaciones: "Convertida desde proforma #{$proforma->numero}",
                     usuario_id: Auth::id(),
                     proforma_id: $proforma->id,
@@ -336,14 +337,16 @@ class ProformaService
                     // Campos de logística
                     requiere_envio: $requiereEnvio,
                     canal_origen: $proforma->canal_origen ?? 'WEB',
-                    estado_logistico: $requiereEnvio ? 'PENDIENTE_ENVIO' : null,
+                    estado_logistico_id: $requiereEnvio ? 27 : null,  // 27 = PENDIENTE_ENVIO
                     // Campos de política de pago
                     politica_pago: $politicaPago,
                     estado_pago: 'PENDIENTE',
                     // Campos de SLA y compromisos de entrega
                     fecha_entrega_comprometida: $proforma->fecha_entrega_confirmada,
                     hora_entrega_comprometida: $proforma->hora_entrega_confirmada
-                        ? $proforma->hora_entrega_confirmada->format('H:i:s')
+                        ? (is_string($proforma->hora_entrega_confirmada)
+                            ? $proforma->hora_entrega_confirmada
+                            : $proforma->hora_entrega_confirmada->format('H:i:s'))
                         : null,
                     ventana_entrega_ini: $ventanas['inicio'],
                     ventana_entrega_fin: $ventanas['fin'],
@@ -551,7 +554,11 @@ class ProformaService
         }
 
         // Crear ventana de ±1 hora alrededor de la hora comprometida
+        // 🔧 Convertir string a Carbon si es necesario (ahora que el cast es 'string')
         $horaConfirmada = $proforma->hora_entrega_confirmada;
+        if (is_string($horaConfirmada)) {
+            $horaConfirmada = \Carbon\Carbon::createFromFormat('H:i:s', $horaConfirmada);
+        }
 
         $horaInicio = $horaConfirmada->copy()->subHour();
         $horaFin = $horaConfirmada->copy()->addHour();

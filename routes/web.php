@@ -68,6 +68,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::put('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'update'])->name('clientes.fotos.update');
     Route::delete('clientes/{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'destroy'])->name('clientes.fotos.destroy');
 
+    // Rutas para crédito de clientes
+    Route::get('clientes/{cliente}/credito', function (\App\Models\Cliente $cliente) {
+        return \Inertia\Inertia::render('clientes/credito', ['clienteId' => $cliente->id]);
+    })->name('clientes.credito');
     // ⚠️ RUTAS ESPECÍFICAS DEBEN IR ANTES DEL RESOURCE
     // Rutas para carga masiva de productos
     Route::get('productos/carga-masiva', function () {
@@ -116,6 +120,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Rutas para gestión de tipos de precio
     Route::resource('tipos-precio', \App\Http\Controllers\TipoPrecioController::class)->parameters(['tipos-precio' => 'tipoPrecio'])->middleware('permission:tipos-precio.manage');
     Route::patch('tipos-precio/{tipoPrecio}/toggle-activo', [\App\Http\Controllers\TipoPrecioController::class, 'toggleActivo'])->middleware('permission:tipos-precio.manage')->name('tipos-precio.toggle-activo');
+
+    // ✅ NUEVO: Rutas para gestión de rangos de precios por cantidad
+    Route::get('precio-rango', [\App\Http\Controllers\PrecioRangoController::class, 'index'])->middleware('permission:productos.manage')->name('precio-rango.index');
+    Route::get('precio-rango/create', [\App\Http\Controllers\PrecioRangoController::class, 'create'])->middleware('permission:productos.manage')->name('precio-rango.create');
+    Route::get('precio-rango/import-csv', [\App\Http\Controllers\PrecioRangoController::class, 'importCsv'])->middleware('permission:productos.manage')->name('precio-rango.import-csv');
+    Route::get('precio-rango/{rango}/edit', [\App\Http\Controllers\PrecioRangoController::class, 'edit'])->middleware('permission:productos.manage')->name('precio-rango.edit');
 
     // Rutas para gestión de monedas
     Route::resource('monedas', \App\Http\Controllers\MonedaController::class)->middleware('permission:monedas.manage');

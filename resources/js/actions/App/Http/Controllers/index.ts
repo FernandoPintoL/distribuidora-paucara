@@ -32,6 +32,7 @@ import CodigoBarraController from './CodigoBarraController'
 import ReporteCodigosBarraController from './ReporteCodigosBarraController'
 import UnidadMedidaController from './UnidadMedidaController'
 import TipoPrecioController from './TipoPrecioController'
+import PrecioRangoController from './PrecioRangoController'
 import MonedaController from './MonedaController'
 import TipoPagoController from './TipoPagoController'
 import TipoDocumentoController from './TipoDocumentoController'
@@ -95,6 +96,7 @@ CodigoBarraController,
 ReporteCodigosBarraController,
 UnidadMedidaController,
 TipoPrecioController,
+PrecioRangoController,
 MonedaController,
 TipoPagoController,
 TipoDocumentoController,

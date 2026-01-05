@@ -322,11 +322,15 @@ class DashboardService
         $query = Proforma::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
         $total = $query->count();
 
-        $queryConvertidas = Proforma::where('estado', 'CONVERTIDA')->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        $queryConvertidas = Proforma::whereHas('estadoLogistica', function ($q) {
+            $q->where('codigo', 'CONVERTIDA')->where('categoria', 'proforma');
+        })->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
         $convertidas = $queryConvertidas->count();
 
         // Contar proformas que NO han sido convertidas (pendientes)
-        $queryPendientes = Proforma::whereNotIn('estado', ['CONVERTIDA'])->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
+        $queryPendientes = Proforma::whereHas('estadoLogistica', function ($q) {
+            $q->where('codigo', '!=', 'CONVERTIDA')->where('categoria', 'proforma');
+        })->whereBetween('fecha', [$fechas['inicio'], $fechas['fin']]);
         $pendientes = $queryPendientes->count();
 
         return [

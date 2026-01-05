@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ApiProformaController;
+use App\Http\Controllers\Api\ApiVentaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChoferPreferenciaController;
 use App\Http\Controllers\Api\EmpleadoApiController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\EntregaController;
 use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\EstadoLogisticoController;
 use App\Http\Controllers\Api\GeocodingController;
+use App\Http\Controllers\Api\PrecioRangoProductoController;
 use App\Http\Controllers\Api\ReporteCargoController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\ReporteCargaPdfController;
@@ -265,6 +267,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::post('/proformas/{proforma}/confirmar', [ApiProformaController::class, 'confirmarProforma'])->name('api.proformas.confirmar');
     Route::post('/proformas/{proforma}/extender-vencimiento', [ApiProformaController::class, 'extenderVencimiento']);
     Route::post('/proformas/{proforma}/coordinar', [ApiProformaController::class, 'coordinarEntrega'])->name('api.proformas.coordinar');
+    Route::post('/proformas/{proforma}/actualizar-detalles', [ApiProformaController::class, 'actualizarDetalles'])->name('api.proformas.actualizar-detalles');
 
     // Estado y verificaciones
     Route::get('/proformas/{proforma}/estado', [ApiProformaController::class, 'verificarEstado']);
@@ -321,6 +324,15 @@ Route::group(['prefix' => 'ventas'], function () {
     Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
     Route::get('{venta}/resumen-stock', [VentaController::class, 'obtenerResumenStock']);
     Route::post('{venta}/anular', [VentaController::class, 'anular']);
+
+    // ✅ NUEVO: Endpoints para confirmación de pickup
+    Route::post('{venta}/confirmar-pickup-cliente', [ApiVentaController::class, 'confirmarPickupCliente'])
+        ->middleware('auth:sanctum,web')
+        ->name('api.ventas.confirmar-pickup-cliente');
+
+    Route::post('{venta}/confirmar-pickup-empleado', [ApiVentaController::class, 'confirmarPickupEmpleado'])
+        ->middleware('auth:sanctum,web')
+        ->name('api.ventas.confirmar-pickup-empleado');
 });
 
 // Rutas API para contabilidad
@@ -336,6 +348,7 @@ Route::group(['prefix' => 'inventario'], function () {
     Route::post('ajustes', [InventarioController::class, 'procesarAjusteApi']);
     Route::get('movimientos', [InventarioController::class, 'movimientosApi']);
     Route::post('movimientos', [InventarioController::class, 'crearMovimiento']);
+    Route::get('estadisticas', [InventarioController::class, 'estadisticasApi']);
 
     // ✅ NUEVO: Tipos de Operación para ajustes masivos
     Route::get('tipos-operacion', [TipoOperacionController::class, 'index']);
@@ -368,6 +381,24 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::delete('{producto}', [ProductoController::class, 'destroyApi']);
         Route::get('{producto}/historial-precios', [ProductoController::class, 'historialPrecios']);
 
+        // ✅ NUEVO: Rutas para gestión de rangos de precios por cantidad
+        Route::get('{producto}/rangos-precio', [PrecioRangoProductoController::class, 'index']);
+        Route::post('{producto}/rangos-precio', [PrecioRangoProductoController::class, 'store']);
+        Route::get('{producto}/rangos-precio/{rango}', [PrecioRangoProductoController::class, 'show'])
+            ->where('rango', '\d+');
+        Route::put('{producto}/rangos-precio/{rango}', [PrecioRangoProductoController::class, 'update'])
+            ->where('rango', '\d+');
+        Route::delete('{producto}/rangos-precio/{rango}', [PrecioRangoProductoController::class, 'destroy'])
+            ->where('rango', '\d+');
+        Route::get('{producto}/rangos-precio/validar', [PrecioRangoProductoController::class, 'validarIntegridad']);
+        Route::post('{producto}/rangos-precio/copiar/{productoDestino}', [PrecioRangoProductoController::class, 'copiarRangos']);
+        Route::post('{producto}/calcular-precio', [PrecioRangoProductoController::class, 'calcularPrecio']);
+
+        // ✅ NUEVO: Rutas para importación CSV de rangos
+        Route::post('rangos-precio/previsualizar-csv', [PrecioRangoProductoController::class, 'previsualizarCSV']);
+        Route::post('rangos-precio/importar-csv', [PrecioRangoProductoController::class, 'importarCSV']);
+        Route::get('rangos-precio/plantilla-csv', [PrecioRangoProductoController::class, 'descargarPlantillaCSV']);
+
         // Rutas para carga masiva de productos
         Route::post('importar-masivo', [ProductoController::class, 'importarProductosMasivos']);
         Route::post('validar-csv', [ProductoController::class, 'validarProductosCSV']);
@@ -375,6 +406,9 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('cargas-masivas/{cargo}', [ProductoController::class, 'verCargaMasiva']);
         Route::post('cargas-masivas/{cargo}/revertir', [ProductoController::class, 'revertirCargaMasiva']);
     });
+
+    // ✅ NUEVO: Endpoint para calcular carrito completo con precios por rango
+    Route::post('/carrito/calcular', [PrecioRangoProductoController::class, 'calcularCarrito']);
 
     // Rutas API para vehículos
     Route::group(['prefix' => 'vehiculos'], function () {
@@ -397,6 +431,9 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::delete('{cliente}', [ClienteController::class, 'destroy']);
         Route::get('{cliente}/saldo-cuentas', [ClienteController::class, 'saldoCuentasPorCobrar']);
         Route::get('{cliente}/historial-ventas', [ClienteController::class, 'historialVentas']);
+        Route::get('{cliente}/credito/detalles', [ClienteController::class, 'obtenerDetallesCreditoApi']);
+        Route::get('{cliente}/auditoria-credito', [ClienteController::class, 'obtenerAuditoriaCreditoApi']);
+        Route::post('{cliente}/pagos', [ClienteController::class, 'registrarPagoApi']);
 
         // Cambio de credenciales para clientes autenticados
         Route::post('cambiar-credenciales', [ClienteController::class, 'cambiarCredenciales']);

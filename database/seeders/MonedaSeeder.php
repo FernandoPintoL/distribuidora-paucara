@@ -21,7 +21,16 @@ class MonedaSeeder extends Seeder
                 'es_moneda_base' => true,
                 'activo'         => true,
             ],
-            /* [
+            [
+                'codigo' => 'RS',
+                'nombre' => 'Real',
+                'simbolo' => 'Rs',
+                'decimales' => 2,
+                'tasa_cambio' => 1.70,
+                'es_moneda_base' => false,
+                'activo' => true,
+            ],
+            [
                 'codigo' => 'USD',
                 'nombre' => 'Dólar Estadounidense',
                 'simbolo' => '$',
@@ -30,15 +39,7 @@ class MonedaSeeder extends Seeder
                 'es_moneda_base' => false,
                 'activo' => true,
             ],
-            [
-                'codigo' => 'EUR',
-                'nombre' => 'Euro',
-                'simbolo' => '€',
-                'decimales' => 2,
-                'tasa_cambio' => 7.50,
-                'es_moneda_base' => false,
-                'activo' => true,
-            ], */
+            
         ];
 
         foreach ($monedas as $moneda) {

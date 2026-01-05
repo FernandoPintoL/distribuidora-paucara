@@ -25,9 +25,10 @@ class CajeroTestSeeder extends Seeder
         $cajeros = [
             [
                 'user' => [
-                    'email' => 'cajero1@paucara.test',
-                    'name' => 'Juana García',
+                    'email' => 'cajero@principal.com',
+                    'name' => 'Cajero Principal',
                     'usernick' => 'cajero1',
+                    'empresa_id' => 1,
                 ],
                 'empleado' => [
                     'codigo_empleado' => 'CAJ001',
@@ -36,7 +37,7 @@ class CajeroTestSeeder extends Seeder
                     'direccion' => 'Av. Cajas 500, Cochabamba',
                 ],
             ],
-            [
+            /* [
                 'user' => [
                     'email' => 'cajero2@paucara.test',
                     'name' => 'Sandra López',
@@ -48,12 +49,12 @@ class CajeroTestSeeder extends Seeder
                     'telefono' => '71888888',
                     'direccion' => 'Calle Comercio 888, Cochabamba',
                 ],
-            ],
+            ], */
         ];
 
         foreach ($cajeros as $cajeroData) {
-            // Crear usuario
-            $user = User::firstOrCreate(
+            // Crear o actualizar usuario
+            $user = User::updateOrCreate(
                 ['email' => $cajeroData['user']['email']],
                 [
                     'name' => $cajeroData['user']['name'],
@@ -69,22 +70,38 @@ class CajeroTestSeeder extends Seeder
                 $user->assignRole('Cajero');
             }
 
-            // Crear empleado asociado
-            $empleado = Empleado::firstOrCreate(
-                ['codigo_empleado' => $cajeroData['empleado']['codigo_empleado']],
-                [
+            // Buscar empleado por CI o código y actualizar/crear
+            $empleado = Empleado::where('ci', $cajeroData['empleado']['ci'])
+                ->orWhere('codigo_empleado', $cajeroData['empleado']['codigo_empleado'])
+                ->first();
+
+            if ($empleado) {
+                // Actualizar empleado existente
+                $empleado->update([
                     'user_id' => $user->id,
+                    'codigo_empleado' => $cajeroData['empleado']['codigo_empleado'],
+                    'ci' => $cajeroData['empleado']['ci'],
+                    'estado' => 'activo',
+                    'puede_acceder_sistema' => true,
+                    'telefono' => $cajeroData['empleado']['telefono'],
+                    'direccion' => $cajeroData['empleado']['direccion'],
+                ]);
+            } else {
+                // Crear nuevo empleado
+                $empleado = Empleado::create([
+                    'user_id' => $user->id,
+                    'codigo_empleado' => $cajeroData['empleado']['codigo_empleado'],
                     'ci' => $cajeroData['empleado']['ci'],
                     'fecha_ingreso' => now()->subMonths(rand(6, 24))->format('Y-m-d'),
                     'estado' => 'activo',
                     'puede_acceder_sistema' => true,
                     'telefono' => $cajeroData['empleado']['telefono'],
                     'direccion' => $cajeroData['empleado']['direccion'],
-                ]
-            );
+                ]);
+            }
 
             // Crear caja asociada al cajero
-            $caja = Caja::firstOrCreate(
+            /* $caja = Caja::firstOrCreate(
                 ['codigo' => 'CAJA-' . $cajeroData['empleado']['codigo_empleado']],
                 [
                     'descripcion' => 'Caja de ' . $cajeroData['user']['name'],
@@ -95,9 +112,9 @@ class CajeroTestSeeder extends Seeder
                     'fecha_apertura' => null,
                     'fecha_cierre' => null,
                 ]
-            );
+            ); */
 
-            $estado = $user->wasRecentlyCreated ? '✅ Creado' : '⚠️  Ya existe';
+            $estado = $empleado->wasRecentlyCreated ? '✅ Creado' : '🔄 Actualizado';
             $this->command->info("  {$estado}: {$cajeroData['user']['name']} ({$cajeroData['user']['email']})");
         }
 

@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use App\Models\Traits\GeneratesSequentialCode;
+use App\Models\Traits\ManageEstadosLogisticos;
 use App\Services\StockService;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 
 class Venta extends Model
 {
-    use HasFactory, GeneratesSequentialCode;
+    use HasFactory, GeneratesSequentialCode, ManageEstadosLogisticos;
 
     protected $fillable = [
         'numero',
@@ -33,7 +34,13 @@ class Venta extends Model
         // Campos para logística
         'requiere_envio',
         'canal_origen',
-        'estado_logistico',
+        'tipo_entrega',  // NUEVO: DELIVERY o PICKUP
+        'estado_logistico_id',
+        // Campos para confirmación de pickup
+        'pickup_confirmado_cliente_en',      // NUEVO
+        'pickup_confirmado_cliente_por_id',  // NUEVO
+        'pickup_confirmado_empleado_en',     // NUEVO
+        'pickup_confirmado_empleado_por_id', // NUEVO
         // Campos de política de pago
         'politica_pago',
         'estado_pago',
@@ -65,6 +72,9 @@ class Venta extends Model
             'ventana_entrega_ini' => 'datetime:H:i:s',
             'ventana_entrega_fin' => 'datetime:H:i:s',
             'fue_on_time' => 'boolean',
+            // Casts para confirmación de pickup
+            'pickup_confirmado_cliente_en' => 'datetime',
+            'pickup_confirmado_empleado_en' => 'datetime',
         ];
     }
 
@@ -189,6 +199,30 @@ class Venta extends Model
     }
 
     /**
+     * Usuario que confirmó el pickup desde el cliente (app)
+     */
+    public function pickupConfirmadoClientePor()
+    {
+        return $this->belongsTo(User::class, 'pickup_confirmado_cliente_por_id');
+    }
+
+    /**
+     * Usuario que confirmó el pickup desde el empleado (almacén)
+     */
+    public function pickupConfirmadoEmpleadoPor()
+    {
+        return $this->belongsTo(User::class, 'pickup_confirmado_empleado_por_id');
+    }
+
+    /**
+     * Relación con el estado logístico (FK)
+     */
+    public function estadoLogistica()
+    {
+        return $this->belongsTo(EstadoLogistica::class, 'estado_logistico_id');
+    }
+
+    /**
      * Métodos de Utilidad para Logística
      */
 
@@ -271,6 +305,11 @@ class Venta extends Model
 
     const CANAL_PRESENCIAL = 'PRESENCIAL';
 
+    // Tipos de entrega
+    const TIPO_DELIVERY = 'DELIVERY';
+
+    const TIPO_PICKUP = 'PICKUP';
+
     // Estados Logísticos
     const ESTADO_LOGISTICO_SIN_ENTREGA = 'SIN_ENTREGA';
     const ESTADO_LOGISTICO_PROGRAMADO = 'PROGRAMADO';
@@ -279,6 +318,10 @@ class Venta extends Model
     const ESTADO_LOGISTICO_ENTREGADA = 'ENTREGADA';
     const ESTADO_LOGISTICO_PROBLEMAS = 'PROBLEMAS';
     const ESTADO_LOGISTICO_CANCELADA = 'CANCELADA';
+
+    // Estados específicos para PICKUP
+    const ESTADO_LOGISTICO_PENDIENTE_RETIRO = 'PENDIENTE_RETIRO';
+    const ESTADO_LOGISTICO_RETIRADO = 'RETIRADO';
 
     const ESTADO_PENDIENTE_ENVIO = 'PENDIENTE_ENVIO';
 
@@ -313,6 +356,36 @@ class Venta extends Model
     public function esDeAppExterna(): bool
     {
         return $this->canal_origen === self::CANAL_APP_EXTERNA;
+    }
+
+    public function esPickup(): bool
+    {
+        return $this->tipo_entrega === self::TIPO_PICKUP;
+    }
+
+    public function esDelivery(): bool
+    {
+        return $this->tipo_entrega === self::TIPO_DELIVERY;
+    }
+
+    public function puedeConfirmarsePickupPorCliente(): bool
+    {
+        return $this->esPickup()
+            && $this->estado_logistico === self::ESTADO_LOGISTICO_PENDIENTE_RETIRO
+            && !$this->pickup_confirmado_cliente_en;
+    }
+
+    public function puedeConfirmarsePickupPorEmpleado(): bool
+    {
+        return $this->esPickup()
+            && $this->estado_logistico === self::ESTADO_LOGISTICO_PENDIENTE_RETIRO
+            && !$this->pickup_confirmado_empleado_en;
+    }
+
+    public function pickupCompletamenteConfirmado(): bool
+    {
+        return $this->pickup_confirmado_cliente_en !== null
+            && $this->pickup_confirmado_empleado_en !== null;
     }
 
     // Scopes para el nuevo sistema

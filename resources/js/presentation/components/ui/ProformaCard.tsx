@@ -9,6 +9,7 @@ interface ProformaCardProps {
   icon?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  footerAction?: React.ReactNode;
 }
 
 const variantStyles: Record<CardVariant, string> = {
@@ -23,21 +24,29 @@ export function ProformaCard({
   title,
   icon,
   children,
-  className
+  className,
+  footerAction
 }: ProformaCardProps) {
   return (
     <Card className={cn(variantStyles[variant], className)}>
       {title && (
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            {icon}
-            {title}
+          <CardTitle className="flex items-center justify-between gap-2 text-lg">
+            <span className="flex items-center gap-2">
+              {icon}
+              {title}
+            </span>
           </CardTitle>
         </CardHeader>
       )}
       <CardContent className={!title ? 'pt-6' : ''}>
         {children}
       </CardContent>
+      {footerAction && (
+        <CardContent className="border-t pt-4 flex justify-end">
+          {footerAction}
+        </CardContent>
+      )}
     </Card>
   );
 }

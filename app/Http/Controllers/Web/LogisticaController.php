@@ -23,7 +23,7 @@ class LogisticaController extends Controller
 
         // Estadísticas del dashboard - Consistent with API endpoints
         $estadisticas = [
-            'proformas_pendientes'  => Proforma::where('estado', 'PENDIENTE')->count(),  // Count ALL pending, not just APP_EXTERNA
+            'proformas_pendientes'  => Proforma::where('estado_proforma_id', 1)->count(),  // ID 1 = PENDIENTE
             'entregas_programadas'    => Entrega::where('estado', 'PROGRAMADO')->count(),
             'entregas_en_transito'    => Entrega::where('estado', 'EN_CAMINO')->count(),
             'entregas_entregadas_hoy' => Entrega::whereDate('fecha_entrega', today())
@@ -34,11 +34,16 @@ class LogisticaController extends Controller
 
         // proformas recientes con paginación y filtros
         // Mostrar TODAS las proformas, no solo APP_EXTERNA
-        $query = Proforma::with(['cliente', 'usuarioCreador', 'direccionSolicitada']);
+        $query = Proforma::with(['cliente', 'usuarioCreador', 'estadoLogistica', 'direccionSolicitada']);
 
         // Aplicar filtros desde query params
         if (request()->has('estado') && request('estado') !== 'TODOS') {
-            $query->where('estado', request('estado'));
+            // Mapear código de estado a ID
+            $estadoCodigo = request('estado');
+            $estadoId = Proforma::obtenerIdEstado($estadoCodigo, 'proforma');
+            if ($estadoId) {
+                $query->where('estado_proforma_id', $estadoId);
+            }
         }
 
         if (request()->has('search') && request('search') !== '') {
@@ -52,8 +57,9 @@ class LogisticaController extends Controller
         }
 
         if (request()->has('solo_vencidas') && request('solo_vencidas') === 'true') {
+            // ID 3 = RECHAZADA, ID 4 = CONVERTIDA
             $query->where('fecha_vencimiento', '<', now())
-                  ->whereNotIn('estado', ['RECHAZADA', 'CONVERTIDA']);
+                  ->whereNotIn('estado_proforma_id', [3, 4]);
         }
 
         $proformasPaginated = $query->orderBy('fecha', 'desc')

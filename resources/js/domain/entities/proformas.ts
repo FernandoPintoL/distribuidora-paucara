@@ -46,6 +46,7 @@ export interface Proforma extends BaseEntity {
     estado_documento_id: Id;
     moneda_id: Id;
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
+    canal?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL'; // Campo devuelto por el backend
     requiere_envio?: boolean;
 
     // Solicitud de entrega del cliente (inicial)
@@ -101,7 +102,10 @@ export interface ProformaDetalle extends BaseEntity {
     precio_unitario: number;
     descuento: number;
     subtotal: number;
-    producto: Producto; // ✅ OBLIGATORIO - Un detalle siempre tiene un producto
+    producto?: Producto; // Relación opcional - puede no venir desde el backend
+    // Campos directos cuando no viene la relación
+    producto_nombre?: string;
+    sku?: string;
 }
 
 export interface ProformaFormData extends BaseFormData {

@@ -1131,8 +1131,291 @@ historialVentas.head = (args: { cliente: number | { id: number } } | [cliente: n
     
     historialVentas.form = historialVentasForm
 /**
+* @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:803
+ * @route '/api/clientes/{cliente}/credito/detalles'
+ */
+export const obtenerDetallesCreditoApi = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerDetallesCreditoApi.url(args, options),
+    method: 'get',
+})
+
+obtenerDetallesCreditoApi.definition = {
+    methods: ["get","head"],
+    url: '/api/clientes/{cliente}/credito/detalles',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:803
+ * @route '/api/clientes/{cliente}/credito/detalles'
+ */
+obtenerDetallesCreditoApi.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { cliente: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { cliente: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    cliente: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        cliente: typeof args.cliente === 'object'
+                ? args.cliente.id
+                : args.cliente,
+                }
+
+    return obtenerDetallesCreditoApi.definition.url
+            .replace('{cliente}', parsedArgs.cliente.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:803
+ * @route '/api/clientes/{cliente}/credito/detalles'
+ */
+obtenerDetallesCreditoApi.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerDetallesCreditoApi.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:803
+ * @route '/api/clientes/{cliente}/credito/detalles'
+ */
+obtenerDetallesCreditoApi.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerDetallesCreditoApi.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:803
+ * @route '/api/clientes/{cliente}/credito/detalles'
+ */
+    const obtenerDetallesCreditoApiForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerDetallesCreditoApi.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:803
+ * @route '/api/clientes/{cliente}/credito/detalles'
+ */
+        obtenerDetallesCreditoApiForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDetallesCreditoApi.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:803
+ * @route '/api/clientes/{cliente}/credito/detalles'
+ */
+        obtenerDetallesCreditoApiForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDetallesCreditoApi.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerDetallesCreditoApi.form = obtenerDetallesCreditoApiForm
+/**
+* @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:562
+ * @route '/api/clientes/{cliente}/auditoria-credito'
+ */
+export const obtenerAuditoriaCreditoApi = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerAuditoriaCreditoApi.url(args, options),
+    method: 'get',
+})
+
+obtenerAuditoriaCreditoApi.definition = {
+    methods: ["get","head"],
+    url: '/api/clientes/{cliente}/auditoria-credito',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:562
+ * @route '/api/clientes/{cliente}/auditoria-credito'
+ */
+obtenerAuditoriaCreditoApi.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { cliente: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { cliente: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    cliente: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        cliente: typeof args.cliente === 'object'
+                ? args.cliente.id
+                : args.cliente,
+                }
+
+    return obtenerAuditoriaCreditoApi.definition.url
+            .replace('{cliente}', parsedArgs.cliente.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:562
+ * @route '/api/clientes/{cliente}/auditoria-credito'
+ */
+obtenerAuditoriaCreditoApi.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerAuditoriaCreditoApi.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:562
+ * @route '/api/clientes/{cliente}/auditoria-credito'
+ */
+obtenerAuditoriaCreditoApi.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerAuditoriaCreditoApi.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:562
+ * @route '/api/clientes/{cliente}/auditoria-credito'
+ */
+    const obtenerAuditoriaCreditoApiForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerAuditoriaCreditoApi.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:562
+ * @route '/api/clientes/{cliente}/auditoria-credito'
+ */
+        obtenerAuditoriaCreditoApiForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerAuditoriaCreditoApi.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
+ * @see app/Http/Controllers/ClienteController.php:562
+ * @route '/api/clientes/{cliente}/auditoria-credito'
+ */
+        obtenerAuditoriaCreditoApiForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerAuditoriaCreditoApi.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerAuditoriaCreditoApi.form = obtenerAuditoriaCreditoApiForm
+/**
+* @see \App\Http\Controllers\ClienteController::registrarPagoApi
+ * @see app/Http/Controllers/ClienteController.php:914
+ * @route '/api/clientes/{cliente}/pagos'
+ */
+export const registrarPagoApi = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: registrarPagoApi.url(args, options),
+    method: 'post',
+})
+
+registrarPagoApi.definition = {
+    methods: ["post"],
+    url: '/api/clientes/{cliente}/pagos',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\ClienteController::registrarPagoApi
+ * @see app/Http/Controllers/ClienteController.php:914
+ * @route '/api/clientes/{cliente}/pagos'
+ */
+registrarPagoApi.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { cliente: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { cliente: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    cliente: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        cliente: typeof args.cliente === 'object'
+                ? args.cliente.id
+                : args.cliente,
+                }
+
+    return registrarPagoApi.definition.url
+            .replace('{cliente}', parsedArgs.cliente.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ClienteController::registrarPagoApi
+ * @see app/Http/Controllers/ClienteController.php:914
+ * @route '/api/clientes/{cliente}/pagos'
+ */
+registrarPagoApi.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: registrarPagoApi.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\ClienteController::registrarPagoApi
+ * @see app/Http/Controllers/ClienteController.php:914
+ * @route '/api/clientes/{cliente}/pagos'
+ */
+    const registrarPagoApiForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: registrarPagoApi.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::registrarPagoApi
+ * @see app/Http/Controllers/ClienteController.php:914
+ * @route '/api/clientes/{cliente}/pagos'
+ */
+        registrarPagoApiForm.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: registrarPagoApi.url(args, options),
+            method: 'post',
+        })
+    
+    registrarPagoApi.form = registrarPagoApiForm
+/**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:814
+ * @see app/Http/Controllers/ClienteController.php:1024
  * @route '/api/clientes/cambiar-credenciales'
  */
 export const cambiarCredenciales = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1147,7 +1430,7 @@ cambiarCredenciales.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:814
+ * @see app/Http/Controllers/ClienteController.php:1024
  * @route '/api/clientes/cambiar-credenciales'
  */
 cambiarCredenciales.url = (options?: RouteQueryOptions) => {
@@ -1156,7 +1439,7 @@ cambiarCredenciales.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:814
+ * @see app/Http/Controllers/ClienteController.php:1024
  * @route '/api/clientes/cambiar-credenciales'
  */
 cambiarCredenciales.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1166,7 +1449,7 @@ cambiarCredenciales.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
     /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:814
+ * @see app/Http/Controllers/ClienteController.php:1024
  * @route '/api/clientes/cambiar-credenciales'
  */
     const cambiarCredencialesForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1176,7 +1459,7 @@ cambiarCredenciales.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
             /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:814
+ * @see app/Http/Controllers/ClienteController.php:1024
  * @route '/api/clientes/cambiar-credenciales'
  */
         cambiarCredencialesForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1462,6 +1745,6 @@ edit.head = (args: { cliente: number | { id: number } } | [cliente: number | { i
         })
     
     edit.form = editForm
-const ClienteController = { index, store, buscarApi, miPerfil, showApi, update, destroy, saldoCuentasPorCobrar, historialVentas, cambiarCredenciales, create, show, edit }
+const ClienteController = { index, store, buscarApi, miPerfil, showApi, update, destroy, saldoCuentasPorCobrar, historialVentas, obtenerDetallesCreditoApi, obtenerAuditoriaCreditoApi, registrarPagoApi, cambiarCredenciales, create, show, edit }
 
 export default ClienteController

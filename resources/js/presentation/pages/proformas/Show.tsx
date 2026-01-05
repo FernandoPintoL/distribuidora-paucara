@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react'
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
 import { Button } from '@/presentation/components/ui/button'
@@ -41,9 +42,181 @@ import { ProformaConvertirModal } from '@/presentation/pages/logistica/component
 import { ApprovalPaymentForm } from './components/ApprovalPaymentForm'
 import { LoadingOverlay } from '@/presentation/components/ui/LoadingOverlay'
 import { ProformaCard } from '@/presentation/components/ui/ProformaCard'
+import { Search } from 'lucide-react'
 
 interface Props {
     item: Proforma
+}
+
+// Componente para seleccionar producto
+interface ProductSelectionDialogProps {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    productos: any[]
+    searchTerm: string
+    onSearchChange: (term: string) => void
+    onSelectProducto: (producto: any) => void
+}
+
+function ProductSelectionDialog({
+    open,
+    onOpenChange,
+    productos,
+    searchTerm,
+    onSearchChange,
+    onSelectProducto
+}: ProductSelectionDialogProps) {
+    const [selectedProducto, setSelectedProducto] = useState<any | null>(null)
+    const [cantidad, setCantidad] = useState(1)
+
+    // Filtrar productos según el término de búsqueda
+    const productosFiltrados = productos.filter(p =>
+        p.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const handleAgregarProductoSeleccionado = () => {
+        if (!selectedProducto) return
+
+        // Obtener precio del producto (puede venir como 'precio' o 'precio_venta')
+        const precioUnitario = selectedProducto.precio || selectedProducto.precio_venta || 0
+
+        // Crear detalle con la cantidad especificada
+        const nuevoDetalle = {
+            id: Math.random(),
+            producto: selectedProducto,
+            producto_id: selectedProducto.id,
+            producto_nombre: selectedProducto.nombre, // Campo directo para mostrar nombre
+            sku: selectedProducto.sku, // Campo directo para mostrar código
+            cantidad: Math.max(0.01, cantidad),
+            precio_unitario: precioUnitario,
+            subtotal: (Math.max(0.01, cantidad)) * precioUnitario
+        }
+
+        onSelectProducto(nuevoDetalle)
+
+        // Limpiar el formulario
+        setSelectedProducto(null)
+        setCantidad(1)
+        onSearchChange('')
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] flex flex-col">
+                <DialogHeader className="shrink-0">
+                    <DialogTitle>Agregar Producto</DialogTitle>
+                    <DialogDescription className="text-xs">
+                        Busca y selecciona un producto para agregarlo a la proforma
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto space-y-3 px-1">
+                    {/* Búsqueda de productos */}
+                    <div className="relative sticky top-0 bg-background pb-2">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Buscar por nombre o código..."
+                            value={searchTerm}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            className="pl-10 h-9 text-sm"
+                        />
+                    </div>
+
+                    {/* Lista de productos */}
+                    {productosFiltrados.length > 0 ? (
+                        <div className="border rounded-lg divide-y bg-background">
+                            {productosFiltrados.map((producto) => (
+                                <div
+                                    key={producto.id}
+                                    className={`p-3 cursor-pointer hover:bg-accent/50 transition-colors text-sm ${
+                                        selectedProducto?.id === producto.id ? 'bg-accent' : ''
+                                    }`}
+                                    onClick={() => setSelectedProducto(producto)}
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-sm truncate">{producto.nombre}</p>
+                                            <p className="text-xs text-muted-foreground line-clamp-1">
+                                                {producto.sku || producto.codigo} • Stock: {producto.cantidad_disponible || 0}
+                                            </p>
+                                            <p className="text-sm font-medium text-foreground mt-1">
+                                                Bs. {(producto.precio || producto.precio_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                        {selectedProducto?.id === producto.id && (
+                                            <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="border rounded-lg p-4 text-center bg-muted/30 text-sm">
+                            <p className="text-muted-foreground">
+                                {productos.length === 0
+                                    ? 'Cargando productos...'
+                                    : 'No se encontraron productos'}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Cantidad - Solo mostrar si hay producto seleccionado */}
+                    {selectedProducto && (
+                        <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+                            <Label htmlFor="cantidad-input" className="text-sm">Cantidad</Label>
+                            <Input
+                                id="cantidad-input"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={cantidad || ''}
+                                onChange={(e) => {
+                                    const valor = parseFloat(e.target.value)
+                                    if (!isNaN(valor) && valor > 0) {
+                                        setCantidad(valor)
+                                    }
+                                }}
+                                onBlur={(e) => {
+                                    const valor = parseFloat(e.target.value)
+                                    if (isNaN(valor) || valor <= 0) {
+                                        setCantidad(1)
+                                    }
+                                }}
+                                placeholder="1.00"
+                                className="h-9 text-sm"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Subtotal: Bs. {(cantidad * (selectedProducto.precio || selectedProducto.precio_venta || 0)).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter className="shrink-0 gap-2 pt-2 flex">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            onOpenChange(false)
+                            setSelectedProducto(null)
+                            setCantidad(1)
+                            onSearchChange('')
+                        }}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleAgregarProductoSeleccionado}
+                        disabled={!selectedProducto}
+                    >
+                        Agregar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
 export default function ProformasShow({ item: proforma }: Props) {
@@ -109,14 +282,31 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [showMapaEntrega, setShowMapaEntrega] = useState(false)
     const [convertErrorState, setConvertErrorState] = useState<{ code?: string; message?: string; reservasExpiradas?: number } | null>(null)
 
+    // Estados para edición de detalles
+    const [editableDetalles, setEditableDetalles] = useState(proforma.detalles.map(d => ({ ...d })))
+    const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
+    const [searchProducto, setSearchProducto] = useState('')
+    const [productosDisponibles, setProductosDisponibles] = useState<any[]>([])
+
     // Función helper para calcular fecha/hora por defecto (DEBE estar aquí para usarla en useState)
+    // 🔧 Helper para extraer solo la hora (HH:ii) - mantener por compatibilidad con datos legados
+    const extractTime = (timeValue: string | undefined, defaultTime: string = '09:00'): string => {
+        if (!timeValue) return defaultTime
+        // Si contiene espacio, es un datetime completo - extraer la parte de hora (compatibilidad)
+        if (timeValue.includes(' ')) {
+            return timeValue.split(' ')[1].substring(0, 5)
+        }
+        // Si ya es solo hora, retornar como está
+        return timeValue
+    }
+
     const defaultDelivery = (() => {
         // Si ya hay fecha confirmada, usarla
         if (proforma.fecha_entrega_confirmada) {
             return {
                 fecha: proforma.fecha_entrega_confirmada,
-                hora: proforma.hora_entrega_confirmada || '09:00',
-                hora_fin: proforma.hora_entrega_confirmada_fin || '17:00'
+                hora: extractTime(proforma.hora_entrega_confirmada, '09:00'),
+                hora_fin: extractTime(proforma.hora_entrega_confirmada_fin, '17:00')
             }
         }
 
@@ -128,8 +318,8 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             // Convertir a formato YYYY-MM-DD
             const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
-            const horaDefault = proforma.hora_entrega_solicitada || '09:00'
-            const horaFinDefault = proforma.hora_entrega_solicitada_fin || '17:00'
+            const horaDefault = extractTime(proforma.hora_entrega_solicitada, '09:00')
+            const horaFinDefault = extractTime(proforma.hora_entrega_solicitada_fin, '17:00')
 
             return {
                 fecha: fechaFormato,
@@ -167,6 +357,33 @@ export default function ProformasShow({ item: proforma }: Props) {
         observaciones_entrega: proforma.observaciones_entrega || '',
     })
 
+    // Cargar productos disponibles cuando se abre el diálogo
+    useEffect(() => {
+        if (showAgregarProductoDialog) {
+            const cargarProductos = async () => {
+                try {
+                    const response = await fetch('/api/productos?per_page=100', {
+                        credentials: 'same-origin', // Incluir cookies de sesión
+                    })
+                    if (response.ok) {
+                        const result = await response.json()
+                        // El API devuelve: { success, message, data: { data: [], current_page, ... } }
+                        // data.data contiene el array de productos
+                        const productos = result.data?.data || result.data || []
+                        setProductosDisponibles(Array.isArray(productos) ? productos : [])
+                    } else if (response.status === 401) {
+                        console.warn('No autorizado para cargar productos')
+                        setProductosDisponibles([])
+                    }
+                } catch (error) {
+                    console.error('Error cargando productos:', error)
+                    setProductosDisponibles([])
+                }
+            }
+            cargarProductos()
+        }
+    }, [showAgregarProductoDialog])
+
     // Sincronizar datos de coordinación cuando la proforma cambia
     useEffect(() => {
         console.log('📦 Datos de Proforma desde Backend:', proforma)
@@ -176,8 +393,8 @@ export default function ProformasShow({ item: proforma }: Props) {
             if (proforma.fecha_entrega_confirmada) {
                 return {
                     fecha: proforma.fecha_entrega_confirmada,
-                    hora: proforma.hora_entrega_confirmada || '09:00',
-                    hora_fin: proforma.hora_entrega_confirmada_fin || '17:00'
+                    hora: extractTime(proforma.hora_entrega_confirmada, '09:00'),
+                    hora_fin: extractTime(proforma.hora_entrega_confirmada_fin, '17:00')
                 }
             }
 
@@ -186,8 +403,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                 const fechaSiguiente = new Date(fechaSolicitada)
                 fechaSiguiente.setDate(fechaSiguiente.getDate() + 1)
                 const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
-                const horaDefault = proforma.hora_entrega_solicitada || '09:00'
-                const horaFinDefault = proforma.hora_entrega_solicitada_fin || '17:00'
+                const horaDefault = extractTime(proforma.hora_entrega_solicitada, '09:00')
+                const horaFinDefault = extractTime(proforma.hora_entrega_solicitada_fin, '17:00')
 
                 return {
                     fecha: fechaFormato,
@@ -221,6 +438,50 @@ export default function ProformasShow({ item: proforma }: Props) {
             observaciones_entrega: proforma.observaciones_entrega || '',
         })
     }, [proforma.id])
+
+    // Handlers para edición de detalles
+    const handleEditarCantidad = (index: number, cantidad: number) => {
+        const nuevosDetalles = [...editableDetalles]
+        // Validar que sea un número válido y positivo
+        const cantidadValida = Math.max(0.01, isNaN(cantidad) ? 0.01 : cantidad)
+        nuevosDetalles[index].cantidad = cantidadValida
+        nuevosDetalles[index].subtotal = cantidadValida * nuevosDetalles[index].precio_unitario
+        setEditableDetalles(nuevosDetalles)
+    }
+
+    // Calcular total en tiempo real
+    const calcularTotales = () => {
+        const subtotal = editableDetalles.reduce((sum, d) => sum + (d.subtotal || 0), 0)
+        const total = subtotal
+        return { subtotal, total }
+    }
+
+    const totales = calcularTotales()
+
+    const handleEliminarProducto = (index: number) => {
+        const nuevosDetalles = editableDetalles.filter((_, i) => i !== index)
+        setEditableDetalles(nuevosDetalles)
+    }
+
+    const handleAgregarProducto = (detalle: any) => {
+        // Si viene del diálogo, ya está completo
+        // Si viene de otra fuente, es un producto simple
+        const nuevoDetalle = detalle.id !== undefined
+            ? detalle // Ya es un detalle completo del diálogo
+            : {       // Es un producto simple, necesita ser transformado
+                id: Math.random(),
+                producto: detalle,
+                producto_id: detalle.id,
+                producto_nombre: detalle.nombre || detalle.producto_nombre,
+                sku: detalle.sku,
+                cantidad: 1,
+                precio_unitario: detalle.precio || detalle.precio_venta || 0,
+                subtotal: detalle.precio || detalle.precio_venta || 0
+            }
+
+        setEditableDetalles([...editableDetalles, nuevoDetalle])
+        setShowAgregarProductoDialog(false)
+    }
 
     // PRESENTATION LAYER: Handlers simples que delegan al hook
     const handleAprobar = () => {
@@ -257,6 +518,51 @@ export default function ProformasShow({ item: proforma }: Props) {
         }
 
         try {
+            // PASO 0: Detectar cambios en detalles y actualizar si es necesario
+            const hayChangios = editableDetalles.length !== proforma.detalles.length ||
+                editableDetalles.some((d, i) => {
+                    const original = proforma.detalles[i];
+                    return !original ||
+                        d.cantidad !== parseFloat(original.cantidad) ||
+                        d.precio_unitario !== original.precio_unitario;
+                });
+
+            if (hayChangios) {
+                console.log('%c⏳ PASO 0: Actualizando detalles de proforma...', 'color: blue;');
+
+                const detallesParaGuardar = editableDetalles.map(d => ({
+                    producto_id: d.producto_id,
+                    cantidad: d.cantidad,
+                    precio_unitario: d.precio_unitario,
+                    subtotal: d.subtotal,
+                }));
+
+                const actualizarResponse = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({ detalles: detallesParaGuardar }),
+                });
+
+                if (!actualizarResponse.ok) {
+                    const errorData = await actualizarResponse.json();
+                    const errorMsg = `Error al actualizar detalles: ${errorData.message || 'Error desconocido'}`;
+                    toast.error(errorMsg);
+                    throw new Error(errorMsg);
+                }
+
+                const actualizarData = await actualizarResponse.json();
+                console.log('%c✅ PASO 0 completado: Detalles actualizados', 'color: green;', actualizarData);
+                toast.success('✅ Detalles actualizados correctamente');
+
+                // Actualizar estado del flujo
+                if (approvalFlow) {
+                    approvalFlow.setLoading(true, 'approving');
+                }
+            }
+
             // PASO 1: Aprobar proforma con coordinación
             console.log('%c⏳ PASO 1: Aprobando proforma...', 'color: blue;');
 
@@ -268,8 +574,9 @@ export default function ProformasShow({ item: proforma }: Props) {
                 },
                 body: JSON.stringify({
                     fecha_entrega_confirmada: coordinacion.fecha_entrega_confirmada,
-                    hora_entrega_confirmada: coordinacion.hora_entrega_confirmada,
-                    hora_entrega_confirmada_fin: coordinacion.hora_entrega_confirmada_fin,
+                    // Ahora el backend devuelve tiempos en formato 'H:i', pero mantenemos la extracción por compatibilidad
+                    hora_entrega_confirmada: extractTime(coordinacion.hora_entrega_confirmada),
+                    hora_entrega_confirmada_fin: extractTime(coordinacion.hora_entrega_confirmada_fin),
                     comentario_coordinacion: coordinacion.comentario_coordinacion,
                     numero_intentos_contacto: coordinacion.numero_intentos_contacto,
                     fecha_ultimo_intento: coordinacion.fecha_ultimo_intento || null,
@@ -280,11 +587,18 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             if (!aprobarResponse.ok) {
                 const errorData = await aprobarResponse.json();
-                throw new Error(errorData.message || 'Error al aprobar proforma');
+                console.error('❌ Error en aprobación:', {
+                    status: aprobarResponse.status,
+                    error: errorData
+                });
+                const errorMessage = errorData.message || `Error ${aprobarResponse.status}: Error al aprobar proforma`;
+                toast.error(errorMessage);
+                throw new Error(errorMessage);
             }
 
             const aprobarData = await aprobarResponse.json();
             console.log('%c✅ PASO 1 completado: Proforma aprobada', 'color: green;', aprobarData);
+            toast.success('✅ Proforma aprobada exitosamente');
 
             // Actualizar estado del flujo
             if (approvalFlow) {
@@ -314,11 +628,15 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             if (!convertirResponse.ok) {
                 const errorData = await convertirResponse.json();
-                throw new Error(errorData.message || 'Error al convertir a venta');
+                const errorMessage = errorData.message || 'Error al convertir a venta';
+                console.error('❌ Error en conversión:', { status: convertirResponse.status, error: errorData });
+                toast.error(errorMessage);
+                throw new Error(errorMessage);
             }
 
             const convertirData = await convertirResponse.json();
             console.log('%c✅ PASO 2 completado: Proforma convertida a venta', 'color: green;', convertirData);
+            toast.success('✅ Proforma convertida a venta exitosamente');
 
             // Actualizar estado del flujo con éxito
             if (approvalFlow) {
@@ -342,15 +660,16 @@ export default function ProformasShow({ item: proforma }: Props) {
         } catch (error) {
             console.error('%c❌ Error en flujo combinado:', 'color: red;', error);
 
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+
+            // Mostrar notificación de error en toast
+            toast.error(`Error: ${errorMessage}`);
+
             // Actualizar estado de error
             if (approvalFlow) {
-                const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
                 approvalFlow.setError(errorMessage);
                 approvalFlow.setLoading(false, 'error');
             }
-
-            // Mostrar notificación de error
-            alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
     }
 
@@ -406,12 +725,18 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 <p className="text-[var(--text-sm)] text-muted-foreground">
                                     Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
                                 </p>
-                                <div>
+                                {/* Mostrar origen */}
+                                {(proforma.canal || proforma.canal_origen) && (
+                                    <p className="text-[var(--text-sm)] text-muted-foreground">
+                                        Origen: <span className="font-medium text-foreground">{proforma.canal || proforma.canal_origen}</span>
+                                    </p>
+                                )}
+                                {/* <div>
                                     <p className="text-[var(--text-xs)] text-muted-foreground font-medium uppercase">Total</p>
                                     <p className="text-[var(--text-2xl)] font-bold text-[var(--brand-primary)]">
                                         Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                     </p>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                     </div>
@@ -459,23 +784,49 @@ export default function ProformasShow({ item: proforma }: Props) {
                 <div className="grid gap-[var(--space-lg)] lg:grid-cols-3">
                     {/* Información principal */}
                     <div className="lg:col-span-2 space-y-[var(--space-lg)]">
+                        {/* Advertencia sobre cambios locales */}
+                        {editableDetalles.length !== proforma.detalles.length && (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex gap-2 text-sm">
+                                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                <div className="text-amber-900 dark:text-amber-100">
+                                    <p className="font-medium">Cambios no guardados</p>
+                                    <p className="text-xs mt-1">Los productos agregados/modificados solo existen localmente. Para guardarlos, debes aprobar la proforma.</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Detalles de la proforma */}
-                        <ProformaCard
-                            variant="default"
-                            title="Detalles de la Proforma"
-                            icon={<Package className="h-5 w-5" />}
-                        >
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle className="flex items-center gap-2">
+                                    <Package className="h-5 w-5" />
+                                    Detalles de la Proforma
+                                </CardTitle>
+                                {proforma.estado === 'PENDIENTE' && (
+                                    <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={() => setShowAgregarProductoDialog(true)}
+                                        className="text-xs bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white"
+                                    >
+                                        <ShoppingCart className="h-4 w-4 mr-1" />
+                                        + Agregar Producto
+                                    </Button>
+                                )}
+                            </CardHeader>
+                            <CardContent>
                             <Table>
                                     <TableHeader>
                                         <TableRow className="bg-muted/50">
                                             <TableHead className="font-semibold">Producto</TableHead>
-                                            <TableHead className="font-semibold">Cantidad</TableHead>
-                                            <TableHead className="font-semibold">Precio Unit.</TableHead>
+                                            <TableHead className="font-semibold text-center">Cantidad</TableHead>
+                                            <TableHead className="font-semibold text-right">Precio Unit.</TableHead>
                                             <TableHead className="text-right font-semibold">Subtotal</TableHead>
+                                            {proforma.estado === 'PENDIENTE' && <TableHead className="text-center font-semibold">Acciones</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {proforma.detalles.map((detalle, index) => (
+                                        {editableDetalles.map((detalle, index) => (
                                             <TableRow
                                                 key={detalle.id}
                                                 className={`transition-colors hover:bg-muted/30 ${
@@ -485,32 +836,97 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                 <TableCell>
                                                     <div className="space-y-1">
                                                         <div className="font-medium text-[var(--text-base)]">
-                                                            {detalle.producto?.nombre || 'Producto sin datos'}
+                                                            {detalle.producto?.nombre || detalle.producto_nombre || 'Producto sin datos'}
                                                         </div>
                                                         {detalle.producto && (
                                                             <div className="text-[var(--text-sm)] text-muted-foreground">
                                                                 {detalle.producto.categoria?.nombre || 'Sin categoría'} - {detalle.producto.marca?.nombre || 'Sin marca'}
                                                             </div>
                                                         )}
-                                                        {detalle.producto?.codigo && (
+                                                        {(detalle.producto?.codigo || detalle.sku) && (
                                                             <div className="text-[var(--text-xs)] text-muted-foreground font-mono">
-                                                                Código: {detalle.producto.codigo}
+                                                                Código: {detalle.producto?.codigo || detalle.sku}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-medium">{detalle.cantidad}</TableCell>
-                                                <TableCell className="font-medium">
+                                                <TableCell className="text-center">
+                                                    {proforma.estado === 'PENDIENTE' ? (
+                                                        <Input
+                                                            type="number"
+                                                            min="0.01"
+                                                            step="0.01"
+                                                            value={detalle.cantidad || ''}
+                                                            onChange={(e) => {
+                                                                const valor = e.target.value
+                                                                if (valor === '' || valor === '0') {
+                                                                    handleEditarCantidad(index, 0.01)
+                                                                } else {
+                                                                    handleEditarCantidad(index, parseFloat(valor) || 0.01)
+                                                                }
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                const valor = parseFloat(e.target.value) || 0
+                                                                if (valor <= 0) {
+                                                                    handleEditarCantidad(index, 0.01)
+                                                                }
+                                                            }}
+                                                            placeholder="0.00"
+                                                            className="w-24 text-center"
+                                                        />
+                                                    ) : (
+                                                        <span className="font-medium">{detalle.cantidad}</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">
                                                     Bs. {(detalle.precio_unitario ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
                                                 <TableCell className="text-right font-semibold">
                                                     Bs. {(detalle.subtotal ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </TableCell>
+                                                {proforma.estado === 'PENDIENTE' && (
+                                                    <TableCell className="text-center">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleEliminarProducto(index)}
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                )}
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
-                        </ProformaCard>
+
+                            {/* Resumen de Totales en Tiempo Real */}
+                            {proforma.estado === 'PENDIENTE' && (
+                                <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
+                                    <div className="flex justify-end gap-8">
+                                        <div className="space-y-2 text-right">
+                                            <p className="text-sm text-muted-foreground">Subtotal:</p>
+                                            <p className="text-2xl font-bold text-foreground">
+                                                Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-2 text-right">
+                                            <p className="text-sm font-medium text-foreground">Total:</p>
+                                            <p className="text-2xl font-bold text-[var(--brand-primary)]">
+                                                Bs. {totales.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {totales.total !== proforma.total && (
+                                        <p className="text-xs text-amber-600 dark:text-amber-400 text-right italic">
+                                            ℹ️ Total modificado desde: Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                            </CardContent>
+                        </Card>
 
                         {/* Observaciones */}
                         {proforma.observaciones && (
@@ -1041,6 +1457,16 @@ export default function ProformasShow({ item: proforma }: Props) {
                 }}
                 isRenovando={isRenovandoReservas}
                 errorState={convertErrorState}
+            />
+
+            {/* Diálogo para agregar productos */}
+            <ProductSelectionDialog
+                open={showAgregarProductoDialog}
+                onOpenChange={setShowAgregarProductoDialog}
+                productos={productosDisponibles}
+                searchTerm={searchProducto}
+                onSearchChange={setSearchProducto}
+                onSelectProducto={handleAgregarProducto}
             />
 
             {/* Loading Overlay para flujo de aprobación */}

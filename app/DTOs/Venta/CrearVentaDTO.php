@@ -28,7 +28,7 @@ class CrearVentaDTO extends BaseDTO
         public ?int $direccion_cliente_id = null,
         public ?bool $requiere_envio = null,
         public ?string $canal_origen = 'WEB',
-        public ?string $estado_logistico = null,
+        public ?int $estado_logistico_id = null,
         // Campos de política de pago
         public ?string $politica_pago = 'CONTRA_ENTREGA',
         public ?string $estado_pago = 'PENDIENTE',

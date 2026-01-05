@@ -4,6 +4,7 @@ namespace App\Models;
 use App\Models\Traits\HasActiveScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Almacen extends Model
 {
@@ -19,6 +20,7 @@ class Almacen extends Model
         'responsable',
         'telefono',
         'activo',
+        'empresa_id',
     ];
 
     protected function casts(): array
@@ -27,6 +29,11 @@ class Almacen extends Model
             'activo'                      => 'boolean',
             'requiere_transporte_externo' => 'boolean',
         ];
+    }
+
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class);
     }
 
     public function stockProductos()

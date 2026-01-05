@@ -1649,4 +1649,128 @@ class InventarioController extends Controller
             return ApiResponse::error('Error al revertir el cargo: ' . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * API: Obtener estadísticas de inventario
+     */
+    public function estadisticasApi(Request $request): JsonResponse
+    {
+        try {
+            // Parámetros opcionales de filtro
+            $almacenId = $request->integer('almacen_id');
+            $categoriaId = $request->integer('categoria_id');
+            $fechaDesde = $request->date('fecha_desde');
+            $fechaHasta = $request->date('fecha_hasta');
+
+            // Query base de movimientos
+            $movimientosQuery = MovimientoInventario::when($almacenId, fn($q) => 
+                $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId))
+            )->when($categoriaId, fn($q) => 
+                $q->whereHas('stockProducto.producto', fn($sq) => $sq->where('categoria_id', $categoriaId))
+            )->when($fechaDesde, fn($q) => 
+                $q->whereDate('fecha', '>=', $fechaDesde)
+            )->when($fechaHasta, fn($q) => 
+                $q->whereDate('fecha', '<=', $fechaHasta)
+            );
+
+            // Estadísticas por tipo de movimiento
+            $totalMovimientos = (clone $movimientosQuery)->count();
+            $totalEntradas = (clone $movimientosQuery)->where('tipo', 'like', 'ENTRADA%')->count();
+            $totalSalidas = (clone $movimientosQuery)->where('tipo', 'like', 'SALIDA%')->count();
+            $totalTransferencias = (clone $movimientosQuery)->where('tipo', 'like', '%TRANSFERENCIA%')->count();
+            $totalMermas = (clone $movimientosQuery)->where('tipo', 'like', '%MERMA%')->count();
+            $totalAjustes = (clone $movimientosQuery)->where('tipo', 'like', '%AJUSTE%')->count();
+
+            // Valor total de movimientos (usando cantidad como aproximación)
+            $valorTotalEntradas = (clone $movimientosQuery)
+                ->where('tipo', 'like', 'ENTRADA%')
+                ->where('cantidad', '>', 0)
+                ->sum(DB::raw('cantidad'));
+            
+            $valorTotalSalidas = (clone $movimientosQuery)
+                ->where('tipo', 'like', 'SALIDA%')
+                ->where('cantidad', '>', 0)
+                ->sum(DB::raw('cantidad'));
+            
+            $valorTotalMermas = (clone $movimientosQuery)
+                ->where('tipo', 'like', '%MERMA%')
+                ->sum(DB::raw('ABS(cantidad)'));
+
+            // Productos afectados
+            $productosAfectados = (clone $movimientosQuery)
+                ->select('stock_productos.producto_id')
+                ->distinct()
+                ->count();
+
+            // Almacenes activos
+            $almacenesActivos = Almacen::where('activo', true)->count();
+
+            // Stock bajo
+            $stockBajo = Producto::where('activo', true)
+                ->stockBajo()
+                ->count();
+
+            // Próximos a vencer
+            $proximosVencer = Producto::where('activo', true)
+                ->proximosVencer(30)
+                ->count();
+
+            // Vencidos
+            $vencidos = Producto::where('activo', true)
+                ->vencidos()
+                ->count();
+
+            // Tendencia semanal
+            $tendenciaSemanal = (clone $movimientosQuery)
+                ->select(
+                    DB::raw('DATE(fecha) as fecha'),
+                    DB::raw("SUM(CASE WHEN tipo LIKE 'ENTRADA%' THEN ABS(cantidad) ELSE 0 END) as entradas"),
+                    DB::raw("SUM(CASE WHEN tipo LIKE 'SALIDA%' THEN ABS(cantidad) ELSE 0 END) as salidas"),
+                    DB::raw("SUM(CASE WHEN tipo LIKE '%TRANSFERENCIA%' THEN 1 ELSE 0 END) as transferencias"),
+                    DB::raw("SUM(CASE WHEN tipo LIKE '%MERMA%' THEN ABS(cantidad) ELSE 0 END) as mermas")
+                )
+                ->groupBy(DB::raw('DATE(fecha)'))
+                ->orderBy('fecha', 'desc')
+                ->limit(7)
+                ->get()
+                ->sortBy('fecha')
+                ->values()
+                ->map(fn($item) => [
+                    'fecha' => $item->fecha,
+                    'entradas' => (int) $item->entradas,
+                    'salidas' => (int) $item->salidas,
+                    'transferencias' => (int) $item->transferencias,
+                    'mermas' => (int) $item->mermas,
+                ]);
+
+            $estadisticas = [
+                'total_movimientos' => $totalMovimientos,
+                'total_entradas' => $totalEntradas,
+                'total_salidas' => $totalSalidas,
+                'total_transferencias' => $totalTransferencias,
+                'total_mermas' => $totalMermas,
+                'total_ajustes' => $totalAjustes,
+                'valor_total_entradas' => (float) $valorTotalEntradas,
+                'valor_total_salidas' => (float) $valorTotalSalidas,
+                'valor_total_mermas' => (float) $valorTotalMermas,
+                'productos_afectados' => $productosAfectados,
+                'almacenes_activos' => $almacenesActivos,
+                'stock_bajo' => $stockBajo,
+                'proximos_vencer' => $proximosVencer,
+                'vencidos' => $vencidos,
+                'movimientos_pendientes' => 0,
+                'tendencia_semanal' => $tendenciaSemanal,
+            ];
+
+            return ApiResponse::success($estadisticas);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener estadísticas', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return ApiResponse::error('Error al obtener estadísticas: ' . $e->getMessage(), 500);
+        }
+    }
 }

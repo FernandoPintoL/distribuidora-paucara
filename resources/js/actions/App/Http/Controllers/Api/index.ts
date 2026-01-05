@@ -7,7 +7,9 @@ import ChoferPreferenciaController from './ChoferPreferenciaController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
+import ApiVentaController from './ApiVentaController'
 import TipoOperacionController from './TipoOperacionController'
+import PrecioRangoProductoController from './PrecioRangoProductoController'
 import GeocodingController from './GeocodingController'
 import RutaApiController from './RutaApiController'
 import EntregaController from './EntregaController'
@@ -27,7 +29,9 @@ ChoferPreferenciaController,
 TipoMermaController,
 EstadoMermaController,
 ApiProformaController,
+ApiVentaController,
 TipoOperacionController,
+PrecioRangoProductoController,
 GeocodingController,
 RutaApiController,
 EntregaController,

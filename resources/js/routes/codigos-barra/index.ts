@@ -157,7 +157,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::store
- * @see app/Http/Controllers/CodigoBarraController.php:65
+ * @see app/Http/Controllers/CodigoBarraController.php:76
  * @route '/codigos-barra'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::store
- * @see app/Http/Controllers/CodigoBarraController.php:65
+ * @see app/Http/Controllers/CodigoBarraController.php:76
  * @route '/codigos-barra'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::store
- * @see app/Http/Controllers/CodigoBarraController.php:65
+ * @see app/Http/Controllers/CodigoBarraController.php:76
  * @route '/codigos-barra'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +191,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::store
- * @see app/Http/Controllers/CodigoBarraController.php:65
+ * @see app/Http/Controllers/CodigoBarraController.php:76
  * @route '/codigos-barra'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +201,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::store
- * @see app/Http/Controllers/CodigoBarraController.php:65
+ * @see app/Http/Controllers/CodigoBarraController.php:76
  * @route '/codigos-barra'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -309,7 +309,7 @@ show.head = (args: { codigos_barra: string | number } | [codigos_barra: string |
     show.form = showForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::edit
- * @see app/Http/Controllers/CodigoBarraController.php:106
+ * @see app/Http/Controllers/CodigoBarraController.php:117
  * @route '/codigos-barra/{codigos_barra}/edit'
  */
 export const edit = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -324,7 +324,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::edit
- * @see app/Http/Controllers/CodigoBarraController.php:106
+ * @see app/Http/Controllers/CodigoBarraController.php:117
  * @route '/codigos-barra/{codigos_barra}/edit'
  */
 edit.url = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -352,7 +352,7 @@ edit.url = (args: { codigos_barra: string | number } | [codigos_barra: string | 
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::edit
- * @see app/Http/Controllers/CodigoBarraController.php:106
+ * @see app/Http/Controllers/CodigoBarraController.php:117
  * @route '/codigos-barra/{codigos_barra}/edit'
  */
 edit.get = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -361,7 +361,7 @@ edit.get = (args: { codigos_barra: string | number } | [codigos_barra: string | 
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::edit
- * @see app/Http/Controllers/CodigoBarraController.php:106
+ * @see app/Http/Controllers/CodigoBarraController.php:117
  * @route '/codigos-barra/{codigos_barra}/edit'
  */
 edit.head = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -371,7 +371,7 @@ edit.head = (args: { codigos_barra: string | number } | [codigos_barra: string |
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::edit
- * @see app/Http/Controllers/CodigoBarraController.php:106
+ * @see app/Http/Controllers/CodigoBarraController.php:117
  * @route '/codigos-barra/{codigos_barra}/edit'
  */
     const editForm = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -381,7 +381,7 @@ edit.head = (args: { codigos_barra: string | number } | [codigos_barra: string |
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::edit
- * @see app/Http/Controllers/CodigoBarraController.php:106
+ * @see app/Http/Controllers/CodigoBarraController.php:117
  * @route '/codigos-barra/{codigos_barra}/edit'
  */
         editForm.get = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -390,7 +390,7 @@ edit.head = (args: { codigos_barra: string | number } | [codigos_barra: string |
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::edit
- * @see app/Http/Controllers/CodigoBarraController.php:106
+ * @see app/Http/Controllers/CodigoBarraController.php:117
  * @route '/codigos-barra/{codigos_barra}/edit'
  */
         editForm.head = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -406,7 +406,7 @@ edit.head = (args: { codigos_barra: string | number } | [codigos_barra: string |
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::update
- * @see app/Http/Controllers/CodigoBarraController.php:118
+ * @see app/Http/Controllers/CodigoBarraController.php:129
  * @route '/codigos-barra/{codigos_barra}'
  */
 export const update = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -421,7 +421,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::update
- * @see app/Http/Controllers/CodigoBarraController.php:118
+ * @see app/Http/Controllers/CodigoBarraController.php:129
  * @route '/codigos-barra/{codigos_barra}'
  */
 update.url = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -449,7 +449,7 @@ update.url = (args: { codigos_barra: string | number } | [codigos_barra: string 
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::update
- * @see app/Http/Controllers/CodigoBarraController.php:118
+ * @see app/Http/Controllers/CodigoBarraController.php:129
  * @route '/codigos-barra/{codigos_barra}'
  */
 update.put = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -458,7 +458,7 @@ update.put = (args: { codigos_barra: string | number } | [codigos_barra: string 
 })
 /**
 * @see \App\Http\Controllers\CodigoBarraController::update
- * @see app/Http/Controllers/CodigoBarraController.php:118
+ * @see app/Http/Controllers/CodigoBarraController.php:129
  * @route '/codigos-barra/{codigos_barra}'
  */
 update.patch = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -468,7 +468,7 @@ update.patch = (args: { codigos_barra: string | number } | [codigos_barra: strin
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::update
- * @see app/Http/Controllers/CodigoBarraController.php:118
+ * @see app/Http/Controllers/CodigoBarraController.php:129
  * @route '/codigos-barra/{codigos_barra}'
  */
     const updateForm = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -483,7 +483,7 @@ update.patch = (args: { codigos_barra: string | number } | [codigos_barra: strin
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::update
- * @see app/Http/Controllers/CodigoBarraController.php:118
+ * @see app/Http/Controllers/CodigoBarraController.php:129
  * @route '/codigos-barra/{codigos_barra}'
  */
         updateForm.put = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -497,7 +497,7 @@ update.patch = (args: { codigos_barra: string | number } | [codigos_barra: strin
         })
             /**
 * @see \App\Http\Controllers\CodigoBarraController::update
- * @see app/Http/Controllers/CodigoBarraController.php:118
+ * @see app/Http/Controllers/CodigoBarraController.php:129
  * @route '/codigos-barra/{codigos_barra}'
  */
         updateForm.patch = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -513,7 +513,7 @@ update.patch = (args: { codigos_barra: string | number } | [codigos_barra: strin
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::destroy
- * @see app/Http/Controllers/CodigoBarraController.php:156
+ * @see app/Http/Controllers/CodigoBarraController.php:167
  * @route '/codigos-barra/{codigos_barra}'
  */
 export const destroy = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -528,7 +528,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::destroy
- * @see app/Http/Controllers/CodigoBarraController.php:156
+ * @see app/Http/Controllers/CodigoBarraController.php:167
  * @route '/codigos-barra/{codigos_barra}'
  */
 destroy.url = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -556,7 +556,7 @@ destroy.url = (args: { codigos_barra: string | number } | [codigos_barra: string
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::destroy
- * @see app/Http/Controllers/CodigoBarraController.php:156
+ * @see app/Http/Controllers/CodigoBarraController.php:167
  * @route '/codigos-barra/{codigos_barra}'
  */
 destroy.delete = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -566,7 +566,7 @@ destroy.delete = (args: { codigos_barra: string | number } | [codigos_barra: str
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::destroy
- * @see app/Http/Controllers/CodigoBarraController.php:156
+ * @see app/Http/Controllers/CodigoBarraController.php:167
  * @route '/codigos-barra/{codigos_barra}'
  */
     const destroyForm = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -581,7 +581,7 @@ destroy.delete = (args: { codigos_barra: string | number } | [codigos_barra: str
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::destroy
- * @see app/Http/Controllers/CodigoBarraController.php:156
+ * @see app/Http/Controllers/CodigoBarraController.php:167
  * @route '/codigos-barra/{codigos_barra}'
  */
         destroyForm.delete = (args: { codigos_barra: string | number } | [codigos_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -597,7 +597,7 @@ destroy.delete = (args: { codigos_barra: string | number } | [codigos_barra: str
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\CodigoBarraController::principal
- * @see app/Http/Controllers/CodigoBarraController.php:262
+ * @see app/Http/Controllers/CodigoBarraController.php:273
  * @route '/codigos-barra/{codigo_barra}/principal'
  */
 export const principal = (args: { codigo_barra: string | number } | [codigo_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -612,7 +612,7 @@ principal.definition = {
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::principal
- * @see app/Http/Controllers/CodigoBarraController.php:262
+ * @see app/Http/Controllers/CodigoBarraController.php:273
  * @route '/codigos-barra/{codigo_barra}/principal'
  */
 principal.url = (args: { codigo_barra: string | number } | [codigo_barra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -640,7 +640,7 @@ principal.url = (args: { codigo_barra: string | number } | [codigo_barra: string
 
 /**
 * @see \App\Http\Controllers\CodigoBarraController::principal
- * @see app/Http/Controllers/CodigoBarraController.php:262
+ * @see app/Http/Controllers/CodigoBarraController.php:273
  * @route '/codigos-barra/{codigo_barra}/principal'
  */
 principal.put = (args: { codigo_barra: string | number } | [codigo_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -650,7 +650,7 @@ principal.put = (args: { codigo_barra: string | number } | [codigo_barra: string
 
     /**
 * @see \App\Http\Controllers\CodigoBarraController::principal
- * @see app/Http/Controllers/CodigoBarraController.php:262
+ * @see app/Http/Controllers/CodigoBarraController.php:273
  * @route '/codigos-barra/{codigo_barra}/principal'
  */
     const principalForm = (args: { codigo_barra: string | number } | [codigo_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -665,7 +665,7 @@ principal.put = (args: { codigo_barra: string | number } | [codigo_barra: string
 
             /**
 * @see \App\Http\Controllers\CodigoBarraController::principal
- * @see app/Http/Controllers/CodigoBarraController.php:262
+ * @see app/Http/Controllers/CodigoBarraController.php:273
  * @route '/codigos-barra/{codigo_barra}/principal'
  */
         principalForm.put = (args: { codigo_barra: string | number } | [codigo_barra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

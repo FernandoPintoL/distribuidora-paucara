@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Observers\UserObserver;
 use App\Events\DashboardMetricsUpdated;
 use App\Events\EntregaAsignada;
 use App\Events\EntregaCompletada;
@@ -152,7 +154,8 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Registrar observadores de modelos
+        User::observe(UserObserver::class);
     }
 
     /**

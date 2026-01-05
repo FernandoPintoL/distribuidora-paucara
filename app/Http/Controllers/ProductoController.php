@@ -769,17 +769,25 @@ class ProductoController extends Controller
         $activo      = $request->boolean('activo', true);
         $conStock    = $request->boolean('con_stock', false);
 
-        // Obtener almacén: desde request > empresa autenticada > empresa principal > config
-        // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
-        if ($request->has('almacen_id')) {
-            $almacenId = $request->integer('almacen_id');
-        } else {
-            // Obtener empresa del contexto (usuario autenticado o empresa principal)
-            $empresa = $this->obtenerEmpresa($request);
-            $almacenId = $empresa?->almacen_id_principal ?? config('inventario.almacen_principal_id', 1);
+        // Obtener empresa del usuario autenticado
+        $empresa = auth()->user()->empresa;
+        if (!$empresa) {
+            return response()->json([
+                'message' => 'El usuario no tiene asociada una empresa',
+                'data' => []
+            ], 403);
         }
 
-        // Precargar el almacén para evitar N+1 queries (consulta de una sola vez)
+        // Obtener almacén de venta de la empresa
+        $almacenId = $empresa->almacen_id;
+        if (!$almacenId) {
+            return response()->json([
+                'message' => 'La empresa no tiene un almacén de venta asignado',
+                'data' => []
+            ], 403);
+        }
+
+        // Precargar el almacén para evitar N+1 queries
         $almacenPrincipal = Almacen::find($almacenId);
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
@@ -802,12 +810,28 @@ class ProductoController extends Controller
             },
             'stock.almacen:id,nombre', // Cargar todos los stocks con almacenes
         ])
+            ->where('empresa_id', $empresa->id) // Filtrar por empresa
             ->when($q, fn($query) => $query->where(function ($subQuery) use ($searchLower) {
                 $subQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(codigo_barras) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(codigo_qr) like ?', ["%$searchLower%"])
                     ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"]);
+                    ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"])
+                    // Buscar en códigos de barra activos
+                    ->orWhereHas('codigosBarra', function ($codigosQuery) use ($searchLower) {
+                        $codigosQuery->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"])
+                            ->where('activo', true);
+                    })
+                    // Buscar en marca
+                    ->orWhereHas('marca', function ($marcaQuery) use ($searchLower) {
+                        $marcaQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+                    })
+                    // Buscar en categoría
+                    ->orWhereHas('categoria', function ($categoriaQuery) use ($searchLower) {
+                        $categoriaQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+                    })
+                    // Buscar en unidad de medida
+                    ->orWhereHas('unidad', function ($unidadQuery) use ($searchLower) {
+                        $unidadQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+                    });
             }))
             ->when($categoriaId, fn($query) => $query->where('categoria_id', $categoriaId))
             ->when($marcaId, fn($query) => $query->where('marca_id', $marcaId))

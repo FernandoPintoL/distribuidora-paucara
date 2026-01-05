@@ -126,7 +126,7 @@ class VentaService
                 // Campos de logística
                 'requiere_envio' => $dto->requiere_envio,
                 'canal_origen' => $dto->canal_origen ?? 'WEB',
-                'estado_logistico' => $dto->estado_logistico,
+                'estado_logistico_id' => $dto->estado_logistico_id,
                 // Campos de política de pago
                 'politica_pago' => $dto->politica_pago ?? 'CONTRA_ENTREGA',
                 'estado_pago' => $dto->estado_pago ?? 'PENDIENTE',

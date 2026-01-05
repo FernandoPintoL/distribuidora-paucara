@@ -794,6 +794,216 @@ class ClienteController extends Controller
     /**
      * Genera un usernick único basado en el teléfono del cliente
      * Si el teléfono ya existe como usernick, agrega un sufijo numérico
+
+    /**
+     * API: Obtener detalles completos de crédito del cliente
+     * Endpoint: GET /api/clientes/{id}/credito/detalles
+     * Retorna: Información completa de crédito, cuentas pendientes, historial de pagos y auditoría
+     */
+    public function obtenerDetallesCreditoApi(ClienteModel $cliente): JsonResponse
+    {
+        // ✅ Autorizar: Solo roles que pueden ver este cliente
+        $this->authorize('view', $cliente);
+
+        // Obtener cuentas por cobrar pendientes
+        $cuentasPendientes = $cliente->cuentasPorCobrar()
+            ->where('saldo_pendiente', '>', 0)
+            ->with(['venta:id,numero,fecha,monto_total,estado_pago'])
+            ->orderByDesc('fecha_vencimiento')
+            ->get(['id', 'venta_id', 'monto_original', 'saldo_pendiente', 'fecha_vencimiento', 'dias_vencido', 'estado']);
+
+        // Calcular totales
+        $saldoUtilizado = $cuentasPendientes->sum('saldo_pendiente');
+        $saldoDisponible = max(0, $cliente->limite_credito - $saldoUtilizado);
+        $porcentajeUtilizacion = $cliente->limite_credito > 0 ? ($saldoUtilizado / $cliente->limite_credito) * 100 : 0;
+
+        // Obtener historial de pagos (últimos pagos realizados)
+        $historialPagos = \App\Models\Pago::whereHas('venta', function ($q) use ($cliente) {
+            $q->where('cliente_id', $cliente->id);
+        })
+            ->with(['tipoPago:id,nombre', 'usuario:id,name,email'])
+            ->orderByDesc('fecha_pago')
+            ->limit(10)
+            ->get(['id', 'venta_id', 'tipo_pago_id', 'monto', 'fecha_pago', 'numero_recibo', 'usuario_id', 'observaciones']);
+
+        // Obtener auditoría de crédito
+        $auditoria = \App\Models\ClienteAudit::where('cliente_id', $cliente->id)
+            ->where('accion', 'actualizar_credito')
+            ->orderByDesc('created_at')
+            ->with(['preventista.user:id,name', 'usuario:id,name,email'])
+            ->limit(5)
+            ->get(['id', 'accion', 'cambios', 'motivo', 'created_at', 'preventista_id', 'usuario_id', 'ip_address']);
+
+        // Determinar estado del crédito
+        $estado = 'normal';
+        if ($porcentajeUtilizacion >= 100) {
+            $estado = 'excedido';
+        } elseif ($porcentajeUtilizacion >= 80) {
+            $estado = 'critico';
+        }
+
+        // Verificar si hay cuentas vencidas
+        $cuentasVencidas = $cuentasPendientes->filter(fn($c) => $c->dias_vencido > 0);
+        if ($cuentasVencidas->count() > 0) {
+            $estado = 'vencido';
+        }
+
+        return ApiResponse::success([
+            'cliente' => [
+                'id'    => $cliente->id,
+                'nombre' => $cliente->nombre,
+                'codigo' => $cliente->codigo_cliente,
+                'nit'    => $cliente->nit,
+                'email'  => $cliente->email,
+                'telefono' => $cliente->telefono,
+                'activo' => $cliente->activo,
+            ],
+            'credito' => [
+                'limite_credito'        => (float) $cliente->limite_credito,
+                'saldo_utilizado'       => (float) $saldoUtilizado,
+                'saldo_disponible'      => (float) $saldoDisponible,
+                'porcentaje_utilizacion' => round($porcentajeUtilizacion, 2),
+                'estado'                => $estado,
+            ],
+            'cuentas_pendientes' => [
+                'total'   => $cuentasPendientes->count(),
+                'monto_total' => (float) $saldoUtilizado,
+                'cuentas_vencidas' => $cuentasVencidas->count(),
+                'dias_maximo_vencido' => $cuentasVencidas->max('dias_vencido') ?? 0,
+                'detalles' => $cuentasPendientes->map(fn($c) => [
+                    'id' => $c->id,
+                    'venta_id' => $c->venta_id,
+                    'numero_venta' => $c->venta?->numero,
+                    'fecha_venta' => $c->venta?->fecha,
+                    'monto_original' => (float) $c->monto_original,
+                    'saldo_pendiente' => (float) $c->saldo_pendiente,
+                    'fecha_vencimiento' => $c->fecha_vencimiento->format('Y-m-d'),
+                    'dias_vencido' => $c->dias_vencido,
+                    'estado' => $c->estado,
+                ]),
+            ],
+            'historial_pagos' => $historialPagos->map(fn($p) => [
+                'id' => $p->id,
+                'monto' => (float) $p->monto,
+                'fecha_pago' => $p->fecha_pago->format('Y-m-d H:i:s'),
+                'tipo_pago' => $p->tipoPago?->nombre,
+                'numero_recibo' => $p->numero_recibo,
+                'usuario' => $p->usuario?->name,
+                'observaciones' => $p->observaciones,
+            ]),
+            'auditoria' => $auditoria->map(fn($a) => [
+                'id' => $a->id,
+                'fecha' => $a->created_at->format('Y-m-d H:i:s'),
+                'accion' => $a->accion,
+                'cambios' => $a->cambios,
+                'motivo' => $a->motivo,
+                'responsable' => $a->usuario?->name ?? $a->preventista?->user?->name ?? 'Sistema',
+            ]),
+        ]);
+    }
+
+    /**
+     * Genera un usernick único basado en el teléfono del cliente
+     * Si el teléfono ya existe como usernick, agrega un sufijo numérico
+
+    /**
+     * API: Registrar un pago para una cuenta por cobrar
+     * Endpoint: POST /api/clientes/{id}/pagos
+     * Body: { cuenta_por_cobrar_id, tipo_pago_id, monto, fecha_pago, numero_recibo?, numero_transferencia?, numero_cheque?, observaciones? }
+     */
+    public function registrarPagoApi(ClienteModel $cliente, Request $request): JsonResponse
+    {
+        // ✅ Autorizar: Solo roles que pueden registrar pagos
+        $this->authorize('update', $cliente);
+
+        // Validar datos
+        $validated = $request->validate([
+            'cuenta_por_cobrar_id' => 'required|integer|exists:cuentas_por_cobrar,id',
+            'tipo_pago_id'         => 'required|integer|exists:tipos_pago,id',
+            'monto'                => 'required|numeric|min:0.01',
+            'fecha_pago'           => 'required|date',
+            'numero_recibo'        => 'nullable|string|max:100',
+            'numero_transferencia' => 'nullable|string|max:100',
+            'numero_cheque'        => 'nullable|string|max:100',
+            'observaciones'        => 'nullable|string|max:500',
+        ]);
+
+        try {
+            // Obtener la cuenta por cobrar
+            $cuenta = \App\Models\CuentaPorCobrar::findOrFail($validated['cuenta_por_cobrar_id']);
+
+            // Verificar que la cuenta pertenece al cliente
+            if ($cuenta->cliente_id !== $cliente->id) {
+                return ApiResponse::error('La cuenta no pertenece a este cliente', 403);
+            }
+
+            // Verificar que hay saldo pendiente
+            if ($cuenta->saldo_pendiente <= 0) {
+                return ApiResponse::error('Esta cuenta ya ha sido pagada completamente', 400);
+            }
+
+            // Verificar que el monto no exceda el saldo pendiente
+            if ($validated['monto'] > $cuenta->saldo_pendiente) {
+                return ApiResponse::error('El monto no puede exceder el saldo pendiente', 400);
+            }
+
+            // Crear el pago
+            $pago = \App\Models\Pago::create([
+                'cuenta_por_cobrar_id' => $validated['cuenta_por_cobrar_id'],
+                'venta_id'             => $cuenta->venta_id,
+                'tipo_pago_id'         => $validated['tipo_pago_id'],
+                'monto'                => $validated['monto'],
+                'fecha_pago'           => $validated['fecha_pago'],
+                'numero_recibo'        => $validated['numero_recibo'] ?? null,
+                'numero_transferencia' => $validated['numero_transferencia'] ?? null,
+                'numero_cheque'        => $validated['numero_cheque'] ?? null,
+                'observaciones'        => $validated['observaciones'] ?? null,
+                'usuario_id'           => Auth::id(),
+            ]);
+
+            // Actualizar el saldo pendiente de la cuenta
+            $nuevoSaldo = $cuenta->saldo_pendiente - $validated['monto'];
+            $nuevoEstado = $nuevoSaldo > 0 ? 'parcial' : 'pagado';
+
+            $cuenta->update([
+                'saldo_pendiente' => $nuevoSaldo,
+                'estado'          => $nuevoEstado,
+            ]);
+
+            // Si la cuenta se pagó completamente, registrar en la venta también
+            if ($nuevoEstado === 'pagado') {
+                $venta = $cuenta->venta;
+                if ($venta) {
+                    $venta->update([
+                        'estado_pago' => 'pagado',
+                        'monto_pagado' => $venta->monto_total,
+                        'monto_pendiente' => 0,
+                    ]);
+                }
+            }
+
+            return ApiResponse::success([
+                'pago'   => $pago,
+                'cuenta' => [
+                    'id'                => $cuenta->id,
+                    'saldo_anterior'    => $cuenta->getOriginal('saldo_pendiente'),
+                    'saldo_pendiente'   => $nuevoSaldo,
+                    'estado'            => $nuevoEstado,
+                ],
+            ], 'Pago registrado exitosamente', 201);
+
+        } catch (\Exception $e) {
+            Log::error('Error al registrar pago:', [
+                'cliente_id' => $cliente->id,
+                'error'      => $e->getMessage(),
+            ]);
+            return ApiResponse::error('Error al registrar el pago: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Genera un usernick único basado en el teléfono del cliente
+     * Si el teléfono ya existe como usernick, agrega un sufijo numérico
      */
     private function generarUsernickUnico(string $telefono): string
     {
