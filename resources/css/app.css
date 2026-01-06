@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './proforma-tokens.css';
+@import './app-mobile-fix.css';
 
 @plugin 'tailwindcss-animate';
 

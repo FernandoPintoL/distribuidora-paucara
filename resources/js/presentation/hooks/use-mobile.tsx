@@ -3,25 +3,27 @@ import { useEffect, useState } from 'react';
 const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-    // Inicializar con el valor correcto desde el cliente
     const [isMobile, setIsMobile] = useState<boolean>(() => {
-        // Solo se ejecuta en el cliente
         if (typeof window !== 'undefined') {
-            return window.innerWidth < MOBILE_BREAKPOINT;
+            const isMobileValue = window.innerWidth < MOBILE_BREAKPOINT;
+            console.log('[Mobile Detection] Init:', { w: window.innerWidth, bp: 768, isMobile: isMobileValue });
+            return isMobileValue;
         }
-        // Fallback: asumir desktop en el servidor
         return false;
     });
 
     useEffect(() => {
-        const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-
+        const mql = window.matchMedia('(max-width: 767px)');
         const onChange = () => {
-            setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+            const isMobileValue = window.innerWidth < MOBILE_BREAKPOINT;
+            console.log('[Mobile Detection] Change:', { w: window.innerWidth, bp: 768, isMobile: isMobileValue });
+            setIsMobile(isMobileValue);
         };
 
         mql.addEventListener('change', onChange);
-        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+        const initialValue = window.innerWidth < MOBILE_BREAKPOINT;
+        console.log('[Mobile Detection] Effect:', { w: window.innerWidth, bp: 768, isMobile: initialValue });
+        setIsMobile(initialValue);
 
         return () => mql.removeEventListener('change', onChange);
     }, []);
