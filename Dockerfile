@@ -31,10 +31,14 @@ RUN apk add --no-cache \
     zlib-dev \
     postgresql-dev \
     oniguruma-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
     $PHPIZE_DEPS
 
 # Install and enable PHP extensions required by dependencies
-RUN docker-php-ext-install zip pdo_mysql mbstring pdo_pgsql
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
+    docker-php-ext-install zip pdo_mysql mbstring pdo_pgsql gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
