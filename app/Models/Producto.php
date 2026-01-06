@@ -20,6 +20,8 @@ class Producto extends Model
         'nombre',
         'sku',
         'descripcion',
+        'principio_activo',
+        'uso_de_medicacion',
         'peso',
         'unidad_medida_id',
         'stock_minimo',

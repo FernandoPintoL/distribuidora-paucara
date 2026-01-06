@@ -33,24 +33,51 @@ export const productosCSVService = {
   convertirFecha(fechaStr: string): string | null {
     if (!fechaStr) return null;
 
-    // Formatos soportados: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
-    const formatos = [
-      /^(\d{2})\/(\d{2})\/(\d{4})$/, // DD/MM/YYYY
-      /^(\d{2})-(\d{2})-(\d{4})$/, // DD-MM-YYYY
-      /^(\d{4})-(\d{2})-(\d{2})$/, // YYYY-MM-DD (retornar tal cual)
-    ];
+    // Limpiar espacios
+    fechaStr = fechaStr.trim();
 
-    for (const formato of formatos) {
-      const match = fechaStr.match(formato);
-      if (match) {
-        if (formato === formatos[2]) {
-          return fechaStr; // Ya está en formato ISO
-        }
-        const [, dia, mes, año] = match;
-        return `${año}-${mes}-${dia}`;
-      }
+    // Formato 1: DD/MM/YYYY o DD-MM-YYYY (fecha completa)
+    const formatoCompleto = /^(\d{1,2})([\/-])(\d{1,2})\2(\d{4})$/;
+    const matchCompleto = fechaStr.match(formatoCompleto);
+    if (matchCompleto) {
+      const [, dia, , mes, año] = matchCompleto;
+      return `${año}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
     }
 
+    // Formato 2: YYYY-MM-DD (ISO, retornar tal cual)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+      return fechaStr;
+    }
+
+    // Formato 3: MM/YYYY o MM-YYYY (solo mes y año - farmacéutico)
+    // Convertir al ÚLTIMO día del mes
+    const formatoMesAño = /^(\d{1,2})([\/-])(\d{4})$/;
+    const matchMesAño = fechaStr.match(formatoMesAño);
+    if (matchMesAño) {
+      const [, mes, , año] = matchMesAño;
+      const mesNum = parseInt(mes, 10);
+      const añoNum = parseInt(año, 10);
+
+      // Calcular último día del mes
+      const ultimoDia = new Date(añoNum, mesNum, 0).getDate();
+      return `${año}-${mes.padStart(2, '0')}-${ultimoDia.toString().padStart(2, '0')}`;
+    }
+
+    // Formato 4: M/YYYY o M-YYYY (mes sin padding)
+    const formatoMesAñoSinPadding = /^(\d{1,2})([\/-])(\d{4})$/;
+    const matchMesAñoSinPadding = fechaStr.match(formatoMesAñoSinPadding);
+    if (matchMesAñoSinPadding) {
+      const [, mes, , año] = matchMesAñoSinPadding;
+      const mesNum = parseInt(mes, 10);
+      const añoNum = parseInt(año, 10);
+
+      // Calcular último día del mes
+      const ultimoDia = new Date(añoNum, mesNum, 0).getDate();
+      const mesPadded = mes.padStart(2, '0');
+      return `${año}-${mesPadded}-${ultimoDia.toString().padStart(2, '0')}`;
+    }
+
+    // Si no coincide con ningún formato, retornar null
     return null;
   },
 
@@ -100,6 +127,10 @@ export const productosCSVService = {
         const valor = valores[j]?.trim() || '';
 
         if (col === 'descripción' || col === 'descripcion') fila.descripcion = valor || undefined;
+        if (col === 'principio activo' || col === 'principio_activo' || col === 'principioactivo')
+          fila.principio_activo = valor || undefined;
+        if (col === 'uso de medicación' || col === 'uso de medicacion' || col === 'uso_de_medicacion' || col === 'usodemedicacion')
+          fila.uso_de_medicacion = valor || undefined;
         if (col === 'sku') fila.sku = valor || undefined;
         if (col === 'código barras' || col === 'codigo barras' || col === 'codigo_barras')
           fila.codigo_barra = valor || undefined;
@@ -407,6 +438,8 @@ export const productosCSVService = {
     const headers = [
       'Nombre Producto',
       'Descripción',
+      'Principio Activo',
+      'Uso de Medicación',
       'SKU',
       'Código Barras',
       'Almacén',
@@ -422,20 +455,22 @@ export const productosCSVService = {
     ];
 
     const ejemplo = [
-      'Coca Cola 2L',
-      'Gaseosa sabor cola',
+      'Paracetamol 500mg',
+      'Analgésico y antipirético',
+      'Paracetamol',
+      'Alivio de dolor leve a moderado y reducción de fiebre',
       '',
       '7501234567890',
       'Almacén Central',
-      'Embotelladora Coca Cola',
-      'UN',
+      'Laboratorios ABC',
+      'TAB',
       '100',
       '8.50',
       '12.00',
       'LOTE2025A',
       '31/12/2025',
-      'Bebidas',
-      'Coca Cola',
+      'Medicamentos',
+      'Genérico',
     ];
 
     const filas = [headers, ejemplo];

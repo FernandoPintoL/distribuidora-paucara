@@ -2,6 +2,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Almacen;
+use App\Models\InventarioInicialBorrador;
+use App\Models\InventarioInicialBorradorItem;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
@@ -15,7 +17,7 @@ use Inertia\Inertia;
 class InventarioInicialController extends Controller
 {
     /**
-     * Mostrar la página de carga masiva de inventario inicial
+     * Mostrar la página de carga masiva de inventario inicial (versión anterior)
      */
     public function index()
     {
@@ -48,10 +50,9 @@ class InventarioInicialController extends Controller
         // Obtener el tipo de ajuste INVENTARIO_INICIAL
         $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
 
-        return Inertia::render('inventario/inventario-inicial', [
-            'productos'             => $productos,
-            'almacenes'             => $almacenes,
-            'tipoInventarioInicial' => $tipoInventarioInicial,
+        // Renderizar el nuevo componente avanzado
+        return Inertia::render('inventario/components/inventario-inicial-avanzado', [
+            'almacenes' => $almacenes,
         ]);
     }
 
@@ -180,6 +181,436 @@ class InventarioInicialController extends Controller
 
             return redirect()->back()->with('error', 'Error al cargar el inventario inicial: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Crear o obtener un borrador para el usuario actual
+     */
+    public function createOrGetDraft()
+    {
+        $borrador = InventarioInicialBorrador::firstOrCreate(
+            [
+                'usuario_id' => Auth::id(),
+                'estado'     => 'borrador',
+            ],
+            [
+                'usuario_id' => Auth::id(),
+                'estado'     => 'borrador',
+            ]
+        );
+
+        return response()->json([
+            'id'     => $borrador->id,
+            'estado' => $borrador->estado,
+        ]);
+    }
+
+    /**
+     * Guardar o actualizar un item del borrador
+     */
+    public function storeDraftItem(Request $request, $borradorId)
+    {
+        $validated = $request->validate([
+            'producto_id'       => 'required|exists:productos,id',
+            'almacen_id'        => 'required|exists:almacenes,id',
+            'cantidad'          => 'nullable|numeric|min:0',
+            'lote'              => 'nullable|string|max:100',
+            'fecha_vencimiento' => 'nullable|date',
+            'precio_costo'      => 'nullable|numeric|min:0',
+        ]);
+
+        // Verificar que el borrador pertenece al usuario actual
+        $borrador = InventarioInicialBorrador::findOrFail($borradorId);
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        // Usar UPSERT para insertar o actualizar
+        // IMPORTANTE: Incluir 'lote' en los criterios de búsqueda para evitar duplicados
+        $item = InventarioInicialBorradorItem::updateOrCreate(
+            [
+                'borrador_id'  => $borradorId,
+                'producto_id'  => $validated['producto_id'],
+                'almacen_id'   => $validated['almacen_id'],
+                'lote'         => $validated['lote'] ?? null,
+            ],
+            $validated
+        );
+
+        return response()->json([
+            'success'         => true,
+            'item'            => $item,
+            'lastUpdated'     => now(),
+        ]);
+    }
+
+    /**
+     * Obtener un borrador con todos sus items
+     */
+    public function getDraft($borradorId)
+    {
+        $borrador = InventarioInicialBorrador::with(['items.producto', 'items.almacen', 'items.stockProducto'])
+            ->findOrFail($borradorId);
+
+        // Verificar autorización
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        return response()->json([
+            'id'       => $borrador->id,
+            'estado'   => $borrador->estado,
+            'items'    => $borrador->items->map(fn($item) => [
+                'id'                 => $item->id,
+                'producto_id'        => $item->producto_id,
+                'almacen_id'         => $item->almacen_id,
+                'cantidad'           => $item->cantidad,
+                'lote'               => $item->lote,
+                'fecha_vencimiento'  => $item->fecha_vencimiento,
+                'precio_costo'       => $item->precio_costo,
+                'producto'           => $item->producto,
+                'almacen'            => $item->almacen,
+                'stock_existente_id' => $item->stock_producto_id,
+                'es_actualizacion'   => $item->stock_producto_id !== null,
+            ]),
+            'created'  => $borrador->created_at,
+            'updated'  => $borrador->updated_at,
+        ]);
+    }
+
+    /**
+     * Agregar múltiples productos al borrador
+     */
+    public function addProductosToDraft(Request $request, $borradorId)
+    {
+        $validated = $request->validate([
+            'producto_ids' => 'required|array|min:1',
+            'producto_ids.*' => 'exists:productos,id',
+        ]);
+
+        $borrador = InventarioInicialBorrador::findOrFail($borradorId);
+
+        // Verificar autorización
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        // Obtener almacenes activos
+        $almacenes = Almacen::where('activo', true)->get();
+
+        // Crear items para cada producto/almacén, cargando stock existente
+        $items = [];
+        foreach ($validated['producto_ids'] as $productoId) {
+            foreach ($almacenes as $almacen) {
+                // Buscar stock existente para este producto/almacén
+                $stocksExistentes = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->get();
+
+                if ($stocksExistentes->isEmpty()) {
+                    // Crear item sin stock (nuevo producto)
+                    $item = InventarioInicialBorradorItem::firstOrCreate(
+                        [
+                            'borrador_id' => $borradorId,
+                            'producto_id' => $productoId,
+                            'almacen_id'  => $almacen->id,
+                        ],
+                        [
+                            'cantidad'          => null,
+                            'lote'              => null,
+                            'fecha_vencimiento' => null,
+                            'precio_costo'      => null,
+                            'stock_producto_id' => null,
+                        ]
+                    );
+                    $items[] = $item;
+                } else {
+                    // Crear un item por cada lote existente
+                    foreach ($stocksExistentes as $stock) {
+                        $item = InventarioInicialBorradorItem::firstOrCreate(
+                            [
+                                'borrador_id' => $borradorId,
+                                'producto_id' => $productoId,
+                                'almacen_id'  => $almacen->id,
+                                'lote'        => $stock->lote,
+                            ],
+                            [
+                                'cantidad'          => $stock->cantidad,
+                                'fecha_vencimiento' => $stock->fecha_vencimiento,
+                                'precio_costo'      => $stock->precio_costo,
+                                'stock_producto_id' => $stock->id,
+                            ]
+                        );
+                        $items[] = $item;
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'itemsCount' => count($items),
+            'items' => $items,
+        ]);
+    }
+
+    /**
+     * Eliminar un item del borrador
+     */
+    public function deleteDraftItem($borradorId, $itemId)
+    {
+        $borrador = InventarioInicialBorrador::findOrFail($borradorId);
+
+        // Verificar autorización
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $item = InventarioInicialBorradorItem::where('id', $itemId)
+            ->where('borrador_id', $borradorId)
+            ->firstOrFail();
+
+        $item->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Completar el borrador y guardar el inventario inicial
+     */
+    public function completeDraft(Request $request, $borradorId)
+    {
+        $validated = $request->validate([
+            'validar_cantidades' => 'boolean',
+        ]);
+
+        $borrador = InventarioInicialBorrador::with('items')->findOrFail($borradorId);
+
+        // Verificar autorización
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        // Nota: Los items sin cantidad serán ignorados automáticamente al procesar
+        // (ver línea 413-415: if ($item->cantidad === null || $item->cantidad <= 0) continue;)
+
+        DB::beginTransaction();
+        try {
+            $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
+            $resultados = [
+                'exitosos'     => 0,
+                'fallidos'     => 0,
+                'advertencias' => [],
+                'errores'      => [],
+            ];
+
+            foreach ($borrador->items as $index => $item) {
+                if ($item->cantidad === null || $item->cantidad <= 0) {
+                    continue;  // Saltar items sin cantidad
+                }
+
+                try {
+                    if ($item->stock_producto_id) {
+                        // Actualizar stock existente
+                        $stockProducto = StockProducto::findOrFail($item->stock_producto_id);
+                        $cantidadAnterior = $stockProducto->cantidad;
+                        $diferencia = $item->cantidad - $cantidadAnterior;
+
+                        // Actualizar cantidad y mantener invariante
+                        $stockProducto->cantidad = $item->cantidad;
+                        $stockProducto->cantidad_disponible = $item->cantidad - $stockProducto->cantidad_reservada;
+                        $stockProducto->lote = $item->lote;
+                        $stockProducto->fecha_vencimiento = $item->fecha_vencimiento;
+                        if ($item->precio_costo) {
+                            $stockProducto->precio_costo = $item->precio_costo;
+                        }
+                        $stockProducto->fecha_actualizacion = now();
+                        $stockProducto->save();
+
+                        // Validar invariante
+                        if ($stockProducto->validarInvariante() === false) {
+                            throw new \Exception("Invariante de stock roto para producto_id={$item->producto_id}");
+                        }
+
+                        // Registrar movimiento de ajuste
+                        if ($diferencia !== 0) {
+                            MovimientoInventario::create([
+                                'stock_producto_id'         => $stockProducto->id,
+                                'cantidad'                  => $diferencia,
+                                'cantidad_anterior'         => $cantidadAnterior,
+                                'cantidad_posterior'        => $stockProducto->cantidad,
+                                'fecha'                     => now(),
+                                'numero_documento'          => 'INV-AJUSTE-' . now()->format('Ymd') . '-' . str_pad($index + 1, 4, '0', STR_PAD_LEFT),
+                                'observacion'               => 'Ajuste de inventario inicial',
+                                'tipo'                      => 'ENTRADA_AJUSTE',
+                                'tipo_ajuste_inventario_id' => $tipoInventarioInicial->id,
+                                'referencia_tipo'           => 'inventario_inicial_borrador',
+                                'referencia_id'             => $item->id,
+                                'user_id'                   => Auth::id(),
+                                'ip_dispositivo'            => $request->ip(),
+                            ]);
+                        }
+                    } else {
+                        // Crear nuevo registro de stock
+                        $stockProducto = StockProducto::create([
+                            'producto_id'           => $item->producto_id,
+                            'almacen_id'            => $item->almacen_id,
+                            'cantidad'              => $item->cantidad,
+                            'cantidad_disponible'   => $item->cantidad,
+                            'cantidad_reservada'    => 0,
+                            'lote'                  => $item->lote,
+                            'fecha_vencimiento'     => $item->fecha_vencimiento,
+                            'precio_costo'          => $item->precio_costo,
+                            'fecha_actualizacion'   => now(),
+                        ]);
+
+                        // Registrar movimiento de creación
+                        MovimientoInventario::create([
+                            'stock_producto_id'         => $stockProducto->id,
+                            'cantidad'                  => $item->cantidad,
+                            'cantidad_anterior'         => 0,
+                            'cantidad_posterior'        => $item->cantidad,
+                            'fecha'                     => now(),
+                            'numero_documento'          => 'INV-INICIAL-' . now()->format('Ymd') . '-' . str_pad($index + 1, 4, '0', STR_PAD_LEFT),
+                            'observacion'               => 'Carga inicial de inventario',
+                            'tipo'                      => 'ENTRADA_AJUSTE',
+                            'tipo_ajuste_inventario_id' => $tipoInventarioInicial->id,
+                            'referencia_tipo'           => 'inventario_inicial_borrador',
+                            'referencia_id'             => $item->id,
+                            'user_id'                   => Auth::id(),
+                            'ip_dispositivo'            => $request->ip(),
+                        ]);
+                    }
+
+                    $resultados['exitosos']++;
+                } catch (\Exception $e) {
+                    $resultados['fallidos']++;
+                    $resultados['errores'][] = "Item producto {$item->producto_id}, almacén {$item->almacen_id}: {$e->getMessage()}";
+                    Log::error('Error completando borrador', ['error' => $e->getMessage()]);
+                }
+            }
+
+            // Marcar borrador como completado
+            $borrador->estado = 'completado';
+            $borrador->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'resultados' => $resultados,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error completando inventario inicial borrador', [
+                'borrador_id' => $borradorId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al completar el inventario: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Cargar productos paginados al borrador con stock actual
+     */
+    public function loadProductsPaginated(Request $request, $borradorId)
+    {
+        $validated = $request->validate([
+            'page' => 'integer|min:1',
+            'per_page' => 'integer|min:1|max:100',
+            'search' => 'nullable|string|max:255',
+        ]);
+
+        $borrador = InventarioInicialBorrador::findOrFail($borradorId);
+
+        // Verificar autorización
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $page = $validated['page'] ?? 1;
+        $perPage = $validated['per_page'] ?? 30;
+        $search = $validated['search'] ?? '';
+
+        // Obtener productos activos con paginación
+        $productosQuery = Producto::with(['categoria', 'marca', 'unidad'])
+            ->where('activo', true);
+
+        // Aplicar búsqueda
+        if (!empty($search)) {
+            $productosQuery->where(function($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        $productos = $productosQuery->paginate($perPage, ['*'], 'page', $page);
+
+        // Obtener almacenes activos
+        $almacenes = Almacen::where('activo', true)->get();
+
+        // Agregar productos al borrador con stock actual
+        $productosIds = $productos->pluck('id')->toArray();
+
+        // Usar el método existente para agregar productos (ya carga stock)
+        $items = [];
+        foreach ($productosIds as $productoId) {
+            foreach ($almacenes as $almacen) {
+                // Buscar stock existente
+                $stocksExistentes = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->get();
+
+                if ($stocksExistentes->isEmpty()) {
+                    $item = InventarioInicialBorradorItem::firstOrCreate(
+                        [
+                            'borrador_id' => $borradorId,
+                            'producto_id' => $productoId,
+                            'almacen_id'  => $almacen->id,
+                        ],
+                        [
+                            'cantidad' => null,
+                            'lote' => null,
+                            'fecha_vencimiento' => null,
+                            'precio_costo' => null,
+                            'stock_producto_id' => null,
+                        ]
+                    );
+                    $items[] = $item;
+                } else {
+                    foreach ($stocksExistentes as $stock) {
+                        $item = InventarioInicialBorradorItem::firstOrCreate(
+                            [
+                                'borrador_id' => $borradorId,
+                                'producto_id' => $productoId,
+                                'almacen_id'  => $almacen->id,
+                                'lote' => $stock->lote,
+                            ],
+                            [
+                                'cantidad' => $stock->cantidad,
+                                'fecha_vencimiento' => $stock->fecha_vencimiento,
+                                'precio_costo' => $stock->precio_costo,
+                                'stock_producto_id' => $stock->id,
+                            ]
+                        );
+                        $items[] = $item;
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'productos' => $productos->items(),
+            'current_page' => $productos->currentPage(),
+            'last_page' => $productos->lastPage(),
+            'per_page' => $productos->perPage(),
+            'total' => $productos->total(),
+            'itemsAdded' => count($items),
+        ]);
     }
 
     /**

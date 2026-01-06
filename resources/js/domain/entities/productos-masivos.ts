@@ -9,6 +9,8 @@ export interface FilaProductoCSV {
   fila: number;
   nombre: string;
   descripcion?: string;
+  principio_activo?: string;
+  uso_de_medicacion?: string;
   sku?: string;
   codigo_barra?: string;
   proveedor_nombre?: string;
@@ -76,6 +78,8 @@ export interface ResultadoValidacion {
 export interface ProductoParaProcesar {
   nombre: string;
   descripcion?: string;
+  principio_activo?: string;
+  uso_de_medicacion?: string;
   sku?: string;
   codigo_barra?: string;
   proveedor_nombre?: string;

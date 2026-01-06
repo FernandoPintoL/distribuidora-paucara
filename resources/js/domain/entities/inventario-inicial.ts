@@ -36,3 +36,48 @@ export interface InventarioInicialPageProps {
     almacenes: Almacen[];
     tipoInventarioInicial: TipoAjuste;
 }
+
+/**
+ * Item del borrador de inventario inicial
+ * Representa un producto x almacén en el borrador
+ */
+export interface InventarioInicialBorradorItem {
+    id?: Id;
+    producto_id: Id;
+    almacen_id: Id;
+    cantidad?: number | null;
+    lote?: string | null;
+    fecha_vencimiento?: string | null;
+    stock_producto_id?: Id; // Referencia al stock existente
+    es_actualizacion?: boolean; // Indica si actualiza un stock existente
+    producto?: Producto;
+    almacen?: Almacen;
+}
+
+/**
+ * Payload para guardar un item del borrador
+ */
+export interface GuardarInventarioInicialItemPayload {
+    producto_id: Id;
+    almacen_id: Id;
+    cantidad?: number | null;
+    lote?: string | null;
+    fecha_vencimiento?: string | null;
+}
+
+/**
+ * Props para el componente AlmacenRegistroRow
+ */
+export interface AlmacenRegistroRowProps {
+    producto: Producto;
+    almacen: Almacen;
+    item?: InventarioInicialBorradorItem;
+    onGuardarItem: (
+        productoId: Id,
+        almacenId: Id,
+        cantidad?: number,
+        lote?: string,
+        fechaVencimiento?: string
+    ) => Promise<void>;
+    mostrarNombreAlmacen?: boolean;
+}

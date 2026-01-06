@@ -1307,6 +1307,8 @@ class ProductoController extends Controller
                 'productos.*.lote' => 'nullable|string|max:50',
                 'productos.*.fecha_vencimiento' => 'nullable|date',
                 'productos.*.descripcion' => 'nullable|string|max:500',
+                'productos.*.principio_activo' => 'nullable|string|max:255',
+                'productos.*.uso_de_medicacion' => 'nullable|string',
                 'productos.*.categoria_nombre' => 'nullable|string|max:100',
                 'productos.*.marca_nombre' => 'nullable|string|max:100',
                 'productos.*.almacen_id' => 'nullable|integer|min:1',
@@ -1386,6 +1388,17 @@ class ProductoController extends Controller
                     DB::statement("SAVEPOINT {$savepointName}");
 
                     try {
+                        // Limpiar campos de texto para evitar errores de UTF-8 en JSON
+                        $camposTexto = [
+                            'nombre', 'descripcion', 'principio_activo', 'uso_de_medicacion',
+                            'sku', 'codigo_barra', 'proveedor_nombre', 'unidad_medida_nombre',
+                            'lote', 'categoria_nombre', 'marca_nombre', 'almacen_nombre'
+                        ];
+                        foreach ($camposTexto as $campo) {
+                            if (isset($datosFila[$campo])) {
+                                $datosFila[$campo] = $this->limpiarUTF8($datosFila[$campo]);
+                            }
+                        }
                         // Buscar/crear proveedor
                         $proveedor = null;
                         if (!empty($datosFila['proveedor_nombre'])) {
@@ -1450,6 +1463,8 @@ class ProductoController extends Controller
                             $producto = Producto::create([
                                 'nombre' => $datosFila['nombre'],
                                 'descripcion' => $datosFila['descripcion'] ?? null,
+                                'principio_activo' => $datosFila['principio_activo'] ?? null,
+                                'uso_de_medicacion' => $datosFila['uso_de_medicacion'] ?? null,
                                 'sku' => $datosFila['sku'] ?? null, // Se genera automáticamente si es null
                                 'categoria_id' => $categoria?->id,
                                 'marca_id' => $marca?->id,
@@ -1515,6 +1530,10 @@ class ProductoController extends Controller
                             }
 
                             $stock->cantidad_disponible = $stock->cantidad - ($stock->cantidad_reservada ?? 0);
+                            // Actualizar fecha de vencimiento si se proporciona
+                            if (!empty($datosFila['fecha_vencimiento'])) {
+                                $stock->fecha_vencimiento = $this->parsearFechaVencimiento($datosFila['fecha_vencimiento']);
+                            }
                             $stock->fecha_actualizacion = now();
                             $stock->save();
                         } else {
@@ -1526,7 +1545,7 @@ class ProductoController extends Controller
                                 'cantidad_reservada' => 0,
                                 'cantidad_disponible' => $datosFila['cantidad'],
                                 'lote' => $datosFila['lote'] ?? null,
-                                'fecha_vencimiento' => $datosFila['fecha_vencimiento'] ?? null,
+                                'fecha_vencimiento' => $this->parsearFechaVencimiento($datosFila['fecha_vencimiento'] ?? null),
                             ]);
                             $stockAnterior = 0;
                         }
@@ -1556,7 +1575,7 @@ class ProductoController extends Controller
                         $cambios[] = [
                             'fila' => $index + 2, // +2 porque fila 1 es encabezado
                             'producto_id' => $producto->id,
-                            'producto_nombre' => $producto->nombre,
+                            'producto_nombre' => $this->limpiarUTF8($producto->nombre),
                             'accion' => $esNuevo ? 'creado' : 'actualizado',
                             'stock_anterior' => $stockAnterior,
                             'stock_nuevo' => $stock->cantidad,
@@ -1571,7 +1590,7 @@ class ProductoController extends Controller
 
                         $errores[] = [
                             'fila' => $index + 2,
-                            'mensaje' => "Error procesando fila: {$e->getMessage()}",
+                            'mensaje' => $this->limpiarUTF8("Error procesando fila: {$e->getMessage()}"),
                         ];
                         Log::error("Error procesando producto en carga CSV: {$e->getMessage()}", [
                             'cargo_id' => $cargo->id,
@@ -2126,6 +2145,60 @@ class ProductoController extends Controller
     }
 
     /**
+     * Parsear fecha de vencimiento con soporte a formato MM/YYYY (farmacéutico)
+     *
+     * Soporta múltiples formatos:
+     * - DD/MM/YYYY o DD-MM-YYYY (fecha completa)
+     * - YYYY-MM-DD (ISO)
+     * - MM/YYYY o MM-YYYY (farmacéutico - convierte a último día del mes)
+     * - M/YYYY o M-YYYY (mes sin padding)
+     *
+     * Para formatos de mes/año (ej: 05-2027), convierte al último día del mes
+     * porque es cuando el medicamento realmente expira
+     */
+    private function parsearFechaVencimiento(?string $fechaStr): ?string
+    {
+        if (empty($fechaStr)) {
+            return null;
+        }
+
+        $fechaStr = trim($fechaStr);
+
+        // Formato 1: DD/MM/YYYY o DD-MM-YYYY (fecha completa)
+        if (preg_match('/^(\d{1,2})([\/-])(\d{1,2})\2(\d{4})$/', $fechaStr, $matches)) {
+            [$_, $dia, , $mes, $año] = $matches;
+            return sprintf('%s-%s-%s', $año, str_pad($mes, 2, '0', STR_PAD_LEFT), str_pad($dia, 2, '0', STR_PAD_LEFT));
+        }
+
+        // Formato 2: YYYY-MM-DD (ISO, retornar tal cual)
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaStr)) {
+            return $fechaStr;
+        }
+
+        // Formato 3: MM/YYYY o MM-YYYY o M/YYYY o M-YYYY (mes/año farmacéutico)
+        // Convertir al ÚLTIMO día del mes
+        if (preg_match('/^(\d{1,2})([\/-])(\d{4})$/', $fechaStr, $matches)) {
+            [$_, $mes, , $año] = $matches;
+            $mesNum = intval($mes);
+            $añoNum = intval($año);
+
+            // Calcular último día del mes
+            // Usar día 0 del siguiente mes para obtener el último día del mes actual
+            $ultimoDia = (int) date('d', mktime(0, 0, 0, $mesNum + 1, 0, $añoNum));
+
+            return sprintf(
+                '%s-%s-%s',
+                $año,
+                str_pad($mes, 2, '0', STR_PAD_LEFT),
+                str_pad($ultimoDia, 2, '0', STR_PAD_LEFT)
+            );
+        }
+
+        // Si no coincide con ningún formato válido, retornar null
+        return null;
+    }
+
+    /**
      * Obtener la empresa del contexto actual
      *
      * Prioridad de obtención:
@@ -2156,5 +2229,172 @@ class ProductoController extends Controller
 
         // 3. Retornar empresa principal como fallback
         return Empresa::principal();
+    }
+
+    /**
+     * Limpia y valida caracteres UTF-8 en una cadena
+     * Evita errores de "Malformed UTF-8 characters" durante serialización JSON
+     *
+     * @param string|null $valor Valor a limpiar
+     * @return string|null Valor limpio o null si estaba vacío
+     */
+    private function limpiarUTF8(?string $valor): ?string
+    {
+        if (empty($valor)) {
+            return null;
+        }
+
+        // Verificar si ya es UTF-8 válido
+        if (mb_check_encoding($valor, 'UTF-8')) {
+            return $valor;
+        }
+
+        // Si no es UTF-8 válido, intentar convertir desde latin1 (encoding más común)
+        $convertido = iconv('ISO-8859-1', 'UTF-8//IGNORE', $valor);
+        if ($convertido !== false) {
+            return $convertido;
+        }
+
+        // Fallback: eliminar caracteres inválidos
+        return mb_convert_encoding($valor, 'UTF-8', 'UTF-8');
+    }
+
+    /**
+     * Obtener productos paginados para carga de inventario inicial
+     */
+    public function getPaginados(Request $request): JsonResponse
+    {
+        $perPage = $request->get('per_page', 30);
+        $page = $request->get('page', 1);
+        $search = $request->get('search', '');
+        $barcode = $request->get('barcode', null);
+
+        // Nuevos filtros
+        $proveedorId = $request->get('proveedor_id');
+        $marcaId = $request->get('marca_id');
+        $categoriaId = $request->get('categoria_id');
+        $stockStatus = $request->get('stock_status'); // 'bajo', 'alto', 'sin_stock'
+        $precioStatus = $request->get('precio_status'); // 'con_precio', 'sin_precio'
+
+        $query = Producto::where('activo', true)
+            ->with(['categoria:id,nombre', 'marca:id,nombre', 'proveedor:id,nombre', 'unidad:id,codigo,nombre', 'stocks']);
+
+        // Búsqueda por código de barras si se proporciona
+        if ($barcode) {
+            $query->orWhereHas('codigosBarra', function ($q) use ($barcode) {
+                $q->where('codigo', 'like', "%{$barcode}%");
+            });
+        }
+
+        // Búsqueda por nombre, SKU o código
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhereHas('codigosBarra', function ($subQ) use ($search) {
+                      $subQ->where('codigo', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filtro por proveedor
+        if ($proveedorId) {
+            $query->where('proveedor_id', $proveedorId);
+        }
+
+        // Filtro por marca
+        if ($marcaId) {
+            $query->where('marca_id', $marcaId);
+        }
+
+        // Filtro por categoría
+        if ($categoriaId) {
+            $query->where('categoria_id', $categoriaId);
+        }
+
+        // Filtro por precio
+        if ($precioStatus === 'sin_precio') {
+            $query->whereNull('precio_venta');
+        } elseif ($precioStatus === 'con_precio') {
+            $query->whereNotNull('precio_venta');
+        }
+
+        // Paginar primero
+        $productos = $query
+            ->select('id', 'nombre', 'sku', 'categoria_id', 'marca_id', 'proveedor_id', 'unidad_medida_id', 'stock_minimo', 'precio_venta')
+            ->orderBy('nombre')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Filtro por estado de stock (post-paginación, en memory)
+        if ($stockStatus) {
+            $items = $productos->items();
+            $items = array_filter($items, function($producto) use ($stockStatus) {
+                $stockTotal = $producto->stocks?->sum('cantidad') ?? 0;
+                $stockMinimo = $producto->stock_minimo ?? 0;
+
+                switch($stockStatus) {
+                    case 'bajo':
+                        return $stockTotal > 0 && $stockTotal <= $stockMinimo;
+                    case 'sin_stock':
+                        return $stockTotal <= 0;
+                    case 'alto':
+                        return $stockTotal > $stockMinimo;
+                    default:
+                        return true;
+                }
+            });
+            $productos->setCollection(collect($items));
+        }
+
+        // Mapear resultados
+        $items = $productos->items();
+        $items = collect($items)->map(function ($producto) {
+            // Calcular stock total
+            $stockTotal = $producto->stocks?->sum('cantidad') ?? 0;
+
+            return [
+                'id'           => $producto->id,
+                'nombre'       => $producto->nombre,
+                'sku'          => $producto->sku,
+                'categoria'    => $producto->categoria?->nombre,
+                'marca'        => $producto->marca?->nombre,
+                'proveedor'    => $producto->proveedor?->nombre,
+                'unidad'       => $producto->unidad?->codigo,
+                'stock_minimo' => $producto->stock_minimo,
+                'stock_total'  => $stockTotal,
+                'precio_venta' => $producto->precio_venta,
+            ];
+        })->toArray();
+
+        return response()->json([
+            'data'     => $items,
+            'total'    => $productos->total(),
+            'per_page' => $productos->perPage(),
+            'current_page' => $productos->currentPage(),
+            'last_page' => $productos->lastPage(),
+            'from'     => $productos->firstItem(),
+            'to'       => $productos->lastItem(),
+        ]);
+    }
+
+    /**
+     * Obtener datos para los filtros (proveedores, marcas, categorías)
+     */
+    public function getFiltrosData(): JsonResponse
+    {
+        return response()->json([
+            'proveedores' => \App\Models\Proveedor::where('activo', true)
+                ->select('id', 'nombre')
+                ->orderBy('nombre')
+                ->get(),
+            'marcas' => \App\Models\Marca::where('activo', true)
+                ->select('id', 'nombre')
+                ->orderBy('nombre')
+                ->get(),
+            'categorias' => \App\Models\Categoria::where('activo', true)
+                ->select('id', 'nombre')
+                ->orderBy('nombre')
+                ->get(),
+        ]);
     }
 }

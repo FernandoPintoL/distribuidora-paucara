@@ -1,7 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
+import draft from './draft'
 /**
 * @see \App\Http\Controllers\InventarioInicialController::index
- * @see app/Http/Controllers/InventarioInicialController.php:20
+ * @see app/Http/Controllers/InventarioInicialController.php:22
  * @route '/inventario/inventario-inicial'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +17,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::index
- * @see app/Http/Controllers/InventarioInicialController.php:20
+ * @see app/Http/Controllers/InventarioInicialController.php:22
  * @route '/inventario/inventario-inicial'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +26,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::index
- * @see app/Http/Controllers/InventarioInicialController.php:20
+ * @see app/Http/Controllers/InventarioInicialController.php:22
  * @route '/inventario/inventario-inicial'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioInicialController::index
- * @see app/Http/Controllers/InventarioInicialController.php:20
+ * @see app/Http/Controllers/InventarioInicialController.php:22
  * @route '/inventario/inventario-inicial'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioInicialController::index
- * @see app/Http/Controllers/InventarioInicialController.php:20
+ * @see app/Http/Controllers/InventarioInicialController.php:22
  * @route '/inventario/inventario-inicial'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +55,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioInicialController::index
- * @see app/Http/Controllers/InventarioInicialController.php:20
+ * @see app/Http/Controllers/InventarioInicialController.php:22
  * @route '/inventario/inventario-inicial'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +64,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioInicialController::index
- * @see app/Http/Controllers/InventarioInicialController.php:20
+ * @see app/Http/Controllers/InventarioInicialController.php:22
  * @route '/inventario/inventario-inicial'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +80,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:61
+ * @see app/Http/Controllers/InventarioInicialController.php:62
  * @route '/inventario/inventario-inicial'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -94,7 +95,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:61
+ * @see app/Http/Controllers/InventarioInicialController.php:62
  * @route '/inventario/inventario-inicial'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -103,7 +104,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:61
+ * @see app/Http/Controllers/InventarioInicialController.php:62
  * @route '/inventario/inventario-inicial'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -113,7 +114,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:61
+ * @see app/Http/Controllers/InventarioInicialController.php:62
  * @route '/inventario/inventario-inicial'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -123,7 +124,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:61
+ * @see app/Http/Controllers/InventarioInicialController.php:62
  * @route '/inventario/inventario-inicial'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -135,6 +136,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 const inicial = {
     index,
 store,
+draft,
 }
 
 export default inicial

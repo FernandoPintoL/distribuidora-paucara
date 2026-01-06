@@ -84,6 +84,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     })->middleware('permission:productos.manage')->name('productos.carga-masiva');
     Route::get('productos/historial-cargas', fn() => \Inertia\Inertia::render('productos/historial-cargas'))->middleware('permission:productos.manage')->name('productos.historial-cargas');
     Route::get('productos/crear/moderno', [\App\Http\Controllers\ProductoController::class, 'createModerno'])->middleware('permission:productos.manage')->name('productos.create.moderno');
+    Route::get('productos/paginados/listar', [\App\Http\Controllers\ProductoController::class, 'getPaginados'])->middleware('permission:productos.manage')->name('productos.paginados');
+    Route::get('productos/filtros/datos', [\App\Http\Controllers\ProductoController::class, 'getFiltrosData'])->middleware('permission:productos.manage')->name('productos.filtros-data');
 
     // Resource route DESPUÉS de las rutas específicas
     Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
@@ -393,6 +395,17 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // Rutas para carga masiva de inventario inicial
         Route::get('inventario-inicial', [\App\Http\Controllers\InventarioInicialController::class, 'index'])->middleware('permission:inventario.ajuste.form')->name('inicial.index');
         Route::post('inventario-inicial', [\App\Http\Controllers\InventarioInicialController::class, 'store'])->middleware('permission:inventario.ajuste.procesar')->name('inicial.store');
+
+        // Rutas para borradores de inventario inicial
+        Route::prefix('inventario-inicial')->name('inicial.')->middleware('permission:inventario.ajuste.form')->group(function () {
+            Route::post('draft/create', [\App\Http\Controllers\InventarioInicialController::class, 'createOrGetDraft'])->name('draft.create');
+            Route::get('draft/{borrador}', [\App\Http\Controllers\InventarioInicialController::class, 'getDraft'])->name('draft.get');
+            Route::post('draft/{borrador}/items', [\App\Http\Controllers\InventarioInicialController::class, 'storeDraftItem'])->name('draft.item.store');
+            Route::post('draft/{borrador}/productos', [\App\Http\Controllers\InventarioInicialController::class, 'addProductosToDraft'])->name('draft.productos.add');
+            Route::post('draft/{borrador}/productos/load-paginated', [\App\Http\Controllers\InventarioInicialController::class, 'loadProductsPaginated'])->name('draft.productos.load-paginated');
+            Route::delete('draft/{borrador}/items/{item}', [\App\Http\Controllers\InventarioInicialController::class, 'deleteDraftItem'])->name('draft.item.delete');
+            Route::post('draft/{borrador}/complete', [\App\Http\Controllers\InventarioInicialController::class, 'completeDraft'])->middleware('permission:inventario.ajuste.procesar')->name('draft.complete');
+        });
     });
 
     // Rutas para logística y envíos

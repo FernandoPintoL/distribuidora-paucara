@@ -118,6 +118,7 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                         } else {
                             // Si es un objeto
                             Object.entries(errorsResponse).forEach(([key, value]: [string, unknown]) => {
+                                console.log('Manejando error de campo:', key, value);
                                 const errorMsg = Array.isArray(value) ? value[0] : String(value);
                                 NotificationService.error(errorMsg);
                             });
