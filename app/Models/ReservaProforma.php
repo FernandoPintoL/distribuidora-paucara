@@ -27,7 +27,9 @@ class ReservaProforma extends Model
         return [
             'fecha_reserva' => 'datetime',
             'fecha_expiracion' => 'datetime',
-            'cantidad_reservada' => 'integer',
+            'cantidad_reservada' => 'integer',  // ← Asegurar que sea INTEGER, no float
+            'proforma_id' => 'integer',
+            'stock_producto_id' => 'integer',
             'deleted_at' => 'datetime', // ✓ Para SoftDeletes
         ];
     }

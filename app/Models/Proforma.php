@@ -433,7 +433,7 @@ class Proforma extends Model
                         ReservaProforma::create([
                             'proforma_id' => $this->id,
                             'stock_producto_id' => $stock->id,
-                            'cantidad_reservada' => $cantidadAReservar,
+                            'cantidad_reservada' => (int) $cantidadAReservar,  // ← Convertir a INT
                             'fecha_reserva' => now(),
                             'fecha_expiracion' => now()->addHours(24), // 24 horas para aprobar
                             'estado' => ReservaProforma::ACTIVA,
