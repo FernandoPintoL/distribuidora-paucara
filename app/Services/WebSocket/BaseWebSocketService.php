@@ -21,15 +21,32 @@ abstract class BaseWebSocketService
 
     public function __construct()
     {
-        $this->wsUrl       = config('websocket.url', 'http://localhost:3000');
-        $this->enabled     = config('websocket.enabled', true);
-        $this->debug       = config('websocket.debug', false);
-        $this->timeout     = config('websocket.timeout', 5);
-        $this->retryConfig = config('websocket.retry', [
-            'enabled' => true,
-            'times'   => 2,
-            'sleep'   => 100,
-        ]);
+        try {
+            $this->wsUrl       = config('websocket.url', 'http://localhost:3000') ?? 'http://localhost:3000';
+            $this->enabled     = (bool) (config('websocket.enabled') !== false);
+            $this->debug       = (bool) config('websocket.debug', false);
+            $this->timeout     = (int) config('websocket.timeout', 5);
+            $this->retryConfig = config('websocket.retry') ?? [
+                'enabled' => true,
+                'times'   => 2,
+                'sleep'   => 100,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Error initializing WebSocketService, using defaults', [
+                'error' => $e->getMessage(),
+            ]);
+
+            // Valores por defecto seguros
+            $this->wsUrl       = 'http://localhost:3000';
+            $this->enabled     = false;
+            $this->debug       = false;
+            $this->timeout     = 5;
+            $this->retryConfig = [
+                'enabled' => true,
+                'times'   => 2,
+                'sleep'   => 100,
+            ];
+        }
     }
 
     /**

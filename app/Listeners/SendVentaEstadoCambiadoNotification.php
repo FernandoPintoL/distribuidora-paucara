@@ -47,6 +47,14 @@ class SendVentaEstadoCambiadoNotification
                 'razon' => $event->razon,
             ]);
 
+            // Verificar que el servicio WebSocket esté inicializado
+            if (!$this->webSocketService) {
+                Log::warning('⚠️ [SendVentaEstadoCambiadoNotification] WebSocket service no está disponible', [
+                    'venta_id' => $event->venta->id,
+                ]);
+                return;
+            }
+
             // Enviar notificación vía WebSocket
             $enviado = $this->webSocketService->notifyEstadoCambiado(
                 $event->venta,
@@ -65,10 +73,13 @@ class SendVentaEstadoCambiadoNotification
                 ]);
             }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ [SendVentaEstadoCambiadoNotification] Error enviando notificación', [
                 'venta_id' => $event->venta->id,
-                'error' => $e->getMessage(),
+                'error_message' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
             // No relanzar excepción para que el evento se considere procesado
