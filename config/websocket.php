@@ -9,7 +9,7 @@ return [
     | URL del servidor WebSocket/Socket.IO para enviar notificaciones en tiempo real
     |
     */
-    'url' => env('WEBSOCKET_URL', 'http://localhost:3000'),
+    'url' => env('WEBSOCKET_URL', env('APP_ENV') === 'production' ? 'http://localhost:3001' : 'http://localhost:3000'),
 
     /*
     |--------------------------------------------------------------------------
@@ -27,9 +27,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | Habilitar o deshabilitar notificaciones WebSocket globalmente
+    | Por defecto: deshabilitado en producción, habilitado en desarrollo
     |
     */
-    'enabled' => env('WEBSOCKET_ENABLED', true),
+    'enabled' => env('WEBSOCKET_ENABLED', env('APP_ENV') !== 'production'),
 
     /*
     |--------------------------------------------------------------------------
