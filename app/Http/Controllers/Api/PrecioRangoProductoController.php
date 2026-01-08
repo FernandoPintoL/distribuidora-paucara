@@ -223,8 +223,12 @@ class PrecioRangoProductoController extends Controller
     {
         $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.producto_id' => 'required|integer|exists:productos,id',
-            'items.*.cantidad' => 'required|integer|min:1',
+            'items.*.producto_id' => [
+                'required',
+                'integer',
+                'exists:productos,id,activo,1', // ← Validar que esté activo
+            ],
+            'items.*.cantidad' => 'required|numeric|min:0.01', // ← Permite decimales (0.01 en adelante)
         ]);
 
         $empresaId = auth()->user()->empresa_id;

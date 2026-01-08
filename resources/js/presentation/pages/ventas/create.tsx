@@ -14,6 +14,7 @@ import ProductosTable, { DetalleProducto } from '@/presentation/components/Produ
 
 // Importar servicios adicionales
 import { NotificationService } from '@/infrastructure/services/notification.service';
+import { usePrecioRangoCarrito } from '@/application/hooks/use-precio-rango-carrito';
 
 // Importar tipos del domain y servicio
 import type {
@@ -94,6 +95,9 @@ export default function VentaForm() {
     const [detallesWithProducts, setDetallesWithProducts] = useState<DetalleProducto[]>([]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [stockValido, setStockValido] = useState(true);
+
+    // Hook para calcular carrito con precios por rango
+    const precioRango = usePrecioRangoCarrito(500); // Debounce de 500ms
 
     // Estado para InputSearch de cliente
     const [clienteValue, setClienteValue] = useState<string | number | null>(null);
@@ -215,6 +219,14 @@ export default function VentaForm() {
         const newDetalles = [...detallesWithProducts, newDetail];
         setDetallesWithProducts(newDetalles);
 
+        // 🔑 NUEVO: Calcular precios según rangos
+        precioRango.calcularCarritoDebounced(
+            newDetalles.map(d => ({
+                producto_id: d.producto_id,
+                cantidad: d.cantidad
+            }))
+        );
+
         calculateTotals(newDetalles);
     };
 
@@ -234,6 +246,16 @@ export default function VentaForm() {
 
         setDetallesWithProducts(updatedDetalles);
 
+        // 🔑 NUEVO: Si cambió la cantidad, recalcular precios por rango
+        if (field === 'cantidad') {
+            precioRango.calcularCarritoDebounced(
+                updatedDetalles.map(d => ({
+                    producto_id: d.producto_id,
+                    cantidad: d.cantidad
+                }))
+            );
+        }
+
         calculateTotals(updatedDetalles);
     };
 
@@ -241,11 +263,32 @@ export default function VentaForm() {
         const updatedDetalles = detallesWithProducts.filter((_, i) => i !== index);
         setDetallesWithProducts(updatedDetalles);
 
+        // 🔑 NUEVO: Recalcular rangos cuando se elimina un producto
+        if (updatedDetalles.length > 0) {
+            precioRango.calcularCarritoDebounced(
+                updatedDetalles.map(d => ({
+                    producto_id: d.producto_id,
+                    cantidad: d.cantidad
+                }))
+            );
+        }
+
         calculateTotals(updatedDetalles);
     };
 
     const calculateTotals = (detalles: DetalleProducto[]) => {
-        const subtotal = detalles.reduce((sum, detalle) => sum + detalle.subtotal, 0);
+        let subtotal = 0;
+
+        // 🔑 NUEVO: Usar precios actualizados según rango si están disponibles
+        detalles.forEach(detalle => {
+            const precioActualizado = precioRango.getPrecioActualizado(detalle.producto_id as number);
+            const precio = precioActualizado ?? detalle.precio_unitario;
+            const cantidad = detalle.cantidad;
+            const descuento = detalle.descuento || 0;
+
+            subtotal += (Number(cantidad) * Number(precio)) - Number(descuento);
+        });
+
         const descuentoGeneral = data.descuento || 0;
         // Por ahora no se suma impuesto al total
         const total = subtotal - descuentoGeneral;
@@ -293,14 +336,21 @@ export default function VentaForm() {
 
         const submitData = {
             ...data,
-            detalles: detallesWithProducts.map(d => ({
-                id: d.id,
-                producto_id: d.producto_id,
-                cantidad: d.cantidad,
-                precio_unitario: d.precio_unitario,
-                descuento: d.descuento,
-                subtotal: d.subtotal
-            }))
+            detalles: detallesWithProducts.map(d => {
+                // 🔑 NUEVO: Usar precios calculados por rango si están disponibles
+                const precioActualizado = precioRango.getPrecioActualizado(d.producto_id as number);
+                const precioFinal = precioActualizado ?? d.precio_unitario;
+                const subtotalFinal = (Number(d.cantidad) * Number(precioFinal)) - Number(d.descuento);
+
+                return {
+                    id: d.id,
+                    producto_id: d.producto_id,
+                    cantidad: d.cantidad,
+                    precio_unitario: precioFinal,
+                    descuento: d.descuento,
+                    subtotal: subtotalFinal
+                };
+            })
         };
 
         if (isEditing && venta) {
@@ -602,6 +652,69 @@ export default function VentaForm() {
                             almacenId={1} // TODO: Agregar selección de almacén
                             onStockChange={setStockValido}
                         />
+                    </div>
+                )}
+
+                {/* 🔑 NUEVO: Información de Precios por Rango */}
+                {detallesWithProducts.length > 0 && precioRango.carritoCalculado && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm border border-blue-200 dark:border-blue-800 p-6">
+                        <h2 className="text-lg font-medium text-blue-900 dark:text-blue-100 mb-4">
+                            📊 Información de Precios por Rango
+                        </h2>
+
+                        <div className="space-y-4">
+                            {precioRango.carritoCalculado.detalles.map((detalleRango) => {
+                                const detalleLocal = detallesWithProducts.find(d => d.producto_id === detalleRango.producto_id);
+                                if (!detalleLocal) return null;
+
+                                return (
+                                    <div key={detalleRango.producto_id} className="bg-white dark:bg-zinc-800 rounded p-3 border border-blue-200 dark:border-blue-700">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <p className="font-medium text-gray-900 dark:text-white">
+                                                    {detalleRango.producto_nombre}
+                                                </p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    Cantidad: <span className="font-medium">{detalleRango.cantidad} unidades</span>
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                                                    {detalleRango.tipo_precio_nombre}
+                                                </p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    Bs {detalleRango.precio_unitario.toFixed(2)}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {detalleRango.rango_aplicado && (
+                                            <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                                Rango: {detalleRango.rango_aplicado.cantidad_minima} - {detalleRango.rango_aplicado.cantidad_maxima === null ? '+' : detalleRango.rango_aplicado.cantidad_maxima} unidades
+                                            </div>
+                                        )}
+
+                                        {detalleRango.ahorro_proximo && detalleRango.proximo_rango && (
+                                            <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-200 dark:border-green-700">
+                                                <p className="text-xs text-green-700 dark:text-green-300">
+                                                    💚 <span className="font-medium">Ahorro disponible:</span> Bs {detalleRango.ahorro_proximo.toFixed(2)}
+                                                    <br />
+                                                    Agrega {detalleRango.proximo_rango.falta_cantidad} unidad{detalleRango.proximo_rango.falta_cantidad !== 1 ? 'es' : ''} más para acceder a <strong>{detalleRango.proximo_rango.tipo_precio_nombre}</strong>
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            {precioRango.tiene_ahorro_disponible && (
+                                <div className="bg-green-100 dark:bg-green-900/30 rounded p-4 border border-green-300 dark:border-green-700">
+                                    <p className="text-green-800 dark:text-green-200 font-medium">
+                                        🎉 Total de ahorro disponible en carrito: Bs {precioRango.ahorro_disponible.toFixed(2)}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

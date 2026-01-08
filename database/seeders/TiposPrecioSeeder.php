@@ -44,7 +44,7 @@ class TiposPrecioSeeder extends Seeder
                     'tooltip' => 'Precio de venta al público',
                 ]),
             ],
-            /*[
+            [
                 'codigo'              => 'POR_MAYOR',
                 'nombre'              => 'Precio por Mayor',
                 'descripcion'         => 'Precio especial para ventas al por mayor',
@@ -59,23 +59,6 @@ class TiposPrecioSeeder extends Seeder
                     'icono'           => '📦',
                     'tooltip'         => 'Precio para ventas mayoristas',
                     'cantidad_minima' => 10,
-                ]),
-            ],
-            [
-                'codigo'              => 'FACTURADO',
-                'nombre'              => 'Precio Facturado',
-                'descripcion'         => 'Precio para ventas con factura fiscal',
-                'porcentaje_ganancia' => 16.00,
-                'color'               => 'orange',
-                'es_ganancia'         => true,
-                'es_precio_base'      => false,
-                'orden'               => 4,
-                'activo'              => true,
-                'es_sistema'          => true,
-                'configuracion'       => json_encode([
-                    'icono'             => '🧾',
-                    'tooltip'           => 'Precio con factura fiscal',
-                    'incluye_impuestos' => true,
                 ]),
             ],
             [
@@ -111,7 +94,8 @@ class TiposPrecioSeeder extends Seeder
                     'tooltip'  => 'Precio promocional',
                     'temporal' => true,
                 ]),
-            ],*/
+            ],
+            // Especial
         ];
 
         foreach ($tiposPrecios as $tipoPrecio) {

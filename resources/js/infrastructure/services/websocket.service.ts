@@ -41,7 +41,7 @@ class WebSocketService {
           reconnection: config.reconnection !== false,
           reconnectionDelay: config.reconnectionDelay || 1000,
           reconnectionDelayMax: config.reconnectionDelayMax || 5000,
-          reconnectionAttempts: config.reconnectionAttempts || 5,
+          reconnectionAttempts: config.reconnectionAttempts || 10, // Aumentado para esperar al token
           auth: config.auth ? {
             token: config.auth.token,
             userId: config.auth.userId,
@@ -97,7 +97,8 @@ class WebSocketService {
         this.socket.on('auth_error', (error) => {
           console.error('🔐 Error de autenticación:', error);
           this.emitLocal('websocket:auth_error', error);
-          reject(new Error(error.message || 'Authentication failed'));
+          // No rechazar aquí - dejar que se reconecte automáticamente
+          // reject(new Error(error.message || 'Authentication failed'));
         });
 
       } catch (error) {

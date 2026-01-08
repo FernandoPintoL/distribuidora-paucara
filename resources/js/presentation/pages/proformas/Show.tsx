@@ -35,6 +35,8 @@ import type { Proforma } from '@/domain/entities/proformas'
 // APPLICATION LAYER: Importar hooks de lógica de negocio
 import { useProformaActions, type CoordinacionData } from '@/application/hooks/use-proforma-actions'
 import { useApprovalFlow } from '@/application/hooks/use-approval-flow'
+import { useBuscarProductos } from '@/application/hooks/use-buscar-productos'
+import { usePrecioRangoCarrito } from '@/application/hooks/use-precio-rango-carrito'
 
 // PRESENTATION LAYER: Componentes reutilizables
 import { ProformaEstadoBadge } from '@/presentation/components/proforma/ProformaEstadoBadge'
@@ -56,6 +58,8 @@ interface ProductSelectionDialogProps {
     searchTerm: string
     onSearchChange: (term: string) => void
     onSelectProducto: (producto: any) => void
+    isLoading?: boolean
+    error?: string | null
 }
 
 function ProductSelectionDialog({
@@ -64,16 +68,15 @@ function ProductSelectionDialog({
     productos,
     searchTerm,
     onSearchChange,
-    onSelectProducto
+    onSelectProducto,
+    isLoading = false,
+    error = null
 }: ProductSelectionDialogProps) {
     const [selectedProducto, setSelectedProducto] = useState<any | null>(null)
     const [cantidad, setCantidad] = useState(1)
 
-    // Filtrar productos según el término de búsqueda
-    const productosFiltrados = productos.filter(p =>
-        p.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    // Los productos ya están filtrados por el servidor (servidor-side search)
+    const productosFiltrados = productos
 
     const handleAgregarProductoSeleccionado = () => {
         if (!selectedProducto) return
@@ -116,15 +119,35 @@ function ProductSelectionDialog({
                     <div className="relative sticky top-0 bg-background pb-2">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
-                            placeholder="Buscar por nombre o código..."
+                            placeholder="Buscar por nombre, SKU, código de barra, marca..."
                             value={searchTerm}
                             onChange={(e) => onSearchChange(e.target.value)}
                             className="pl-10 h-9 text-sm"
+                            disabled={isLoading}
                         />
+                        {isLoading && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                            </div>
+                        )}
                     </div>
 
+                    {/* Mensaje de error */}
+                    {error && (
+                        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
+                            {error}
+                        </div>
+                    )}
+
                     {/* Lista de productos */}
-                    {productosFiltrados.length > 0 ? (
+                    {isLoading ? (
+                        <div className="border rounded-lg p-8 text-center bg-muted/30">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                                <p className="text-sm text-muted-foreground">Buscando productos...</p>
+                            </div>
+                        </div>
+                    ) : productosFiltrados.length > 0 ? (
                         <div className="border rounded-lg divide-y bg-background">
                             {productosFiltrados.map((producto) => (
                                 <div
@@ -136,27 +159,83 @@ function ProductSelectionDialog({
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-sm truncate">{producto.nombre}</p>
-                                            <p className="text-xs text-muted-foreground line-clamp-1">
-                                                {producto.sku || producto.codigo} • Stock: {producto.cantidad_disponible || 0}
-                                            </p>
-                                            <p className="text-sm font-medium text-foreground mt-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="font-semibold text-sm truncate flex-1">{producto.nombre}</p>
+                                                {selectedProducto?.id === producto.id && (
+                                                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                                                )}
+                                            </div>
+
+                                            {/* Información técnica del producto */}
+                                            <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                                                {/* SKU */}
+                                                {(producto.sku || producto.codigo) && (
+                                                    <div className="col-span-2">
+                                                        <span className="text-muted-foreground">SKU: </span>
+                                                        <span className="font-mono text-foreground">{producto.sku || producto.codigo}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Códigos de barra */}
+                                                {(producto.codigo_barras || producto.codigos_barra?.length > 0) && (
+                                                    <div className="col-span-2">
+                                                        <span className="text-muted-foreground">Código: </span>
+                                                        <span className="font-mono text-foreground">
+                                                            {producto.codigo_barras || producto.codigos_barra?.[0]?.codigo}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Marca */}
+                                                {producto.marca?.nombre && (
+                                                    <div>
+                                                        <span className="text-muted-foreground">Marca: </span>
+                                                        <span className="text-foreground">{producto.marca.nombre}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Unidad */}
+                                                {producto.unidad?.nombre && (
+                                                    <div>
+                                                        <span className="text-muted-foreground">Unidad: </span>
+                                                        <span className="text-foreground">{producto.unidad.nombre}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Stock */}
+                                                <div className="col-span-2">
+                                                    <span className="text-muted-foreground">Stock: </span>
+                                                    <span className={producto.cantidad_disponible || producto.stock_disponible ? 'text-green-600 font-medium' : 'text-red-600'}>
+                                                        {producto.cantidad_disponible || producto.stock_disponible || 0}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Precio */}
+                                            <p className="text-sm font-semibold text-foreground mt-2">
                                                 Bs. {(producto.precio || producto.precio_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                             </p>
                                         </div>
-                                        {selectedProducto?.id === producto.id && (
-                                            <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
-                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
+                    ) : searchTerm ? (
+                        <div className="border rounded-lg p-4 text-center bg-muted/30 text-sm">
+                            <p className="text-muted-foreground">
+                                No se encontraron productos para "{searchTerm}"
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Intenta con otro término: nombre, SKU, código de barra, marca, etc.
+                            </p>
+                        </div>
                     ) : (
                         <div className="border rounded-lg p-4 text-center bg-muted/30 text-sm">
                             <p className="text-muted-foreground">
-                                {productos.length === 0
-                                    ? 'Cargando productos...'
-                                    : 'No se encontraron productos'}
+                                Comienza a escribir para buscar productos
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Puedes buscar por: nombre, SKU, código de barra, marca, etc.
                             </p>
                         </div>
                     )}
@@ -285,8 +364,26 @@ export default function ProformasShow({ item: proforma }: Props) {
     // Estados para edición de detalles
     const [editableDetalles, setEditableDetalles] = useState(proforma.detalles.map(d => ({ ...d })))
     const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
-    const [searchProducto, setSearchProducto] = useState('')
-    const [productosDisponibles, setProductosDisponibles] = useState<any[]>([])
+
+    // Hook para búsqueda de productos con debounce
+    const {
+        searchTerm: searchProducto,
+        setSearchTerm: setSearchProducto,
+        productos: productosDisponibles,
+        isLoading: isLoadingProductos,
+        error: errorProductos
+    } = useBuscarProductos({ debounceMs: 400 })
+
+    // Hook para cálculo de precios por rango de cantidad
+    const {
+        calcularCarritoDebounced,
+        getPrecioActualizado,
+        getProximoRango,
+        getAhorroDisponible,
+        getTipoPrecio,
+        loading: isCalculandoRangos,
+        error: errorRangos
+    } = usePrecioRangoCarrito(400)
 
     // Función helper para calcular fecha/hora por defecto (DEBE estar aquí para usarla en useState)
     // 🔧 Helper para extraer solo la hora (HH:ii) - mantener por compatibilidad con datos legados
@@ -357,32 +454,43 @@ export default function ProformasShow({ item: proforma }: Props) {
         observaciones_entrega: proforma.observaciones_entrega || '',
     })
 
-    // Cargar productos disponibles cuando se abre el diálogo
+    // Limpiar búsqueda cuando se cierra el diálogo
     useEffect(() => {
-        if (showAgregarProductoDialog) {
-            const cargarProductos = async () => {
-                try {
-                    const response = await fetch('/api/productos?per_page=100', {
-                        credentials: 'same-origin', // Incluir cookies de sesión
-                    })
-                    if (response.ok) {
-                        const result = await response.json()
-                        // El API devuelve: { success, message, data: { data: [], current_page, ... } }
-                        // data.data contiene el array de productos
-                        const productos = result.data?.data || result.data || []
-                        setProductosDisponibles(Array.isArray(productos) ? productos : [])
-                    } else if (response.status === 401) {
-                        console.warn('No autorizado para cargar productos')
-                        setProductosDisponibles([])
-                    }
-                } catch (error) {
-                    console.error('Error cargando productos:', error)
-                    setProductosDisponibles([])
-                }
-            }
-            cargarProductos()
+        if (!showAgregarProductoDialog) {
+            // Limpiar el término de búsqueda cuando se cierra el modal
+            setSearchProducto('')
         }
-    }, [showAgregarProductoDialog])
+    }, [showAgregarProductoDialog, setSearchProducto])
+
+    // 🔄 CRÍTICO: Cuando el cálculo de rangos completa, actualizar detalles con nuevos precios
+    // El backend retorna los detalles con precio_unitario y subtotal ya calculados
+    useEffect(() => {
+        if (!isCalculandoRangos && errorRangos === null) {
+            // La carga completó sin errores, ahora actualizar editableDetalles
+            // con los precios calculados del backend
+
+            setEditableDetalles(prevDetalles => {
+                const detallesActualizados = prevDetalles.map(detalle => {
+                    // Obtener el detalle calculado del hook
+                    const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
+
+                    if (precioActualizado) {
+                        // Si hay precio actualizado, recalcular subtotal
+                        return {
+                            ...detalle,
+                            precio_unitario: precioActualizado,
+                            subtotal: detalle.cantidad * precioActualizado
+                        }
+                    }
+
+                    return detalle
+                })
+
+                console.log('📊 Tabla actualizada con nuevos precios:', detallesActualizados)
+                return detallesActualizados
+            })
+        }
+    }, [isCalculandoRangos, errorRangos, getPrecioActualizado])
 
     // Sincronizar datos de coordinación cuando la proforma cambia
     useEffect(() => {
@@ -447,11 +555,23 @@ export default function ProformasShow({ item: proforma }: Props) {
         nuevosDetalles[index].cantidad = cantidadValida
         nuevosDetalles[index].subtotal = cantidadValida * nuevosDetalles[index].precio_unitario
         setEditableDetalles(nuevosDetalles)
+
+        // Recalcular rangos de precio
+        const itemsParaCalcular = nuevosDetalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad
+        }))
+        calcularCarritoDebounced(itemsParaCalcular)
     }
 
-    // Calcular total en tiempo real
+    // Calcular total en tiempo real (usando precios actualizados por rango)
     const calcularTotales = () => {
-        const subtotal = editableDetalles.reduce((sum, d) => sum + (d.subtotal || 0), 0)
+        const subtotal = editableDetalles.reduce((sum, d) => {
+            // Obtener precio actualizado del hook, o usar el actual
+            const precioActualizado = getPrecioActualizado(d.producto_id as number)
+            const precio = precioActualizado ?? (d.precio_unitario ?? 0)
+            return sum + (d.cantidad * precio)
+        }, 0)
         const total = subtotal
         return { subtotal, total }
     }
@@ -479,8 +599,16 @@ export default function ProformasShow({ item: proforma }: Props) {
                 subtotal: detalle.precio || detalle.precio_venta || 0
             }
 
-        setEditableDetalles([...editableDetalles, nuevoDetalle])
+        const nuevosDetalles = [...editableDetalles, nuevoDetalle]
+        setEditableDetalles(nuevosDetalles)
         setShowAgregarProductoDialog(false)
+
+        // Calcular rangos para el nuevo detalle
+        const itemsParaCalcular = nuevosDetalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad
+        }))
+        calcularCarritoDebounced(itemsParaCalcular)
     }
 
     // PRESENTATION LAYER: Handlers simples que delegan al hook
@@ -820,6 +948,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         <TableRow className="bg-muted/50">
                                             <TableHead className="font-semibold">Producto</TableHead>
                                             <TableHead className="font-semibold text-center">Cantidad</TableHead>
+                                            {/* <TableHead className="font-semibold text-center">Rango</TableHead> */}
                                             <TableHead className="font-semibold text-right">Precio Unit.</TableHead>
                                             <TableHead className="text-right font-semibold">Subtotal</TableHead>
                                             {proforma.estado === 'PENDIENTE' && <TableHead className="text-center font-semibold">Acciones</TableHead>}
@@ -854,35 +983,103 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                     {proforma.estado === 'PENDIENTE' ? (
                                                         <Input
                                                             type="number"
-                                                            min="0.01"
-                                                            step="0.01"
+                                                            min="1"
                                                             value={detalle.cantidad || ''}
                                                             onChange={(e) => {
                                                                 const valor = e.target.value
                                                                 if (valor === '' || valor === '0') {
-                                                                    handleEditarCantidad(index, 0.01)
+                                                                    handleEditarCantidad(index, 1)
                                                                 } else {
-                                                                    handleEditarCantidad(index, parseFloat(valor) || 0.01)
+                                                                    handleEditarCantidad(index, parseFloat(valor) || 1)
                                                                 }
                                                             }}
                                                             onBlur={(e) => {
                                                                 const valor = parseFloat(e.target.value) || 0
                                                                 if (valor <= 0) {
-                                                                    handleEditarCantidad(index, 0.01)
+                                                                    handleEditarCantidad(index, 1)
                                                                 }
                                                             }}
-                                                            placeholder="0.00"
+                                                            placeholder="1"
                                                             className="w-24 text-center"
                                                         />
                                                     ) : (
                                                         <span className="font-medium">{detalle.cantidad}</span>
                                                     )}
                                                 </TableCell>
+                                                {/* Columna de Rango */}
+                                                {/* <TableCell className="text-center">
+                                                    {(() => {
+                                                        const proximoRango = getProximoRango(detalle.producto_id as number)
+                                                        const ahorroDisponible = getAhorroDisponible(detalle.producto_id as number)
+
+                                                        if (ahorroDisponible && proximoRango) {
+                                                            return (
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="font-semibold text-amber-600 dark:text-amber-400">
+                                                                        Faltan {proximoRango.falta_cantidad} unidad{proximoRango.falta_cantidad !== 1 ? 'es' : ''}
+                                                                    </div>
+                                                                    <div className="text-muted-foreground">
+                                                                        para {proximoRango.cantidad_minima}+ ({proximoRango.tipo_precio_nombre})
+                                                                    </div>
+                                                                    <div className="text-green-600 dark:text-green-400 font-medium">
+                                                                        Ahorro: Bs {ahorroDisponible.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        }
+
+                                                        const tipoPrecio = getTipoPrecio(detalle.producto_id as number)
+                                                        return tipoPrecio ? (
+                                                            <div className="text-xs">
+                                                                <div className="font-semibold text-foreground">
+                                                                    {tipoPrecio.nombre}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">Sin rango</span>
+                                                        )
+                                                    })()}
+                                                </TableCell> */}
+                                                {/* Precio actualizado según rango */}
                                                 <TableCell className="text-right font-medium">
-                                                    Bs. {(detalle.precio_unitario ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                    {(() => {
+                                                        const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
+                                                        const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
+
+                                                        return (
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <span>
+                                                                    Bs. {precio.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                </span>
+                                                                {precioActualizado && precioActualizado !== detalle.precio_unitario && (
+                                                                    <span className="text-xs text-green-600 dark:text-green-400 line-through opacity-60">
+                                                                        {detalle.precio_unitario.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })()}
                                                 </TableCell>
+                                                {/* Subtotal actualizado */}
                                                 <TableCell className="text-right font-semibold">
-                                                    Bs. {(detalle.subtotal ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                    {(() => {
+                                                        const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
+                                                        const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
+                                                        const subtotalActualizado = detalle.cantidad * precio
+
+                                                        return (
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <span>
+                                                                    Bs. {subtotalActualizado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                </span>
+                                                                {precioActualizado && subtotalActualizado !== detalle.subtotal && (
+                                                                    <span className="text-xs text-green-600 dark:text-green-400 line-through opacity-60">
+                                                                        {detalle.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })()}
                                                 </TableCell>
                                                 {proforma.estado === 'PENDIENTE' && (
                                                     <TableCell className="text-center">
@@ -904,6 +1101,14 @@ export default function ProformasShow({ item: proforma }: Props) {
                             {/* Resumen de Totales en Tiempo Real */}
                             {proforma.estado === 'PENDIENTE' && (
                                 <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
+                                    {/* Indicador de cálculo en progreso */}
+                                    {isCalculandoRangos && (
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex items-center gap-2">
+                                            <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                                            <p className="text-xs text-blue-700 dark:text-blue-200">Recalculando precios...</p>
+                                        </div>
+                                    )}
+
                                     <div className="flex justify-end gap-8">
                                         <div className="space-y-2 text-right">
                                             <p className="text-sm text-muted-foreground">Subtotal:</p>
@@ -1467,6 +1672,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                 searchTerm={searchProducto}
                 onSearchChange={setSearchProducto}
                 onSelectProducto={handleAgregarProducto}
+                isLoading={isLoadingProductos}
+                error={errorProductos}
             />
 
             {/* Loading Overlay para flujo de aprobación */}

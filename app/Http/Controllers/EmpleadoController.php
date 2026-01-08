@@ -201,6 +201,8 @@ class EmpleadoController extends Controller
                     'password'          => Hash::make($request->password), // Usar password del request
                     'email_verified_at' => $request->email ? now() : null, // Solo verificar si se proporciona email
                     'activo'            => $request->puede_acceder_sistema ?? false,
+                    // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
+                    'empresa_id'        => Auth::user()?->empresa_id,
                 ]);
 
                 // Asignar múltiples roles
@@ -212,6 +214,8 @@ class EmpleadoController extends Controller
             // Preparar datos para el empleado con valores por defecto
             $empleadoData = [
                 'user_id'                      => $user ? $user->id : null,
+                // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
+                'empresa_id'                   => Auth::user()?->empresa_id,
                 'ci'                           => $request->ci,
                 'telefono'                     => $request->telefono,
                 'direccion'                    => $request->direccion,

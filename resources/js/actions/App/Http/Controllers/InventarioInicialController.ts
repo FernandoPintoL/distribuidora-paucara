@@ -507,6 +507,80 @@ loadProductsPaginated.post = (args: { borrador: string | number } | [borrador: s
     
     loadProductsPaginated.form = loadProductsPaginatedForm
 /**
+* @see \App\Http\Controllers\InventarioInicialController::searchProductoInDraft
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+export const searchProductoInDraft = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: searchProductoInDraft.url(args, options),
+    method: 'post',
+})
+
+searchProductoInDraft.definition = {
+    methods: ["post"],
+    url: '/inventario/inventario-inicial/draft/{borrador}/productos/search',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\InventarioInicialController::searchProductoInDraft
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+searchProductoInDraft.url = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { borrador: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    borrador: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        borrador: args.borrador,
+                }
+
+    return searchProductoInDraft.definition.url
+            .replace('{borrador}', parsedArgs.borrador.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\InventarioInicialController::searchProductoInDraft
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+searchProductoInDraft.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: searchProductoInDraft.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\InventarioInicialController::searchProductoInDraft
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+    const searchProductoInDraftForm = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: searchProductoInDraft.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\InventarioInicialController::searchProductoInDraft
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+        searchProductoInDraftForm.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: searchProductoInDraft.url(args, options),
+            method: 'post',
+        })
+    
+    searchProductoInDraft.form = searchProductoInDraftForm
+/**
 * @see \App\Http\Controllers\InventarioInicialController::deleteDraftItem
  * @see app/Http/Controllers/InventarioInicialController.php:360
  * @route '/inventario/inventario-inicial/draft/{borrador}/items/{item}'
@@ -662,6 +736,6 @@ completeDraft.post = (args: { borrador: string | number } | [borrador: string | 
         })
     
     completeDraft.form = completeDraftForm
-const InventarioInicialController = { index, store, createOrGetDraft, getDraft, storeDraftItem, addProductosToDraft, loadProductsPaginated, deleteDraftItem, completeDraft }
+const InventarioInicialController = { index, store, createOrGetDraft, getDraft, storeDraftItem, addProductosToDraft, loadProductsPaginated, searchProductoInDraft, deleteDraftItem, completeDraft }
 
 export default InventarioInicialController

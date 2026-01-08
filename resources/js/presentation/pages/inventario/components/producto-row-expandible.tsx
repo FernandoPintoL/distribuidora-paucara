@@ -46,21 +46,22 @@ export default function ProductoRowExpandible({
             {/* Fila principal del producto */}
             <button
                 onClick={() => onToggleExpand(item.producto_id)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                className="w-full px-3 sm:px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
             >
-                <div className="flex-1 text-left">
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                {/* Contenido principal */}
+                <div className="flex-1 text-left min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
                                 {item.producto?.nombre}
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
                                 SKU: {item.producto?.sku}
                             </p>
                         </div>
 
-                        {/* Barra de progreso */}
-                        <div className="w-32">
+                        {/* Barra de progreso - adaptativa */}
+                        <div className="w-full sm:w-40 flex-shrink-0">
                             <div className="flex items-center gap-2">
                                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                     <div
@@ -68,7 +69,7 @@ export default function ProductoRowExpandible({
                                         style={{ width: `${porcentajeCompletado}%` }}
                                     ></div>
                                 </div>
-                                <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[30px] text-right">
+                                <span className="text-xs text-gray-600 dark:text-gray-400 min-w-fit whitespace-nowrap">
                                     {almacenesCompletados}/{almacenes.length}
                                 </span>
                             </div>
@@ -76,7 +77,8 @@ export default function ProductoRowExpandible({
                     </div>
                 </div>
 
-                <div className="ml-4">
+                {/* Icono expandible */}
+                <div className="flex justify-end sm:ml-4 flex-shrink-0">
                     {expanded ? (
                         <ChevronUp className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                     ) : (

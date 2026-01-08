@@ -72,6 +72,10 @@ export function useProformaNotifications(): UseProformaNotificationsReturn {
 
       // Normalizar roles a minúsculas para comparación case-insensitive
       const normalizedRoles = (roles || []).map(r => r.toLowerCase());
+      // ⭐ Super Admin recibe TODAS las notificaciones
+      if (normalizedRoles.includes('super admin')) {
+        return true;
+      }
 
       // Lógica de filtrado por rol
       switch (eventType) {

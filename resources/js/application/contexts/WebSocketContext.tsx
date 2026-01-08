@@ -119,17 +119,25 @@ export function WebSocketProvider({
 
   /**
    * Efecto: Conectar automáticamente cuando se monta el Provider
+   * Espera a que el token esté disponible antes de intentar conectar
    */
   useEffect(() => {
-    if (autoConnect && !connectionInitializedRef.current) {
-      console.log('🚀 Iniciando conexión automática del WebSocket Context...');
-      connect();
+    if (!autoConnect || connectionInitializedRef.current) {
+      return;
     }
 
-    return () => {
-      // No desconectar automáticamente al desmontar
-      // para mantener la conexión global
-    };
+    // Esperar a que el token esté disponible antes de conectar
+    const checkAndConnect = setInterval(() => {
+      const token = localStorage.getItem('auth_token');
+      if (token && !connectionInitializedRef.current) {
+        console.log('🚀 Iniciando conexión automática del WebSocket Context...');
+        clearInterval(checkAndConnect);
+        connect(token);
+      }
+    }, 500);
+
+    // Limpiar el intervalo cuando se desmonte
+    return () => clearInterval(checkAndConnect);
   }, [autoConnect, connect]);
 
   /**

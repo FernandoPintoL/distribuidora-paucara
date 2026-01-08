@@ -36,7 +36,12 @@ class PrecioRangoProductoService
     }
 
     /**
-     * Calcular todos los items del carrito con sus precios
+     * Calcular todos los items del carrito con sus precios por rango
+     *
+     * RESPUESTA MEJORADA (FASE 1):
+     * ✅ Incluye tipo_precio_id y tipo_precio_nombre en nivel superior
+     * ✅ Calcula ahorro total disponible del carrito
+     * ✅ Mantiene compatibilidad con rango_aplicado
      */
     public function calcularCarrito(
         array $items,
@@ -45,36 +50,73 @@ class PrecioRangoProductoService
         $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
         $detalles = [];
         $totalGeneral = 0;
+        $ahorroTotalDisponible = 0;
 
         foreach ($items as $item) {
-            $producto = Producto::find($item['producto_id']);
+            // Buscar producto ACTIVO (con scope)
+            $producto = Producto::activos()->find($item['producto_id']);
 
             if (!$producto) {
+                // El producto no existe o está inactivo
+                \Log::warning("Producto {$item['producto_id']} no encontrado o inactivo en calcularCarrito");
                 continue;
             }
 
             $cantidad = (int) $item['cantidad'];
             $precioInfo = $this->calcularPrecioCompleto($producto, $cantidad, $empresaId);
 
-            $detalles[] = [
+            // 🔑 NUEVO: Extraer tipo_precio_id del rango_aplicado
+            // Si hay rango aplicado, usar el tipo_precio_id de ahí
+            // Si no, usar tipo_precio_id=2 (VENTA - por defecto)
+            if ($precioInfo['rango_aplicado']) {
+                $tipoPrecioId = $precioInfo['rango_aplicado']['tipo_precio_id'];
+                $tipoPrecioNombre = $precioInfo['rango_aplicado']['tipo_precio_nombre'];
+            } else {
+                // Fallback: Si no hay rango, obtener el tipo_precio de la venta normal
+                $precioVenta = $producto->obtenerPrecio(2); // tipo_precio_id = 2 (VENTA)
+                $tipoPrecioId = 2;
+                $tipoPrecioNombre = 'Precio de Venta';
+            }
+
+            $detalle = [
+                // ✅ DATOS PRINCIPALES
                 'producto_id' => $producto->id,
                 'producto_nombre' => $producto->nombre,
                 'producto_sku' => $producto->sku,
                 'cantidad' => $cantidad,
+
+                // 🔑 NUEVO: Tipo de precio en nivel superior (fácil acceso)
+                'tipo_precio_id' => $tipoPrecioId,
+                'tipo_precio_nombre' => $tipoPrecioNombre,
+
+                // PRECIOS
                 'precio_unitario' => $precioInfo['precio_unitario'],
                 'subtotal' => $precioInfo['subtotal'],
+
+                // INFORMACIÓN DE RANGOS
                 'rango_aplicado' => $precioInfo['rango_aplicado'],
                 'proximo_rango' => $precioInfo['proximo_rango'],
                 'ahorro_proximo' => $precioInfo['ahorro_proximo'],
             ];
 
+            $detalles[] = $detalle;
+
+            // Acumular totales
             $totalGeneral += $precioInfo['subtotal'];
+            if ($precioInfo['ahorro_proximo']) {
+                $ahorroTotalDisponible += $precioInfo['ahorro_proximo'];
+            }
         }
 
         return [
             'detalles' => $detalles,
-            'total' => $totalGeneral,
+            'subtotal' => $totalGeneral,
+            'total' => $totalGeneral, // Alias para compatibilidad
             'cantidad_items' => count($detalles),
+
+            // 🔑 NUEVO: Ahorro disponible del carrito completo
+            'ahorro_disponible' => $ahorroTotalDisponible,
+            'tiene_ahorro_disponible' => $ahorroTotalDisponible > 0,
         ];
     }
 

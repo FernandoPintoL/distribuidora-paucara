@@ -295,6 +295,8 @@ class ClienteController extends Controller
                             'usernick' => $usernick,
                             'password' => Hash::make($telefono),
                             'activo'   => true,
+                            // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
+                            'empresa_id' => Auth::user()?->empresa_id,
                         ];
 
                         if ($request->filled('email')) {
@@ -624,6 +626,8 @@ class ClienteController extends Controller
                 'usernick' => $usernick,
                 'password' => Hash::make($telefono), // Usar teléfono como password
                 'activo'   => true,
+                // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
+                'empresa_id' => Auth::user()?->empresa_id,
             ];
 
             // Agregar email solo si se proporciona

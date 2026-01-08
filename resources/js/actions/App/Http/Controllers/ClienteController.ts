@@ -279,7 +279,7 @@ export const store = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::buscarApi
- * @see app/Http/Controllers/ClienteController.php:717
+ * @see app/Http/Controllers/ClienteController.php:721
  * @route '/api/clientes/buscar'
  */
 export const buscarApi = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -294,7 +294,7 @@ buscarApi.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::buscarApi
- * @see app/Http/Controllers/ClienteController.php:717
+ * @see app/Http/Controllers/ClienteController.php:721
  * @route '/api/clientes/buscar'
  */
 buscarApi.url = (options?: RouteQueryOptions) => {
@@ -303,7 +303,7 @@ buscarApi.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::buscarApi
- * @see app/Http/Controllers/ClienteController.php:717
+ * @see app/Http/Controllers/ClienteController.php:721
  * @route '/api/clientes/buscar'
  */
 buscarApi.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -312,7 +312,7 @@ buscarApi.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ClienteController::buscarApi
- * @see app/Http/Controllers/ClienteController.php:717
+ * @see app/Http/Controllers/ClienteController.php:721
  * @route '/api/clientes/buscar'
  */
 buscarApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -322,7 +322,7 @@ buscarApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ClienteController::buscarApi
- * @see app/Http/Controllers/ClienteController.php:717
+ * @see app/Http/Controllers/ClienteController.php:721
  * @route '/api/clientes/buscar'
  */
     const buscarApiForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -332,7 +332,7 @@ buscarApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ClienteController::buscarApi
- * @see app/Http/Controllers/ClienteController.php:717
+ * @see app/Http/Controllers/ClienteController.php:721
  * @route '/api/clientes/buscar'
  */
         buscarApiForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -341,7 +341,7 @@ buscarApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ClienteController::buscarApi
- * @see app/Http/Controllers/ClienteController.php:717
+ * @see app/Http/Controllers/ClienteController.php:721
  * @route '/api/clientes/buscar'
  */
         buscarApiForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -357,7 +357,7 @@ buscarApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     buscarApi.form = buscarApiForm
 /**
 * @see \App\Http\Controllers\ClienteController::miPerfil
- * @see app/Http/Controllers/ClienteController.php:522
+ * @see app/Http/Controllers/ClienteController.php:524
  * @route '/api/clientes/mi-perfil'
  */
 export const miPerfil = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -372,7 +372,7 @@ miPerfil.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::miPerfil
- * @see app/Http/Controllers/ClienteController.php:522
+ * @see app/Http/Controllers/ClienteController.php:524
  * @route '/api/clientes/mi-perfil'
  */
 miPerfil.url = (options?: RouteQueryOptions) => {
@@ -381,7 +381,7 @@ miPerfil.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::miPerfil
- * @see app/Http/Controllers/ClienteController.php:522
+ * @see app/Http/Controllers/ClienteController.php:524
  * @route '/api/clientes/mi-perfil'
  */
 miPerfil.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -390,7 +390,7 @@ miPerfil.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ClienteController::miPerfil
- * @see app/Http/Controllers/ClienteController.php:522
+ * @see app/Http/Controllers/ClienteController.php:524
  * @route '/api/clientes/mi-perfil'
  */
 miPerfil.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -400,7 +400,7 @@ miPerfil.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ClienteController::miPerfil
- * @see app/Http/Controllers/ClienteController.php:522
+ * @see app/Http/Controllers/ClienteController.php:524
  * @route '/api/clientes/mi-perfil'
  */
     const miPerfilForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -410,7 +410,7 @@ miPerfil.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ClienteController::miPerfil
- * @see app/Http/Controllers/ClienteController.php:522
+ * @see app/Http/Controllers/ClienteController.php:524
  * @route '/api/clientes/mi-perfil'
  */
         miPerfilForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -419,7 +419,7 @@ miPerfil.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ClienteController::miPerfil
- * @see app/Http/Controllers/ClienteController.php:522
+ * @see app/Http/Controllers/ClienteController.php:524
  * @route '/api/clientes/mi-perfil'
  */
         miPerfilForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -435,7 +435,7 @@ miPerfil.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     miPerfil.form = miPerfilForm
 /**
 * @see \App\Http\Controllers\ClienteController::showApi
- * @see app/Http/Controllers/ClienteController.php:482
+ * @see app/Http/Controllers/ClienteController.php:484
  * @route '/api/clientes/{cliente}'
  */
 export const showApi = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -450,7 +450,7 @@ showApi.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::showApi
- * @see app/Http/Controllers/ClienteController.php:482
+ * @see app/Http/Controllers/ClienteController.php:484
  * @route '/api/clientes/{cliente}'
  */
 showApi.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -483,7 +483,7 @@ showApi.url = (args: { cliente: number | { id: number } } | [cliente: number | {
 
 /**
 * @see \App\Http\Controllers\ClienteController::showApi
- * @see app/Http/Controllers/ClienteController.php:482
+ * @see app/Http/Controllers/ClienteController.php:484
  * @route '/api/clientes/{cliente}'
  */
 showApi.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -492,7 +492,7 @@ showApi.get = (args: { cliente: number | { id: number } } | [cliente: number | {
 })
 /**
 * @see \App\Http\Controllers\ClienteController::showApi
- * @see app/Http/Controllers/ClienteController.php:482
+ * @see app/Http/Controllers/ClienteController.php:484
  * @route '/api/clientes/{cliente}'
  */
 showApi.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -502,7 +502,7 @@ showApi.head = (args: { cliente: number | { id: number } } | [cliente: number | 
 
     /**
 * @see \App\Http\Controllers\ClienteController::showApi
- * @see app/Http/Controllers/ClienteController.php:482
+ * @see app/Http/Controllers/ClienteController.php:484
  * @route '/api/clientes/{cliente}'
  */
     const showApiForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -512,7 +512,7 @@ showApi.head = (args: { cliente: number | { id: number } } | [cliente: number | 
 
             /**
 * @see \App\Http\Controllers\ClienteController::showApi
- * @see app/Http/Controllers/ClienteController.php:482
+ * @see app/Http/Controllers/ClienteController.php:484
  * @route '/api/clientes/{cliente}'
  */
         showApiForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -521,7 +521,7 @@ showApi.head = (args: { cliente: number | { id: number } } | [cliente: number | 
         })
             /**
 * @see \App\Http\Controllers\ClienteController::showApi
- * @see app/Http/Controllers/ClienteController.php:482
+ * @see app/Http/Controllers/ClienteController.php:484
  * @route '/api/clientes/{cliente}'
  */
         showApiForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -744,7 +744,7 @@ export const update = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/api/clientes/{cliente}'
  */
 const destroyb4aecc3f2a1150c4870c6b2353680aa8 = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -759,7 +759,7 @@ destroyb4aecc3f2a1150c4870c6b2353680aa8.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/api/clientes/{cliente}'
  */
 destroyb4aecc3f2a1150c4870c6b2353680aa8.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -792,7 +792,7 @@ destroyb4aecc3f2a1150c4870c6b2353680aa8.url = (args: { cliente: number | { id: n
 
 /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/api/clientes/{cliente}'
  */
 destroyb4aecc3f2a1150c4870c6b2353680aa8.delete = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -802,7 +802,7 @@ destroyb4aecc3f2a1150c4870c6b2353680aa8.delete = (args: { cliente: number | { id
 
     /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/api/clientes/{cliente}'
  */
     const destroyb4aecc3f2a1150c4870c6b2353680aa8Form = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -817,7 +817,7 @@ destroyb4aecc3f2a1150c4870c6b2353680aa8.delete = (args: { cliente: number | { id
 
             /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/api/clientes/{cliente}'
  */
         destroyb4aecc3f2a1150c4870c6b2353680aa8Form.delete = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -833,7 +833,7 @@ destroyb4aecc3f2a1150c4870c6b2353680aa8.delete = (args: { cliente: number | { id
     destroyb4aecc3f2a1150c4870c6b2353680aa8.form = destroyb4aecc3f2a1150c4870c6b2353680aa8Form
     /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/clientes/{cliente}'
  */
 const destroy5b845d2a69a6f256699117f439758ef1 = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -848,7 +848,7 @@ destroy5b845d2a69a6f256699117f439758ef1.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/clientes/{cliente}'
  */
 destroy5b845d2a69a6f256699117f439758ef1.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -881,7 +881,7 @@ destroy5b845d2a69a6f256699117f439758ef1.url = (args: { cliente: number | { id: n
 
 /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/clientes/{cliente}'
  */
 destroy5b845d2a69a6f256699117f439758ef1.delete = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -891,7 +891,7 @@ destroy5b845d2a69a6f256699117f439758ef1.delete = (args: { cliente: number | { id
 
     /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/clientes/{cliente}'
  */
     const destroy5b845d2a69a6f256699117f439758ef1Form = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -906,7 +906,7 @@ destroy5b845d2a69a6f256699117f439758ef1.delete = (args: { cliente: number | { id
 
             /**
 * @see \App\Http\Controllers\ClienteController::destroy
- * @see app/Http/Controllers/ClienteController.php:436
+ * @see app/Http/Controllers/ClienteController.php:438
  * @route '/clientes/{cliente}'
  */
         destroy5b845d2a69a6f256699117f439758ef1Form.delete = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -928,7 +928,7 @@ export const destroy = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::saldoCuentasPorCobrar
- * @see app/Http/Controllers/ClienteController.php:746
+ * @see app/Http/Controllers/ClienteController.php:750
  * @route '/api/clientes/{cliente}/saldo-cuentas'
  */
 export const saldoCuentasPorCobrar = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -943,7 +943,7 @@ saldoCuentasPorCobrar.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::saldoCuentasPorCobrar
- * @see app/Http/Controllers/ClienteController.php:746
+ * @see app/Http/Controllers/ClienteController.php:750
  * @route '/api/clientes/{cliente}/saldo-cuentas'
  */
 saldoCuentasPorCobrar.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -976,7 +976,7 @@ saldoCuentasPorCobrar.url = (args: { cliente: number | { id: number } } | [clien
 
 /**
 * @see \App\Http\Controllers\ClienteController::saldoCuentasPorCobrar
- * @see app/Http/Controllers/ClienteController.php:746
+ * @see app/Http/Controllers/ClienteController.php:750
  * @route '/api/clientes/{cliente}/saldo-cuentas'
  */
 saldoCuentasPorCobrar.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -985,7 +985,7 @@ saldoCuentasPorCobrar.get = (args: { cliente: number | { id: number } } | [clien
 })
 /**
 * @see \App\Http\Controllers\ClienteController::saldoCuentasPorCobrar
- * @see app/Http/Controllers/ClienteController.php:746
+ * @see app/Http/Controllers/ClienteController.php:750
  * @route '/api/clientes/{cliente}/saldo-cuentas'
  */
 saldoCuentasPorCobrar.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -995,7 +995,7 @@ saldoCuentasPorCobrar.head = (args: { cliente: number | { id: number } } | [clie
 
     /**
 * @see \App\Http\Controllers\ClienteController::saldoCuentasPorCobrar
- * @see app/Http/Controllers/ClienteController.php:746
+ * @see app/Http/Controllers/ClienteController.php:750
  * @route '/api/clientes/{cliente}/saldo-cuentas'
  */
     const saldoCuentasPorCobrarForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1005,7 +1005,7 @@ saldoCuentasPorCobrar.head = (args: { cliente: number | { id: number } } | [clie
 
             /**
 * @see \App\Http\Controllers\ClienteController::saldoCuentasPorCobrar
- * @see app/Http/Controllers/ClienteController.php:746
+ * @see app/Http/Controllers/ClienteController.php:750
  * @route '/api/clientes/{cliente}/saldo-cuentas'
  */
         saldoCuentasPorCobrarForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1014,7 +1014,7 @@ saldoCuentasPorCobrar.head = (args: { cliente: number | { id: number } } | [clie
         })
             /**
 * @see \App\Http\Controllers\ClienteController::saldoCuentasPorCobrar
- * @see app/Http/Controllers/ClienteController.php:746
+ * @see app/Http/Controllers/ClienteController.php:750
  * @route '/api/clientes/{cliente}/saldo-cuentas'
  */
         saldoCuentasPorCobrarForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1030,7 +1030,7 @@ saldoCuentasPorCobrar.head = (args: { cliente: number | { id: number } } | [clie
     saldoCuentasPorCobrar.form = saldoCuentasPorCobrarForm
 /**
 * @see \App\Http\Controllers\ClienteController::historialVentas
- * @see app/Http/Controllers/ClienteController.php:774
+ * @see app/Http/Controllers/ClienteController.php:778
  * @route '/api/clientes/{cliente}/historial-ventas'
  */
 export const historialVentas = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1045,7 +1045,7 @@ historialVentas.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::historialVentas
- * @see app/Http/Controllers/ClienteController.php:774
+ * @see app/Http/Controllers/ClienteController.php:778
  * @route '/api/clientes/{cliente}/historial-ventas'
  */
 historialVentas.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1078,7 +1078,7 @@ historialVentas.url = (args: { cliente: number | { id: number } } | [cliente: nu
 
 /**
 * @see \App\Http\Controllers\ClienteController::historialVentas
- * @see app/Http/Controllers/ClienteController.php:774
+ * @see app/Http/Controllers/ClienteController.php:778
  * @route '/api/clientes/{cliente}/historial-ventas'
  */
 historialVentas.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1087,7 +1087,7 @@ historialVentas.get = (args: { cliente: number | { id: number } } | [cliente: nu
 })
 /**
 * @see \App\Http\Controllers\ClienteController::historialVentas
- * @see app/Http/Controllers/ClienteController.php:774
+ * @see app/Http/Controllers/ClienteController.php:778
  * @route '/api/clientes/{cliente}/historial-ventas'
  */
 historialVentas.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1097,7 +1097,7 @@ historialVentas.head = (args: { cliente: number | { id: number } } | [cliente: n
 
     /**
 * @see \App\Http\Controllers\ClienteController::historialVentas
- * @see app/Http/Controllers/ClienteController.php:774
+ * @see app/Http/Controllers/ClienteController.php:778
  * @route '/api/clientes/{cliente}/historial-ventas'
  */
     const historialVentasForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1107,7 +1107,7 @@ historialVentas.head = (args: { cliente: number | { id: number } } | [cliente: n
 
             /**
 * @see \App\Http\Controllers\ClienteController::historialVentas
- * @see app/Http/Controllers/ClienteController.php:774
+ * @see app/Http/Controllers/ClienteController.php:778
  * @route '/api/clientes/{cliente}/historial-ventas'
  */
         historialVentasForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1116,7 +1116,7 @@ historialVentas.head = (args: { cliente: number | { id: number } } | [cliente: n
         })
             /**
 * @see \App\Http\Controllers\ClienteController::historialVentas
- * @see app/Http/Controllers/ClienteController.php:774
+ * @see app/Http/Controllers/ClienteController.php:778
  * @route '/api/clientes/{cliente}/historial-ventas'
  */
         historialVentasForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1132,7 +1132,7 @@ historialVentas.head = (args: { cliente: number | { id: number } } | [cliente: n
     historialVentas.form = historialVentasForm
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
- * @see app/Http/Controllers/ClienteController.php:803
+ * @see app/Http/Controllers/ClienteController.php:807
  * @route '/api/clientes/{cliente}/credito/detalles'
  */
 export const obtenerDetallesCreditoApi = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1147,7 +1147,7 @@ obtenerDetallesCreditoApi.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
- * @see app/Http/Controllers/ClienteController.php:803
+ * @see app/Http/Controllers/ClienteController.php:807
  * @route '/api/clientes/{cliente}/credito/detalles'
  */
 obtenerDetallesCreditoApi.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1180,7 +1180,7 @@ obtenerDetallesCreditoApi.url = (args: { cliente: number | { id: number } } | [c
 
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
- * @see app/Http/Controllers/ClienteController.php:803
+ * @see app/Http/Controllers/ClienteController.php:807
  * @route '/api/clientes/{cliente}/credito/detalles'
  */
 obtenerDetallesCreditoApi.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1189,7 +1189,7 @@ obtenerDetallesCreditoApi.get = (args: { cliente: number | { id: number } } | [c
 })
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
- * @see app/Http/Controllers/ClienteController.php:803
+ * @see app/Http/Controllers/ClienteController.php:807
  * @route '/api/clientes/{cliente}/credito/detalles'
  */
 obtenerDetallesCreditoApi.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1199,7 +1199,7 @@ obtenerDetallesCreditoApi.head = (args: { cliente: number | { id: number } } | [
 
     /**
 * @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
- * @see app/Http/Controllers/ClienteController.php:803
+ * @see app/Http/Controllers/ClienteController.php:807
  * @route '/api/clientes/{cliente}/credito/detalles'
  */
     const obtenerDetallesCreditoApiForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1209,7 +1209,7 @@ obtenerDetallesCreditoApi.head = (args: { cliente: number | { id: number } } | [
 
             /**
 * @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
- * @see app/Http/Controllers/ClienteController.php:803
+ * @see app/Http/Controllers/ClienteController.php:807
  * @route '/api/clientes/{cliente}/credito/detalles'
  */
         obtenerDetallesCreditoApiForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1218,7 +1218,7 @@ obtenerDetallesCreditoApi.head = (args: { cliente: number | { id: number } } | [
         })
             /**
 * @see \App\Http\Controllers\ClienteController::obtenerDetallesCreditoApi
- * @see app/Http/Controllers/ClienteController.php:803
+ * @see app/Http/Controllers/ClienteController.php:807
  * @route '/api/clientes/{cliente}/credito/detalles'
  */
         obtenerDetallesCreditoApiForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1234,7 +1234,7 @@ obtenerDetallesCreditoApi.head = (args: { cliente: number | { id: number } } | [
     obtenerDetallesCreditoApi.form = obtenerDetallesCreditoApiForm
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
- * @see app/Http/Controllers/ClienteController.php:562
+ * @see app/Http/Controllers/ClienteController.php:564
  * @route '/api/clientes/{cliente}/auditoria-credito'
  */
 export const obtenerAuditoriaCreditoApi = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1249,7 +1249,7 @@ obtenerAuditoriaCreditoApi.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
- * @see app/Http/Controllers/ClienteController.php:562
+ * @see app/Http/Controllers/ClienteController.php:564
  * @route '/api/clientes/{cliente}/auditoria-credito'
  */
 obtenerAuditoriaCreditoApi.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1282,7 +1282,7 @@ obtenerAuditoriaCreditoApi.url = (args: { cliente: number | { id: number } } | [
 
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
- * @see app/Http/Controllers/ClienteController.php:562
+ * @see app/Http/Controllers/ClienteController.php:564
  * @route '/api/clientes/{cliente}/auditoria-credito'
  */
 obtenerAuditoriaCreditoApi.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1291,7 +1291,7 @@ obtenerAuditoriaCreditoApi.get = (args: { cliente: number | { id: number } } | [
 })
 /**
 * @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
- * @see app/Http/Controllers/ClienteController.php:562
+ * @see app/Http/Controllers/ClienteController.php:564
  * @route '/api/clientes/{cliente}/auditoria-credito'
  */
 obtenerAuditoriaCreditoApi.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1301,7 +1301,7 @@ obtenerAuditoriaCreditoApi.head = (args: { cliente: number | { id: number } } | 
 
     /**
 * @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
- * @see app/Http/Controllers/ClienteController.php:562
+ * @see app/Http/Controllers/ClienteController.php:564
  * @route '/api/clientes/{cliente}/auditoria-credito'
  */
     const obtenerAuditoriaCreditoApiForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1311,7 +1311,7 @@ obtenerAuditoriaCreditoApi.head = (args: { cliente: number | { id: number } } | 
 
             /**
 * @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
- * @see app/Http/Controllers/ClienteController.php:562
+ * @see app/Http/Controllers/ClienteController.php:564
  * @route '/api/clientes/{cliente}/auditoria-credito'
  */
         obtenerAuditoriaCreditoApiForm.get = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1320,7 +1320,7 @@ obtenerAuditoriaCreditoApi.head = (args: { cliente: number | { id: number } } | 
         })
             /**
 * @see \App\Http\Controllers\ClienteController::obtenerAuditoriaCreditoApi
- * @see app/Http/Controllers/ClienteController.php:562
+ * @see app/Http/Controllers/ClienteController.php:564
  * @route '/api/clientes/{cliente}/auditoria-credito'
  */
         obtenerAuditoriaCreditoApiForm.head = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1336,7 +1336,7 @@ obtenerAuditoriaCreditoApi.head = (args: { cliente: number | { id: number } } | 
     obtenerAuditoriaCreditoApi.form = obtenerAuditoriaCreditoApiForm
 /**
 * @see \App\Http\Controllers\ClienteController::registrarPagoApi
- * @see app/Http/Controllers/ClienteController.php:914
+ * @see app/Http/Controllers/ClienteController.php:918
  * @route '/api/clientes/{cliente}/pagos'
  */
 export const registrarPagoApi = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1351,7 +1351,7 @@ registrarPagoApi.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::registrarPagoApi
- * @see app/Http/Controllers/ClienteController.php:914
+ * @see app/Http/Controllers/ClienteController.php:918
  * @route '/api/clientes/{cliente}/pagos'
  */
 registrarPagoApi.url = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1384,7 +1384,7 @@ registrarPagoApi.url = (args: { cliente: number | { id: number } } | [cliente: n
 
 /**
 * @see \App\Http\Controllers\ClienteController::registrarPagoApi
- * @see app/Http/Controllers/ClienteController.php:914
+ * @see app/Http/Controllers/ClienteController.php:918
  * @route '/api/clientes/{cliente}/pagos'
  */
 registrarPagoApi.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1394,7 +1394,7 @@ registrarPagoApi.post = (args: { cliente: number | { id: number } } | [cliente: 
 
     /**
 * @see \App\Http\Controllers\ClienteController::registrarPagoApi
- * @see app/Http/Controllers/ClienteController.php:914
+ * @see app/Http/Controllers/ClienteController.php:918
  * @route '/api/clientes/{cliente}/pagos'
  */
     const registrarPagoApiForm = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1404,7 +1404,7 @@ registrarPagoApi.post = (args: { cliente: number | { id: number } } | [cliente: 
 
             /**
 * @see \App\Http\Controllers\ClienteController::registrarPagoApi
- * @see app/Http/Controllers/ClienteController.php:914
+ * @see app/Http/Controllers/ClienteController.php:918
  * @route '/api/clientes/{cliente}/pagos'
  */
         registrarPagoApiForm.post = (args: { cliente: number | { id: number } } | [cliente: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1415,7 +1415,7 @@ registrarPagoApi.post = (args: { cliente: number | { id: number } } | [cliente: 
     registrarPagoApi.form = registrarPagoApiForm
 /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:1024
+ * @see app/Http/Controllers/ClienteController.php:1028
  * @route '/api/clientes/cambiar-credenciales'
  */
 export const cambiarCredenciales = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1430,7 +1430,7 @@ cambiarCredenciales.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:1024
+ * @see app/Http/Controllers/ClienteController.php:1028
  * @route '/api/clientes/cambiar-credenciales'
  */
 cambiarCredenciales.url = (options?: RouteQueryOptions) => {
@@ -1439,7 +1439,7 @@ cambiarCredenciales.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:1024
+ * @see app/Http/Controllers/ClienteController.php:1028
  * @route '/api/clientes/cambiar-credenciales'
  */
 cambiarCredenciales.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1449,7 +1449,7 @@ cambiarCredenciales.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
     /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:1024
+ * @see app/Http/Controllers/ClienteController.php:1028
  * @route '/api/clientes/cambiar-credenciales'
  */
     const cambiarCredencialesForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1459,7 +1459,7 @@ cambiarCredenciales.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
             /**
 * @see \App\Http\Controllers\ClienteController::cambiarCredenciales
- * @see app/Http/Controllers/ClienteController.php:1024
+ * @see app/Http/Controllers/ClienteController.php:1028
  * @route '/api/clientes/cambiar-credenciales'
  */
         cambiarCredencialesForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

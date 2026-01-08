@@ -49,6 +49,7 @@ class EntregaService
         private \App\Services\RutaOptimizer $rutaOptimizer,
         private EntregaWebSocketService $webSocketService,
         private ReporteCargoService $reporteCargoService,
+        private SincronizacionVentaEntregaService $sincronizador,
     ) {}
 
     /**
@@ -981,6 +982,13 @@ class EntregaService
                 "Chofer iniciando tránsito - Ubicación inicial: ({$latitud}, {$longitud})"
             );
 
+            // ✅ NUEVO: Sincronizar estado de todas las ventas asociadas a EN_TRANSITO
+            // Esto notificará a los clientes que sus ventas están siendo entregadas
+            $this->sincronizador->alCambiarEstadoEntrega(
+                $entrega,
+                $estadoAnterior,
+                Entrega::ESTADO_EN_TRANSITO
+            );
 
             // Recargar relaciones para WebSocket
             $entrega->load(['chofer', 'ventas.cliente', 'vehiculo']);

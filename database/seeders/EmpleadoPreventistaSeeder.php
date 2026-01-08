@@ -18,12 +18,12 @@ class EmpleadoPreventistaSeeder extends Seeder
     public function run(): void
     {
         // Obtener o crear el usuario Preventista
-        $usuario = User::where('email', 'preventista@test.com')->first();
+        $usuario = User::where('email', 'preventista@paucara.com')->first();
 
         if (!$usuario) {
             $usuario = User::create([
                 'name' => 'Preventista',
-                'email' => 'preventista@test.com',
+                'email' => 'preventista@paucara.com',
                 'usernick' => 'preventista',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),

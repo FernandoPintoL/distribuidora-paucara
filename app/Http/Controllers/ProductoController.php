@@ -752,12 +752,15 @@ class ProductoController extends Controller
      * - marca_id: Filtrar por marca
      * - proveedor_id: Filtrar por proveedor
      * - activo: Filtrar por estado (default: true)
-     * - almacen_id: ID del almacén para consultar stock (default: almacén principal de config)
-     * - con_stock: Mostrar solo productos con stock disponible (default: false)
+     *
+     * ✅ NOTA IMPORTANTE DE SEGURIDAD:
+     * El almacén se obtiene SIEMPRE de empresa.almacen_id del usuario autenticado.
+     * Se IGNORA COMPLETAMENTE cualquier parámetro 'almacen_id' en el request para
+     * evitar que usuarios accedan a productos de otros almacenes.
      *
      * Respuesta:
-     * - stock_principal: Stock del almacén seleccionado/principal
-     * - stock_por_almacenes: Array con stock desglosado por cada almacén
+     * - productos: Array paginado de productos con sus precios
+     * - total: Total de productos encontrados
      */
     public function indexApi(Request $request): JsonResponse
     {
@@ -767,7 +770,6 @@ class ProductoController extends Controller
         $marcaId     = $request->integer('marca_id');
         $proveedorId = $request->integer('proveedor_id');
         $activo      = $request->boolean('activo', true);
-        $conStock    = $request->boolean('con_stock', false);
 
         // Obtener empresa del usuario autenticado
         $empresa = auth()->user()->empresa;
@@ -778,7 +780,8 @@ class ProductoController extends Controller
             ], 403);
         }
 
-        // Obtener almacén de venta de la empresa
+        // ✅ SEGURIDAD: Obtener almacén de venta de la empresa del usuario autenticado
+        // Se IGNORA COMPLETAMENTE cualquier parámetro 'almacen_id' en el request
         $almacenId = $empresa->almacen_id;
         if (!$almacenId) {
             return response()->json([
@@ -836,11 +839,18 @@ class ProductoController extends Controller
             ->when($categoriaId, fn($query) => $query->where('categoria_id', $categoriaId))
             ->when($marcaId, fn($query) => $query->where('marca_id', $marcaId))
             ->when($proveedorId, fn($query) => $query->where('proveedor_id', $proveedorId))
-            ->when($conStock, fn($query) => $query->whereHas('stock', function ($stockQuery) use ($almacenId) {
-                // Filtrar por productos que tienen stock disponible en el almacén seleccionado
+            // FILTROS OBLIGATORIOS PARA VENTA:
+            // 1. Solo productos con stock disponible en el almacén de la empresa
+            ->whereHas('stock', function ($stockQuery) use ($almacenId) {
                 $stockQuery->where('almacen_id', $almacenId)
                     ->where('cantidad_disponible', '>', 0);
-            }))
+            })
+            // 2. Solo productos con precio de venta válido (> 0)
+            ->whereHas('precios', function ($precioQuery) {
+                $precioQuery->where('tipo_precio_id', 2) // tipo_precio_id = 2 es precio de venta
+                    ->where('activo', true)
+                    ->where('precio', '>', 0);
+            })
             ->where('activo', $activo)
             ->orderBy('nombre')
             ->paginate($perPage)

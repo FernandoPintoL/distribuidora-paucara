@@ -89,6 +89,8 @@ class UserController extends Controller
             'usernick' => $validated['usernick'],
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
+            // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
+            'empresa_id' => Auth::user()?->empresa_id,
         ]);
 
         // Asignar roles

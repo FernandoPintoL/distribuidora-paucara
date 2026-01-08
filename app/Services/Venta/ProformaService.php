@@ -376,15 +376,27 @@ class ProformaService
             ]);
 
             // Marcar proforma como convertida
-            $proforma->update(['estado' => 'CONVERTIDA']);
+            // 🔧 Usar el ID correcto del estado (4 = CONVERTIDA en estados_logistica)
+            $proforma->update(['estado_proforma_id' => 4]);
 
             \Log::info('✅ [ProformaService::convertirAVenta] Proforma marcada como CONVERTIDA', [
                 'proforma_id' => $proformaId,
             ]);
 
-            // Disparar evento de proforma convertida (COMENTADO: requiere obtener modelo Venta desde DTO)
-            \Log::debug('📢 [ProformaService::convertirAVenta] Evento ProformaConvertida omitido (será habilitado después)');
-            // event(new \App\Events\ProformaConvertida($proforma, $venta));
+            // Obtener el modelo Venta desde la BD (necesario para el evento)
+            // Ya que VentaService retorna un DTO, necesitamos el modelo real
+            $ventaModel = \App\Models\Venta::find($ventaDTO->id);
+
+            // Disparar evento de proforma convertida
+            if ($ventaModel) {
+                \Log::debug('📢 [ProformaService::convertirAVenta] Disparando evento ProformaConvertida');
+                event(new \App\Events\ProformaConvertida($proforma, $ventaModel));
+            } else {
+                \Log::warning('⚠️ [ProformaService::convertirAVenta] No se pudo obtener el modelo Venta para el evento', [
+                    'proforma_id' => $proformaId,
+                    'venta_id' => $ventaDTO->id,
+                ]);
+            }
 
             return $ventaDTO;
         });

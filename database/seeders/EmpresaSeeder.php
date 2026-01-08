@@ -100,7 +100,7 @@ class EmpresaSeeder extends Seeder
     /**
      * Configuración centralizada de empresa
      */
-    private function getEmpresaConfiguration(): array
+    /* private function getEmpresaConfiguration(): array
     {
         return [
             'nombre_comercial' => 'Farmacia Orellana',
@@ -109,6 +109,37 @@ class EmpresaSeeder extends Seeder
             'telefono' => '+591 2 1234567',
             'email' => 'info@farmaciaorellana.com',
             'sitio_web' => 'www.farmaciaorellana.com',
+            'direccion' => 'Av. Principal #123',
+            'ciudad' => 'La Paz',
+            'pais' => 'Bolivia',
+            'mensaje_footer' => 'Gracias por su preferencia',
+            'mensaje_legal' => 'Este documento es una representación impresa de un documento electrónico.',
+            'activo' => true,
+            'es_principal' => true,
+            'configuracion_impresion' => [
+                'formatos_soportados' => ['A4', 'TICKET_58', 'TICKET_80'],
+                'formato_default' => 'A4',
+                'margen_ticket' => '2mm',
+                'margen_hoja' => '10mm',
+                'mostrar_logo_ticket' => true,
+                'mostrar_logo_hoja' => true,
+                'fuente_ticket' => 'Courier New',
+                'fuente_hoja' => 'Arial',
+                'tamaño_fuente_ticket' => '8px',
+                'tamaño_fuente_hoja' => '10px',
+            ],
+        ];
+    } */
+
+    private function getEmpresaConfiguration(): array
+    {
+        return [
+            'nombre_comercial' => 'Distribuidora Paucara',
+            'razon_social' => 'Distribuidora Paucara S.R.L.',
+            'nit' => '123456789',
+            'telefono' => '+591 2 1234567',
+            'email' => 'info@distribuidorapaucara.com',
+            'sitio_web' => 'www.distribuidorapaucara.com',
             'direccion' => 'Av. Principal #123',
             'ciudad' => 'La Paz',
             'pais' => 'Bolivia',

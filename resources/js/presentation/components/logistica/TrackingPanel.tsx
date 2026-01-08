@@ -15,10 +15,16 @@ import {
     Navigation,
     Eye,
     EyeOff,
+    ChevronDown,
+    ChevronUp,
+    DollarSign,
+    Users,
 } from 'lucide-react';
 import { Button } from '@/presentation/components/ui/button';
 import type { Entrega, UbicacionEntrega } from '@/domain/entities/logistica';
 import type { Id } from '@/domain/entities/shared';
+import VentaEnEntregaCard from './VentaEnEntregaCard';
+import EntregaDetalleModal from './EntregaDetalleModal';
 
 type SortOption = 'tiempo' | 'distancia' | 'estado' | 'velocidad';
 
@@ -89,6 +95,8 @@ export function TrackingPanel({
     height = '600px',
 }: TrackingPanelProps) {
     const [sortBy, setSortBy] = useState<SortOption>('tiempo');
+    const [expandedEntregaId, setExpandedEntregaId] = useState<number | null>(null);
+    const [modalEntrega, setModalEntrega] = useState<Entrega | null>(null);
 
     const entregasOrdenadas = useMemo(() => {
         const entregas_copy = [...entregas];
@@ -192,97 +200,177 @@ export function TrackingPanel({
                             {entregasOrdenadas.map((entrega) => {
                                 const ubicacion = ubicaciones.get(entrega.id);
                                 const isFollowing = followingId === entrega.id;
+                                const isExpanded = expandedEntregaId === entrega.id;
 
                                 return (
                                     <div
                                         key={entrega.id}
                                         className={`
-                                            group relative p-3 rounded-lg border cursor-pointer transition-all
+                                            group relative rounded-lg border transition-all
                                             ${isFollowing
                                                 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 shadow-md'
                                                 : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:shadow-sm'
                                             }
                                         `}
-                                        onClick={() => onEntregaClick?.(entrega.id)}
                                     >
-                                        {/* Header: ID y Estado */}
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-sm text-gray-900 dark:text-white">
-                                                    #{entrega.id}
-                                                </span>
-                                                {entrega.proforma_id && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Pf. #{entrega.proforma_id}
+                                        {/* ✅ SECCIÓN 1: Header Principal - Resumen de la Entrega */}
+                                        <div
+                                            className="p-3 cursor-pointer"
+                                            onClick={() => onEntregaClick?.(entrega.id)}
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2 flex-1">
+                                                    <span className="font-bold text-sm text-gray-900 dark:text-white">
+                                                        #{entrega.id}
                                                     </span>
-                                                )}
+                                                    {entrega.numero_entrega && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {entrega.numero_entrega}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className={getEstadoColorClass(entrega.estado)}>
+                                                        {getEstadoLabel(entrega.estado)}
+                                                    </Badge>
+                                                </div>
                                             </div>
-                                            <Badge className={getEstadoColorClass(entrega.estado)}>
-                                                {getEstadoLabel(entrega.estado)}
-                                            </Badge>
+
+                                            {/* ✅ NUEVO: Resumen de Ventas */}
+                                            <div className="mb-2 flex items-center gap-4 text-xs">
+                                                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                                                    <Users className="h-3 w-3" />
+                                                    <span>{entrega.cantidad_ventas} venta{entrega.cantidad_ventas !== 1 ? 's' : ''}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                                    <DollarSign className="h-3 w-3" />
+                                                    <span className="font-semibold">Bs. {entrega.total_consolidado.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* ✅ NUEVO: Clientes de la entrega */}
+                                            {entrega.clientes_nombres && entrega.clientes_nombres.length > 0 && (
+                                                <div className="mb-2 text-xs text-gray-600 dark:text-gray-400">
+                                                    <span className="font-medium">Clientes:</span>{' '}
+                                                    {entrega.clientes_nombres.join(', ')}
+                                                </div>
+                                            )}
+
+                                            {/* Información de ubicación y velocidad */}
+                                            {ubicacion ? (
+                                                <div className="space-y-2 text-xs">
+                                                    {/* Velocidad y tiempo */}
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                                            <Navigation className="h-3 w-3" />
+                                                            <span className="font-semibold">
+                                                                {ubicacion.velocidad?.toFixed(1) || '0'} km/h
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                                                            <Clock className="h-3 w-3" />
+                                                            <span>
+                                                                {new Date(ubicacion.timestamp).toLocaleTimeString(
+                                                                    'es-ES',
+                                                                    {
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                    }
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Ubicación */}
+                                                    <div className="flex items-start gap-1 text-gray-600 dark:text-gray-400">
+                                                        <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                                        <span className="text-xs">
+                                                            {ubicacion.latitud.toFixed(4)}, {ubicacion.longitud.toFixed(4)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-amber-600 dark:text-amber-400">
+                                                    Sin ubicación registrada
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Información de ubicación y velocidad */}
-                                        {ubicacion ? (
-                                            <div className="space-y-2 text-xs">
-                                                {/* Velocidad y tiempo */}
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                                                        <Navigation className="h-3 w-3" />
-                                                        <span className="font-semibold">
-                                                            {ubicacion.velocidad?.toFixed(1) || '0'} km/h
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                                                        <Clock className="h-3 w-3" />
-                                                        <span>
-                                                            {new Date(ubicacion.timestamp).toLocaleTimeString(
-                                                                'es-ES',
-                                                                {
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                }
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Ubicación */}
-                                                <div className="flex items-start gap-1 text-gray-600 dark:text-gray-400">
-                                                    <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                                    <span className="text-xs">
-                                                        {ubicacion.latitud.toFixed(4)}, {ubicacion.longitud.toFixed(4)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-xs text-amber-600 dark:text-amber-400">
-                                                Sin ubicación registrada
-                                            </div>
-                                        )}
-
-                                        {/* Botón de seguimiento - visible al hover */}
-                                        {onFollowClick && ubicacion && (
+                                        {/* ✅ NUEVO: Botones de acción */}
+                                        <div className="flex items-center justify-between px-3 pb-2 gap-1 border-t border-gray-200 dark:border-gray-700 pt-2">
+                                            {/* Botón expandir/contraer ventas */}
                                             <Button
                                                 size="sm"
-                                                variant={isFollowing ? 'default' : 'ghost'}
-                                                className={`
-                                                    absolute top-2 right-2 h-8 w-8 p-0
-                                                    opacity-0 group-hover:opacity-100 transition-opacity
-                                                    ${isFollowing ? 'opacity-100' : ''}
-                                                `}
+                                                variant="ghost"
+                                                className="flex-1 h-7 text-xs"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    onFollowClick(entrega.id);
+                                                    setExpandedEntregaId(isExpanded ? null : entrega.id);
                                                 }}
-                                                title={isFollowing ? 'Dejar de seguir' : 'Seguir entrega'}
                                             >
-                                                {isFollowing ? (
-                                                    <Eye className="h-4 w-4" />
+                                                {isExpanded ? (
+                                                    <>
+                                                        <ChevronUp className="h-3 w-3 mr-1" />
+                                                        Contraer
+                                                    </>
                                                 ) : (
-                                                    <EyeOff className="h-4 w-4" />
+                                                    <>
+                                                        <ChevronDown className="h-3 w-3 mr-1" />
+                                                        Ver Detalles
+                                                    </>
                                                 )}
                                             </Button>
+
+                                            {/* Botón abrir modal completo */}
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="flex-1 h-7 text-xs"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setModalEntrega(entrega);
+                                                }}
+                                            >
+                                                Expandir
+                                            </Button>
+
+                                            {/* Botón de seguimiento - visible al hover */}
+                                            {onFollowClick && ubicacion && (
+                                                <Button
+                                                    size="sm"
+                                                    variant={isFollowing ? 'default' : 'ghost'}
+                                                    className="h-7 w-7 p-0"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onFollowClick(entrega.id);
+                                                    }}
+                                                    title={isFollowing ? 'Dejar de seguir' : 'Seguir entrega'}
+                                                >
+                                                    {isFollowing ? (
+                                                        <Eye className="h-4 w-4" />
+                                                    ) : (
+                                                        <EyeOff className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {/* ✅ NUEVO: Panel expandible de ventas */}
+                                        {isExpanded && (
+                                            <div className="px-3 pb-3 border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
+                                                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                                                    {entrega.cantidad_ventas} Venta{entrega.cantidad_ventas !== 1 ? 's' : ''} en esta Entrega
+                                                </p>
+                                                <div className="space-y-2">
+                                                    {entrega.ventas.map((venta) => (
+                                                        <VentaEnEntregaCard
+                                                            key={venta.id}
+                                                            venta={venta}
+                                                            onExpand={() => setModalEntrega(entrega)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 );
@@ -291,6 +379,13 @@ export function TrackingPanel({
                     </div>
                 )}
             </CardContent>
+
+            {/* ✅ NUEVO: Modal de detalles expandido */}
+            <EntregaDetalleModal
+                entrega={modalEntrega}
+                isOpen={!!modalEntrega}
+                onClose={() => setModalEntrega(null)}
+            />
         </Card>
     );
 }

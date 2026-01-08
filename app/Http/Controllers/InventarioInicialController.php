@@ -614,6 +614,89 @@ class InventarioInicialController extends Controller
     }
 
     /**
+     * Buscar producto en el borrador por múltiples criterios
+     * Busca por: id, nombre, sku, código de barras, marca, categoría (case insensitive)
+     */
+    public function searchProductoInDraft(Request $request, $borradorId)
+    {
+        $validated = $request->validate([
+            'search' => 'required|string|min:1|max:255',
+        ]);
+
+        $borrador = InventarioInicialBorrador::findOrFail($borradorId);
+
+        // Verificar autorización
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $search = trim($validated['search']);
+        $searchLower = strtolower($search);
+
+        // Buscar en los items del borrador con relaciones
+        $item = InventarioInicialBorradorItem::with([
+            'producto' => function ($query) {
+                $query->with(['categoria:id,nombre', 'marca:id,nombre', 'unidad:id,nombre']);
+            },
+            'almacen:id,nombre'
+        ])
+            ->where('borrador_id', $borradorId)
+            ->whereHas('producto', function ($query) use ($searchLower, $search) {
+                // Búsqueda case insensitive por múltiples criterios
+                $query->where(function ($q) use ($searchLower, $search) {
+                    // Búsqueda exacta por ID (si es número)
+                    if (is_numeric($search)) {
+                        $q->orWhere('id', (int)$search);
+                    }
+
+                    // Búsqueda case insensitive en nombre
+                    $q->orWhereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"])
+                      // Búsqueda case insensitive en SKU
+                      ->orWhereRaw('LOWER(sku) LIKE ?', ["%{$searchLower}%"])
+                      // Búsqueda case insensitive en código de barras
+                      ->orWhereRaw('LOWER(codigo_barras) LIKE ?', ["%{$searchLower}%"])
+                      // Búsqueda en marca (relacional)
+                      ->orWhereHas('marca', function ($q) use ($searchLower) {
+                          $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"]);
+                      })
+                      // Búsqueda en categoría (relacional)
+                      ->orWhereHas('categoria', function ($q) use ($searchLower) {
+                          $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"]);
+                      });
+                });
+            })
+            ->first();
+
+        if ($item) {
+            return response()->json([
+                'success' => true,
+                'found' => true,
+                'producto' => [
+                    'id' => $item->producto->id,
+                    'nombre' => $item->producto->nombre,
+                    'sku' => $item->producto->sku,
+                    'codigo_barras' => $item->producto->codigo_barras,
+                    'categoria' => $item->producto->categoria?->nombre,
+                    'marca' => $item->producto->marca?->nombre,
+                ],
+                'item' => [
+                    'cantidad' => $item->cantidad,
+                    'lote' => $item->lote,
+                    'fecha_vencimiento' => $item->fecha_vencimiento,
+                    'almacen' => $item->almacen?->nombre,
+                ],
+                'message' => "Producto ya registrado en borrador"
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'found' => false,
+            'message' => 'Producto no encontrado en borrador'
+        ]);
+    }
+
+    /**
      * Verificar si un producto ya tiene inventario inicial cargado
      */
     private function tieneInventarioInicial(int $productoId): bool

@@ -15,6 +15,7 @@ class Empleado extends Model
 
     protected $fillable = [
         'user_id',
+        'empresa_id',  // ✅ NUEVO: Referencia directa a la empresa
         'codigo_empleado',
         'ci',
         'licencia',                   // Para choferes
@@ -57,6 +58,14 @@ class Empleado extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class)->withDefault();
+    }
+
+    /**
+     * ✅ NUEVO: Empresa a la que pertenece el empleado
+     */
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class)->withDefault();
     }
 
     /**

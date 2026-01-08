@@ -71,7 +71,13 @@ class EntregaController extends Controller
         $vehiculos = Vehiculo::disponibles()
             ->with('choferAsignado')  // 🔧 Cargar relación de chofer asignado (User)
             ->get(['id', 'placa', 'marca', 'modelo', 'capacidad_kg', 'chofer_asignado_id']);
-        $choferes  = Empleado::where('estado', 'activo')->get();
+
+        // Obtener solo empleados que son choferes activos
+        $choferes = Empleado::query()
+            ->with('user.roles')
+            ->where('estado', 'activo')
+            ->get()
+            ->filter(fn($e) => $e->user !== null && $e->user->hasRole('Chofer'));
 
         return Inertia::render('logistica/entregas/index', [
             'entregas'  => $entregas,
@@ -221,17 +227,18 @@ class EntregaController extends Controller
                 ] : null,
             ]);
 
-        // 4. Obtener choferes activos
+        // 4. Obtener choferes activos (solo empleados con rol Chofer)
         $choferes = Empleado::query()
-            ->with('user')
+            ->with('user.roles')
             ->where('estado', 'activo')
             ->get()
-            ->filter(fn($e) => $e->user !== null)
+            ->filter(fn($e) => $e->user !== null && $e->user->hasRole('Chofer'))
             ->map(fn($e) => [
                 'id'             => $e->id,
                 'name'           => $e->user->name ?? $e->nombre,
                 'nombre'         => $e->user->name ?? $e->nombre,
                 'email'          => $e->user->email ?? $e->email,
+                'telefono'       => $e->telefono,
                 'tiene_licencia' => $e->licencia ? true : false,
             ])
             ->values();
@@ -345,7 +352,7 @@ class EntregaController extends Controller
                 ->with('success', 'Entrega creada exitosamente');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::warning('Error de validación en EntregaController::store', [
+            Log::warning('Error de validación en EntregaController::store', [
                 'errors' => $e->errors(),
                 'data' => $request->all(),
             ]);
@@ -880,16 +887,15 @@ class EntregaController extends Controller
                 'localidad',
             ])->get();
 
-            // 1. CONTAR POR ESTADO
-            $estados = [
-                'PROGRAMADO' => $entregas->where('estado', 'PROGRAMADO')->count(),
-                'ASIGNADA'   => $entregas->where('estado', 'ASIGNADA')->count(),
-                'EN_CAMINO'  => $entregas->where('estado', 'EN_CAMINO')->count(),
-                'LLEGO'      => $entregas->where('estado', 'LLEGO')->count(),
-                'ENTREGADO'  => $entregas->where('estado', 'ENTREGADO')->count(),
-                'NOVEDAD'    => $entregas->where('estado', 'NOVEDAD')->count(),
-                'CANCELADA'  => $entregas->where('estado', 'CANCELADA')->count(),
-            ];
+            // 1. CONTAR POR ESTADO (dinámico desde estados_logistica tabla)
+            $estadosLogistica = \App\Models\EstadoLogistica::where('categoria', 'entrega')
+                ->orderBy('orden')
+                ->get();
+
+            $estados = [];
+            foreach ($estadosLogistica as $estado) {
+                $estados[$estado->codigo] = $entregas->where('estado', $estado->codigo)->count();
+            }
 
             // 2. ENTREGAS POR ZONA (vía Entrega.zona_id o ventas asociadas)
             // Usamos zona_id directamente de la entrega o la zona de la primera venta
@@ -1094,16 +1100,18 @@ class EntregaController extends Controller
                 ] : null,
             ]);
 
-        // Obtener choferes activos
+        // Obtener choferes activos (solo empleados con rol Chofer)
         $choferes = Empleado::query()
-            ->with('user')
+            ->with('user.roles')
             ->where('estado', 'activo')
             ->get()
-            ->filter(fn($e) => $e->user !== null)
+            ->filter(fn($e) => $e->user !== null && $e->user->hasRole('Chofer'))
             ->map(fn($e) => [
-                'id'     => $e->id,
-                'nombre' => $e->user?->name ?? $e->nombre,
-                'email'  => $e->user?->email,
+                'id'             => $e->id,
+                'nombre'         => $e->user?->name ?? $e->nombre,
+                'email'          => $e->user?->email,
+                'telefono'       => $e->telefono,
+                'tiene_licencia' => $e->licencia ? true : false,
             ])
             ->values();
 

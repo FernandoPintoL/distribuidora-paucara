@@ -5,8 +5,17 @@ namespace App\Services\WebSocket;
 /**
  * Servicio especializado para notificaciones WebSocket de entregas
  *
+ * FASE 5: SINCRONIZACIÓN DE ESTADOS VENTA-ENTREGA
+ *
  * Maneja todas las notificaciones en tiempo real relacionadas con entregas
  * y cambios de estado en el flujo de carga
+ *
+ * NUEVO EN FASE 5:
+ * ✓ Notifica cambios de estado de VENTA también (no solo Entrega)
+ * ✓ Envía mapeos automáticos (qué estado corresponde a venta)
+ * ✓ Notificaciones para cliente sobre su venta específica
+ * ✓ Incluye SLA y ventana de entrega en notificaciones
+ * ✓ Auditoría de sincronización en tiempo real
  *
  * ESTADOS SOPORTADOS:
  * - PREPARACION_CARGA: Reporte generado, pendiente de confirmación
@@ -17,6 +26,13 @@ namespace App\Services\WebSocket;
  */
 class EntregaWebSocketService extends BaseWebSocketService
 {
+    private \App\Services\Logistica\SincronizacionVentaEntregaService $sincronizador;
+
+    public function __construct(
+        \App\Services\Logistica\SincronizacionVentaEntregaService $sincronizador
+    ) {
+        $this->sincronizador = $sincronizador;
+    }
     /**
      * Notificar creación de entrega
      */
@@ -286,6 +302,199 @@ class EntregaWebSocketService extends BaseWebSocketService
             'chofer' => $entrega->chofer ? [
                 'nombre' => $entrega->chofer->nombre,
             ] : null,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * NUEVO - FASE 5: Notificar cambio de estado SINCRONIZADO de Entrega y Ventas
+     *
+     * Cuando entrega cambia de estado → ventas se sincronizan automáticamente
+     * Esta notificación informa a todos los clientes y admin sobre el cambio coordinado
+     *
+     * @param \App\Models\Entrega $entrega Entrega que cambió de estado
+     * @param string $estadoNuevo Nuevo estado de entrega (código)
+     * @param string|null $estadoAnterior Estado anterior (para auditoría)
+     */
+    public function notifyEstadoSincronizado(
+        \App\Models\Entrega $entrega,
+        string $estadoNuevo,
+        ?string $estadoAnterior = null
+    ): bool {
+        // Obtener mapeo para saber qué estado tienen las ventas ahora
+        $mapeo = \App\Models\MapeoEstado::query()
+            ->where('categoria_origen', 'entrega_logistica')
+            ->whereHas('estadoOrigen', function ($q) use ($estadoNuevo) {
+                $q->where('codigo', $estadoNuevo);
+            })
+            ->where('categoria_destino', 'venta_logistica')
+            ->first();
+
+        $estadoVentaTarget = $mapeo?->estadoDestino?->codigo ?? null;
+
+        // Obtener ventas sincronizadas
+        $ventas = $entrega->ventas()->get()->map(function ($venta) {
+            return [
+                'id' => $venta->id,
+                'numero' => $venta->numero,
+                'cliente_id' => $venta->cliente_id,
+                'cliente_nombre' => $venta->cliente?->nombre,
+                'estado_logistico' => $venta->estadoLogistico?->codigo ?? 'DESCONOCIDO',
+            ];
+        });
+
+        $payload = [
+            'tipo_evento' => 'sincronizacion_estados',
+            'entrega_id' => $entrega->id,
+            'numero_entrega' => $entrega->numero ?? "#E-{$entrega->id}",
+            'estado_anterior' => $estadoAnterior,
+            'estado_nuevo_entrega' => $estadoNuevo,
+            'estado_nuevo_venta' => $estadoVentaTarget,
+            'mapeo' => [
+                'desde_categoria' => 'entrega_logistica',
+                'desde_estado' => $estadoNuevo,
+                'hacia_categoria' => 'venta_logistica',
+                'hacia_estado' => $estadoVentaTarget,
+            ],
+            'ventas_sincronizadas' => $ventas,
+            'cantidad_ventas' => $ventas->count(),
+            'sla' => [
+                'fecha_entrega_comprometida' => $entrega->fecha_entrega_comprometida?->toDateString(),
+                'ventana_entrega_ini' => $entrega->ventana_entrega_ini?->format('H:i:s'),
+                'ventana_entrega_fin' => $entrega->ventana_entrega_fin?->format('H:i:s'),
+            ],
+            'chofer' => $entrega->chofer ? [
+                'id' => $entrega->chofer->id,
+                'nombre' => $entrega->chofer->nombre,
+                'telefono' => $entrega->chofer->telefono ?? null,
+            ] : null,
+            'vehiculo' => $entrega->vehiculo ? [
+                'id' => $entrega->vehiculo->id,
+                'placa' => $entrega->vehiculo->placa,
+            ] : null,
+            'timestamp' => now()->toIso8601String(),
+        ];
+
+        // Enviar a 3 canales
+        return $this->send('notify/sincronizacion-entrega-venta', $payload)
+            && $this->sendToClientes($entrega, $payload)
+            && $this->sendToAdminLogistica($entrega, $payload);
+    }
+
+    /**
+     * NUEVO - Notificar a CLIENTES sobre cambio en su venta específica
+     *
+     * Cada cliente recibe notificación de qué pasó con su venta
+     * Incluye tracking, SLA, y estado actualizado
+     */
+    private function sendToClientes(\App\Models\Entrega $entrega, array $syncPayload): bool
+    {
+        $success = true;
+
+        // Enviar a cada cliente una notificación específica de su venta
+        foreach ($syncPayload['ventas_sincronizadas'] as $ventaData) {
+            $venta = \App\Models\Venta::find($ventaData['id']);
+
+            if (!$venta || !$venta->cliente_id) {
+                continue;
+            }
+
+            $clientePayload = [
+                'tipo_evento' => 'seguimiento_venta',
+                'venta_id' => $venta->id,
+                'numero_venta' => $venta->numero,
+                'cliente_id' => $venta->cliente_id,
+                'estado_logistico' => $ventaData['estado_logistico'],
+                'entrega_numero' => $syncPayload['numero_entrega'],
+                'chofer' => $syncPayload['chofer'],
+                'sla' => $syncPayload['sla'],
+                'ubicacion_chofer' => [
+                    'latitud' => $entrega->latitud_actual,
+                    'longitud' => $entrega->longitud_actual,
+                    'timestamp' => $entrega->fecha_ultima_ubicacion?->toIso8601String(),
+                ],
+                'mensaje' => "Tu pedido #{$venta->numero} está {$this->getEstadoHumano($ventaData['estado_logistico'])}",
+                'timestamp' => now()->toIso8601String(),
+            ];
+
+            // Enviar al cliente (usuario autenticado)
+            $sent = $this->send(
+                "cliente.{$venta->cliente_id}.seguimiento",
+                $clientePayload
+            );
+
+            $success = $success && $sent;
+        }
+
+        return $success;
+    }
+
+    /**
+     * NUEVO - Notificar a equipo de logística/admin
+     */
+    private function sendToAdminLogistica(\App\Models\Entrega $entrega, array $syncPayload): bool
+    {
+        return $this->send('notify/admin-sincronizacion-entrega', [
+            'entrega_id' => $entrega->id,
+            'numero_entrega' => $syncPayload['numero_entrega'],
+            'estado_entrega_anterior' => $syncPayload['estado_anterior'],
+            'estado_entrega_nuevo' => $syncPayload['estado_nuevo_entrega'],
+            'estado_venta_nuevo' => $syncPayload['estado_nuevo_venta'],
+            'ventas_sincronizadas' => $syncPayload['ventas_sincronizadas'],
+            'cantidad_ventas' => $syncPayload['cantidad_ventas'],
+            'chofer' => $syncPayload['chofer'],
+            'vehiculo' => $syncPayload['vehiculo'],
+            'timestamp' => $syncPayload['timestamp'],
+        ]);
+    }
+
+    /**
+     * Convertir código de estado a texto humano para clientes
+     */
+    private function getEstadoHumano(string $codigoEstado): string
+    {
+        return match ($codigoEstado) {
+            'PENDIENTE_ENVIO' => 'pendiente de preparación',
+            'PREPARANDO' => 'siendo preparado en almacén',
+            'EN_PREPARACION' => 'completando preparación',
+            'EN_TRANSITO' => 'en camino hacia ti',
+            'ENTREGADO' => 'entregado',
+            'PROBLEMAS' => 'con novedad, nos comunicaremos pronto',
+            'CANCELADA' => 'cancelado',
+            default => 'en proceso'
+        };
+    }
+
+    /**
+     * NUEVO - Notificar cambio de estado con sincronización de SLA
+     *
+     * Incluye validación de SLA (on-time vs delay) al cambiar de estado
+     */
+    public function notifyEstadoConValidacionSLA(
+        \App\Models\Entrega $entrega,
+        string $estadoNuevo
+    ): bool {
+        // Calcular si estamos on-time o con delay
+        $ahora = now();
+        $ventanaFin = $entrega->ventana_entrega_fin
+            ? $entrega->fecha_entrega_comprometida?->copy()->setTimeFromTimeString($entrega->ventana_entrega_fin->format('H:i:s'))
+            : null;
+
+        $slaStatus = 'on_schedule';
+        $minutoDelay = 0;
+
+        if ($ventanaFin && $ahora->isAfter($ventanaFin)) {
+            $slaStatus = 'delayed';
+            $minutoDelay = $ahora->diffInMinutes($ventanaFin);
+        }
+
+        return $this->send('notify/estado-con-sla', [
+            'entrega_id' => $entrega->id,
+            'estado_nuevo' => $estadoNuevo,
+            'sla_status' => $slaStatus,
+            'minutos_delay' => $minutoDelay,
+            'fecha_comprometida' => $entrega->fecha_entrega_comprometida?->toIso8601String(),
+            'ventana_fin' => $ventanaFin?->toIso8601String(),
             'timestamp' => now()->toIso8601String(),
         ]);
     }

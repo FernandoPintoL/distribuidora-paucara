@@ -211,7 +211,7 @@ class ApiProformaController extends Controller
             // ✅ RESERVAR STOCK AHORA que los detalles existen
             $reservaExitosa = $proforma->reservarStock();
             if (!$reservaExitosa) {
-                \Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
+                Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
             }
 
             // Cargar relaciones para respuesta
@@ -258,7 +258,13 @@ class ApiProformaController extends Controller
             ], 403);
         }
 
-        $proforma->load(['detalles.producto', 'cliente', 'usuarioCreador', 'usuarioAprobador']);
+        $proforma->load([
+            'detalles.producto',
+            'cliente',
+            'usuarioCreador',
+            'usuarioAprobador',
+            'estadoLogistica'  // ✅ AGREGADO: Cargar relación de estado
+        ]);
 
         return response()->json([
             'success' => true,
@@ -290,7 +296,7 @@ class ApiProformaController extends Controller
         // VALIDACIÓN MEJORADA DE AUTENTICACIÓN
         // ========================================
         if (!$user) {
-            \Log::warning('API Index Proformas: No authenticated user found', [
+            Log::warning('API Index Proformas: No authenticated user found', [
                 'bearer_token' => $request->bearerToken() ? 'present' : 'missing',
                 'auth_header' => $request->header('Authorization') ? 'present' : 'missing',
                 'user_agent' => $request->userAgent(),
@@ -308,7 +314,7 @@ class ApiProformaController extends Controller
         }
 
         if (!$user->activo) {
-            \Log::warning('API Index Proformas: User inactive', [
+            Log::warning('API Index Proformas: User inactive', [
                 'user_id' => $user->id,
                 'user_name' => $user->name,
             ]);
@@ -320,8 +326,14 @@ class ApiProformaController extends Controller
         }
 
         // Validar parámetros opcionales
+        // 🔑 ARREGLADO: Usar validación dinámica basada en estados_logistica
+        $estadosValidos = DB::table('estados_logistica')
+            ->where('categoria', 'proforma')
+            ->pluck('codigo')
+            ->implode(',');
+
         $validator = Validator::make($request->all(), [
-            'estado' => 'nullable|in:PENDIENTE,APROBADA,RECHAZADA,CONVERTIDA_A_VENTA',
+            'estado' => 'nullable|in:' . $estadosValidos,
             'canal_origen' => 'nullable|string',
             'fecha_desde' => 'nullable|date',
             'fecha_hasta' => 'nullable|date|after_or_equal:fecha_desde',
@@ -382,8 +394,21 @@ class ApiProformaController extends Controller
         // FILTROS OPCIONALES (Query String)
         // ========================================
 
+        // 🔑 ARREGLADO: Buscar dinámicamente en estados_logistica por código
         if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
+            $estadoCode = strtoupper($request->estado);
+
+            // Buscar el estado en la tabla estados_logistica
+            // Soporta cualquier estado: PENDIENTE, APROBADA, EN_RUTA, etc.
+            $estadoId = DB::table('estados_logistica')
+                ->where('codigo', $estadoCode)
+                ->where('categoria', 'proforma')
+                ->value('id');
+
+            if ($estadoId) {
+                $query->where('estado_proforma_id', $estadoId);
+            }
+            // Si no existe el estado, simplemente no aplica el filtro
         }
 
         if ($request->filled('canal_origen')) {
@@ -441,7 +466,15 @@ class ApiProformaController extends Controller
                             'codigo' => $proforma->numero,
                             'fecha' => $proforma->fecha?->format('Y-m-d'),
                             'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
-                            'estado' => $proforma->estado,
+                            // ✅ MODIFICADO: Devolver objeto estado completo en lugar de solo código
+                            'estado' => $proforma->estadoLogistica ? [
+                                'id' => $proforma->estadoLogistica->id,
+                                'codigo' => $proforma->estadoLogistica->codigo,
+                                'nombre' => $proforma->estadoLogistica->nombre,
+                                'color' => $proforma->estadoLogistica->color,
+                                'icono' => $proforma->estadoLogistica->icono,
+                                'categoria' => $proforma->estadoLogistica->categoria,
+                            ] : null,
                             'total' => (float) $proforma->total,
                             'moneda' => 'BOB',
                             'cantidad_items' => $proforma->detalles->count(),
@@ -501,7 +534,7 @@ class ApiProformaController extends Controller
         // ========================================
         if (!$user) {
             // Log detallado para debugging
-            \Log::warning('API Stats: No authenticated user found', [
+            Log::warning('API Stats: No authenticated user found', [
                 'bearer_token' => $request->bearerToken() ? 'present' : 'missing',
                 'auth_header' => $request->header('Authorization') ? 'present' : 'missing',
                 'user_agent' => $request->userAgent(),
@@ -524,7 +557,7 @@ class ApiProformaController extends Controller
 
         // Validación adicional: verificar que el usuario está activo
         if (!$user->activo) {
-            \Log::warning('API Stats: User inactive', [
+            Log::warning('API Stats: User inactive', [
                 'user_id' => $user->id,
                 'user_name' => $user->name,
             ]);
@@ -545,7 +578,7 @@ class ApiProformaController extends Controller
         $userRoles = $user->roles->pluck('name')->map(fn($role) => strtolower($role))->toArray();
 
         // Verificar permisos en orden: admin/logistica primero (mayor prioridad)
-        if (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado', 'chofer'], $userRoles)) {
+        if (array_intersect(['Gestor Logística', 'admin', 'Admin', 'Cajero', 'Manager', 'encargado', 'Chofer'], $userRoles)) {
             // DASHBOARD: Todas las proformas
         }
         elseif (in_array('cliente', $userRoles)) {
@@ -1667,7 +1700,7 @@ class ApiProformaController extends Controller
             Proforma::PENDIENTE => 'Tu pedido está siendo revisado por nuestro equipo',
             Proforma::APROBADA => 'Tu pedido ha sido aprobado y está listo para ser procesado',
             Proforma::RECHAZADA => 'Lo sentimos, tu pedido no pudo ser procesado',
-            Proforma::CONVERTIDA_A_VENTA => 'Tu pedido ha sido confirmado y está en proceso de entrega',
+            Proforma::CONVERTIDA => 'Tu pedido ha sido confirmado y está en proceso de entrega',
             default => 'Estado desconocido',
         };
     }
@@ -1681,7 +1714,7 @@ class ApiProformaController extends Controller
             Proforma::PENDIENTE => '#FFA500', // Naranja
             Proforma::APROBADA => '#4CAF50', // Verde
             Proforma::RECHAZADA => '#F44336', // Rojo
-            Proforma::CONVERTIDA_A_VENTA => '#2196F3', // Azul
+            Proforma::CONVERTIDA => '#2196F3', // Azul
             default => '#9E9E9E', // Gris
         };
     }
@@ -1695,7 +1728,7 @@ class ApiProformaController extends Controller
             Proforma::PENDIENTE => 'clock',
             Proforma::APROBADA => 'check-circle',
             Proforma::RECHAZADA => 'x-circle',
-            Proforma::CONVERTIDA_A_VENTA => 'truck',
+            Proforma::CONVERTIDA => 'truck',
             default => 'help-circle',
         };
     }
@@ -1961,7 +1994,7 @@ class ApiProformaController extends Controller
                     }
                 } else {
                     // NO hay reservas: intentar crearlas automáticamente
-                    \Log::info('⚠️  No hay reservas para proforma ' . $proforma->numero . ', intentando crearlas...');
+                    Log::info('⚠️  No hay reservas para proforma ' . $proforma->numero . ', intentando crearlas...');
 
                     $reservasCreadas = $proforma->reservarStock();
 
@@ -1972,7 +2005,7 @@ class ApiProformaController extends Controller
                         ], 422);
                     }
 
-                    \Log::info('✅ Reservas creadas automáticamente para proforma ' . $proforma->numero);
+                    Log::info('✅ Reservas creadas automáticamente para proforma ' . $proforma->numero);
                 }
 
                 // Calcular estado de pago si se proporcionan datos
@@ -2165,8 +2198,9 @@ class ApiProformaController extends Controller
             }
 
             // Obtener la proforma más reciente en estado PENDIENTE
+            // 🔑 ARREGLADO: Usar estado_proforma_id = 1 para PENDIENTE
             $proforma = Proforma::where('cliente_id', $cliente->id)
-                ->where('estado', 'PENDIENTE')
+                ->where('estado_proforma_id', 1) // 1 = PENDIENTE
                 ->orderBy('created_at', 'desc')
                 ->with([
                     'detalles',
@@ -2290,8 +2324,21 @@ class ApiProformaController extends Controller
         }
 
         // Aplicar filtros opcionales
+        // 🔑 ARREGLADO: Buscar dinámicamente en estados_logistica por código
         if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
+            $estadoCode = strtoupper($request->estado);
+
+            // Buscar el estado en la tabla estados_logistica
+            // Soporta cualquier estado: PENDIENTE, APROBADA, EN_RUTA, etc.
+            $estadoId = DB::table('estados_logistica')
+                ->where('codigo', $estadoCode)
+                ->where('categoria', 'proforma')
+                ->value('id');
+
+            if ($estadoId) {
+                $query->where('estado_proforma_id', $estadoId);
+            }
+            // Si no existe el estado, simplemente no aplica el filtro
         }
 
         if ($request->filled('canal_origen')) {
@@ -2451,7 +2498,7 @@ class ApiProformaController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Error actualizando detalles de proforma:', [
+            Log::error('Error actualizando detalles de proforma:', [
                 'proforma_id' => $proforma->id,
                 'error' => $e->getMessage(),
             ]);

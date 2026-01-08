@@ -65,19 +65,105 @@ export interface ProformaAppExterna extends BaseEntity {
 }
 
 /**
- * Entrega desde vista de logística
+ * ✅ NUEVO: Venta dentro de una Entrega agrupada
  *
- * Representa una entrega en el sistema de logística
+ * Representa una venta individual dentro de una entrega consolidada
+ * Incluye información del cliente y metadatos del pivot
+ */
+export interface VentaEnEntrega {
+    id: Id;
+    numero: string;
+    cliente: {
+        id: Id;
+        nombre: string;
+        telefono?: string;
+    };
+    total: number;
+    estado_logistico?: string;
+    fecha_entrega_comprometida?: string;
+    cantidad_items: number;
+    // Metadatos del pivot (orden, confirmación)
+    orden: number;
+    confirmado_por?: Id;
+    fecha_confirmacion?: string;
+    notas?: string;
+}
+
+/**
+ * Información consolidada del Chofer y Vehículo
+ */
+export interface ChoferEntregaInfo {
+    id: Id;
+    nombre: string;
+    telefono?: string;
+}
+
+export interface VehiculoEntregaInfo {
+    id: Id;
+    placa: string;
+    marca: string;
+}
+
+/**
+ * Ubicación actual durante la entrega
+ */
+export interface UbicacionActualEntrega {
+    latitud: number;
+    longitud: number;
+    velocidad?: number;
+    timestamp: string;
+}
+
+/**
+ * Entrega desde vista de logística (EN TRÁNSITO)
+ *
+ * ✅ ACTUALIZADO: Ahora representa una entrega consolidada con múltiples ventas
+ *
+ * ANTES (Deprecated):
+ * - Una entrega = Una venta
+ * - Difícil trackear múltiples clientes
+ *
+ * AHORA (Correcto):
+ * - Una entrega = Múltiples ventas (1:N)
+ * - Una Entrega es un viaje con múltiples paradas (clientes)
+ * - Un Chofer + Vehículo = Una Entrega
  */
 export interface EntregaLogistica extends BaseEntity {
     id: Id;
-    proforma_id: Id;
+    numero_entrega?: string;
+
+    // Estado de la entrega consolidada
+    estado: EstadoEntrega;
+
+    // ✅ NUEVO: Información consolidada de ventas
+    /** Array de todas las ventas en esta entrega */
+    ventas: VentaEnEntrega[];
+
+    /** Total consolidado de todas las ventas */
+    total_consolidado: number;
+
+    /** Cantidad de ventas en esta entrega */
+    cantidad_ventas: number;
+
+    /** Nombres de clientes únicos (para resumen rápido) */
+    clientes_nombres: string[];
+
+    // Recursos asignados
+    chofer: ChoferEntregaInfo;
+    vehiculo: VehiculoEntregaInfo;
+
+    // Ubicación en tiempo real
+    ubicacion_actual?: UbicacionActualEntrega | null;
+
+    // Fechas
+    fecha_inicio?: string;
+    fecha_llegada?: string;
+
+    // Legacy
+    proforma_id?: Id;
     chofer_id?: Id;
     vehiculo_id?: Id;
-    estado: EstadoEntrega;
     fecha_asignacion?: string;
-    fecha_inicio?: string;
-    fecha_entrega?: string;
     observaciones?: string;
 }
 

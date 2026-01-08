@@ -85,9 +85,46 @@ class SincronizacionVentaEntregaService
                     'estado_nuevo' => $nuevoEstado,
                 ]);
 
-                // Actualizar solo si cambió
-                if ($venta->estado_logistico !== $nuevoEstado) {
-                    $venta->update(['estado_logistico' => $nuevoEstado]);
+                // Obtener el ID del estado nuevo desde estados_logistica
+                $nuevoEstadoLogisticoId = \App\Models\EstadoLogistica::where('codigo', $nuevoEstado)
+                    ->where('categoria', 'venta_logistica')
+                    ->value('id');
+
+                if (!$nuevoEstadoLogisticoId) {
+                    Log::error('Estado logístico no encontrado en BD', [
+                        'codigo' => $nuevoEstado,
+                        'venta_id' => $venta->id,
+                    ]);
+                    continue;
+                }
+
+                // Actualizar solo si cambió el estado
+                if ($venta->estado_logistico_id !== $nuevoEstadoLogisticoId) {
+                    // Obtener estado anterior
+                    $estadoAnteriorObj = null;
+                    if ($venta->estado_logistico_id) {
+                        $estadoAnteriorObj = \App\Models\EstadoLogistica::find($venta->estado_logistico_id);
+                    }
+
+                    // Obtener estado nuevo
+                    $estadoNuevoObj = \App\Models\EstadoLogistica::find($nuevoEstadoLogisticoId);
+
+                    // Actualizar la venta
+                    $venta->update(['estado_logistico_id' => $nuevoEstadoLogisticoId]);
+
+                    // Disparar evento de cambio de estado
+                    event(new \App\Events\VentaEstadoCambiado(
+                        $venta,
+                        $estadoAnteriorObj,
+                        $estadoNuevoObj,
+                        "Sincronización automática al crear entrega {$entrega->id}"
+                    ));
+
+                    Log::info('✅ Evento VentaEstadoCambiado disparado (alCrearEntrega)', [
+                        'venta_id' => $venta->id,
+                        'estado_anterior_id' => $estadoAnteriorObj?->id,
+                        'estado_nuevo_id' => $estadoNuevoObj?->id,
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::warning('Error sincronizando venta al crear entrega', [
@@ -158,9 +195,46 @@ class SincronizacionVentaEntregaService
                     'estado_venta_nuevo' => $nuevoEstadoVenta,
                 ]);
 
-                // Actualizar solo si cambió
-                if ($venta->estado_logistico !== $nuevoEstadoVenta) {
-                    $venta->update(['estado_logistico' => $nuevoEstadoVenta]);
+                // Obtener el ID del estado nuevo desde estados_logistica
+                $nuevoEstadoLogisticoId = \App\Models\EstadoLogistica::where('codigo', $nuevoEstadoVenta)
+                    ->where('categoria', 'venta_logistica')
+                    ->value('id');
+
+                if (!$nuevoEstadoLogisticoId) {
+                    Log::error('Estado logístico no encontrado en BD', [
+                        'codigo' => $nuevoEstadoVenta,
+                        'venta_id' => $venta->id,
+                    ]);
+                    continue;
+                }
+
+                // Actualizar solo si cambió el estado
+                if ($venta->estado_logistico_id !== $nuevoEstadoLogisticoId) {
+                    // Obtener estado anterior para el evento
+                    $estadoAnteriorObj = null;
+                    if ($venta->estado_logistico_id) {
+                        $estadoAnteriorObj = \App\Models\EstadoLogistica::find($venta->estado_logistico_id);
+                    }
+
+                    // Obtener estado nuevo
+                    $estadoNuevoObj = \App\Models\EstadoLogistica::find($nuevoEstadoLogisticoId);
+
+                    // Actualizar la venta
+                    $venta->update(['estado_logistico_id' => $nuevoEstadoLogisticoId]);
+
+                    // Disparar evento de cambio de estado
+                    event(new \App\Events\VentaEstadoCambiado(
+                        $venta,
+                        $estadoAnteriorObj,
+                        $estadoNuevoObj,
+                        "Sincronización automática desde entrega {$entrega->id}"
+                    ));
+
+                    Log::info('✅ Evento VentaEstadoCambiado disparado', [
+                        'venta_id' => $venta->id,
+                        'estado_anterior_id' => $estadoAnteriorObj?->id,
+                        'estado_nuevo_id' => $estadoNuevoObj?->id,
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::warning('Error sincronizando venta al cambiar estado entrega', [

@@ -22,12 +22,18 @@ class Entrega extends Model
         'numero_entrega',           // ID legible (ENT-20251227-001)
 
         // Estados y flujo
-        'estado',
+        'estado',                   // ENUM (legacy, será deprecado)
+        'estado_entrega_id',        // FK a estados_logistica (categoría: entrega_logistica) - NUEVO
         'fecha_asignacion',
         'fecha_inicio',
         'fecha_llegada',
         'fecha_entrega',
         'fecha_programada',
+
+        // SLA (copiado de venta para sincronización)
+        'fecha_entrega_comprometida',  // NUEVO
+        'ventana_entrega_ini',         // NUEVO
+        'ventana_entrega_fin',         // NUEVO
 
         // Información de entrega
         'peso_kg',                  // Suma de pesos de ventas
@@ -59,6 +65,9 @@ class Entrega extends Model
             'fecha_llegada' => 'datetime',
             'fecha_entrega' => 'datetime',
             'fecha_programada' => 'datetime',
+            'fecha_entrega_comprometida' => 'datetime',  // NUEVO: SLA
+            'ventana_entrega_ini' => 'time',             // NUEVO: SLA
+            'ventana_entrega_fin' => 'time',             // NUEVO: SLA
             'fecha_firma_entrega' => 'datetime',
             'fecha_confirmacion_carga' => 'datetime',
             'fecha_inicio_entrega' => 'datetime',
@@ -89,18 +98,37 @@ class Entrega extends Model
      */
 
     /**
-     * Ventas asociadas a esta entrega (NUEVO - modelo consolidado)
+     * Ventas asociadas a esta entrega (NUEVA ARQUITECTURA - FASE 3)
      *
-     * NUEVA ARQUITECTURA (FASE 1 REFACTORIZACIÓN):
-     * Una entrega ahora puede contener múltiples ventas
-     * Ejemplo: Entrega a zona centro con 3 clientes diferentes
+     * RELACIÓN 1:N: Una entrega contiene MUCHAS ventas
+     *
+     * MIGRACIÓN:
+     * - FASE 1: N:M via pivot table (entrega_venta) ← LEGACY
+     * - FASE 3: 1:N via FK venta.entrega_id (relación actual) ← ACTUAL
      *
      * Uso:
-     *   $entrega->ventas;  // Todas las ventas
-     *   $entrega->ventas()->confirmadas()->get();  // Solo las confirmadas en almacén
-     *   $entrega->ventas()->pendientes()->get();  // Pendientes de confirmar carga
+     *   $entrega->ventas;           // Todas las ventas
+     *   $entrega->ventas->count()   // Cantidad de ventas
+     *   $entrega->ventas()->where('estado_logistico_id', $id)->get()
+     *
+     * NOTA: Se mantiene compatible con métodos legacy como confirmadas(), pendientes()
      */
-    public function ventas(): BelongsToMany
+    public function ventas(): HasMany
+    {
+        return $this->hasMany(Venta::class, 'entrega_id');
+    }
+
+    /**
+     * Ventas asociadas a esta entrega (LEGACY - PHASE 1)
+     *
+     * ⚠️ DEPRECADO en FASE 3: Usar $entrega->ventas() en su lugar
+     *
+     * Relación N:M via pivot table entrega_venta
+     * Se mantiene por compatibilidad durante transición
+     *
+     * SERÁ ELIMINADA cuando se dropee tabla pivot en FASE 3b
+     */
+    public function ventasLegacy(): BelongsToMany
     {
         return $this->belongsToMany(
             Venta::class,
@@ -150,6 +178,22 @@ class Entrega extends Model
     public function localidad(): BelongsTo
     {
         return $this->belongsTo(Localidad::class, 'zona_id');
+    }
+
+    /**
+     * Estado logístico normalizado (NUEVO - FASE 1)
+     *
+     * FK a estados_logistica.categoria = 'entrega_logistica'
+     * Reemplaza al ENUM 'estado' con transiciones validadas en BD
+     *
+     * Uso:
+     *   $entrega->estadoEntrega->codigo       // 'ENTREGADO'
+     *   $entrega->estadoEntrega->nombre       // 'Entregada'
+     *   $entrega->estadoEntrega->esEstadoFinal()  // true/false
+     */
+    public function estadoEntrega(): BelongsTo
+    {
+        return $this->belongsTo(EstadoLogistica::class, 'estado_entrega_id');
     }
 
     /**
@@ -241,16 +285,38 @@ class Entrega extends Model
 
         // Sincronizar estado de TODAS las ventas cuando cambia estado de entrega
         static::updated(function ($model) {
-            // Solo si cambió el estado
-            if ($model->isDirty('estado')) {
-                $estadoAnterior = $model->getOriginal('estado');
+            // Detectar si cambió estado (ENUM legacy o FK nuevo)
+            $cambioEstadoEnum = $model->isDirty('estado');
+            $cambioEstadoFk = $model->isDirty('estado_entrega_id');
+
+            if ($cambioEstadoEnum || $cambioEstadoFk) {
+                $estadoAnterior = $cambioEstadoEnum ? $model->getOriginal('estado') : null;
                 $estadoNuevo = $model->estado;
 
                 // Sincronizar todas las ventas asociadas a esta entrega
                 if ($model->ventas()->count() > 0) {
-                    $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
-                    foreach ($model->ventas as $venta) {
-                        $sincronizador->alCambiarEstadoEntrega($model, $estadoAnterior, $estadoNuevo, $venta);
+                    try {
+                        $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
+                        foreach ($model->ventas as $venta) {
+                            if ($cambioEstadoFk && $model->estadoEntrega) {
+                                // Si cambió el FK, usar el código del estado
+                                $sincronizador->alCambiarEstadoEntrega(
+                                    $model,
+                                    $estadoAnterior,
+                                    $model->estadoEntrega->codigo,
+                                    $venta
+                                );
+                            } elseif ($cambioEstadoEnum) {
+                                $sincronizador->alCambiarEstadoEntrega(
+                                    $model,
+                                    $estadoAnterior,
+                                    $estadoNuevo,
+                                    $venta
+                                );
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning("Error sincronizando ventas al cambiar estado de entrega: " . $e->getMessage());
                     }
                 }
             }

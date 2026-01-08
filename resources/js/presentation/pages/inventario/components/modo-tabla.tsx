@@ -111,10 +111,11 @@ export default function ModoTabla({
 
     return (
         <div className="flex flex-col h-full gap-4">
-            <div className="flex justify-between items-center">
+            {/* Header responsivo */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                     <h3 className="text-lg font-semibold">Tabla Editable</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground hidden sm:block">
                         Edita directamente en las celdas para cambios rápidos
                     </p>
                 </div>
@@ -122,109 +123,120 @@ export default function ModoTabla({
                     onClick={onAgregarItem}
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 w-full sm:w-auto"
                 >
                     <Plus className="h-4 w-4" />
                     Agregar Producto
                 </Button>
             </div>
 
-            <div className="flex-1 overflow-auto border rounded-lg">
-                <table className="w-full text-xs">
-                    <thead className="bg-slate-100 dark:bg-slate-800 border-b sticky top-0">
-                        <tr>
-                            <th className="px-2 py-1.5 text-left font-medium w-10">#</th>
-                            <th className="px-2 py-1.5 text-left font-medium min-w-48">Producto</th>
-                            <th className="px-2 py-1.5 text-left font-medium min-w-32">Almacén</th>
-                            <th className="px-2 py-1.5 text-left font-medium w-20">Cantidad</th>
-                            <th className="px-2 py-1.5 text-left font-medium w-24">Lote</th>
-                            <th className="px-2 py-1.5 text-left font-medium w-28">Vencimiento</th>
-                            <th className="px-2 py-1.5 text-center font-medium w-10">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {items.map((item, index) => {
-                            const hasDuplicado = item.producto_id && item.almacen_id && verificarDuplicado(Number(item.producto_id), Number(item.almacen_id), index);
-
-                            return (
-                            <tr key={index} className={`border-b hover:bg-slate-50 dark:hover:bg-slate-900/50 ${hasDuplicado ? 'bg-yellow-50 dark:bg-yellow-950/10' : ''}`}>
-                                <td className="px-2 py-1.5 font-medium text-slate-600 dark:text-slate-400 w-10">
-                                    {hasDuplicado && <AlertCircle className="h-4 w-4 text-yellow-600 inline mr-1" />}
-                                    {index + 1}
-                                </td>
-                                <td className="px-2 py-1.5 min-w-48">
-                                    <SearchSelect
-                                        placeholder="Buscar..."
-                                        value={item.producto_id ? String(item.producto_id) : ''}
-                                        options={productosOptions}
-                                        onChange={(value) => handleActualizarConValidacion(index, 'producto_id', value ? Number(value) : '')}
-                                        allowClear={true}
-                                        emptyText="No encontrado"
-                                    />
-                                </td>
-                                <td className="px-2 py-1.5 min-w-32">
-                                    <SearchSelect
-                                        placeholder="Almacén..."
-                                        value={item.almacen_id ? String(item.almacen_id) : ''}
-                                        options={almacenesOptions}
-                                        onChange={(value) => handleActualizarConValidacion(index, 'almacen_id', value ? Number(value) : '')}
-                                        allowClear={true}
-                                        emptyText="N/A"
-                                    />
-                                </td>
-                                <td className="px-2 py-1.5 w-20">
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        value={item.cantidad}
-                                        onChange={(e) => onActualizarItem(index, 'cantidad', Number(e.target.value) || '')}
-                                        className="w-full text-center"
-                                        placeholder="0"
-                                    />
-                                </td>
-                                <td className="px-2 py-1.5 w-24">
-                                    <Input
-                                        type="text"
-                                        value={item.lote || ''}
-                                        onChange={(e) => onActualizarItem(index, 'lote', e.target.value)}
-                                        className="w-full text-xs"
-                                        placeholder="-"
-                                    />
-                                </td>
-                                <td className="px-2 py-1.5 w-28">
-                                    <Input
-                                        type="date"
-                                        value={item.fecha_vencimiento || ''}
-                                        onChange={(e) => onActualizarItem(index, 'fecha_vencimiento', e.target.value)}
-                                        className="w-full"
-                                    />
-                                </td>
-                                <td className="px-2 py-1.5 text-center w-10">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onEliminarItem(index)}
-                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                </td>
+            {/* Tabla responsiva con scroll en móvil */}
+            <div className="flex-1 overflow-x-auto border rounded-lg -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full sm:min-w-0">
+                    <table className="w-full text-xs">
+                        <thead className="bg-slate-100 dark:bg-slate-800 border-b sticky top-0">
+                            <tr>
+                                <th className="px-2 py-1.5 text-left font-medium w-8 sm:w-10">#</th>
+                                {/* Producto - siempre visible */}
+                                <th className="px-2 py-1.5 text-left font-medium min-w-40 sm:min-w-48">Producto</th>
+                                {/* Almacén - oculto en móvil */}
+                                <th className="px-2 py-1.5 text-left font-medium min-w-24 sm:min-w-32 hidden sm:table-cell">Almacén</th>
+                                {/* Cantidad - siempre visible */}
+                                <th className="px-2 py-1.5 text-left font-medium w-16 sm:w-20">Cant.</th>
+                                {/* Lote - oculto en móvil */}
+                                <th className="px-2 py-1.5 text-left font-medium w-20 hidden sm:table-cell">Lote</th>
+                                {/* Vencimiento - oculto en móvil */}
+                                <th className="px-2 py-1.5 text-left font-medium w-24 hidden md:table-cell">Vencimiento</th>
+                                {/* Acciones */}
+                                <th className="px-2 py-1.5 text-center font-medium w-8 sm:w-10">X</th>
                             </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {items.map((item, index) => {
+                                const hasDuplicado = item.producto_id && item.almacen_id && verificarDuplicado(Number(item.producto_id), Number(item.almacen_id), index);
+
+                                return (
+                                <tr key={index} className={`border-b hover:bg-slate-50 dark:hover:bg-slate-900/50 ${hasDuplicado ? 'bg-yellow-50 dark:bg-yellow-950/10' : ''}`}>
+                                    <td className="px-2 py-1.5 font-medium text-slate-600 dark:text-slate-400 w-8 sm:w-10">
+                                        {hasDuplicado && <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600 inline mr-1" />}
+                                        <span className="hidden sm:inline">{index + 1}</span>
+                                    </td>
+                                    <td className="px-2 py-1.5 min-w-40 sm:min-w-48">
+                                        <SearchSelect
+                                            placeholder="Buscar..."
+                                            value={item.producto_id ? String(item.producto_id) : ''}
+                                            options={productosOptions}
+                                            onChange={(value) => handleActualizarConValidacion(index, 'producto_id', value ? Number(value) : '')}
+                                            allowClear={true}
+                                            emptyText="No encontrado"
+                                        />
+                                    </td>
+                                    <td className="px-2 py-1.5 min-w-24 sm:min-w-32 hidden sm:table-cell">
+                                        <SearchSelect
+                                            placeholder="Almacén..."
+                                            value={item.almacen_id ? String(item.almacen_id) : ''}
+                                            options={almacenesOptions}
+                                            onChange={(value) => handleActualizarConValidacion(index, 'almacen_id', value ? Number(value) : '')}
+                                            allowClear={true}
+                                            emptyText="N/A"
+                                        />
+                                    </td>
+                                    <td className="px-2 py-1.5 w-16 sm:w-20">
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={item.cantidad}
+                                            onChange={(e) => onActualizarItem(index, 'cantidad', Number(e.target.value) || '')}
+                                            className="w-full text-center text-xs sm:text-sm"
+                                            placeholder="0"
+                                        />
+                                    </td>
+                                    <td className="px-2 py-1.5 w-20 hidden sm:table-cell">
+                                        <Input
+                                            type="text"
+                                            value={item.lote || ''}
+                                            onChange={(e) => onActualizarItem(index, 'lote', e.target.value)}
+                                            className="w-full text-xs"
+                                            placeholder="-"
+                                        />
+                                    </td>
+                                    <td className="px-2 py-1.5 w-24 hidden md:table-cell">
+                                        <Input
+                                            type="date"
+                                            value={item.fecha_vencimiento || ''}
+                                            onChange={(e) => onActualizarItem(index, 'fecha_vencimiento', e.target.value)}
+                                            className="w-full text-xs"
+                                        />
+                                    </td>
+                                    <td className="px-2 py-1.5 text-center w-8 sm:w-10">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => onEliminarItem(index)}
+                                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                        >
+                                            <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                        </Button>
+                                    </td>
+                                </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
+            {/* Footer responsivo */}
             {items.length > 0 && (
-                <div className="flex justify-end gap-3">
+                <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                     <Button
                         onClick={onGuardar}
                         disabled={processing || items.length === 0}
-                        className="gap-2"
+                        className="gap-2 w-full sm:w-auto"
                     >
                         <Save className="h-4 w-4" />
-                        Cargar Inventario Inicial ({items.length} items)
+                        <span className="hidden sm:inline">Cargar Inventario Inicial</span>
+                        <span className="sm:hidden">Cargar ({items.length})</span>
                     </Button>
                 </div>
             )}

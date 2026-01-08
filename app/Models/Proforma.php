@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Services\WebSocketNotificationService;
+use Illuminate\Support\Facades\Log;
 
 class Proforma extends Model
 {
@@ -293,10 +295,10 @@ class Proforma extends Model
 
         // Enviar notificación WebSocket en tiempo real
         try {
-            app(\App\Services\WebSocketNotificationService::class)
+            app(WebSocketNotificationService::class)
                 ->notifyProformaApproved($this->fresh('usuarioAprobador'));
         } catch (\Exception $e) {
-            \Log::warning('Error enviando notificación WebSocket de aprobación', [
+            Log::warning('Error enviando notificación WebSocket de aprobación', [
                 'proforma_id' => $this->id,
                 'error' => $e->getMessage(),
             ]);
@@ -321,10 +323,10 @@ class Proforma extends Model
 
         // Enviar notificación WebSocket en tiempo real
         try {
-            app(\App\Services\WebSocketNotificationService::class)
+            app(WebSocketNotificationService::class)
                 ->notifyProformaRejected($this->fresh('usuarioAprobador'), $motivo);
         } catch (\Exception $e) {
-            \Log::warning('Error enviando notificación WebSocket de rechazo', [
+            Log::warning('Error enviando notificación WebSocket de rechazo', [
                 'proforma_id' => $this->id,
                 'error' => $e->getMessage(),
             ]);

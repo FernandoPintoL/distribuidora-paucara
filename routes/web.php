@@ -403,6 +403,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::post('draft/{borrador}/items', [\App\Http\Controllers\InventarioInicialController::class, 'storeDraftItem'])->name('draft.item.store');
             Route::post('draft/{borrador}/productos', [\App\Http\Controllers\InventarioInicialController::class, 'addProductosToDraft'])->name('draft.productos.add');
             Route::post('draft/{borrador}/productos/load-paginated', [\App\Http\Controllers\InventarioInicialController::class, 'loadProductsPaginated'])->name('draft.productos.load-paginated');
+            Route::post('draft/{borrador}/productos/search', [\App\Http\Controllers\InventarioInicialController::class, 'searchProductoInDraft'])->name('draft.productos.search');
             Route::delete('draft/{borrador}/items/{item}', [\App\Http\Controllers\InventarioInicialController::class, 'deleteDraftItem'])->name('draft.item.delete');
             Route::post('draft/{borrador}/complete', [\App\Http\Controllers\InventarioInicialController::class, 'completeDraft'])->middleware('permission:inventario.ajuste.procesar')->name('draft.complete');
         });

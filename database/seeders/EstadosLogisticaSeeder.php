@@ -24,11 +24,14 @@ class EstadosLogisticaSeeder extends Seeder
             ['codigo' => 'APROBADA', 'nombre' => 'Aprobada', 'color' => '#28A745', 'icono' => 'check-circle', 'orden' => 2, 'requiere_aprobacion' => true],
             ['codigo' => 'RECHAZADA', 'nombre' => 'Rechazada', 'color' => '#DC3545', 'icono' => 'times-circle', 'orden' => 3, 'es_estado_final' => true, 'permite_edicion' => false],
             ['codigo' => 'CONVERTIDA', 'nombre' => 'Convertida a Venta', 'color' => '#17A2B8', 'icono' => 'exchange-alt', 'orden' => 4, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'VENCIDA', 'nombre' => 'Vencida', 'color' => '#6C757D', 'icono' => 'calendar-times', 'orden' => 5, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'EN_RUTA', 'nombre' => 'En Ruta', 'color' => '#2196F3', 'icono' => 'local-shipping', 'orden' => 5],
+            ['codigo' => 'VENCIDA', 'nombre' => 'Vencida', 'color' => '#6C757D', 'icono' => 'calendar-times', 'orden' => 6, 'es_estado_final' => true, 'permite_edicion' => false],
         ];
 
         // VENTA LOGISTIC STATES
         $ventaStates = [
+            ['codigo' => 'PENDIENTE_RETIRO', 'nombre' => 'Pendiente de Retiro', 'color' => '#FFC107', 'icono' => 'local-shipping', 'orden' => 0],
+            ['codigo' => 'PENDIENTE_ENVIO', 'nombre' => 'Pendiente de Envío', 'color' => '#FF9800', 'icono' => 'schedule', 'orden' => 0],
             ['codigo' => 'SIN_ENTREGA', 'nombre' => 'Sin Entrega Asignada', 'color' => '#E0E0E0', 'icono' => 'inbox', 'orden' => 1],
             ['codigo' => 'PROGRAMADO', 'nombre' => 'Entrega Programada', 'color' => '#FFC107', 'icono' => 'calendar', 'orden' => 2],
             ['codigo' => 'EN_PREPARACION', 'nombre' => 'En Preparación', 'color' => '#9C27B0', 'icono' => 'inventory', 'orden' => 3],
@@ -203,6 +206,13 @@ class EstadosLogisticaSeeder extends Seeder
             ->keyBy('codigo');
 
         $transitions = [
+            // Transiciones desde PENDIENTE_RETIRO (para PICKUP)
+            ['origen' => 'PENDIENTE_RETIRO', 'destino' => 'PROGRAMADO'],
+            ['origen' => 'PENDIENTE_RETIRO', 'destino' => 'CANCELADA'],
+            // Transiciones desde PENDIENTE_ENVIO (para DELIVERY)
+            ['origen' => 'PENDIENTE_ENVIO', 'destino' => 'EN_PREPARACION'],
+            ['origen' => 'PENDIENTE_ENVIO', 'destino' => 'CANCELADA'],
+            // Transiciones existentes
             ['origen' => 'SIN_ENTREGA', 'destino' => 'PROGRAMADO'],
             ['origen' => 'SIN_ENTREGA', 'destino' => 'CANCELADA'],
             ['origen' => 'PROGRAMADO', 'destino' => 'EN_PREPARACION'],

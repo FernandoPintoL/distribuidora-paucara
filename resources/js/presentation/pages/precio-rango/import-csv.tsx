@@ -213,6 +213,17 @@ export default function ImportCSV({ productos }: ImportCSVProps) {
         formData.append('filas_eliminadas', JSON.stringify(Array.from(filasEliminadas)));
       }
 
+      // ✅ DEBUG: Mostrar en consola qué se envía al backend
+      console.log('========== IMPORTANDO CSV AL BACKEND ==========');
+      console.log('Archivo:', selectedFile?.name);
+      console.log('Tamaño:', selectedFile?.size);
+      console.log('FormData contenido:');
+      console.log('- producto_id:', selectedProductoId || 'No definido');
+      console.log('- sobreescribir:', sobreescribir ? 'Sí' : 'No');
+      console.log('- correcciones:', Object.keys(correcciones).length > 0 ? correcciones : 'Ninguna');
+      console.log('- filas_eliminadas:', filasEliminadas.size > 0 ? Array.from(filasEliminadas) : 'Ninguna');
+      console.log('============================================');
+
       const response = await axios.post('/api/productos/rangos-precio/importar-csv', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -230,6 +241,15 @@ export default function ImportCSV({ productos }: ImportCSVProps) {
       }
     } catch (error: any) {
       NotificationService.dismiss(loadingToast);
+
+      // ✅ DEBUG: Mostrar en consola el error del servidor
+      console.log('========== ERROR EN IMPORTACIÓN CSV ==========');
+      console.log('Status:', error.response?.status);
+      console.log('Errores de validación:', error.response?.data?.errors);
+      console.log('Errores de filas:', error.response?.data?.data?.detalles);
+      console.log('Mensaje:', error.response?.data?.message);
+      console.log('Respuesta completa:', error.response?.data);
+      console.log('=============================================');
 
       // Mostrar errores de validación del request si existen
       if (error.response?.status === 422 && error.response?.data?.errors) {

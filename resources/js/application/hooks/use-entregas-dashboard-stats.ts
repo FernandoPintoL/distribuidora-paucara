@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-export interface EntregaEstado {
-    PROGRAMADO: number;
-    ASIGNADA: number;
-    EN_CAMINO: number;
-    LLEGO: number;
-    ENTREGADO: number;
-    NOVEDAD: number;
-    CANCELADA: number;
-}
+// ✅ ACTUALIZADO: Usar Record<string, number> para soportar cualquier código de estado
+// Esto permite que el dashboard sea agnóstico a qué códigos existen en la BD
+export type EntregaEstado = Record<string, number>;
 
 export interface MetricaZona {
     zona_id: number | null;

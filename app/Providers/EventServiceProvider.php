@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Models\Venta;
 use App\Observers\UserObserver;
+use App\Observers\VentaObserver;
 use App\Events\DashboardMetricsUpdated;
 use App\Events\EntregaAsignada;
 use App\Events\EntregaCompletada;
@@ -20,7 +22,9 @@ use App\Events\ProformaCreada;
 use App\Events\ProformaRechazada;
 use App\Events\RutaPlanificada;
 use App\Events\UbicacionActualizada;
+use App\Events\VentaEstadoCambiado;
 use App\Listeners\BroadcastDashboardMetrics;
+use App\Listeners\SendVentaEstadoCambiadoNotification;
 use App\Listeners\Logistica\BroadcastEntregaAsignada;
 use App\Listeners\Logistica\BroadcastEntregaConfirmada;
 use App\Listeners\Logistica\BroadcastMarcarLlegada;
@@ -133,6 +137,14 @@ class EventServiceProvider extends ServiceProvider
         ],
 
         // ══════════════════════════════════════════════════════════
+        // VENTA EVENTS
+        // ══════════════════════════════════════════════════════════
+
+        VentaEstadoCambiado::class => [
+            SendVentaEstadoCambiadoNotification::class,
+        ],
+
+        // ══════════════════════════════════════════════════════════
         // UBICACIÓN/TRACKING EVENTS
         // ══════════════════════════════════════════════════════════
 
@@ -156,6 +168,7 @@ class EventServiceProvider extends ServiceProvider
     {
         // Registrar observadores de modelos
         User::observe(UserObserver::class);
+        Venta::observe(VentaObserver::class);
     }
 
     /**

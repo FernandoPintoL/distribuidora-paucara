@@ -21,15 +21,26 @@ interface DashboardEntregasStatsProps {
     onRefresh: () => void;
 }
 
-// Mapeo de estado código a ícono (no disponible en API)
+// ✅ ACTUALIZADO: Mapeo de estado código a ícono para TODOS los estados de entrega
+// Los códigos aquí deben coincidir con los de la tabla estados_logistica categoria='entrega'
 const estadoIconMap: Record<string, any> = {
+    // Legacy workflow
     PROGRAMADO: Clock,
     ASIGNADA: Package,
     EN_CAMINO: Truck,
     LLEGO: MapPin,
     ENTREGADO: CheckCircle2,
-    NOVEDAD: AlertCircle,
+    RECHAZADO: AlertCircle,
     CANCELADA: AlertCircle,
+
+    // New loading workflow
+    PREPARACION_CARGA: Package,
+    EN_CARGA: Truck,
+    LISTO_PARA_ENTREGA: CheckCircle2,
+    EN_TRANSITO: Truck,
+
+    // Issues
+    NOVEDAD: AlertCircle,
 };
 
 // Helper para convertir color hex a clases tailwind

@@ -147,9 +147,84 @@ loadPaginated.post = (args: { borrador: string | number } | [borrador: string | 
         })
     
     loadPaginated.form = loadPaginatedForm
+/**
+* @see \App\Http\Controllers\InventarioInicialController::search
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+export const search = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: search.url(args, options),
+    method: 'post',
+})
+
+search.definition = {
+    methods: ["post"],
+    url: '/inventario/inventario-inicial/draft/{borrador}/productos/search',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\InventarioInicialController::search
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+search.url = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { borrador: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    borrador: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        borrador: args.borrador,
+                }
+
+    return search.definition.url
+            .replace('{borrador}', parsedArgs.borrador.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\InventarioInicialController::search
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+search.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: search.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\InventarioInicialController::search
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+    const searchForm = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: search.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\InventarioInicialController::search
+ * @see app/Http/Controllers/InventarioInicialController.php:620
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
+ */
+        searchForm.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: search.url(args, options),
+            method: 'post',
+        })
+    
+    search.form = searchForm
 const productos = {
     add,
 loadPaginated,
+search,
 }
 
 export default productos

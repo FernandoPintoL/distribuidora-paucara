@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Cliente;
 use App\Models\Compra;
+use App\Models\Entrega;
 use App\Models\ModuloSidebar;
 use App\Models\PrecioProducto;
 use App\Models\Proforma;
@@ -11,6 +12,7 @@ use App\Models\Ruta;
 use App\Models\RutaDetalle;
 use App\Observers\ClienteObserver;
 use App\Observers\CompraObserver;
+use App\Observers\EntregaObserver;
 use App\Observers\ModuloSidebarObserver;
 use App\Observers\PrecioProductoObserver;
 use App\Observers\ProformaObserver;
@@ -47,5 +49,8 @@ class AppServiceProvider extends ServiceProvider
         Ruta::observe(RutaObserver::class);
         RutaDetalle::observe(RutaDetalleObserver::class);
         \App\Models\CodigoBarra::observe(\App\Observers\CodigoBarraObserver::class);
+
+        // ✅ NUEVO - FASE 5: Observer para sincronización WebSocket Entrega-Venta
+        Entrega::observe(EntregaObserver::class);
     }
 }

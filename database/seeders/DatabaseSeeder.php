@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
 
         // $this->call(CajaSeeder::class);
         // $this->call(ClienteTestSeeder::class);
-        $this->call(ClientesConUsuariosSeeder::class);
+        // $this->call(ClientesConUsuariosSeeder::class);
         // $this->call(CuentaContableSeeder::class);
         $this->call(EmpleadoRolesSeeder::class);
         // $this->call(EmpleadosTestSeeder::class);
@@ -57,7 +57,6 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoMermaSeeder::class);
         $this->call(TipoOperacionCajaSeeder::class);
         $this->call(TiposPrecioSeeder::class);
-        // $this->call(\Database\Seeders\VehiculoSeeder::class);
         // $this->call(ProductosEjemploSeeder::class);
         $this->call(CategoriaClienteSeeder::class);
         $this->call(LocalidadSeeder::class);
@@ -90,8 +89,12 @@ class DatabaseSeeder extends Seeder
             $superAdminRole->syncPermissions(Permission::all());
         }
 
+        // ✅ IMPORTANTE: Crear choferes ANTES de los vehículos
         // Crear usuario chofer de prueba
-        // $this->call(ChoferTestSeeder::class);
+        $this->call(ChoferTestSeeder::class);
+
+        // ✅ Crear vehículos DESPUÉS de los choferes para poder asignarlos
+        $this->call(VehiculoSeeder::class);
 
         // Crear usuarios cajero de prueba
         $this->call(CajeroTestSeeder::class);

@@ -388,17 +388,46 @@ class EncargadoController extends Controller
                 ->get()
                 ->map(function ($entrega) {
                     $ultimaUbicacion = $entrega->ubicaciones->first();
-                    $primeraVenta = $entrega->ventas?->first();
-                    $cliente = $primeraVenta?->cliente;
+
+                    // ✅ ACTUALIZADO: Devolver TODAS las ventas agrupadas, no solo la primera
+                    $ventasConMetadatos = $entrega->ventas->map(function ($venta) {
+                        return [
+                            'id' => $venta->id,
+                            'numero' => $venta->numero,
+                            'cliente' => [
+                                'id' => $venta->cliente?->id,
+                                'nombre' => $venta->cliente?->razon_social ?? $venta->cliente?->nombres,
+                                'telefono' => $venta->cliente?->telefono,
+                            ],
+                            'total' => (float) $venta->total,
+                            'estado_logistico' => $venta->estado_logistico,
+                            'fecha_entrega_comprometida' => $venta->fecha_entrega_comprometida,
+                            'cantidad_items' => $venta->detalles?->sum('cantidad') ?? 0,
+                            // Metadatos del pivot (orden, confirmación)
+                            'orden' => $venta->pivot?->orden ?? 1,
+                            'confirmado_por' => $venta->pivot?->confirmado_por,
+                            'fecha_confirmacion' => $venta->pivot?->fecha_confirmacion,
+                            'notas' => $venta->pivot?->notas,
+                        ];
+                    })->sortBy('orden')->values();
+
+                    // Calcular totales consolidados
+                    $totalConsolidado = $ventasConMetadatos->sum('total');
+                    $cantidadVentas = $ventasConMetadatos->count();
 
                     return [
                         'id' => $entrega->id,
-                        'numero_proforma' => $primeraVenta?->numero ?? null,
+                        'numero_entrega' => $entrega->numero_entrega,
                         'estado' => $entrega->estado,
-                        'cliente' => [
-                            'id' => $cliente?->id,
-                            'nombre' => $cliente?->razon_social ?? $cliente?->nombres,
-                        ],
+
+                        // ✅ NUEVO: Información consolidada
+                        'total_consolidado' => (float) $totalConsolidado,
+                        'cantidad_ventas' => $cantidadVentas,
+                        'clientes_nombres' => $ventasConMetadatos->pluck('cliente.nombre')->unique()->values()->toArray(),
+
+                        // ✅ NUEVO: Array de todas las ventas
+                        'ventas' => $ventasConMetadatos,
+
                         'chofer' => [
                             'id' => $entrega->chofer->id,
                             'nombre' => $entrega->chofer->user->nombre . ' ' . $entrega->chofer->user->apellidos,

@@ -115,6 +115,15 @@ export default function PrecioRangoForm({
         : precioRangoService.storeParaProductoUrl(data.producto_id);
 
       const method = isEditing ? 'put' : 'post';
+
+      // ✅ DEBUG: Mostrar en consola qué se envía al backend
+      console.log('========== ENVIANDO AL BACKEND ==========');
+      console.log('URL:', url);
+      console.log('Método:', method.toUpperCase());
+      console.log('Datos enviados:', submitData);
+      console.log('tipo_precio_id (tipo):', typeof submitData.tipo_precio_id, '- valor:', submitData.tipo_precio_id);
+      console.log('========================================');
+
       const response = await axios[method](url, submitData);
 
       NotificationService.dismiss(loadingToast);
@@ -126,6 +135,14 @@ export default function PrecioRangoForm({
       router.get(`/precio-rango?producto_id=${data.producto_id}`);
     } catch (error: any) {
       NotificationService.dismiss(loadingToast);
+
+      // ✅ DEBUG: Mostrar en consola el error del servidor
+      console.log('========== ERROR DEL SERVIDOR ==========');
+      console.log('Status:', error.response?.status);
+      console.log('Errores de validación:', error.response?.data?.errors);
+      console.log('Mensaje:', error.response?.data?.message);
+      console.log('Respuesta completa:', error.response?.data);
+      console.log('========================================');
 
       // Mostrar errores de validación del servidor si existen
       if (error.response?.data?.errors) {

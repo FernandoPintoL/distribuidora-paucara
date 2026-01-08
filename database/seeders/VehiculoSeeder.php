@@ -14,7 +14,12 @@ class VehiculoSeeder extends Seeder
         // Obtener choferes disponibles para asignar
         $choferes = Empleado::whereHas('user.roles', function ($query) {
             $query->where('name', 'Chofer');
-        })->get();
+        })->with('user')->get();
+
+        $this->command->info("📍 Choferes encontrados: " . $choferes->count());
+        foreach ($choferes as $index => $chofer) {
+            $this->command->info("   {$index}. {$chofer->user->name} (ID Usuario: {$chofer->user_id}, ID Empleado: {$chofer->id})");
+        }
 
         // Actualizar vehículos existentes con campos de logística
         $vehiculosExistentes = Vehiculo::whereNull('capacidad_volumen')->get();
@@ -37,7 +42,7 @@ class VehiculoSeeder extends Seeder
                 'estado'            => Vehiculo::DISPONIBLE,
                 'activo'            => true,
                 'observaciones'     => 'Vehículo para entregas locales - Zona Norte',
-                'chofer_asignado_id' => $choferes->get(0)->id ?? null,
+                'chofer_asignado_id' => $choferes->get(0)?->user_id ?? null,
             ],
             [
                 'placa'             => 'GHI-789',
@@ -49,7 +54,7 @@ class VehiculoSeeder extends Seeder
                 'estado'            => Vehiculo::DISPONIBLE,
                 'activo'            => true,
                 'observaciones'     => 'Camioneta para entregas rápidas - Zona Sur',
-                'chofer_asignado_id' => $choferes->get(1)->id ?? null,
+                'chofer_asignado_id' => $choferes->get(1)?->user_id ?? null,
             ],
             [
                 'placa'             => 'JKL-012',
@@ -73,7 +78,7 @@ class VehiculoSeeder extends Seeder
                 'estado'            => Vehiculo::DISPONIBLE,
                 'activo'            => true,
                 'observaciones'     => 'Camioneta 4x4 para zonas rurales',
-                'chofer_asignado_id' => $choferes->get(2)->id ?? null,
+                'chofer_asignado_id' => $choferes->get(2)?->user_id ?? null,
             ],
             [
                 'placa'             => 'PQR-678',
@@ -85,7 +90,7 @@ class VehiculoSeeder extends Seeder
                 'estado'            => Vehiculo::DISPONIBLE,
                 'activo'            => true,
                 'observaciones'     => 'Camión mediano para distribución regional',
-                'chofer_asignado_id' => $choferes->get(3)->id ?? null,
+                'chofer_asignado_id' => $choferes->get(3)?->user_id ?? null,
             ],
             [
                 'placa'             => 'STU-901',
@@ -97,7 +102,7 @@ class VehiculoSeeder extends Seeder
                 'estado'            => Vehiculo::DISPONIBLE,
                 'activo'            => true,
                 'observaciones'     => 'Furgoneta pequeña para entregas urbanas rápidas',
-                'chofer_asignado_id' => $choferes->get(4)->id ?? null,
+                'chofer_asignado_id' => $choferes->get(4)?->user_id ?? null,
             ],
         ];
 
@@ -108,18 +113,38 @@ class VehiculoSeeder extends Seeder
             );
 
             $estado = $vehiculo->wasRecentlyCreated ? '✅ Creado' : '⚠️  Ya existe';
-            $this->command->info("  {$estado}: {$vehiculoData['placa']} - {$vehiculoData['marca']} {$vehiculoData['modelo']}");
+            $choferInfo = '';
+            if ($vehiculo->chofer_asignado_id) {
+                $chofer = \App\Models\User::find($vehiculo->chofer_asignado_id);
+                if ($chofer) {
+                    $choferInfo = " → Chofer: {$chofer->name}";
+                }
+            }
+            $this->command->info("  {$estado}: {$vehiculoData['placa']} - {$vehiculoData['marca']} {$vehiculoData['modelo']}{$choferInfo}");
         }
 
         $totalVehiculos = Vehiculo::count();
         $disponibles = Vehiculo::where('estado', Vehiculo::DISPONIBLE)->count();
         $enMantenimiento = Vehiculo::where('estado', Vehiculo::MANTENIMIENTO)->count();
+        $conChoferAsignado = Vehiculo::whereNotNull('chofer_asignado_id')->count();
 
         $this->command->info('');
         $this->command->info("📊 Resumen de vehículos:");
         $this->command->info("  Total: {$totalVehiculos}");
         $this->command->info("  Disponibles: {$disponibles}");
         $this->command->info("  En mantenimiento: {$enMantenimiento}");
-        $this->command->info("  Con chofer asignado: " . Vehiculo::whereNotNull('chofer_asignado_id')->count());
+        $this->command->info("  Con chofer asignado: {$conChoferAsignado}");
+
+        // Mostrar detalle de asignaciones
+        if ($conChoferAsignado > 0) {
+            $this->command->info('');
+            $this->command->info('📋 Detalle de asignaciones:');
+            $vehiculosConChofer = Vehiculo::whereNotNull('chofer_asignado_id')
+                ->with('choferAsignado')
+                ->get();
+            foreach ($vehiculosConChofer as $vehiculo) {
+                $this->command->info("   - {$vehiculo->placa} → {$vehiculo->choferAsignado->name}");
+            }
+        }
     }
 }

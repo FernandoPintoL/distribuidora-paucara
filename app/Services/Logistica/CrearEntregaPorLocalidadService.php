@@ -205,14 +205,19 @@ class CrearEntregaPorLocalidadService
      */
     private function validarYObtenerVentas(array $ventaIds): array
     {
+        Log::info('📍 validarYObtenerVentas: starting validation', ['venta_ids' => $ventaIds]);
+
         if (empty($ventaIds)) {
             throw new Exception('Debe proporcionar al menos 1 venta');
         }
 
         // Obtener las ventas con bloqueo para evitar lecturas sucias
+        Log::info('📍 Fetching ventas with lock...');
         $ventas = Venta::whereIn('id', $ventaIds)
             ->lockForUpdate()
             ->get();
+
+        Log::info('✅ Ventas fetched', ['count' => $ventas->count()]);
 
         // Validar que se encontraron todas las ventas
         if ($ventas->count() !== count($ventaIds)) {
@@ -406,14 +411,40 @@ class CrearEntregaPorLocalidadService
         array $datos,
         array $ventas = []
     ): Entrega {
+        Log::info('📍 crearEntrega: starting', [
+            'vehiculo_id' => $vehiculoId,
+            'chofer_id' => $choferId,
+            'zona_id' => $zonaId,
+            'ventas_count' => count($ventas),
+        ]);
+
         // Determinar la localidad desde el cliente de las ventas (si no se proporciona zonaId)
         $localidadId = $zonaId;
         if (!$localidadId && !empty($ventas)) {
-            // Obtener la localidad del primer cliente de las ventas
-            // En una entrega consolidada, todos los clientes deberían estar en la misma zona
-            $primerVenta = is_array($ventas[0]) ? Venta::find($ventas[0]['id']) : $ventas[0];
-            if ($primerVenta && $primerVenta->cliente) {
-                $localidadId = $primerVenta->cliente->localidad_id;
+            Log::info('📍 Determining localidad from cliente...');
+
+            try {
+                // Obtener la localidad del primer cliente de las ventas
+                // En una entrega consolidada, todos los clientes deberían estar en la misma zona
+                $primerVenta = is_array($ventas[0]) ? Venta::find($ventas[0]['id']) : $ventas[0];
+
+                Log::info('✅ Primera venta obtained', [
+                    'is_array' => is_array($ventas[0]),
+                    'venta_id' => $primerVenta?->id ?? 'null',
+                ]);
+
+                if ($primerVenta && $primerVenta->cliente) {
+                    $localidadId = $primerVenta->cliente->localidad_id;
+                    Log::info('✅ Localidad determined', ['localidad_id' => $localidadId]);
+                } else {
+                    Log::warning('⚠️ Could not determine localidad - no cliente found');
+                }
+            } catch (\Exception $e) {
+                Log::error('❌ Error determining localidad', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                throw $e;
             }
         }
 

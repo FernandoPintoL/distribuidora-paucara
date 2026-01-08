@@ -34,21 +34,22 @@ export default function EstadoBorrador({ borrador }: Props) {
 
     return (
         <Card>
-            <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+                {/* Grid responsivo */}
+                <div className="grid grid-cols-3 sm:grid-cols-3 gap-3 sm:gap-6">
                     {/* Productos */}
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600">{productosUnicos}</div>
-                        <p className="text-sm text-gray-600 mt-1">Productos en borrador</p>
+                        <div className="text-xl sm:text-3xl font-bold text-blue-600">{productosUnicos}</div>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">Productos</p>
                     </div>
 
                     {/* Items completados */}
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-green-600">{itemsConCantidad}</div>
-                        <p className="text-sm text-gray-600 mt-1">Items completados</p>
-                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                        <div className="text-xl sm:text-3xl font-bold text-green-600">{itemsConCantidad}</div>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">Completados</p>
+                        <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
                             <div
-                                className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                                className="bg-green-500 h-1.5 sm:h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${porcentajeComplecion}%` }}
                             ></div>
                         </div>
@@ -56,38 +57,38 @@ export default function EstadoBorrador({ borrador }: Props) {
 
                     {/* Items pendientes */}
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-orange-600">{itemsSinCantidad}</div>
-                        <p className="text-sm text-gray-600 mt-1">Items pendientes</p>
+                        <div className="text-xl sm:text-3xl font-bold text-orange-600">{itemsSinCantidad}</div>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">Pendientes</p>
                     </div>
                 </div>
 
-                {/* Estado del borrador */}
-                <div className="mt-6 pt-6 border-t">
-                    <div className="flex items-center gap-3">
+                {/* Estado del borrador - responsivo */}
+                <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         {borrador.estado === 'completado' ? (
                             <>
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                <CheckCircle2 className="h-5 w-5 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
                                 <div>
-                                    <p className="font-semibold text-green-700">Completado</p>
-                                    <p className="text-sm text-gray-600">Inventario inicial registrado en el sistema</p>
+                                    <p className="font-semibold text-xs sm:text-sm text-green-700">Completado</p>
+                                    <p className="text-xs sm:text-sm text-gray-600">Inventario inicial registrado</p>
                                 </div>
                             </>
                         ) : itemsSinCantidad > 0 ? (
                             <>
-                                <AlertCircle className="h-5 w-5 text-orange-500" />
+                                <AlertCircle className="h-5 w-5 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0" />
                                 <div>
-                                    <p className="font-semibold text-orange-700">En progreso</p>
-                                    <p className="text-sm text-gray-600">
-                                        {itemsSinCantidad} item(s) sin cantidad. Completa todos para finalizar.
+                                    <p className="font-semibold text-xs sm:text-sm text-orange-700">En progreso</p>
+                                    <p className="text-xs sm:text-sm text-gray-600">
+                                        {itemsSinCantidad} item(s) sin cantidad
                                     </p>
                                 </div>
                             </>
                         ) : (
                             <>
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                <CheckCircle2 className="h-5 w-5 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
                                 <div>
-                                    <p className="font-semibold text-green-700">Listo para finalizar</p>
-                                    <p className="text-sm text-gray-600">Todos los items tienen cantidad registrada</p>
+                                    <p className="font-semibold text-xs sm:text-sm text-green-700">Listo</p>
+                                    <p className="text-xs sm:text-sm text-gray-600">Todos los items completados</p>
                                 </div>
                             </>
                         )}

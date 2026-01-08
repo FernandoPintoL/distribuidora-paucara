@@ -39,35 +39,58 @@ export function EntregasPorEstado({
         );
     }
 
-    // Fallback a datos hardcodeados si el API no está disponible
+    // ✅ ACTUALIZADO: Fallback con todos los estados de entrega de la BD
     const estadoLabelsFallback = [
-        'Programada',
+        'Programado',
         'Asignada',
+        'Preparación de Carga',
+        'En Carga',
+        'Listo para Entrega',
         'En Camino',
-        'Llegó',
-        'Entregada',
-        'Novedad',
+        'En Tránsito',
+        'Llegó a Destino',
+        'Entregado',
+        'Con Novedad',
+        'Rechazado',
         'Cancelada',
     ];
 
     const estadoColorsFallback = [
-        '#3b82f6', // blue
-        '#a855f7', // purple
-        '#f97316', // orange
-        '#06b6d4', // cyan
-        '#10b981', // green
-        '#eab308', // yellow
-        '#ef4444', // red
+        '#FFC107', // PROGRAMADO: yellow
+        '#0275D8', // ASIGNADA: blue
+        '#9C27B0', // PREPARACION_CARGA: purple
+        '#673AB7', // EN_CARGA: dark purple
+        '#3F51B5', // LISTO_PARA_ENTREGA: indigo
+        '#2196F3', // EN_CAMINO: light blue
+        '#03A9F4', // EN_TRANSITO: cyan
+        '#00BCD4', // LLEGO: cyan
+        '#28A745', // ENTREGADO: green
+        '#FF9800', // NOVEDAD: orange
+        '#F44336', // RECHAZADO: red
+        '#6C757D', // CANCELADA: gray
     ];
 
     // Generar labels y colores desde el API
     const chartConfig = useMemo(() => {
         if (estadosAPI.length === 0) {
-            // Fallback si no hay datos del API
+            // ✅ ACTUALIZADO: Fallback con todos los códigos de estado de entrega
             return {
                 labels: estadoLabelsFallback,
                 colors: estadoColorsFallback,
-                estadoCodigos: ['PROGRAMADO', 'ASIGNADA', 'EN_CAMINO', 'LLEGO', 'ENTREGADO', 'NOVEDAD', 'CANCELADA']
+                estadoCodigos: [
+                    'PROGRAMADO',
+                    'ASIGNADA',
+                    'PREPARACION_CARGA',
+                    'EN_CARGA',
+                    'LISTO_PARA_ENTREGA',
+                    'EN_CAMINO',
+                    'EN_TRANSITO',
+                    'LLEGO',
+                    'ENTREGADO',
+                    'NOVEDAD',
+                    'RECHAZADO',
+                    'CANCELADA',
+                ]
             };
         }
 

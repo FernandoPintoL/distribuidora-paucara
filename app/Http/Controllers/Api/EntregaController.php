@@ -901,6 +901,11 @@ class EntregaController extends Controller
     public function crearEntregaConsolidada(\Illuminate\Http\Request $request)
     {
         try {
+            \Log::info('📍 crearEntregaConsolidada request received', [
+                'request_data' => $request->all(),
+                'user_id' => Auth::id(),
+            ]);
+
             $validated = $request->validate([
                 'venta_ids' => 'required|array|min:1',
                 'venta_ids.*' => 'integer|exists:ventas,id',
@@ -910,7 +915,11 @@ class EntregaController extends Controller
                 'observaciones' => 'nullable|string|max:500',
             ]);
 
+            \Log::info('✅ Validation passed', ['validated' => $validated]);
+
             $service = app(\App\Services\Logistica\CrearEntregaPorLocalidadService::class);
+
+            \Log::info('🔧 Service instantiated, calling crearEntregaConsolidada...');
 
             $entrega = $service->crearEntregaConsolidada(
                 ventaIds: $validated['venta_ids'],
@@ -923,31 +932,58 @@ class EntregaController extends Controller
                 ]
             );
 
+            \Log::info('✅ Service call successful', ['entrega_id' => $entrega->id ?? 'unknown']);
+
             // Cargar relaciones para la respuesta
+            \Log::info('📍 Loading relationships...', ['entrega_id' => $entrega->id]);
             $entrega->load(['vehiculo:id,placa', 'chofer.user:id,name']);
+            \Log::info('✅ Relationships loaded');
 
             // Obtener ventas y sus clientes con query simple
+            \Log::info('📍 Fetching related sales...');
             $ventasCount = DB::table('entrega_venta')
                 ->where('entrega_id', $entrega->id)
                 ->count();
 
+            \Log::info('✅ Found sales', ['count' => $ventasCount]);
+
             $ventas = [];
             if ($ventasCount > 0) {
-                $ventas = DB::table('ventas')
+                $ventasQuery = DB::table('ventas')
                     ->join('entrega_venta', 'ventas.id', '=', 'entrega_venta.venta_id')
                     ->where('entrega_venta.entrega_id', $entrega->id)
                     ->select('ventas.id', 'ventas.numero', 'ventas.cliente_id', 'ventas.total')
-                    ->orderBy('entrega_venta.orden')
-                    ->get()
-                    ->map(function ($venta) {
+                    ->orderBy('entrega_venta.orden');
+
+                \Log::info('📍 Executing query:', ['query' => $ventasQuery->toSql()]);
+
+                $ventasRaw = $ventasQuery->get();
+
+                \Log::info('✅ Query executed, mapping results...', ['raw_count' => $ventasRaw->count()]);
+
+                $ventas = $ventasRaw->map(function ($venta) {
+                    \Log::info('📍 Processing venta', ['venta_id' => $venta->id, 'cliente_id' => $venta->cliente_id]);
+
+                    try {
                         $cliente = \App\Models\Cliente::find($venta->cliente_id);
-                        return [
-                            'id' => $venta->id,
-                            'numero' => $venta->numero,
-                            'cliente' => $cliente?->nombre,
-                            'total' => $venta->total,
-                        ];
-                    });
+                        \Log::info('✅ Cliente found', ['cliente_id' => $venta->cliente_id, 'cliente_nombre' => $cliente?->nombre]);
+                    } catch (\Exception $e) {
+                        \Log::error('❌ Error finding cliente', [
+                            'cliente_id' => $venta->cliente_id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $cliente = null;
+                    }
+
+                    return [
+                        'id' => $venta->id,
+                        'numero' => $venta->numero,
+                        'cliente' => $cliente?->nombre,
+                        'total' => $venta->total,
+                    ];
+                })->all();
+
+                \Log::info('✅ Mapped all sales', ['count' => count($ventas)]);
             }
 
             return response()->json([
@@ -974,15 +1010,25 @@ class EntregaController extends Controller
             ], 201);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('❌ Validation failed', ['errors' => $e->errors()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validación fallida',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
+            \Log::error('❌ Exception in crearEntregaConsolidada', [
+                'exception_class' => get_class($e),
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error creando entrega consolidada: ' . $e->getMessage(),
+                'error_code' => $e->getCode(),
             ], 500);
         }
     }

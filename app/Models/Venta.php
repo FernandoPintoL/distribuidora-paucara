@@ -36,6 +36,7 @@ class Venta extends Model
         'canal_origen',
         'tipo_entrega',  // NUEVO: DELIVERY o PICKUP
         'estado_logistico_id',
+        'entrega_id',    // NUEVO - FASE 3: FK a entregas (relación 1:N)
         // Campos para confirmación de pickup
         'pickup_confirmado_cliente_en',      // NUEVO
         'pickup_confirmado_cliente_por_id',  // NUEVO
@@ -163,13 +164,37 @@ class Venta extends Model
     }
 
     /**
-     * Entregas asociadas a esta venta (modelo consolidado)
+     * Entregas asociadas a esta venta (NUEVA ARQUITECTURA - FASE 3)
      *
-     * NOTA: La relación anterior $this->hasOne(Envio::class) fue deprecada en favor de entregas()
-     * El modelo Envio y su relación 1:1 con Venta fueron reemplazados por el sistema de Entregas
-     * que soporta múltiples entregas por venta y mejor optimización de rutas.
+     * RELACIÓN 1:N: Una venta pertenece a UNA entrega
      *
-     * NUEVA ARQUITECTURA (FASE 1): Relación N:M via pivot table entrega_venta
+     * MIGRACIÓN:
+     * - FASE 1: N:M via pivot table (entrega_venta) ← LEGACY
+     * - FASE 3: 1:N via FK entrega_id (relación actual) ← ACTUAL
+     *
+     * USO:
+     *   $venta->entrega              // Obtener entrega asignada
+     *   $venta->entrega->estado      // Estado actual
+     *   $venta->entrega->chofer      // Chofer asignado
+     *
+     * NOTA: El método legacy $venta->entregas() (N:M) se mantiene
+     *       para compatibilidad temporal pero será deprecado en FASE 3b
+     */
+    public function entrega()
+    {
+        return $this->belongsTo(Entrega::class, 'entrega_id');
+    }
+
+    /**
+     * ✅ NUEVA FASE 3: Entregas asociadas a esta venta (N:M via pivot)
+     *
+     * Relación N:M via pivot table entrega_venta
+     * Una venta puede estar en múltiples entregas consolidadas
+     *
+     * Se usa para:
+     * - Sincronizar estados cuando entrega cambia
+     * - Rastrear múltiples entregas de una venta
+     * - Consolidar cargas (múltiples ventas en una entrega)
      */
     public function entregas()
     {
@@ -188,6 +213,21 @@ class Venta extends Model
             'updated_at',
         ])
         ->orderByPivot('orden');  // Usar orderByPivot para evitar ambiguous column
+    }
+
+    /**
+     * Entregas asociadas a esta venta (LEGACY - FASE 1)
+     *
+     * ⚠️ DEPRECADO en FASE 3: Usar $venta->entregas() en su lugar
+     *
+     * Relación N:M via pivot table entrega_venta
+     * Se mantiene por compatibilidad durante transición
+     *
+     * SERÁ ELIMINADA cuando se dropee tabla pivot en FASE 3b
+     */
+    public function entregasLegacy()
+    {
+        return $this->entregas();  // Redirigir a la relación nueva
     }
 
     /**
