@@ -138,9 +138,9 @@ export function useEntregaBatch() {
                     isSubmitting: false,
                 }));
 
-                // Redirigir a lista de entregas después de 2 segundos
+                // Redirigir al dashboard de entregas después de 2 segundos
                 setTimeout(() => {
-                    router.visit('/logistica/entregas');
+                    router.visit('/logistica/entregas/dashboard');
                 }, 2000);
             } else {
                 setState((prev) => ({
