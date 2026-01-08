@@ -13,16 +13,20 @@ use Illuminate\Support\Facades\Log;
  */
 abstract class BaseWebSocketService
 {
-    protected string $wsUrl;
-    protected bool $enabled;
-    protected bool $debug;
-    protected int $timeout;
-    protected array $retryConfig;
+    protected string $wsUrl = 'http://localhost:3000';
+    protected bool $enabled = false;
+    protected bool $debug = false;
+    protected int $timeout = 5;
+    protected array $retryConfig = [
+        'enabled' => true,
+        'times' => 2,
+        'sleep' => 100,
+    ];
 
     public function __construct()
     {
         try {
-            $this->wsUrl       = config('websocket.url', 'http://localhost:3000') ?? 'http://localhost:3000';
+            $this->wsUrl       = config('websocket.url', 'http://localhost:3001') ?? 'http://localhost:3001';
             $this->enabled     = (bool) (config('websocket.enabled') !== false);
             $this->debug       = (bool) config('websocket.debug', false);
             $this->timeout     = (int) config('websocket.timeout', 5);
@@ -37,7 +41,7 @@ abstract class BaseWebSocketService
             ]);
 
             // Valores por defecto seguros
-            $this->wsUrl       = 'http://localhost:3000';
+            $this->wsUrl       = 'http://localhost:3001';
             $this->enabled     = false;
             $this->debug       = false;
             $this->timeout     = 5;
