@@ -1016,19 +1016,29 @@ class EntregaController extends Controller
                 'message' => 'Validación fallida',
                 'errors' => $e->errors(),
             ], 422);
-        } catch (\Exception $e) {
-            \Log::error('❌ Exception in crearEntregaConsolidada', [
+        } catch (\Throwable $e) {
+            $errorDetails = [
                 'exception_class' => get_class($e),
                 'message' => $e->getMessage(),
                 'code' => $e->getCode(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
-            ]);
+            ];
+
+            \Log::error('❌ Exception in crearEntregaConsolidada', $errorDetails);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error creando entrega consolidada: ' . $e->getMessage(),
+                'message' => 'Error creando entrega consolidada',
+                'error' => $e->getMessage(),
                 'error_code' => $e->getCode(),
+                'debug' => [
+                    'exception_class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => explode("\n", $e->getTraceAsString()),
+                ],
             ], 500);
         }
     }
