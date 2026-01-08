@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  */
 abstract class BaseWebSocketService
 {
-    protected string $wsUrl = 'http://localhost:3000';
+    protected string $wsUrl = 'http://localhost:3001';
     protected bool $enabled = false;
     protected bool $debug = false;
     protected int $timeout = 5;

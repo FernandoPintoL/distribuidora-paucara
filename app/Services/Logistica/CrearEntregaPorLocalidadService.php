@@ -520,26 +520,41 @@ class CrearEntregaPorLocalidadService
      */
 
     /**
-     * Vincular ventas a la entrega via pivot entrega_venta
+     * Vincular ventas a la entrega
+     *
+     * Phase 3: Actualiza directamente la FK entrega_id en ventas (relación HasMany)
+     * No usa tabla pivot, sino actualización directa en tabla ventas.
      */
     private function vincularVentas(Entrega $entrega, array $ventas): void
     {
-        $attach = [];
+        Log::info('📍 Vinculando ventas a entrega', [
+            'entrega_id' => $entrega->id,
+            'cantidad_ventas' => count($ventas),
+        ]);
 
-        foreach ($ventas as $index => $venta) {
-            $attach[$venta['id']] = [
-                'orden' => $index + 1,  // orden 1, 2, 3, ...
-                'confirmado_por' => null,  // Se confirmarán después
-                'fecha_confirmacion' => null,
-                'notas' => null,
-            ];
+        foreach ($ventas as $venta) {
+            try {
+                // Actualizar la venta con la FK entrega_id
+                Venta::where('id', $venta['id'])
+                    ->update(['entrega_id' => $entrega->id]);
+
+                Log::info('✅ Venta vinculada a entrega', [
+                    'venta_id' => $venta['id'],
+                    'entrega_id' => $entrega->id,
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('❌ Error vinculando venta individual', [
+                    'venta_id' => $venta['id'],
+                    'entrega_id' => $entrega->id,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
         }
 
-        $entrega->ventas()->attach($attach);
-
-        Log::info('Ventas vinculadas a entrega', [
+        Log::info('✅ Todas las ventas vinculadas a entrega', [
             'entrega_id' => $entrega->id,
-            'cantidad' => count($attach),
+            'cantidad' => count($ventas),
         ]);
     }
 
