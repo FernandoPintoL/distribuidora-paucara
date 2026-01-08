@@ -131,9 +131,10 @@ class EntregaController extends Controller
         // 1. Detectar modo basado en parámetro (opcional)
         $ventaPreseleccionada = $request->input('venta_id');
 
-        // 2. Obtener ventas sin entregas
-        // Solo mostrar ventas que no tienen entregas creadas
-        // Usar datos enriquecidos para soportar ambos flujos
+        // 2. Obtener ventas sin entregas asignadas
+        // Phase 3: Solo mostrar ventas que no tienen entrega_id asignado (FK)
+        // Una venta puede estar en múltiples entregas consolidadas (pivot),
+        // pero solo si no tiene una entrega principal asignada
         $ventas = \App\Models\Venta::query()
             ->with([
                 'cliente.direcciones',  // Cargar direcciones del cliente (fallback)
@@ -142,9 +143,9 @@ class EntregaController extends Controller
                 'estadoDocumento',
                 'direccionCliente'      // Dirección específica de la venta (prioridad)
             ])
-            ->whereDoesntHave('entregas')  // Solo ventas sin entregas
-            ->whereNotNull('cliente_id')    // Debe tener cliente
-            ->whereHas('detalles')          // Debe tener detalles de productos
+            ->whereNull('entrega_id')           // ✅ Phase 3: No tiene entrega principal asignada
+            ->whereNotNull('cliente_id')        // Debe tener cliente
+            ->whereHas('detalles')              // Debe tener detalles de productos
             ->latest()
             ->get()
             ->map(function ($venta) {
