@@ -210,25 +210,27 @@ class ReporteCargoService
 
                     foreach ($venta->detalles as $detalleVenta) {
                         $productoId = $detalleVenta->producto_id;
+                        // Cast cantidad a int porque BD espera INTEGER, no FLOAT
+                        $cantidadInt = (int) $detalleVenta->cantidad;
 
                         // Si el producto ya existe en consolidados, sumar cantidad
                         if (isset($detallesConsolidados[$productoId])) {
-                            $detallesConsolidados[$productoId]['cantidad_solicitada'] += $detalleVenta->cantidad;
+                            $detallesConsolidados[$productoId]['cantidad_solicitada'] += $cantidadInt;
                             $pesoDetalle = $detalleVenta->producto?->peso_kg
-                                ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
-                                : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
+                                ? ($cantidadInt * $detalleVenta->producto->peso_kg)
+                                : ($cantidadInt * 2); // Default 2kg por unidad
                             $detallesConsolidados[$productoId]['peso_kg'] += $pesoDetalle;
                         } else {
                             // Agregar nuevo producto
                             $pesoDetalle = $detalleVenta->producto?->peso_kg
-                                ? ($detalleVenta->cantidad * $detalleVenta->producto->peso_kg)
-                                : ($detalleVenta->cantidad * 2); // Default 2kg por unidad
+                                ? ($cantidadInt * $detalleVenta->producto->peso_kg)
+                                : ($cantidadInt * 2); // Default 2kg por unidad
 
                             $detallesConsolidados[$productoId] = [
                                 'reporte_carga_id' => $reporte->id,
                                 'detalle_venta_id' => $detalleVenta->id, // Referencia al primero encontrado
                                 'producto_id' => $productoId,
-                                'cantidad_solicitada' => $detalleVenta->cantidad,
+                                'cantidad_solicitada' => $cantidadInt,
                                 'cantidad_cargada' => 0,
                                 'verificado' => false,
                                 'peso_kg' => $pesoDetalle,
@@ -292,13 +294,16 @@ class ReporteCargoService
         $detalles = $venta->detalles()->with('producto')->get();
 
         foreach ($detalles as $detalle) {
+            // Cast cantidad a int porque BD espera INTEGER, no FLOAT
+            $cantidadInt = (int) $detalle->cantidad;
+
             ReporteCargaDetalle::create([
                 'reporte_carga_id' => $reporte->id,
                 'detalle_venta_id' => $detalle->id,
                 'producto_id' => $detalle->producto_id,
-                'cantidad_solicitada' => $detalle->cantidad,
+                'cantidad_solicitada' => $cantidadInt,
                 'cantidad_cargada' => 0,
-                'peso_kg' => $detalle->producto?->peso_kg ? ($detalle->cantidad * $detalle->producto->peso_kg) : null,
+                'peso_kg' => $detalle->producto?->peso_kg ? ($cantidadInt * $detalle->producto->peso_kg) : null,
                 'notas' => null,
                 'verificado' => false,
             ]);
