@@ -66,8 +66,8 @@ class Entrega extends Model
             'fecha_entrega' => 'datetime',
             'fecha_programada' => 'datetime',
             'fecha_entrega_comprometida' => 'datetime',  // NUEVO: SLA
-            'ventana_entrega_ini' => 'time',             // NUEVO: SLA
-            'ventana_entrega_fin' => 'time',             // NUEVO: SLA
+            'ventana_entrega_ini' => 'string',           // NUEVO: SLA (TIME type - cast as string HH:MM:SS)
+            'ventana_entrega_fin' => 'string',           // NUEVO: SLA (TIME type - cast as string HH:MM:SS)
             'fecha_firma_entrega' => 'datetime',
             'fecha_confirmacion_carga' => 'datetime',
             'fecha_inicio_entrega' => 'datetime',
