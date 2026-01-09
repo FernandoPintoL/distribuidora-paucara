@@ -789,6 +789,18 @@ class Entrega extends Model
 
             foreach ($ventas as $venta) {
                 try {
+                    // ✅ IMPORTANTE: No sincronizar ventas que ya fueron confirmadas como cargadas
+                    // Si una venta está en estado PENDIENTE_ENVIO, significa que el usuario la confirmó
+                    // como cargada manualmente, y no debemos cambiar su estado automáticamente
+                    if ($venta->estadoLogistica?->codigo === 'PENDIENTE_ENVIO') {
+                        \Log::info('⏭️  [SYNC] Venta ya confirmada como cargada, saltando sincronización', [
+                            'venta_id' => $venta->id,
+                            'venta_numero' => $venta->numero,
+                            'estado_actual' => 'PENDIENTE_ENVIO',
+                        ]);
+                        continue; // Saltar esta venta, no cambiar su estado
+                    }
+
                     $estadoAnterior = $venta->estado_logistico;
                     $estadoAnteriorId = $venta->estado_logistico_id;
 
