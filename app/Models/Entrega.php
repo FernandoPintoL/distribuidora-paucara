@@ -621,29 +621,6 @@ class Entrega extends Model
             'venta_numero' => $venta->numero,
         ]);
 
-        // Actualizar estado de la venta a PENDIENTE_ENVIO
-        $estadoPendienteEnvioId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
-            ->where('categoria', 'venta_logistica')
-            ->value('id');
-
-        if ($estadoPendienteEnvioId && $venta->estado_logistico_id !== $estadoPendienteEnvioId) {
-            $estadoAnterior = $venta->estado_logistico_id;
-            $venta->update(['estado_logistico_id' => $estadoPendienteEnvioId]);
-
-            \Log::info('✅ [CONFIRM] Venta actualizada a PENDIENTE_ENVIO', [
-                'venta_id' => $venta->id,
-                'venta_numero' => $venta->numero,
-                'estado_anterior_id' => $estadoAnterior,
-                'estado_nuevo_id' => $estadoPendienteEnvioId,
-            ]);
-        } else {
-            \Log::warning('⚠️  [CONFIRM] No se pudo actualizar estado de venta a PENDIENTE_ENVIO', [
-                'venta_id' => $venta->id,
-                'estado_logistica_id' => $estadoPendienteEnvioId,
-                'estado_actual_venta' => $venta->estado_logistico_id,
-            ]);
-        }
-
         // Sincronizar el estado de la venta que acaba de confirmarse
         try {
             $this->sincronizarEstadosVentas();
@@ -652,6 +629,28 @@ class Entrega extends Model
                 'entrega_id' => $this->id,
                 'venta_id' => $venta->id,
                 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Actualizar estado de la venta a PENDIENTE_ENVIO (DESPUÉS de sincronización para que no sea sobrescrito)
+        $estadoPendienteEnvioId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
+            ->where('categoria', 'venta_logistica')
+            ->value('id');
+
+        if ($estadoPendienteEnvioId) {
+            $estadoAnterior = $venta->estado_logistico_id;
+            $venta->update(['estado_logistico_id' => $estadoPendienteEnvioId]);
+
+            \Log::info('✅ [CONFIRM] Venta actualizada a PENDIENTE_ENVIO (post-sync)', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'estado_anterior_id' => $estadoAnterior,
+                'estado_nuevo_id' => $estadoPendienteEnvioId,
+            ]);
+        } else {
+            \Log::error('❌ [CONFIRM] Estado PENDIENTE_ENVIO no encontrado en BD', [
+                'venta_id' => $venta->id,
+                'categoria' => 'venta_logistica',
             ]);
         }
 
