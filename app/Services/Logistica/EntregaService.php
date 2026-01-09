@@ -70,9 +70,22 @@ class EntregaService
             // Crear una entrega por cada dirección de entrega
             $direccion = $venta->direccion_entrega;
 
+            // Obtener el estado inicial PREPARACION_CARGA desde estados_logistica
+            $estadoInicial = \App\Models\EstadoLogistica::where('codigo', 'PREPARACION_CARGA')
+                ->where('categoria', 'entrega')
+                ->first();
+
+            if (!$estadoInicial) {
+                \Log::error('❌ Estado PREPARACION_CARGA no encontrado en estados_logistica', [
+                    'venta_id' => $venta->id,
+                ]);
+                return $entregas;
+            }
+
             $entrega = Entrega::create([
                 'venta_id' => $venta->id,
-                'estado' => 'PENDIENTE',
+                'estado' => 'PROGRAMADO',  // Mantener estado ENUM
+                'estado_entrega_id' => $estadoInicial->id,  // ✅ FK a estados_logistica con ID de PREPARACION_CARGA
                 'direccion' => $direccion,
                 'fecha_programada' => $venta->fecha_entrega_programada ?? now()->addDays(3),
                 'usuario_asignado_id' => Auth::id(),
@@ -82,7 +95,7 @@ class EntregaService
             $this->registrarCambioEstado(
                 $entrega,
                 null,
-                'PENDIENTE',
+                $estadoProgramado->codigo,  // ✅ Usar el estado válido
                 'Entrega creada desde venta'
             );
 
@@ -654,11 +667,17 @@ class EntregaService
                 try {
                     $venta = Venta::with('direccionCliente')->findOrFail($ventaId);
 
+                    // Obtener el estado inicial PROGRAMADO desde estados_logistica
+                    $estadoProgramado = \App\Models\EstadoLogistica::where('codigo', 'PROGRAMADO')
+                        ->where('categoria', 'entrega')
+                        ->first();
+
                     // Crear una entrega por venta con todos los datos disponibles
                     // ✅ CORREGIDO: Removido 'usuario_asignado_id' que no existe en el modelo
                     $entrega = Entrega::create([
                         'venta_id'              => $venta->id,
                         'estado'                => 'PROGRAMADO',
+                        'estado_entrega_id'     => $estadoProgramado?->id,  // ✅ FK a estados_logistica
                         'direccion_entrega'     => $venta->direccion_entrega ?? $venta->direccionCliente?->direccion,
                         'direccion_cliente_id'  => $venta->direccion_cliente_id,
                         'fecha_programada'      => $venta->fecha_entrega_programada ?? now()->addDays(3),
@@ -892,8 +911,15 @@ class EntregaService
         $entrega = $this->transaction(function () use ($entregaId) {
             $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-            // Validar que esté en EN_CARGA
-            if ($entrega->estado !== Entrega::ESTADO_EN_CARGA) {
+            // ✅ NUEVA LÓGICA: Aceptar PREPARACION_CARGA o EN_CARGA
+            // El flujo ahora es: PREPARACION_CARGA → LISTO_PARA_ENTREGA
+            // (antes era: EN_CARGA → LISTO_PARA_ENTREGA)
+            $estadosValidos = [
+                Entrega::ESTADO_PREPARACION_CARGA,
+                Entrega::ESTADO_EN_CARGA,
+            ];
+
+            if (!in_array($entrega->estado, $estadosValidos)) {
                 throw EstadoInvalidoException::transicionInvalida(
                     'Entrega',
                     $entregaId,
@@ -904,9 +930,26 @@ class EntregaService
 
             $estadoAnterior = $entrega->estado;
 
-            // Actualizar a LISTO_PARA_ENTREGA
+            // Obtener el ID del estado LISTO_PARA_ENTREGA (ID 20)
+            $estadoListoParaEntregaId = \App\Models\EstadoLogistica::where('codigo', 'LISTO_PARA_ENTREGA')
+                ->where('categoria', 'entrega')
+                ->value('id');
+
+            if (!$estadoListoParaEntregaId) {
+                throw new \Exception('Estado LISTO_PARA_ENTREGA no encontrado en tabla estados_logistica');
+            }
+
+            // ✅ Actualizar a LISTO_PARA_ENTREGA usando estado_entrega_id (FK normalizad)
+            // También mantener el ENUM legacy por compatibilidad
             $entrega->update([
                 'estado' => Entrega::ESTADO_LISTO_PARA_ENTREGA,
+                'estado_entrega_id' => $estadoListoParaEntregaId,
+            ]);
+
+            \Log::info('✅ [LISTO_ENTREGA] Entrega marcada como LISTO_PARA_ENTREGA', [
+                'entrega_id' => $entrega->id,
+                'estado_anterior' => $estadoAnterior,
+                'estado_entrega_id' => $estadoListoParaEntregaId,
             ]);
 
             $this->registrarCambioEstado(
