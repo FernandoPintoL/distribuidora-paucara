@@ -16,14 +16,14 @@ class Entrega extends Model
         // Asignación de recursos
         'chofer_id',
         'vehiculo_id',
-        'zona_id',                  // FK a localidades
+        'zona_id',                  // ✅ FK a tabla localidades (localidad de entrega)
 
         // Identificadores
         'numero_entrega',           // ID legible (ENT-20251227-001)
 
         // Estados y flujo
         'estado',                   // ENUM (legacy, será deprecado)
-        'estado_entrega_id',        // FK a estados_logistica (categoría: entrega_logistica) - NUEVO
+        'estado_entrega_id',        // FK a estados_logistica (categoría: entrega) - NUEVO
         'fecha_asignacion',
         'fecha_inicio',
         'fecha_llegada',
@@ -157,11 +157,12 @@ class Entrega extends Model
     }
 
     /**
-     * Chofer (Empleado) asignado a esta entrega
+     * Chofer (User) asignado a esta entrega
+     * FK a users.id (usuario con rol de chofer)
      */
     public function chofer(): BelongsTo
     {
-        return $this->belongsTo(Empleado::class, 'chofer_id');
+        return $this->belongsTo(User::class, 'chofer_id');
     }
 
     /**
@@ -173,7 +174,14 @@ class Entrega extends Model
     }
 
     /**
-     * Localidad/Zona de entrega
+     * Localidad de entrega
+     *
+     * ✅ SINCRONIZADO: zona_id es FK a tabla localidades (localidades son ciudades/pueblos)
+     * Localidades pueden tener relación M-M con Zonas (áreas de distribución) via tabla localidad_zona
+     *
+     * Acceso:
+     *   $entrega->localidad->nombre        // Ej: "La Paz"
+     *   $entrega->localidad->zonas()->get() // Zonas de distribución de esta localidad
      */
     public function localidad(): BelongsTo
     {
@@ -183,7 +191,7 @@ class Entrega extends Model
     /**
      * Estado logístico normalizado (NUEVO - FASE 1)
      *
-     * FK a estados_logistica.categoria = 'entrega_logistica'
+     * FK a estados_logistica.categoria = 'entrega'
      * Reemplaza al ENUM 'estado' con transiciones validadas en BD
      *
      * Uso:
@@ -278,49 +286,14 @@ class Entrega extends Model
             // (En la mayoría de casos nuevos, proforma_id será null)
         });
 
-        // Ya no sincronizamos por venta_id simple
-        // La sincronización ocurre en:
-        // - CrearEntregaPorLocalidadService (al crear entrega con ventas)
-        // - Al cambiar estado de entrega (sincroniza todas las ventas)
-
-        // Sincronizar estado de TODAS las ventas cuando cambia estado de entrega
-        static::updated(function ($model) {
-            // Detectar si cambió estado (ENUM legacy o FK nuevo)
-            $cambioEstadoEnum = $model->isDirty('estado');
-            $cambioEstadoFk = $model->isDirty('estado_entrega_id');
-
-            if ($cambioEstadoEnum || $cambioEstadoFk) {
-                $estadoAnterior = $cambioEstadoEnum ? $model->getOriginal('estado') : null;
-                $estadoNuevo = $model->estado;
-
-                // Sincronizar todas las ventas asociadas a esta entrega
-                if ($model->ventas()->count() > 0) {
-                    try {
-                        $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
-                        foreach ($model->ventas as $venta) {
-                            if ($cambioEstadoFk && $model->estadoEntrega) {
-                                // Si cambió el FK, usar el código del estado
-                                $sincronizador->alCambiarEstadoEntrega(
-                                    $model,
-                                    $estadoAnterior,
-                                    $model->estadoEntrega->codigo,
-                                    $venta
-                                );
-                            } elseif ($cambioEstadoEnum) {
-                                $sincronizador->alCambiarEstadoEntrega(
-                                    $model,
-                                    $estadoAnterior,
-                                    $estadoNuevo,
-                                    $venta
-                                );
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        \Log::warning("Error sincronizando ventas al cambiar estado de entrega: " . $e->getMessage());
-                    }
-                }
-            }
-        });
+        // ⚠️ NOTA: La sincronización de estados de ventas se ejecuta MANUALMENTE
+        // después de cambiar el estado, NO en el boot event.
+        //
+        // Razón: El boot event se ejecuta durante la transacción y las relaciones
+        // no están recargadas correctamente. Es más seguro sincronizar después
+        // en el contexto donde sabemos exactamente qué cambió.
+        //
+        // Ubicación: confirmarVentaCargada() → cambiarEstado() → sincronizarEstadosVentas()
     }
 
     /**
@@ -427,6 +400,9 @@ class Entrega extends Model
 
     /**
      * Cambiar estado de la entrega con validación
+     *
+     * Actualiza tanto el enum 'estado' como la FK 'estado_entrega_id'
+     * para mantener sincronización entre FASE 1 (legacy) y FASE 3 (actual)
      */
     public function cambiarEstado(string $nuevoEstado, ?string $comentario = null, ?\Illuminate\Foundation\Auth\User $usuario = null): void
     {
@@ -441,6 +417,19 @@ class Entrega extends Model
             );
         }
 
+        // Obtener el estado logístico correspondiente
+        $estadoLogistico = \App\Models\EstadoLogistica::where('codigo', $nuevoEstado)
+            ->where('categoria', 'entrega')
+            ->first();
+
+        if (!$estadoLogistico) {
+            \Log::error('❌ [cambiarEstado] Estado logístico no encontrado', [
+                'entrega_id' => $this->id,
+                'codigo_estado' => $nuevoEstado,
+                'categoria' => 'entrega',
+            ]);
+        }
+
         // Registrar en historial
         $this->historialEstados()->create([
             'estado_anterior' => $this->estado,
@@ -450,8 +439,18 @@ class Entrega extends Model
             'metadata' => null,
         ]);
 
-        // Actualizar estado
-        $this->update(['estado' => $nuevoEstado]);
+        // Actualizar AMBOS estados: enum y FK
+        $this->update([
+            'estado' => $nuevoEstado,
+            'estado_entrega_id' => $estadoLogistico?->id,  // ✅ FK a estados_logistica
+        ]);
+
+        \Log::info('✅ [cambiarEstado] Estado de entrega actualizado', [
+            'entrega_id' => $this->id,
+            'estado_anterior' => $this->getOriginal('estado'),
+            'estado_nuevo' => $nuevoEstado,
+            'estado_entrega_id' => $estadoLogistico?->id,
+        ]);
     }
 
     /**
@@ -592,34 +591,122 @@ class Entrega extends Model
      */
     public function confirmarVentaCargada(Venta $venta, ?User $usuario = null, ?string $notas = null): void
     {
-        // Verificar que la venta pertenece a esta entrega
+        // Verificar que la venta pertenece a esta entrega (FASE 3: 1:N directa O FASE 1: pivot)
         $entregaVenta = $this->ventasAsociadas()
             ->where('venta_id', $venta->id)
             ->first();
 
-        if (!$entregaVenta) {
+        // Si no está en la tabla pivot (legacy), verificar si está en la relación 1:N (FASE 3)
+        if (!$entregaVenta && !$this->ventas()->where('id', $venta->id)->exists()) {
             throw new \InvalidArgumentException(
                 "Venta #{$venta->id} no pertenece a Entrega #{$this->id}"
             );
         }
 
+        // Si está en relación 1:N pero no en pivot, crear el registro pivot
+        if (!$entregaVenta && $this->ventas()->where('id', $venta->id)->exists()) {
+            $entregaVenta = EntregaVenta::create([
+                'entrega_id' => $this->id,
+                'venta_id' => $venta->id,
+                'orden' => $this->ventasAsociadas()->max('orden') + 1,
+            ]);
+        }
+
         // Confirmar la venta
         $entregaVenta->confirmarCarga($usuario, $notas);
 
+        \Log::info('✅ [CONFIRM] Venta confirmada como cargada', [
+            'entrega_id' => $this->id,
+            'venta_id' => $venta->id,
+            'venta_numero' => $venta->numero,
+        ]);
+
+        // Actualizar estado de la venta a PENDIENTE_ENVIO
+        $estadoPendienteEnvioId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
+            ->where('categoria', 'venta_logistica')
+            ->value('id');
+
+        if ($estadoPendienteEnvioId && $venta->estado_logistico_id !== $estadoPendienteEnvioId) {
+            $estadoAnterior = $venta->estado_logistico_id;
+            $venta->update(['estado_logistico_id' => $estadoPendienteEnvioId]);
+
+            \Log::info('✅ [CONFIRM] Venta actualizada a PENDIENTE_ENVIO', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'estado_anterior_id' => $estadoAnterior,
+                'estado_nuevo_id' => $estadoPendienteEnvioId,
+            ]);
+        } else {
+            \Log::warning('⚠️  [CONFIRM] No se pudo actualizar estado de venta a PENDIENTE_ENVIO', [
+                'venta_id' => $venta->id,
+                'estado_logistica_id' => $estadoPendienteEnvioId,
+                'estado_actual_venta' => $venta->estado_logistico_id,
+            ]);
+        }
+
+        // Sincronizar el estado de la venta que acaba de confirmarse
+        try {
+            $this->sincronizarEstadosVentas();
+        } catch (\Exception $e) {
+            \Log::error('❌ [CONFIRM] Error en sincronización inicial', [
+                'entrega_id' => $this->id,
+                'venta_id' => $venta->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         // Si todas las ventas están confirmadas, cambiar estado a LISTA_PARA_ENTREGA
         if ($this->todasVentasConfirmadas()) {
+            \Log::info('🔄 [CONFIRM] Todas las ventas confirmadas, integrando cambio de estado', [
+                'entrega_id' => $this->id,
+                'estado_actual' => $this->estado,
+            ]);
+
             try {
                 if ($this->esTransicionValida(self::ESTADO_LISTO_PARA_ENTREGA)) {
+                    // Cambiar estado
                     $this->cambiarEstado(
                         self::ESTADO_LISTO_PARA_ENTREGA,
                         'Todas las ventas fueron confirmadas como cargadas',
                         $usuario
                     );
+
+                    \Log::info('✅ [CONFIRM] Estado de entrega cambiado a LISTO_PARA_ENTREGA', [
+                        'entrega_id' => $this->id,
+                    ]);
+
+                    // Sincronizar nuevamente después de cambiar estado
+                    $this->sincronizarEstadosVentas();
+                } else {
+                    $estadosSiguientes = $this->obtenerEstadosSiguientes();
+                    \Log::warning('⚠️  [CONFIRM] Transición inválida a LISTO_PARA_ENTREGA', [
+                        'entrega_id' => $this->id,
+                        'estado_actual' => $this->estado,
+                        'estados_validos' => $estadosSiguientes,
+                    ]);
                 }
             } catch (\Exception $e) {
                 // Log pero no fallar si no se puede cambiar estado
-                \Log::warning("No se pudo cambiar estado de entrega a LISTO_PARA_ENTREGA: " . $e->getMessage());
+                \Log::warning("❌ [CONFIRM] No se pudo cambiar estado de entrega a LISTO_PARA_ENTREGA: " . $e->getMessage(), [
+                    'entrega_id' => $this->id,
+                    'error_trace' => $e->getTraceAsString(),
+                ]);
+
+                // Sincronizar de todos modos para actualizar estados
+                try {
+                    $this->sincronizarEstadosVentas();
+                } catch (\Exception $syncError) {
+                    \Log::error('❌ [CONFIRM] Error en sincronización de recuperación', [
+                        'entrega_id' => $this->id,
+                        'error' => $syncError->getMessage(),
+                    ]);
+                }
             }
+        } else {
+            \Log::info('⏳ [CONFIRM] Hay ventas pendientes de confirmación', [
+                'entrega_id' => $this->id,
+                'progreso' => $this->obtenerProgresoConfirmacion(),
+            ]);
         }
     }
 
@@ -664,6 +751,139 @@ class Entrega extends Model
     }
 
     /**
+     * Sincronizar los estados logísticos de todas las ventas en esta entrega
+     *
+     * Se llama manualmente después de cambiar el estado de la entrega.
+     * Actualiza el campo `estado_logistico_id` en cada venta según el estado actual de la entrega
+     *
+     * Ventas que serán sincronizadas:
+     * - Todas las ventas con relación 1:N directa (FASE 3: venta.entrega_id = entrega.id)
+     *
+     * @return void
+     */
+    public function sincronizarEstadosVentas(): void
+    {
+        \Log::info('🔄 [SYNC] Iniciando sincronización de estados de ventas', [
+            'entrega_id' => $this->id,
+            'estado_entrega' => $this->estado,
+        ]);
+
+        try {
+            // Obtener TODAS las ventas de esta entrega (FASE 3: relación 1:N directa)
+            $ventas = $this->ventas()->get();
+
+            \Log::info('🔄 [SYNC] Ventas a sincronizar', [
+                'entrega_id' => $this->id,
+                'cantidad_ventas' => $ventas->count(),
+                'venta_ids' => $ventas->pluck('id')->toArray(),
+            ]);
+
+            if ($ventas->isEmpty()) {
+                \Log::info('⚠️ [SYNC] No hay ventas para sincronizar', [
+                    'entrega_id' => $this->id,
+                ]);
+                return;
+            }
+
+            $sincronizador = app(\App\Services\Logistica\SincronizacionVentaEntregaService::class);
+            $ventasActualizadas = 0;
+
+            foreach ($ventas as $venta) {
+                try {
+                    $estadoAnterior = $venta->estado_logistico;
+                    $estadoAnteriorId = $venta->estado_logistico_id;
+
+                    // Determinar nuevo estado
+                    $nuevoEstado = $sincronizador->determinarEstadoLogistico($venta);
+
+                    \Log::info('🔄 [SYNC] Procesando venta', [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'estado_anterior' => $estadoAnterior,
+                        'estado_nuevo_calculado' => $nuevoEstado,
+                    ]);
+
+                    // Obtener ID del nuevo estado
+                    $nuevoEstadoLogisticoId = \App\Models\EstadoLogistica::where('codigo', $nuevoEstado)
+                        ->where('categoria', 'venta_logistica')
+                        ->value('id');
+
+                    if (!$nuevoEstadoLogisticoId) {
+                        \Log::error('❌ [SYNC] Estado logístico no encontrado en BD', [
+                            'venta_id' => $venta->id,
+                            'codigo' => $nuevoEstado,
+                            'categoria' => 'venta_logistica',
+                            'estados_disponibles' => \App\Models\EstadoLogistica::where('categoria', 'venta_logistica')
+                                ->pluck('codigo')
+                                ->toArray(),
+                        ]);
+
+                        // Intentar usar PENDIENTE_ENVIO como fallback
+                        $fallbackId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
+                            ->where('categoria', 'venta_logistica')
+                            ->value('id');
+
+                        if ($fallbackId) {
+                            \Log::warning('⚠️  [SYNC] Usando estado fallback PENDIENTE_ENVIO', [
+                                'venta_id' => $venta->id,
+                                'codigo_solicitado' => $nuevoEstado,
+                            ]);
+                            $nuevoEstadoLogisticoId = $fallbackId;
+                        } else {
+                            \Log::error('❌ [SYNC] No hay estado fallback disponible', [
+                                'venta_id' => $venta->id,
+                            ]);
+                            continue;
+                        }
+                    }
+
+                    // Actualizar solo si cambió el estado
+                    if ($estadoAnteriorId !== $nuevoEstadoLogisticoId) {
+                        $venta->update(['estado_logistico_id' => $nuevoEstadoLogisticoId]);
+
+                        \Log::info('✅ [SYNC] Venta actualizada', [
+                            'venta_id' => $venta->id,
+                            'venta_numero' => $venta->numero,
+                            'estado_anterior_id' => $estadoAnteriorId,
+                            'estado_nuevo_id' => $nuevoEstadoLogisticoId,
+                            'estado_anterior_codigo' => $estadoAnterior,
+                            'estado_nuevo_codigo' => $nuevoEstado,
+                        ]);
+
+                        $ventasActualizadas++;
+                    } else {
+                        \Log::info('⏭️  [SYNC] Venta sin cambios', [
+                            'venta_id' => $venta->id,
+                            'venta_numero' => $venta->numero,
+                            'estado_id' => $estadoAnteriorId,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('❌ [SYNC] Error sincronizando venta', [
+                        'venta_id' => $venta->id,
+                        'entrega_id' => $this->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                }
+            }
+
+            \Log::info('✅ [SYNC] Sincronización completada', [
+                'entrega_id' => $this->id,
+                'estado_entrega' => $this->estado,
+                'ventas_totales' => $ventas->count(),
+                'ventas_actualizadas' => $ventasActualizadas,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('❌ [SYNC] Error crítico en sincronización', [
+                'entrega_id' => $this->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
      * Desmarcar una venta como cargada
      * (En caso de error después de confirmar)
      *
@@ -674,14 +894,21 @@ class Entrega extends Model
      */
     public function desmarcarVentaCargada(Venta $venta, ?string $razon = null): void
     {
+        // Verificar que la venta pertenece a esta entrega (FASE 3: 1:N directa O FASE 1: pivot)
         $entregaVenta = $this->ventasAsociadas()
             ->where('venta_id', $venta->id)
             ->first();
 
-        if (!$entregaVenta) {
+        // Si no está en la tabla pivot pero sí en la relación 1:N, permitir
+        if (!$entregaVenta && !$this->ventas()->where('id', $venta->id)->exists()) {
             throw new \InvalidArgumentException(
                 "Venta #{$venta->id} no pertenece a Entrega #{$this->id}"
             );
+        }
+
+        // Si está en relación 1:N pero no en pivot, nada que desmarcar
+        if (!$entregaVenta) {
+            return;
         }
 
         $entregaVenta->desmarcarCarga($razon ?? 'Desmarcado manualmente');
