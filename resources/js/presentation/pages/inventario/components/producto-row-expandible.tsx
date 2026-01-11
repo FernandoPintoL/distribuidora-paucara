@@ -29,6 +29,8 @@ export default function ProductoRowExpandible({
     onGuardarItem,
     allItems,
 }: Props) {
+
+    // console.log('Renderizando ProductoRowExpandible para producto:', item);
     // const [eliminando, setEliminando] = useState(false);
 
     // Obtener todos los items del mismo producto
@@ -55,9 +57,19 @@ export default function ProductoRowExpandible({
                             <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
                                 {item.producto?.nombre}
                             </h3>
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
-                                SKU: {item.producto?.sku}
-                            </p>
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                <div className="truncate">
+                                    SKU: {item.producto?.sku}
+                                    {item.producto?.codigo_barras && (
+                                        <> • {item.producto.codigo_barras}</>
+                                    )}
+                                </div>
+                                {Array.isArray(item.producto?.codigos_barra) && item.producto.codigos_barra.length > 0 && (
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 truncate">
+                                        🔖 {item.producto.codigos_barra.map((cb: any) => cb.codigo).join(', ')}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Barra de progreso - adaptativa */}

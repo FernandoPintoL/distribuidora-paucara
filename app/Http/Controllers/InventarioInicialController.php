@@ -249,8 +249,11 @@ class InventarioInicialController extends Controller
      */
     public function getDraft($borradorId)
     {
-        $borrador = InventarioInicialBorrador::with(['items.producto', 'items.almacen', 'items.stockProducto'])
-            ->findOrFail($borradorId);
+        $borrador = InventarioInicialBorrador::with([
+            'items.producto.codigosBarra',  // ✅ Cargar códigos de barra con el producto
+            'items.almacen',
+            'items.stockProducto'
+        ])->findOrFail($borradorId);
 
         // Verificar autorización
         if ($borrador->usuario_id !== Auth::id()) {
@@ -536,14 +539,20 @@ class InventarioInicialController extends Controller
         $search = $validated['search'] ?? '';
 
         // Obtener productos activos con paginación
-        $productosQuery = Producto::with(['categoria', 'marca', 'unidad'])
+        $productosQuery = Producto::with(['categoria', 'marca', 'unidad', 'codigosBarra'])
             ->where('activo', true);
 
         // Aplicar búsqueda
         if (!empty($search)) {
-            $productosQuery->where(function($q) use ($search) {
-                $q->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+            $searchLower = strtolower($search);
+            $productosQuery->where(function($q) use ($search, $searchLower) {
+                $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
+                  ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
+                  // Buscar en la tabla codigos_barra
+                  ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                      $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
+                          ->where('activo', true);
+                  });
             });
         }
 
@@ -636,7 +645,7 @@ class InventarioInicialController extends Controller
         // Buscar en los items del borrador con relaciones
         $item = InventarioInicialBorradorItem::with([
             'producto' => function ($query) {
-                $query->with(['categoria:id,nombre', 'marca:id,nombre', 'unidad:id,nombre']);
+                $query->with(['categoria:id,nombre', 'marca:id,nombre', 'unidad:id,nombre', 'codigosBarra']);
             },
             'almacen:id,nombre'
         ])
@@ -653,8 +662,13 @@ class InventarioInicialController extends Controller
                     $q->orWhereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"])
                       // Búsqueda case insensitive en SKU
                       ->orWhereRaw('LOWER(sku) LIKE ?', ["%{$searchLower}%"])
-                      // Búsqueda case insensitive en código de barras
+                      // Búsqueda case insensitive en código de barras legacy
                       ->orWhereRaw('LOWER(codigo_barras) LIKE ?', ["%{$searchLower}%"])
+                      // Búsqueda en tabla codigos_barra (actual)
+                      ->orWhereHas('codigosBarra', function ($q) use ($searchLower) {
+                          $q->whereRaw('LOWER(codigo) LIKE ?', ["%{$searchLower}%"])
+                            ->where('activo', true);
+                      })
                       // Búsqueda en marca (relacional)
                       ->orWhereHas('marca', function ($q) use ($searchLower) {
                           $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"]);

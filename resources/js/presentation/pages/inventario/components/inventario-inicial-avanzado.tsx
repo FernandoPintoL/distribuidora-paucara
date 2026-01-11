@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
@@ -84,6 +84,8 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
     const [sugerencias, setSugerencias] = useState<BorradorItem[]>([]);
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
     const [mostrarScannerCamara, setMostrarScannerCamara] = useState(false);
+    const [buscandoEnDB, setBuscandoEnDB] = useState(false);
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Obtener token CSRF
     const getCsrfToken = () => {
@@ -94,6 +96,15 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
     // Inicializar borrador al cargar
     useEffect(() => {
         inicializarBorrador();
+    }, []);
+
+    // Limpiar debounce timer al desmontar componente
+    useEffect(() => {
+        return () => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+            }
+        };
     }, []);
 
     const inicializarBorrador = async () => {
@@ -292,18 +303,43 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
     };
 
     const handleBusquedaChange = (valor: string) => {
+        console.log('🔍 Búsqueda cambiada:', valor);
         setBusqueda(valor);
         setPaginaActual(1);
 
-        // Generar sugerencias basadas en la búsqueda
+        // Limpiar timer anterior si existe
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        // Mostrar sugerencias locales inmediatamente
         if (valor.trim().length > 0) {
             const filtrados = productosUnicos.filter(
-                p => p.producto?.nombre?.toLowerCase().includes(valor.toLowerCase()) ||
-                    p.producto?.sku?.toLowerCase().includes(valor.toLowerCase()) ||
-                    p.producto?.codigo_barras?.toLowerCase().includes(valor.toLowerCase())
+                p => {
+                    const valorLower = valor.toLowerCase();
+                    const nombre = p.producto?.nombre?.toLowerCase().includes(valorLower) || false;
+                    const sku = p.producto?.sku?.toLowerCase().includes(valorLower) || false;
+                    const codigoBarrasLegacy = p.producto?.codigo_barras?.toLowerCase().includes(valorLower) || false;
+
+                    // Buscar en la relación codigos_barra
+                    const enCodigosBarra = Array.isArray(p.producto?.codigos_barra) &&
+                        p.producto.codigos_barra.some((cb: any) =>
+                            cb.codigo?.toLowerCase().includes(valorLower)
+                        );
+
+                    return nombre || sku || codigoBarrasLegacy || enCodigosBarra;
+                }
             );
-            setSugerencias(filtrados.slice(0, 5)); // Máximo 5 sugerencias
+            setSugerencias(filtrados.slice(0, 5)); // Máximo 5 sugerencias locales
             setMostrarSugerencias(filtrados.length > 0);
+
+            // Debounce: buscar en BD después de 800ms sin escribir
+            debounceTimerRef.current = setTimeout(() => {
+                if (valor.trim().length >= 2) { // Mínimo 2 caracteres para buscar en BD
+                    console.log(`⏱️ Debounce finalizado - Buscando en BD: "${valor}"`);
+                    buscarEnDB(valor);
+                }
+            }, 800);
         } else {
             setSugerencias([]);
             setMostrarSugerencias(false);
@@ -344,15 +380,28 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             // ═══════════════════════════════════════════════════════════════
             console.log('1️⃣ Buscando en borrador local (esta sesión)...');
 
+            const codigoLower = codigoLimpio.toLowerCase();
             const productoEnBorradorLocal = borrador.items.find(
-                item =>
-                    // Case insensitive para código de barras, SKU, nombre
-                    item.producto?.codigo_barras?.toLowerCase() === codigoLimpio.toLowerCase() ||
-                    item.producto?.sku?.toLowerCase() === codigoLimpio.toLowerCase() ||
-                    item.producto?.nombre?.toLowerCase().includes(codigoLimpio.toLowerCase()) ||
-                    String(item.producto_id) === codigoLimpio ||
-                    item.producto?.marca?.nombre?.toLowerCase().includes(codigoLimpio.toLowerCase()) ||
-                    item.producto?.categoria?.nombre?.toLowerCase().includes(codigoLimpio.toLowerCase())
+                item => {
+                    if (!item.producto) return false;
+
+                    // Búsqueda case-insensitive
+                    const match =
+                        item.producto.codigo_barras?.toLowerCase() === codigoLower ||
+                        item.producto.sku?.toLowerCase() === codigoLower ||
+                        item.producto.nombre?.toLowerCase().includes(codigoLower) ||
+                        String(item.producto_id) === codigoLimpio ||
+                        item.producto.marca?.nombre?.toLowerCase().includes(codigoLower) ||
+                        item.producto.categoria?.nombre?.toLowerCase().includes(codigoLower);
+
+                    // Buscar en codigos_barra (nueva tabla)
+                    const enCodigosBarra = Array.isArray(item.producto.codigos_barra) &&
+                        item.producto.codigos_barra.some((cb: any) =>
+                            cb.codigo?.toLowerCase() === codigoLower
+                        );
+
+                    return match || enCodigosBarra;
+                }
             );
 
             if (productoEnBorradorLocal?.producto) {
@@ -365,16 +414,24 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             }
 
             // ═══════════════════════════════════════════════════════════════
-            // PASO 2️⃣: BUSCAR EN TABLA PRODUCTOS (API)
+            // PASO 2️⃣: BUSCAR EN TABLA PRODUCTOS Y CODIGOS_BARRA (API)
             // ═══════════════════════════════════════════════════════════════
-            console.log('2️⃣ Buscando en tabla de productos (API)...');
+            console.log('2️⃣ Buscando en tabla de productos y codigos_barra (API)...');
 
             const responseProductos = await fetch(
-                getRoute('productos.paginados') + `?barcode=${encodeURIComponent(codigoLimpio)}`,
+                getRoute('draft.productos.load-paginated', { borrador: borrador.id }),
                 {
+                    method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken(),
                     },
+                    body: JSON.stringify({
+                        page: 1,
+                        per_page: 50,
+                        search: codigoLimpio,
+                    }),
                 }
             );
 
@@ -383,10 +440,10 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             }
 
             const dataProductos = await responseProductos.json();
-            const productos = dataProductos.data || [];
+            const productos = dataProductos.productos || [];
 
             if (!productos || productos.length === 0) {
-                console.warn(`❌ Producto NO EXISTE en tabla productos: ${codigoLimpio}`);
+                console.warn(`❌ Producto NO EXISTE en tabla productos ni en codigos_barra: ${codigoLimpio}`);
                 NotificationService.error(
                     `❌ Producto no encontrado\nCódigo: ${codigoLimpio}\n\nVerifica que el código sea correcto`
                 );
@@ -467,6 +524,72 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
         }
     };
 
+    const buscarEnDB = async (termino: string) => {
+        if (!borrador || !termino.trim()) {
+            NotificationService.error('Ingresa un término de búsqueda');
+            return;
+        }
+
+        try {
+            setBuscandoEnDB(true);
+            console.log(`🔍 Buscando en DB: "${termino}"`);
+
+            // Usar el endpoint loadProductsPaginated que ahora busca en codigos_barra también
+            const response = await fetch(
+                getRoute('draft.productos.load-paginated', { borrador: borrador.id }),
+                {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        page: 1,
+                        per_page: 50,
+                        search: termino,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Error al buscar en BD');
+            }
+
+            const data = await response.json();
+            const productos = data.productos || [];
+
+            if (!productos || productos.length === 0) {
+                NotificationService.error(
+                    `❌ No se encontraron productos\nBúsqueda: "${termino}"\n\nVerifica nombre, SKU o código de barras`
+                );
+                return;
+            }
+
+            console.log(`✅ Encontrados ${productos.length} producto(s)`);
+
+            // Cargar borrador para obtener items actualizados
+            await cargarBorrador(borrador.id);
+
+            // Resetear paginación a página 1 para mostrar resultados
+            setPaginaActual(1);
+
+            NotificationService.success(
+                // `✓ Se encontraron ${productos.length} producto(s)\n\n${productos.map((p: any) => p.nombre).join(', ')}`
+                `✓ Se encontraron ${productos.length} producto(s)`
+            );
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
+            console.error('❌ Error en búsqueda en DB:', error);
+
+            NotificationService.error(
+                `Error al buscar en BD:\n${errorMsg}`
+            );
+        } finally {
+            setBuscandoEnDB(false);
+        }
+    };
+
     const finalizarInventario = async () => {
         if (!borrador) return;
 
@@ -535,9 +658,20 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
     const productosFiltrados = busqueda
         ? productosUnicos.filter(
-            p => p.producto?.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-                p.producto?.sku?.toLowerCase().includes(busqueda.toLowerCase()) ||
-                p.producto?.codigo_barras?.toLowerCase().includes(busqueda.toLowerCase())
+            p => {
+                const busquedaLower = busqueda.toLowerCase();
+                const nombre = p.producto?.nombre?.toLowerCase().includes(busquedaLower) || false;
+                const sku = p.producto?.sku?.toLowerCase().includes(busquedaLower) || false;
+                const codigoBarrasLegacy = p.producto?.codigo_barras?.toLowerCase().includes(busquedaLower) || false;
+
+                // Buscar en la relación codigos_barra
+                const enCodigosBarra = Array.isArray(p.producto?.codigos_barra) &&
+                    p.producto.codigos_barra.some((cb: any) =>
+                        cb.codigo?.toLowerCase().includes(busquedaLower)
+                    );
+
+                return nombre || sku || codigoBarrasLegacy || enCodigosBarra;
+            }
         )
         : productosUnicos;
 
@@ -566,14 +700,32 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                             {/* Búsqueda */}
                             <div className="flex flex-col gap-2">
                                 <div className="relative">
-                                    <Input
-                                        placeholder="Buscar producto..."
-                                        value={busqueda}
-                                        onChange={(e) => handleBusquedaChange(e.target.value)}
-                                        onBlur={() => setTimeout(() => setMostrarSugerencias(false), 200)}
-                                        className="flex-1 text-sm sm:text-base h-9 sm:h-10"
-                                        autoComplete="off"
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Buscar por nombre, SKU o código de barras..."
+                                            value={busqueda}
+                                            onChange={(e) => handleBusquedaChange(e.target.value)}
+                                            onBlur={() => setTimeout(() => setMostrarSugerencias(false), 200)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    buscarEnDB(busqueda);
+                                                }
+                                            }}
+                                            className="flex-1 text-sm sm:text-base h-9 sm:h-10"
+                                            autoComplete="off"
+                                        />
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={() => buscarEnDB(busqueda)}
+                                            disabled={buscandoEnDB || !busqueda.trim()}
+                                            className="h-9 sm:h-10 text-xs sm:text-sm"
+                                            title="Buscar en la base de datos (nombre, SKU, código de barras)"
+                                        >
+                                            {buscandoEnDB ? 'Buscando...' : 'Buscar'}
+                                        </Button>
+                                    </div>
                                     {/* Dropdown de sugerencias - responsivo */}
                                     {mostrarSugerencias && sugerencias.length > 0 && (
                                         <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
@@ -589,12 +741,19 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                                                                 <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-gray-100 truncate">
                                                                     {item.producto?.nombre}
                                                                 </p>
-                                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                                                    SKU: {item.producto?.sku}
-                                                                    {item.producto?.codigo_barras && (
-                                                                        <> • {item.producto.codigo_barras}</>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                                                    <div className="truncate">
+                                                                        SKU: {item.producto?.sku}
+                                                                        {item.producto?.codigo_barras && (
+                                                                            <> • {item.producto.codigo_barras}</>
+                                                                        )}
+                                                                    </div>
+                                                                    {Array.isArray(item.producto?.codigos_barra) && item.producto.codigos_barra.length > 0 && (
+                                                                        <div className="text-xs text-blue-600 dark:text-blue-400 truncate">
+                                                                            🔖 Códigos: {item.producto.codigos_barra.map((cb: any) => cb.codigo).join(', ')}
+                                                                        </div>
                                                                     )}
-                                                                </p>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </button>
@@ -684,10 +843,37 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 {/* Productos */}
                 <Card>
                     <CardHeader className="px-3 sm:px-6">
-                        <CardTitle className="text-lg sm:text-xl">Productos a Registrar</CardTitle>
-                        <CardDescription className="text-xs sm:text-sm">
-                            Expande para registrar cantidades por almacén
-                        </CardDescription>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                                <CardTitle className="text-lg sm:text-xl">Productos a Registrar</CardTitle>
+                                <CardDescription className="text-xs sm:text-sm">
+                                    {busqueda ? (
+                                        <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                                            🔍 Resultados de búsqueda: "{busqueda}" ({productosFiltrados.length})
+                                        </span>
+                                    ) : (
+                                        <>Expande para registrar cantidades por almacén</>
+                                    )}
+                                </CardDescription>
+                            </div>
+                            {busqueda && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setBusqueda('');
+                                        setSugerencias([]);
+                                        setMostrarSugerencias(false);
+                                        setPaginaActual(1);
+                                    }}
+                                    className="text-xs sm:text-sm h-8 sm:h-9 whitespace-nowrap"
+                                    title="Limpiar búsqueda"
+                                >
+                                    ✕ Limpiar búsqueda
+                                </Button>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-2 px-3 sm:px-6">
                         {productosPaginados.length === 0 ? (

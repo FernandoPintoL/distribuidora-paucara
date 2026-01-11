@@ -66,6 +66,7 @@ export interface Producto extends BaseEntity {
   galeria?: Imagen[];
   precios?: Precio[];
   codigos?: CodigoBarra[];
+  codigosBarra?: CodigoBarra[]; // Relación con tabla codigos_barra
   almacenes?: StockAlmacen[];
   conversiones?: ConversionUnidad[]; // ✨ NUEVO: Conversiones de unidad
 }

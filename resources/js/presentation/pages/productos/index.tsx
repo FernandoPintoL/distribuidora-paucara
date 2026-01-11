@@ -16,6 +16,7 @@ interface ProductosIndexProps {
 }
 
 export default function ProductosIndex({ productos, filters, categorias, marcas, proveedores }: ProductosIndexProps) {
+  console.log('ProductosIndex renderizado con productos:', productos);
   return (
     <AppLayout breadcrumbs={[
       { title: 'Dashboard', href: productosService.indexUrl() },

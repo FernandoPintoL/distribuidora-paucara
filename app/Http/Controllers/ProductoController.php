@@ -428,8 +428,19 @@ class ProductoController extends Controller
             return ['id' => $img->id, 'url' => $img->url];
         });
 
-        // Obtener códigos de barra de la nueva tabla (mostrar solo el segundo código como string)
-        $segundoCodigo = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';
+        // Obtener todos los códigos de barra activos para el frontend
+        $codigos = $producto->codigosBarra->map(function ($cb) {
+            return [
+                'codigo' => $cb->codigo,
+                'es_principal' => (bool) $cb->es_principal,
+                'tipo' => $cb->tipo,
+            ];
+        })->values()->toArray();
+
+        // Si no hay códigos, incluir uno vacío para poder agregar
+        if (empty($codigos)) {
+            $codigos = [['codigo' => '']];
+        }
 
         // Obtener precios en formato simple que espera el frontend
         $precios = $producto->precios()
@@ -493,8 +504,8 @@ class ProductoController extends Controller
             'perfil'            => $perfil ? ['id' => $perfil->id, 'url' => $perfil->url] : null,
             'galeria'           => $galeria,
             'precios'           => $precios,
-            'codigos'           => $segundoCodigo, // String simple del segundo código activo
-                                                   // mapear stock por almacén para el frontend
+            'codigos'           => $codigos, // Array de códigos de barra con metadata
+            // mapear stock por almacén para el frontend
             'almacenes'         => StockProducto::where('producto_id', $producto->id)
                 ->get(['almacen_id', 'cantidad as stock', 'lote', 'fecha_vencimiento'])
                 ->map(function ($s) {
