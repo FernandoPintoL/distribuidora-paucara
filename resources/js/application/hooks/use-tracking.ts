@@ -83,38 +83,45 @@ export function useTracking(options: UseTrackingOptions = {}): UseTrackingReturn
     subscribeTo(channelName);
     setIsTracking(true);
 
-    // Escuchar actualizaciones de ubicación
-    on('ubicacion.actualizada', (data: any) => {
-      if (data.data?.entrega_id === id) {
-        setUbicacion(data.data);
-      }
+    console.log(`[useTracking] Iniciando tracking para entrega #${id} en canal ${channelName}`);
+
+    // Escuchar actualizaciones de ubicación en tiempo real
+    // El evento se dispara desde el backend cuando se registra una nueva ubicación
+    on(`${channelName}:ubicacion.actualizada`, (data: any) => {
+      console.log(`[useTracking] Ubicación actualizada para entrega #${id}:`, data);
+      setUbicacion({
+        id: data.id || 0,
+        entrega_id: id,
+        latitud: data.latitud,
+        longitud: data.longitud,
+        velocidad: data.velocidad,
+        timestamp: data.timestamp,
+      });
     });
 
     // Escuchar cambios de estado
-    on('entrega.estado-cambio', (data: any) => {
-      if (data.data?.entrega_id === id) {
-        setEstadoActual(data.data.estado_nuevo);
+    on(`${channelName}:estado-cambio`, (data: any) => {
+      console.log(`[useTracking] Estado cambió para entrega #${id}:`, data);
+      if (data.estado_nuevo) {
+        setEstadoActual(data.estado_nuevo);
       }
     });
 
     // Escuchar novedades
-    on('novedad.reportada', (data: any) => {
-      if (data.data?.entrega_id === id) {
-        setNovedades(prev => [...prev, data.data]);
-      }
+    on(`${channelName}:novedad.reportada`, (data: any) => {
+      console.log(`[useTracking] Novedad reportada para entrega #${id}:`, data);
+      setNovedades(prev => [...prev, data]);
     });
 
     // Escuchar eventos del chofer
-    on('chofer.en-camino', (data: any) => {
-      if (data.data?.entrega_id === id) {
-        setEstadoActual('en_camino');
-      }
+    on(`${channelName}:chofer.en-camino`, (data: any) => {
+      console.log(`[useTracking] Chofer en camino para entrega #${id}`);
+      setEstadoActual('en_camino');
     });
 
-    on('chofer.llegada', (data: any) => {
-      if (data.data?.entrega_id === id) {
-        setEstadoActual('entregado');
-      }
+    on(`${channelName}:chofer.llegada`, (data: any) => {
+      console.log(`[useTracking] Chofer llegó a entrega #${id}`);
+      setEstadoActual('entregado');
     });
   }, [isConnected, subscribeTo, on]);
 
@@ -123,12 +130,14 @@ export function useTracking(options: UseTrackingOptions = {}): UseTrackingReturn
     const channelName = `entrega.${id}`;
     unsubscribeFrom(channelName);
 
+    console.log(`[useTracking] Deteniendo tracking para entrega #${id}`);
+
     // Remover listeners
-    off('ubicacion.actualizada');
-    off('entrega.estado-cambio');
-    off('novedad.reportada');
-    off('chofer.en-camino');
-    off('chofer.llegada');
+    off(`${channelName}:ubicacion.actualizada`);
+    off(`${channelName}:estado-cambio`);
+    off(`${channelName}:novedad.reportada`);
+    off(`${channelName}:chofer.en-camino`);
+    off(`${channelName}:chofer.llegada`);
 
     setIsTracking(false);
     setUbicacion(null);

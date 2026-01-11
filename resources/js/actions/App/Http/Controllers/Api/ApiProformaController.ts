@@ -788,7 +788,7 @@ coordinarEntrega.post = (args: { proforma: number | { id: number } } | [proforma
     coordinarEntrega.form = coordinarEntregaForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
- * @see app/Http/Controllers/Api/ApiProformaController.php:2407
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2416
  * @route '/api/proformas/{proforma}/actualizar-detalles'
  */
 export const actualizarDetalles = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -803,7 +803,7 @@ actualizarDetalles.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
- * @see app/Http/Controllers/Api/ApiProformaController.php:2407
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2416
  * @route '/api/proformas/{proforma}/actualizar-detalles'
  */
 actualizarDetalles.url = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -836,7 +836,7 @@ actualizarDetalles.url = (args: { proforma: number | { id: number } } | [proform
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
- * @see app/Http/Controllers/Api/ApiProformaController.php:2407
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2416
  * @route '/api/proformas/{proforma}/actualizar-detalles'
  */
 actualizarDetalles.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -846,7 +846,7 @@ actualizarDetalles.post = (args: { proforma: number | { id: number } } | [profor
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
- * @see app/Http/Controllers/Api/ApiProformaController.php:2407
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2416
  * @route '/api/proformas/{proforma}/actualizar-detalles'
  */
     const actualizarDetallesForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -856,7 +856,7 @@ actualizarDetalles.post = (args: { proforma: number | { id: number } } | [profor
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
- * @see app/Http/Controllers/Api/ApiProformaController.php:2407
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2416
  * @route '/api/proformas/{proforma}/actualizar-detalles'
  */
         actualizarDetallesForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1532,7 +1532,7 @@ obtenerEstadoPedido.head = (args: { id: string | number } | [id: string | number
     obtenerEstadoPedido.form = obtenerEstadoPedidoForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
- * @see app/Http/Controllers/Api/ApiProformaController.php:2176
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2185
  * @route '/api/carritos/usuario/{usuarioId}/ultimo'
  */
 export const obtenerUltimoCarrito = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1547,7 +1547,7 @@ obtenerUltimoCarrito.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
- * @see app/Http/Controllers/Api/ApiProformaController.php:2176
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2185
  * @route '/api/carritos/usuario/{usuarioId}/ultimo'
  */
 obtenerUltimoCarrito.url = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -1575,7 +1575,7 @@ obtenerUltimoCarrito.url = (args: { usuarioId: string | number } | [usuarioId: s
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
- * @see app/Http/Controllers/Api/ApiProformaController.php:2176
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2185
  * @route '/api/carritos/usuario/{usuarioId}/ultimo'
  */
 obtenerUltimoCarrito.get = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1584,7 +1584,7 @@ obtenerUltimoCarrito.get = (args: { usuarioId: string | number } | [usuarioId: s
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
- * @see app/Http/Controllers/Api/ApiProformaController.php:2176
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2185
  * @route '/api/carritos/usuario/{usuarioId}/ultimo'
  */
 obtenerUltimoCarrito.head = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1594,7 +1594,7 @@ obtenerUltimoCarrito.head = (args: { usuarioId: string | number } | [usuarioId: 
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
- * @see app/Http/Controllers/Api/ApiProformaController.php:2176
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2185
  * @route '/api/carritos/usuario/{usuarioId}/ultimo'
  */
     const obtenerUltimoCarritoForm = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1604,7 +1604,7 @@ obtenerUltimoCarrito.head = (args: { usuarioId: string | number } | [usuarioId: 
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
- * @see app/Http/Controllers/Api/ApiProformaController.php:2176
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2185
  * @route '/api/carritos/usuario/{usuarioId}/ultimo'
  */
         obtenerUltimoCarritoForm.get = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1613,7 +1613,7 @@ obtenerUltimoCarrito.head = (args: { usuarioId: string | number } | [usuarioId: 
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerUltimoCarrito
- * @see app/Http/Controllers/Api/ApiProformaController.php:2176
+ * @see app/Http/Controllers/Api/ApiProformaController.php:2185
  * @route '/api/carritos/usuario/{usuarioId}/ultimo'
  */
         obtenerUltimoCarritoForm.head = (args: { usuarioId: string | number } | [usuarioId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

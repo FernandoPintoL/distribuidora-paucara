@@ -107,6 +107,7 @@ export function EstadosProvider({ children }: EstadosProviderProps) {
             console.error('[EstadosProvider] ❌ Error:', error.message);
             setError(error);
             setEstados({});
+            setIsInitialized(true); // ✅ IMPORTANTE: Marcar como inicializado incluso con error
         } finally {
             setIsLoading(false);
         }

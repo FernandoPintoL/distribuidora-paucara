@@ -100,7 +100,7 @@ export function EntregaDetalleModal({
                             </CardHeader>
                             <CardContent className="space-y-2">
                                 <p className="font-semibold text-gray-900 dark:text-white">
-                                    {entrega.chofer.nombre}
+                                    {entrega.chofer.name}
                                 </p>
                                 {entrega.chofer.telefono && (
                                     <p className="text-sm text-gray-600 dark:text-gray-400">

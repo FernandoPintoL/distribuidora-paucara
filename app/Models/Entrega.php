@@ -158,7 +158,9 @@ class Entrega extends Model
 
     /**
      * Chofer (User) asignado a esta entrega
-     * FK a users.id (usuario con rol de chofer)
+     * FK a users.id (user con rol 'Chofer')
+     *
+     * Relación inversa: User -> empleado() para acceder a datos del empleado
      */
     public function chofer(): BelongsTo
     {
@@ -218,6 +220,22 @@ class Entrega extends Model
     public function historialEstados(): HasMany
     {
         return $this->hasMany(EntregaEstadoHistorial::class);
+    }
+
+    /**
+     * Confirmaciones de entrega por venta
+     *
+     * Registros de confirmación de entregas por venta individual
+     * Incluye fotos, firma digital, contexto de entrega (tienda abierta, cliente presente)
+     * y motivos de rechazo si aplica
+     *
+     * Uso:
+     *   $entrega->confirmacionesVentas              // Todas las confirmaciones
+     *   $entrega->confirmacionesVentas()->count()   // Cantidad de ventas confirmadas
+     */
+    public function confirmacionesVentas(): HasMany
+    {
+        return $this->hasMany(EntregaVentaConfirmacion::class);
     }
 
     /**
@@ -1035,5 +1053,42 @@ class Entrega extends Model
     public function getLongitudAttribute(): ?float
     {
         return $this->longitud_actual;
+    }
+
+    /**
+     * Accessors para exponer datos del estado logístico en la serialización
+     * Permite que el frontend acceda a: estado_entrega_id, estado_entrega_codigo, etc
+     */
+    public function getEstadoEntregaIdAttribute(): ?int
+    {
+        return $this->attributes['estado_entrega_id'] ?? null;
+    }
+
+    public function getEstadoEntregaCodigoAttribute(): ?string
+    {
+        return $this->relationLoaded('estadoEntrega')
+            ? $this->estadoEntrega?->codigo
+            : null;
+    }
+
+    public function getEstadoEntregaNombreAttribute(): ?string
+    {
+        return $this->relationLoaded('estadoEntrega')
+            ? $this->estadoEntrega?->nombre
+            : null;
+    }
+
+    public function getEstadoEntregaColorAttribute(): ?string
+    {
+        return $this->relationLoaded('estadoEntrega')
+            ? $this->estadoEntrega?->color
+            : null;
+    }
+
+    public function getEstadoEntregaIconoAttribute(): ?string
+    {
+        return $this->relationLoaded('estadoEntrega')
+            ? $this->estadoEntrega?->icono
+            : null;
     }
 }

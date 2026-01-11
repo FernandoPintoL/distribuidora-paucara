@@ -73,17 +73,33 @@ export interface ProformaAppExterna extends BaseEntity {
 export interface VentaEnEntrega {
     id: Id;
     numero: string;
+    subtotal?: number | string;      // Subtotal sin impuesto
+    impuesto?: number | string;      // Impuesto aplicado
+    total: number | string;
     cliente: {
         id: Id;
         nombre: string;
         telefono?: string;
     };
-    total: number;
+    direccion_cliente?: {            // Dirección del cliente
+        id: Id;
+        direccion: string;
+        latitud?: number;
+        longitud?: number;
+    };
     estado_logistico?: string;
+    estado_logistico_id?: Id;        // FK a estados_logistica
+    estado_logistica?: {             // Objeto completo del estado
+        id: Id;
+        codigo: string;
+        nombre: string;
+        color?: string;
+        icono?: string;
+    };
     fecha_entrega_comprometida?: string;
-    cantidad_items: number;
+    cantidad_items?: number;
     // Metadatos del pivot (orden, confirmación)
-    orden: number;
+    orden?: number;
     confirmado_por?: Id;
     fecha_confirmacion?: string;
     notas?: string;
@@ -133,24 +149,45 @@ export interface EntregaLogistica extends BaseEntity {
     numero_entrega?: string;
 
     // Estado de la entrega consolidada
-    estado: EstadoEntrega;
+    estado: EstadoEntrega | string;  // Puede ser EstadoEntrega o valor del backend (ej: "EN_TRANSITO", "PREPARACION_CARGA")
+
+    // Estado logístico normalizado desde tabla estados_logistica
+    estado_entrega_id?: Id;          // FK a estados_logistica
+    estado_entrega?: {               // Objeto completo con metadata
+        id: Id;
+        codigo: string;
+        nombre: string;
+        color?: string;
+        icono?: string;
+    };
 
     // ✅ NUEVO: Información consolidada de ventas
     /** Array de todas las ventas en esta entrega */
-    ventas: VentaEnEntrega[];
+    ventas?: VentaEnEntrega[];
 
-    /** Total consolidado de todas las ventas */
-    total_consolidado: number;
+    /** Total consolidado de todas las ventas (subtotal + impuesto) */
+    total_general?: number;
+    total_consolidado?: number;      // Alias de total_general (para compatibilidad)
+
+    /** Subtotal consolidado de todas las ventas */
+    subtotal_total?: number;
+
+    /** Impuesto consolidado de todas las ventas */
+    impuesto_total?: number;
 
     /** Cantidad de ventas en esta entrega */
-    cantidad_ventas: number;
+    cantidad_ventas?: number;
 
     /** Nombres de clientes únicos (para resumen rápido) */
-    clientes_nombres: string[];
+    clientes_nombres?: string[];
+
+    // Peso y medidas
+    peso_kg?: number | string;
+    volumen_m3?: number;
 
     // Recursos asignados
-    chofer: ChoferEntregaInfo;
-    vehiculo: VehiculoEntregaInfo;
+    chofer?: ChoferEntregaInfo;
+    vehiculo?: VehiculoEntregaInfo;
 
     // Ubicación en tiempo real
     ubicacion_actual?: UbicacionActualEntrega | null;
@@ -158,12 +195,12 @@ export interface EntregaLogistica extends BaseEntity {
     // Fechas
     fecha_inicio?: string;
     fecha_llegada?: string;
+    fecha_asignacion?: string;
 
     // Legacy
     proforma_id?: Id;
     chofer_id?: Id;
     vehiculo_id?: Id;
-    fecha_asignacion?: string;
     observaciones?: string;
 }
 

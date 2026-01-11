@@ -149,8 +149,9 @@ trait ManageEstadosLogisticos
 
         $estadoActualId = $this->{$campoPkActual};
 
-        // Validar transición
-        if (!self::esTransicionValida($estadoActualId, $nuevoEstadoId, $categoria)) {
+        // ✅ Si el estado actual es null (primera vez), permitir transición
+        // Si no es null, validar que sea una transición válida
+        if ($estadoActualId !== null && !self::esTransicionValida($estadoActualId, $nuevoEstadoId, $categoria)) {
             throw new \Exception(
                 "Transición inválida: de {$estadoActualId} a {$nuevoEstadoId} ({$categoria})"
             );
@@ -179,6 +180,8 @@ trait ManageEstadosLogisticos
      */
     protected function registrarEnHistorialEstados($estadoAnteriorId, $estadoNuevoId, $motivo = null)
     {
+        // ✅ Registrar cambio de estado en historial
+        // NOTA: historial_estados solo tiene 'created_at', no 'updated_at'
         \DB::table('historial_estados')->insert([
             'entidad_tipo' => $this->obtenerTipoEntidad(),
             'entidad_id' => $this->id,
@@ -188,7 +191,7 @@ trait ManageEstadosLogisticos
             'motivo' => $motivo,
             'observaciones' => null,
             'created_at' => now(),
-            'updated_at' => now(),
+            // NO incluir 'updated_at' - la tabla no la tiene
         ]);
     }
 

@@ -96,7 +96,7 @@ export const useEntregasCreate = (
     const ventasOptions: SelectOption[] = ventas.map(venta => ({
         value: venta.id,
         label: `${venta.numero_venta} - ${venta.cliente.nombre}`,
-        description: `Bs. ${venta.total}`,
+        description: `Bs. ${venta.subtotal}`,
     }));
 
     const vehiculosOptions: SelectOption[] = vehiculos.map(vehiculo => ({

@@ -237,7 +237,7 @@ export default function ConsolidacionAutomaticaModal({
                                                             {entrega.vehiculo.placa}
                                                         </p>
                                                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                            {entrega.chofer.nombre}
+                                                            {entrega.chofer.name}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -294,7 +294,7 @@ export default function ConsolidacionAutomaticaModal({
                                                             {venta.cliente}
                                                         </td>
                                                         <td className="py-2 px-3 text-right text-gray-900 dark:text-white">
-                                                            Bs. {venta.total.toFixed(2)}
+                                                            Bs. {venta.subtotal.toFixed(2)}
                                                         </td>
                                                         <td className="py-2 px-3 text-yellow-700 dark:text-yellow-300 text-xs">
                                                             {venta.motivo}

@@ -50,10 +50,20 @@ class TrackingService
             // 1. Validar que la entrega existe
             $entrega = Entrega::findOrFail($entregaId);
 
-            // 2. Validar que la entrega está en estado apropiado (EN_CAMINO, LLEGO, etc)
-            if (!in_array($entrega->estado, ['ASIGNADA', 'EN_CAMINO', 'LLEGO'])) {
+            // 2. Validar que la entrega está en estado apropiado para tracking
+            // FASE 1 + FASE 3: Ahora soportamos LISTO_PARA_ENTREGA, EN_TRANSITO, etc.
+            // Legacy: ASIGNADA, EN_CAMINO, LLEGO
+            $estadosValidos = [
+                'ASIGNADA',              // Legacy
+                'EN_CAMINO',             // Legacy
+                'LLEGO',                 // Legacy
+                'LISTO_PARA_ENTREGA',    // FASE 1
+                'EN_TRANSITO',           // FASE 1 (nuevo flujo)
+            ];
+
+            if (!in_array($entrega->estado, $estadosValidos)) {
                 throw new \InvalidArgumentException(
-                    "No se puede registrar ubicación. Entrega en estado {$entrega->estado}"
+                    "No se puede registrar ubicación. Entrega en estado {$entrega->estado}. Estados válidos: " . implode(', ', $estadosValidos)
                 );
             }
 

@@ -164,8 +164,37 @@ class SincronizacionVentaEntregaService
                     'estado_venta_nuevo' => $nuevoEstadoVenta,
                 ]);
 
-                if ($ventaEspecifica->estado_logistico !== $nuevoEstadoVenta) {
-                    $ventaEspecifica->update(['estado_logistico' => $nuevoEstadoVenta]);
+                // Obtener el ID del estado nuevo desde estados_logistica
+                $nuevoEstadoLogisticoId = \App\Models\EstadoLogistica::where('codigo', $nuevoEstadoVenta)
+                    ->where('categoria', 'venta_logistica')
+                    ->value('id');
+
+                if ($nuevoEstadoLogisticoId && $ventaEspecifica->estado_logistico_id !== $nuevoEstadoLogisticoId) {
+                    // Obtener estado anterior para el evento
+                    $estadoAnteriorObj = null;
+                    if ($ventaEspecifica->estado_logistico_id) {
+                        $estadoAnteriorObj = \App\Models\EstadoLogistica::find($ventaEspecifica->estado_logistico_id);
+                    }
+
+                    // Obtener estado nuevo
+                    $estadoNuevoObj = \App\Models\EstadoLogistica::find($nuevoEstadoLogisticoId);
+
+                    // ✅ Actualizar el campo correcto: estado_logistico_id (no estado_logistico)
+                    $ventaEspecifica->update(['estado_logistico_id' => $nuevoEstadoLogisticoId]);
+
+                    // Disparar evento de cambio de estado
+                    event(new \App\Events\VentaEstadoCambiado(
+                        $ventaEspecifica,
+                        $estadoAnteriorObj,
+                        $estadoNuevoObj,
+                        "Sincronización automática desde entrega {$entrega->id}"
+                    ));
+
+                    Log::info('✅ Evento VentaEstadoCambiado disparado (venta específica)', [
+                        'venta_id' => $ventaEspecifica->id,
+                        'estado_anterior_id' => $estadoAnteriorObj?->id,
+                        'estado_nuevo_id' => $estadoNuevoObj?->id,
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::warning('Error sincronizando venta específica', [
@@ -251,7 +280,10 @@ class SincronizacionVentaEntregaService
      * Determinar el estado logístico de una venta basado en sus entregas
      *
      * FASE 3 - REFACTORIZACIÓN:
-     * Ahora usa relación ventas() (N:M via pivot entrega_venta)
+     * Ahora busca entregas en AMBAS relaciones:
+     * 1. Relación N:M via pivot entrega_venta (FASE 1 Legacy)
+     * 2. Relación 1:N directa vía FK entrega_id (FASE 3 Actual)
+     *
      * Una venta puede estar en múltiples entregas consolidadas
      *
      * Lógica:
@@ -266,12 +298,21 @@ class SincronizacionVentaEntregaService
      */
     public function determinarEstadoLogistico(Venta $venta): string
     {
-        // Obtener TODAS las entregas de esta venta (via pivot entrega_venta)
-        $entregas = $venta->entregas()
+        // Obtener entregas de AMBAS relaciones:
+        // 1. Relación N:M via pivot (FASE 1 - Legacy)
+        $entregasLegacy = $venta->entregas()
             ->select('entregas.id', 'entregas.estado')
             ->get();
 
-        // Si no hay entregas
+        // 2. Relación 1:N directa vía FK (FASE 3 - Actual)
+        $entregasDirecta = \App\Models\Entrega::where('id', $venta->entrega_id)
+            ->select('id', 'estado')
+            ->get();
+
+        // Combinar ambas relaciones (evitando duplicados por id)
+        $entregas = $entregasLegacy->merge($entregasDirecta)->unique('id');
+
+        // Si no hay entregas en ninguna relación
         if ($entregas->isEmpty()) {
             return 'SIN_ENTREGA';
         }

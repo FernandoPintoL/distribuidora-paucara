@@ -27,7 +27,7 @@ class CheckPlatformAccess
         }
 
         // Super-Admin siempre tiene acceso a ambas plataformas
-        if ($user->hasRole(['super-admin', 'Super Admin'])) {
+        if ($user->hasRole('Super Admin')) {
             return $next($request);
         }
 

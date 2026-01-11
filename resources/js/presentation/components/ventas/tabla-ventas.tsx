@@ -19,6 +19,23 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
     const [anularModal, setAnularModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
     const [isAnulando, setIsAnulando] = useState(false);
 
+    // ✅ DEBUG: Verificar datos de dirección en consola
+    React.useEffect(() => {
+        if (ventas.data && ventas.data.length > 0) {
+            const ventaConDelivery = ventas.data.find(v => v.requiere_envio);
+            if (ventaConDelivery) {
+                console.log('📦 Venta con delivery - DEBUG:', {
+                    id: ventaConDelivery.id,
+                    numero: ventaConDelivery.numero,
+                    requiere_envio: ventaConDelivery.requiere_envio,
+                    direccionCliente: ventaConDelivery.direccionCliente,
+                    estado_logistico: ventaConDelivery.estado_logistico,
+                    estado_logistico_id: ventaConDelivery.estado_logistico_id,
+                });
+            }
+        }
+    }, [ventas]);
+
     const toggleRowExpanded = (ventaId: number) => {
         const newExpanded = new Set(expandedRows);
         if (newExpanded.has(ventaId)) {
@@ -72,27 +89,44 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
     };
 
     const getEstadoLogisticoColor = (estado: string) => {
+        // ✅ ACTUALIZADO: Incluir todos los estados posibles desde BD
         const colorMap: { [key: string]: string } = {
+            // Estados de entrega
             'SIN_ENTREGA': 'gray',
+            'PENDIENTE_ENVIO': 'yellow',    // ✅ NUEVO: Pendiente de envío
             'PROGRAMADO': 'blue',
             'EN_PREPARACION': 'yellow',
+            'PREPARANDO': 'yellow',         // ✅ NUEVO: Alias de preparación
             'EN_TRANSITO': 'purple',
+            'ENVIADO': 'blue',              // ✅ NUEVO: En camino
             'ENTREGADA': 'green',
+            'ENTREGADO': 'green',           // ✅ NUEVO: Ya entregado
             'PROBLEMAS': 'red',
-            'CANCELADA': 'dark'
+            'CANCELADA': 'dark',
+            'CANCELADO': 'dark',            // ✅ NUEVO: Alias
+            'PENDIENTE_RETIRO': 'orange',   // ✅ NUEVO: Pendiente de retiro
+            'RETIRADO': 'green'             // ✅ NUEVO: Retirado
         };
         return colorMap[estado] || 'gray';
     };
 
     const getEstadoLogisticoLabel = (estado: string) => {
+        // ✅ ACTUALIZADO: Incluir todos los estados posibles desde BD
         const labelMap: { [key: string]: string } = {
             'SIN_ENTREGA': 'Sin Entrega',
+            'PENDIENTE_ENVIO': 'Pendiente de Envío',   // ✅ NUEVO
             'PROGRAMADO': 'Programado',
             'EN_PREPARACION': 'En Preparación',
+            'PREPARANDO': 'Preparando',                 // ✅ NUEVO
             'EN_TRANSITO': 'En Tránsito',
+            'ENVIADO': 'Enviado',                       // ✅ NUEVO
             'ENTREGADA': 'Entregada',
+            'ENTREGADO': 'Entregado',                   // ✅ NUEVO
             'PROBLEMAS': 'Con Problemas',
-            'CANCELADA': 'Cancelada'
+            'CANCELADA': 'Cancelada',
+            'CANCELADO': 'Cancelado',                   // ✅ NUEVO
+            'PENDIENTE_RETIRO': 'Pendiente de Retiro', // ✅ NUEVO
+            'RETIRADO': 'Retirado'                      // ✅ NUEVO
         };
         return labelMap[estado] || 'Desconocido';
     };
@@ -244,6 +278,12 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                 scope="col"
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                             >
+                                Peso (kg)
+                            </th>
+                            <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                            >
                                 Usuario
                             </th>
                             <th scope="col" className="relative px-6 py-3">
@@ -279,9 +319,9 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(venta.estado_documento?.nombre || '')
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(venta.estado_logistico || '')
                                         }`}>
-                                        {venta.estado_documento?.nombre || 'Sin estado'}
+                                        {venta.estado_logistico || 'Sin estado'}
                                     </span>
                                 </td>
 
@@ -323,6 +363,19 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                                     Presencial
                                                 </span>
                                             </>
+                                        )}
+                                    </div>
+                                </td>
+
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-900 dark:text-white">
+                                        {venta.peso_total_estimado ? (
+                                            <>
+                                                <span className="font-semibold">{Number(venta.peso_total_estimado).toFixed(2)}</span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">kg</span>
+                                            </>
+                                        ) : (
+                                            <span className="text-gray-400 dark:text-gray-500">-</span>
                                         )}
                                     </div>
                                 </td>
@@ -397,23 +450,50 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                 {/* Fila expandible para detalles de delivery */}
                                 {venta.requiere_envio && expandedRows.has(venta.id) && (
                                     <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
-                                        <td colSpan={8} className="px-6 py-4">
+                                        <td colSpan={9} className="px-6 py-4">
                                             <div className="space-y-4">
                                                 {/* Dirección de entrega */}
                                                 <div className="flex items-start space-x-3">
                                                     <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                                                    <div>
-                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                                    <div className="flex-1">
+                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
                                                             Dirección de Entrega
                                                         </h4>
-                                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                                            {venta.direccionCliente?.direccion || 'No especificada'}
-                                                        </p>
-                                                        {venta.direccionCliente?.referencias && (
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                                📌 {venta.direccionCliente.referencias}
-                                                            </p>
-                                                        )}
+                                                        <div className="space-y-2">
+                                                            {/* Dirección principal */}
+                                                            <div>
+                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                    {venta.direccionCliente?.direccion || 'No especificada'}
+                                                                </p>
+                                                            </div>
+
+                                                            {/* Referencias */}
+                                                            {venta.direccionCliente?.referencias && (
+                                                                <div>
+                                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                                        📌 Referencias: {venta.direccionCliente.referencias}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Localidad */}
+                                                            {venta.direccionCliente?.localidad && (
+                                                                <div>
+                                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                                        🏘️ Localidad: {venta.direccionCliente.localidad}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Coordenadas para mapas */}
+                                                            {venta.direccionCliente?.latitud && venta.direccionCliente?.longitud && (
+                                                                <div className="mt-2 p-2 bg-white dark:bg-zinc-800 rounded border border-gray-200 dark:border-zinc-700">
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                                                                        📍 Coordenadas: {Number(venta.direccionCliente.latitud).toFixed(4)}, {Number(venta.direccionCliente.longitud).toFixed(4)}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -435,6 +515,12 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                                             }`}>
                                                                 {getEstadoLogisticoLabel(venta.estado_logistico || 'SIN_ENTREGA')}
                                                             </span>
+                                                            {/* ✅ NUEVO: Mostrar estado_logistico_id */}
+                                                            {venta.estado_logistico_id && (
+                                                                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                                                    (ID: {venta.estado_logistico_id})
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

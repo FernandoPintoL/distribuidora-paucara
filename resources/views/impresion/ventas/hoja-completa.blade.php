@@ -69,26 +69,26 @@
 {{-- Totales --}}
 <div class="totales">
     <table>
-        <tr class="subtotal-row">
+        {{-- <tr class="subtotal-row">
             <td><strong>Subtotal:</strong></td>
             <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->subtotal, 2) }}</td>
-        </tr>
+        </tr> --}}
         @if($documento->descuento > 0)
         <tr>
             <td><strong>Descuento:</strong></td>
             <td class="text-right">-{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->descuento, 2) }}</td>
         </tr>
         @endif
-        @if($documento->impuesto > 0)
+       {{--  @if($documento->impuesto > 0)
         <tr>
             <td><strong>Impuesto ({{ $opciones['porcentaje_impuesto'] ?? '13' }}%):</strong></td>
             <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->impuesto, 2) }}</td>
         </tr>
-        @endif
+        @endif --}}
         <tr class="total-final">
             <td><strong>TOTAL:</strong></td>
             <td class="text-right">
-                <strong>{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->total, 2) }}</strong>
+                <strong>{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->subtotal, 2) }}</strong>
             </td>
         </tr>
     </table>
@@ -108,7 +108,7 @@
     <strong>Información de Pago:</strong>
     <p style="margin-top: 5px;">
         Monto Pagado: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pagado ?? 0, 2) }}<br>
-        Monto Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? $documento->total, 2) }}
+        Monto Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? $documento->subtotal, 2) }}
     </p>
 </div>
 @endif

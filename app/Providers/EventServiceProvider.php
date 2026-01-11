@@ -12,6 +12,7 @@ use App\Events\EntregaCompletada;
 use App\Events\EntregaConfirmada;
 use App\Events\EntregaCreada;
 use App\Events\EntregaEnCamino;
+use App\Events\EntregaEstadoCambiado;
 use App\Events\EntregaRechazada;
 use App\Events\MarcarLlegadaConfirmada;
 use App\Events\NovedadEntregaReportada;
@@ -25,6 +26,8 @@ use App\Events\UbicacionActualizada;
 use App\Events\VentaEstadoCambiado;
 use App\Listeners\BroadcastDashboardMetrics;
 use App\Listeners\SendVentaEstadoCambiadoNotification;
+use App\Listeners\SincronizarWebSocketEstadoEntrega;
+use App\Listeners\SincronizarWebSocketUbicacion;
 use App\Listeners\Logistica\BroadcastEntregaAsignada;
 use App\Listeners\Logistica\BroadcastEntregaConfirmada;
 use App\Listeners\Logistica\BroadcastMarcarLlegada;
@@ -112,6 +115,14 @@ class EventServiceProvider extends ServiceProvider
             // Broadcast cuando entrega está en camino
         ],
 
+        // ✅ FASE 2: Evento centralizado de cambio de estado
+        // Se dispara desde EntregaService::cambiarEstadoNormalizado()
+        // Listeners:
+        //   1. SincronizarWebSocketEstadoEntrega - Notifica al WebSocket
+        EntregaEstadoCambiado::class => [
+            SincronizarWebSocketEstadoEntrega::class,
+        ],
+
         EntregaCompletada::class => [
             // Broadcast cuando entrega se completa
         ],
@@ -150,6 +161,8 @@ class EventServiceProvider extends ServiceProvider
 
         UbicacionActualizada::class => [
             BroadcastUbicacionActualizada::class,
+            // ✅ FASE 3: Notificar cambios de ubicación al WebSocket en tiempo real
+            SincronizarWebSocketUbicacion::class,
         ],
 
         // ══════════════════════════════════════════════════════════

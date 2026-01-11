@@ -79,15 +79,15 @@
             <td class="right">-{{ number_format($documento->descuento, 2) }}</td>
         </tr>
         @endif
-        @if($documento->impuesto > 0)
+        {{-- @if($documento->impuesto > 0)
         <tr>
             <td>Imp.:</td>
             <td class="right">{{ number_format($documento->impuesto, 2) }}</td>
         </tr>
-        @endif
+        @endif --}}
         <tr class="total-final">
             <td><strong>TOTAL:</strong></td>
-            <td class="right"><strong>{{ number_format($documento->total, 2) }}</strong></td>
+            <td class="right"><strong>{{ number_format($documento->subtotal, 2) }}</strong></td>
         </tr>
     </table>
 </div>

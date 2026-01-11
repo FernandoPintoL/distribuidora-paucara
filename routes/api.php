@@ -504,6 +504,14 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/entregas/{id}/iniciar-ruta', [EntregaController::class, 'iniciarRuta']);
         Route::post('/entregas/{id}/actualizar-estado', [EntregaController::class, 'actualizarEstado']);
         Route::post('/entregas/{id}/marcar-llegada', [EntregaController::class, 'marcarLlegada']);
+        // ✅ NUEVO: Confirmar una VENTA específica (con validación de todas entregadas)
+        // ✅ Confirmar venta individual (venta por venta)
+        Route::post('/entregas/{id}/ventas/{venta_id}/confirmar-entrega', [EntregaController::class, 'confirmarVentaEntregada']);
+
+        // ✅ NUEVA RUTA: Finalizar entrega (después de todas las ventas entregadas)
+        Route::post('/entregas/{id}/finalizar-entrega', [EntregaController::class, 'finalizarEntrega']);
+
+        // Confirmar TODA la entrega (backward compatibility)
         Route::post('/entregas/{id}/confirmar-entrega', [EntregaController::class, 'confirmarEntrega']);
         Route::post('/entregas/{id}/reportar-novedad', [EntregaController::class, 'reportarNovedad']);
         Route::post('/entregas/{id}/ubicacion', [EntregaController::class, 'registrarUbicacion']);
@@ -771,6 +779,10 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
     });
 });
 
+// ✅ NUEVA RUTA: Obtener datos completos de una entrega
+Route::middleware(['auth:sanctum,web'])->get('/entregas/{id}', [EntregaController::class, 'showEntrega'])
+    ->name('entregas.show');
+
 // Rutas API para proveedores
 Route::group(['prefix' => 'proveedores'], function () {
     Route::post('/', [ProveedorController::class, 'storeApi']);
@@ -856,6 +868,10 @@ Route::prefix('estados')->group(function () {
     // Buscar estados por término
     Route::get('/buscar', [EstadoLogisticoController::class, 'buscar']);
 
+    // Obtener transiciones válidas desde un estado (por ID)
+    // IMPORTANTE: Esto debe estar ANTES de las rutas con parámetros dinámicos
+    Route::get('/{estadoId}/transiciones', [EstadoLogisticoController::class, 'transicionesPorId']);
+
     // Obtener estados de una categoría específica
     Route::get('/{categoria}', [EstadoLogisticoController::class, 'porCategoria']);
 
@@ -865,7 +881,7 @@ Route::prefix('estados')->group(function () {
     // Obtener estadísticas de una categoría
     Route::get('/{categoria}/estadisticas', [EstadoLogisticoController::class, 'estadisticas']);
 
-    // Obtener transiciones válidas desde un estado
+    // Obtener transiciones válidas desde un estado (por categoría y código)
     Route::get('/{categoria}/{codigo}/transiciones', [EstadoLogisticoController::class, 'transicionesDisponibles']);
 });
 

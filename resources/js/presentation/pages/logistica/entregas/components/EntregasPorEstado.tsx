@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import {
     Chart as ChartJS,
@@ -21,23 +21,8 @@ export function EntregasPorEstado({
     estados,
     loading,
 }: EntregasPorEstadoProps) {
-    // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
+    // ✅ Todos los hooks PRIMERO (antes de cualquier return)
     const { estados: estadosAPI, isLoading: estadosLoading } = useEstadosEntregas();
-
-    if (loading || estadosLoading) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-medium">
-                        Entregas por Estado
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="h-80 flex items-center justify-center">
-                    <div className="text-muted-foreground">Cargando...</div>
-                </CardContent>
-            </Card>
-        );
-    }
 
     // ✅ ACTUALIZADO: Fallback con todos los estados de entrega de la BD
     const estadoLabelsFallback = [
@@ -74,6 +59,7 @@ export function EntregasPorEstado({
     const chartConfig = useMemo(() => {
         if (estadosAPI.length === 0) {
             // ✅ ACTUALIZADO: Fallback con todos los códigos de estado de entrega
+            console.log('📊 [EntregasPorEstado] Usando fallback (no hay estados del API)');
             return {
                 labels: estadoLabelsFallback,
                 colors: estadoColorsFallback,
@@ -94,17 +80,76 @@ export function EntregasPorEstado({
             };
         }
 
-        return {
+        const config = {
             labels: estadosAPI.map(e => e.nombre),
             colors: estadosAPI.map(e => e.color || '#6b7280'),
             estadoCodigos: estadosAPI.map(e => e.codigo)
         };
+
+        console.log('📊 [EntregasPorEstado] Config del gráfico desde BD:', {
+            cantidad: config.estadoCodigos.length,
+            codigos: config.estadoCodigos,
+            labels: config.labels,
+            colors: config.colors,
+        });
+
+        return config;
     }, [estadosAPI]);
 
     // Mapear datos de estados a los códigos en orden
     const chartDataValues = chartConfig.estadoCodigos.map(codigo => {
         return (estados as any)[codigo] || 0;
     });
+
+    // ✅ DEBUG: Todos los useEffect hooks juntos
+    useEffect(() => {
+        if (estadosAPI && estadosAPI.length > 0) {
+            console.log('✅ [EntregasPorEstado] Estados cargados desde estados_logistica:', {
+                cantidad: estadosAPI.length,
+                estados: estadosAPI.map(e => ({
+                    codigo: e.codigo,
+                    nombre: e.nombre,
+                    color: e.color,
+                    orden: e.orden,
+                })),
+            });
+        } else if (!estadosLoading) {
+            console.warn('⚠️ [EntregasPorEstado] No hay estados disponibles (usando fallback)');
+        }
+    }, [estadosAPI, estadosLoading]);
+
+    useEffect(() => {
+        if (estados && Object.keys(estados).length > 0) {
+            console.log('✅ [EntregasPorEstado] Datos de entregas por estado:', estados);
+        }
+    }, [estados]);
+
+    useEffect(() => {
+        console.log('📊 [EntregasPorEstado] Datos finales para gráfico:', {
+            labels: chartConfig.labels,
+            data: chartDataValues,
+            codigosMapeados: chartConfig.estadoCodigos.map((cod, idx) => ({
+                codigo: cod,
+                cantidad: chartDataValues[idx],
+            })),
+        });
+    }, [chartConfig.labels, chartDataValues, chartConfig.estadoCodigos]);
+
+    // ✅ Ahora SÍ podemos hacer early return
+    if ((loading || (estadosLoading && estadosAPI.length === 0))) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-sm font-medium">
+                        Entregas por Estado
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="h-80 flex items-center justify-center">
+                    <div className="text-muted-foreground">Cargando...</div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     const chartData = {
         labels: chartConfig.labels,

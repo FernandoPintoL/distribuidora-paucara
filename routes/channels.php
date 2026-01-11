@@ -93,7 +93,7 @@ Broadcast::channel('private.org.{orgId}', function ($user, $orgId) {
  */
 Broadcast::channel('private.chofer.{choferId}', function ($user, $choferId) {
     return (int) $user->id === (int) $choferId ||
-           $user->hasRole(['supervisor', 'admin']);
+           $user->hasRole(['Supervisor', 'Admin']);
 });
 
 /**
@@ -104,7 +104,7 @@ Broadcast::channel('private.ruta.{rutaId}', function ($user, $rutaId) {
     if (!$ruta) return false;
 
     return (int) $user->id === (int) $ruta->chofer_id ||
-           $user->hasRole(['supervisor', 'admin']);
+           $user->hasRole(['Supervisor', 'Admin']);
 });
 
 /**
@@ -112,7 +112,7 @@ Broadcast::channel('private.ruta.{rutaId}', function ($user, $rutaId) {
  */
 Broadcast::channel('private.cliente.{clienteId}', function ($user, $clienteId) {
     return $user->cliente_id === (int) $clienteId ||
-           $user->hasRole(['supervisor', 'admin', 'vendedor']);
+           $user->hasRole(['Supervisor', 'Admin', 'Vendedor']);
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -134,8 +134,8 @@ Broadcast::channel('pedido.{proformaId}', function ($user, $proformaId) {
             return false;
         }
 
-        // El usuario es cliente de la proforma O es admin/encargado
-        return $user->id === $proforma->cliente->user_id || $user->hasRole(['admin', 'encargado']);
+        // El usuario es cliente de la proforma O es admin/manager
+        return $user->id === $proforma->cliente->user_id || $user->hasRole(['Admin', 'Manager']);
     } catch (\Exception $e) {
         return false;
     }
@@ -156,10 +156,10 @@ Broadcast::channel('entrega.{entregaId}', function ($user, $entregaId) {
             return false;
         }
 
-        // El usuario es cliente de la proforma, chofer asignado, O admin/encargado
+        // El usuario es cliente de la proforma, chofer asignado, O admin/manager
         return $user->id === $entrega->proforma->cliente->user_id ||
                ($entrega->chofer && $user->id === $entrega->chofer->user_id) ||
-               $user->hasRole(['admin', 'encargado']);
+               $user->hasRole(['Admin', 'Manager']);
     } catch (\Exception $e) {
         return false;
     }
@@ -180,8 +180,8 @@ Broadcast::channel('chofer.{choferId}', function ($user, $choferId) {
             return false;
         }
 
-        // El usuario es el chofer O es admin/encargado
-        return $user->id === $chofer->user_id || $user->hasRole(['admin', 'encargado']);
+        // El usuario es el chofer O es admin/manager
+        return $user->id === $chofer->user_id || $user->hasRole(['Admin', 'Manager']);
     } catch (\Exception $e) {
         return false;
     }
@@ -196,5 +196,5 @@ Broadcast::channel('admin.pedidos', function ($user) {
         return false;
     }
 
-    return $user->hasRole(['admin', 'encargado']);
+    return $user->hasRole(['Admin', 'Manager']);
 });

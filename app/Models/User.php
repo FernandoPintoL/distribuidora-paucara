@@ -98,12 +98,8 @@ class User extends Authenticatable
     /**
      * Relación con entregas asignadas al chofer (usuario)
      *
-     * DEPRECADO: Esta relación es solo para compatibilidad histórica
-     * Los usuarios como choferes ahora se registran como Empleados
-     * IMPORTANTE: Esta relación ya no debe usarse en código nuevo
-     * Usar Empleado::entregas() en su lugar
-     *
-     * @deprecated Usar $user->empleado->entregas() en su lugar
+     * Entregas asignadas a este usuario (como chofer)
+     * FK chofer_id en entregas apunta a users.id (FASE 3)
      */
     public function entregas(): HasMany
     {

@@ -47,9 +47,9 @@ class EntregaWebSocketService extends BaseWebSocketService
             'estado' => $entrega->estado,
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
-                'apellido' => $entrega->chofer->apellido ?? '',
-                'telefono' => $entrega->chofer->telefono ?? null,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                'apellido' => $entrega->chofer->empleado?->apellido ?? '',
+                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
             ] : null,
             'cliente' => $entrega->venta?->cliente ? [
                 'id' => $entrega->venta->cliente->id,
@@ -82,7 +82,7 @@ class EntregaWebSocketService extends BaseWebSocketService
             'estado_entrega' => 'PREPARACION_CARGA',
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
             ] : null,
             'cliente' => $entrega->venta?->cliente ? [
                 'id' => $entrega->venta->cliente->id,
@@ -107,8 +107,8 @@ class EntregaWebSocketService extends BaseWebSocketService
             'estado_anterior' => 'PREPARACION_CARGA',
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
-                'telefono' => $entrega->chofer->telefono ?? null,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
             ] : null,
             'cliente' => $entrega->venta?->cliente ? [
                 'id' => $entrega->venta->cliente->id,
@@ -134,8 +134,8 @@ class EntregaWebSocketService extends BaseWebSocketService
             'estado_anterior' => 'EN_CARGA',
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
-                'telefono' => $entrega->chofer->telefono ?? null,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
             ] : null,
             'cliente' => $entrega->venta?->cliente ? [
                 'id' => $entrega->venta->cliente->id,
@@ -166,8 +166,8 @@ class EntregaWebSocketService extends BaseWebSocketService
             'estado_anterior' => 'LISTO_PARA_ENTREGA',
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
-                'telefono' => $entrega->chofer->telefono ?? null,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
             ] : null,
             'cliente' => $entrega->venta?->cliente ? [
                 'id' => $entrega->venta->cliente->id,
@@ -205,7 +205,7 @@ class EntregaWebSocketService extends BaseWebSocketService
             ],
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
             ] : null,
             'cliente_id' => $entrega->venta?->cliente_id,
             'direccion_destino' => $entrega->direccion_entrega,
@@ -225,7 +225,7 @@ class EntregaWebSocketService extends BaseWebSocketService
             'estado_anterior' => 'EN_TRANSITO',
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
             ] : null,
             'cliente' => $entrega->venta?->cliente ? [
                 'id' => $entrega->venta->cliente->id,
@@ -258,8 +258,8 @@ class EntregaWebSocketService extends BaseWebSocketService
             'requiere_reintento' => $requiereReintento,
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
-                'telefono' => $entrega->chofer->telefono ?? null,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
             ] : null,
             'cliente' => $entrega->venta?->cliente ? [
                 'id' => $entrega->venta->cliente->id,
@@ -300,7 +300,7 @@ class EntregaWebSocketService extends BaseWebSocketService
                 'nombre' => $entrega->venta->cliente->nombre,
             ] : null,
             'chofer' => $entrega->chofer ? [
-                'nombre' => $entrega->chofer->nombre,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
             ] : null,
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -323,7 +323,7 @@ class EntregaWebSocketService extends BaseWebSocketService
     ): bool {
         // Obtener mapeo para saber qué estado tienen las ventas ahora
         $mapeo = \App\Models\MapeoEstado::query()
-            ->where('categoria_origen', 'entrega_logistica')
+            ->where('categoria_origen', 'entrega')
             ->whereHas('estadoOrigen', function ($q) use ($estadoNuevo) {
                 $q->where('codigo', $estadoNuevo);
             })
@@ -351,7 +351,7 @@ class EntregaWebSocketService extends BaseWebSocketService
             'estado_nuevo_entrega' => $estadoNuevo,
             'estado_nuevo_venta' => $estadoVentaTarget,
             'mapeo' => [
-                'desde_categoria' => 'entrega_logistica',
+                'desde_categoria' => 'entrega',
                 'desde_estado' => $estadoNuevo,
                 'hacia_categoria' => 'venta_logistica',
                 'hacia_estado' => $estadoVentaTarget,
@@ -365,8 +365,8 @@ class EntregaWebSocketService extends BaseWebSocketService
             ],
             'chofer' => $entrega->chofer ? [
                 'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->nombre,
-                'telefono' => $entrega->chofer->telefono ?? null,
+                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
             ] : null,
             'vehiculo' => $entrega->vehiculo ? [
                 'id' => $entrega->vehiculo->id,
@@ -463,6 +463,71 @@ class EntregaWebSocketService extends BaseWebSocketService
             'CANCELADA' => 'cancelado',
             default => 'en proceso'
         };
+    }
+
+    /**
+     * ✅ FASE 2: Notificar cambio de estado a todos los clientes conectados
+     *
+     * Método centralizado que es llamado desde el Listener SincronizarWebSocketEstadoEntrega
+     * cuando se dispara el evento EntregaEstadoCambiado.
+     *
+     * RESPONSABILIDADES:
+     * ✓ Envía cambio de estado al WebSocket via HTTP
+     * ✓ Soporta diferentes endpoints según el tipo de cambio
+     * ✓ Maneja errores sin afectar el flujo principal
+     *
+     * @param array $payload Datos del cambio de estado desde EntregaEstadoCambiado
+     * @param string $endpoint Endpoint específico (entrega-estado-cambio, entrega-en-transito, etc.)
+     * @return bool Éxito de la notificación
+     */
+    public function notifyEstadoCambio(array $payload, string $endpoint = 'entrega-estado-cambio'): bool
+    {
+        try {
+            // Mapear nombre de endpoint a ruta WebSocket correcta
+            $rutaEndpoint = 'notify/' . $endpoint;
+
+            return $this->send($rutaEndpoint, $payload);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ [FASE 2] Error notificando cambio de estado al WebSocket', [
+                'entrega_id' => $payload['entrega_id'] ?? null,
+                'endpoint' => $endpoint,
+                'error' => $e->getMessage(),
+            ]);
+
+            // NO relanzar excepción - el cambio ya está guardado en BD
+            return false;
+        }
+    }
+
+    /**
+     * ✅ FASE 3: Notificar actualización de ubicación GPS en tiempo real
+     *
+     * Método que es llamado desde el Listener SincronizarWebSocketUbicacion
+     * cuando TrackingService registra una nueva ubicación.
+     *
+     * RESPONSABILIDADES:
+     * ✓ Envía ubicación actual al WebSocket via HTTP
+     * ✓ Actualiza mapa en admin y cliente en tiempo real
+     * ✓ Maneja errores sin afectar el almacenamiento
+     *
+     * @param array $payload Datos de ubicación desde UbicacionActualizada
+     * @return bool Éxito de la notificación
+     */
+    public function notifyUbicacion(array $payload): bool
+    {
+        try {
+            return $this->send('notify/entrega-ubicacion', $payload);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ [FASE 3] Error notificando ubicación al WebSocket', [
+                'entrega_id' => $payload['entrega_id'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            // NO relanzar excepción - la ubicación ya está guardada en BD
+            return false;
+        }
     }
 
     /**

@@ -208,26 +208,33 @@ class VehiculoController extends Controller
             ]);
 
             // Obtener vehículos disponibles ordenados por capacidad (menor primero)
-            // Solo filtrar por capacidad, los vehículos pueden servir a cualquier localidad
+            // Filtrar considerando peso ya cargado
             $vehiculosDisponibles = Vehiculo::where('activo', true)
                 ->whereRaw('LOWER(estado) = ?', ['disponible'])
-                ->where('capacidad_kg', '>=', $pesoTotal)
-                ->with('choferAsignado')
+                ->with('choferAsignado', 'entregas')
                 ->orderBy('capacidad_kg', 'asc')
                 ->get()
+                ->filter(function ($vehiculo) use ($pesoTotal) {
+                    // Usar el método mejorado que considera peso cargado
+                    return $vehiculo->tieneCapacidadPara($pesoTotal);
+                })
+                ->values()
                 ->map(function ($vehiculo) use ($pesoTotal) {
-                    $porcentajeUso = round(($pesoTotal / $vehiculo->capacidad_kg) * 100, 1);
+                    $pesoCargado = $vehiculo->obtenerPesoCargado();
+                    $capacidadDisponible = $vehiculo->obtenerCapacidadDisponible();
+                    $porcentajeUsoActual = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
+                    $porcentajeUsoConNuevasCarga = round((($pesoCargado + $pesoTotal) / $vehiculo->capacidad_kg) * 100, 1);
 
                     // Debug logging
-                    \Log::info('Mapeando vehículo:', [
+                    \Log::info('Mapeando vehículo (con peso actual):', [
                         'vehiculo_id' => $vehiculo->id,
                         'placa' => $vehiculo->placa,
-                        'chofer_asignado_id' => $vehiculo->chofer_asignado_id,
-                        'choferAsignado' => $vehiculo->choferAsignado ? [
-                            'id' => $vehiculo->choferAsignado->id,
-                            'name' => $vehiculo->choferAsignado->name,
-                            'campos' => array_keys($vehiculo->choferAsignado->toArray()),
-                        ] : 'NULL',
+                        'capacidad_total_kg' => $vehiculo->capacidad_kg,
+                        'peso_cargado_actual' => $pesoCargado,
+                        'capacidad_disponible' => $capacidadDisponible,
+                        'peso_nuevas_cargas' => $pesoTotal,
+                        'porcentaje_uso_actual' => $porcentajeUsoActual,
+                        'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
                     ]);
 
                     return [
@@ -237,7 +244,10 @@ class VehiculoController extends Controller
                         'modelo' => $vehiculo->modelo,
                         'anho' => $vehiculo->anho,
                         'capacidad_kg' => $vehiculo->capacidad_kg,
-                        'porcentaje_uso' => $porcentajeUso,
+                        'peso_cargado_actual' => $pesoCargado,
+                        'capacidad_disponible' => $capacidadDisponible,
+                        'porcentaje_uso_actual' => $porcentajeUsoActual,
+                        'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
                         'estado' => 'recomendado',
                         'choferAsignado' => $vehiculo->choferAsignado ? [
                             'id' => $vehiculo->choferAsignado->id,
@@ -255,23 +265,25 @@ class VehiculoController extends Controller
                 // Si no hay vehículos con capacidad suficiente, mostrar todos disponibles
                 $todosDisponibles = Vehiculo::where('activo', true)
                     ->whereRaw('LOWER(estado) = ?', ['disponible'])
-                    ->with('choferAsignado')
+                    ->with('choferAsignado', 'entregas')
                     ->orderBy('capacidad_kg', 'asc')
                     ->get()
                     ->map(function ($vehiculo) use ($pesoTotal) {
-                        $porcentajeUso = round(($pesoTotal / $vehiculo->capacidad_kg) * 100, 1);
-                        $excesoCarga = $pesoTotal > $vehiculo->capacidad_kg;
+                        $pesoCargado = $vehiculo->obtenerPesoCargado();
+                        $capacidadDisponible = $vehiculo->obtenerCapacidadDisponible();
+                        $porcentajeUsoActual = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
+                        $porcentajeUsoConNuevasCarga = round((($pesoCargado + $pesoTotal) / $vehiculo->capacidad_kg) * 100, 1);
+                        $excesoCarga = ($pesoCargado + $pesoTotal) > $vehiculo->capacidad_kg;
 
                         // Debug logging
-                        \Log::info('Mapeando vehículo (sin capacidad):', [
+                        \Log::info('Mapeando vehículo (capacidad insuficiente):', [
                             'vehiculo_id' => $vehiculo->id,
                             'placa' => $vehiculo->placa,
-                            'chofer_asignado_id' => $vehiculo->chofer_asignado_id,
-                            'choferAsignado' => $vehiculo->choferAsignado ? [
-                                'id' => $vehiculo->choferAsignado->id,
-                                'name' => $vehiculo->choferAsignado->name,
-                                'campos' => array_keys($vehiculo->choferAsignado->toArray()),
-                            ] : 'NULL',
+                            'capacidad_total_kg' => $vehiculo->capacidad_kg,
+                            'peso_cargado_actual' => $pesoCargado,
+                            'capacidad_disponible' => $capacidadDisponible,
+                            'peso_nuevas_cargas' => $pesoTotal,
+                            'exceso_carga' => $excesoCarga,
                         ]);
 
                         return [
@@ -281,8 +293,11 @@ class VehiculoController extends Controller
                             'modelo' => $vehiculo->modelo,
                             'anho' => $vehiculo->anho,
                             'capacidad_kg' => $vehiculo->capacidad_kg,
-                            'porcentaje_uso' => $porcentajeUso,
-                            'estado' => $excesoCarga ? 'excede_capacidad' : 'disponible',
+                            'peso_cargado_actual' => $pesoCargado,
+                            'capacidad_disponible' => $capacidadDisponible,
+                            'porcentaje_uso_actual' => $porcentajeUsoActual,
+                            'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
+                            'estado' => $excesoCarga ? 'excede_capacidad' : 'capacidad_insuficiente',
                             'choferAsignado' => $vehiculo->choferAsignado ? [
                                 'id' => $vehiculo->choferAsignado->id,
                                 'name' => $vehiculo->choferAsignado->name,
@@ -310,6 +325,7 @@ class VehiculoController extends Controller
                 'data' => [
                     'recomendado' => $recomendado,
                     'peso_total' => $pesoTotal,
+                    'disponibles_count' => $vehiculosDisponibles->count(),
                     'disponibles' => $vehiculosDisponibles->map(fn($v) => [
                         'id' => $v['id'],
                         'placa' => $v['placa'],
@@ -317,7 +333,10 @@ class VehiculoController extends Controller
                         'modelo' => $v['modelo'],
                         'anho' => $v['anho'],
                         'capacidad_kg' => $v['capacidad_kg'],
-                        'porcentaje_uso' => $v['porcentaje_uso'],
+                        'peso_cargado_actual' => $v['peso_cargado_actual'],
+                        'capacidad_disponible' => $v['capacidad_disponible'],
+                        'porcentaje_uso_actual' => $v['porcentaje_uso_actual'],
+                        'porcentaje_uso_con_nuevas_cargas' => $v['porcentaje_uso_con_nuevas_cargas'],
                         'estado' => 'disponible',
                         'choferAsignado' => $v['choferAsignado'],
                     ])->toArray(),

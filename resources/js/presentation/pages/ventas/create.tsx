@@ -228,6 +228,7 @@ export default function VentaForm() {
         );
 
         calculateTotals(newDetalles);
+        calculatePeso(newDetalles);
     };
 
     const updateDetail = (index: number, field: keyof DetalleVentaFormData, value: number | string) => {
@@ -257,6 +258,7 @@ export default function VentaForm() {
         }
 
         calculateTotals(updatedDetalles);
+        calculatePeso(updatedDetalles);
     };
 
     const removeDetail = (index: number) => {
@@ -274,6 +276,7 @@ export default function VentaForm() {
         }
 
         calculateTotals(updatedDetalles);
+        calculatePeso(updatedDetalles);
     };
 
     const calculateTotals = (detalles: DetalleProducto[]) => {
@@ -297,6 +300,41 @@ export default function VentaForm() {
             ...prev,
             subtotal: subtotal,
             total: total
+        }));
+    };
+
+    /**
+     * ✅ NUEVO: Calcular peso total de la venta
+     * Fórmula: pesoTotal = Σ(cantidad × peso_producto)
+     * Mismo patrón que calculateTotals()
+     */
+    const calculatePeso = (detalles: DetalleProducto[]) => {
+        let pesoTotal = 0;
+
+        // 🔑 Iterar cada detalle y sumar: cantidad * peso_producto
+        detalles.forEach(detalle => {
+            const peso = detalle.producto?.peso || 0;  // Peso del producto en kg
+            const cantidad = detalle.cantidad || 0;     // Cantidad vendida
+
+            // Sumar: cantidad × peso
+            pesoTotal += Number(cantidad) * Number(peso);
+        });
+
+        console.log('⚖️ Peso total calculado:', {
+            pesoTotal,
+            detallesCount: detalles.length,
+            detalles: detalles.map(d => ({
+                numero: d.numero,
+                producto: d.producto?.nombre,
+                cantidad: d.cantidad,
+                peso_unitario: d.producto?.peso,
+                subtotal_peso: Number(d.cantidad) * Number(d.producto?.peso || 0)
+            }))
+        });
+
+        setData(prev => ({
+            ...prev,
+            peso_total_estimado: pesoTotal
         }));
     };
 

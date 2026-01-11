@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ShoppingCart, User, DollarSign, Calendar, MapPin, Package, CheckCircle, AlertCircle } from 'lucide-react';
+import { ChevronDown, ShoppingCart, DollarSign, Calendar, MapPin, Package, CheckCircle, AlertCircle } from 'lucide-react';
 import { Badge } from '@/presentation/components/ui/badge';
 import type { VentaEntrega, Entrega } from '@/domain/entities/entregas';
 
@@ -21,7 +21,8 @@ const getEstadoColor = (estado: string) => {
     return estadoMap[estado] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
 };
 
-export default function VentasEntregaSection({ entrega, ventas, totalVentas }: VentasEntregaSectionProps) {
+export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaSectionProps) {
+    console.log('VentasEntregaSection render with ventas:', ventas);
     const [expandedVentaId, setExpandedVentaId] = useState<number | null>(null);
 
     if (!ventas || ventas.length === 0) {
@@ -35,7 +36,7 @@ export default function VentasEntregaSection({ entrega, ventas, totalVentas }: V
         );
     }
 
-    const montoTotal = ventas.reduce((sum, v) => sum + (typeof v.total === 'string' ? parseFloat(v.total) : v.total || 0), 0);
+    const montoTotal = ventas.reduce((sum, v) => sum + (typeof v.subtotal === 'string' ? parseFloat(v.subtotal) : v.subtotal || 0), 0);
 
     // Usar el peso de la entrega si está disponible, sino calcular desde las ventas
     // Convertir a número para evitar errores con .toFixed()
@@ -86,8 +87,8 @@ export default function VentasEntregaSection({ entrega, ventas, totalVentas }: V
             {/* Lista de ventas con acordeón */}
             <div className="space-y-3">
                 {ventas.map((venta, index) => {
-                    const isExpanded = expandedVentaId === venta.id;
-                    const ventaTotal = typeof venta.total === 'string' ? parseFloat(venta.total) : venta.total;
+                    const isExpanded = expandedVentaId === Number(venta.id);
+                    const ventaTotal = (typeof venta.subtotal === 'string' ? parseFloat(venta.subtotal) : venta.subtotal) || 0;
 
                     return (
                         <div
@@ -96,7 +97,7 @@ export default function VentasEntregaSection({ entrega, ventas, totalVentas }: V
                         >
                             {/* Tarjeta principal - Clic para expandir */}
                             <button
-                                onClick={() => setExpandedVentaId(isExpanded ? null : venta.id)}
+                                onClick={() => setExpandedVentaId(isExpanded ? null : Number(venta.id))}
                                 className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition flex items-center justify-between gap-4"
                             >
                                 <div className="flex-1">
@@ -105,8 +106,8 @@ export default function VentasEntregaSection({ entrega, ventas, totalVentas }: V
                                             {index + 1}
                                         </span>
                                         <p className="font-semibold text-gray-900 dark:text-white">{venta.numero}</p>
-                                        <Badge className={getEstadoColor(venta.estado_logistico || 'PROGRAMADO')}>
-                                            {venta.estado_logistico || 'PROGRAMADO'}
+                                        <Badge className={getEstadoColor(venta.estado_logistica?.codigo || 'PROGRAMADO')}>
+                                            {venta.estado_logistica?.codigo || 'PROGRAMADO'}
                                         </Badge>
                                     </div>
 
@@ -126,7 +127,7 @@ export default function VentasEntregaSection({ entrega, ventas, totalVentas }: V
                                         <div>
                                             <p className="text-gray-500 dark:text-gray-400">Peso</p>
                                             <p className="text-gray-900 dark:text-white font-medium">
-                                                {venta.peso_estimado || 0} kg
+                                                {venta.peso_total_estimado || 0} kg
                                             </p>
                                         </div>
                                         <div>
@@ -197,7 +198,7 @@ export default function VentasEntregaSection({ entrega, ventas, totalVentas }: V
                                             <div>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">Peso Estimado</p>
                                                 <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                                    {venta.peso_estimado || 0} kg
+                                                    {venta.peso_total_estimado || 0} kg
                                                 </p>
                                             </div>
                                         </div>

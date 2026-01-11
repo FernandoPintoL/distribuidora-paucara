@@ -90,7 +90,7 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
      * 3. Legacy format: any other format
      */
     private static normalizePaginatedResponse<T>(response: any, currentPage: number = 1): PaginatedResponse<T> {
-        // Format 1: Already normalized
+        // Format 1: Already normalized (data at root level with pagination fields)
         if (response.data && Array.isArray(response.data) && response.total !== undefined) {
             return {
                 data: response.data,
@@ -103,20 +103,33 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
             };
         }
 
-        // Format 2: Success wrapper with meta
-        if (response.success && response.data && Array.isArray(response.data)) {
+        // Format 2: Success wrapper with pagination object
+        if (response.success && response.data && Array.isArray(response.data) && response.pagination) {
             return {
                 data: response.data,
-                total: response.meta?.total || response.data.length,
-                per_page: response.meta?.per_page || 15,
-                current_page: response.meta?.current_page || currentPage,
-                last_page: response.meta?.last_page,
-                from: response.meta?.from,
-                to: response.meta?.to,
+                total: response.pagination.total || response.data.length,
+                per_page: response.pagination.per_page || 15,
+                current_page: response.pagination.current_page || currentPage,
+                last_page: response.pagination.last_page,
+                from: response.pagination.from,
+                to: response.pagination.to,
             };
         }
 
-        // Format 3: Fallback
+        // Format 3: Success wrapper with meta object
+        if (response.success && response.data && Array.isArray(response.data) && response.meta) {
+            return {
+                data: response.data,
+                total: response.meta.total || response.data.length,
+                per_page: response.meta.per_page || 15,
+                current_page: response.meta.current_page || currentPage,
+                last_page: response.meta.last_page,
+                from: response.meta.from,
+                to: response.meta.to,
+            };
+        }
+
+        // Format 4: Fallback
         return {
             data: Array.isArray(response) ? response : response.data || [],
             total: response.total || 0,
@@ -758,6 +771,76 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
         } catch (error: any) {
             console.error('Error confirmando entrega:', error);
             const message = error.response?.data?.message || 'Error al confirmar entrega';
+            NotificationService.error(message);
+            throw error;
+        }
+    }
+
+    /**
+     * Confirmar entrega de una venta específica dentro de una entrega
+     * @param entregaId - ID de la entrega
+     * @param ventaId - ID de la venta a confirmar
+     * @param data - Datos de confirmación (firma, fotos, contexto de entrega)
+     */
+    async confirmarVentaEnEntrega(
+        entregaId: Id,
+        ventaId: Id,
+        data: {
+            firma_digital_base64?: string; // Base64
+            fotos?: string[]; // Array de base64
+            observaciones?: string;
+            // ✅ NUEVO: Contexto de entrega
+            tienda_abierta?: boolean;      // ¿Tienda estaba abierta?
+            cliente_presente?: boolean;     // ¿Cliente presente?
+            motivo_rechazo?: 'TIENDA_CERRADA' | 'CLIENTE_AUSENTE' | 'CLIENTE_RECHAZA' | 'DIRECCION_INCORRECTA' | 'CLIENTE_NO_IDENTIFICADO' | 'OTRO';
+            // ✅ FASE 1: Confirmación de Pago
+            estado_pago?: 'PAGADO' | 'PARCIAL' | 'NO_PAGADO';
+            monto_recibido?: number;       // Dinero recibido del cliente
+            tipo_pago_id?: Id;             // FK a tipos_pago
+            motivo_no_pago?: string;       // Razón si NO pagó
+            // ✅ FASE 2: Foto de comprobante
+            foto_comprobante?: string;     // Base64 foto del dinero o comprobante
+        }
+    ): Promise<ActionResponse<any>> {
+        try {
+            const response = await axios.post(
+                `/api/chofer/entregas/${entregaId}/ventas/${ventaId}/confirmar-entrega`,
+                data
+            );
+            NotificationService.success('Venta entregada exitosamente');
+            return response.data;
+        } catch (error: any) {
+            console.error('Error confirmando venta:', error);
+            const message = error.response?.data?.message || 'Error al confirmar venta';
+            NotificationService.error(message);
+            throw error;
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Finalizar entrega (después de todas las ventas entregadas)
+     * @param entregaId - ID de la entrega
+     * @param data - Datos de finalización (firma, fotos, observaciones, monto recolectado)
+     */
+    async finalizarEntrega(
+        entregaId: Id,
+        data: {
+            firma_digital_base64?: string; // Base64
+            fotos?: string[]; // Array de base64
+            observaciones?: string;
+            monto_recolectado?: number; // Dinero recolectado
+        }
+    ): Promise<ActionResponse<Entrega>> {
+        try {
+            const response = await axios.post(
+                `/api/chofer/entregas/${entregaId}/finalizar-entrega`,
+                data
+            );
+            NotificationService.success('Entrega finalizada exitosamente');
+            return response.data;
+        } catch (error: any) {
+            console.error('Error finalizando entrega:', error);
+            const message = error.response?.data?.message || 'Error al finalizar entrega';
             NotificationService.error(message);
             throw error;
         }

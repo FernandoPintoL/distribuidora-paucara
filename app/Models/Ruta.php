@@ -61,11 +61,14 @@ class Ruta extends Model
     }
 
     /**
-     * Chofer asignado a la ruta
+     * Chofer asignado a la ruta (User con rol 'Chofer')
+     * FK a users.id (mismo que Entrega.chofer_id)
+     *
+     * Relación inversa: User -> empleado() para acceder a datos del empleado
      */
     public function chofer(): BelongsTo
     {
-        return $this->belongsTo(Empleado::class, 'chofer_id');
+        return $this->belongsTo(User::class, 'chofer_id');
     }
 
     /**

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import { Eye } from 'lucide-react';
+import { useEffect } from 'react';
 import type { EntregaReciente } from '@/application/hooks/use-entregas-dashboard-stats';
 import { EntregaEstadoBadge } from '@/presentation/components/entrega/EntregaEstadoBadge';
 import { LoadingState } from '@/presentation/components/entrega/LoadingState';
@@ -16,6 +17,21 @@ export function EntregasRecientes({
     loading,
     onVerEntrega,
 }: EntregasRecientesProps) {
+    // ✅ DEBUG: Verificar datos de entregas recientes
+    useEffect(() => {
+        if (entregas && entregas.length > 0) {
+            console.log('📋 [EntregasRecientes] Entregas recibidas:', {
+                cantidad: entregas.length,
+                entregas: entregas.map(e => ({
+                    id: e.id,
+                    estado: e.estado,
+                    cliente_nombre: e.cliente_nombre,
+                    chofer_nombre: e.chofer_nombre,
+                })),
+            });
+        }
+    }, [entregas]);
+
     if (loading) {
         return (
             <Card>

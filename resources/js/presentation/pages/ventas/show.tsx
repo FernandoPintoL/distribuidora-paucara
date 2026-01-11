@@ -384,29 +384,29 @@ export default function VentaShow() {
                         <div className="border-t border-gray-200 dark:border-zinc-700 pt-6">
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Total</span>
                                     <span className="text-sm text-gray-900 dark:text-white">
                                         {formatCurrency(venta.subtotal, venta.moneda.codigo)}
                                     </span>
                                 </div>
 
-                                {venta.descuento > 0 && (
+                                {/* {venta.descuento > 0 && (
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-500 dark:text-gray-400">Descuento</span>
                                         <span className="text-sm text-red-600 dark:text-red-400">
                                             -{formatCurrency(venta.descuento, venta.moneda.codigo)}
                                         </span>
                                     </div>
-                                )}
+                                )} */}
 
-                                <div className="border-t border-gray-200 dark:border-zinc-700 pt-3">
+                                {/* <div className="border-t border-gray-200 dark:border-zinc-700 pt-3">
                                     <div className="flex justify-between">
                                         <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
                                         <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                                             {formatCurrency(venta.total, venta.moneda.codigo)}
                                         </span>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                     </div>

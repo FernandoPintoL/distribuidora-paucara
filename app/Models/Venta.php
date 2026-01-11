@@ -5,6 +5,7 @@ use App\Models\Traits\GeneratesSequentialCode;
 use App\Models\Traits\ManageEstadosLogisticos;
 use App\Services\StockService;
 use Exception;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,7 @@ class Venta extends Model
         'descuento',
         'impuesto',
         'total',
+        'peso_total_estimado',  // ✅ NUEVO: Peso total en kg (cantidad * peso_producto)
         'observaciones',
         'cliente_id',
         'usuario_id',
@@ -65,6 +67,7 @@ class Venta extends Model
             'descuento'      => 'decimal:2',
             'impuesto'       => 'decimal:2',
             'total'          => 'decimal:2',
+            'peso_total_estimado' => 'decimal:2',  // ✅ NUEVO: Peso en kg con 2 decimales
             'requiere_envio' => 'boolean',
             'monto_pagado'   => 'decimal:2',
             'monto_pendiente' => 'decimal:2',
@@ -77,6 +80,27 @@ class Venta extends Model
             'pickup_confirmado_cliente_en' => 'datetime',
             'pickup_confirmado_empleado_en' => 'datetime',
         ];
+    }
+
+    /**
+     * ✅ NUEVO: Accessor para obtener el código de estado logístico desde la relación
+     *
+     * Convierte estado_logistico_id (FK) a estado_logistico (código)
+     * Permite que el frontend acceda a $venta->estado_logistico
+     * en lugar de $venta->estadoLogistica->codigo
+     */
+    protected function estadoLogistico(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                // Acceder a la relación estadoLogistica (no a este accessor para evitar recursión)
+                $relacion = $this->getAttribute('estadoLogistica');
+                if ($relacion) {
+                    return $relacion->codigo ?? 'SIN_ENTREGA';
+                }
+                return 'SIN_ENTREGA';
+            }
+        );
     }
 
     protected static function booted()
@@ -751,5 +775,21 @@ class Venta extends Model
     public function facturaElectronica()
     {
         return $this->hasOne(FacturaElectronica::class);
+    }
+
+    /**
+     * Confirmaciones de entrega para esta venta
+     *
+     * Registros de confirmación de esta venta cuando fue entregada
+     * Incluye fotos, firma digital, contexto de entrega (tienda abierta, cliente presente)
+     * y motivos de rechazo si aplica
+     *
+     * Uso:
+     *   $venta->confirmaciones              // Todas las confirmaciones
+     *   $venta->confirmaciones()->first()   // Última confirmación (o la principal)
+     */
+    public function confirmaciones()
+    {
+        return $this->hasMany(EntregaVentaConfirmacion::class);
     }
 }

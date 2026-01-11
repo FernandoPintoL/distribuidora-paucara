@@ -105,7 +105,7 @@ export function VentaEnEntregaCard({
                         <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
                             <p className="font-semibold text-green-600">
-                                Bs. {venta.total.toFixed(2)}
+                                Bs. {venta.subtotal.toFixed(2)}
                             </p>
                         </div>
                     </div>

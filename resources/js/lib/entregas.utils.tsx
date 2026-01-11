@@ -24,6 +24,9 @@ interface EstadoConfig {
 /**
  * Mapeo de estados a configuración visual
  *
+ * SINCRONIZADO con EstadosLogisticaSeeder.php y FALLBACK_ESTADOS_ENTREGA
+ * Incluye TODOS los estados de la categoría 'entrega'
+ *
  * @deprecated Use useEstadosEntregas() or useEntregaEstadoBadge() hooks instead
  * Este objeto se mantiene por compatibilidad backward, pero los estados deberían
  * obtenerse dinámicamente desde la API usando los hooks especializados.
@@ -33,12 +36,101 @@ interface EstadoConfig {
 export const ESTADOS_CONFIG: Record<EstadoEntrega, EstadoConfig> = {
     'PROGRAMADO': {
         badge: 'secondary',
-        color: 'text-blue-700 dark:text-blue-300',
-        bgColor: 'bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700',
+        color: 'text-yellow-700 dark:text-yellow-300',
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/40 border border-yellow-300 dark:border-yellow-700',
         icon: <Clock className="w-4 h-4" />,
         label: 'Programado',
         descripcion: 'Entrega programada, pendiente de preparación'
     },
+    'ASIGNADA': {
+        badge: 'secondary',
+        color: 'text-blue-700 dark:text-blue-300',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700',
+        icon: <CheckCircle className="w-4 h-4" />,
+        label: 'Asignada a Chofer',
+        descripcion: 'Asignada a chofer'
+    },
+    'PREPARACION_CARGA': {
+        badge: 'default',
+        color: 'text-purple-700 dark:text-purple-300',
+        bgColor: 'bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-700',
+        icon: <Package className="w-4 h-4" />,
+        label: 'Preparación de Carga',
+        descripcion: 'Preparando la carga del vehículo'
+    },
+    'EN_CARGA': {
+        badge: 'default',
+        color: 'text-violet-700 dark:text-violet-300',
+        bgColor: 'bg-violet-100 dark:bg-violet-900/40 border border-violet-300 dark:border-violet-700',
+        icon: <Truck className="w-4 h-4" />,
+        label: 'En Carga',
+        descripcion: 'Cargando mercancía en el vehículo'
+    },
+    'LISTO_PARA_ENTREGA': {
+        badge: 'default',
+        color: 'text-indigo-700 dark:text-indigo-300',
+        bgColor: 'bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-700',
+        icon: <CheckCircle className="w-4 h-4" />,
+        label: 'Listo para Entrega',
+        descripcion: 'Carga lista, autorizado para salir'
+    },
+    'EN_CAMINO': {
+        badge: 'default',
+        color: 'text-orange-700 dark:text-orange-300',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700',
+        icon: <Truck className="w-4 h-4" />,
+        label: 'En Camino',
+        descripcion: 'En camino al destino'
+    },
+    'EN_TRANSITO': {
+        badge: 'default',
+        color: 'text-cyan-700 dark:text-cyan-300',
+        bgColor: 'bg-cyan-100 dark:bg-cyan-900/40 border border-cyan-300 dark:border-cyan-700',
+        icon: <Truck className="w-4 h-4" />,
+        label: 'En Tránsito',
+        descripcion: 'En tránsito hacia el destino'
+    },
+    'LLEGO': {
+        badge: 'default',
+        color: 'text-teal-700 dark:text-teal-300',
+        bgColor: 'bg-teal-100 dark:bg-teal-900/40 border border-teal-300 dark:border-teal-700',
+        icon: <MapPin className="w-4 h-4" />,
+        label: 'Llegó a Destino',
+        descripcion: 'Llegó al destino, aguardando confirmación'
+    },
+    'ENTREGADO': {
+        badge: 'default',
+        color: 'text-green-700 dark:text-green-300',
+        bgColor: 'bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700',
+        icon: <CheckCircle className="w-4 h-4" />,
+        label: 'Entregado',
+        descripcion: 'Entrega confirmada al cliente'
+    },
+    'NOVEDAD': {
+        badge: 'outline',
+        color: 'text-amber-700 dark:text-amber-300',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700',
+        icon: <AlertCircle className="w-4 h-4" />,
+        label: 'Con Novedad',
+        descripcion: 'Con novedad en la entrega'
+    },
+    'RECHAZADO': {
+        badge: 'destructive',
+        color: 'text-red-700 dark:text-red-300',
+        bgColor: 'bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700',
+        icon: <XCircle className="w-4 h-4" />,
+        label: 'Rechazado',
+        descripcion: 'Entrega rechazada por el cliente'
+    },
+    'CANCELADA': {
+        badge: 'destructive',
+        color: 'text-red-700 dark:text-red-300',
+        bgColor: 'bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700',
+        icon: <XCircle className="w-4 h-4" />,
+        label: 'Cancelada',
+        descripcion: 'Entrega cancelada'
+    },
+    // Deprecated states (kept for backward compatibility)
     'EN_PREPARACION': {
         badge: 'default',
         color: 'text-yellow-700 dark:text-yellow-300',
@@ -54,54 +146,6 @@ export const ESTADOS_CONFIG: Record<EstadoEntrega, EstadoConfig> = {
         icon: <Truck className="w-4 h-4" />,
         label: 'En Ruta',
         descripcion: 'Vehículo en camino hacia el destino'
-    },
-    'EN_TRANSITO': {
-        badge: 'default',
-        color: 'text-indigo-700 dark:text-indigo-300',
-        bgColor: 'bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-700',
-        icon: <Truck className="w-4 h-4" />,
-        label: 'En Tránsito',
-        descripcion: 'En tránsito hacia el destino'
-    },
-    'ASIGNADA': {
-        badge: 'secondary',
-        color: 'text-cyan-700 dark:text-cyan-300',
-        bgColor: 'bg-cyan-100 dark:bg-cyan-900/40 border border-cyan-300 dark:border-cyan-700',
-        icon: <CheckCircle className="w-4 h-4" />,
-        label: 'Asignada',
-        descripcion: 'Asignada a chofer'
-    },
-    'EN_CAMINO': {
-        badge: 'default',
-        color: 'text-orange-700 dark:text-orange-300',
-        bgColor: 'bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700',
-        icon: <Truck className="w-4 h-4" />,
-        label: 'En Camino',
-        descripcion: 'En camino al destino'
-    },
-    'LLEGO': {
-        badge: 'default',
-        color: 'text-teal-700 dark:text-teal-300',
-        bgColor: 'bg-teal-100 dark:bg-teal-900/40 border border-teal-300 dark:border-teal-700',
-        icon: <MapPin className="w-4 h-4" />,
-        label: 'Llegó',
-        descripcion: 'Llegó al destino'
-    },
-    'ENTREGADO': {
-        badge: 'default',
-        color: 'text-green-700 dark:text-green-300',
-        bgColor: 'bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700',
-        icon: <CheckCircle className="w-4 h-4" />,
-        label: 'Entregado',
-        descripcion: 'Entrega confirmada al cliente'
-    },
-    'NOVEDAD': {
-        badge: 'outline',
-        color: 'text-amber-700 dark:text-amber-300',
-        bgColor: 'bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700',
-        icon: <AlertCircle className="w-4 h-4" />,
-        label: 'Novedad',
-        descripcion: 'Con novedad en la entrega'
     },
     'CANCELADO': {
         badge: 'destructive',

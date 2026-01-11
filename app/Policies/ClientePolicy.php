@@ -31,12 +31,12 @@ class ClientePolicy
      */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole(['super-admin', 'Super Admin'])) {
+        if ($user->hasRole('Super Admin')) {
             return true;
         }
 
         // Admin: puede ver todo pero no editar
-        if ($user->hasRole(['admin', 'Admin']) && in_array($ability, ['view', 'viewAny', 'audit'])) {
+        if ($user->hasRole('Admin') && in_array($ability, ['view', 'viewAny', 'audit'])) {
             return true;
         }
 
@@ -54,7 +54,7 @@ class ClientePolicy
         }
 
         // Preventista: ver solo SUS clientes (por preventista_id)
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             return $user->empleado?->id === $cliente->preventista_id;
         }
 
@@ -84,12 +84,12 @@ class ClientePolicy
     public function create(User $user): bool
     {
         // Super-Admin siempre
-        if ($user->hasRole(['super-admin', 'Super Admin'])) {
+        if ($user->hasRole('Super Admin')) {
             return true;
         }
 
         // Preventista con permiso
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             return $user->hasPermissionTo('clientes.create') ||
                    $user->hasPermissionTo('clientes.manage');
         }
@@ -106,7 +106,7 @@ class ClientePolicy
     public function update(User $user, Cliente $cliente): bool
     {
         // Preventista: editar solo SUS clientes
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             // Verificar que sea el preventista asignado al cliente
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
@@ -118,7 +118,7 @@ class ClientePolicy
         }
 
         // Admin NO puede editar
-        if ($user->hasRole(['admin', 'Admin'])) {
+        if ($user->hasRole('Admin')) {
             return false;
         }
 
@@ -132,7 +132,7 @@ class ClientePolicy
     public function delete(User $user, Cliente $cliente): bool
     {
         // Preventista: eliminar solo SUS clientes
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
             }
@@ -149,7 +149,7 @@ class ClientePolicy
     public function block(User $user, Cliente $cliente): bool
     {
         // Preventista: bloquear solo SUS clientes
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
             }
@@ -166,7 +166,7 @@ class ClientePolicy
     public function audit(User $user, Cliente $cliente): bool
     {
         // Preventista: ver auditoría solo de SUS clientes
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
             }
@@ -175,7 +175,7 @@ class ClientePolicy
         }
 
         // Admin: ver auditoría de cualquiera
-        if ($user->hasRole(['admin', 'Admin'])) {
+        if ($user->hasRole('Admin')) {
             return $user->hasPermissionTo('clientes.audit');
         }
 
@@ -188,7 +188,7 @@ class ClientePolicy
     public function changeState(User $user, Cliente $cliente): bool
     {
         // Preventista: cambiar estado solo de SUS clientes
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             return $user->empleado?->id === $cliente->preventista_id;
         }
 
@@ -201,7 +201,7 @@ class ClientePolicy
     public function restore(User $user, Cliente $cliente): bool
     {
         // Preventista: restaurar solo SUS clientes
-        if ($user->hasRole(['Preventista', 'preventista'])) {
+        if ($user->hasRole('Preventista')) {
             return $user->empleado?->id === $cliente->preventista_id;
         }
 
@@ -214,6 +214,6 @@ class ClientePolicy
     public function forceDelete(User $user, Cliente $cliente): bool
     {
         // Solo Super-Admin
-        return $user->hasRole(['super-admin', 'Super Admin']);
+        return $user->hasRole('Super Admin');
     }
 }

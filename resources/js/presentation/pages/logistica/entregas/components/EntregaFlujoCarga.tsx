@@ -9,7 +9,7 @@
  * ✅ Maneja transiciones de estado
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
@@ -22,6 +22,9 @@ import {
     Package,
 } from 'lucide-react';
 import type { Entrega } from '@/domain/entities/entregas';
+import type { Estado } from '@/domain/entities/estados-centralizados';
+import { useEstadosContext } from '@/application/contexts/EstadosContext';
+import { FALLBACK_ESTADOS_ENTREGA } from '@/domain/entities/estados-centralizados';
 import UbicacionMapa from './UbicacionMapa';
 
 interface EntregaFlujoCargoProps {
@@ -33,49 +36,80 @@ export default function EntregaFlujoCarga({
     entrega,
     onStateChange,
 }: EntregaFlujoCargoProps) {
+    const { getEstadosPorCategoria } = useEstadosContext();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isAutoGeolocating, setIsAutoGeolocating] = useState(false);
 
-    const flujoEstados = [
-        {
-            estado: 'PREPARACION_CARGA',
-            label: 'Preparación de Carga',
-            descripcion: 'Reporte generado, esperando carga física',
-            icon: Package,
-            color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-        },
-        {
-            estado: 'EN_CARGA',
-            label: 'En Carga',
-            descripcion: 'Carga física en progreso',
-            icon: Truck,
-            color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200',
-        },
-        {
-            estado: 'LISTO_PARA_ENTREGA',
-            label: 'Listo para Entrega',
-            descripcion: 'Carga completada, listo para partir',
-            icon: CheckCircle,
-            color: 'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-200',
-        },
-        {
-            estado: 'EN_TRANSITO',
-            label: 'En Tránsito',
-            descripcion: 'En ruta con seguimiento GPS',
-            icon: MapPin,
-            color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
-        },
-        {
-            estado: 'ENTREGADO',
-            label: 'Entregado',
-            descripcion: 'Entrega completada',
-            icon: CheckCircle,
-            color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-        },
-    ];
+    /**
+     * Mapea códigos de estado a iconos de lucide-react
+     */
+    const getIconForEstado = (codigo: string) => {
+        const iconMap: Record<string, typeof Package> = {
+            PREPARACION_CARGA: Package,
+            EN_CARGA: Truck,
+            LISTO_PARA_ENTREGA: CheckCircle,
+            EN_TRANSITO: MapPin,
+            EN_CAMINO: Truck,
+            ENTREGADO: CheckCircle,
+            PROGRAMADO: Package,
+            ASIGNADA: Truck,
+        };
+        return iconMap[codigo] || Package;
+    };
 
-    const currentStateIndex = flujoEstados.findIndex((e) => e.estado === entrega.estado);
+    /**
+     * Convierte color hexadecimal a clases de Tailwind
+     * Fallback a clases genéricas si no se puede convertir
+     */
+    const getColorClasses = (hexColor?: string) => {
+        if (!hexColor) return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200';
+
+        // Mapeo simple de colores comunes a clases Tailwind
+        const colorMap: Record<string, string> = {
+            '#FFC107': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+            '#0275D8': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+            '#9C27B0': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+            '#673AB7': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+            '#3F51B5': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200',
+            '#2196F3': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+            '#03A9F4': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200',
+            '#00BCD4': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200',
+            '#28A745': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+            '#FF9800': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+            '#F44336': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+            '#6C757D': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200',
+        };
+
+        return colorMap[hexColor] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200';
+    };
+
+    /**
+     * Obtiene los estados de entrega desde la tabla estados_logistica
+     * Ordenados por el campo `orden`
+     * Usa fallback si el contexto aún no ha cargado
+     */
+    const flujoEstados = useMemo(() => {
+        const estadosDelContexto = getEstadosPorCategoria('entrega');
+        // Usar el array del contexto si tiene datos, sino usar el fallback
+        const estados = estadosDelContexto.length > 0 ? estadosDelContexto : FALLBACK_ESTADOS_ENTREGA;
+
+        return estados
+            .sort((a, b) => a.orden - b.orden)
+            .map((estado: Estado) => ({
+                estado: estado.codigo,
+                label: estado.nombre,
+                descripcion: estado.descripcion || '',
+                icon: getIconForEstado(estado.codigo),
+                color: getColorClasses(estado.color),
+                estado_obj: estado,
+            }));
+    }, [getEstadosPorCategoria]);
+
+    // Obtener el código del estado actual
+    // Prioridad: estado_entrega_codigo > estado_entrega.codigo > estado
+    const estadoActual = entrega.estado_entrega_codigo ?? entrega.estado_entrega?.codigo ?? entrega.estado;
+    const currentStateIndex = flujoEstados.findIndex((e) => e.estado === estadoActual);
     const currentState = flujoEstados[currentStateIndex];
 
     const handleConfirmarCarga = async () => {
@@ -284,8 +318,19 @@ export default function EntregaFlujoCarga({
 
     if (!currentState) {
         return (
-            <Card className="p-6">
-                <p className="text-gray-500 dark:text-gray-400">Estado no soportado en este flujo</p>
+            <Card className="p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                <div className="flex gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                            Estado no configurado
+                        </p>
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                            El estado "{estadoActual}" no está disponible en el flujo de carga.
+                            Por favor, contacte al administrador.
+                        </p>
+                    </div>
+                </div>
             </Card>
         );
     }
@@ -432,14 +477,15 @@ export default function EntregaFlujoCarga({
             </Card>
 
             {/* Mapa de ubicación en tiempo real (si está en tránsito) */}
-            {entrega.estado === 'EN_TRANSITO' && (
+            {(entrega.estado_entrega_codigo ?? entrega.estado) === 'EN_TRANSITO' && (
                 <Card className="p-6">
                     <UbicacionMapa
+                        ventas={entrega.ventas || []}
                         latitud={entrega.latitud || 0}
                         longitud={entrega.longitud || 0}
                         nombreChofer={entrega.chofer?.nombre}
                         placa={entrega.vehiculo?.placa}
-                        entregaId={entrega.id as number}
+                        entregaId={entrega.id}
                     />
                 </Card>
             )}

@@ -113,7 +113,7 @@ class EstadoLogisticoController extends Controller
     /**
      * GET /api/transiciones/{categoria}/{codigo}
      *
-     * Obtener transiciones válidas desde un estado
+     * Obtener transiciones válidas desde un estado (por categoría y código)
      *
      * @param string $categoria Categoría del estado
      * @param string $codigo Código del estado
@@ -137,6 +137,56 @@ class EstadoLogisticoController extends Controller
                     'total' => count($detalles['transiciones_validas']),
                 ],
             ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error obteniendo transiciones',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /api/estados/{estadoId}/transiciones
+     *
+     * Obtener transiciones válidas desde un estado (por ID de estado)
+     * Endpoint optimizado para frontend que conoce el estado_entrega_id
+     *
+     * @param int $estadoId ID del estado en la tabla estados_logistica
+     * @return JsonResponse
+     */
+    public function transicionesPorId(int $estadoId): JsonResponse
+    {
+        try {
+            // Obtener el estado por ID
+            $estado = \App\Models\EstadoLogistica::findOrFail($estadoId);
+
+            // Obtener transiciones desde este estado
+            $transiciones = $estado->transicionesDesde()->get()->map(function ($transicion) {
+                return [
+                    'codigo_destino' => $transicion->estadoDestino->codigo,
+                    'nombre_destino' => $transicion->estadoDestino->nombre,
+                    'requiere_validacion' => $transicion->requiere_validacion ?? false,
+                    'icono' => $transicion->estadoDestino->icono,
+                    'color' => $transicion->estadoDestino->color,
+                ];
+            });
+
+            return response()->json([
+                'transiciones' => $transiciones,
+                'meta' => [
+                    'estado_id' => $estado->id,
+                    'estado_codigo' => $estado->codigo,
+                    'estado_nombre' => $estado->nombre,
+                    'categoria' => $estado->categoria,
+                    'total' => $transiciones->count(),
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'Estado no encontrado',
+                'estado_id' => $estadoId,
+            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Error obteniendo transiciones',

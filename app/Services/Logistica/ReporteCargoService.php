@@ -86,10 +86,22 @@ class ReporteCargoService
                 'notas' => null,
             ]);
 
+            // Obtener el estado PREPARACION_CARGA desde estados_logistica
+            $estadoPreparacion = \App\Models\EstadoLogistica::where('codigo', 'PREPARACION_CARGA')
+                ->where('categoria', 'entrega')
+                ->first();
+
+            if (!$estadoPreparacion) {
+                \Log::error('❌ Estado PREPARACION_CARGA no encontrado en estados_logistica', [
+                    'categoria' => 'entrega',
+                ]);
+            }
+
             // Actualizar la entrega con el estado (mantener reporte_carga_id para compatibilidad legacy)
             $entrega->update([
                 'reporte_carga_id' => $reporte->id,
                 'estado' => Entrega::ESTADO_PREPARACION_CARGA,
+                'estado_entrega_id' => $estadoPreparacion?->id,  // ✅ FK a estados_logistica
             ]);
 
             $this->logSuccess('Reporte de carga generado', [

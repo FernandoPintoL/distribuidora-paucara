@@ -293,9 +293,18 @@ class ProformaService
                 'precio_unitario' => $det->precio_unitario,
             ])->toArray();
 
+            // ✅ NUEVO: Calcular peso total desde detalles
+            // Fórmula: pesoTotal = Σ(cantidad × peso_producto)
+            $pesoTotal = 0;
+            foreach ($proforma->detalles as $detalle) {
+                $pesoProducto = $detalle->producto?->peso ?? 0;
+                $pesoTotal += $detalle->cantidad * $pesoProducto;
+            }
+
             \Log::info('📦 [ProformaService::convertirAVenta] Detalles preparados', [
                 'proforma_id' => $proformaId,
                 'cantidad_detalles' => count($detalles),
+                'peso_total_estimado' => $pesoTotal,
                 'detalles' => $detalles,
             ]);
 
@@ -327,6 +336,7 @@ class ProformaService
                     subtotal: $proforma->subtotal,
                     impuesto: $proforma->impuesto,
                     total: $proforma->total,
+                    peso_total_estimado: $pesoTotal,  // ✅ NUEVO: Pasar peso calculado
                     // 🔧 Obtener almacén del usuario autenticado (no de la proforma)
                     almacen_id: auth()->user()?->empresa?->almacen_id ?? 2,
                     observaciones: "Convertida desde proforma #{$proforma->numero}",
@@ -337,7 +347,7 @@ class ProformaService
                     // Campos de logística
                     requiere_envio: $requiereEnvio,
                     canal_origen: $proforma->canal_origen ?? 'WEB',
-                    estado_logistico_id: $requiereEnvio ? 27 : null,  // 27 = PENDIENTE_ENVIO
+                    estado_logistico_id: $this->obtenerEstadoLogisticoInicial($requiereEnvio),
                     // Campos de política de pago
                     politica_pago: $politicaPago,
                     estado_pago: 'PENDIENTE',
@@ -354,10 +364,18 @@ class ProformaService
                 )
             );
 
+            // Obtener el código del estado logístico asignado (para logging)
+            $estadoLogisticoInfo = $ventaDTO->estado_logistico_id
+                ? \App\Models\EstadoLogistica::find($ventaDTO->estado_logistico_id)?->codigo
+                : 'SIN_LOGISTICA';
+
             \Log::info('✅ [ProformaService::convertirAVenta] Venta creada exitosamente', [
                 'proforma_id' => $proformaId,
                 'venta_id' => $ventaDTO->id,
                 'venta_numero' => $ventaDTO->numero,
+                'requiere_envio' => $requiereEnvio,
+                'estado_logistico_id' => $ventaDTO->estado_logistico_id,
+                'estado_logistico_codigo' => $estadoLogisticoInfo,
             ]);
 
             // Liberar reserva de stock (COMENTADO: sera implementado con referencia_id correctamente)
@@ -579,5 +597,48 @@ class ProformaService
             'inicio' => $horaInicio->format('H:i:s'),
             'fin' => $horaFin->format('H:i:s'),
         ];
+    }
+
+    /**
+     * Obtener el estado logístico inicial para una venta recién creada desde proforma
+     *
+     * Estados iniciales:
+     * - Si requiere envío: PENDIENTE_ENVIO
+     * - Si es retiro: PENDIENTE_RETIRO
+     * - Si no requiere logística: null
+     *
+     * @param bool $requiereEnvio Si la venta requiere envío/logística
+     * @return int|null ID del estado logístico inicial, o null si no requiere logística
+     */
+    private function obtenerEstadoLogisticoInicial(bool $requiereEnvio): ?int
+    {
+        if (!$requiereEnvio) {
+            return null;  // Venta de mostrador, no requiere logística
+        }
+
+        // Por defecto, usar PENDIENTE_ENVIO para ventas que requieren envío
+        $estadoId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
+            ->where('categoria', 'venta_logistica')
+            ->value('id');
+
+        if (!$estadoId) {
+            \Log::error('❌ [ProformaService] Estado PENDIENTE_ENVIO no encontrado en estados_logistica', [
+                'categoria' => 'venta_logistica',
+                'codigo' => 'PENDIENTE_ENVIO',
+            ]);
+
+            // Fallback a PENDIENTE_RETIRO si PENDIENTE_ENVIO no existe
+            $estadoId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_RETIRO')
+                ->where('categoria', 'venta_logistica')
+                ->value('id');
+        }
+
+        if (!$estadoId) {
+            \Log::error('❌ [ProformaService] No hay estados logísticos disponibles', [
+                'categoria' => 'venta_logistica',
+            ]);
+        }
+
+        return $estadoId;
     }
 }

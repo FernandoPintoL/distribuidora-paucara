@@ -14,6 +14,7 @@ interface LiveTrackingMapProps {
     followingEntregaId?: number | null;
     showPolylines?: boolean;
     height?: string;
+    userLocation?: { latitude: number; longitude: number } | null;
 }
 
 const DEFAULT_CENTER = { lat: -17.78629, lng: -63.18117 }; // Bolivia
@@ -44,6 +45,7 @@ export function LiveTrackingMap({
     followingEntregaId,
     showPolylines = true,
     height = '600px',
+    userLocation,
 }: LiveTrackingMapProps) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -143,6 +145,14 @@ export function LiveTrackingMap({
     }
 
     const calculateCenter = () => {
+        // Si tenemos ubicación del usuario, usarla como centro preferido
+        if (userLocation) {
+            return {
+                lat: userLocation.latitude,
+                lng: userLocation.longitude,
+            };
+        }
+
         if (entregas.length === 0) return DEFAULT_CENTER;
 
         // Si estamos siguiendo una entrega, usar su posición
@@ -188,7 +198,22 @@ export function LiveTrackingMap({
                         }
                     }}
                 >
-                    {/* Renderizar los marcadores - estos serán actualizados por el hook */}
+                    {/* Marcador de ubicación del usuario */}
+                    {userLocation && (
+                        <AdvancedMarker
+                            position={{
+                                lat: userLocation.latitude,
+                                lng: userLocation.longitude,
+                            }}
+                            title="Mi ubicación"
+                        >
+                            <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full border-4 border-white shadow-lg">
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                        </AdvancedMarker>
+                    )}
+
+                    {/* Renderizar los marcadores de entregas */}
                     {Array.from(markers.values()).map((marker) => (
                         <AdvancedMarker
                             key={marker.id}

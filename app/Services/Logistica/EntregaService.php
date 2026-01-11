@@ -30,6 +30,13 @@ class EntregaService
 {
     use ManagesTransactions, LogsOperations;
 
+    /**
+     * DEPRECATED: Usar validación dinámica desde EstadoLogistica::puedeTransicionarA()
+     *
+     * Este array se mantiene SOLO para compatibilidad con flujos legacy (EN_CAMINO, etc.)
+     * FASE 1: Los nuevos flujos (PREPARACION_CARGA, LISTO_PARA_ENTREGA, EN_TRANSITO)
+     * validan dinámicamente desde la BD.
+     */
     private static array $transicionesValidas = [
         'PROGRAMADO' => ['ASIGNADA', 'CANCELADA'],          // Nuevo estado inicial
         'PENDIENTE' => ['ASIGNADA', 'CANCELADA'],           // Legacy
@@ -51,6 +58,90 @@ class EntregaService
         private ReporteCargoService $reporteCargoService,
         private SincronizacionVentaEntregaService $sincronizador,
     ) {}
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════
+     * MÉTODO CENTRALIZADO - FASE 1: Cambio de estado normalizado
+     * ═══════════════════════════════════════════════════════════════════
+     *
+     * RESPONSABILIDAD ÚNICA: Cambiar estado de entrega con validación dinámica
+     *
+     * Flujo garantizado:
+     * 1. Obtener estado nuevo desde BD (tabla estados_logistica)
+     * 2. Validar transición dinámicamente (puedeTransicionarA)
+     * 3. Actualizar estado_entrega_id y estado (ENUM legacy)
+     * 4. Registrar en historial
+     * 5. Sincronizar estado de ventas
+     * 6. Disparar evento centralizado
+     *
+     * ✅ REDUCE DUPLICACIÓN: 4 métodos ahora reutilizan esto
+     * ✅ VALIDACIÓN DINÁMICA: Desde BD, no hardcoded
+     * ✅ SINCRONIZACIÓN AUTOMÁTICA: Ventas se sincronizan siempre
+     * ✅ EVENTOS GARANTIZADOS: Cada cambio dispara evento
+     */
+    protected function cambiarEstadoNormalizado(
+        Entrega $entrega,
+        string $codigoEstadoNuevo,
+        array $datosAdicionales = [],
+        string $razon = ''
+    ): Entrega {
+        return $this->transaction(function () use (
+            $entrega,
+            $codigoEstadoNuevo,
+            $datosAdicionales,
+            $razon
+        ) {
+            // 1️⃣ Obtener estado nuevo desde BD
+            $estadoNuevo = \App\Models\EstadoLogistica::where('codigo', $codigoEstadoNuevo)
+                ->where('categoria', 'entrega')
+                ->firstOrFail();
+
+            // 2️⃣ Validar transición dinámicamente
+            if (!$entrega->estadoEntrega->puedeTransicionarA($estadoNuevo)) {
+                throw EstadoInvalidoException::transicionInvalida(
+                    'Entrega',
+                    $entrega->id,
+                    $entrega->estadoEntrega->codigo,
+                    $codigoEstadoNuevo
+                );
+            }
+
+            // 3️⃣ Guardar estado anterior para sincronización
+            $estadoAnterior = $entrega->estadoEntrega;
+
+            // 4️⃣ Actualizar entrega (FK normalizado + ENUM legacy)
+            $entrega->update([
+                'estado_entrega_id' => $estadoNuevo->id,
+                'estado' => $codigoEstadoNuevo,  // Mantener ENUM para retrocompatibilidad
+                ...$datosAdicionales,
+            ]);
+
+            // 5️⃣ Registrar en historial
+            $this->registrarCambioEstado(
+                $entrega,
+                $estadoAnterior->codigo,
+                $codigoEstadoNuevo,
+                $razon
+            );
+
+            // 6️⃣ Sincronizar estado de ventas automáticamente
+            $this->sincronizador->alCambiarEstadoEntrega(
+                $entrega,
+                $estadoAnterior->codigo,
+                $codigoEstadoNuevo
+            );
+
+            // 7️⃣ Disparar evento centralizado
+            event(new \App\Events\EntregaEstadoCambiado(
+                $entrega,
+                $estadoAnterior,
+                $estadoNuevo,
+                $razon
+            ));
+
+            return $entrega->refresh();
+        });
+    }
 
     /**
      * Crear entregas desde una venta
@@ -141,18 +232,26 @@ class EntregaService
             }
 
             // Validar que chofer y vehículo existan y estén disponibles
-            $chofer = \App\Models\Empleado::findOrFail($choferId);
+            // chofer_id en entregas apunta a users.id (User con rol Chofer)
+            $choferUser = \App\Models\User::with('empleado')->findOrFail($choferId);
             $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
 
+            // Validar que el usuario tenga asociado un empleado (chofer)
+            if (!$choferUser->empleado) {
+                throw new \Exception("Usuario {$choferUser->name} no tiene datos de empleado");
+            }
+
+            $choferEmpleado = $choferUser->empleado;
+
             // Validar estado del chofer
-            if ($chofer->estado !== 'activo') {
-                throw new \Exception("Chofer {$chofer->nombre} no está activo");
+            if ($choferEmpleado->estado !== 'activo') {
+                throw new \Exception("Chofer {$choferEmpleado->nombre} no está activo");
             }
 
             // Validar licencia (si está configurada)
-            if ($chofer->licencia && $chofer->fecha_vencimiento_licencia) {
-                if ($chofer->fecha_vencimiento_licencia < now()) {
-                    throw new \Exception("Chofer {$chofer->nombre} tiene licencia vencida");
+            if ($choferEmpleado->licencia && $choferEmpleado->fecha_vencimiento_licencia) {
+                if ($choferEmpleado->fecha_vencimiento_licencia < now()) {
+                    throw new \Exception("Chofer {$choferEmpleado->nombre} tiene licencia vencida");
                 }
             }
 
@@ -177,7 +276,7 @@ class EntregaService
                 $entrega,
                 $estadoAnterior,
                 'ASIGNADA',
-                "Asignado chofer: {$chofer->nombre}, Vehículo: {$vehiculo->placa}"
+                "Asignado chofer: {$choferEmpleado->nombre}, Vehículo: {$vehiculo->placa}"
             );
 
 
@@ -194,46 +293,36 @@ class EntregaService
     }
 
     /**
-     * Iniciar entrega - Cambiar a "EN_CAMINO"
+     * Iniciar entrega LEGACY - Cambiar a "EN_CAMINO"
+     *
+     * ⚠️ DEPRECATED: Este flujo es legacy (ASIGNADA → EN_CAMINO)
+     * Para nuevas implementaciones usar iniciarTransito() que es el flujo actual:
+     *   LISTO_PARA_ENTREGA → EN_TRANSITO
      *
      * El chofer inicia la ruta de entrega
-     * ⚠️ CRÍTICO: Aquí se reduce el stock de la venta
+     * CRÍTICO: Aquí se reduce el stock de la venta
+     *
+     * @deprecated Use iniciarTransito() instead (FASE 1 - nuevo flujo)
      */
     public function iniciarEntrega(int $entregaId): EntregaResponseDTO
     {
-        $entrega = $this->transaction(function () use ($entregaId) {
-            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+        $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-            // Validar que esté ASIGNADA
-            $this->validarTransicion($entrega->estado, 'EN_CAMINO');
+        // Lógica específica: reducir stock
+        $venta = $entrega->venta;
+        if ($venta && $venta->detalles && !in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
+            $this->procesarStockEntrega($entrega, 'reducir');
+        }
 
-            // Guardar estado anterior
-            $estadoAnterior = $entrega->estado;
+        // Usar método centralizado para cambio de estado
+        $entrega = $this->cambiarEstadoNormalizado(
+            $entrega,
+            'EN_CAMINO',
+            ['fecha_inicio' => now()],
+            'Chofer inicia ruta de entrega (LEGACY) - Stock reducido'
+        );
 
-            // ⚠️ PUNTO CRÍTICO: Reducir stock de la venta asociada
-            $venta = $entrega->venta;
-            if ($venta && $venta->detalles && !in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
-                $this->procesarStockEntrega($entrega, 'reducir');
-            }
-
-            // Actualizar a EN_CAMINO
-            $entrega->update([
-                'estado' => 'EN_CAMINO',
-                'fecha_inicio' => now(),
-            ]);
-
-            $this->registrarCambioEstado(
-                $entrega,
-                $estadoAnterior,
-                'EN_CAMINO',
-                'Chofer inicia ruta de entrega - Stock reducido'
-            );
-
-
-            return $entrega;
-        });
-
-        $this->logSuccess('Entrega iniciada y stock reducido', ['entrega_id' => $entregaId]);
+        $this->logSuccess('Entrega iniciada (legacy) y stock reducido', ['entrega_id' => $entregaId]);
 
         return EntregaResponseDTO::fromModel($entrega);
     }
@@ -242,32 +331,19 @@ class EntregaService
      * Registrar llegada del chofer - Cambiar a "LLEGO"
      *
      * El chofer llegó a la ubicación del cliente
+     * ✅ REFACTORIZADO FASE 1: Usa método centralizado
      */
     public function registrarLlegada(int $entregaId): EntregaResponseDTO
     {
-        $entrega = $this->transaction(function () use ($entregaId) {
-            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+        $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-            // Validar que esté EN_CAMINO
-            $this->validarTransicion($entrega->estado, 'LLEGO');
-
-            $estadoAnterior = $entrega->estado;
-
-            // Actualizar a LLEGO
-            $entrega->update([
-                'estado' => 'LLEGO',
-                'fecha_llegada' => now(),
-            ]);
-
-            $this->registrarCambioEstado(
-                $entrega,
-                $estadoAnterior,
-                'LLEGO',
-                'Chofer llegó a ubicación del cliente'
-            );
-
-            return $entrega;
-        });
+        // Usar método centralizado para cambio de estado
+        $entrega = $this->cambiarEstadoNormalizado(
+            $entrega,
+            'LLEGO',
+            ['fecha_llegada' => now()],
+            'Chofer llegó a ubicación del cliente'
+        );
 
         $this->logSuccess('Llegada registrada', ['entrega_id' => $entregaId]);
 
@@ -278,6 +354,7 @@ class EntregaService
      * Confirmar entrega exitosa - Cambiar a "ENTREGADO"
      *
      * El cliente recibió la mercadería satisfactoriamente
+     * ✅ REFACTORIZADO FASE 1: Usa método centralizado
      *
      * @param int $entregaId ID de la entrega
      * @param string|null $firmaDigitalUrl URL de la firma digital del cliente
@@ -288,39 +365,23 @@ class EntregaService
         ?string $firmaDigitalUrl = null,
         ?string $fotoEntregaUrl = null,
     ): EntregaResponseDTO {
-        $entrega = $this->transaction(function () use ($entregaId, $firmaDigitalUrl, $fotoEntregaUrl) {
-            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+        $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-            // Validar transición (desde LLEGO o EN_CAMINO para retrocompatibilidad)
-            $this->validarTransicion($entrega->estado, 'ENTREGADO');
+        // Actualizar con registros de firma/foto
+        $datosAdicionales = [
+            'fecha_entrega' => now(),
+            'fecha_firma_entrega' => $firmaDigitalUrl ? now() : null,
+            'firma_digital_url' => $firmaDigitalUrl,
+            'foto_entrega_url' => $fotoEntregaUrl,
+        ];
 
-            $estadoAnterior = $entrega->estado;
-
-            // Actualizar a ENTREGADO
-            $entrega->update([
-                'estado' => 'ENTREGADO',
-                'fecha_entrega' => now(),
-                'fecha_firma_entrega' => $firmaDigitalUrl ? now() : null,
-                'firma_digital_url' => $firmaDigitalUrl,
-                'foto_entrega_url' => $fotoEntregaUrl,
-            ]);
-
-            $this->registrarCambioEstado(
-                $entrega,
-                $estadoAnterior,
-                'ENTREGADO',
-                'Entrega confirmada por cliente - Mercadería recibida satisfactoriamente'
-            );
-
-            // Actualizar venta si existe
-            $venta = $entrega->venta;
-            if ($venta && \in_array($venta->estado, ['EN_ENTREGA', 'PENDIENTE'], true)) {
-                $venta->update(['estado' => 'ENTREGADO']);
-            }
-
-
-            return $entrega;
-        });
+        // Usar método centralizado para cambio de estado
+        $entrega = $this->cambiarEstadoNormalizado(
+            $entrega,
+            'ENTREGADO',
+            $datosAdicionales,
+            'Entrega confirmada por cliente - Mercadería recibida satisfactoriamente'
+        );
 
         $this->logSuccess('Entrega confirmada', [
             'entrega_id' => $entregaId,
@@ -335,6 +396,7 @@ class EntregaService
      * Reportar novedad en entrega - Cambiar a "NOVEDAD"
      *
      * El chofer reporta un problema: cliente ausente, dirección incorrecta, rechazo, etc.
+     * ✅ REFACTORIZADO FASE 1: Usa método centralizado
      *
      * @param int $entregaId ID de la entrega
      * @param string $motivoNovedad Descripción de la novedad
@@ -345,48 +407,27 @@ class EntregaService
         string $motivoNovedad,
         bool $devolverStock = false,
     ): EntregaResponseDTO {
-        $entrega = $this->transaction(function () use ($entregaId, $motivoNovedad, $devolverStock) {
-            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+        $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-            // Validar transición (desde EN_CAMINO o LLEGO)
-            $this->validarTransicion($entrega->estado, 'NOVEDAD');
-
-            $estadoAnterior = $entrega->estado;
-
-            // Revertir stock SOLO si es rechazo definitivo
-            if ($devolverStock) {
-                $venta = $entrega->venta;
-                if ($venta && $venta->detalles && !\in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
-                    $this->stockService->devolverStock(
-                        $venta->detalles->toArray(),
-                        "ENTREGA#{$entregaId}-NOVEDAD",
-                        $venta->almacen_id ?? null
-                    );
-                }
-            }
-
-            // Actualizar a NOVEDAD
-            $entrega->update([
-                'estado' => 'NOVEDAD',
-                'motivo_novedad' => $motivoNovedad,
-            ]);
-
-            $this->registrarCambioEstado(
-                $entrega,
-                $estadoAnterior,
-                'NOVEDAD',
-                "Novedad reportada: {$motivoNovedad}"
-            );
-
-            // Actualizar venta
+        // Lógica específica: revertir stock SOLO si es rechazo definitivo
+        if ($devolverStock) {
             $venta = $entrega->venta;
-            if ($venta) {
-                $venta->update(['estado' => 'CON_NOVEDAD']);
+            if ($venta && $venta->detalles && !\in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
+                $this->stockService->devolverStock(
+                    $venta->detalles->toArray(),
+                    "ENTREGA#{$entregaId}-NOVEDAD",
+                    $venta->almacen_id ?? null
+                );
             }
+        }
 
-
-            return $entrega;
-        });
+        // Usar método centralizado para cambio de estado
+        $entrega = $this->cambiarEstadoNormalizado(
+            $entrega,
+            'NOVEDAD',
+            ['motivo_novedad' => $motivoNovedad],
+            "Novedad reportada: {$motivoNovedad}"
+        );
 
         $this->logSuccess('Novedad reportada', [
             'entrega_id' => $entregaId,
@@ -509,10 +550,14 @@ class EntregaService
 
     /**
      * Sugerir chofer disponible
+     *
+     * Retorna un empleado (chofer) activo con licencia válida
+     * El 'id' retornado es el user_id (para asignar a chofer_id en entregas)
      */
     private function sugerirChofer(): ?array
     {
-        $chofer = \App\Models\Empleado::where('estado', 'activo')
+        $chofer = \App\Models\Empleado::with('user')
+            ->where('estado', 'activo')
             ->whereNotNull('licencia')
             ->where(function($q) {
                 $q->whereNull('fecha_vencimiento_licencia')
@@ -520,12 +565,12 @@ class EntregaService
             })
             ->first();
 
-        if (!$chofer) {
+        if (!$chofer || !$chofer->user) {
             return null;
         }
 
         return [
-            'id' => $chofer->id,
+            'id' => $chofer->user_id,  // Retornar user_id, no empleado.id
             'nombre' => $chofer->nombre,
             'licencia' => $chofer->licencia,
         ];
@@ -650,16 +695,23 @@ class EntregaService
 
             // Validar vehículo y chofer
             $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
-            // ✅ CORREGIDO: Eager load user para evitar lazy loading dentro de la transacción
-            $chofer = \App\Models\Empleado::with('user')->findOrFail($choferId);
+            // ✅ CORREGIDO: Cargar User (chofer_id apunta a users.id) con su empleado
+            $choferUser = \App\Models\User::with('empleado')->findOrFail($choferId);
+
+            // Validar que el usuario tenga asociado un empleado
+            if (!$choferUser->empleado) {
+                throw new \Exception("Usuario {$choferUser->name} no tiene datos de empleado");
+            }
+
+            $choferEmpleado = $choferUser->empleado;
 
             // Validar estado del vehículo (case-insensitive)
             if (strtolower($vehiculo->estado) !== 'disponible') {
                 throw new \Exception("Vehículo {$vehiculo->placa} no está disponible");
             }
 
-            if ($chofer->estado !== 'activo') {
-                throw new \Exception("Chofer {$chofer->nombre} no está activo");
+            if ($choferEmpleado->estado !== 'activo') {
+                throw new \Exception("Chofer {$choferEmpleado->nombre} no está activo");
             }
 
             // 1. Crear entregas desde ventas
@@ -777,8 +829,8 @@ class EntregaService
                         'capacidad_kg' => $vehiculo->capacidad_kg,
                     ],
                     'chofer' => [
-                        'id' => $chofer->id,
-                        'nombre' => $chofer->nombre,
+                        'id' => $choferUser->id,
+                        'nombre' => $choferEmpleado->nombre,
                     ],
                 ],
                 'errores' => $errores,
@@ -984,66 +1036,47 @@ class EntregaService
     /**
      * Iniciar tránsito de entrega con coordenadas GPS (cambiar a EN_TRANSITO)
      *
-     * Se ejecuta cuando el chofer inicia el viaje de entrega
-     * Requiere ubicación GPS inicial
+     * FLUJO PRINCIPAL FASE 1:
+     * - Estado anterior: LISTO_PARA_ENTREGA
+     * - Estado nuevo: EN_TRANSITO
+     * - GPS: Captura ubicación inicial
+     * - Sincronización: Ventas pasan a EN_TRANSITO automáticamente
+     *
+     * ✅ REFACTORIZADO FASE 1: Usa método centralizado + validación dinámica
+     *
+     * Se ejecuta cuando el chofer presiona "Iniciar Entrega" en la app
+     * Requiere ubicación GPS inicial del chofer
      *
      * @param int $entregaId ID de la entrega
-     * @param float $latitud Latitud inicial
-     * @param float $longitud Longitud inicial
+     * @param float $latitud Latitud inicial del chofer
+     * @param float $longitud Longitud inicial del chofer
      * @return EntregaResponseDTO
      * @throws EstadoInvalidoException
      */
     public function iniciarTransito(int $entregaId, float $latitud, float $longitud): EntregaResponseDTO
     {
-        $entrega = $this->transaction(function () use ($entregaId, $latitud, $longitud) {
-            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+        $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-            // Validar que esté en LISTO_PARA_ENTREGA
-            if ($entrega->estado !== Entrega::ESTADO_LISTO_PARA_ENTREGA) {
-                throw EstadoInvalidoException::transicionInvalida(
-                    'Entrega',
-                    $entregaId,
-                    $entrega->estado,
-                    Entrega::ESTADO_EN_TRANSITO
-                );
-            }
-
-            $estadoAnterior = $entrega->estado;
-
-            // Actualizar a EN_TRANSITO con coordenadas iniciales
-            $entrega->update([
-                'estado' => Entrega::ESTADO_EN_TRANSITO,
+        // Usar método centralizado para cambio de estado con validación dinámica
+        $entrega = $this->cambiarEstadoNormalizado(
+            $entrega,
+            'EN_TRANSITO',
+            [
                 'latitud_actual' => $latitud,
                 'longitud_actual' => $longitud,
                 'fecha_ultima_ubicacion' => now(),
-            ]);
-
-            $this->registrarCambioEstado(
-                $entrega,
-                $estadoAnterior,
-                Entrega::ESTADO_EN_TRANSITO,
-                "Chofer iniciando tránsito - Ubicación inicial: ({$latitud}, {$longitud})"
-            );
-
-            // ✅ NUEVO: Sincronizar estado de todas las ventas asociadas a EN_TRANSITO
-            // Esto notificará a los clientes que sus ventas están siendo entregadas
-            $this->sincronizador->alCambiarEstadoEntrega(
-                $entrega,
-                $estadoAnterior,
-                Entrega::ESTADO_EN_TRANSITO
-            );
-
-            // Recargar relaciones para WebSocket
-            $entrega->load(['chofer', 'ventas.cliente', 'vehiculo']);
-
-            return $entrega;
-        });
+            ],
+            "Chofer iniciando tránsito - Ubicación inicial: ({$latitud}, {$longitud})"
+        );
 
         $this->logSuccess('Entrega iniciada en tránsito', [
             'entrega_id' => $entregaId,
             'latitud' => $latitud,
             'longitud' => $longitud,
         ]);
+
+        // Recargar relaciones para WebSocket
+        $entrega->load(['chofer', 'ventas.cliente', 'vehiculo']);
 
         // Notificar por WebSocket a chofer y cliente
         try {

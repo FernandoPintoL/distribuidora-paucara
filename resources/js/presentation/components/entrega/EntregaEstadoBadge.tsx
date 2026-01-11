@@ -8,8 +8,8 @@
  * @phase Fase 3.6: Refactorización con hooks dinámicos
  */
 
-import { useMemo } from 'react';
-import { useEntregaEstadoBadge } from '@/application/hooks';
+import { useMemo, useEffect } from 'react';
+import { useEstados } from '@/application/hooks';
 import { getEstadoLabel, getEstadoIcon, getEstadoBgColor } from '@/lib/entregas.utils';
 
 interface EntregaEstadoBadgeProps {
@@ -38,33 +38,68 @@ export function EntregaEstadoBadge({
   showIcon = true,
   className
 }: EntregaEstadoBadgeProps) {
-  // Fase 3.6: Integración con hook dinámico
-  const getEstadoBadgeInfo = useEntregaEstadoBadge();
+  // ✅ MEJORADO: Usar useEstados('entrega') sin filtro onlyActive para obtener TODOS los estados de la BD
+  // (useEstadosEntregas() filtra solo activos, lo cual puede perder estados)
+  const { estados: estadosAPI, getEstadoPorCodigo } = useEstados('entrega', {
+    onlyActive: false, // ✅ Obtener TODOS los estados, no solo activos
+  });
 
-  // Obtener información dinámica del estado
+  // ✅ DEBUG: Verificar que se obtiene el estado correctamente
+  useEffect(() => {
+    // ✅ IMPORTANTE: Solo verificar si ya tenemos estados cargados
+    if (estadosAPI.length === 0) {
+      console.log(`⏳ [EntregaEstadoBadge] Estados aún cargando para código "${estado}"...`);
+      return;
+    }
+
+    const estadoEncontrado = getEstadoPorCodigo(estado);
+    if (estadoEncontrado) {
+      console.log(`✅ [EntregaEstadoBadge] Estado encontrado para código "${estado}":`, {
+        nombre: estadoEncontrado.nombre,
+        color: estadoEncontrado.color,
+        codigo: estadoEncontrado.codigo,
+      });
+    } else {
+      console.warn(`⚠️ [EntregaEstadoBadge] Estado NO encontrado para código "${estado}" (${estadosAPI.length} estados disponibles) - usando fallback`);
+    }
+  }, [estado, getEstadoPorCodigo, estadosAPI]);
+
+  // Obtener información dinámica del estado desde BD
   const memoizedContent = useMemo(() => {
-    const badgeInfo = getEstadoBadgeInfo(estado);
+    // Buscar el estado en estadosAPI
+    const estadoEncontrado = estadosAPI.find(e => e.codigo === estado);
 
-    if (badgeInfo) {
+    if (estadoEncontrado) {
+      // ✅ Usar los datos del estado desde la BD
       return {
-        bgColor: badgeInfo.bgColor,
-        textColor: badgeInfo.textColor,
-        label: badgeInfo.label,
-        icon: badgeInfo.icon,
+        bgColor: getEstadoBgColor(estado), // Usar el color de utilities para Tailwind
+        textColor: '',
+        label: estadoEncontrado.nombre,
+        icon: getEstadoIcon(estado),
+        color: estadoEncontrado.color, // Color hex para estilos inline
+        usesDbColor: true,
       };
     }
 
     // Fallback a funciones hardcodeadas si no hay información dinámica
     return {
       bgColor: getEstadoBgColor(estado),
-      textColor: '', // No se usa en fallback
+      textColor: '',
       label: getEstadoLabel(estado),
       icon: getEstadoIcon(estado),
+      color: undefined,
+      usesDbColor: false,
     };
-  }, [estado, getEstadoBadgeInfo]);
+  }, [estado, estadosAPI]);
 
   return (
-    <div className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${memoizedContent.bgColor} ${className || ''}`}>
+    <div
+      className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${memoizedContent.bgColor} ${className || ''}`}
+      style={memoizedContent.usesDbColor && memoizedContent.color ? {
+        backgroundColor: `${memoizedContent.color}20`,
+        color: memoizedContent.color,
+      } : undefined}
+    >
       {showIcon && (
         <>
           {memoizedContent.icon}

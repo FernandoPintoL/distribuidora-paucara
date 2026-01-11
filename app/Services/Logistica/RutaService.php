@@ -147,7 +147,7 @@ class RutaService
                     'localidad' => $ruta->zona?->nombre ?? 'N/A',
                     'paradas' => $ruta->cantidad_entregas ?? 0,
                     'distancia_km' => $ruta->distancia_km ?? 0,
-                    'chofer' => $ruta->chofer?->user?->name ?? 'Sin asignar',
+                    'chofer' => $ruta->chofer?->name ?? 'Sin asignar',
                     'vehiculo' => $ruta->vehiculo?->placa ?? 'Sin asignar',
                 ];
             }, $rutas);
@@ -237,7 +237,14 @@ class RutaService
             $ruta = Ruta::lockForUpdate()->findOrFail($rutaId);
 
             // ✅ VALIDAR CHOFER
-            $chofer = \App\Models\Empleado::findOrFail($choferId);
+            // chofer_id apunta a users.id, cargar User con su empleado
+            $choferUser = \App\Models\User::with('empleado')->findOrFail($choferId);
+
+            if (!$choferUser->empleado) {
+                throw new \Exception("Usuario {$choferUser->name} no tiene datos de empleado");
+            }
+
+            $chofer = $choferUser->empleado;
 
             if (!$chofer->estaActivo()) {
                 throw new \Exception("Chofer {$chofer->nombre} no está activo");
@@ -429,7 +436,7 @@ class RutaService
 
         return array_merge($progreso, [
             'estado' => $ruta->estado,
-            'chofer' => $ruta->chofer?->user?->name,
+            'chofer' => $ruta->chofer?->name,
             'zona' => $ruta->zona?->nombre,
             'distancia_km' => $ruta->distancia_km,
             'hora_salida' => $ruta->hora_salida,
@@ -453,7 +460,7 @@ class RutaService
             $errores[] = "La ruta no tiene entregas asignadas";
         }
 
-        if (!$ruta->chofer || !$ruta->chofer->licencia_vigente) {
+        if (!$ruta->chofer || !$ruta->chofer->empleado || !$ruta->chofer->empleado->licencia_vigente) {
             $errores[] = "El chofer no tiene licencia vigente";
         }
 

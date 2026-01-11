@@ -144,7 +144,7 @@ export default function SimpleEntregaForm({
                             <p className="text-xs font-medium text-blue-700 dark:text-blue-400">
                                 Monto Total
                             </p>
-                            <p className="font-semibold">Bs {venta.total.toFixed(2)}</p>
+                            <p className="font-semibold">Bs {venta.subtotal.toFixed(2)}</p>
                         </div>
                         <div>
                             <p className="text-xs font-medium text-blue-700 dark:text-blue-400">

@@ -45,6 +45,7 @@ class VentaController extends Controller
     public function __construct(
         private VentaService $ventaService,
         private \App\Services\ImpresionService $impresionService,
+        private \App\Services\PrinterService $printerService,
     ) {
         $this->middleware('permission:ventas.index')->only('index');
         $this->middleware('permission:ventas.show')->only('show');
@@ -87,6 +88,85 @@ class VentaController extends Controller
                 perPage: $request->input('per_page', 15),
                 filtros: array_filter($filtros) // Solo filtros no vacíos
             );
+
+            // ✅ NUEVO: Transformar datos para asegurar que Inertia tenga acceso a todas las relaciones
+            // Convertir modelos a arrays incluyendo explícitamente las relaciones
+            \Log::debug('📦 VentaController::index - Transformando ventas', [
+                'total' => $ventasPaginadas->total(),
+                'primera_venta_id' => $ventasPaginadas->first()?->id,
+                'primera_venta_tiene_direccion' => $ventasPaginadas->first()?->direccionCliente ? 'SÍ' : 'NO',
+                'primera_venta_direccion' => $ventasPaginadas->first()?->direccionCliente?->direccion ?? 'N/A',
+                'primera_venta_latitud' => $ventasPaginadas->first()?->direccionCliente?->latitud ?? 'N/A',
+            ]);
+
+            $ventasPaginadas->getCollection()->transform(function ($venta) {
+                return [
+                    'id' => $venta->id,
+                    'numero' => $venta->numero,
+                    'fecha' => $venta->fecha,
+                    'subtotal' => $venta->subtotal,
+                    'descuento' => $venta->descuento,
+                    'impuesto' => $venta->impuesto,
+                    'total' => $venta->total,
+                    'peso_total_estimado' => $venta->peso_total_estimado,
+                    'observaciones' => $venta->observaciones,
+                    'requiere_envio' => $venta->requiere_envio,
+                    'canal_origen' => $venta->canal_origen,
+                    'estado' => $venta->estado,
+                    'estado_logistico' => $venta->estado_logistico,
+                    'estado_logistico_id' => $venta->estado_logistico_id,
+                    'fecha_entrega_comprometida' => $venta->fecha_entrega_comprometida,
+                    'hora_entrega_comprometida' => $venta->hora_entrega_comprometida,
+                    'cliente_id' => $venta->cliente_id,
+                    'usuario_id' => $venta->usuario_id,
+                    'estado_documento_id' => $venta->estado_documento_id,
+                    'moneda_id' => $venta->moneda_id,
+                    'direccion_cliente_id' => $venta->direccion_cliente_id,
+                    'proforma_id' => $venta->proforma_id,
+                    'created_at' => $venta->created_at,
+                    'updated_at' => $venta->updated_at,
+                    // ✅ RELACIONES - Incluir explícitamente
+                    'cliente' => $venta->cliente ? [
+                        'id' => $venta->cliente->id,
+                        'nombre' => $venta->cliente->nombre,
+                        'nit' => $venta->cliente->nit,
+                        'email' => $venta->cliente->email,
+                        'telefono' => $venta->cliente->telefono,
+                    ] : null,
+                    'usuario' => $venta->usuario ? [
+                        'id' => $venta->usuario->id,
+                        'name' => $venta->usuario->name,
+                        'email' => $venta->usuario->email,
+                    ] : null,
+                    'estado_documento' => $venta->estadoDocumento ? [
+                        'id' => $venta->estadoDocumento->id,
+                        'codigo' => $venta->estadoDocumento->codigo,
+                        'nombre' => $venta->estadoDocumento->nombre,
+                    ] : null,
+                    'moneda' => $venta->moneda ? [
+                        'id' => $venta->moneda->id,
+                        'codigo' => $venta->moneda->codigo,
+                        'nombre' => $venta->moneda->nombre,
+                    ] : null,
+                    'direccionCliente' => $venta->direccionCliente ? [
+                        'id' => $venta->direccionCliente->id,
+                        'direccion' => $venta->direccionCliente->direccion,
+                        'referencias' => $venta->direccionCliente->observaciones,
+                        'localidad_id' => $venta->direccionCliente->localidad_id,
+                        'localidad' => $venta->direccionCliente->localidad?->nombre ?? null,
+                        'latitud' => (float) ($venta->direccionCliente->latitud ?? 0),
+                        'longitud' => (float) ($venta->direccionCliente->longitud ?? 0),
+                        'es_principal' => $venta->direccionCliente->es_principal,
+                        'activa' => $venta->direccionCliente->activa,
+                    ] : null,
+                    'estadoLogistica' => $venta->estadoLogistica ? [
+                        'id' => $venta->estadoLogistica->id,
+                        'codigo' => $venta->estadoLogistica->codigo,
+                        'nombre' => $venta->estadoLogistica->nombre,
+                        'categoria' => $venta->estadoLogistica->categoria,
+                    ] : null,
+                ];
+            });
 
             // Responder según cliente
             return Inertia::render('ventas/index', [
@@ -150,6 +230,36 @@ class VentaController extends Controller
 
             // 3. Delegar al Service (ÚNICA lógica de negocio)
             $ventaDTO = $this->ventaService->crear($dto, $cajaId);
+
+            // 3.5 Imprimir ticket en impresora térmica
+            try {
+                $venta = Venta::with(['cliente', 'detalles', 'tipoPago'])->findOrFail($ventaDTO->id);
+
+                $datosTicket = [
+                    'numero' => $venta->numero,
+                    'cliente_nombre' => $venta->cliente?->nombre ?? 'Cliente',
+                    'cliente_nit' => $venta->cliente?->nit ?? '',
+                    'fecha' => $venta->fecha,
+                    'detalles' => $venta->detalles->map(fn($d) => [
+                        'producto' => $d->producto?->nombre ?? 'Producto',
+                        'cantidad' => $d->cantidad,
+                        'precio' => $d->precio_unitario,
+                        'subtotal' => $d->subtotal,
+                    ])->toArray(),
+                    'subtotal' => $venta->subtotal,
+                    'descuento' => $venta->descuento,
+                    'total' => $venta->total,
+                    'tipo_pago' => $venta->tipoPago?->nombre ?? 'Contado',
+                ];
+
+                $this->printerService->printTicket($datosTicket);
+            } catch (\Exception $e) {
+                // Log error pero no fallar la creación de venta
+                \Illuminate\Support\Facades\Log::warning('Advertencia al imprimir ticket', [
+                    'venta_id' => $ventaDTO->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // 4. Responder según cliente
             return $this->respondSuccess(
@@ -305,7 +415,7 @@ class VentaController extends Controller
     {
         try {
             // Verificar permiso
-            if (!auth()->user()->hasRole('admin')) {
+            if (!auth()->user()->hasRole('Admin')) {
                 return $this->respondForbidden('No tienes permiso para anular ventas');
             }
 

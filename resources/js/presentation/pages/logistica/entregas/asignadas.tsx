@@ -13,6 +13,7 @@ import {
     Clock,
     ChevronRight,
     Plus,
+    Weight,
 } from 'lucide-react';
 import logisticaService, { type Entrega, type FiltrosEntregas } from '@/infrastructure/services/logistica.service';
 import type { Id } from '@/domain/entities/shared';
@@ -187,9 +188,9 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="flex-1">
-                                                    <h3 className="font-semibold text-lg">Entrega #{entrega.id}</h3>
+                                                    <h3 className="font-semibold text-lg">{entrega.numero_entrega || `Entrega #${entrega.id}`}</h3>
                                                     <p className="text-sm text-muted-foreground">
-                                                        Proforma: #{entrega.proforma_id}
+                                                        {entrega.proforma_id ? `Proforma: #${entrega.proforma_id}` : `${entrega.ventas?.length || 0} ventas`}
                                                     </p>
                                                 </div>
                                             </div>
@@ -199,14 +200,14 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
                                         </div>
 
                                         {/* Detalles */}
-                                        <div className="grid md:grid-cols-2 gap-4 border-y py-4">
+                                        <div className="grid md:grid-cols-3 gap-4 border-y py-4">
                                             {/* Chofer */}
                                             <div className="flex items-center gap-3">
                                                 <User className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                                                 <div className="min-w-0">
                                                     <p className="text-xs text-muted-foreground">Chofer</p>
-                                                    <p className="font-medium">
-                                                        {entrega.chofer_id ? `Asignado (#${entrega.chofer_id})` : 'No asignado'}
+                                                    <p className="font-medium truncate">
+                                                        {entrega.chofer?.nombre || (entrega.chofer_id ? `#${entrega.chofer_id}` : 'No asignado')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -216,8 +217,19 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
                                                 <Truck className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                                                 <div className="min-w-0">
                                                     <p className="text-xs text-muted-foreground">Vehículo</p>
+                                                    <p className="font-medium truncate">
+                                                        {entrega.vehiculo?.placa || (entrega.vehiculo_id ? `#${entrega.vehiculo_id}` : 'No asignado')}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Peso */}
+                                            <div className="flex items-center gap-3">
+                                                <Weight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Peso</p>
                                                     <p className="font-medium">
-                                                        {entrega.vehiculo_id ? `Asignado (#${entrega.vehiculo_id})` : 'No asignado'}
+                                                        {entrega.peso_kg ? `${entrega.peso_kg} kg` : '-'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -228,12 +240,28 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
                                                     <Clock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                                                     <div>
                                                         <p className="text-xs text-muted-foreground">Asignada</p>
-                                                        <p className="font-medium">
+                                                        <p className="font-medium text-sm">
                                                             {new Date(entrega.fecha_asignacion).toLocaleDateString('es-ES')}
                                                         </p>
                                                     </div>
                                                 </div>
                                             )}
+
+                                            {/* Total general */}
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Total</p>
+                                                <p className="font-medium">
+                                                    Bs. {(entrega.total_general || entrega.total_consolidado || 0).toFixed(2)}
+                                                </p>
+                                            </div>
+
+                                            {/* Cantidad de ventas */}
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Ventas</p>
+                                                <p className="font-medium">
+                                                    {entrega.ventas?.length || entrega.cantidad_ventas || 0}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         {/* Acciones */}
@@ -281,7 +309,7 @@ export default function EntregasAsignadas({ entregas: initialEntregas = [] }: Pr
                             value={datosAsignacion.chofer_id}
                             options={choferes.map((chofer) => ({
                                 value: chofer.id,
-                                label: chofer.nombre,
+                                label: chofer.name,
                                 description: chofer.email,
                             }))}
                             onChange={(value) => setDatosAsignacion({

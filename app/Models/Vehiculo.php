@@ -130,9 +130,32 @@ class Vehiculo extends Model
      * @param float $pesoRequerido Peso en kg
      * @return bool
      */
+    /**
+     * Obtener peso total cargado actualmente (entregas en estado NO completadas)
+     */
+    public function obtenerPesoCargado(): float
+    {
+        return $this->entregas()
+            ->whereNotIn('estado', ['ENTREGADO', 'CANCELADA'])  // Entregas pendientes o en progreso
+            ->sum('peso_kg') ?? 0.0;
+    }
+
+    /**
+     * Obtener peso disponible restante
+     */
+    public function obtenerCapacidadDisponible(): float
+    {
+        $pesoCargado = $this->obtenerPesoCargado();
+        return max(0, (float) $this->capacidad_kg - $pesoCargado);
+    }
+
+    /**
+     * Verificar si el vehículo tiene capacidad para un peso adicional
+     * Considera el peso ya cargado en entregas pendientes
+     */
     public function tieneCapacidadPara(float $pesoRequerido): bool
     {
-        return $this->capacidad_kg >= $pesoRequerido;
+        return $this->obtenerCapacidadDisponible() >= $pesoRequerido;
     }
 
     /**

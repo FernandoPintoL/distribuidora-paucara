@@ -157,7 +157,7 @@ export default function CreateEntregasUnificado({
         return {
             count: selectedVentaIds.length,
             pesoTotal: selectedVentas.reduce((sum, v) => sum + (v.peso_estimado ?? 0), 0),
-            montoTotal: selectedVentas.reduce((sum, v) => sum + (v.total ?? 0), 0),
+            montoTotal: selectedVentas.reduce((sum, v) => sum + (v.subtotal ?? 0), 0),
         };
     }, [ventas, selectedVentaIds]);
 
@@ -201,7 +201,7 @@ export default function CreateEntregasUnificado({
                     numero_venta: v.numero_venta,
                     cliente: v.cliente?.nombre,
                     peso_estimado: v.peso_estimado,
-                    total: v.total,
+                    subtotal: v.subtotal,
                 }))
             });
 

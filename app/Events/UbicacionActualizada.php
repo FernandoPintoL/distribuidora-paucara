@@ -26,6 +26,7 @@ class UbicacionActualizada implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     // Parámetros del evento
+    public int $id;
     public int $entregaId;
     public float $latitud;
     public float $longitud;
@@ -50,8 +51,10 @@ class UbicacionActualizada implements ShouldBroadcast
         float $altitud = 0,
         float $precision = 0,
         string $timestamp = '',
-        string $choferNombre = 'Desconocido'
+        string $choferNombre = 'Desconocido',
+        int $id = 0
     ) {
+        $this->id = $id;
         $this->entregaId = $entregaId;
         $this->latitud = $latitud;
         $this->longitud = $longitud;
@@ -83,6 +86,7 @@ class UbicacionActualizada implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
+            'id'           => $this->id,
             'entrega_id'   => $this->entregaId,
             'latitud'      => $this->latitud,
             'longitud'     => $this->longitud,

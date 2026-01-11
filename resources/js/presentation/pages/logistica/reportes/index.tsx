@@ -347,7 +347,7 @@ export default function ReportesIndex({
                                 <option value="">Todos los choferes</option>
                                 {choferes.map((chofer) => (
                                     <option key={chofer.id} value={chofer.id}>
-                                        {chofer.nombre}
+                                        {chofer.name}
                                     </option>
                                 ))}
                             </select>

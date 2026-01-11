@@ -305,7 +305,7 @@ class ProformaController extends Controller
             // 3. Es cualquier empleado de la distribuidora (can view proformas)
             $user = auth()->user();
             $isOwnProforma = $proforma->cliente_id === $user->cliente_id;
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->hasRole('Admin');
 
             // Si llega aquí es porque pudo ver/acceder a la proforma
             // Si es cliente y no es suya, rechazar

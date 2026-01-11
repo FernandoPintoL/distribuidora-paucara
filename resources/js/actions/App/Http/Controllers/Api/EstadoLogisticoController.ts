@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::categorias
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:214
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:264
  * @route '/api/estados/categorias'
  */
 export const categorias = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ categorias.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::categorias
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:214
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:264
  * @route '/api/estados/categorias'
  */
 categorias.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ categorias.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::categorias
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:214
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:264
  * @route '/api/estados/categorias'
  */
 categorias.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ categorias.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::categorias
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:214
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:264
  * @route '/api/estados/categorias'
  */
 categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::categorias
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:214
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:264
  * @route '/api/estados/categorias'
  */
     const categoriasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::categorias
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:214
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:264
  * @route '/api/estados/categorias'
  */
         categoriasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::categorias
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:214
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:264
  * @route '/api/estados/categorias'
  */
         categoriasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ categorias.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     categorias.form = categoriasForm
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::buscar
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:275
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:325
  * @route '/api/estados/buscar'
  */
 export const buscar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ buscar.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::buscar
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:275
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:325
  * @route '/api/estados/buscar'
  */
 buscar.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ buscar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::buscar
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:275
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:325
  * @route '/api/estados/buscar'
  */
 buscar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ buscar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::buscar
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:275
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:325
  * @route '/api/estados/buscar'
  */
 buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::buscar
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:275
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:325
  * @route '/api/estados/buscar'
  */
     const buscarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::buscar
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:275
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:325
  * @route '/api/estados/buscar'
  */
         buscarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::buscar
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:275
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:325
  * @route '/api/estados/buscar'
  */
         buscarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -155,6 +155,103 @@ buscar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     buscar.form = buscarForm
+/**
+* @see \App\Http\Controllers\Api\EstadoLogisticoController::transicionesPorId
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:157
+ * @route '/api/estados/{estadoId}/transiciones'
+ */
+export const transicionesPorId = (args: { estadoId: string | number } | [estadoId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: transicionesPorId.url(args, options),
+    method: 'get',
+})
+
+transicionesPorId.definition = {
+    methods: ["get","head"],
+    url: '/api/estados/{estadoId}/transiciones',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EstadoLogisticoController::transicionesPorId
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:157
+ * @route '/api/estados/{estadoId}/transiciones'
+ */
+transicionesPorId.url = (args: { estadoId: string | number } | [estadoId: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { estadoId: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    estadoId: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        estadoId: args.estadoId,
+                }
+
+    return transicionesPorId.definition.url
+            .replace('{estadoId}', parsedArgs.estadoId.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EstadoLogisticoController::transicionesPorId
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:157
+ * @route '/api/estados/{estadoId}/transiciones'
+ */
+transicionesPorId.get = (args: { estadoId: string | number } | [estadoId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: transicionesPorId.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EstadoLogisticoController::transicionesPorId
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:157
+ * @route '/api/estados/{estadoId}/transiciones'
+ */
+transicionesPorId.head = (args: { estadoId: string | number } | [estadoId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: transicionesPorId.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EstadoLogisticoController::transicionesPorId
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:157
+ * @route '/api/estados/{estadoId}/transiciones'
+ */
+    const transicionesPorIdForm = (args: { estadoId: string | number } | [estadoId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: transicionesPorId.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EstadoLogisticoController::transicionesPorId
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:157
+ * @route '/api/estados/{estadoId}/transiciones'
+ */
+        transicionesPorIdForm.get = (args: { estadoId: string | number } | [estadoId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: transicionesPorId.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EstadoLogisticoController::transicionesPorId
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:157
+ * @route '/api/estados/{estadoId}/transiciones'
+ */
+        transicionesPorIdForm.head = (args: { estadoId: string | number } | [estadoId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: transicionesPorId.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    transicionesPorId.form = transicionesPorIdForm
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::porCategoria
  * @see app/Http/Controllers/Api/EstadoLogisticoController.php:27
@@ -349,7 +446,7 @@ porCodigo.head = (args: { categoria: string | number, codigo: string | number } 
     porCodigo.form = porCodigoForm
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::estadisticas
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:251
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:301
  * @route '/api/estados/{categoria}/estadisticas'
  */
 export const estadisticas = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -364,7 +461,7 @@ estadisticas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::estadisticas
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:251
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:301
  * @route '/api/estados/{categoria}/estadisticas'
  */
 estadisticas.url = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -392,7 +489,7 @@ estadisticas.url = (args: { categoria: string | number } | [categoria: string | 
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::estadisticas
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:251
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:301
  * @route '/api/estados/{categoria}/estadisticas'
  */
 estadisticas.get = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -401,7 +498,7 @@ estadisticas.get = (args: { categoria: string | number } | [categoria: string | 
 })
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::estadisticas
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:251
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:301
  * @route '/api/estados/{categoria}/estadisticas'
  */
 estadisticas.head = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -411,7 +508,7 @@ estadisticas.head = (args: { categoria: string | number } | [categoria: string |
 
     /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::estadisticas
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:251
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:301
  * @route '/api/estados/{categoria}/estadisticas'
  */
     const estadisticasForm = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -421,7 +518,7 @@ estadisticas.head = (args: { categoria: string | number } | [categoria: string |
 
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::estadisticas
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:251
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:301
  * @route '/api/estados/{categoria}/estadisticas'
  */
         estadisticasForm.get = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -430,7 +527,7 @@ estadisticas.head = (args: { categoria: string | number } | [categoria: string |
         })
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::estadisticas
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:251
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:301
  * @route '/api/estados/{categoria}/estadisticas'
  */
         estadisticasForm.head = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -541,7 +638,7 @@ transicionesDisponibles.head = (args: { categoria: string | number, codigo: stri
     transicionesDisponibles.form = transicionesDisponiblesForm
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::obtenerMapeo
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:158
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:208
  * @route '/api/mapeos/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}'
  */
 export const obtenerMapeo = (args: { categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number } | [categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -556,7 +653,7 @@ obtenerMapeo.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::obtenerMapeo
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:158
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:208
  * @route '/api/mapeos/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}'
  */
 obtenerMapeo.url = (args: { categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number } | [categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number ], options?: RouteQueryOptions) => {
@@ -585,7 +682,7 @@ obtenerMapeo.url = (args: { categoriaOrigen: string | number, codigoOrigen: stri
 
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::obtenerMapeo
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:158
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:208
  * @route '/api/mapeos/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}'
  */
 obtenerMapeo.get = (args: { categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number } | [categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -594,7 +691,7 @@ obtenerMapeo.get = (args: { categoriaOrigen: string | number, codigoOrigen: stri
 })
 /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::obtenerMapeo
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:158
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:208
  * @route '/api/mapeos/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}'
  */
 obtenerMapeo.head = (args: { categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number } | [categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -604,7 +701,7 @@ obtenerMapeo.head = (args: { categoriaOrigen: string | number, codigoOrigen: str
 
     /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::obtenerMapeo
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:158
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:208
  * @route '/api/mapeos/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}'
  */
     const obtenerMapeoForm = (args: { categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number } | [categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -614,7 +711,7 @@ obtenerMapeo.head = (args: { categoriaOrigen: string | number, codigoOrigen: str
 
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::obtenerMapeo
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:158
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:208
  * @route '/api/mapeos/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}'
  */
         obtenerMapeoForm.get = (args: { categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number } | [categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -623,7 +720,7 @@ obtenerMapeo.head = (args: { categoriaOrigen: string | number, codigoOrigen: str
         })
             /**
 * @see \App\Http\Controllers\Api\EstadoLogisticoController::obtenerMapeo
- * @see app/Http/Controllers/Api/EstadoLogisticoController.php:158
+ * @see app/Http/Controllers/Api/EstadoLogisticoController.php:208
  * @route '/api/mapeos/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}'
  */
         obtenerMapeoForm.head = (args: { categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number } | [categoriaOrigen: string | number, codigoOrigen: string | number, categoriaDestino: string | number ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -637,6 +734,6 @@ obtenerMapeo.head = (args: { categoriaOrigen: string | number, codigoOrigen: str
         })
     
     obtenerMapeo.form = obtenerMapeoForm
-const EstadoLogisticoController = { categorias, buscar, porCategoria, porCodigo, estadisticas, transicionesDisponibles, obtenerMapeo }
+const EstadoLogisticoController = { categorias, buscar, transicionesPorId, porCategoria, porCodigo, estadisticas, transicionesDisponibles, obtenerMapeo }
 
 export default EstadoLogisticoController

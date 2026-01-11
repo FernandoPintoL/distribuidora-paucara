@@ -34,6 +34,8 @@ class VentaResponseDTO extends BaseDTO
         public string $updated_at = '',
         public ?bool $requiere_envio = null,
         public ?string $estado_logistico = null,
+        public ?int $estado_logistico_id = null,  // ✅ NUEVO: ID del estado logístico
+        public ?array $estadoLogistica = null,    // ✅ NUEVO: Objeto con id, codigo, nombre
         public ?string $canal_origen = null,
         public ?array $tipo_pago = null,
         public ?array $proforma = null,
@@ -45,7 +47,7 @@ class VentaResponseDTO extends BaseDTO
      */
     public static function fromModel($venta): static
     {
-        // Cargar relaciones si existen
+        // ✅ ACTUALIZADO: Cargar todas las relaciones necesarias
         if (!isset($venta->estadoDocumento)) {
             $venta->load('estadoDocumento');
         }
@@ -62,7 +64,13 @@ class VentaResponseDTO extends BaseDTO
             $venta->load('proforma');
         }
         if (!isset($venta->direccionCliente)) {
-            $venta->load('direccionCliente');
+            $venta->load('direccionCliente.localidad');  // ✅ Cargar con localidad para mapas
+        } elseif (!isset($venta->direccionCliente->localidad)) {
+            // Si direccionCliente existe pero no localidad, cargar solo localidad
+            $venta->direccionCliente->load('localidad');
+        }
+        if (!isset($venta->estadoLogistica)) {
+            $venta->load('estadoLogistica');  // ✅ NUEVO: Cargar estado logístico
         }
 
         return new self(
@@ -118,6 +126,13 @@ class VentaResponseDTO extends BaseDTO
             updated_at: $venta->updated_at->toIso8601String(),
             requiere_envio: $venta->requiere_envio,
             estado_logistico: $venta->estado_logistico,
+            estado_logistico_id: $venta->estado_logistico_id,  // ✅ NUEVO: ID de la FK
+            estadoLogistica: $venta->estadoLogistica ? [       // ✅ NUEVO: Relación completa
+                'id' => $venta->estadoLogistica->id,
+                'codigo' => $venta->estadoLogistica->codigo,
+                'nombre' => $venta->estadoLogistica->nombre ?? null,
+                'categoria' => $venta->estadoLogistica->categoria ?? null,
+            ] : null,
             canal_origen: $venta->canal_origen,
             tipo_pago: $venta->tipoPago ? [
                 'id' => $venta->tipoPago->id,
@@ -132,6 +147,11 @@ class VentaResponseDTO extends BaseDTO
                 'direccion' => $venta->direccionCliente->direccion,
                 'referencias' => $venta->direccionCliente->observaciones ?? null,
                 'localidad' => $venta->direccionCliente->localidad?->nombre ?? null,
+                'localidad_id' => $venta->direccionCliente->localidad_id,
+                'latitud' => (float) ($venta->direccionCliente->latitud ?? 0),    // ✅ NUEVO: Para mapas
+                'longitud' => (float) ($venta->direccionCliente->longitud ?? 0), // ✅ NUEVO: Para mapas
+                'es_principal' => $venta->direccionCliente->es_principal ?? false,
+                'activa' => $venta->direccionCliente->activa ?? true,
             ] : null,
         );
     }

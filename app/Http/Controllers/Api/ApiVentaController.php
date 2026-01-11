@@ -220,7 +220,7 @@ class ApiVentaController extends Controller
 
         // Verificar si tiene rol de almacén (si existe sistema de roles)
         if (method_exists($user, 'hasRole')) {
-            return $user->hasRole(['almacen', 'admin']);
+            return $user->hasRole(['Gestor de Almacén', 'Admin']);
         }
 
         // Verificar si tiene permisos explícitos

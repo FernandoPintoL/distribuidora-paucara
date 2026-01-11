@@ -51,7 +51,7 @@ class RutaPlanificada implements ShouldBroadcast
             'fecha_ruta' => $this->ruta->fecha_ruta->format('Y-m-d'),
             'localidad_id' => $this->ruta->localidad_id,
             'chofer_id' => $this->ruta->chofer_id,
-            'chofer_nombre' => $this->ruta->chofer->nombre ?? 'N/A',
+            'chofer_nombre' => $this->ruta->chofer?->empleado?->nombre ?? $this->ruta->chofer?->name ?? 'N/A',
             'vehiculo_id' => $this->ruta->vehiculo_id,
             'vehiculo_placa' => $this->ruta->vehiculo->placa ?? 'N/A',
             'estado' => $this->ruta->estado,

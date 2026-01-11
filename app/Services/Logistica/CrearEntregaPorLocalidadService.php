@@ -301,14 +301,20 @@ class CrearEntregaPorLocalidadService
 
     /**
      * Validar chofer
+     *
+     * @param int $choferId ID del User (no Empleado)
+     * @return Empleado El empleado asociado al user
      */
     private function validarChofer(int $choferId): Empleado
     {
-        $chofer = Empleado::lockForUpdate()->find($choferId);
+        // chofer_id apunta a users.id
+        $choferUser = \App\Models\User::with('empleado')->lockForUpdate()->find($choferId);
 
-        if (!$chofer) {
-            throw new Exception("Chofer #$choferId no existe");
+        if (!$choferUser || !$choferUser->empleado) {
+            throw new Exception("Chofer (Usuario) #$choferId no existe o no tiene datos de empleado");
         }
+
+        $chofer = $choferUser->empleado;
 
         // Validar estado
         if ($chofer->estado !== 'activo') {
@@ -329,7 +335,7 @@ class CrearEntregaPorLocalidadService
         }
 
         Log::info('Chofer validado', [
-            'chofer_id' => $choferId,
+            'chofer_user_id' => $choferId,
             'nombre' => $chofer->nombre,
         ]);
 
@@ -369,7 +375,15 @@ class CrearEntregaPorLocalidadService
      */
 
     /**
-     * Calcular métricas consolidadas de ventas
+     * ✅ ACTUALIZADO: Calcular métricas consolidadas de ventas
+     *
+     * Ahora usa peso_total_estimado (pre-calculado cuando se crea la venta)
+     * en lugar de calcular desde detalles cada vez
+     *
+     * VENTAJAS:
+     * - Performance: O(n) en lugar de O(n*m) donde m = detalles por venta
+     * - Auditabilidad: El peso está persistido en BD para cada venta
+     * - Consistencia: Mismo peso que se usa en validaciones de stock
      */
     private function calcularMetricas(array $ventas): array
     {
@@ -378,9 +392,9 @@ class CrearEntregaPorLocalidadService
         $montoTotal = 0;
 
         foreach ($ventas as $venta) {
-            // Si peso_estimado no está definido, usar un valor por defecto de 5kg por venta
-            // (esto es una aproximación hasta que el usuario ingrese pesos reales)
-            $peso = $venta['peso_estimado'] ?? 5;
+            // ✅ NUEVO: Usar peso_total_estimado calculado al crear venta
+            // Si es null (para ventas antiguas sin peso calculado), usar 0
+            $peso = $venta['peso_total_estimado'] ?? 0;
             $pesoTotal += $peso;
             $volumenTotal += $venta['volumen_estimado'] ?? 0;
             $montoTotal += $venta['total'] ?? 0;
@@ -469,6 +483,30 @@ class CrearEntregaPorLocalidadService
             $fechaProgramada = now()->addDay();
         }
 
+        // Obtener el estado inicial PREPARACION_CARGA desde estados_logistica
+        $estadoInicial = \App\Models\EstadoLogistica::where('codigo', 'PREPARACION_CARGA')
+            ->where('categoria', 'entrega')
+            ->first();
+
+        if (!$estadoInicial) {
+            Log::error('❌ Estado PREPARACION_CARGA no encontrado en estados_logistica', [
+                'categoria' => 'entrega',
+                'estados_disponibles' => \App\Models\EstadoLogistica::where('categoria', 'entrega')
+                    ->pluck('codigo')
+                    ->toArray(),
+            ]);
+            // Fallback: intentar sin categoría específica
+            $estadoInicial = \App\Models\EstadoLogistica::where('codigo', 'PREPARACION_CARGA')->first();
+        }
+
+        $estadoEntregaId = $estadoInicial?->id;
+
+        Log::info('🔧 [CrearEntregaConsolidada] Estado obtenido', [
+            'codigo' => $estadoInicial?->codigo ?? 'NULL',
+            'estado_entrega_id' => $estadoEntregaId ?? 'NULL',
+            'estado_completo' => $estadoInicial,
+        ]);
+
         // Crear entrega sin número primero (para obtener el ID)
         $entrega = Entrega::create([
             'numero_entrega' => '',  // Temporal, se actualizará después
@@ -477,11 +515,19 @@ class CrearEntregaPorLocalidadService
             'zona_id' => $localidadId,  // Usar localidadId (puede ser null)
             'peso_kg' => $metricas['peso_total'],
             'volumen_m3' => $metricas['volumen_total'],
-            'estado' => Entrega::ESTADO_PROGRAMADO,
+            'estado' => $estadoInicial?->codigo ?? Entrega::ESTADO_PREPARACION_CARGA,  // Mantener estado ENUM como estaba
+            'estado_entrega_id' => $estadoEntregaId,  // ✅ FK a estados_logistica con el ID de PREPARACION_CARGA
             'fecha_asignacion' => now(),
             'fecha_programada' => $fechaProgramada,
             'descripcion' => $datos['descripcion'] ?? null,
             'observaciones' => $datos['observaciones'] ?? null,
+        ]);
+
+        Log::info('✅ Entrega creada (con estado_entrega_id)', [
+            'entrega_id' => $entrega->id,
+            'estado' => $entrega->estado,
+            'estado_entrega_id' => $entrega->estado_entrega_id,
+            'es_null' => is_null($entrega->estado_entrega_id),
         ]);
 
         // Generar número de entrega con el ID

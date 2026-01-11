@@ -116,6 +116,7 @@ class VentaService
                 'subtotal' => $dto->subtotal,
                 'impuesto' => $dto->impuesto,
                 'total' => $dto->total,
+                'peso_total_estimado' => $dto->peso_total_estimado ?? 0,  // ✅ NUEVO: Peso total calculado
                 'estado' => 'PENDIENTE',
                 'estado_documento_id' => $estadoPendiente?->id ?? 2,
                 'moneda_id' => $monedaDefecto?->id ?? 1,
@@ -297,14 +298,15 @@ class VentaService
     public function obtener(int $ventaId): VentaResponseDTO
     {
         $venta = $this->read(fn() => Venta::with([
-            'detalles',
+            'detalles.producto',  // ✅ Incluir productos de detalles
             'cliente',
             'usuario',
             'estadoDocumento',
             'moneda',
             'tipoPago',
             'proforma',
-            'direccionCliente'
+            'direccionCliente.localidad',  // ✅ Cargar localidad para mapas
+            'estadoLogistica'              // ✅ NUEVO: Estado logístico
         ])->findOrFail($ventaId));
 
         return VentaResponseDTO::fromModel($venta);
@@ -319,7 +321,17 @@ class VentaService
     public function listar(int $perPage = 15, array $filtros = []): LengthAwarePaginator
     {
         return $this->read(function () use ($perPage, $filtros) {
-            $query = Venta::with(['cliente', 'estadoDocumento', 'usuario', 'moneda', 'direccionCliente'])
+            // ✅ ACTUALIZADO: Cargar todas las relaciones necesarias para el frontend
+            // Incluye estadoLogistica para mostrar estado de entregas en tabla
+            $query = Venta::with([
+                'cliente',
+                'estadoDocumento',
+                'usuario',
+                'moneda',
+                'direccionCliente.localidad',  // ✅ Cargar localidad de la dirección para mapas
+                'estadoLogistica',  // ✅ NUEVO: Para mostrar estado logístico en tabla
+                'detalles.producto' // ✅ RECOMENDADO: Para verificar peso_total_estimado si es necesario
+            ])
                 ->when($filtros['estado'] ?? null, fn($q, $estado) =>
                     $q->where('estado', $estado)
                 )
@@ -364,10 +376,22 @@ class VentaService
                         : ($tipoVenta === 'presencial' ? $q->where('requiere_envio', false) : $q)
                 );
 
-            return $query
+            $resultado = $query
                 ->orderByDesc('fecha')
                 ->orderByDesc('id')
                 ->paginate($perPage);
+
+            // ✅ DEBUG: Verificar que las relaciones se cargaron correctamente
+            \Log::debug('📦 VentaService::listar - Primeras ventas cargadas', [
+                'total' => $resultado->total(),
+                'primera_venta_id' => $resultado->first()?->id ?? 'N/A',
+                'tiene_direccion_cliente' => $resultado->first()?->direccionCliente ? 'SÍ' : 'NO',
+                'tiene_estadoLogistica' => $resultado->first()?->estadoLogistica ? 'SÍ' : 'NO',
+                'latitud' => $resultado->first()?->direccionCliente?->latitud ?? 'N/A',
+                'longitud' => $resultado->first()?->direccionCliente?->longitud ?? 'N/A',
+            ]);
+
+            return $resultado;
         });
     }
 

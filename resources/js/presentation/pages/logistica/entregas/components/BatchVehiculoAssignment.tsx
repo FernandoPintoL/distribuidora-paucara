@@ -185,7 +185,7 @@ export default function BatchVehiculoAssignment({
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <h4 className="font-semibold text-gray-900 dark:text-white">
-                                                {chofer.nombre}
+                                                {chofer.name}
                                             </h4>
                                             {chofer.email && (
                                                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">

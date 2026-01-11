@@ -113,7 +113,7 @@ export default function WizardStep1Venta({
                                         <div>
                                             <p className="text-gray-600 dark:text-gray-400">Total</p>
                                             <p className="font-semibold dark:text-white">
-                                                Bs {venta.total.toLocaleString('es-BO', {
+                                                Bs {venta.subtotal.toLocaleString('es-BO', {
                                                     minimumFractionDigits: 2,
                                                     maximumFractionDigits: 2,
                                                 })}

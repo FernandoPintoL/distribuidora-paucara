@@ -69,7 +69,13 @@ class Empleado extends Model
     }
 
     /**
-     * Entregas asignadas a este chofer
+     * ⚠️ DEPRECADO: Entregas asignadas a este chofer
+     *
+     * NOTA: Esta relación es históricamente incorrecta.
+     * En FASE 3, chofer_id en entregas apunta a users.id, no a empleados.id
+     * Usar $user->entregas() en su lugar
+     *
+     * @deprecated Usar $empleado->user->entregas() en su lugar
      */
     public function entregas(): HasMany
     {

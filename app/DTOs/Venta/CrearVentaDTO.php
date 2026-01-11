@@ -20,6 +20,7 @@ class CrearVentaDTO extends BaseDTO
         public float $subtotal,
         public float $impuesto,
         public float $total,
+        public ?float $peso_total_estimado = null,  // ✅ NUEVO: Peso total en kg (cantidad * peso_producto)
         public int $almacen_id = 2,
         public ?string $observaciones = null,
         public ?int $usuario_id = null,
@@ -54,6 +55,7 @@ class CrearVentaDTO extends BaseDTO
             subtotal: (float) $request->input('subtotal', 0),
             impuesto: (float) $request->input('impuesto', 0),
             total: (float) $request->input('total', 0),
+            peso_total_estimado: $request->has('peso_total_estimado') ? (float) $request->input('peso_total_estimado') : null,  // ✅ NUEVO
             almacen_id: (int) $request->input('almacen_id', 1),
             observaciones: $request->input('observaciones'),
             usuario_id: $user ? $user->id : null,

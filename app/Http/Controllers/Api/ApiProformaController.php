@@ -2036,6 +2036,14 @@ class ApiProformaController extends Controller
                     throw new \Exception('No se encontraron los estados logísticos requeridos en la base de datos');
                 }
 
+                // ✅ NUEVO: Calcular peso total desde detalles
+                // Fórmula: pesoTotal = Σ(cantidad × peso_producto)
+                $pesoTotal = 0;
+                foreach ($proforma->detalles as $detalle) {
+                    $pesoProducto = $detalle->producto?->peso ?? 0;
+                    $pesoTotal += $detalle->cantidad * $pesoProducto;
+                }
+
                 // Preparar datos para la venta desde la proforma
                 $datosVenta = [
                     'numero' => \App\Models\Venta::generarNumero(),
@@ -2044,6 +2052,7 @@ class ApiProformaController extends Controller
                     'descuento' => $proforma->descuento ?? 0,
                     'impuesto' => $proforma->impuesto,
                     'total' => $proforma->total,
+                    'peso_total_estimado' => $pesoTotal,  // ✅ NUEVO: Pasar peso calculado
                     'observaciones' => $proforma->observaciones,
                     'cliente_id' => $proforma->cliente_id,
                     'usuario_id' => request()->user()->id,
@@ -2310,10 +2319,10 @@ class ApiProformaController extends Controller
 
             $query->where('cliente_id', $clienteId);
         }
-        elseif ($user->hasRole('preventista')) {
+        elseif ($user->hasRole('Preventista')) {
             $query->where('usuario_creador_id', $user->id);
         }
-        elseif ($user->hasAnyRole(['logistica', 'admin', 'cajero', 'manager', 'encargado', 'chofer'])) {
+        elseif ($user->hasAnyRole(['Gestor de Logística', 'Admin', 'Cajero', 'Manager', 'Chofer'])) {
             // Dashboard: todas las proformas
         }
         else {

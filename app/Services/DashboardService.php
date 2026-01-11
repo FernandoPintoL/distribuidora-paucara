@@ -516,7 +516,7 @@ class DashboardService
     public function getMovimientosCaja(array $fechas): array
     {
         return MovimientoCaja::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])
-            ->latest()
+            ->orderBy('fecha', 'desc')
             ->limit(10)
             ->get()
             ->map(function ($movimiento) {

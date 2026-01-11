@@ -39,7 +39,17 @@ class EntregaController extends Controller
         $this->middleware('permission:entregas.index')->only('index');
         $this->middleware('permission:entregas.show')->only('show');
         $this->middleware('permission:entregas.create')->only(['create', 'store']);
-        $this->middleware('permission:entregas.manage')->only('asignarChoferVehiculo');
+        $this->middleware('permission:entregas.manage')->only([
+            'asignarChoferVehiculo',
+            'iniciar',
+            'confirmar',
+            'confirmarCarga',
+            'marcarListoParaEntrega',
+            'iniciarTransito',  // ✅ FASE 1: Necesita permiso de manejo
+            'registrarLlegada',
+            'reportarNovedad',
+            'rechazar',
+        ]);
     }
 
     /**
@@ -144,6 +154,7 @@ class EntregaController extends Controller
                 'direccionCliente'      // Dirección específica de la venta (prioridad)
             ])
             ->whereNull('entrega_id')           // ✅ Phase 3: No tiene entrega principal asignada
+            ->where('requiere_envio', true)     // ✅ Solo ventas que requieren envío
             ->whereNotNull('cliente_id')        // Debe tener cliente
             ->whereHas('detalles')              // Debe tener detalles de productos
             ->latest()
@@ -177,7 +188,9 @@ class EntregaController extends Controller
                     'id'               => $venta->id,
                     'numero_venta'     => $venta->numero ?? "V-{$venta->id}",
                     'numero'           => $venta->numero,
-                    'total'            => (float) $venta->total,
+                    'subtotal'         => (float) $venta->subtotal,                    // ✅ NUEVO: Sin impuesto
+                    'peso_total_estimado' => (float) ($venta->peso_total_estimado ?? 0),  // ✅ NUEVO: Peso pre-calculado
+                    'peso_estimado'    => (float) ($venta->peso_total_estimado ?? 0), // Fallback para compatibilidad
                     'fecha_venta'      => $venta->fecha?->format('Y-m-d'),
                     'fecha'            => $venta->fecha?->format('Y-m-d'),
                     'estado'           => $venta->estadoDocumento?->nombre ?? 'Sin estado',
@@ -199,7 +212,6 @@ class EntregaController extends Controller
                     'ventana_entrega_fin'        => $venta->ventana_entrega_fin?->format('H:i'),
                     // Datos para batch UI
                     'cantidad_items'   => $venta->detalles?->count() ?? 0,
-                    'peso_estimado'    => $venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10,
                     'detalles'         => $venta->detalles?->toArray() ?? [],
                 ];
             });
@@ -325,6 +337,12 @@ class EntregaController extends Controller
             // Obtener la venta para completar datos adicionales
             $venta = \App\Models\Venta::with('direccionCliente')->findOrFail($validated['venta_id']);
 
+            // ✅ NUEVO: Obtener el estado inicial desde estados_logistica tabla
+            // Estado inicial: PREPARACION_CARGA (preparar la carga antes de enviar)
+            $estadoInicial = \App\Models\EstadoLogistica::where('categoria', 'entrega')
+                ->where('codigo', 'PREPARACION_CARGA')
+                ->firstOrFail();
+
             // Crear entrega con todos los datos disponibles
             $entrega = \App\Models\Entrega::create([
                 'venta_id'              => $validated['venta_id'],
@@ -335,7 +353,16 @@ class EntregaController extends Controller
                 'direccion_cliente_id'  => $venta->direccion_cliente_id,  // ✅ Asignar dirección del cliente
                 'peso_kg'               => $validated['peso_kg'],
                 'observaciones'         => $validated['observaciones'] ?? null,
-                'estado'                => 'PROGRAMADO',
+                'estado'                => $estadoInicial->codigo,  // ✅ Enum (legacy compatibility)
+                'estado_entrega_id'     => $estadoInicial->id,  // ✅✅ FK a estados_logistica (CRITICAL)
+            ]);
+
+            // ✅ DEBUG: Log para verificar que la entrega se creó con el estado correcto
+            \Log::info('✅ Entrega creada con estado inicial', [
+                'entrega_id' => $entrega->id,
+                'estado' => $entrega->estado,
+                'estado_logistico_codigo' => $estadoInicial->codigo,
+                'estado_logistico_nombre' => $estadoInicial->nombre,
             ]);
 
             // ✅ DIFERENCIADO: Respuesta API vs Web
@@ -397,7 +424,10 @@ class EntregaController extends Controller
     {
         // Cargar relaciones necesarias
         $entrega->load([
+            'estadoEntrega',     // ✅ NUEVO: Para acceder a estado_entrega_codigo
             'ventas.cliente',
+            'ventas.direccionCliente',  // ✅ NUEVO: Para coordenadas del mapa
+            'ventas.estadoLogistica',   // ✅ NUEVO: Estado logístico de cada venta
             'ventas.detalles.producto',  // Productos de cada venta
             'chofer',
             'vehiculo',
@@ -415,8 +445,17 @@ class EntregaController extends Controller
         }
 
         // Web (Inertia)
+        // Convertir a array - toArray() ya incluye todas las relaciones cargadas
+        $entregaData = $entrega->toArray();
+
+        // Agregar explícitamente accessors que toArray() podría no incluir
+        $entregaData['estado_entrega_codigo'] = $entrega->estado_entrega_codigo;
+        $entregaData['estado_entrega_nombre'] = $entrega->estado_entrega_nombre;
+        $entregaData['estado_entrega_color'] = $entrega->estado_entrega_color;
+        $entregaData['estado_entrega_icono'] = $entrega->estado_entrega_icono;
+
         return Inertia::render('logistica/entregas/Show', [
-            'entrega' => $entrega,
+            'entrega' => $entregaData,
         ]);
     }
 
@@ -563,9 +602,40 @@ class EntregaController extends Controller
     }
 
     /**
-     * Iniciar tránsito (cambiar a EN_TRANSITO)
+     * Iniciar tránsito de entrega con GPS - FLUJO PRINCIPAL FASE 1
      *
-     * POST /entregas/{id}/iniciar-transito
+     * ENDPOINT: POST /entregas/{id}/iniciar-transito
+     *
+     * TRANSICIÓN DE ESTADO:
+     * - Estado anterior: LISTO_PARA_ENTREGA (carga confirmada)
+     * - Estado nuevo: EN_TRANSITO (activa seguimiento GPS)
+     *
+     * ACCIONES AUTOMÁTICAS:
+     * ✅ Valida transición dinámicamente (desde estados_logistica)
+     * ✅ Registra ubicación GPS inicial del chofer
+     * ✅ Sincroniza todas las ventas a EN_TRANSITO
+     * ✅ Dispara evento EntregaEstadoCambiado (WebSocket)
+     * ✅ Notifica a admin, chofer y cliente
+     *
+     * REQUEST:
+     * {
+     *   "latitud": -17.3895,
+     *   "longitud": -66.1568
+     * }
+     *
+     * RESPONSE:
+     * {
+     *   "success": true,
+     *   "data": { ...EntregaDTO },
+     *   "message": "Tránsito iniciado"
+     * }
+     *
+     * ERRORES:
+     * - 422: Transición inválida o coordenadas faltantes
+     * - 404: Entrega no encontrada
+     *
+     * @param Request $request Con campos: latitud, longitud
+     * @param int $id ID de la entrega
      */
     public function iniciarTransito(Request $request, int $id): JsonResponse | RedirectResponse
     {
@@ -876,6 +946,10 @@ class EntregaController extends Controller
      * Obtener estadísticas del dashboard de entregas
      *
      * GET /api/logistica/entregas/dashboard-stats
+     *
+     * ✅ MEJORADO: Usa estados finales dinámicos desde BD
+     * ✅ MEJORADO: Calcula tiempos con campos correctos (fecha_salida, fecha_entrega)
+     * ✅ MEJORADO: Agrupa correctamente por zonas
      */
     public function dashboardStats(): JsonResponse
     {
@@ -883,10 +957,16 @@ class EntregaController extends Controller
             // Obtener todas las entregas con relaciones necesarias
             $entregas = \App\Models\Entrega::with([
                 'ventas.cliente',
-                'chofer.user',
+                'chofer',  // chofer es directamente User, no tiene relación .user
                 'vehiculo',
                 'localidad',
             ])->get();
+
+            // ✅ MEJORA 1: Obtener códigos de estados FINALES dinámicamente desde BD
+            $estadosFinales = \App\Models\EstadoLogistica::where('categoria', 'entrega')
+                ->where('es_estado_final', true)
+                ->pluck('codigo')
+                ->toArray();
 
             // 1. CONTAR POR ESTADO (dinámico desde estados_logistica tabla)
             $estadosLogistica = \App\Models\EstadoLogistica::where('categoria', 'entrega')
@@ -898,49 +978,57 @@ class EntregaController extends Controller
                 $estados[$estado->codigo] = $entregas->where('estado', $estado->codigo)->count();
             }
 
-            // 2. ENTREGAS POR ZONA (vía Entrega.zona_id o ventas asociadas)
-            // Usamos zona_id directamente de la entrega o la zona de la primera venta
+            // 2. ENTREGAS POR LOCALIDAD
+            // ✅ MEJORADO: zona_id es FK a tabla localidades (localidades son las ciudades/pueblos de entrega)
+            // Localidades: Ciudades/pueblos donde se entregan (tabla: localidades)
+            // Relación: Localidad ←M-M→ Zona (via tabla localidad_zona)
             $porZona = $entregas
                 ->groupBy(function ($entrega) {
-                    // Usar zona_id de entrega directamente, o la zona de la primera venta
+                    // Usar zona_id de entrega (FK a localidades)
                     if ($entrega->zona_id) {
                         return $entrega->zona_id;
                     }
 
-                    // Obtener zona del cliente de la primera venta (si existe)
+                    // Fallback: obtener localidad del cliente de la primera venta
                     $primeraVenta = $entrega->ventas?->first();
                     $cliente = $primeraVenta?->cliente;
-                    if ($cliente && $cliente->zona_id) {
-                        return $cliente->zona_id;
+                    if ($cliente && $cliente->localidad_id) {
+                        return $cliente->localidad_id;
                     }
-                    return 'Sin zona';
+                    return 'Sin localidad';
                 })
-                ->map(function ($grupo, $zonaId) {
-                    $total       = $grupo->count();
-                    $completadas = $grupo->whereIn('estado', ['ENTREGADO'])->count();
+                ->map(function ($grupo, $localidadId) use ($estadosFinales) {
+                    $total = $grupo->count();
 
-                    // Calcular tiempo promedio de entrega en minutos
+                    // ✅ MEJORA 2: Usar estados finales dinámicos desde BD (en lugar de ['ENTREGADO'])
+                    // Esto incluye automáticamente: ENTREGADO, CANCELADA, RECHAZADO
+                    $completadas = $grupo->whereIn('estado', $estadosFinales)->count();
+
+                    // ✅ MEJORA 3: Calcular tiempo promedio usando fecha_salida (no fecha_inicio)
+                    // fecha_salida: Momento cuando el vehículo partió con la carga
+                    // fecha_entrega: Momento cuando se confirmó la entrega
                     $tiempoPromedio    = 0;
                     $entregasConTiempo = $grupo->filter(function ($e) {
-                        return $e->fecha_inicio && $e->fecha_entrega;
+                        return $e->fecha_salida && $e->fecha_entrega;
                     });
 
                     if ($entregasConTiempo->count() > 0) {
                         $tiempoTotal = $entregasConTiempo->sum(function ($e) {
-                            return $e->fecha_entrega->diffInMinutes($e->fecha_inicio);
+                            return $e->fecha_entrega->diffInMinutes($e->fecha_salida);
                         });
                         $tiempoPromedio = (int) ($tiempoTotal / $entregasConTiempo->count());
                     }
 
-                    $nombreZona = 'Sin zona';
-                    if ($zonaId !== 'Sin zona') {
-                        $zona       = \App\Models\Zona::find($zonaId);
-                        $nombreZona = $zona?->nombre ?? "Zona {$zonaId}";
+                    // ✅ MEJORA 4: Obtener nombre de la localidad desde tabla localidades
+                    $nombreLocalidad = 'Sin localidad';
+                    if ($localidadId !== 'Sin localidad') {
+                        $localidad = \App\Models\Localidad::find($localidadId);
+                        $nombreLocalidad = $localidad?->nombre ?? "Localidad {$localidadId}";
                     }
 
                     return [
-                        'zona_id'                 => $zonaId === 'Sin zona' ? null : $zonaId,
-                        'nombre'                  => $nombreZona,
+                        'zona_id'                 => $localidadId === 'Sin localidad' ? null : $localidadId,
+                        'nombre'                  => $nombreLocalidad,
                         'total'                   => $total,
                         'completadas'             => $completadas,
                         'porcentaje'              => $total > 0 ? round(($completadas / $total) * 100, 2) : 0,
@@ -953,20 +1041,22 @@ class EntregaController extends Controller
             // 3. TOP 5 CHOFERES
             $topChoferes = $entregas
                 ->groupBy('chofer_id')
-                ->map(function ($grupo) {
+                ->map(function ($grupo) use ($estadosFinales) {
                     $chofer = $grupo->first()->chofer;
                     if (! $chofer) {
                         return null;
                     }
 
-                    $total       = $grupo->count();
-                    $completadas = $grupo->where('estado', 'ENTREGADO')->count();
+                    $total = $grupo->count();
+
+                    // ✅ MEJORA 4: Usar estados finales dinámicos en lugar de ['ENTREGADO']
+                    $completadas = $grupo->whereIn('estado', $estadosFinales)->count();
                     $eficiencia  = $total > 0 ? round(($completadas / $total) * 100, 2) : 0;
 
                     return [
                         'chofer_id'             => $chofer->id,
-                        'nombre'                => $chofer->user?->name ?? $chofer->nombre,
-                        'email'                 => $chofer->user?->email,
+                        'nombre'                => $chofer->name ?? 'Sin nombre',
+                        'email'                 => $chofer->email,
                         'entregas_total'        => $total,
                         'entregas_completadas'  => $completadas,
                         'eficiencia_porcentaje' => $eficiencia,
@@ -1010,7 +1100,7 @@ class EntregaController extends Controller
                         'id'               => $entrega->id,
                         'estado'           => $entrega->estado,
                         'cliente_nombre'   => $cliente?->nombre ?? 'Sin cliente',
-                        'chofer_nombre'    => $entrega->chofer?->user?->name ?? 'Sin asignar',
+                        'chofer_nombre'    => $entrega->chofer?->name ?? 'Sin asignar',
                         'fecha_entrega'    => $entrega->fecha_entrega?->format('Y-m-d H:i'),
                         'fecha_programada' => $entrega->fecha_programada?->format('Y-m-d H:i'),
                         'peso_kg'          => $entrega->peso_kg,
@@ -1067,7 +1157,7 @@ class EntregaController extends Controller
                 return [
                     'id'            => $venta->id,
                     'numero_venta'  => $venta->numero ?? "V-{$venta->id}",
-                    'total'         => (float) $venta->total,
+                    'subtotal'      => (float) $venta->subtotal,
                     'fecha_venta'   => $venta->fecha?->format('Y-m-d'),
                     'cliente'       => [
                         'id'     => $venta->cliente?->id,

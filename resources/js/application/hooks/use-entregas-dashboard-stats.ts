@@ -5,13 +5,24 @@ import axios from 'axios';
 // Esto permite que el dashboard sea agnóstico a qué códigos existen en la BD
 export type EntregaEstado = Record<string, number>;
 
+/**
+ * Métricas de entregas agrupadas por localidad
+ *
+ * ✅ SINCRONIZADO: zona_id es FK a tabla localidades
+ * - Localidades: Ciudades/pueblos (tabla: localidades)
+ * - Relación: Localidad ←M-M→ Zona (via tabla localidad_zona)
+ *
+ * Notas:
+ * - completadas: Entregas en estados finales (ENTREGADO, CANCELADA, RECHAZADO)
+ * - tiempo_promedio_minutos: Calculado con fecha_salida y fecha_entrega
+ */
 export interface MetricaZona {
-    zona_id: number | null;
-    nombre: string;
-    total: number;
-    completadas: number;
-    porcentaje: number;
-    tiempo_promedio_minutos: number;
+    zona_id: number | null;  // ✅ FK a tabla localidades (localidad_id)
+    nombre: string;          // Nombre de la localidad desde tabla localidades
+    total: number;           // Total de entregas en esta localidad
+    completadas: number;     // Entregas finalizadas (estados finales desde BD)
+    porcentaje: number;      // Porcentaje de completadas vs total
+    tiempo_promedio_minutos: number;  // Tiempo promedio de salida a entrega
 }
 
 export interface TopChofer {
@@ -40,13 +51,20 @@ export interface EntregaReciente {
     vehiculo_placa: string;
 }
 
+/**
+ * Estadísticas del dashboard de entregas
+ *
+ * ✅ SINCRONIZADO con EstadosLogisticaSeeder
+ * ✅ Estados finales obtenidos dinámicamente desde BD
+ * ✅ Localidades obtenidas correctamente desde tabla localidades
+ */
 export interface EntregasDashboardStats {
-    estados: EntregaEstado;
-    estados_total: number;
-    por_zona: MetricaZona[];
-    top_choferes: TopChofer[];
-    ultimos_7_dias: UltimoDia[];
-    entregas_recientes: EntregaReciente[];
+    estados: EntregaEstado;                      // Conteos por código de estado
+    estados_total: number;                       // Total de entregas
+    por_zona: MetricaZona[];                     // ✅ Métricas por localidad (zona_id → localidades)
+    top_choferes: TopChofer[];                   // Top 5 choferes por eficiencia
+    ultimos_7_dias: UltimoDia[];                 // Entregas de últimos 7 días
+    entregas_recientes: EntregaReciente[];       // Últimas 10 entregas
 }
 
 interface UseEntregasDashboardStatsOptions {

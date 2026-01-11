@@ -72,15 +72,16 @@ export default function BatchVentaSelector({
     };
 
     // Calcular totales
+    // ✅ ACTUALIZADO: Usar peso_total_estimado y subtotal (sin impuesto)
     const totalSeleccionado = useMemo(() => {
         return {
             cantidad: selectedIds.length,
             peso: ventas
                 .filter((v) => selectedIds.includes(v.id))
-                .reduce((sum, v) => sum + v.peso_estimado, 0),
+                .reduce((sum, v) => sum + (v.peso_total_estimado || v.peso_estimado || 0), 0),  // ✅ Usar peso_total_estimado
             monto: ventas
                 .filter((v) => selectedIds.includes(v.id))
-                .reduce((sum, v) => sum + v.total, 0),
+                .reduce((sum, v) => sum + (v.subtotal || 0), 0),  // ✅ Usar subtotal (sin impuesto)
         };
     }, [ventas, selectedIds]);
 
@@ -219,7 +220,7 @@ export default function BatchVentaSelector({
                                                                         Fecha: {venta.fecha_venta}
                                                                     </span>
                                                                     <span className="font-semibold text-gray-900 dark:text-white">
-                                                                        Bs {venta.total.toLocaleString('es-BO', {
+                                                                        Bs {venta.subtotal.toLocaleString('es-BO', {
                                                                             minimumFractionDigits: 2,
                                                                             maximumFractionDigits: 2,
                                                                         })}

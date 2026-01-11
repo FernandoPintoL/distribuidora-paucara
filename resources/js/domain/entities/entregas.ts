@@ -13,21 +13,23 @@ import type { BaseEntity, BaseFormData } from './generic';
 /**
  * Estados de Entrega
  *
- * IMPORTANTE: Estos estados deben coincidir exactamente con las constantes
- * definidas en app/Models/Entrega.php
+ * SINCRONIZADO con EstadosLogisticaSeeder.php (línea 45-58)
+ * IMPORTANTE: Estos estados deben coincidir exactamente con los códigos
+ * definidos en la tabla estados_logistica con categoría 'entrega'
  */
 export type EstadoEntrega =
-    | 'PROGRAMADO'      // Entrega programada
-    | 'EN_PREPARACION'  // Stock reducido, en preparación
-    | 'EN_RUTA'         // Vehículo en camino
-    | 'EN_TRANSITO'     // En tránsito
-    | 'ASIGNADA'        // Asignada a chofer (legacy)
-    | 'EN_CAMINO'       // En camino (legacy)
-    | 'LLEGO'           // Llegó al destino (legacy)
-    | 'ENTREGADO'       // Entrega confirmada
-    | 'NOVEDAD'         // Con novedad
-    | 'CANCELADO'       // Entrega cancelada
-    | 'FALLIDO';        // Entrega fallida
+    | 'PROGRAMADO'           // Entrega programada, pendiente de preparación
+    | 'ASIGNADA'             // Asignada a chofer
+    | 'PREPARACION_CARGA'    // Preparación de Carga
+    | 'EN_CARGA'             // En Carga
+    | 'LISTO_PARA_ENTREGA'   // Listo para Entrega
+    | 'EN_CAMINO'            // En camino al destino
+    | 'EN_TRANSITO'          // En tránsito hacia el destino
+    | 'LLEGO'                // Llegó a Destino
+    | 'ENTREGADO'            // Entregado
+    | 'NOVEDAD'              // Con Novedad
+    | 'RECHAZADO'            // Rechazado
+    | 'CANCELADA';           // Cancelada
 
 /**
  * Interfaces para relaciones de Entrega
@@ -59,15 +61,30 @@ export interface DetalleVentaEntrega {
     };
 }
 
+export interface EstadoLogistico {
+    id: Id;
+    codigo: string;
+    categoria: string;
+    nombre: string;
+    color?: string;
+    icono?: string;
+    descripcion?: string;
+}
+
 export interface VentaEntrega {
     id: Id;
     numero: string;
     cliente: ClienteEntrega;
     total?: number;
+    subtotal?: number;
     estado_logistico?: string;
+    estado_logistico_id?: number;
+    estado_logistica?: EstadoLogistico;
     fecha_entrega_comprometida?: string;
     direccion_entrega?: string;
+    direccion_cliente?: DireccionClienteEntrega;
     peso_estimado?: number;
+    peso_total_estimado?: number;
     detalles?: DetalleVentaEntrega[];
 }
 
@@ -145,6 +162,14 @@ export interface Entrega extends BaseEntity {
     // Estado y observaciones
     estado: EstadoEntrega;
     observaciones?: string;
+
+    // ✅ NUEVO: Estado logístico normalizado desde tabla estados_logistica
+    estado_entrega_id?: number;           // FK a estados_logistica
+    estado_entrega_codigo?: string;       // Código del estado (ej: 'EN_TRANSITO')
+    estado_entrega_nombre?: string;       // Nombre legible (ej: 'En Tránsito')
+    estado_entrega_color?: string;        // Color en hex (ej: '#8B5CF6')
+    estado_entrega_icono?: string;        // Icono/emoji (ej: '🚚')
+    estado_entrega?: EstadoLogistico;     // Relación completa con estados_logistica
 
     // Confirmación de entrega
     foto_entrega?: string;
@@ -259,7 +284,9 @@ export interface ActualizarUbicacionFormData extends BaseFormData {
 export interface VentaConDetalles {
     id: Id;
     numero_venta: string;
-    total: number;
+    subtotal: number;                       // ✅ NUEVO: Subtotal sin impuesto
+    impuesto?: number;                      // ✅ NUEVO: Impuesto (si aplica)
+    total: number;                          // Total de la venta
     fecha_venta: string;
     cliente: ClienteEntrega;
 
@@ -270,7 +297,8 @@ export interface VentaConDetalles {
     ventana_entrega_fin?: string;           // Ej: "17:00"
     direccion_entrega?: string;             // Dirección heredada de proforma (legacy)
     direccionCliente?: DireccionClienteEntrega; // Dirección del cliente (FK)
-    peso_estimado?: number;                 // Peso calculado de detalles
+    peso_estimado?: number;                 // Peso calculado de detalles (legacy)
+    peso_total_estimado?: number;           // ✅ NUEVO: Peso total calculado al crear venta (en kg)
 
     // Detalles de los productos
     detalles: Array<{

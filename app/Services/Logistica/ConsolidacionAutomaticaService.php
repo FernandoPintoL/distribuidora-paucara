@@ -296,16 +296,23 @@ class ConsolidacionAutomaticaService
      * @param Collection $ventas
      * @return array
      */
+    /**
+     * ✅ ACTUALIZADO: Calcular métricas de ventas
+     *
+     * Ahora usa peso_total_estimado (pre-calculado al crear venta)
+     * en lugar de iterar sobre detalles
+     *
+     * VENTAJAS:
+     * - Performance: O(n) en lugar de O(n*m)
+     * - Auditabilidad: Peso persistido y auditable
+     * - Consistencia: Mismo peso que se usa en validaciones
+     */
     private function calcularMetricas(Collection $ventas): array
     {
         $pesoTotal = $ventas->reduce(function ($sum, $venta) {
-            $peso = 0;
-            if ($venta->detalles) {
-                foreach ($venta->detalles as $detalle) {
-                    $pesoPorUnidad = $detalle->producto?->peso_kg ?? 2;
-                    $peso += $detalle->cantidad * $pesoPorUnidad;
-                }
-            }
+            // ✅ NUEVO: Usar peso_total_estimado pre-calculado
+            // Si es null (ventas antiguas), usar 0
+            $peso = $venta->peso_total_estimado ?? 0;
             return $sum + $peso;
         }, 0);
 

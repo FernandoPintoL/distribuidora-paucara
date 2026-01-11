@@ -13,7 +13,8 @@ import {
     Map as MapIcon,
     AlertCircle,
     Wifi,
-    WifiOff
+    WifiOff,
+    Loader
 } from 'lucide-react';
 import { PageHeader } from '@/presentation/components/entrega/PageHeader';
 import { EntregaListFilters } from '@/presentation/components/entrega/EntregaListFilters';
@@ -25,6 +26,7 @@ import type { Entrega, FiltrosEntregas } from '@/infrastructure/services/logisti
 // Application hooks
 import { useEntregasEnTransito } from '@/application/hooks/use-entregas-transito';
 import { useRealtimeNotifications } from '@/application/hooks/use-realtime-notifications';
+import { useGeolocation } from '@/application/hooks/use-geolocation';
 
 // Components
 import LiveTrackingMap from '@/presentation/components/logistica/LiveTrackingMap';
@@ -50,6 +52,13 @@ export default function EntregasEnTransito({ entregas: initialEntregas = [] }: P
 
     // ✅ Notificaciones en tiempo real
     const { unreadCount } = useRealtimeNotifications({ enableAutoNotify: true });
+
+    // ✅ Geolocalización del dispositivo del usuario
+    const { location: userLocation, loading: geoLoading, error: geoError } = useGeolocation({
+        autoRequest: true,
+        enableHighAccuracy: true,
+        timeout: 10000,
+    });
 
     // Estado local solo para UI
     const [showFilters, setShowFilters] = useState(false);
@@ -81,10 +90,21 @@ export default function EntregasEnTransito({ entregas: initialEntregas = [] }: P
                                     ✓ WebSocket conectado
                                 </span>
                             )}
+                            {userLocation && (
+                                <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                                    ✓ Ubicación detectada
+                                </span>
+                            )}
                         </>
                     }
                     actions={
                         <>
+                            {geoError && (
+                                <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                                    <AlertCircle className="h-4 w-4" />
+                                    {geoError}
+                                </div>
+                            )}
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -148,14 +168,30 @@ export default function EntregasEnTransito({ entregas: initialEntregas = [] }: P
                     <TabsContent value="mapa">
                         <Card>
                             <CardContent className="pt-6 p-0">
-                                <LiveTrackingMap
-                                    entregas={entregas}
-                                    ubicaciones={ubicaciones}
-                                    onMarkerClick={(entregaId) => setSelectedEntregaId(entregaId)}
-                                    followingEntregaId={followingEntregaId}
-                                    showPolylines={true}
-                                    height="600px"
-                                />
+                                {geoLoading && !userLocation && (
+                                    <div className="h-96 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                                        <div className="text-center">
+                                            <Loader className="h-8 w-8 text-blue-600 mx-auto mb-2 animate-spin" />
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                Obteniendo tu ubicación...
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                                {!geoLoading && (
+                                    <LiveTrackingMap
+                                        entregas={entregas}
+                                        ubicaciones={ubicaciones}
+                                        onMarkerClick={(entregaId) => setSelectedEntregaId(entregaId)}
+                                        followingEntregaId={followingEntregaId}
+                                        showPolylines={true}
+                                        height="600px"
+                                        userLocation={userLocation ? {
+                                            latitude: userLocation.latitude,
+                                            longitude: userLocation.longitude,
+                                        } : null}
+                                    />
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>

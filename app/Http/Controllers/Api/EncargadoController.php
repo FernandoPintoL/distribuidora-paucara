@@ -377,8 +377,7 @@ class EncargadoController extends Controller
             ])
                 ->with([
                     'ventas.cliente',
-                    'chofer',
-                    'chofer.user',
+                    'chofer.empleado',
                     'vehiculo',
                     'ubicaciones' => function ($query) {
                         $query->latest('timestamp')->limit(1);
@@ -415,6 +414,26 @@ class EncargadoController extends Controller
                     $totalConsolidado = $ventasConMetadatos->sum('total');
                     $cantidadVentas = $ventasConMetadatos->count();
 
+                    // Datos del chofer con null safety
+                    $choferData = null;
+                    if ($entrega->chofer) {
+                        $choferData = [
+                            'id' => $entrega->chofer->id,
+                            'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                            'telefono' => $entrega->chofer->empleado?->telefono,
+                        ];
+                    }
+
+                    // Datos del vehículo con null safety
+                    $vehiculoData = null;
+                    if ($entrega->vehiculo) {
+                        $vehiculoData = [
+                            'id' => $entrega->vehiculo->id,
+                            'placa' => $entrega->vehiculo->placa,
+                            'marca' => $entrega->vehiculo->marca,
+                        ];
+                    }
+
                     return [
                         'id' => $entrega->id,
                         'numero_entrega' => $entrega->numero_entrega,
@@ -428,16 +447,8 @@ class EncargadoController extends Controller
                         // ✅ NUEVO: Array de todas las ventas
                         'ventas' => $ventasConMetadatos,
 
-                        'chofer' => [
-                            'id' => $entrega->chofer->id,
-                            'nombre' => $entrega->chofer->user->nombre . ' ' . $entrega->chofer->user->apellidos,
-                            'telefono' => $entrega->chofer->telefono,
-                        ],
-                        'vehiculo' => [
-                            'id' => $entrega->vehiculo->id,
-                            'placa' => $entrega->vehiculo->placa,
-                            'marca' => $entrega->vehiculo->marca,
-                        ],
+                        'chofer' => $choferData,
+                        'vehiculo' => $vehiculoData,
                         'ubicacion_actual' => $ultimaUbicacion ? [
                             'latitud' => (float) $ultimaUbicacion->latitud,
                             'longitud' => (float) $ultimaUbicacion->longitud,

@@ -76,6 +76,13 @@ export interface DetalleVenta extends BaseEntity {
     producto?: Producto;
 }
 
+export interface EstadoLogistica extends BaseEntity {
+    id: Id;
+    codigo: string;
+    nombre?: string;
+    categoria?: string;
+}
+
 export interface Venta extends BaseEntity {
     id: Id;
     numero: string;
@@ -84,6 +91,7 @@ export interface Venta extends BaseEntity {
     descuento: number;
     impuesto: number;
     total: number;
+    peso_total_estimado?: number;  // ✅ NUEVO: Peso total en kg
     observaciones?: string;
     cliente_id: Id;
     usuario_id: Id;
@@ -94,7 +102,8 @@ export interface Venta extends BaseEntity {
     tipo_documento_id?: Id;
     requiere_envio?: boolean;
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
-    estado_logistico?: 'PENDIENTE_ENVIO' | 'PREPARANDO' | 'ENVIADO' | 'ENTREGADO';
+    estado_logistico?: 'SIN_ENTREGA' | 'PENDIENTE_ENVIO' | 'PROGRAMADO' | 'EN_PREPARACION' | 'PREPARANDO' | 'EN_TRANSITO' | 'ENVIADO' | 'ENTREGADA' | 'ENTREGADO' | 'PROBLEMAS' | 'CANCELADA' | 'CANCELADO' | 'PENDIENTE_RETIRO' | 'RETIRADO';
+    estado_logistico_id?: Id;  // ✅ NUEVO: FK al estado logístico
 
     // Relaciones
     cliente?: Cliente;
@@ -104,9 +113,11 @@ export interface Venta extends BaseEntity {
     tipo_pago?: TipoPago;
     tipo_documento?: TipoDocumento;
     proforma?: Proforma;
+    estadoLogistica?: EstadoLogistica;  // ✅ NUEVO: Relación con EstadoLogistica
     detalles?: DetalleVenta[];
     pagos?: Pago[];
     cuenta_por_cobrar?: CuentaPorCobrar;
+    direccionCliente?: DireccionCliente;  // ✅ NUEVO: Relación con DireccionCliente
 
     // Timestamps
     created_at: string;
@@ -132,6 +143,7 @@ export interface VentaFormData extends BaseFormData {
     descuento: number;
     impuesto: number;
     total: number;
+    peso_total_estimado?: number;  // ✅ NUEVO: Peso total en kg
     observaciones?: string;
     cliente_id: Id;
     usuario_id: Id;
@@ -142,7 +154,7 @@ export interface VentaFormData extends BaseFormData {
     tipo_documento_id?: Id;
     requiere_envio?: boolean;
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
-    estado_logistico?: 'PENDIENTE_ENVIO' | 'PREPARANDO' | 'ENVIADO' | 'ENTREGADO';
+    estado_logistico?: 'SIN_ENTREGA' | 'PENDIENTE_ENVIO' | 'PROGRAMADO' | 'EN_PREPARACION' | 'PREPARANDO' | 'EN_TRANSITO' | 'ENVIADO' | 'ENTREGADA' | 'ENTREGADO' | 'PROBLEMAS' | 'CANCELADA' | 'CANCELADO' | 'PENDIENTE_RETIRO' | 'RETIRADO';
     detalles: DetalleVentaFormData[];
 }
 
@@ -282,6 +294,11 @@ export interface DireccionCliente extends BaseEntity {
     direccion: string;
     referencias?: string;
     localidad?: string;
+    localidad_id?: Id;
+    latitud?: number;           // ✅ NUEVO: Coordenada para mapas
+    longitud?: number;          // ✅ NUEVO: Coordenada para mapas
+    es_principal?: boolean;
+    activa?: boolean;
 }
 
 export interface VentaShow extends Venta {
