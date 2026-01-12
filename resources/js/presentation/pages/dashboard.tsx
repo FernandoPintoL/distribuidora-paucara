@@ -199,7 +199,7 @@ export default function Dashboard({
                             Dashboard
                         </h1>
                         <p className="text-neutral-600 dark:text-neutral-400">
-                            Resumen general de tu distribuidora
+                            Resumen general de tu empresa
                         </p>
                         {lastUpdate && (
                             <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">

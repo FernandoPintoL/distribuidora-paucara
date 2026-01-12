@@ -144,8 +144,16 @@ class ProductoController extends Controller
                 })->values();
                 $precioBase = optional($producto->precios->firstWhere('es_precio_base', true))->precio;
 
-                // Códigos de barra - mostrar solo el segundo código como string simple
-                $segundoCodigo = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';
+                // Códigos de barra - enviar relación completa
+                $codigosBarra = $producto->codigosBarra->map(function ($cb) {
+                    return [
+                        'id'          => $cb->id,
+                        'codigo'      => $cb->codigo,
+                        'tipo'        => $cb->tipo,
+                        'es_principal' => (bool) $cb->es_principal,
+                        'activo'      => (bool) $cb->activo,
+                    ];
+                })->values();
 
                 $stockTotal      = (int) ($producto->stock_total_calc ?? $producto->stock?->sum('cantidad') ?? 0);
                 $stockDisponible = (int) ($producto->stock_disponible_calc ?? 0);
@@ -176,7 +184,8 @@ class ProductoController extends Controller
                     'perfil'                => $perfil ? ['id' => $perfil->id, 'url' => $perfil->url] : null,
                     'galeria'               => $galeria,
                     'precios'               => $preciosActivos,
-                    'codigos'               => $segundoCodigo, // String simple del segundo código activo
+                    'codigos'               => $codigosBarra, // Array completo de códigos de barra con metadata
+                    'codigosBarra'          => $codigosBarra, // Para compatibilidad
                     'historial_precios'     => [],             // se puede cargar diferido si se requiere
                     'precio_base'           => $precioBase,
                 ];
@@ -382,6 +391,30 @@ class ProductoController extends Controller
                 }
             }
 
+            // 4. Guardar conversiones de unidad (si es fraccionado)
+            if ($data['es_fraccionado'] ?? false) {
+                $conversiones = $data['conversiones'] ?? [];
+
+                foreach ($conversiones as $conv) {
+                    \App\Models\ConversionUnidadProducto::create([
+                        'producto_id'             => $producto->id,
+                        'unidad_base_id'          => $conv['unidad_base_id'],
+                        'unidad_destino_id'       => $conv['unidad_destino_id'],
+                        'factor_conversion'       => $conv['factor_conversion'],
+                        'activo'                  => $conv['activo'] ?? true,
+                        'es_conversion_principal' => $conv['es_conversion_principal'] ?? false,
+                    ]);
+                }
+
+                Log::info('Conversiones de unidad guardadas', [
+                    'producto_id' => $producto->id,
+                    'cantidad'    => count($conversiones),
+                ]);
+
+                // Actualizar es_fraccionado en el producto
+                $producto->update(['es_fraccionado' => true]);
+            }
+
             // imágenes: perfil + galería
             $orden = 0;
             if ($request->hasFile('perfil')) {
@@ -513,6 +546,33 @@ class ProductoController extends Controller
                 })->toArray(),
             'historial_precios' => $historialPrecios,
         ];
+
+        // Cargar conversiones de unidad
+        $payload['conversiones'] = $producto->conversiones()
+            ->with(['unidadBase:id,nombre,codigo', 'unidadDestino:id,nombre,codigo'])
+            ->get()
+            ->map(function ($conv) {
+                return [
+                    'id'                      => $conv->id,
+                    'unidad_base_id'          => $conv->unidad_base_id,
+                    'unidad_destino_id'       => $conv->unidad_destino_id,
+                    'factor_conversion'       => (float) $conv->factor_conversion,
+                    'activo'                  => (bool) $conv->activo,
+                    'es_conversion_principal' => (bool) $conv->es_conversion_principal,
+                    'unidad_base'             => $conv->unidadBase ? [
+                        'id'     => $conv->unidadBase->id,
+                        'nombre' => $conv->unidadBase->nombre,
+                        'codigo' => $conv->unidadBase->codigo,
+                    ] : null,
+                    'unidad_destino'          => $conv->unidadDestino ? [
+                        'id'     => $conv->unidadDestino->id,
+                        'nombre' => $conv->unidadDestino->nombre,
+                        'codigo' => $conv->unidadDestino->codigo,
+                    ] : null,
+                ];
+            })->toArray();
+
+        $payload['es_fraccionado'] = (bool) $producto->es_fraccionado;
 
         $empresa = auth()->user()?->empresa;
 
@@ -650,6 +710,36 @@ class ProductoController extends Controller
                         ]);
                     }
                 }
+            }
+
+            // 4. Actualizar conversiones de unidad (si es fraccionado)
+            if ($data['es_fraccionado'] ?? false) {
+                // Eliminar conversiones actuales
+                $producto->conversiones()->delete();
+
+                // Crear nuevas conversiones
+                $conversiones = $data['conversiones'] ?? [];
+                foreach ($conversiones as $conv) {
+                    \App\Models\ConversionUnidadProducto::create([
+                        'producto_id'             => $producto->id,
+                        'unidad_base_id'          => $conv['unidad_base_id'],
+                        'unidad_destino_id'       => $conv['unidad_destino_id'],
+                        'factor_conversion'       => $conv['factor_conversion'],
+                        'activo'                  => $conv['activo'] ?? true,
+                        'es_conversion_principal' => $conv['es_conversion_principal'] ?? false,
+                    ]);
+                }
+
+                // Actualizar es_fraccionado en el producto
+                $producto->update(['es_fraccionado' => true]);
+
+                Log::info('Conversiones de unidad actualizadas', [
+                    'producto_id' => $producto->id,
+                ]);
+            } else {
+                // Si ya no es fraccionado, eliminar conversiones existentes
+                $producto->conversiones()->delete();
+                $producto->update(['es_fraccionado' => false]);
             }
 
             // Eliminar imágenes de galería marcadas
@@ -1230,12 +1320,17 @@ class ProductoController extends Controller
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = strtolower($q);
-        $productos   = Producto::select(['id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id'])
+        $productos   = Producto::select([
+            'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
+            'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
+            'stock_minimo', 'stock_maximo', 'activo', 'es_fraccionado'
+        ])
             ->where('activo', true)
             ->where(function ($query) use ($searchLower) {
                 $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
                     ->orWhereRaw('LOWER(codigo_barras) like ?', ["%$searchLower%"])
                     ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
+                    ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"]) // ✨ NUEVO
                     ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
                         $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
                     });
@@ -1248,6 +1343,9 @@ class ProductoController extends Controller
                 },
                 'categoria:id,nombre',
                 'marca:id,nombre',
+                'proveedor:id,nombre,razon_social', // ✨ NUEVO
+                'unidadMedida:id,nombre,codigo', // ✨ NUEVO
+                'conversiones:id,producto_id,unidad_base_id,unidad_destino_id,factor_conversion,activo,es_conversion_principal', // ✨ NUEVO
                 'precios'      => function ($q) {
                     // Cargar SOLO precios activos
                     $q->where('activo', true)

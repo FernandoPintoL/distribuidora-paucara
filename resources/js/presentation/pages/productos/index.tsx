@@ -17,6 +17,15 @@ interface ProductosIndexProps {
 
 export default function ProductosIndex({ productos, filters, categorias, marcas, proveedores }: ProductosIndexProps) {
   console.log('ProductosIndex renderizado con productos:', productos);
+
+  // 🔍 DEBUG: Inspeccionar la estructura de los productos
+  if (productos?.data && productos.data.length > 0) {
+    console.log('🔍 PRIMER PRODUCTO COMPLETO:', productos.data[0]);
+    console.log('🔍 Campo "codigos":', productos.data[0].codigos);
+    console.log('🔍 Campo "codigosBarra":', (productos.data[0] as any).codigosBarra);
+    console.log('🔍 Todas las propiedades:', Object.keys(productos.data[0]));
+  }
+
   return (
     <AppLayout breadcrumbs={[
       { title: 'Dashboard', href: productosService.indexUrl() },

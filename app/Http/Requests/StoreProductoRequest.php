@@ -100,6 +100,15 @@ class StoreProductoRequest extends FormRequest
             'galeria'                  => ['nullable', 'array'],
             'galeria.*'                => ['file', 'image', 'max:4096'],
 
+            // Productos fraccionados
+            'es_fraccionado'           => ['nullable', 'boolean'],
+            'conversiones'             => ['nullable', 'array'],
+            'conversiones.*.unidad_base_id' => ['required_with:conversiones', 'integer', 'exists:unidades_medida,id'],
+            'conversiones.*.unidad_destino_id' => ['required_with:conversiones', 'integer', 'exists:unidades_medida,id', 'different:conversiones.*.unidad_base_id'],
+            'conversiones.*.factor_conversion' => ['required_with:conversiones', 'numeric', 'gt:0'],
+            'conversiones.*.activo'    => ['nullable', 'boolean'],
+            'conversiones.*.es_conversion_principal' => ['nullable', 'boolean'],
+
             'activo'                   => ['nullable', 'boolean'],
         ];
     }
@@ -155,6 +164,21 @@ class StoreProductoRequest extends FormRequest
             'galeria.*.image'                          => 'Cada imagen de la galería debe ser una imagen válida.',
             'galeria.*.max'                            => 'Cada imagen de la galería no puede exceder 4MB.',
 
+            'es_fraccionado.boolean'                   => 'El campo fraccionado debe ser verdadero o falso.',
+            'conversiones.array'                       => 'Las conversiones deben ser un arreglo.',
+            'conversiones.*.unidad_base_id.required_with' => 'La unidad base es obligatoria en cada conversión.',
+            'conversiones.*.unidad_base_id.integer'    => 'La unidad base debe ser un ID numérico.',
+            'conversiones.*.unidad_base_id.exists'     => 'La unidad base seleccionada no existe.',
+            'conversiones.*.unidad_destino_id.required_with' => 'La unidad destino es obligatoria en cada conversión.',
+            'conversiones.*.unidad_destino_id.integer' => 'La unidad destino debe ser un ID numérico.',
+            'conversiones.*.unidad_destino_id.exists'  => 'La unidad destino seleccionada no existe.',
+            'conversiones.*.unidad_destino_id.different' => 'La unidad destino no puede ser igual a la unidad base.',
+            'conversiones.*.factor_conversion.required_with' => 'El factor de conversión es obligatorio en cada conversión.',
+            'conversiones.*.factor_conversion.numeric' => 'El factor de conversión debe ser un número.',
+            'conversiones.*.factor_conversion.gt'      => 'El factor de conversión debe ser mayor que 0.',
+            'conversiones.*.activo.boolean'            => 'El estado activo debe ser verdadero o falso.',
+            'conversiones.*.es_conversion_principal.boolean' => 'El estado de conversión principal debe ser verdadero o falso.',
+
             'activo.boolean'                           => 'El estado activo debe ser verdadero o falso.',
         ];
     }
@@ -186,6 +210,14 @@ class StoreProductoRequest extends FormRequest
             'perfil'           => 'foto de perfil',
             'galeria'          => 'galería de imágenes',
 
+            'es_fraccionado'   => 'producto fraccionado',
+            'conversiones'     => 'conversiones de unidad',
+            'conversiones.*.unidad_base_id' => 'unidad base de conversión',
+            'conversiones.*.unidad_destino_id' => 'unidad destino de conversión',
+            'conversiones.*.factor_conversion' => 'factor de conversión',
+            'conversiones.*.activo' => 'estado de conversión',
+            'conversiones.*.es_conversion_principal' => 'conversión principal',
+
             'activo'           => 'estado activo',
         ];
     }
@@ -201,6 +233,7 @@ class StoreProductoRequest extends FormRequest
             $this->validarProveedorActivo($validator);
             $this->validarMarcaActiva($validator);
             $this->validarCategoriaActiva($validator);
+            $this->validarConversiones($validator);
         });
     }
 
@@ -345,6 +378,46 @@ class StoreProductoRequest extends FormRequest
                     "La categoría '{$categoria->nombre}' está desactivada."
                 );
             }
+        }
+    }
+
+    /**
+     * Validar conversiones de unidad para productos fraccionados
+     */
+    private function validarConversiones(Validator $validator): void
+    {
+        $esFraccionado = $this->boolean('es_fraccionado');
+        $conversiones = $this->input('conversiones', []);
+
+        // Si es fraccionado, debe tener al menos 1 conversión
+        if ($esFraccionado && empty($conversiones)) {
+            $validator->errors()->add('conversiones',
+                'Un producto fraccionado debe tener al menos una conversión de unidad.'
+            );
+            return;
+        }
+
+        if (empty($conversiones)) {
+            return;
+        }
+
+        // Validar que solo haya 1 conversión principal
+        $principalesCount = 0;
+
+        foreach ($conversiones as $index => $conversion) {
+            if (!is_array($conversion)) {
+                continue;
+            }
+
+            if (!empty($conversion['es_conversion_principal'])) {
+                $principalesCount++;
+            }
+        }
+
+        if ($principalesCount > 1) {
+            $validator->errors()->add('conversiones',
+                'Solo puede existir una conversión principal.'
+            );
         }
     }
 }

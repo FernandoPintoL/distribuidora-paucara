@@ -1,5 +1,5 @@
 // Application Layer: Generic hook for entity management - Updated with notifications
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import type { BaseEntity, BaseService, Filters, BaseFormData } from '@/domain/entities/generic';
 import NotificationService from '@/infrastructure/services/notification.service';
@@ -10,11 +10,12 @@ export function useGenericEntities<T extends BaseEntity, F extends BaseFormData>
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Búsqueda de entidades con notificación
-  const searchEntities = useCallback((filters: Filters) => {
+  // Búsqueda de entidades con notificación (opcional)
+  const searchEntities = useCallback((filters: Filters, showNotification: boolean = false) => {
     setIsLoading(true);
 
-    if (filters.q && filters.q.trim()) {
+    // Solo mostrar notificación si se especifica y hay query
+    if (showNotification && filters.q && filters.q.trim()) {
       NotificationService.info(`Buscando: "${filters.q}"`);
     }
 
@@ -95,6 +96,7 @@ export function useGenericEntities<T extends BaseEntity, F extends BaseFormData>
       setSearchQuery(externalFilters.q || '');
     }
   }, [searchQuery]);
+
 
   return {
     // Estado

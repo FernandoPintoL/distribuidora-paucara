@@ -47,6 +47,95 @@ export default function Step1DatosProducto({
   const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
   const [searchResultsFound, setSearchResultsFound] = useState<boolean>(false);
 
+  // Estados para búsqueda de productos
+  const [lastProductSearchQuery, setLastProductSearchQuery] = useState<string>('');
+  const [productSearchResultsFound, setProductSearchResultsFound] = useState<boolean>(false);
+  const [productosCacheMap, setProductosCacheMap] = useState<{ [key: number]: any }>({});
+
+  // ✨ Función de búsqueda para productos - Busca en la API
+  const searchProductos = async (query: string) => {
+    console.log('🔍 Buscando productos con query:', query);
+    setLastProductSearchQuery(query);
+
+    if (!query || query.length < 2) {
+      console.log('❌ Query muy corto, retornando vacío');
+      setProductSearchResultsFound(false);
+      return [];
+    }
+
+    try {
+      const response = await fetch(`/api/productos/buscar?q=${encodeURIComponent(query)}&limite=10`);
+
+      if (!response.ok) {
+        console.error('❌ Error en búsqueda de productos:', response.status);
+        setProductSearchResultsFound(false);
+        return [];
+      }
+
+      const result = await response.json();
+      console.log('✅ Productos encontrados:', result.data?.length || 0);
+      console.log('📝 Resultados:', result.data);
+
+      if (result.success && result.data) {
+        const hasResults = result.data.length > 0;
+        setProductSearchResultsFound(hasResults);
+
+        // ✨ Cachear los productos para acceso rápido
+        const newCache: { [key: number]: any } = {};
+        result.data.forEach((producto: any) => {
+          newCache[producto.id] = producto;
+        });
+        setProductosCacheMap(prev => ({ ...prev, ...newCache }));
+
+        return result.data.map((producto: any) => ({
+          value: producto.id,
+          label: producto.nombre,
+          description: `SKU: ${producto.sku || 'N/A'} | Categoría: ${producto.categoria?.nombre || 'N/A'}`
+        }));
+      }
+
+      setProductSearchResultsFound(false);
+      return [];
+    } catch (error) {
+      console.error('❌ Error en búsqueda de productos:', error);
+      setProductSearchResultsFound(false);
+      return [];
+    }
+  };
+
+  // ✨ Función para cargar datos cuando se selecciona un producto existente
+  const handleProductoSelection = (selectedValue: string | number | null) => {
+    if (!selectedValue) {
+      setData('nombre', '');
+      return;
+    }
+
+    // Si es un número, es un ID de producto existente - cargarlo
+    const productoId = Number(selectedValue);
+    if (!isNaN(productoId) && productosCacheMap[productoId]) {
+      const productoData = productosCacheMap[productoId];
+      console.log('✨ Cargando producto existente:', productoData);
+
+      // Cargar todos los datos del producto en el formulario
+      setData('nombre', productoData.nombre);
+      setData('sku', productoData.sku || '');
+      setData('descripcion', productoData.descripcion || '');
+      setData('peso', productoData.peso || null);
+      setData('unidad_medida_id', productoData.unidad_medida_id ? Number(productoData.unidad_medida_id) : '');
+      setData('categoria_id', productoData.categoria_id ? Number(productoData.categoria_id) : '');
+      setData('marca_id', productoData.marca_id ? Number(productoData.marca_id) : '');
+      setData('proveedor_id', productoData.proveedor_id ? Number(productoData.proveedor_id) : '');
+      setData('stock_minimo', productoData.stock_minimo || 0);
+      setData('stock_maximo', productoData.stock_maximo || 50);
+      setData('activo', productoData.activo ?? true);
+
+      NotificationService.success(`Producto "${productoData.nombre}" cargado correctamente`);
+    } else {
+      // Es un texto nuevo - usar como nombre
+      setData('nombre', String(selectedValue));
+    }
+  };
+
   // 🔍 Función de búsqueda para proveedores - Busca en la API
   const searchProveedores = async (query: string) => {
     console.log('🔍 Buscando proveedores con query:', query);
@@ -100,16 +189,29 @@ export default function Step1DatosProducto({
         <div className="text-xs text-muted-foreground">Complete la información general del producto</div>
       </div> */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-1 sm:col-span-1">
-          <Label htmlFor="nombre">Nombre *</Label>
-          <Input
+        <div className="space-y-1 sm:col-span-2">
+          <InputSearch
             id="nombre"
-            value={data.nombre}
-            onChange={e => setData('nombre', e.target.value)}
-            required
-            className={getInputClassName('nombre')}
+            label="Nombre del Producto *"
+            value={data.nombre ?? ''}
+            onChange={(value) => {
+              handleProductoSelection(value);
+            }}
+            onSearch={searchProductos}
+            placeholder="Busca un producto existente o escribe uno nuevo"
+            emptyText="No se encontró el producto. Puedes crear uno nuevo"
+            error={errors.nombre}
+            showCreateIconButton={false}
+            displayValue={data.nombre}
           />
-          {errors.nombre && <div className="text-red-500 text-sm mt-1">⚠️ {errors.nombre}</div>}
+          <div className="text-xs text-muted-foreground mt-1">
+            💡 Busca productos existentes por nombre para cargarlos automáticamente
+          </div>
+          {lastProductSearchQuery && lastProductSearchQuery.length >= 2 && !productSearchResultsFound && (
+            <div className="text-amber-700 dark:text-amber-200 font-semibold text-xs mt-1">
+              ⚠️ No encontramos "{lastProductSearchQuery}". Puedes crear uno nuevo con este nombre.
+            </div>
+          )}
         </div>
         <div className="space-y-1 sm:col-span-1">
           <Label htmlFor="sku">SKU / Código (opcional)</Label>
@@ -355,30 +457,41 @@ export default function Step1DatosProducto({
 
       {/* ✨ NUEVA SECCIÓN: Productos Fraccionados */}
       {permite_productos_fraccionados && (
-        <div className="space-y-3 mt-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="es_fraccionado"
-              checked={!!data.es_fraccionado}
-              onCheckedChange={(v) => setData('es_fraccionado', !!v)}
-            />
+        <div className="space-y-3 mt-6 p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border-2 border-amber-200 dark:border-amber-700 rounded-lg shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 pt-0.5">
+              <Checkbox
+                id="es_fraccionado"
+                checked={!!data.es_fraccionado}
+                onCheckedChange={(v) => setData('es_fraccionado', !!v)}
+              />
+            </div>
             <div className="flex-1">
-              <Label htmlFor="es_fraccionado" className="font-semibold cursor-pointer">
-                ✨ Permitir Conversiones de Unidades
+              <Label htmlFor="es_fraccionado" className="font-semibold cursor-pointer flex items-center gap-2 text-base">
+                <span>⚡</span> Permitir Conversiones de Unidades
               </Label>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-2 leading-relaxed">
                 Activa esta opción si el producto puede venderse en diferentes unidades de medida.
-                <br/>Ejemplo: Compra en CAJAS pero vende en TABLETAS individuales.
+              </p>
+              <p className="text-sm text-amber-600 dark:text-amber-400 mt-1 font-medium">
+                📦 Ejemplo: Compra en CAJAS (almacenamiento) pero vende en TABLETAS (al público)
               </p>
             </div>
           </div>
           {data.es_fraccionado && (
-            <div className="ml-6 p-3 bg-white dark:bg-slate-900 rounded border border-amber-300 dark:border-amber-700">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                📌 <strong>Nota:</strong> Una vez que actives esto, podrás configurar las conversiones de unidad
-                en la pestaña <strong>"Conversiones"</strong> (Ej: 1 Caja = 100 Tabletas)
+            <div className="ml-6 mt-3 p-3 bg-white dark:bg-slate-900 rounded-md border-l-4 border-amber-400 dark:border-amber-600 shadow-sm">
+              <p className="text-sm text-amber-900 dark:text-amber-100 font-medium">
+                💡 <strong>Siguiente Paso:</strong> Configura las conversiones en la pestaña <strong>"Conversiones"</strong>
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                Ejemplo de configuración: 1 CAJA = 30 TABLETAS
               </p>
             </div>
+          )}
+          {!data.es_fraccionado && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic ml-6">
+              Verás opciones de configuración una vez que marques esta casilla
+            </p>
           )}
         </div>
       )}

@@ -19,6 +19,31 @@ export function MetricCard({
     className = '',
     loading = false,
 }: MetricCardProps) {
+    const formatValue = (val: string | number) => {
+        // Si es string, intenta convertir a número
+        let numValue: number;
+
+        if (typeof val === 'string') {
+            numValue = parseFloat(val);
+            // Si no es un número válido, devuelve el string original
+            if (isNaN(numValue)) return val;
+        } else {
+            numValue = val;
+        }
+
+        // Formatea con máximo 2 decimales
+        if (numValue > 1000) {
+            return new Intl.NumberFormat('es-BO', {
+                style: 'currency',
+                currency: 'BOB',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(numValue);
+        }
+
+        return numValue.toFixed(2);
+    };
+
     const formatChange = (change: number) => {
         const sign = change >= 0 ? '+' : '';
         return `${sign}${change.toFixed(1)}%`;
@@ -56,14 +81,7 @@ export function MetricCard({
 
             <div className="mt-3">
                 <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                    {typeof value === 'number' && value > 1000
-                        ? new Intl.NumberFormat('es-BO', {
-                            style: 'currency',
-                            currency: 'BOB',
-                            minimumFractionDigits: 0
-                        }).format(value)
-                        : value
-                    }
+                    {formatValue(value)}
                 </p>
 
                 <div className="mt-1 flex items-center gap-2 text-sm">

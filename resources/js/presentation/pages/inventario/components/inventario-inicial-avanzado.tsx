@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
@@ -15,6 +15,7 @@ import CargarProductosModal from './cargar-productos-modal';
 import EstadoBorrador from './estado-borrador';
 import ScannerCodigoBarras from './scanner-codigo-barras';
 import ScannerCamaraModal from './scanner-camara-modal';
+import ProductoEncontradoModal from './producto-encontrado-modal';
 
 // Declarar la función global route de Ziggy
 declare function route(name: string, params?: { [key: string]: Id | string | number }): string;
@@ -56,6 +57,7 @@ interface BorradorItem {
     almacen?: Almacen;
     stock_existente_id?: number;
     es_actualizacion?: boolean;
+    codigoDetectado?: string;
 }
 
 interface Borrador {
@@ -85,6 +87,10 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
     const [mostrarScannerCamara, setMostrarScannerCamara] = useState(false);
     const [buscandoEnDB, setBuscandoEnDB] = useState(false);
+    const [modalProductoEncontrado, setModalProductoEncontrado] = useState<{
+        isOpen: boolean;
+        producto: BorradorItem | null;
+    } | null>(null);
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Obtener token CSRF
@@ -359,7 +365,33 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
         setPaginaActual(1);
     };
 
-    const buscarPorCodigoBarras = async (codigo: string) => {
+    const handleConfirmarProductoEncontrado = useCallback(() => {
+        if (!modalProductoEncontrado?.producto) return;
+
+        const producto = modalProductoEncontrado.producto;
+
+        // Hacer lo mismo que seleccionarSugerencia: filtrar lista y expandir
+        // Actualizar búsqueda con el nombre del producto seleccionado
+        setBusqueda(producto.producto?.nombre || '');
+        setSugerencias([]);
+        setMostrarSugerencias(false);
+
+        // Expandir el producto seleccionado
+        setExpandidos(prev => new Set([...prev, producto.producto_id]));
+
+        // Llevar a la primera página donde está el producto
+        setPaginaActual(1);
+
+        // Cerrar modal
+        setModalProductoEncontrado(null);
+
+        // Notificación de éxito
+        NotificationService.success(
+            `✓ Producto encontrado: ${producto.producto?.nombre}`
+        );
+    }, [modalProductoEncontrado]);
+
+    const buscarPorCodigoBarras = useCallback(async (codigo: string) => {
         if (!borrador) {
             NotificationService.error('No hay borrador disponible');
             return;
@@ -404,14 +436,23 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 }
             );
 
+            console.log('Resultado de búsqueda en borrador local:', productoEnBorradorLocal);
+
             if (productoEnBorradorLocal?.producto) {
                 console.log(`✅ Encontrado en borrador local: ${productoEnBorradorLocal.producto.nombre}`);
-                setExpandidos(prev => new Set([...prev, productoEnBorradorLocal.producto_id]));
-                NotificationService.success(
-                    `✓ Producto encontrado: ${productoEnBorradorLocal.producto.nombre}`
-                );
+
+                // [NUEVO] Mostrar modal de confirmación
+                setModalProductoEncontrado({
+                    isOpen: true,
+                    producto: {
+                        ...productoEnBorradorLocal,
+                        codigoDetectado: codigoLimpio, // Guardar el código que se detectó
+                    },
+                });
+
                 return;
             }
+            console.log(`❌ No encontrado en borrador local`);
 
             // ═══════════════════════════════════════════════════════════════
             // PASO 2️⃣: BUSCAR EN TABLA PRODUCTOS Y CODIGOS_BARRA (API)
@@ -434,6 +475,8 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                     }),
                 }
             );
+
+            console.log('Respuesta de búsqueda en tabla productos recibida', responseProductos);
 
             if (!responseProductos.ok) {
                 throw new Error('Error al buscar en tabla de productos');
@@ -473,6 +516,8 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 }
             );
 
+            console.log('Respuesta de verificación en borrador recibida', responseSearch.body);
+
             if (!responseSearch.ok) {
                 throw new Error('Error al verificar producto en borrador');
             }
@@ -488,15 +533,20 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 const itemExistente = dataSearch.item;
                 const productoExistente = dataSearch.producto;
 
-                // Expandir y mostrar info detallada
-                setExpandidos(prev => new Set([...prev, productoExistente.id]));
+                // [NUEVO] Mostrar modal de confirmación
+                setModalProductoEncontrado({
+                    isOpen: true,
+                    producto: {
+                        producto_id: productoExistente.id,
+                        almacen_id: itemExistente.almacen_id || 1,
+                        cantidad: itemExistente.cantidad,
+                        lote: itemExistente.lote,
+                        fecha_vencimiento: itemExistente.fecha_vencimiento,
+                        producto: productoExistente,
+                        codigoDetectado: codigoLimpio,
+                    },
+                });
 
-                NotificationService.warning(
-                    `⚠️ Producto ya registrado\n\n` +
-                    `📦 ${productoExistente.nombre}\n` +
-                    `📊 Cantidad: ${itemExistente.cantidad || 'Sin registrar'} unidades\n` +
-                    `🏢 Almacén: ${itemExistente.almacen || 'N/A'}`
-                );
                 return;
             }
 
@@ -506,7 +556,15 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             console.log(`✅ Producto es nuevo, agregando al borrador...`);
 
             await agregarProductos([producto.id]);
+
+            // Expandir el producto automáticamente
             setExpandidos(prev => new Set([...prev, producto.id]));
+
+            // Limpiar búsqueda para mostrar el producto agregado
+            setBusqueda('');
+            setSugerencias([]);
+            setMostrarSugerencias(false);
+            setPaginaActual(1);
 
             NotificationService.success(
                 `✓ Producto agregado\n\n` +
@@ -522,9 +580,9 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 `Error al buscar código de barras:\n${errorMsg}`
             );
         }
-    };
+    }, [borrador, agregarProductos]);
 
-    const buscarEnDB = async (termino: string) => {
+    const buscarEnDB = useCallback(async (termino: string) => {
         if (!borrador || !termino.trim()) {
             NotificationService.error('Ingresa un término de búsqueda');
             return;
@@ -551,6 +609,8 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                     }),
                 }
             );
+
+            console.log('Respuesta de búsqueda en DB recibida', response.body);
 
             if (!response.ok) {
                 throw new Error('Error al buscar en BD');
@@ -588,7 +648,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
         } finally {
             setBuscandoEnDB(false);
         }
-    };
+    }, [borrador]);
 
     const finalizarInventario = async () => {
         if (!borrador) return;
@@ -646,7 +706,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             <AppLayout>
                 <Head title="Inventario Inicial - Cargando" />
                 <div className="flex items-center justify-center h-96">
-                    <p>Cargando...</p>
+                    <p>Cargando Productos...</p>
                 </div>
             </AppLayout>
         );
@@ -1001,6 +1061,24 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 <ScannerCamaraModal
                     onClose={() => setMostrarScannerCamara(false)}
                     onDetected={buscarPorCodigoBarras}
+                />
+            )}
+
+            {/* Modal de Producto Encontrado */}
+            {modalProductoEncontrado?.isOpen && modalProductoEncontrado.producto && (
+                <ProductoEncontradoModal
+                    isOpen={modalProductoEncontrado.isOpen}
+                    onClose={() => setModalProductoEncontrado(null)}
+                    onConfirmar={handleConfirmarProductoEncontrado}
+                    producto={{
+                        id: modalProductoEncontrado.producto.producto_id,
+                        nombre: modalProductoEncontrado.producto.producto?.nombre || '',
+                        sku: modalProductoEncontrado.producto.producto?.sku,
+                        codigoDetectado: modalProductoEncontrado.producto.codigoDetectado || '',
+                        codigosBarra: modalProductoEncontrado.producto.producto?.codigos_barra,
+                        categoria: modalProductoEncontrado.producto.producto?.categoria,
+                        marca: modalProductoEncontrado.producto.producto?.marca,
+                    }}
                 />
             )}
 

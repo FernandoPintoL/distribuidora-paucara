@@ -5,8 +5,8 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import { Form, Head, usePage } from '@inertiajs/react';
-import { LoaderCircle, Mail, Lock } from 'lucide-react';
-import { useEffect } from 'react';
+import { LoaderCircle, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface LoginProps {
     status?: string;
@@ -14,6 +14,7 @@ interface LoginProps {
 
 export default function Login({ status }: LoginProps) {
     const { props } = usePage();
+    const [showPassword, setShowPassword] = useState(false);
 
     // ✅ Log cuando el usuario se autentica (el token está disponible en props.auth.sanctumToken)
     useEffect(() => {
@@ -78,14 +79,27 @@ export default function Login({ status }: LoginProps) {
                                     <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors peer-focus:text-red-500" />
                                     <Input
                                         id="password"
-                                        type="password"
+                                        type={showPassword ? 'text' : 'password'}
                                         name="password"
                                         required
                                         tabIndex={2}
                                         autoComplete="current-password"
                                         placeholder="••••••••"
-                                        className="peer h-11 pl-10 transition-all duration-300 focus:ring-2 focus:ring-red-500/20"
+                                        className="peer h-11 pl-10 pr-10 transition-all duration-300 focus:ring-2 focus:ring-red-500/20"
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-red-500 peer-focus:text-red-500"
+                                        tabIndex={-1}
+                                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
                                 </div>
                                 <InputError message={errors.password} />
                             </div>

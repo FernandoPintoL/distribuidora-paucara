@@ -114,6 +114,13 @@ class DashboardService
             ->orderBy('total_vendido', 'desc')
             ->limit($limite)
             ->get()
+            ->map(function ($item) {
+                return [
+                    'nombre' => $item->nombre,
+                    'total_vendido' => round($item->total_vendido, 2),
+                    'ingresos_total' => round($item->ingresos_total, 2),
+                ];
+            })
             ->toArray();
     }
 
@@ -161,7 +168,7 @@ class DashboardService
             ->mapWithKeys(function ($item) {
                 return [$item->canal_origen => [
                     'total' => $item->total,
-                    'monto' => $item->monto,
+                    'monto' => round($item->monto, 2),
                 ]];
             })
             ->toArray();
@@ -206,9 +213,9 @@ class DashboardService
         }
 
         return [
-            'total' => $ventasActuales,
+            'total' => round($ventasActuales, 2),
             'cantidad' => $queryCount->count(),
-            'promedio' => $queryAvg->avg('total') ?? 0,
+            'promedio' => round($queryAvg->avg('total') ?? 0, 2),
             'cambio_porcentual' => round($cambio, 2),
         ];
     }
@@ -224,9 +231,9 @@ class DashboardService
         $cambio = $comprasAnteriores > 0 ? (($comprasActuales - $comprasAnteriores) / $comprasAnteriores) * 100 : 0;
 
         return [
-            'total' => $comprasActuales,
+            'total' => round($comprasActuales, 2),
             'cantidad' => Compra::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->count(),
-            'promedio' => Compra::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->avg('total') ?? 0,
+            'promedio' => round(Compra::whereBetween('fecha', [$fechas['inicio'], $fechas['fin']])->avg('total') ?? 0, 2),
             'cambio_porcentual' => round($cambio, 2),
         ];
     }
@@ -249,8 +256,8 @@ class DashboardService
 
         return [
             'total_productos' => $totalProductos,
-            'stock_total' => $stockTotal,
-            'valor_inventario' => $valorInventario,
+            'stock_total' => round($stockTotal, 2),
+            'valor_inventario' => round($valorInventario, 2),
             'productos_sin_stock' => StockProducto::where('cantidad', '<=', 0)->count(),
         ];
     }
@@ -282,10 +289,13 @@ class DashboardService
             $queryCount->where('caja_id', $cajaId);
         }
 
+        $ingresos = round($ingresos, 2);
+        $egresos = round($egresos, 2);
+
         return [
             'ingresos' => $ingresos,
             'egresos' => $egresos,
-            'saldo' => $ingresos - $egresos,
+            'saldo' => round($ingresos - $egresos, 2),
             'total_movimientos' => $queryCount->count(),
         ];
     }

@@ -309,15 +309,15 @@ export default function InputSearch({
     return (
         <div className={`relative ${className}`}>
             {label && (
-                <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {label} {required && <span className="text-red-500">*</span>}
+                <label htmlFor={id} className="block text-sm font-medium text-foreground mb-2">
+                    {label} {required && <span className="text-destructive">*</span>}
                 </label>
             )}
 
             <div className="relative" ref={dropdownRef}>
                 <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-muted-foreground" />
                     </div>
 
                     <input
@@ -330,32 +330,28 @@ export default function InputSearch({
                         onFocus={() => query.length >= 2 && (options.length > 0 || (showCreateButton && !!onCreateClick)) && setIsOpen(true)}
                         placeholder={placeholder}
                         disabled={disabled}
+                        aria-invalid={!!error}
                         className={`
-                            block w-full pl-12 pr-12 py-3 border-2 rounded-xl shadow-sm text-sm font-medium
-                            focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500
-                            dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400
-                            transition-all duration-200 ease-in-out
-                            ${error
-                                ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
-                                : 'border-gray-300 hover:border-gray-400 dark:hover:border-gray-500'
-                            }
-                            ${disabled
-                                ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-gray-800 border-gray-200'
-                                : 'bg-white'
-                            }
+                            border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground
+                            flex h-9 w-full min-w-0 rounded-md border bg-transparent pl-9 pr-9 text-base shadow-xs
+                            transition-[color,box-shadow] outline-none
+                            focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+                            disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50
+                            md:text-sm
+                            aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
                         `}
                     />
 
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center space-x-2">
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center space-x-1">
                         {showSearchButton && query && query.length >= 2 && (
                             <button
                                 type="button"
                                 onClick={handleSearchButtonClick}
                                 disabled={disabled || loading}
-                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-150"
+                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Buscar"
                             >
-                                <Search className="h-5 w-5" />
+                                <Search className="h-4 w-4" />
                             </button>
                         )}
 
@@ -364,10 +360,10 @@ export default function InputSearch({
                                 type="button"
                                 onClick={() => onCreateClick(query)}
                                 disabled={disabled}
-                                className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-150"
+                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title={createIconButtonTitle}
                             >
-                                <Plus className="h-5 w-5" />
+                                <Plus className="h-4 w-4" />
                             </button>
                         )}
 
@@ -376,10 +372,10 @@ export default function InputSearch({
                                 type="button"
                                 onClick={startScanner}
                                 disabled={disabled}
-                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-150"
+                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title={scannerLabel}
                             >
-                                <Camera className="h-5 w-5" />
+                                <Camera className="h-4 w-4" />
                             </button>
                         )}
 
@@ -388,107 +384,107 @@ export default function InputSearch({
                                 type="button"
                                 onClick={handleClear}
                                 disabled={disabled}
-                                className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-150"
+                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <X className="h-5 w-5" />
+                                <X className="h-4 w-4" />
                             </button>
                         )}
 
                         {loading && (
-                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
                         )}
                     </div>
                 </div>
 
                 {/* Dropdown de opciones mejorado */}
                 {isOpen && (
-                    <div className="absolute z-[2147483647] mt-2 w-full bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden transform transition-all duration-200 ease-out">
+                    <div className="absolute z-[2147483647] mt-2 w-full bg-background shadow-lg border border-border rounded-md overflow-hidden transform transition-all duration-200 ease-out">
                         {/* Header del dropdown */}
-                        <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 border-b border-gray-200 dark:border-gray-600">
+                        <div className="px-4 py-2 bg-muted border-b border-border">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
-                                    <Search className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Resultados de búsqueda
+                                    <Search className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-foreground">
+                                        Resultados
                                     </span>
                                 </div>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded-full">
-                                    {options.length} encontrado{options.length !== 1 ? 's' : ''}
+                                <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded">
+                                    {options.length}
                                 </span>
                             </div>
                         </div>
 
                         {/* Contenedor de resultados con scroll mejorado */}
-                        <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                        <div className="max-h-80 overflow-y-auto">
                             {options.length === 0 && !loading ? (
                                 <div className="px-6 py-8 text-center">
                                     {/* Banner de advertencia si hay búsqueda pero sin resultados */}
                                     {query.length >= 2 && showCreateButton && onCreateClick && (
-                                        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 dark:border-amber-600 rounded-r">
+                                        <div className="mb-6 p-4 bg-destructive/5 border-l-4 border-destructive rounded-r">
                                             <div className="flex items-start space-x-3">
                                                 <div className="text-2xl">⚠️</div>
                                                 <div className="flex-1 text-left">
-                                                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                                    <p className="text-sm font-semibold text-foreground">
                                                         No encontramos "{query}"
                                                     </p>
-                                                    <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
-                                                        Este proveedor no existe en la base de datos. Puedes crearlo usando el botón de abajo.
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        Este elemento no existe. Puedes crearlo usando el botón de abajo.
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
-                                    <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                                        <Search className="h-6 w-6 text-gray-400" />
+                                    <div className="w-12 h-12 mx-auto mb-3 bg-muted rounded-full flex items-center justify-center">
+                                        <Search className="h-6 w-6 text-muted-foreground" />
                                     </div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                    <p className="text-sm text-foreground font-medium">
                                         {emptyText}
                                     </p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                         Intenta con otros términos de búsqueda
                                     </p>
 
                                     {/* Botón para crear nuevo elemento */}
                                     {showCreateButton && query.length >= 2 && onCreateClick && (
-                                        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                                        <div className="mt-6 pt-6 border-t border-border">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     console.log('🖱️ Botón crear clickeado con query:', query);
                                                     onCreateClick(query);
                                                 }}
-                                                className="w-full inline-flex items-center justify-center px-4 py-3 text-sm font-bold text-white bg-green-600 dark:bg-green-700 border-2 border-green-700 dark:border-green-800 rounded-md hover:bg-green-700 dark:hover:bg-green-800 transition-colors duration-150 shadow-md hover:shadow-lg"
+                                                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md transition-colors duration-150"
                                             >
-                                                <span className="mr-2 text-lg">➕</span>
-                                                {createButtonText} "{query}"
+                                                <span className="mr-2">➕</span>
+                                                {createButtonText}
                                             </button>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 text-center font-medium">
-                                                Haz clic para crear el proveedor
+                                            <p className="text-xs text-muted-foreground mt-3 text-center">
+                                                Crear elemento con este nombre
                                             </p>
                                         </div>
                                     )}
                                 </div>
                             ) : (
-                                <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                <div className="divide-y divide-border">
                                     {options.map((option, index) => (
                                         <button
                                             key={`${option.value}-${index}`}
                                             type="button"
                                             onClick={() => handleSelectOption(option)}
-                                            className={`w-full text-left px-4 py-4 transition-all duration-150 group ${selectedIndex === index
-                                                ? 'bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500'
-                                                : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-gray-700 dark:hover:to-gray-600'
+                                            className={`w-full text-left px-4 py-3 transition-colors duration-150 group ${selectedIndex === index
+                                                ? 'bg-accent border-l-4 border-primary'
+                                                : 'hover:bg-accent'
                                                 }`}
                                         >
                                             <div className="flex items-start justify-between space-x-3">
                                                 {/* Información principal del producto */}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center space-x-2 mb-1">
-                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                                                        <h4 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                                                             {option.label}
                                                         </h4>
                                                         {option.codigos_barras && (
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
                                                                 <span className="mr-1">📱</span>
                                                                 {option.codigos_barras}
                                                             </span>
@@ -496,7 +492,7 @@ export default function InputSearch({
                                                     </div>
 
                                                     {option.description && (
-                                                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mb-2 line-clamp-2">
+                                                        <p className="text-xs text-muted-foreground leading-relaxed mb-2 line-clamp-2">
                                                             {option.description}
                                                         </p>
                                                     )}
@@ -505,8 +501,8 @@ export default function InputSearch({
                                                     <div className="flex items-center space-x-4 text-xs">
                                                         {option.precio_base !== undefined && option.precio_base > 0 && (
                                                             <div className="flex items-center space-x-1">
-                                                                <span className="text-gray-500 dark:text-gray-400">Precio:</span>
-                                                                <span className="font-semibold text-green-600 dark:text-green-400">
+                                                                <span className="text-muted-foreground">Precio:</span>
+                                                                <span className="font-semibold text-foreground">
                                                                     Bs. {option.precio_base.toLocaleString('es-BO', { minimumFractionDigits: 2 })}
                                                                 </span>
                                                             </div>
@@ -514,12 +510,12 @@ export default function InputSearch({
 
                                                         {option.stock_total !== undefined && (
                                                             <div className="flex items-center space-x-1">
-                                                                <span className="text-gray-500 dark:text-gray-400">Stock:</span>
+                                                                <span className="text-muted-foreground">Stock:</span>
                                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${option.stock_total > 10
                                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
                                                                     : option.stock_total > 0
                                                                         ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                                                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                                                        : 'bg-destructive/10 text-destructive'
                                                                     }`}>
                                                                     {option.stock_total > 10 ? '✅' : option.stock_total > 0 ? '⚠️' : '❌'}
                                                                     {option.stock_total}
@@ -532,13 +528,15 @@ export default function InputSearch({
                                                 {/* Indicador de selección */}
                                                 <div className={`flex-shrink-0 transition-opacity ${selectedIndex === index ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                                                     }`}>
-                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${selectedIndex === index
-                                                        ? 'bg-blue-600'
-                                                        : 'bg-gray-300 dark:bg-gray-600'
+                                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${selectedIndex === index
+                                                        ? 'bg-primary'
+                                                        : 'bg-muted'
                                                         }`}>
-                                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                        </svg>
+                                                        {selectedIndex === index && (
+                                                            <svg className="w-3 h-3 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -550,8 +548,8 @@ export default function InputSearch({
 
                         {/* Footer con información adicional */}
                         {options.length > 0 && (
-                            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
-                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <div className="px-4 py-2 bg-muted border-t border-border">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
                                     <span>Presiona Enter o haz clic para seleccionar</span>
                                     <span>↑↓ para navegar</span>
                                 </div>
@@ -562,20 +560,20 @@ export default function InputSearch({
             </div>
 
             {error && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
+                <p className="mt-1 text-sm text-destructive">{error}</p>
             )}
 
             {/* Modal del scanner */}
             {showScanner && (
-                <div className="fixed inset-0 z-[2147483646] flex items-center justify-center bg-black bg-opacity-75">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+                <div className="fixed inset-0 z-[2147483646] flex items-center justify-center bg-black/75">
+                    <div className="bg-background rounded-lg p-6 w-full max-w-md mx-4 border border-border">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                            <h3 className="text-lg font-semibold text-foreground">
                                 {scannerLabel}
                             </h3>
                             <button
                                 onClick={stopScanner}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                className="text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <X className="h-6 w-6" />
                             </button>
@@ -583,10 +581,10 @@ export default function InputSearch({
 
                         {scannerError ? (
                             <div className="text-center py-8">
-                                <p className="text-red-600 dark:text-red-400 mb-4">{scannerError}</p>
+                                <p className="text-destructive mb-4">{scannerError}</p>
                                 <button
                                     onClick={stopScanner}
-                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                    className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
                                 >
                                     Cerrar
                                 </button>
@@ -604,7 +602,7 @@ export default function InputSearch({
                                 </div>
 
                                 <div className="text-center">
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                    <p className="text-sm text-muted-foreground mb-4">
                                         Apunta la cámara hacia el código de barras
                                     </p>
 
@@ -613,7 +611,7 @@ export default function InputSearch({
                                         <input
                                             type="text"
                                             placeholder="O ingresa el código manualmente"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
                                                     const target = e.target as HTMLInputElement;
@@ -623,7 +621,7 @@ export default function InputSearch({
                                                 }
                                             }}
                                         />
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        <p className="text-xs text-muted-foreground">
                                             Presiona Enter después de escribir el código
                                         </p>
                                     </div>

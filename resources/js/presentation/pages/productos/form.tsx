@@ -241,6 +241,21 @@ export default function ProductoForm({
       // No enviamos nada, el backend se encargará
     }
 
+    // Conversiones de unidad (si es fraccionado)
+    formData.append('es_fraccionado', data.es_fraccionado ? '1' : '0');
+
+    if (data.es_fraccionado && data.conversiones && data.conversiones.length > 0) {
+      (data.conversiones as any[]).forEach((conv, i) => {
+        formData.append(`conversiones[${i}][unidad_base_id]`, String(conv.unidad_base_id));
+        formData.append(`conversiones[${i}][unidad_destino_id]`, String(conv.unidad_destino_id));
+        formData.append(`conversiones[${i}][factor_conversion]`, String(conv.factor_conversion));
+        formData.append(`conversiones[${i}][activo]`, conv.activo ? '1' : '0');
+        formData.append(`conversiones[${i}][es_conversion_principal]`, conv.es_conversion_principal ? '1' : '0');
+      });
+
+      console.log('✅ Conversiones enviadas:', data.conversiones);
+    }
+
     let savingToast: Id | undefined;
     const options = {
       forceFormData: true,
@@ -432,11 +447,11 @@ export default function ProductoForm({
 
           <CardContent>
             <Tabs defaultValue="datos" className="w-full">
-              <TabsList className={`grid w-full ${permite_productos_fraccionados ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              <TabsList className={`grid w-full ${permite_productos_fraccionados && data.es_fraccionado ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
                 <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
-                {permite_productos_fraccionados && (
-                  <TabsTrigger value="conversiones" disabled={!data.es_fraccionado}>
+                {permite_productos_fraccionados && data.es_fraccionado && (
+                  <TabsTrigger value="conversiones">
                     ✨ Conversiones
                   </TabsTrigger>
                 )}
@@ -459,7 +474,13 @@ export default function ProductoForm({
 
                 <TabsContent value="precios" className="space-y-6 mt-6">
                   <Step2PreciosCodigos
-                    data={{ precios: data.precios, codigos: data.codigos }}
+                    data={{
+                      precios: data.precios,
+                      codigos: data.codigos,
+                      es_fraccionado: data.es_fraccionado, // ✨ NUEVO
+                      unidad_medida_id: data.unidad_medida_id, // ✨ NUEVO
+                      conversiones: data.conversiones, // ✨ NUEVO
+                    }}
                     errors={errors}
                     tipos_precio={tipos_precio}
                     porcentajeInteres={porcentajeInteres}
@@ -476,6 +497,7 @@ export default function ProductoForm({
                     removeCodigo={removeCodigo}
                     setCodigo={setCodigo}
                     historial_precios={historial_precios}
+                    unidades={unidades} // ✨ NUEVO
                   />
                 </TabsContent>
 

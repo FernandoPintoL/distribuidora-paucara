@@ -60,19 +60,53 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       )
     },
     {
-      key: 'codigo_barras',
-      label: 'Código Principal',
+      key: 'codigosBarra',
+      label: 'Códigos',
       type: 'custom',
       sortable: false,
-      render: (value) => value ? (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 font-mono text-xs font-semibold border border-green-200 dark:border-green-700">
-          ★ {value}
-        </span>
-      ) : (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 text-xs font-semibold border border-amber-200 dark:border-amber-700">
-          ⚠️ Sin código
-        </span>
-      )
+      render: (value, entity) => {
+        // Usar codigosBarra primero, luego codigos como fallback
+        let codigos: any[] = [];
+
+        // Intentar obtener codigosBarra
+        if (Array.isArray(value) && value.length > 0) {
+          codigos = value;
+        }
+        // Si no, intentar obtener codigos
+        else if (Array.isArray((entity as any)?.codigos)) {
+          codigos = (entity as any).codigos;
+        }
+        // Legacy: si es string
+        else if (typeof value === 'string' && value) {
+          codigos = [{ codigo: value, es_principal: true }];
+        }
+
+        if (!codigos || codigos.length === 0) {
+          return (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 text-xs font-semibold border border-amber-200 dark:border-amber-700">
+              ⚠️ Sin códigos
+            </span>
+          );
+        }
+
+        return (
+          <div className="flex flex-wrap gap-1.5">
+            {codigos.map((cb: any, idx: number) => (
+              <span
+                key={`codigo-${idx}-${cb.id || cb.codigo}`}
+                className={`inline-flex items-center px-2.5 py-1 rounded-md font-mono text-xs font-semibold border transition-colors ${cb.es_principal
+                  ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 border-green-200 dark:border-green-700 hover:bg-green-200'
+                  : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 border-blue-200 dark:border-blue-700 hover:bg-blue-200'
+                  }`}
+                title={`${cb.es_principal ? 'Principal' : 'Secundario'} - Tipo: ${cb.tipo || 'N/A'}`}
+              >
+                {cb.es_principal && <span className="mr-1">★</span>}
+                {cb.codigo}
+              </span>
+            ))}
+          </div>
+        );
+      }
     },
     { key: 'marca', label: 'Marca', type: 'text' },
     { key: 'categoria', label: 'Categoría', type: 'text' },
@@ -311,12 +345,9 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         ) : (
           <span className="absolute top-2 right-2 bg-red-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Inactivo</span>
         )}
-        {(!p.precio_base || p.precio_base === 0) && (
+        {/* {(!p.precio_base || p.precio_base === 0) && (
           <span className="absolute bottom-2 left-2 bg-amber-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">⚠️ Sin precio</span>
-        )}
-        {!p.codigo_barras && (
-          <span className="absolute bottom-2 right-2 bg-orange-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">📦 Sin código</span>
-        )}
+        )} */}
       </div>
       <div className="p-3 flex flex-col gap-2">
         <div className="space-y-0.5">
@@ -325,7 +356,13 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
             {p.sku && <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono font-semibold">{p.sku}</span>}
             {p.marca?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.marca.nombre}</span>}
             {p.categoria?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.categoria.nombre}</span>}
-            {p.codigo_barras && <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 px-1.5 py-0.5 rounded font-mono font-semibold">★ {p.codigo_barras}</span>}
+            {/* Mostrar códigos de producto */}
+            {Array.isArray(p.codigos) && p.codigos.length > 0 && p.codigos.map((cb: any, idx: number) => (
+              <span key={idx} className={`px-1.5 py-0.5 rounded font-mono font-semibold ${cb.es_principal ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200'}`}>
+                {cb.es_principal && <span>★ </span>}{cb.codigo}
+              </span>
+            ))}
+            {typeof p.codigos === 'string' && p.codigos && <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 px-1.5 py-0.5 rounded font-mono font-semibold">★ {p.codigos}</span>}
           </div>
         </div>
         <div className="flex items-end justify-between mt-auto">

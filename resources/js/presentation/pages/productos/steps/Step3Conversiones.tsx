@@ -71,6 +71,27 @@ export default function Step3Conversiones({
       return;
     }
 
+    // Validar que no exista un duplicado (mismo unidad_base_id y unidad_destino_id)
+    const isDuplicate = editingIndex === null && conversiones.some((c: any) =>
+      c.unidad_base_id === Number(formConversion.unidad_base_id) &&
+      c.unidad_destino_id === Number(formConversion.unidad_destino_id)
+    );
+
+    if (isDuplicate) {
+      setValidationError('Esta conversión ya existe');
+      return;
+    }
+
+    // Validar que solo haya una conversión principal
+    const otherPrincipals = conversiones.filter((c: any, i: number) =>
+      c.es_conversion_principal && i !== editingIndex
+    );
+
+    if (formConversion.es_conversion_principal && otherPrincipals.length > 0 && editingIndex === null) {
+      setValidationError('Ya existe una conversión principal. Desmarca la actual o edita la existente.');
+      return;
+    }
+
     const newConversion: ConversionUnidad = {
       unidad_base_id: Number(formConversion.unidad_base_id),
       unidad_destino_id: Number(formConversion.unidad_destino_id),
