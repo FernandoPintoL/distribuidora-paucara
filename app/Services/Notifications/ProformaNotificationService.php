@@ -113,7 +113,7 @@ class ProformaNotificationService
      */
     public function notifyConverted(Proforma $proforma, Venta $venta): bool
     {
-        // 1. Obtener usuarios a notificar
+        // 1. Obtener usuarios internos a notificar
         $users = $this->getUsersForConverted($proforma);
         $userIds = $users->pluck('id')->toArray();
 
@@ -130,7 +130,12 @@ class ProformaNotificationService
             'venta_id' => $venta->id,
         ]);
 
-        // 3. WebSocket
+        // 3. ✅ NUEVO: Enviar notificación DIRECTA al cliente (incluso sin user_id)
+        if ($proforma->cliente) {
+            $this->wsService->notifyClientConverted($proforma, $venta);
+        }
+
+        // 4. WebSocket para usuarios internos
         return $this->wsService->notifyConverted($proforma, $venta);
     }
 

@@ -333,7 +333,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                 </div>
 
                 {/* Mapa de Tracking en Tiempo Real - Mostrar cuando está EN_TRANSITO */}
-                {entrega.estado_entrega_codigo === 'EN_TRANSITO' && (
+                {/* {entrega.estado_entrega_codigo === 'EN_TRANSITO' && (
                     <div className="pt-4">
                         <div className="mb-2">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
@@ -347,7 +347,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                             permitirSatellite={true}
                         />
                     </div>
-                )}
+                )} */}
 
                 {/* Información del Lote - Entregas con mismo chofer y vehículo */}
                 {entrega.chofer && entrega.vehiculo && (

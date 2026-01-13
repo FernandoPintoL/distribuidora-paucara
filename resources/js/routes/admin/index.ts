@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 /**
  * @see routes/web.php:146
  * @route '/admin/image-backup'
@@ -38,6 +38,38 @@ imageBackup.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+ * @see routes/web.php:146
+ * @route '/admin/image-backup'
+ */
+    const imageBackupForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imageBackup.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:146
+ * @route '/admin/image-backup'
+ */
+        imageBackupForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imageBackup.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:146
+ * @route '/admin/image-backup'
+ */
+        imageBackupForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imageBackup.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    imageBackup.form = imageBackupForm
 /**
 * @see \App\Http\Controllers\AdminController::dashboard
  * @see app/Http/Controllers/AdminController.php:20
@@ -80,6 +112,42 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: dashboard.url(options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\AdminController::dashboard
+ * @see app/Http/Controllers/AdminController.php:20
+ * @route '/admin/dashboard'
+ */
+    const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: dashboard.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\AdminController::dashboard
+ * @see app/Http/Controllers/AdminController.php:20
+ * @route '/admin/dashboard'
+ */
+        dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\AdminController::dashboard
+ * @see app/Http/Controllers/AdminController.php:20
+ * @route '/admin/dashboard'
+ */
+        dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    dashboard.form = dashboardForm
 const admin = {
     imageBackup,
 dashboard,

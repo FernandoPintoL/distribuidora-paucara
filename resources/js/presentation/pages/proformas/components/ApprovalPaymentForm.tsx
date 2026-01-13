@@ -11,9 +11,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/presentation/components/ui/select';
-import { Banknote, Send, CreditCard, Truck, Split, CheckCircle2 } from 'lucide-react';
+import { Banknote, Send, CreditCard, Truck, Split, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import type { Proforma, PaymentData } from '@/domain/entities/proformas';
 import type { CoordinacionData } from '@/application/hooks/use-proforma-actions';
+import { usePoliticasPago } from '@/application/hooks/use-politicas-pago';
 
 interface TipoPago {
     id: number;
@@ -43,8 +44,20 @@ export function ApprovalPaymentForm({
     const [loadingTiposPago, setLoadingTiposPago] = useState(true);
     const [payment, setPayment] = useState<PaymentData>({
         con_pago: false,
-        politica_pago: 'CONTRA_ENTREGA',
+        politica_pago: proforma.politica_pago || 'CONTRA_ENTREGA', // ✅ NUEVO: Usar politica_pago de proforma
         monto_pagado: 0,
+    });
+
+    // ✅ NUEVO: Hook para obtener políticas de pago disponibles (desde API)
+    const {
+        loading: loadingPoliticas,
+        politicasDisponibles,
+        puedeUsarPolitica,
+        calcularMinimo,
+        validarMonto,
+        getMensajeCreditoNoDisponible
+    } = usePoliticasPago({
+        cliente: proforma.cliente,
     });
 
     // Cargar tipos de pago al montar el componente
@@ -83,20 +96,27 @@ export function ApprovalPaymentForm({
         });
     }, [payment, onCoordinacionChange]);
 
-    // Calcular monto mínimo requerido según política
+    // ✅ MEJORADO: Calcular monto mínimo usando el hook
     const getMinimumPayment = (): number => {
-        if (payment.politica_pago === 'ANTICIPADO_100') return proforma.total;
-        if (payment.politica_pago === 'MEDIO_MEDIO') return proforma.total / 2;
-        return 0;
+        return calcularMinimo(payment.politica_pago as any, proforma.total);
     };
 
-    // Manejo de cambio de política
+    // ✅ MEJORADO: Manejo de cambio de política con validación
     const handlePolicyChange = (policy: string) => {
+        // Validar si el cliente puede usar esta política
+        if (!puedeUsarPolitica(policy as any)) {
+            const mensajeCredito = getMensajeCreditoNoDisponible();
+            if (policy === 'CREDITO' && mensajeCredito) {
+                alert(mensajeCredito);
+            }
+            return;
+        }
+
         setPayment(prev => ({
             ...prev,
             politica_pago: policy as any,
-            // Resetear monto si es contra entrega
-            monto_pagado: policy === 'CONTRA_ENTREGA' ? 0 : prev.monto_pagado
+            // Resetear monto si es contra entrega o crédito
+            monto_pagado: (policy === 'CONTRA_ENTREGA' || policy === 'CREDITO') ? 0 : prev.monto_pagado
         }));
     };
 
@@ -193,264 +213,260 @@ export function ApprovalPaymentForm({
                 </CardContent>
             </Card>
 
+            {/* ✅ NUEVO: Resumen de Política Solicitada */}
+            {proforma.politica_pago && (
+                <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                Política Solicitada por el Cliente
+                            </CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-blue-700 dark:text-blue-300">Política:</span>
+                            <span className="font-semibold text-blue-900 dark:text-blue-100">
+                                {proforma.politica_pago === 'CONTRA_ENTREGA' && 'Contra Entrega'}
+                                {proforma.politica_pago === 'ANTICIPADO_100' && '100% Anticipado'}
+                                {proforma.politica_pago === 'MEDIO_MEDIO' && '50% Anticipo + 50% Contra Entrega'}
+                                {proforma.politica_pago === 'CREDITO' && 'Crédito'}
+                            </span>
+                        </div>
+                        {proforma.politica_pago === 'CREDITO' && (
+                            <div className="mt-2 rounded bg-white p-2 dark:bg-slate-900">
+                                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                    Límite de crédito disponible:
+                                </p>
+                                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                    Bs. {(proforma.cliente?.limite_credito ?? 0).toFixed(2)}
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Sección de Verificación de Pago */}
             <Card>
                 <CardHeader>
                     <CardTitle className="text-sm font-medium">Verificación de Pago</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Checkbox: El cliente realizó un pago */}
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="con_pago"
-                            checked={payment.con_pago}
-                            onChange={(e) => setPayment(prev => ({ ...prev, con_pago: e.target.checked }))}
-                            disabled={isSubmitting}
-                            className="h-4 w-4 rounded border-gray-300 cursor-pointer"
-                        />
-                        <Label
-                            htmlFor="con_pago"
-                            className="text-sm font-medium cursor-pointer"
-                        >
-                            El cliente realizó un pago (aprobar y convertir a venta automáticamente)
+
+
+                    {/* Método de Pago */}
+                    <div className="space-y-2">
+                        <Label htmlFor="tipo_pago" className="text-sm font-medium">
+                            Método de Pago *
                         </Label>
+                        <Select
+                            value={payment.tipo_pago_id?.toString() || ''}
+                            onValueChange={(value) => setPayment(prev => ({
+                                ...prev,
+                                tipo_pago_id: parseInt(value) || undefined
+                            }))}
+                            disabled={isSubmitting || loadingTiposPago}
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Seleccione método de pago" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover dark:bg-popover text-popover-foreground dark:text-popover-foreground border-input dark:border-input">
+                                {tiposPago.filter(t => t.activo).map(tipo => (
+                                    <SelectItem
+                                        key={tipo.id}
+                                        value={tipo.id.toString()}
+                                        className="cursor-pointer focus:bg-accent dark:focus:bg-accent focus:text-accent-foreground dark:focus:text-accent-foreground"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            {getPaymentIcon(tipo.codigo)}
+                                            <span>{tipo.nombre}</span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
-                    {payment.con_pago && (
+                    {/* ✅ MEJORADO: Política de Pago Dinámica */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-medium">Política de Pago *</Label>
+                        {loadingPoliticas ? (
+                            <div className="flex items-center justify-center p-4">
+                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-accent border-t-transparent"></div>
+                                <span className="ml-2 text-sm text-muted-foreground">Cargando políticas...</span>
+                            </div>
+                        ) : (
+                        <div className="space-y-2">
+                            {politicasDisponibles.map((politica) => {
+                                const isSelected = payment.politica_pago === politica.codigo;
+                                const isDisabled = !puedeUsarPolitica(politica.codigo);
+                                const creditoMsg = politica.codigo === 'CREDITO' ? getMensajeCreditoNoDisponible() : null;
+
+                                return (
+                                    <label
+                                        key={politica.codigo}
+                                        htmlFor={`politica_${politica.codigo}`}
+                                        className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                            isDisabled
+                                                ? 'opacity-50 cursor-not-allowed'
+                                                : 'hover:bg-accent/5 dark:hover:bg-accent/10'
+                                        } ${
+                                            isSelected
+                                                ? 'border-accent bg-accent/5 dark:bg-accent/10'
+                                                : 'border-input'
+                                        }`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            id={`politica_${politica.codigo}`}
+                                            name="politica_pago"
+                                            value={politica.codigo}
+                                            checked={isSelected}
+                                            onChange={(e) => handlePolicyChange(e.target.value)}
+                                            disabled={isSubmitting || isDisabled}
+                                            className="h-4 w-4 cursor-pointer"
+                                        />
+                                        <div className="ml-3 flex-1">
+                                            <div className="flex items-center gap-2 font-medium text-sm">
+                                                {getPolicyIcon(politica.codigo)}
+                                                <span>{politica.nombre}</span>
+                                                {politica.codigo === 'CREDITO' && isDisabled && (
+                                                    <AlertCircle className="h-4 w-4 text-amber-500" title={creditoMsg || ''} />
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {politica.descripcion}
+                                            </p>
+                                            {creditoMsg && isDisabled && (
+                                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                                    {creditoMsg}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                        )}
+                    </div>
+
+                    {/* ✅ MEJORADO: Monto Pagado (condicional) */}
+                    {payment.politica_pago !== 'CONTRA_ENTREGA' && payment.politica_pago !== 'CREDITO' && (
                         <>
-                            {/* Método de Pago */}
+                            <Alert>
+                                <AlertDescription>
+                                    {(() => {
+                                        const minimo = getMinimumPayment();
+                                        if (minimo === 0) {
+                                            return 'No se requiere pago por adelantado';
+                                        }
+                                        return `Se requiere mínimo: ${formatCurrency(minimo)}`;
+                                    })()}
+                                </AlertDescription>
+                            </Alert>
+
                             <div className="space-y-2">
-                                <Label htmlFor="tipo_pago" className="text-sm font-medium">
-                                    Método de Pago *
+                                <Label htmlFor="monto_pagado" className="text-sm font-medium">
+                                    Monto Pagado (Bs.) *
                                 </Label>
-                                <Select
-                                    value={payment.tipo_pago_id?.toString() || ''}
-                                    onValueChange={(value) => setPayment(prev => ({
+                                <Input
+                                    type="number"
+                                    id="monto_pagado"
+                                    step="0.01"
+                                    min="0"
+                                    max={proforma.total}
+                                    value={payment.monto_pagado || 0}
+                                    onChange={(e) => setPayment(prev => ({
                                         ...prev,
-                                        tipo_pago_id: parseInt(value) || undefined
+                                        monto_pagado: parseFloat(e.target.value) || 0
                                     }))}
-                                    disabled={isSubmitting || loadingTiposPago}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Seleccione método de pago" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-popover dark:bg-popover text-popover-foreground dark:text-popover-foreground border-input dark:border-input">
-                                        {tiposPago.filter(t => t.activo).map(tipo => (
-                                            <SelectItem
-                                                key={tipo.id}
-                                                value={tipo.id.toString()}
-                                                className="cursor-pointer focus:bg-accent dark:focus:bg-accent focus:text-accent-foreground dark:focus:text-accent-foreground"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    {getPaymentIcon(tipo.codigo)}
-                                                    <span>{tipo.nombre}</span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    disabled={isSubmitting}
+                                    className={
+                                        (payment.monto_pagado < getMinimumPayment() ||
+                                            payment.monto_pagado > proforma.total) && payment.monto_pagado > 0
+                                            ? 'border-red-500'
+                                            : ''
+                                    }
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Total de la proforma: {formatCurrency(proforma.total)}
+                                </p>
                             </div>
 
-                            {/* Política de Pago */}
-                            <div className="space-y-3">
-                                <Label className="text-sm font-medium">Política de Pago *</Label>
+                            {/* Fecha de Pago */}
+                            <div className="space-y-2">
+                                <Label htmlFor="fecha_pago" className="text-sm font-medium">
+                                    Fecha de Pago
+                                </Label>
+                                <Input
+                                    type="date"
+                                    id="fecha_pago"
+                                    value={payment.fecha_pago || new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setPayment(prev => ({ ...prev, fecha_pago: e.target.value }))}
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            {/* Referencias de Pago */}
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    {/* Contra Entrega */}
-                                    <label
-                                        htmlFor="contra_entrega"
-                                        className="flex items-center p-3 rounded-lg border-2 border-input cursor-pointer transition-all hover:bg-accent/5 dark:hover:bg-accent/10"
-                                        style={{
-                                            borderColor: payment.politica_pago === 'CONTRA_ENTREGA' ? 'var(--accent)' : undefined,
-                                            backgroundColor: payment.politica_pago === 'CONTRA_ENTREGA' ? 'var(--accent)' : undefined
-                                        }}
-                                    >
-                                        <input
-                                            type="radio"
-                                            id="contra_entrega"
-                                            name="politica_pago"
-                                            value="CONTRA_ENTREGA"
-                                            checked={payment.politica_pago === 'CONTRA_ENTREGA'}
-                                            onChange={(e) => handlePolicyChange(e.target.value)}
-                                            disabled={isSubmitting}
-                                            className="h-4 w-4 cursor-pointer"
-                                        />
-                                        <div className="ml-3 flex-1">
-                                            <div className="flex items-center gap-2 font-medium text-sm">
-                                                {getPolicyIcon('CONTRA_ENTREGA')}
-                                                <span>Contra Entrega</span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Pago al momento de recibir la mercadería
-                                            </p>
-                                        </div>
-                                    </label>
-
-                                    {/* 50% Anticipo */}
-                                    <label
-                                        htmlFor="medio_medio"
-                                        className="flex items-center p-3 rounded-lg border-2 border-input cursor-pointer transition-all hover:bg-accent/5 dark:hover:bg-accent/10"
-                                        style={{
-                                            borderColor: payment.politica_pago === 'MEDIO_MEDIO' ? 'var(--accent)' : undefined,
-                                            backgroundColor: payment.politica_pago === 'MEDIO_MEDIO' ? 'var(--accent)' : undefined
-                                        }}
-                                    >
-                                        <input
-                                            type="radio"
-                                            id="medio_medio"
-                                            name="politica_pago"
-                                            value="MEDIO_MEDIO"
-                                            checked={payment.politica_pago === 'MEDIO_MEDIO'}
-                                            onChange={(e) => handlePolicyChange(e.target.value)}
-                                            disabled={isSubmitting}
-                                            className="h-4 w-4 cursor-pointer"
-                                        />
-                                        <div className="ml-3 flex-1">
-                                            <div className="flex items-center gap-2 font-medium text-sm">
-                                                {getPolicyIcon('MEDIO_MEDIO')}
-                                                <span>50% Anticipo + 50% Contra Entrega</span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Mitad ahora, mitad al recibir
-                                            </p>
-                                        </div>
-                                    </label>
-
-                                    {/* 100% Anticipado */}
-                                    <label
-                                        htmlFor="anticipado_100"
-                                        className="flex items-center p-3 rounded-lg border-2 border-input cursor-pointer transition-all hover:bg-accent/5 dark:hover:bg-accent/10"
-                                        style={{
-                                            borderColor: payment.politica_pago === 'ANTICIPADO_100' ? 'var(--accent)' : undefined,
-                                            backgroundColor: payment.politica_pago === 'ANTICIPADO_100' ? 'var(--accent)' : undefined
-                                        }}
-                                    >
-                                        <input
-                                            type="radio"
-                                            id="anticipado_100"
-                                            name="politica_pago"
-                                            value="ANTICIPADO_100"
-                                            checked={payment.politica_pago === 'ANTICIPADO_100'}
-                                            onChange={(e) => handlePolicyChange(e.target.value)}
-                                            disabled={isSubmitting}
-                                            className="h-4 w-4 cursor-pointer"
-                                        />
-                                        <div className="ml-3 flex-1">
-                                            <div className="flex items-center gap-2 font-medium text-sm">
-                                                {getPolicyIcon('ANTICIPADO_100')}
-                                                <span>100% Anticipado</span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Pago completo por adelantado
-                                            </p>
-                                        </div>
-                                    </label>
+                                    <Label htmlFor="numero_recibo" className="text-sm font-medium">
+                                        Número de Recibo
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        id="numero_recibo"
+                                        placeholder="Ej: REC-001"
+                                        value={payment.numero_recibo || ''}
+                                        onChange={(e) => setPayment(prev => ({ ...prev, numero_recibo: e.target.value }))}
+                                        disabled={isSubmitting}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="numero_transferencia" className="text-sm font-medium">
+                                        Número de Transferencia
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        id="numero_transferencia"
+                                        placeholder="Ej: TRANS-12345"
+                                        value={payment.numero_transferencia || ''}
+                                        onChange={(e) => setPayment(prev => ({ ...prev, numero_transferencia: e.target.value }))}
+                                        disabled={isSubmitting}
+                                    />
                                 </div>
                             </div>
-
-                            {/* Monto Pagado (condicional) */}
-                            {payment.politica_pago !== 'CONTRA_ENTREGA' && (
-                                <>
-                                    <Alert>
-                                        <AlertDescription>
-                                            {payment.politica_pago === 'ANTICIPADO_100'
-                                                ? `Se requiere pago completo: ${formatCurrency(proforma.total)}`
-                                                : `Se requiere mínimo 50% de anticipo: ${formatCurrency(proforma.total / 2)}`
-                                            }
-                                        </AlertDescription>
-                                    </Alert>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="monto_pagado" className="text-sm font-medium">
-                                            Monto Pagado (Bs.) *
-                                        </Label>
-                                        <Input
-                                            type="number"
-                                            id="monto_pagado"
-                                            step="0.01"
-                                            min="0"
-                                            max={proforma.total}
-                                            value={payment.monto_pagado || 0}
-                                            onChange={(e) => setPayment(prev => ({
-                                                ...prev,
-                                                monto_pagado: parseFloat(e.target.value) || 0
-                                            }))}
-                                            disabled={isSubmitting}
-                                            className={
-                                                (payment.monto_pagado < getMinimumPayment() ||
-                                                payment.monto_pagado > proforma.total) && payment.monto_pagado > 0
-                                                    ? 'border-red-500'
-                                                    : ''
-                                            }
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Total de la proforma: {formatCurrency(proforma.total)}
-                                        </p>
-                                    </div>
-
-                                    {/* Fecha de Pago */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="fecha_pago" className="text-sm font-medium">
-                                            Fecha de Pago
-                                        </Label>
-                                        <Input
-                                            type="date"
-                                            id="fecha_pago"
-                                            value={payment.fecha_pago || new Date().toISOString().split('T')[0]}
-                                            onChange={(e) => setPayment(prev => ({ ...prev, fecha_pago: e.target.value }))}
-                                            disabled={isSubmitting}
-                                        />
-                                    </div>
-
-                                    {/* Referencias de Pago */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="numero_recibo" className="text-sm font-medium">
-                                                Número de Recibo
-                                            </Label>
-                                            <Input
-                                                type="text"
-                                                id="numero_recibo"
-                                                placeholder="Ej: REC-001"
-                                                value={payment.numero_recibo || ''}
-                                                onChange={(e) => setPayment(prev => ({ ...prev, numero_recibo: e.target.value }))}
-                                                disabled={isSubmitting}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="numero_transferencia" className="text-sm font-medium">
-                                                Número de Transferencia
-                                            </Label>
-                                            <Input
-                                                type="text"
-                                                id="numero_transferencia"
-                                                placeholder="Ej: TRANS-12345"
-                                                value={payment.numero_transferencia || ''}
-                                                onChange={(e) => setPayment(prev => ({ ...prev, numero_transferencia: e.target.value }))}
-                                                disabled={isSubmitting}
-                                            />
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* Mensajes de Validación */}
-                            {payment.monto_pagado < getMinimumPayment() && payment.monto_pagado > 0 && (
-                                <Alert variant="destructive">
-                                    <AlertDescription>
-                                        El monto pagado es menor al mínimo requerido para la política seleccionada
-                                    </AlertDescription>
-                                </Alert>
-                            )}
-
-                            {payment.monto_pagado > proforma.total && (
-                                <Alert variant="destructive">
-                                    <AlertDescription>
-                                        El monto pagado no puede exceder el total de la proforma
-                                    </AlertDescription>
-                                </Alert>
-                            )}
                         </>
+                    )}
+
+                    {/* ✅ NUEVO: Información especial para CREDITO */}
+                    {payment.politica_pago === 'CREDITO' && (
+                        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                            <AlertDescription className="text-amber-800 dark:text-amber-200">
+                                Esta venta se registrará como crédito. No requiere pago inmediato pero se generará una cuenta por cobrar.
+                                El cliente tiene un límite de crédito de <span className="font-semibold">{formatCurrency(proforma.cliente?.limite_credito ?? 0)}</span>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {/* Mensajes de Validación */}
+                    {payment.monto_pagado < getMinimumPayment() && payment.monto_pagado > 0 && (
+                        <Alert variant="destructive">
+                            <AlertDescription>
+                                El monto pagado es menor al mínimo requerido para la política seleccionada
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {payment.monto_pagado > proforma.total && (
+                        <Alert variant="destructive">
+                            <AlertDescription>
+                                El monto pagado no puede exceder el total de la proforma
+                            </AlertDescription>
+                        </Alert>
                     )}
                 </CardContent>
             </Card>

@@ -8,6 +8,7 @@ use App\Models\Vehiculo;
 use App\Models\Venta;
 use App\Services\Traits\LogsOperations;
 use App\Services\Traits\ManagesTransactions;
+use App\Events\EntregaAsignada;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -189,6 +190,32 @@ class CrearEntregaPorLocalidadService
                 'error' => $e->getMessage(),
             ]);
             // Continuar sin fallar - la sincronización es no-bloqueante
+        }
+
+        // ✅ NUEVO: Disparar evento para notificar al chofer
+        try {
+            // Cargar relaciones necesarias para el evento
+            $entrega->load(['vehiculo', 'chofer']);
+
+            Log::info('📢 Disparando evento EntregaAsignada', [
+                'entrega_id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+                'chofer_id' => $entrega->chofer_id,
+            ]);
+
+            event(new EntregaAsignada($entrega));
+
+            Log::info('✅ Evento EntregaAsignada disparado exitosamente', [
+                'entrega_id' => $entrega->id,
+                'chofer_id' => $entrega->chofer_id,
+            ]);
+        } catch (Exception $e) {
+            Log::error('❌ Error disparando evento de entrega asignada', [
+                'entrega_id' => $entrega->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Continuar sin fallar - la notificación es no-bloqueante
         }
 
         return $entrega;

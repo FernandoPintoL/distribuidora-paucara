@@ -45,3 +45,6 @@ export {
     useProformaCanApprove,
     useProformaCanReject,
 } from '@/application/hooks/use-estados-proformas';
+
+// ✅ NUEVO: Hook para políticas de pago
+export { usePoliticasPago } from '@/application/hooks/use-politicas-pago';

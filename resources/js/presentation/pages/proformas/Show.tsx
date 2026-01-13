@@ -25,7 +25,7 @@ import {
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
-import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle } from 'lucide-react'
+import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight } from 'lucide-react'
 import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallback'
 import { FormatoSelector } from '@/presentation/components/impresion'
 
@@ -381,6 +381,13 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [showMapaEntrega, setShowMapaEntrega] = useState(false)
     const [convertErrorState, setConvertErrorState] = useState<{ code?: string; message?: string; reservasExpiradas?: number } | null>(null)
 
+    // ✅ NUEVO: Estados para navegación a siguiente proforma
+    const [loadingSiguiente, setLoadingSiguiente] = useState(false)
+    const [siguienteProforma, setSiguienteProforma] = useState<{ id: number; numero: string; cliente_nombre: string; total: number; fecha_creacion: string } | null>(null)
+
+    // ✅ NUEVO: Flag para evitar que el componente se remonte durante flujo de aprobación + conversión
+    const [isFlowAprobacionConversion, setIsFlowAprobacionConversion] = useState(false)
+
     // Estados para edición de detalles
     const [editableDetalles, setEditableDetalles] = useState(proforma.detalles.map(d => ({ ...d })))
     const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
@@ -510,7 +517,14 @@ export default function ProformasShow({ item: proforma }: Props) {
     }, [isCalculandoRangos, errorRangos, getPrecioActualizado])
 
     // Sincronizar datos de coordinación cuando la proforma cambia
+    // ✅ CRÍTICO: No actualizar si estamos en el flujo de aprobación + conversión
     useEffect(() => {
+        // Saltar si estamos en el flujo de aprobación + conversión
+        if (isFlowAprobacionConversion) {
+            console.log('⏭️ Saltando sincronización de coordinación - flujo en progreso');
+            return;
+        }
+
         console.log('📦 Datos de Proforma desde Backend:', proforma)
 
         // Calcular fecha/hora por defecto cuando cambia la proforma
@@ -562,7 +576,7 @@ export default function ProformasShow({ item: proforma }: Props) {
             entregado_a: proforma.entregado_a || '',
             observaciones_entrega: proforma.observaciones_entrega || '',
         })
-    }, [proforma.id])
+    }, [proforma.id, isFlowAprobacionConversion])
 
     // Handlers para edición de detalles
     const handleEditarCantidad = (index: number, cantidad: number) => {
@@ -636,29 +650,16 @@ export default function ProformasShow({ item: proforma }: Props) {
 
     // PRESENTATION LAYER: Handlers simples que delegan al hook
     const handleAprobar = () => {
-        // Si hay datos de pago (con_pago = true), usar flujo combinado
-        if (coordinacion.payment?.con_pago) {
-            handleAprobarYConvertirConPago();
-            return;
-        }
-
-        console.log('%c📋 Iniciando aprobación simple', 'color: blue; font-weight: bold;');
-
-        // Inicializar flujo de aprobación si el contexto está disponible
-        if (approvalFlow) {
-            approvalFlow.initFlow(proforma);
-            approvalFlow.updateCoordinacion(coordinacion);
-            approvalFlow.setLoading(true, 'approving');
-        }
-
-        // Llamar al endpoint de aprobación
-        aprobar(coordinacion);
-        // El diálogo se cerrará cuando la página se recargue después del onSuccess
+        // ✅ SIEMPRE usar flujo combinado: Aprobar + Convertir (incluso sin pago especificado)
+        handleAprobarYConvertirConPago();
     }
 
     // Flujo combinado: Aprobar + Convertir con Pago
     const handleAprobarYConvertirConPago = async () => {
         console.log('%c📋 Iniciando flujo combinado: Aprobar + Convertir', 'color: blue; font-weight: bold;');
+
+        // ✅ CRÍTICO: Establecer flag para evitar que el componente se remonte
+        setIsFlowAprobacionConversion(true);
 
         // Inicializar flujo
         if (approvalFlow) {
@@ -736,6 +737,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                 }),
             });
 
+            console.log('%c📥 Respuesta de aprobación recibida', 'color: gray;', aprobarResponse);
+
             if (!aprobarResponse.ok) {
                 const errorData = await aprobarResponse.json();
                 console.error('❌ Error en aprobación:', {
@@ -760,21 +763,29 @@ export default function ProformasShow({ item: proforma }: Props) {
             // PASO 2: Convertir a venta con datos de pago
             console.log('%c⏳ PASO 2: Convirtiendo a venta...', 'color: blue;');
 
+            // ✅ Preparar datos de pago (pueden no existir si no se especificaron)
+            const paymentData = coordinacion.payment ? {
+                con_pago: coordinacion.payment.con_pago,
+                tipo_pago_id: coordinacion.payment.tipo_pago_id,
+                politica_pago: coordinacion.payment.politica_pago,
+                monto_pagado: coordinacion.payment.monto_pagado,
+                fecha_pago: coordinacion.payment.fecha_pago,
+                numero_recibo: coordinacion.payment.numero_recibo,
+                numero_transferencia: coordinacion.payment.numero_transferencia,
+            } : {
+                con_pago: false,
+                politica_pago: 'CONTRA_ENTREGA', // Política por defecto
+            };
+
+            console.log('%c💳 Datos de pago para conversión:', 'color: orange;', paymentData);
+
             const convertirResponse = await fetch(`/api/proformas/${proforma.id}/convertir-venta`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify({
-                    con_pago: coordinacion.payment!.con_pago,
-                    tipo_pago_id: coordinacion.payment!.tipo_pago_id,
-                    politica_pago: coordinacion.payment!.politica_pago,
-                    monto_pagado: coordinacion.payment!.monto_pagado,
-                    fecha_pago: coordinacion.payment!.fecha_pago,
-                    numero_recibo: coordinacion.payment!.numero_recibo,
-                    numero_transferencia: coordinacion.payment!.numero_transferencia,
-                }),
+                body: JSON.stringify(paymentData),
             });
 
             if (!convertirResponse.ok) {
@@ -803,6 +814,9 @@ export default function ProformasShow({ item: proforma }: Props) {
             const successMessage = `Proforma aprobada y convertida a venta exitosamente`;
             console.log('%c🎉 ' + successMessage, 'color: green; font-weight: bold;');
 
+            // ✅ CRÍTICO: Resetear flag ANTES de recargar la página
+            setIsFlowAprobacionConversion(false);
+
             // Esperar un momento para que el usuario vea el loading, luego recargar
             setTimeout(() => {
                 window.location.reload();
@@ -821,6 +835,9 @@ export default function ProformasShow({ item: proforma }: Props) {
                 approvalFlow.setError(errorMessage);
                 approvalFlow.setLoading(false, 'error');
             }
+
+            // ✅ CRÍTICO: Resetear flag para permitir que el componente se actualice nuevamente
+            setIsFlowAprobacionConversion(false);
         }
     }
 
@@ -840,6 +857,46 @@ export default function ProformasShow({ item: proforma }: Props) {
 
         // El modal se cerrará desde el callback onSuccess o onError
         // si NO es RESERVAS_EXPIRADAS
+    }
+
+    // ✅ NUEVO: Manejar navegación a siguiente proforma pendiente
+    const handleSiguiente = async () => {
+        setLoadingSiguiente(true);
+        try {
+            const response = await fetch(`/api/proformas/siguiente-pendiente?current_id=${proforma.id}&incluir_stats=true`);
+            const data = await response.json();
+
+            if (!data.success) {
+                toast.error('Error al obtener siguiente proforma');
+                setLoadingSiguiente(false);
+                return;
+            }
+
+            if (!data.existe_siguiente) {
+                toast.success('¡No hay más proformas pendientes!');
+                setLoadingSiguiente(false);
+                return;
+            }
+
+            // Guardar información de siguiente proforma
+            setSiguienteProforma(data.proforma);
+
+            // Mostrar toast informativo
+            if (data.stats) {
+                toast.success(`Siguiente: ${data.proforma.numero} (${data.stats.indice})`);
+            }
+
+            // Navegar a la siguiente proforma
+            setTimeout(() => {
+                window.location.href = `/proformas/${data.proforma.id}`;
+            }, 300);
+
+        } catch (error) {
+            console.error('Error al obtener siguiente proforma:', error);
+            toast.error('Error al obtener siguiente proforma');
+        } finally {
+            setLoadingSiguiente(false);
+        }
     }
 
     return (
@@ -974,6 +1031,29 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 Convertir a Venta
                             </Button>
                         )}
+
+                        {/* ✅ NUEVO: Botón para ir a la siguiente proforma pendiente */}
+                        {/* {proforma.estado === 'PENDIENTE' && (
+                            <Button
+                                onClick={handleSiguiente}
+                                disabled={loadingSiguiente}
+                                variant="outline"
+                                className="hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                                title="Ir a la siguiente proforma pendiente sin volver al dashboard"
+                            >
+                                {loadingSiguiente ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent mr-2"></div>
+                                        Cargando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronRight className="mr-2 h-4 w-4" />
+                                        Siguiente
+                                    </>
+                                )}
+                            </Button>
+                        )} */}
 
                         <FormatoSelector
                             documentoId={proforma.id}
@@ -1186,12 +1266,12 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         )}
 
                                         <div className="flex justify-end gap-8">
-                                            <div className="space-y-2 text-right">
+                                            {/* <div className="space-y-2 text-right">
                                                 <p className="text-sm text-muted-foreground">Subtotal:</p>
                                                 <p className="text-2xl font-bold text-foreground">
                                                     Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                 </p>
-                                            </div>
+                                            </div> */}
                                             <div className="space-y-2 text-right">
                                                 <p className="text-sm font-medium text-foreground">Total:</p>
                                                 <p className="text-2xl font-bold text-[var(--brand-primary)]">

@@ -21,7 +21,7 @@
 <div class="documento-info">
     <p><strong>Cliente:</strong> {{ $documento->cliente->nombre }}</p>
     @if($documento->cliente->nit)
-        <p><strong>NIT/CI:</strong> {{ $documento->cliente->nit }}</p>
+    <p><strong>NIT/CI:</strong> {{ $documento->cliente->nit }}</p>
     @endif
     <p><strong>Estado:</strong> {{ $documento->estado }}</p>
 </div>
@@ -48,7 +48,9 @@
             <strong>{{ number_format($detalle->subtotal, 2) }}</strong>
         </td>
     </tr>
-    <tr><td colspan="3" style="height: 3px;"></td></tr>
+    <tr>
+        <td colspan="3" style="height: 3px;"></td>
+    </tr>
     @endforeach
 </table>
 
@@ -57,25 +59,25 @@
 {{-- Totales --}}
 <div class="totales">
     <table>
-        <tr>
+        {{-- <tr>
             <td>Subtotal:</td>
             <td class="right">{{ number_format($documento->subtotal, 2) }}</td>
-        </tr>
-        @if($documento->descuento > 0)
+        </tr> --}}
+        {{-- @if($documento->descuento > 0)
         <tr>
             <td>Descuento:</td>
             <td class="right">-{{ number_format($documento->descuento, 2) }}</td>
         </tr>
-        @endif
-        @if($documento->impuesto > 0)
+        @endif --}}
+        {{-- @if($documento->impuesto > 0)
         <tr>
             <td>Impuesto:</td>
             <td class="right">{{ number_format($documento->impuesto, 2) }}</td>
         </tr>
-        @endif
+        @endif --}}
         <tr class="total-final">
             <td><strong>TOTAL {{ $documento->moneda->codigo ?? 'BOB' }}:</strong></td>
-            <td class="right"><strong>{{ number_format($documento->total, 2) }}</strong></td>
+            <td class="right"><strong>{{ number_format($documento->subtotal, 2) }}</strong></td>
         </tr>
     </table>
 </div>

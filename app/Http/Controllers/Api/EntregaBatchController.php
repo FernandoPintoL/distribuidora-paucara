@@ -1,12 +1,13 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CrearEntregasBatchRequest;
 use App\Http\Requests\OptimizarEntregasRequest;
-use App\Services\Logistica\EntregaService;
+use App\Models\Empleado;
+use App\Models\Vehiculo;
 use App\Services\Logistica\AdvancedVRPService;
+use App\Services\Logistica\EntregaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
@@ -36,36 +37,36 @@ class EntregaBatchController extends Controller
     public function store(CrearEntregasBatchRequest $request): JsonResponse
     {
         try {
-            $ventaIds = $request->input('venta_ids', []);
+            $ventaIds   = $request->input('venta_ids', []);
             $vehiculoId = $request->input('vehiculo_id');
-            $choferId = $request->input('chofer_id');
+            $choferId   = $request->input('chofer_id');
 
             Log::info('🔍 INICIANDO CREACIÓN DE ENTREGAS EN LOTE', [
-                'venta_count' => count($ventaIds),
-                'venta_ids' => $ventaIds,
-                'vehiculo_id' => $vehiculoId,
-                'chofer_id' => $choferId,
-                'user_id' => auth()->id(),
+                'venta_count'  => count($ventaIds),
+                'venta_ids'    => $ventaIds,
+                'vehiculo_id'  => $vehiculoId,
+                'chofer_id'    => $choferId,
+                'user_id'      => auth()->id(),
                 'request_data' => $request->all(),
             ]);
 
             // ✅ Validar vehículo y disponibilidad ANTES de crear entregas
-            $vehiculo = \App\Models\Vehiculo::findOrFail($request->input('vehiculo_id'));
+            $vehiculo = Vehiculo::findOrFail($request->input('vehiculo_id'));
 
             // Validar que el vehículo está disponible (consistente con la recomendación)
             // Usar LOWER() para comparación case-insensitive (la BD puede tener "DISPONIBLE" o "disponible")
             if (strtolower($vehiculo->estado) !== 'disponible') {
                 Log::warning('Vehículo no disponible en creación de lote', [
                     'vehiculo_id' => $vehiculo->id,
-                    'placa' => $vehiculo->placa,
-                    'estado' => $vehiculo->estado,
+                    'placa'       => $vehiculo->placa,
+                    'estado'      => $vehiculo->estado,
                 ]);
 
                 return response()->json([
                     'success' => false,
                     'message' => "El vehículo {$vehiculo->placa} no está disponible (estado actual: {$vehiculo->estado}). Por favor, selecciona otro vehículo.",
                     'data' => [
-                        'vehiculo_id' => $vehiculo->id,
+                        'vehiculo_id'   => $vehiculo->id,
                         'estado_actual' => $vehiculo->estado,
                     ],
                 ], 422);
@@ -79,8 +80,8 @@ class EntregaBatchController extends Controller
 
             if ($pesoTotal > $vehiculo->capacidad_kg) {
                 Log::warning('Capacidad insuficiente para lote de entregas', [
-                    'peso_total' => $pesoTotal,
-                    'capacidad' => $vehiculo->capacidad_kg,
+                    'peso_total'  => $pesoTotal,
+                    'capacidad'   => $vehiculo->capacidad_kg,
                     'venta_count' => count($request->input('venta_ids')),
                 ]);
 
@@ -103,17 +104,17 @@ class EntregaBatchController extends Controller
             Log::info('Entregas en lote creadas exitosamente', [
                 'total_creadas' => $resultado['estadisticas']['total_creadas'],
                 'total_errores' => $resultado['estadisticas']['total_errores'],
-                'vehiculo_id' => $request->input('vehiculo_id'),
+                'vehiculo_id'   => $request->input('vehiculo_id'),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => "Se crearon {$resultado['estadisticas']['total_creadas']} entregas exitosamente",
                 'data' => [
-                    'entregas' => $resultado['entregas'],
+                    'entregas'     => $resultado['entregas'],
                     'estadisticas' => $resultado['estadisticas'],
                     'optimizacion' => $resultado['optimizacion'] ?? null,
-                    'errores' => $resultado['errores'],
+                    'errores'      => $resultado['errores'],
                 ],
             ], 201);
 
@@ -125,25 +126,25 @@ class EntregaBatchController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error de validación',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
             Log::error('❌ ERROR CREANDO ENTREGAS EN LOTE', [
                 'error_message' => $e->getMessage(),
-                'error_class' => get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'venta_ids' => $ventaIds ?? [],
-                'vehiculo_id' => $vehiculoId ?? null,
-                'chofer_id' => $choferId ?? null,
+                'error_class'   => get_class($e),
+                'file'          => $e->getFile(),
+                'line'          => $e->getLine(),
+                'trace'         => $e->getTraceAsString(),
+                'venta_ids'     => $ventaIds ?? [],
+                'vehiculo_id'   => $vehiculoId ?? null,
+                'chofer_id'     => $choferId ?? null,
             ]);
 
             return response()->json([
-                'success' => false,
-                'message' => 'Error al crear entregas en lote: ' . $e->getMessage(),
-                'error' => $e->getMessage(),
+                'success'     => false,
+                'message'     => 'Error al crear entregas en lote: ' . $e->getMessage(),
+                'error'       => $e->getMessage(),
                 'error_class' => get_class($e),
             ], 500);
         }
@@ -169,7 +170,7 @@ class EntregaBatchController extends Controller
             Log::info('Generando preview de entregas en lote', [
                 'venta_count' => count($request->input('venta_ids')),
                 'vehiculo_id' => $request->input('vehiculo_id'),
-                'user_id' => auth()->id(),
+                'user_id'     => auth()->id(),
             ]);
 
             // Obtener datos de las ventas
@@ -179,31 +180,31 @@ class EntregaBatchController extends Controller
 
             // Preparar datos para optimización (con GPS si existe)
             $entregasParaOptimizar = $ventas->map(function ($venta) {
-                $cliente = $venta->cliente;
+                $cliente   = $venta->cliente;
                 $direccion = $cliente?->direcciones?->first();
 
                 return [
-                    'id' => $venta->id,
-                    'venta_id' => $venta->id,
-                    'cliente_id' => $venta->cliente_id,
+                    'id'             => $venta->id,
+                    'venta_id'       => $venta->id,
+                    'cliente_id'     => $venta->cliente_id,
                     'cliente_nombre' => $cliente?->nombre ?? 'Sin cliente',
-                    'peso' => $venta->peso_estimado ?? ($venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10),
-                    'lat' => $direccion?->latitud ?? $cliente?->latitud ?? -17.3895,
-                    'lon' => $direccion?->longitud ?? $cliente?->longitud ?? -66.1568,
-                    'direccion' => $venta->direccion_entrega ?? $direccion?->direccion ?? 'Sin dirección',
+                    'peso'           => $venta->peso_estimado ?? ($venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10),
+                    'lat'            => $direccion?->latitud ?? $cliente?->latitud ?? -17.3895,
+                    'lon'            => $direccion?->longitud ?? $cliente?->longitud ?? -66.1568,
+                    'direccion'      => $venta->direccion_entrega ?? $direccion?->direccion ?? 'Sin dirección',
                 ];
             })->toArray();
 
             // Obtener datos de vehiculos y choferes
-            $vehiculo = \App\Models\Vehiculo::findOrFail($request->input('vehiculo_id'));
-            $vehiculos = [\App\Models\Vehiculo::findOrFail($request->input('vehiculo_id'))]->map(fn($v) => [
-                'id' => $v->id,
-                'placa' => $v->placa,
+            $vehiculo  = Vehiculo::findOrFail($request->input('vehiculo_id'));
+            $vehiculos = [Vehiculo::findOrFail($request->input('vehiculo_id'))]->map(fn($v) => [
+                'id'           => $v->id,
+                'placa'        => $v->placa,
                 'capacidad_kg' => $v->capacidad_kg,
             ])->toArray();
 
-            $choferes = [\App\Models\Empleado::findOrFail($request->input('chofer_id'))]->map(fn($c) => [
-                'id' => $c->id,
+            $choferes = [Empleado::findOrFail($request->input('chofer_id'))]->map(fn($c) => [
+                'id'     => $c->id,
                 'nombre' => $c->nombre,
             ])->toArray();
 
@@ -221,43 +222,43 @@ class EntregaBatchController extends Controller
             // Preparar rutas para respuesta
             $rutasFormato = array_map(function ($ruta, $idx) {
                 return [
-                    'numero' => $idx + 1,
-                    'cluster_id' => $ruta['cluster_id'],
-                    'paradas' => $ruta['paradas'],
-                    'entregas_ids' => $ruta['entregas'],
-                    'ruta' => $ruta['ruta'],
+                    'numero'          => $idx + 1,
+                    'cluster_id'      => $ruta['cluster_id'],
+                    'paradas'         => $ruta['paradas'],
+                    'entregas_ids'    => $ruta['entregas'],
+                    'ruta'            => $ruta['ruta'],
                     'distancia_total' => $ruta['distancia_total'],
-                    'peso_total' => $ruta['peso_total'],
+                    'peso_total'      => $ruta['peso_total'],
                     'tiempo_estimado' => $ruta['tiempo_estimado'],
-                    'porcentaje_uso' => $ruta['porcentaje_uso'],
+                    'porcentaje_uso'  => $ruta['porcentaje_uso'],
                 ];
             }, $resultadoOptimizacion['rutas'], array_keys($resultadoOptimizacion['rutas']));
 
             $pesoTotal = round(array_sum(array_column($entregasParaOptimizar, 'peso')), 2);
 
             Log::info('Preview de entregas en lote generado exitosamente', [
-                'venta_count' => $ventas->count(),
-                'peso_total' => $pesoTotal,
+                'venta_count'        => $ventas->count(),
+                'peso_total'         => $pesoTotal,
                 'capacidad_vehiculo' => $vehiculo->capacidad_kg,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Preview generado exitosamente',
-                'data' => [
-                    'ventas' => $ventas->count(),
-                    'peso_total' => $pesoTotal,
-                    'vehiculo' => [
-                        'id' => $vehiculo->id,
-                        'placa' => $vehiculo->placa,
+                'data'    => [
+                    'ventas'       => $ventas->count(),
+                    'peso_total'   => $pesoTotal,
+                    'vehiculo'     => [
+                        'id'           => $vehiculo->id,
+                        'placa'        => $vehiculo->placa,
                         'capacidad_kg' => $vehiculo->capacidad_kg,
                     ],
                     'optimizacion' => [
-                        'rutas' => $rutasFormato,
-                        'estadisticas' => $resultadoOptimizacion['estadisticas'],
+                        'rutas'            => $rutasFormato,
+                        'estadisticas'     => $resultadoOptimizacion['estadisticas'],
                         'clustering_stats' => $resultadoOptimizacion['clustering'],
-                        'problemas' => $resultadoOptimizacion['problemas'],
-                        'sugerencias' => $sugerencias,
+                        'problemas'        => $resultadoOptimizacion['problemas'],
+                        'sugerencias'      => $sugerencias,
                     ],
                 ],
             ]);
@@ -270,7 +271,7 @@ class EntregaBatchController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error de validación',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -282,7 +283,7 @@ class EntregaBatchController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener preview',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -302,10 +303,10 @@ class EntregaBatchController extends Controller
     {
         try {
             Log::info('Iniciando optimización de entregas', [
-                'venta_count' => count($request->input('venta_ids')),
+                'venta_count'    => count($request->input('venta_ids')),
                 'vehiculo_count' => count($request->input('vehiculo_ids')),
-                'chofer_count' => count($request->input('chofer_ids')),
-                'user_id' => auth()->id(),
+                'chofer_count'   => count($request->input('chofer_ids')),
+                'user_id'        => auth()->id(),
             ]);
 
             // 1. LOOKUP: Obtener datos de ventas desde DB
@@ -317,7 +318,7 @@ class EntregaBatchController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'No se encontraron ventas válidas',
-                    'data' => null,
+                    'data'    => null,
                 ], 404);
             }
 
@@ -325,8 +326,8 @@ class EntregaBatchController extends Controller
             $vehiculos = \App\Models\Vehiculo::whereIn('id', $request->input('vehiculo_ids'))
                 ->get()
                 ->map(fn($v) => [
-                    'id' => $v->id,
-                    'placa' => $v->placa,
+                    'id'           => $v->id,
+                    'placa'        => $v->placa,
                     'capacidad_kg' => $v->capacidad_kg,
                 ])
                 ->toArray();
@@ -335,7 +336,7 @@ class EntregaBatchController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'No se encontraron vehículos válidos',
-                    'data' => null,
+                    'data'    => null,
                 ], 404);
             }
 
@@ -343,7 +344,7 @@ class EntregaBatchController extends Controller
             $choferes = \App\Models\Empleado::whereIn('id', $request->input('chofer_ids'))
                 ->get()
                 ->map(fn($c) => [
-                    'id' => $c->id,
+                    'id'     => $c->id,
                     'nombre' => $c->user->name ?? 'Sin nombre',
                 ])
                 ->toArray();
@@ -352,24 +353,24 @@ class EntregaBatchController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'No se encontraron choferes válidos',
-                    'data' => null,
+                    'data'    => null,
                 ], 404);
             }
 
             // 4. PREPARAR DATOS: Transformar ventas a formato de optimización
             $entregasParaOptimizar = $ventas->map(function ($venta) {
-                $cliente = $venta->cliente;
+                $cliente   = $venta->cliente;
                 $direccion = $cliente?->direcciones?->first();
 
                 return [
-                    'id' => $venta->id,
-                    'venta_id' => $venta->id,
-                    'cliente_id' => $venta->cliente_id,
+                    'id'             => $venta->id,
+                    'venta_id'       => $venta->id,
+                    'cliente_id'     => $venta->cliente_id,
                     'cliente_nombre' => $cliente?->nombre ?? 'Sin cliente',
-                    'peso' => $venta->peso_estimado ?? ($venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10),
-                    'lat' => $direccion?->latitud ?? $cliente?->latitud ?? -17.3895,
-                    'lon' => $direccion?->longitud ?? $cliente?->longitud ?? -66.1568,
-                    'direccion' => $venta->direccion_entrega ?? $direccion?->direccion ?? 'Sin dirección',
+                    'peso'           => $venta->peso_estimado ?? ($venta->detalles?->sum(fn($det) => $det->cantidad * 2) ?? 10),
+                    'lat'            => $direccion?->latitud ?? $cliente?->latitud ?? -17.3895,
+                    'lon'            => $direccion?->longitud ?? $cliente?->longitud ?? -66.1568,
+                    'direccion'      => $venta->direccion_entrega ?? $direccion?->direccion ?? 'Sin dirección',
                 ];
             })->toArray();
 
@@ -389,33 +390,33 @@ class EntregaBatchController extends Controller
             // 7. FORMATEAR RESPUESTA
             $rutasFormato = array_map(function ($ruta, $idx) {
                 return [
-                    'numero' => $idx + 1,
-                    'cluster_id' => $ruta['cluster_id'] ?? null,
-                    'paradas' => $ruta['paradas'],
-                    'entregas_ids' => $ruta['entregas'],
-                    'ruta' => $ruta['ruta'],
+                    'numero'          => $idx + 1,
+                    'cluster_id'      => $ruta['cluster_id'] ?? null,
+                    'paradas'         => $ruta['paradas'],
+                    'entregas_ids'    => $ruta['entregas'],
+                    'ruta'            => $ruta['ruta'],
                     'distancia_total' => $ruta['distancia_total'],
-                    'peso_total' => $ruta['peso_total'],
+                    'peso_total'      => $ruta['peso_total'],
                     'tiempo_estimado' => $ruta['tiempo_estimado'],
-                    'porcentaje_uso' => $ruta['porcentaje_uso'],
+                    'porcentaje_uso'  => $ruta['porcentaje_uso'],
                 ];
             }, $resultadoOptimizacion['rutas'], array_keys($resultadoOptimizacion['rutas']));
 
             Log::info('Optimización completada exitosamente', [
-                'venta_count' => $ventas->count(),
-                'rutas_generadas' => count($rutasFormato),
+                'venta_count'      => $ventas->count(),
+                'rutas_generadas'  => count($rutasFormato),
                 'vehiculos_usados' => count($vehiculos),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Optimización generada exitosamente',
-                'data' => [
-                    'rutas' => $rutasFormato,
+                'data'    => [
+                    'rutas'        => $rutasFormato,
                     'estadisticas' => $resultadoOptimizacion['estadisticas'],
-                    'clustering' => $resultadoOptimizacion['clustering'],
-                    'problemas' => $resultadoOptimizacion['problemas'],
-                    'sugerencias' => $sugerencias,
+                    'clustering'   => $resultadoOptimizacion['clustering'],
+                    'problemas'    => $resultadoOptimizacion['problemas'],
+                    'sugerencias'  => $sugerencias,
                 ],
             ]);
 
@@ -427,7 +428,7 @@ class EntregaBatchController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error de validación',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -439,7 +440,7 @@ class EntregaBatchController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al optimizar entregas',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }

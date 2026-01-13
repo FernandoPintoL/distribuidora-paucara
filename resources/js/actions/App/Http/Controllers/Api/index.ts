@@ -1,6 +1,7 @@
 import AuthController from './AuthController'
 import EmpleadoApiController from './EmpleadoApiController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
+import ApiPoliticaPagoController from './ApiPoliticaPagoController'
 import RoleController from './RoleController'
 import NotificationController from './NotificationController'
 import ChoferPreferenciaController from './ChoferPreferenciaController'
@@ -23,6 +24,7 @@ const Api = {
     AuthController,
 EmpleadoApiController,
 TipoAjusteInventarioController,
+ApiPoliticaPagoController,
 RoleController,
 NotificationController,
 ChoferPreferenciaController,

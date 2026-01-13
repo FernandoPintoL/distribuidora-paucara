@@ -13,9 +13,23 @@
 
         body {
             font-family: 'Courier New', 'Courier', monospace;
-            font-size: {{ $empresa->configuracion_impresion['tamaño_fuente_ticket'] ?? '8px' }};
+
+            font-size: {
+                    {
+                    $empresa->configuracion_impresion['tamaño_fuente_ticket'] ?? '8px'
+                }
+            }
+
+            ;
             line-height: 1.3;
-            padding: {{ $empresa->configuracion_impresion['margen_ticket'] ?? '2mm' }};
+
+            padding: {
+                    {
+                    $empresa->configuracion_impresion['margen_ticket'] ?? '2mm'
+                }
+            }
+
+            ;
             color: #000;
         }
 
@@ -176,23 +190,26 @@
         }
 
         @yield('estilos-adicionales')
+
     </style>
 </head>
 <body>
     <div class="ticket">
         {{-- Header compacto --}}
         <div class="header">
-            @if($empresa->logo_compacto)
-                <img src="{{ $empresa->logo_compacto }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
+            @if(!empty($logo_principal_base64))
+            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
+            @elseif($empresa->logo_compacto)
+            <img src="{{ $empresa->logo_compacto }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
             @elseif($empresa->logo_principal)
-                <img src="{{ $empresa->logo_principal }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
+            <img src="{{ $empresa->logo_principal }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
             @endif
             <div class="empresa-nombre">{{ $empresa->nombre_comercial }}</div>
             <div class="empresa-info">NIT: {{ $empresa->nit }}</div>
             <div class="empresa-info">{{ $empresa->direccion }}</div>
             <div class="empresa-info">{{ $empresa->ciudad }} - {{ $empresa->pais }}</div>
             @if($empresa->telefono)
-                <div class="empresa-info">Tel: {{ $empresa->telefono }}</div>
+            <div class="empresa-info">Tel: {{ $empresa->telefono }}</div>
             @endif
         </div>
 
@@ -201,22 +218,30 @@
 
         {{-- Footer --}}
         <div class="footer">
-            @if($empresa->logo_footer)
-                <div style="margin-bottom: 5px;">
-                    <img src="{{ $empresa->logo_footer }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
-                </div>
+            @if(!empty($logo_footer_base64))
+            <div style="margin-bottom: 5px;">
+                <img src="{{ $logo_footer_base64 }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
+            </div>
+            @elseif(!empty($logo_principal_base64))
+            <div style="margin-bottom: 5px;">
+                <img src="{{ $logo_principal_base64 }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
+            </div>
+            @elseif($empresa->logo_footer)
+            <div style="margin-bottom: 5px;">
+                <img src="{{ $empresa->logo_footer }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
+            </div>
             @elseif($empresa->logo_principal)
-                <div style="margin-bottom: 5px;">
-                    <img src="{{ $empresa->logo_principal }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
-                </div>
+            <div style="margin-bottom: 5px;">
+                <img src="{{ $empresa->logo_principal }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
+            </div>
             @endif
             @if($empresa->mensaje_footer)
-                <div>{{ $empresa->mensaje_footer }}</div>
+            <div>{{ $empresa->mensaje_footer }}</div>
             @endif
             <div style="margin-top: 3px;">
                 {{ $fecha_impresion->format('d/m/Y H:i') }}
                 @if($usuario)
-                    - {{ $usuario->name }}
+                - {{ $usuario->name }}
                 @endif
             </div>
         </div>

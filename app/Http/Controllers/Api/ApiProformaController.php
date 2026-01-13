@@ -1976,17 +1976,56 @@ class ApiProformaController extends Controller
         // 🔧 Cargar la relación estadoLogistica para el accessor
         $proforma->load('estadoLogistica');
 
-        // Validar datos de pago si se proporcionan
+        // ✅ MEJORADO: Validar datos de pago si se proporcionan
+        // Ahora incluye CREDITO en las políticas permitidas
         if ($request->input('con_pago')) {
             $request->validate([
-                'tipo_pago_id' => 'required|exists:tipos_pago,id',
-                'politica_pago' => 'required|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO',
+                'tipo_pago_id' => 'required_unless:politica_pago,CREDITO|exists:tipos_pago,id',
+                'politica_pago' => 'required|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
                 'monto_pagado' => 'nullable|numeric|min:0',
             ]);
         }
 
         return DB::transaction(function () use ($proforma, $request) {
             try {
+                // ✅ VALIDACIÓN 0: Si la política es CREDITO, validar permisos del cliente
+                if ($request->input('politica_pago') === 'CREDITO') {
+                    $cliente = $proforma->cliente;
+
+                    if (!$cliente->puede_tener_credito) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito",
+                            'code' => 'CLIENTE_SIN_PERMISO_CREDITO',
+                        ], 422);
+                    }
+
+                    if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado",
+                            'code' => 'CLIENTE_SIN_LIMITE_CREDITO',
+                        ], 422);
+                    }
+
+                    // Calcular saldo disponible
+                    $saldoDisponible = $cliente->calcularSaldoDisponible();
+                    $totalProforma = (float) $proforma->total;
+
+                    if ($saldoDisponible < $totalProforma) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Crédito insuficiente para esta venta",
+                            'code' => 'CREDITO_INSUFICIENTE',
+                            'datos' => [
+                                'monto_venta' => $totalProforma,
+                                'saldo_disponible' => $saldoDisponible,
+                                'limite_credito' => (float) $cliente->limite_credito,
+                            ],
+                        ], 422);
+                    }
+                }
+
                 // Validación 1: La proforma debe poder convertirse
                 if (!$proforma->puedeConvertirseAVenta()) {
                     return response()->json([
@@ -2035,15 +2074,34 @@ class ApiProformaController extends Controller
                     Log::info('✅ Reservas creadas automáticamente para proforma ' . $proforma->numero);
                 }
 
-                // Calcular estado de pago si se proporcionan datos
+                // ✅ MEJORADO: Calcular estado de pago según política
+                // Ahora considera todas las políticas: CONTRA_ENTREGA, ANTICIPADO_100, MEDIO_MEDIO, CREDITO
                 $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
                 $total = (float) $proforma->total;
                 $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
 
+                // Lógica mejorada para determinar estado de pago según política
                 $estadoPago = match($politica) {
-                    'ANTICIPADO_100' => 'PAGADO',
-                    'MEDIO_MEDIO' => ($montoPagado >= $total) ? 'PAGADO' : 'PARCIAL',
+                    // CREDITO: No requiere pago inmediato, se registra como cuenta por cobrar
+                    'CREDITO' => 'PENDIENTE',
+
+                    // ANTICIPADO_100: Requiere 100% de pago, si se pagó todo = PAGADO
+                    'ANTICIPADO_100' => ($montoPagado >= $total) ? 'PAGADO' : 'PARCIAL',
+
+                    // MEDIO_MEDIO: Requiere 50% mínimo
+                    // Si se pagó el 100% = PAGADO
+                    // Si se pagó entre 50%-100% = PARCIAL
+                    // Si se pagó menos de 50% = PENDIENTE
+                    'MEDIO_MEDIO' => match(true) {
+                        $montoPagado >= $total => 'PAGADO',
+                        $montoPagado >= ($total / 2) => 'PARCIAL',
+                        default => 'PENDIENTE',
+                    },
+
+                    // CONTRA_ENTREGA: Se paga en la entrega, siempre inicia como PENDIENTE
                     'CONTRA_ENTREGA' => 'PENDIENTE',
+
+                    // Default: PENDIENTE (seguridad)
                     default => 'PENDIENTE',
                 };
 
@@ -2149,11 +2207,20 @@ class ApiProformaController extends Controller
                     // El evento falló, pero la conversión ya fue exitosa, así que continuamos
                 }
 
-                Log::info('Proforma convertida a venta exitosamente (API)', [
+                // ✅ MEJORADO: Log detallado con información de política de pago
+                Log::info('✅ Proforma convertida a venta exitosamente (API)', [
                     'proforma_id' => $proforma->id,
                     'proforma_numero' => $proforma->numero,
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
+                    'cliente_id' => $venta->cliente_id,
+                    'cliente_nombre' => $venta->cliente->nombre,
+                    'total' => (float) $venta->total,
+                    'politica_pago' => $politica,
+                    'estado_pago' => $estadoPago,
+                    'monto_pagado' => $montoPagado,
+                    'monto_pendiente' => (float) ($total - $montoPagado),
+                    'requiere_envio' => $venta->requiere_envio,
                     'reservas_consumidas' => $reservasActivas,
                     'usuario_id' => request()->user()->id,
                 ]);
@@ -2174,11 +2241,19 @@ class ApiProformaController extends Controller
                             'estado_documento' => $venta->estadoDocumento?->nombre,
                             'requiere_envio' => $venta->requiere_envio,
                             'estado_logistico' => $venta->estado_logistico,
+                            // ✅ NUEVO: Información de pago
+                            'pago' => [
+                                'politica_pago' => $politica,
+                                'estado_pago' => $estadoPago,
+                                'monto_pagado' => $montoPagado,
+                                'monto_pendiente' => (float) ($total - $montoPagado),
+                            ],
                         ],
                         'proforma' => [
                             'id' => $proforma->id,
                             'numero' => $proforma->numero,
                             'estado' => $proforma->estado,
+                            'politica_pago' => $proforma->politica_pago,
                         ],
                     ],
                 ], 201);
@@ -2542,6 +2617,125 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar detalles: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Obtener la siguiente proforma pendiente
+     *
+     * Retorna la próxima proforma en estado PENDIENTE después de la proforma actual.
+     * Útil para navegación continua sin volver al dashboard.
+     *
+     * @route GET /api/proformas/siguiente-pendiente
+     * @queryParam current_id int - ID de la proforma actual (para excluir)
+     * @queryParam incluir_stats bool - Incluir estadísticas (default: false)
+     *
+     * @return \Illuminate\Http\JsonResponse
+     *
+     * @example
+     * GET /api/proformas/siguiente-pendiente?current_id=1
+     * Response:
+     * {
+     *   "success": true,
+     *   "existe_siguiente": true,
+     *   "proforma": {
+     *     "id": 2,
+     *     "numero": "PR-002",
+     *     "cliente_nombre": "Cliente XYZ",
+     *     "total": 1500.00
+     *   },
+     *   "stats": {
+     *     "pendientes_restantes": 14,
+     *     "indice": "2 de 15"
+     *   }
+     * }
+     */
+    public function obtenerSiguientePendiente(Request $request)
+    {
+        try {
+            $currentId = $request->input('current_id');
+            $incluirStats = $request->boolean('incluir_stats', false);
+            $usuario = Auth::user();
+
+            if (!$currentId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'current_id es requerido',
+                ], 400);
+            }
+
+            // Construir query base filtrando por estado PENDIENTE
+            $queryBase = Proforma::where('estado', 'PENDIENTE')
+                ->where('id', '!=', $currentId) // Excluir la actual
+                ->orderBy('created_at', 'ASC'); // FIFO: la más antigua primero
+
+            // ✅ Aplicar scope por rol (mismo que en index())
+            // Los super admins ven todas, preventistas solo ven sus clientes
+            $query = $queryBase->forCurrentUser();
+
+            // Obtener la siguiente
+            $siguienteProforma = $query->first();
+
+            // Si se solicitan estadísticas
+            $stats = null;
+            // ✅ CORREGIDO: Solo calcular stats si existe siguiente proforma
+            if ($incluirStats && $siguienteProforma) {
+                // Total de pendientes (con el mismo filtro)
+                $totalPendientes = Proforma::where('estado', 'PENDIENTE')
+                    ->forCurrentUser()
+                    ->count();
+
+                // Índice: posición de la próxima en la lista
+                // Contar cuántas proformas PENDIENTES fueron creadas antes que esta
+                $indiceActual = Proforma::where('estado', 'PENDIENTE')
+                    ->where('created_at', '<', $siguienteProforma->created_at)
+                    ->forCurrentUser()
+                    ->count() + 1;
+
+                $stats = [
+                    'pendientes_restantes' => max(0, $totalPendientes - $indiceActual),
+                    'indice' => "{$indiceActual} de {$totalPendientes}",
+                ];
+            }
+
+            // Responder
+            if ($siguienteProforma) {
+                // Eager load relación cliente si no está cargada
+                if (!$siguienteProforma->relationLoaded('cliente')) {
+                    $siguienteProforma->load('cliente');
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'existe_siguiente' => true,
+                    'proforma' => [
+                        'id' => $siguienteProforma->id,
+                        'numero' => $siguienteProforma->numero,
+                        'cliente_nombre' => $siguienteProforma->cliente->nombre ?? 'Sin cliente',
+                        'total' => (float) $siguienteProforma->total,
+                        'fecha_creacion' => $siguienteProforma->created_at->format('d/m/Y H:i'),
+                    ],
+                    'stats' => $stats,
+                ]);
+            } else {
+                return response()->json([
+                    'success' => true,
+                    'existe_siguiente' => false,
+                    'mensaje' => 'No hay más proformas pendientes',
+                    'stats' => null,
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener siguiente proforma pendiente:', [
+                'current_id' => $request->input('current_id'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener siguiente proforma: ' . $e->getMessage(),
             ], 500);
         }
     }

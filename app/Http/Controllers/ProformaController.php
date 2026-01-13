@@ -235,23 +235,23 @@ class ProformaController extends Controller
 
         } catch (\App\Exceptions\Proforma\ReservasExpirasException $e) {
             Log::warning('⚠️ [ProformaController::convertirAVenta] Reservas expiradas', [
-                'proforma_id' => $id,
+                'proforma_id'        => $id,
                 'reservas_expiradas' => $e->getReservasExpiradas(),
-                'error'       => $e->getMessage(),
-                'timestamp'   => now()->toIso8601String(),
+                'error'              => $e->getMessage(),
+                'timestamp'          => now()->toIso8601String(),
             ]);
 
             // Retornar respuesta especial para reservas expiradas con opción de renovación
             return response()->json([
-                'success'     => false,
-                'message'     => $e->getMessage(),
-                'code'        => 'RESERVAS_EXPIRADAS',
-                'action'      => 'renovar_reservas',
-                'data'        => [
-                    'proforma_id' => $e->getProformaId(),
-                    'reservas_expiradas' => $e->getReservasExpiradas(),
+                'success' => false,
+                'message' => $e->getMessage(),
+                'code'    => 'RESERVAS_EXPIRADAS',
+                'action'  => 'renovar_reservas',
+                'data'    => [
+                    'proforma_id'         => $e->getProformaId(),
+                    'reservas_expiradas'  => $e->getReservasExpiradas(),
                     'endpoint_renovacion' => route('proformas.renovar-reservas', $id),
-                    'instrucciones' => 'Usa el endpoint de renovación para extender las reservas 7 días más',
+                    'instrucciones'       => 'Usa el endpoint de renovación para extender las reservas 7 días más',
                 ],
             ], 422);
 
@@ -303,25 +303,25 @@ class ProformaController extends Controller
             // 1. Es administrador
             // 2. Es cliente y la proforma es suya
             // 3. Es cualquier empleado de la distribuidora (can view proformas)
-            $user = auth()->user();
+            $user          = auth()->user();
             $isOwnProforma = $proforma->cliente_id === $user->cliente_id;
-            $isAdmin = $user->hasRole('Admin');
+            $isAdmin       = $user->hasRole('Admin');
 
             // Si llega aquí es porque pudo ver/acceder a la proforma
             // Si es cliente y no es suya, rechazar
-            if ($user->hasRole('cliente') && !$isOwnProforma) {
+            if ($user->hasRole('cliente') && ! $isOwnProforma) {
                 return $this->respondForbidden('No tienes permiso para renovar reservas de esta proforma');
             }
 
             // Validar que tenga reservas expiradas
-            if (!$proforma->tieneReservasExpiradas()) {
+            if (! $proforma->tieneReservasExpiradas()) {
                 Log::warning('⚠️ Intento de renovar proforma sin reservas expiradas', [
                     'proforma_id' => $id,
                 ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Esta proforma no tiene reservas expiradas que renovar',
-                    'code' => 'NO_EXPIRED_RESERVATIONS',
+                    'code'    => 'NO_EXPIRED_RESERVATIONS',
                 ], 422);
             }
 
@@ -329,18 +329,18 @@ class ProformaController extends Controller
             $proforma->renovarReservas();
 
             Log::info('✅ [ProformaController::renovarReservas] Renovación exitosa', [
-                'proforma_id'  => $id,
+                'proforma_id'     => $id,
                 'proforma_numero' => $proforma->numero,
-                'timestamp'    => now()->toIso8601String(),
+                'timestamp'       => now()->toIso8601String(),
             ]);
 
             // Retornar respuesta con información actualizada
             return response()->json([
-                'success'     => true,
-                'message'     => 'Reservas renovadas exitosamente',
-                'data'        => [
-                    'proforma_id' => $proforma->id,
-                    'proforma_numero' => $proforma->numero,
+                'success' => true,
+                'message' => 'Reservas renovadas exitosamente',
+                'data'    => [
+                    'proforma_id'      => $proforma->id,
+                    'proforma_numero'  => $proforma->numero,
                     'reservas_activas' => $proforma->reservasActivas()->count(),
                 ],
             ], 200);
@@ -528,26 +528,26 @@ class ProformaController extends Controller
             $proformaModel = Proforma::class;
 
             $stats = [
-                'total' => $proformaModel::count(),
-                'por_estado' => [
-                    'pendiente' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma'); })->count(),
-                    'aprobada' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'APROBADA')->where('categoria', 'proforma'); })->count(),
-                    'rechazada' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'RECHAZADA')->where('categoria', 'proforma'); })->count(),
-                    'convertida' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'CONVERTIDA')->where('categoria', 'proforma'); })->count(),
-                    'vencida' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'VENCIDA')->where('categoria', 'proforma'); })->count(),
+                'total'             => $proformaModel::count(),
+                'por_estado'        => [
+                    'pendiente'  => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma');})->count(),
+                    'aprobada'   => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'APROBADA')->where('categoria', 'proforma');})->count(),
+                    'rechazada'  => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'RECHAZADA')->where('categoria', 'proforma');})->count(),
+                    'convertida' => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'CONVERTIDA')->where('categoria', 'proforma');})->count(),
+                    'vencida'    => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'VENCIDA')->where('categoria', 'proforma');})->count(),
                 ],
                 'montos_por_estado' => [
-                    'pendiente' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma'); })->sum('total'),
-                    'aprobada' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'APROBADA')->where('categoria', 'proforma'); })->sum('total'),
-                    'convertida' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'CONVERTIDA')->where('categoria', 'proforma'); })->sum('total'),
+                    'pendiente'  => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma');})->sum('total'),
+                    'aprobada'   => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'APROBADA')->where('categoria', 'proforma');})->sum('total'),
+                    'convertida' => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'CONVERTIDA')->where('categoria', 'proforma');})->sum('total'),
                 ],
-                'alertas' => [
-                    'vencidas' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'VENCIDA')->where('categoria', 'proforma'); })->count(),
-                    'por_vencer' => $proformaModel::whereHas('estadoLogistica', function ($q) { $q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma'); })
+                'alertas'           => [
+                    'vencidas'   => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'VENCIDA')->where('categoria', 'proforma');})->count(),
+                    'por_vencer' => $proformaModel::whereHas('estadoLogistica', function ($q) {$q->where('codigo', 'PENDIENTE')->where('categoria', 'proforma');})
                         ->where('fecha_vencimiento', '<=', now()->addDays(2))
                         ->count(),
                 ],
-                'monto_total' => $proformaModel::sum('total'),
+                'monto_total'       => $proformaModel::sum('total'),
             ];
 
             return response()->json(['success' => true, 'data' => $stats]);

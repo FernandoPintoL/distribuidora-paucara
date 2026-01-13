@@ -70,6 +70,35 @@ class EntregaWebSocketService extends BaseWebSocketService
     }
 
     /**
+     * ✅ NUEVO: Notificar asignación de entrega al chofer
+     * Cuando se crea una entrega consolidada, el chofer recibe notificación para comenzar a cargar
+     */
+    public function notifyAsignada($entrega): bool
+    {
+        return $this->send('notify/entrega-asignada', [
+            'entrega_id' => $entrega->id,
+            'numero_entrega' => $entrega->numero_entrega,
+            'chofer_id' => $entrega->chofer_id,
+            'chofer' => $entrega->chofer ? [
+                'id' => $entrega->chofer->id,
+                'nombre' => $entrega->chofer->name,
+            ] : null,
+            'vehiculo' => $entrega->vehiculo ? [
+                'id' => $entrega->vehiculo->id,
+                'placa' => $entrega->vehiculo->placa,
+                'marca' => $entrega->vehiculo->marca,
+                'modelo' => $entrega->vehiculo->modelo,
+            ] : null,
+            'peso_kg' => $entrega->peso_kg,
+            'volumen_m3' => $entrega->volumen_m3,
+            'estado' => $entrega->estado,
+            'fecha_asignacion' => $entrega->fecha_asignacion?->toIso8601String(),
+            'mensaje' => '🚚 Nueva entrega asignada. Por favor inicia la carga de mercadería.',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Notificar generación de reporte de carga
      * Transición: PROGRAMADO → PREPARACION_CARGA
      */

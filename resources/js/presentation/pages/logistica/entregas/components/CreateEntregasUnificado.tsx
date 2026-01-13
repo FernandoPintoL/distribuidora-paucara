@@ -449,13 +449,13 @@ export default function CreateEntregasUnificado({
                             Selecciona una o más ventas para continuar
                         </p>
                     </div>
-                    <Button
+                    {/* <Button
                         onClick={() => setIsConsolidacionModalOpen(true)}
                         className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white whitespace-nowrap"
                     >
                         <Zap className="h-4 w-4 mr-2" />
                         Consolidar Automáticamente
-                    </Button>
+                    </Button> */}
                 </div>
 
                 {/* Layout Principal: Grid 4/8 */}

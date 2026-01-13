@@ -82,8 +82,8 @@ class EntregaNotificationService
                 'chofer_nombre' => $chofer->name,
             ]);
 
-            // 3. Enviar notificación en tiempo real vía WebSocket
-            return $this->wsService->notifyCreated($entrega);
+            // 3. ✅ Enviar notificación en tiempo real vía WebSocket (usando método especializado)
+            return $this->wsService->notifyAsignada($entrega);
 
         } catch (\Exception $e) {
             Log::error('❌ Error procesando notificación de entrega asignada', [

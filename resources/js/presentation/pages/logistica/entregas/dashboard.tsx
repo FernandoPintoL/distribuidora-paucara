@@ -37,7 +37,7 @@ export default function DashboardEntregas() {
                 <Head title="Dashboard de Entregas" />
                 <div className="space-y-6 p-4">
                     <div className="text-center text-muted-foreground">
-                        Cargando dashboard...
+                        Cargando dashboard de entregas...
                     </div>
                 </div>
             </AppLayout>

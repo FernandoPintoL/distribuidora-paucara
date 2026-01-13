@@ -36,7 +36,11 @@ class EntregaPdfController extends Controller
             'numero_entrega' => $entrega->numero_entrega,
             'peso_kg' => $entrega->peso_kg,
             'ventas_count' => $entrega->ventas?->count(),
-            'view_exists' => view()->exists('entregas.entrega-pdf'),
+            'vistas_disponibles' => [
+                'A4' => view()->exists('impresion.entregas.hoja-completa'),
+                'TICKET_80' => view()->exists('impresion.entregas.ticket-80'),
+                'TICKET_58' => view()->exists('impresion.entregas.ticket-58'),
+            ],
         ]);
     }
 
@@ -66,19 +70,30 @@ class EntregaPdfController extends Controller
                 'reportes',
             ]);
 
-            // Preparar datos para el PDF
-            $logoBase64 = $this->getLogoBase64();
+            // Obtener empresa principal
+            $empresa = \App\Models\Empresa::principal();
+            if (!$empresa) {
+                throw new \Exception('No hay empresa configurada');
+            }
+
+            // Convertir logos a base64 para embebimiento en PDF
+            $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
+            $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
 
             $data = [
                 'entrega' => $entrega,
                 'fecha_generacion' => now()->format('d/m/Y H:i'),
-                'empresa' => config('app.name', 'Distribuidora Paucara'),
+                'fecha_impresion' => now(),
+                'empresa' => $empresa,
+                'usuario' => auth()->user(),
                 'formato' => $formato,
-                'logo' => $logoBase64,
+                'logo_principal_base64' => $logoPrincipalBase64,
+                'logo_footer_base64' => $logoFooterBase64,
             ];
 
             // Crear PDF con configuración según formato
-            $pdf = Pdf::loadView('entregas.entrega-pdf', $data);
+            $viewName = $this->obtenerVistaEntrega($formato);
+            $pdf = Pdf::loadView($viewName, $data);
 
             // Configurar papel y márgenes según formato
             match ($formato) {
@@ -126,19 +141,30 @@ class EntregaPdfController extends Controller
                 'reportes',
             ]);
 
-            // Preparar datos para el PDF
-            $logoBase64 = $this->getLogoBase64();
+            // Obtener empresa principal
+            $empresa = \App\Models\Empresa::principal();
+            if (!$empresa) {
+                throw new \Exception('No hay empresa configurada');
+            }
+
+            // Convertir logos a base64 para embebimiento en PDF
+            $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
+            $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
 
             $data = [
                 'entrega' => $entrega,
                 'fecha_generacion' => now()->format('d/m/Y H:i'),
-                'empresa' => config('app.name', 'Distribuidora Paucara'),
+                'fecha_impresion' => now(),
+                'empresa' => $empresa,
+                'usuario' => auth()->user(),
                 'formato' => $formato,
-                'logo' => $logoBase64,
+                'logo_principal_base64' => $logoPrincipalBase64,
+                'logo_footer_base64' => $logoFooterBase64,
             ];
 
             // Crear PDF
-            $pdf = Pdf::loadView('entregas.entrega-pdf', $data);
+            $viewName = $this->obtenerVistaEntrega($formato);
+            $pdf = Pdf::loadView($viewName, $data);
 
             // Configurar papel y márgenes según formato
             match ($formato) {
@@ -195,6 +221,72 @@ class EntregaPdfController extends Controller
             ->setOption('margin-bottom', 5)
             ->setOption('margin-left', 5)
             ->setOption('margin-right', 5);
+    }
+
+    /**
+     * Obtener vista Blade según el formato de entrega
+     *
+     * @param string $formato A4|TICKET_80|TICKET_58
+     * @return string Vista Blade
+     */
+    private function obtenerVistaEntrega(string $formato): string
+    {
+        return match ($formato) {
+            'TICKET_80' => 'impresion.entregas.ticket-80',
+            'TICKET_58' => 'impresion.entregas.ticket-58',
+            default => 'impresion.entregas.hoja-completa',
+        };
+    }
+
+    /**
+     * Convertir URL de logo a data URI base64
+     *
+     * @param string|null $logoUrl URL de la imagen (ej: /storage/logos/logo.png)
+     * @return string|null Data URI para uso en HTML/CSS
+     */
+    private function logoToBase64(?string $logoUrl): ?string
+    {
+        if (!$logoUrl) {
+            return null;
+        }
+
+        try {
+            // Si ya es un data URI, devolverlo tal cual
+            if (str_starts_with($logoUrl, 'data:')) {
+                return $logoUrl;
+            }
+
+            // Resolver la ruta absoluta
+            $logoPath = public_path($logoUrl);
+
+            if (!file_exists($logoPath)) {
+                \Log::warning('Logo no encontrado: ' . $logoPath);
+                return null;
+            }
+
+            $imageData = file_get_contents($logoPath);
+            $base64 = base64_encode($imageData);
+
+            // Detectar el tipo MIME desde la extensión del archivo
+            $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'png' => 'image/png',
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'image/png';
+
+            return "data:{$mimeType};base64,{$base64}";
+        } catch (\Exception $e) {
+            \Log::warning('Error al convertir logo a base64', [
+                'error' => $e->getMessage(),
+                'logo_url' => $logoUrl
+            ]);
+            return null;
+        }
     }
 
     /**

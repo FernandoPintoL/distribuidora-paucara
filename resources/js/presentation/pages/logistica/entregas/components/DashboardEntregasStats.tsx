@@ -9,6 +9,7 @@ import {
     MapPin,
     AlertCircle,
     Clock,
+    LucideIcon,
 } from 'lucide-react';
 import type { EntregaEstado } from '@/application/hooks/use-entregas-dashboard-stats';
 import { useEstadosEntregas } from '@/application/hooks';
@@ -21,41 +22,43 @@ interface DashboardEntregasStatsProps {
     onRefresh: () => void;
 }
 
-// ✅ ACTUALIZADO: Mapeo de estado código a ícono para TODOS los estados de entrega
-// Los códigos aquí deben coincidir con los de la tabla estados_logistica categoria='entrega'
-const estadoIconMap: Record<string, any> = {
-    // Legacy workflow
-    PROGRAMADO: Clock,
-    ASIGNADA: Package,
-    EN_CAMINO: Truck,
-    LLEGO: MapPin,
-    ENTREGADO: CheckCircle2,
-    RECHAZADO: AlertCircle,
-    CANCELADA: AlertCircle,
+interface EstadoConfig {
+    label: string;
+    icon: LucideIcon;
+    color: string;
+    bgColor: string;
+    orden: number;
+}
 
-    // New loading workflow
-    PREPARACION_CARGA: Package,
-    EN_CARGA: Truck,
-    LISTO_PARA_ENTREGA: CheckCircle2,
-    EN_TRANSITO: Truck,
-
-    // Issues
-    NOVEDAD: AlertCircle,
+// Mapeo de nombres de iconos a componentes de Lucide
+const iconoNombreMap: Record<string, LucideIcon> = {
+    'hourglass': Clock,
+    'assignment': Package,
+    'inventory': Package,
+    'local-shipping': Truck,
+    'check-circle': CheckCircle2,
+    'directions-car': Truck,
+    'near-me': MapPin,
+    'location-on': MapPin,
+    'error': AlertCircle,
+    'cancel': AlertCircle,
+    'ban': AlertCircle,
 };
 
-// Helper para convertir color hex a clases tailwind
-const colorToTailwind = (hexColor: string | undefined): { bgColor: string; textColor: string; borderColor: string; iconColor: string } => {
-    // Fallback colors si no hay color en API
-    const colorMap: Record<string, { bgColor: string; textColor: string; borderColor: string; iconColor: string }> = {
-        '#3b82f6': { bgColor: 'bg-blue-50 dark:bg-blue-950', textColor: 'text-blue-600 dark:text-blue-400', borderColor: 'border-blue-200 dark:border-blue-800', iconColor: 'text-blue-600' },
-        '#a855f7': { bgColor: 'bg-purple-50 dark:bg-purple-950', textColor: 'text-purple-600 dark:text-purple-400', borderColor: 'border-purple-200 dark:border-purple-800', iconColor: 'text-purple-600' },
-        '#f97316': { bgColor: 'bg-orange-50 dark:bg-orange-950', textColor: 'text-orange-600 dark:text-orange-400', borderColor: 'border-orange-200 dark:border-orange-800', iconColor: 'text-orange-600' },
-        '#06b6d4': { bgColor: 'bg-cyan-50 dark:bg-cyan-950', textColor: 'text-cyan-600 dark:text-cyan-400', borderColor: 'border-cyan-200 dark:border-cyan-800', iconColor: 'text-cyan-600' },
-        '#10b981': { bgColor: 'bg-green-50 dark:bg-green-950', textColor: 'text-green-600 dark:text-green-400', borderColor: 'border-green-200 dark:border-green-800', iconColor: 'text-green-600' },
-        '#eab308': { bgColor: 'bg-yellow-50 dark:bg-yellow-950', textColor: 'text-yellow-600 dark:text-yellow-400', borderColor: 'border-yellow-200 dark:border-yellow-800', iconColor: 'text-yellow-600' },
-        '#ef4444': { bgColor: 'bg-red-50 dark:bg-red-950', textColor: 'text-red-600 dark:text-red-400', borderColor: 'border-red-200 dark:border-red-800', iconColor: 'text-red-600' },
-    };
-    return colorMap[hexColor?.toLowerCase() || ''] || colorMap['#6b7280'];
+// Helper para obtener el ícono basado en el nombre del icono de BD
+const getIconoComponent = (iconoNombre: string | undefined): LucideIcon => {
+    if (!iconoNombre) return AlertCircle;
+    return iconoNombreMap[iconoNombre.toLowerCase()] || AlertCircle;
+};
+
+// Helper para ajustar brillo del color hex
+const adjustColorBrightness = (hexColor: string, percent: number): string => {
+    const num = parseInt(hexColor.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+    const G = Math.max(0, Math.min(255, (num >> 8 & 0x00FF) + amt));
+    const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+    return `#${(0x1000000 + (R << 16) + (G << 8) + B).toString(16).slice(1)}`;
 };
 
 export function DashboardEntregasStats({
@@ -65,30 +68,43 @@ export function DashboardEntregasStats({
     lastUpdate,
     onRefresh,
 }: DashboardEntregasStatsProps) {
-    // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
+    // Obtener estados centralizados de la BD
     const { estados: estadosAPI } = useEstadosEntregas();
 
-    // Generar configuración dinámica desde el API
+    // Generar configuración dinámica desde el API y ordenar por el campo `orden`
     const estadoConfig = useMemo(() => {
-        const config: Record<string, any> = {};
+        const config: Record<string, EstadoConfig> = {};
 
-        estadosAPI.forEach(estado => {
-            const Icon = estadoIconMap[estado.codigo] || AlertCircle;
-            const colors = colorToTailwind(estado.color);
+        // Ordenar estados por el campo `orden` de la BD
+        const estadosOrdenados = [...estadosAPI].sort((a, b) => a.orden - b.orden);
+
+        estadosOrdenados.forEach(estado => {
+            const Icon = getIconoComponent(estado.icono);
+            const bgColor = adjustColorBrightness(estado.color, -20); // Oscurecer para fondo
 
             config[estado.codigo] = {
                 label: estado.nombre,
                 icon: Icon,
-                ...colors,
+                color: estado.color,
+                bgColor: bgColor,
+                orden: estado.orden,
             };
         });
 
         return config;
     }, [estadosAPI]);
 
-    const estadoEntries = Object.entries(estados) as Array<
-        [keyof EntregaEstado, number]
-    >;
+    // Convertir a array y ordenar por el campo orden
+    const estadoEntries = useMemo(() => {
+        return Object.entries(estados)
+            .filter(([codigo]) => codigo in estadoConfig) // Solo mostrar estados que están en config
+            .map(([codigo, cantidad]) => ({
+                codigo,
+                cantidad,
+                orden: estadoConfig[codigo]?.orden || 999,
+            }))
+            .sort((a, b) => a.orden - b.orden);
+    }, [estados, estadoConfig]);
 
     return (
         <>
@@ -116,41 +132,44 @@ export function DashboardEntregasStats({
 
             {/* Cards de estados */}
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-7">
-                {estadoEntries.map(([estado, cantidad]) => {
-                    const config =
-                        estadoConfig[
-                            estado as keyof typeof estadoConfig
-                        ];
+                {estadoEntries.map(({ codigo, cantidad }) => {
+                    const config = estadoConfig[codigo];
 
-                    // Fallback si el estado no está en la configuración
                     if (!config) {
                         return null;
                     }
 
                     const IconComponent = config.icon;
+                    const porcentaje = Math.round((cantidad / (estadosTotal || 1)) * 100);
 
                     return (
                         <Card
-                            key={estado}
-                            className={`${config.bgColor} ${config.borderColor} border`}
+                            key={codigo}
+                            className="border transition-all hover:shadow-md"
+                            style={{
+                                backgroundColor: `${config.bgColor}20`, // Agregar transparencia
+                                borderColor: config.color,
+                                borderWidth: '1px',
+                            }}
                         >
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-xs font-medium">
                                     {config.label}
                                 </CardTitle>
                                 <IconComponent
-                                    className={`h-4 w-4 ${config.iconColor}`}
+                                    className="h-4 w-4"
+                                    style={{ color: config.color }}
                                 />
                             </CardHeader>
                             <CardContent>
-                                <div className={`text-2xl font-bold ${config.textColor}`}>
+                                <div
+                                    className="text-2xl font-bold"
+                                    style={{ color: config.color }}
+                                >
                                     {loading ? '...' : cantidad}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    {Math.round(
-                                        (cantidad / (estadosTotal || 1)) * 100
-                                    )}
-                                    % del total
+                                    {porcentaje}% del total
                                 </p>
                             </CardContent>
                         </Card>

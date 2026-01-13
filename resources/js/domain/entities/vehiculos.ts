@@ -70,8 +70,14 @@ export interface VehiculoRecomendado {
   marca: string;
   modelo: string;
   anho?: string;
-  capacidad_kg: number;
-  porcentaje_uso: number; // 0-100%
+  capacidad_kg: string | number;
+  // ✅ ACTUALIZADO: Incluyendo porcentajes de uso
+  porcentaje_uso?: number; // Backward compatibility: 0-100%
+  porcentaje_uso_actual?: number; // Uso actual del vehículo: 0-100%
+  porcentaje_uso_con_nuevas_cargas?: number; // Uso proyectado con nuevas cargas: 0-100%
+  // Capacidades disponibles
+  capacidad_disponible?: number; // kg disponibles
+  peso_cargado_actual?: number; // kg cargados actualmente
   estado: 'recomendado' | 'disponible' | 'excede_capacidad';
   choferAsignado?: {
     id: Id;

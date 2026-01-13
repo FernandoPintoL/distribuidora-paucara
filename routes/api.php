@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\ApiVentaController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ApiPoliticaPagoController;
 use App\Http\Controllers\Api\ChoferPreferenciaController;
 use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EntregaBatchController;
@@ -60,6 +61,10 @@ Route::get('/tipos-pago', function () {
         'data' => \App\Models\TipoPago::where('activo', true)->get()
     ]);
 });
+
+// ✅ NUEVO: Endpoints para Políticas de Pago
+Route::get('/politicas-pago', [ApiPoliticaPagoController::class, 'index']);
+Route::get('/politicas-pago/disponibles/{clienteId}', [ApiPoliticaPagoController::class, 'disponibles']);
 
 // Procesar ajustes masivos (requiere autenticación)
 // ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma
@@ -277,6 +282,8 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // Utilidades
     Route::post('/proformas/verificar-stock', [ApiProformaController::class, 'verificarStock']);
     Route::get('/proformas/productos-disponibles', [ApiProformaController::class, 'obtenerProductosDisponibles']);
+    // ✅ NUEVO: Navegación entre proformas pendientes
+    Route::get('/proformas/siguiente-pendiente', [ApiProformaController::class, 'obtenerSiguientePendiente']);
 
     // 🛒 ENDPOINTS LEGACY PARA APP MÓVIL (mantener por compatibilidad)
     // TODO: Migrar app móvil para usar /proformas en lugar de /app/pedidos

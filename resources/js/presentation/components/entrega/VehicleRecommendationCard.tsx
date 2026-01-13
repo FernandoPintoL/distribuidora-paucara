@@ -46,6 +46,11 @@ export function VehicleRecommendationCard({
   onSelectVehiculo,
   onSelectChofer,
 }: VehicleRecommendationCardProps) {
+  console.log('Renderizando VehicleRecommendationCard con props:', {
+    recomendado,
+    disponibles,
+    pesoTotal,
+  });
   const [showAllVehiculos, setShowAllVehiculos] = useState(false);
   const [seleccionarChoferManualmente, setSeleccionarChoferManualmente] = useState(false);
 
@@ -298,18 +303,18 @@ export function VehicleRecommendationCard({
               </span>
               <span
                 className={`text-sm font-bold ${getCapacityTextColor(
-                  vehiculoActual?.porcentaje_uso ?? 0
+                  vehiculoActual?.porcentaje_uso_actual ?? 0
                 )}`}
               >
-                {vehiculoActual?.porcentaje_uso}%
+                {vehiculoActual?.porcentaje_uso_actual}%
               </span>
             </div>
             <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all ${getCapacityColor(
-                  vehiculoActual?.porcentaje_uso ?? 0
+                  vehiculoActual?.porcentaje_uso_actual ?? 0
                 )}`}
-                style={{ width: `${Math.min(vehiculoActual?.porcentaje_uso ?? 0, 100)}%` }}
+                style={{ width: `${Math.min(vehiculoActual?.porcentaje_uso_actual ?? 0, 100)}%` }}
               ></div>
             </div>
           </div>
@@ -392,9 +397,8 @@ function VehicleOption({
   return (
     <button
       onClick={onSelect}
-      className={`w-full p-3 rounded-lg border transition-all text-left ${getStatusColor()} ${
-        isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
-      }`}
+      className={`w-full p-3 rounded-lg border transition-all text-left ${getStatusColor()} ${isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
+        }`}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
@@ -413,12 +417,12 @@ function VehicleOption({
             <span>•</span>
             <span
               className={
-                vehiculo.porcentaje_uso > 80
+                vehiculo.porcentaje_uso_actual > 80
                   ? 'text-red-600 dark:text-red-400 font-semibold'
                   : ''
               }
             >
-              {vehiculo.porcentaje_uso}% uso
+              {vehiculo.porcentaje_uso_actual}% uso
             </span>
           </div>
         </div>

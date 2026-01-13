@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\TipoPrecioController::index
  * @see app/Http/Controllers/TipoPrecioController.php:13
@@ -42,6 +42,41 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::index
+ * @see app/Http/Controllers/TipoPrecioController.php:13
+ * @route '/tipos-precio'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::index
+ * @see app/Http/Controllers/TipoPrecioController.php:13
+ * @route '/tipos-precio'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::index
+ * @see app/Http/Controllers/TipoPrecioController.php:13
+ * @route '/tipos-precio'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::create
  * @see app/Http/Controllers/TipoPrecioController.php:40
@@ -85,6 +120,41 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::create
+ * @see app/Http/Controllers/TipoPrecioController.php:40
+ * @route '/tipos-precio/create'
+ */
+    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: create.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::create
+ * @see app/Http/Controllers/TipoPrecioController.php:40
+ * @route '/tipos-precio/create'
+ */
+        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::create
+ * @see app/Http/Controllers/TipoPrecioController.php:40
+ * @route '/tipos-precio/create'
+ */
+        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: create.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    create.form = createForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::store
  * @see app/Http/Controllers/TipoPrecioController.php:48
@@ -119,6 +189,27 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::store
+ * @see app/Http/Controllers/TipoPrecioController.php:48
+ * @route '/tipos-precio'
+ */
+    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: store.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::store
+ * @see app/Http/Controllers/TipoPrecioController.php:48
+ * @route '/tipos-precio'
+ */
+        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: store.url(options),
+            method: 'post',
+        })
+    
+    store.form = storeForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::show
  * @see app/Http/Controllers/TipoPrecioController.php:90
@@ -186,6 +277,41 @@ show.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::show
+ * @see app/Http/Controllers/TipoPrecioController.php:90
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+    const showForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::show
+ * @see app/Http/Controllers/TipoPrecioController.php:90
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+        showForm.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::show
+ * @see app/Http/Controllers/TipoPrecioController.php:90
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+        showForm.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show.form = showForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::edit
  * @see app/Http/Controllers/TipoPrecioController.php:111
@@ -253,6 +379,41 @@ edit.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::edit
+ * @see app/Http/Controllers/TipoPrecioController.php:111
+ * @route '/tipos-precio/{tipoPrecio}/edit'
+ */
+    const editForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: edit.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::edit
+ * @see app/Http/Controllers/TipoPrecioController.php:111
+ * @route '/tipos-precio/{tipoPrecio}/edit'
+ */
+        editForm.get = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: edit.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::edit
+ * @see app/Http/Controllers/TipoPrecioController.php:111
+ * @route '/tipos-precio/{tipoPrecio}/edit'
+ */
+        editForm.head = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: edit.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    edit.form = editForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::update
  * @see app/Http/Controllers/TipoPrecioController.php:120
@@ -320,6 +481,51 @@ update.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: num
     method: 'patch',
 })
 
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::update
+ * @see app/Http/Controllers/TipoPrecioController.php:120
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+    const updateForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: update.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::update
+ * @see app/Http/Controllers/TipoPrecioController.php:120
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+        updateForm.put = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::update
+ * @see app/Http/Controllers/TipoPrecioController.php:120
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+        updateForm.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: update.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    update.form = updateForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::destroy
  * @see app/Http/Controllers/TipoPrecioController.php:166
@@ -378,6 +584,37 @@ destroy.delete = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: n
     method: 'delete',
 })
 
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::destroy
+ * @see app/Http/Controllers/TipoPrecioController.php:166
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+    const destroyForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: destroy.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'DELETE',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::destroy
+ * @see app/Http/Controllers/TipoPrecioController.php:166
+ * @route '/tipos-precio/{tipoPrecio}'
+ */
+        destroyForm.delete = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: destroy.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\TipoPrecioController::toggleActivo
  * @see app/Http/Controllers/TipoPrecioController.php:182
@@ -435,6 +672,38 @@ toggleActivo.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPreci
     url: toggleActivo.url(args, options),
     method: 'patch',
 })
+
+    /**
+* @see \App\Http\Controllers\TipoPrecioController::toggleActivo
+ * @see app/Http/Controllers/TipoPrecioController.php:182
+ * @route '/tipos-precio/{tipoPrecio}/toggle-activo'
+ */
+    const toggleActivoForm = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: toggleActivo.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\TipoPrecioController::toggleActivo
+ * @see app/Http/Controllers/TipoPrecioController.php:182
+ * @route '/tipos-precio/{tipoPrecio}/toggle-activo'
+ */
+        toggleActivoForm.patch = (args: { tipoPrecio: number | { id: number } } | [tipoPrecio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: toggleActivo.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    toggleActivo.form = toggleActivoForm
 const TipoPrecioController = { index, create, store, show, edit, update, destroy, toggleActivo }
 
 export default TipoPrecioController

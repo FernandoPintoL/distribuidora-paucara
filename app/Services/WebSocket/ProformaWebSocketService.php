@@ -98,6 +98,25 @@ class ProformaWebSocketService extends BaseWebSocketService
     }
 
     /**
+     * ✅ NUEVO: Notificar directamente al cliente cuando su proforma se convierte a venta
+     * Se envía independientemente de si tiene user_id o no
+     */
+    public function notifyClientConverted($proforma, $venta): bool
+    {
+        return $this->send('notify/cliente-proforma-converted', [
+            'cliente_id' => $proforma->cliente_id,
+            'cliente_nombre' => $proforma->cliente?->nombre ?? 'Cliente',
+            'proforma_id' => $proforma->id,
+            'proforma_numero' => $proforma->numero,
+            'venta_id' => $venta->id,
+            'venta_numero' => $venta->numero ?? null,
+            'total' => (float) $venta->total ?? (float) $proforma->total,
+            'fecha_conversion' => now()->toIso8601String(),
+            'tipo_notificacion' => 'cliente', // Identificar que es para el cliente
+        ]);
+    }
+
+    /**
      * Notificar actualización de coordinación de entrega
      */
     public function notifyCoordination($proforma, int $usuarioId): bool
