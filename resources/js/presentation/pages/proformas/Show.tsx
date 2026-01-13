@@ -30,7 +30,9 @@ import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallb
 import { FormatoSelector } from '@/presentation/components/impresion'
 
 // DOMAIN LAYER: Importar tipos desde domain
+import type { Id } from '@/domain/entities/shared'
 import type { Proforma } from '@/domain/entities/proformas'
+import type { Producto } from '@/domain/entities/productos'
 
 // APPLICATION LAYER: Importar hooks de lógica de negocio
 import { useProformaActions, type CoordinacionData } from '@/application/hooks/use-proforma-actions'
@@ -50,14 +52,32 @@ interface Props {
     item: Proforma
 }
 
+// Interfaz para detalle que devuelve el diálogo de selección
+interface ProformaDetalleDialogo {
+    id: number
+    producto: Producto
+    producto_id: Id
+    producto_nombre: string
+    sku?: string
+    cantidad: number
+    precio_unitario: number
+    subtotal: number
+}
+
+// Interfaz para detalle de proforma completo
+interface ProformaDetalleInput extends ProformaDetalleDialogo {
+    proforma_id: Id
+    descuento: number
+}
+
 // Componente para seleccionar producto
 interface ProductSelectionDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    productos: any[]
+    productos: Producto[]
     searchTerm: string
     onSearchChange: (term: string) => void
-    onSelectProducto: (producto: any) => void
+    onSelectProducto: (detalle: ProformaDetalleDialogo) => void
     isLoading?: boolean
     error?: string | null
 }
@@ -72,7 +92,7 @@ function ProductSelectionDialog({
     isLoading = false,
     error = null
 }: ProductSelectionDialogProps) {
-    const [selectedProducto, setSelectedProducto] = useState<any | null>(null)
+    const [selectedProducto, setSelectedProducto] = useState<Producto | null>(null)
     const [cantidad, setCantidad] = useState(1)
 
     // Los productos ya están filtrados por el servidor (servidor-side search)
@@ -81,8 +101,8 @@ function ProductSelectionDialog({
     const handleAgregarProductoSeleccionado = () => {
         if (!selectedProducto) return
 
-        // Obtener precio del producto (puede venir como 'precio' o 'precio_venta')
-        const precioUnitario = selectedProducto.precio || selectedProducto.precio_venta || 0
+        // Obtener precio del producto (precio_base es el campo disponible en Producto)
+        const precioUnitario = (selectedProducto.precio_base as number) || 0
 
         // Crear detalle con la cantidad especificada
         const nuevoDetalle = {
@@ -152,9 +172,8 @@ function ProductSelectionDialog({
                             {productosFiltrados.map((producto) => (
                                 <div
                                     key={producto.id}
-                                    className={`p-3 cursor-pointer hover:bg-accent/50 transition-colors text-sm ${
-                                        selectedProducto?.id === producto.id ? 'bg-accent' : ''
-                                    }`}
+                                    className={`p-3 cursor-pointer hover:bg-accent/50 transition-colors text-sm ${selectedProducto?.id === producto.id ? 'bg-accent' : ''
+                                        }`}
                                     onClick={() => setSelectedProducto(producto)}
                                 >
                                     <div className="flex items-start justify-between gap-2">
@@ -177,11 +196,11 @@ function ProductSelectionDialog({
                                                 )}
 
                                                 {/* Códigos de barra */}
-                                                {(producto.codigo_barras || producto.codigos_barra?.length > 0) && (
+                                                {(producto.codigo_barras || (Array.isArray(producto.codigos_barra) && producto.codigos_barra?.length > 0)) && (
                                                     <div className="col-span-2">
                                                         <span className="text-muted-foreground">Código: </span>
                                                         <span className="font-mono text-foreground">
-                                                            {producto.codigo_barras || producto.codigos_barra?.[0]?.codigo}
+                                                            {producto.codigo_barras || (Array.isArray(producto.codigos_barra) ? producto.codigos_barra[0]?.codigo : '')}
                                                         </span>
                                                     </div>
                                                 )}
@@ -205,15 +224,15 @@ function ProductSelectionDialog({
                                                 {/* Stock */}
                                                 <div className="col-span-2">
                                                     <span className="text-muted-foreground">Stock: </span>
-                                                    <span className={producto.cantidad_disponible || producto.stock_disponible ? 'text-green-600 font-medium' : 'text-red-600'}>
-                                                        {producto.cantidad_disponible || producto.stock_disponible || 0}
+                                                    <span className={(producto.cantidad_disponible as number) || (producto.stock_disponible as number) ? 'text-green-600 font-medium' : 'text-red-600'}>
+                                                        {((producto.cantidad_disponible as number) || (producto.stock_disponible as number) || 0)}
                                                     </span>
                                                 </div>
                                             </div>
 
                                             {/* Precio */}
                                             <p className="text-sm font-semibold text-foreground mt-2">
-                                                Bs. {(producto.precio || producto.precio_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                Bs. {((producto.precio_base as number) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                             </p>
                                         </div>
                                     </div>
@@ -266,7 +285,7 @@ function ProductSelectionDialog({
                                 className="h-9 text-sm"
                             />
                             <p className="text-xs text-muted-foreground">
-                                Subtotal: Bs. {(cantidad * (selectedProducto.precio || selectedProducto.precio_venta || 0)).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                Subtotal: Bs. {(cantidad * ((selectedProducto.precio_base as number) || 0)).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                             </p>
                         </div>
                     )}
@@ -300,6 +319,7 @@ function ProductSelectionDialog({
 
 export default function ProformasShow({ item: proforma }: Props) {
     // APPLICATION LAYER: Lógica de negocio desde hook
+    console.log('📦 Proforma recibida en Show.tsx:', proforma);
     const {
         isSubmitting,
         isConverting,
@@ -321,11 +341,11 @@ export default function ProformasShow({ item: proforma }: Props) {
             setShowConvertirDialog(false);
             setConvertErrorState(null);
         },
-        onError: (error: any) => {
+        onError: (error: Error & { code?: string; reservasExpiradas?: unknown }) => {
             console.error('Error en acción de proforma:', error);
-            console.log('📋 Error code:', error.code);
+            // console.log('📋 Error code:', (error as any).code);
             console.log('📋 Error message:', error.message);
-            console.log('📋 Error reservasExpiradas:', error.reservasExpiradas);
+            // console.log('📋 Error reservasExpiradas:', (error as any).reservasExpiradas);
 
             // Detectar si es error de reservas expiradas
             if (error.code === 'RESERVAS_EXPIRADAS') {
@@ -333,7 +353,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                 const newErrorState = {
                     code: 'RESERVAS_EXPIRADAS',
                     message: error.message,
-                    reservasExpiradas: error.reservasExpiradas,
+                    reservasExpiradas: typeof error.reservasExpiradas === 'number' ? error.reservasExpiradas : undefined,
                 };
                 console.log('📋 Nuevo error state:', newErrorState);
                 setConvertErrorState(newErrorState);
@@ -378,9 +398,6 @@ export default function ProformasShow({ item: proforma }: Props) {
     const {
         calcularCarritoDebounced,
         getPrecioActualizado,
-        getProximoRango,
-        getAhorroDisponible,
-        getTipoPrecio,
         loading: isCalculandoRangos,
         error: errorRangos
     } = usePrecioRangoCarrito(400)
@@ -583,20 +600,26 @@ export default function ProformasShow({ item: proforma }: Props) {
         setEditableDetalles(nuevosDetalles)
     }
 
-    const handleAgregarProducto = (detalle: any) => {
-        // Si viene del diálogo, ya está completo
-        // Si viene de otra fuente, es un producto simple
-        const nuevoDetalle = detalle.id !== undefined
-            ? detalle // Ya es un detalle completo del diálogo
+    const handleAgregarProducto = (detalle: ProformaDetalleDialogo | Producto) => {
+        // Si viene del diálogo, ya es un ProformaDetalleDialogo
+        // Si viene de otra fuente, es un Producto simple
+        const nuevoDetalle: ProformaDetalleInput = 'cantidad' in detalle && 'precio_unitario' in detalle
+            ? {       // Ya es un detalle del diálogo, agregar campos faltantes
+                ...(detalle as ProformaDetalleDialogo),
+                proforma_id: proforma.id,
+                descuento: 0
+            }
             : {       // Es un producto simple, necesita ser transformado
                 id: Math.random(),
-                producto: detalle,
-                producto_id: detalle.id,
-                producto_nombre: detalle.nombre || detalle.producto_nombre,
-                sku: detalle.sku,
+                proforma_id: proforma.id,
+                producto: detalle as Producto,
+                producto_id: (detalle as Producto).id,
+                producto_nombre: (detalle as Producto).nombre,
+                sku: (detalle as Producto).sku || undefined,
                 cantidad: 1,
-                precio_unitario: detalle.precio || detalle.precio_venta || 0,
-                subtotal: detalle.precio || detalle.precio_venta || 0
+                precio_unitario: (detalle as Producto).precio_base || 0,
+                descuento: 0,
+                subtotal: (detalle as Producto).precio_base || 0
             }
 
         const nuevosDetalles = [...editableDetalles, nuevoDetalle]
@@ -651,7 +674,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                 editableDetalles.some((d, i) => {
                     const original = proforma.detalles[i];
                     return !original ||
-                        d.cantidad !== parseFloat(original.cantidad) ||
+                        d.cantidad !== (typeof original.cantidad === 'string' ? parseFloat(original.cantidad) : original.cantidad) ||
                         d.precio_unitario !== original.precio_unitario;
                 });
 
@@ -849,22 +872,72 @@ export default function ProformasShow({ item: proforma }: Props) {
                             <h1 className="text-[var(--text-3xl)] font-bold tracking-tight">
                                 Proforma {proforma.numero}
                             </h1>
-                            <div className="space-y-1 mt-2">
+                            <div className="space-y-2 mt-3">
                                 <p className="text-[var(--text-sm)] text-muted-foreground">
                                     Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
                                 </p>
-                                {/* Mostrar origen */}
-                                {(proforma.canal || proforma.canal_origen) && (
-                                    <p className="text-[var(--text-sm)] text-muted-foreground">
-                                        Origen: <span className="font-medium text-foreground">{proforma.canal || proforma.canal_origen}</span>
-                                    </p>
+
+                                {/* Grid de información adicional */}
+                                <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
+                                    {/* Origen */}
+                                    {proforma.canal_origen && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Origen</span>
+                                            <span className="font-medium text-foreground capitalize">{(proforma.canal_origen as string).replace(/_/g, ' ')}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Tipo de Entrega */}
+                                    {proforma.tipo_entrega && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Tipo de Entrega</span>
+                                            <span className="font-medium text-foreground capitalize">{proforma.tipo_entrega}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Política de Pago */}
+                                    {proforma.politica_pago && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Política de Pago</span>
+                                            <span className="font-medium text-foreground capitalize">{(proforma.politica_pago as string).replace(/_/g, ' ')}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Fecha de Vencimiento */}
+                                    {proforma.fecha_vencimiento && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Vencimiento</span>
+                                            <span className="font-medium text-foreground">{new Date(proforma.fecha_vencimiento).toLocaleDateString('es-ES')}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Items */}
+                                    {(proforma.items_count ?? 0) > 0 && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Items</span>
+                                            <span className="font-medium text-foreground">{proforma.items_count} producto{(proforma.items_count ?? 0) !== 1 ? 's' : ''}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Moneda */}
+                                    {proforma.moneda && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Moneda</span>
+                                            <span className="font-medium text-foreground">{proforma.moneda.codigo}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Mostrar límite de crédito si la política es CREDITO */}
+                                {proforma.politica_pago === 'CREDITO' && proforma.cliente?.puede_tener_credito && (
+                                    <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm">
+                                        <p className="text-muted-foreground">
+                                            Límite de Crédito: <span className="font-medium text-foreground">
+                                                {proforma.moneda?.simbolo || 'Bs.'} {proforma.cliente.limite_credito?.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </p>
+                                    </div>
                                 )}
-                                {/* <div>
-                                    <p className="text-[var(--text-xs)] text-muted-foreground font-medium uppercase">Total</p>
-                                    <p className="text-[var(--text-2xl)] font-bold text-[var(--brand-primary)]">
-                                        Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                    </p>
-                                </div> */}
                             </div>
                         </div>
                     </div>
@@ -943,7 +1016,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 )}
                             </CardHeader>
                             <CardContent>
-                            <Table>
+                                <Table>
                                     <TableHeader>
                                         <TableRow className="bg-muted/50">
                                             <TableHead className="font-semibold">Producto</TableHead>
@@ -958,9 +1031,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         {editableDetalles.map((detalle, index) => (
                                             <TableRow
                                                 key={detalle.id}
-                                                className={`transition-colors hover:bg-muted/30 ${
-                                                    index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
-                                                }`}
+                                                className={`transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                                                    }`}
                                             >
                                                 <TableCell>
                                                     <div className="space-y-1">
@@ -983,27 +1055,31 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                     {proforma.estado === 'PENDIENTE' ? (
                                                         <Input
                                                             type="number"
-                                                            min="1"
-                                                            value={detalle.cantidad || ''}
+                                                            min="0.01"
+                                                            step="0.01"
+                                                            value={detalle.cantidad ? parseFloat(detalle.cantidad.toString()).toFixed(2) : ''}
                                                             onChange={(e) => {
                                                                 const valor = e.target.value
                                                                 if (valor === '' || valor === '0') {
                                                                     handleEditarCantidad(index, 1)
                                                                 } else {
-                                                                    handleEditarCantidad(index, parseFloat(valor) || 1)
+                                                                    const cantidad = parseFloat(valor) || 1
+                                                                    handleEditarCantidad(index, parseFloat(cantidad.toFixed(2)))
                                                                 }
                                                             }}
                                                             onBlur={(e) => {
                                                                 const valor = parseFloat(e.target.value) || 0
                                                                 if (valor <= 0) {
                                                                     handleEditarCantidad(index, 1)
+                                                                } else {
+                                                                    handleEditarCantidad(index, parseFloat(valor.toFixed(2)))
                                                                 }
                                                             }}
                                                             placeholder="1"
                                                             className="w-24 text-center"
                                                         />
                                                     ) : (
-                                                        <span className="font-medium">{detalle.cantidad}</span>
+                                                        <span className="font-medium">{parseFloat(detalle.cantidad.toString()).toFixed(2)}</span>
                                                     )}
                                                 </TableCell>
                                                 {/* Columna de Rango */}
@@ -1098,38 +1174,38 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     </TableBody>
                                 </Table>
 
-                            {/* Resumen de Totales en Tiempo Real */}
-                            {proforma.estado === 'PENDIENTE' && (
-                                <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
-                                    {/* Indicador de cálculo en progreso */}
-                                    {isCalculandoRangos && (
-                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex items-center gap-2">
-                                            <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                                            <p className="text-xs text-blue-700 dark:text-blue-200">Recalculando precios...</p>
-                                        </div>
-                                    )}
+                                {/* Resumen de Totales en Tiempo Real */}
+                                {proforma.estado === 'PENDIENTE' && (
+                                    <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
+                                        {/* Indicador de cálculo en progreso */}
+                                        {isCalculandoRangos && (
+                                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex items-center gap-2">
+                                                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                                                <p className="text-xs text-blue-700 dark:text-blue-200">Recalculando precios...</p>
+                                            </div>
+                                        )}
 
-                                    <div className="flex justify-end gap-8">
-                                        <div className="space-y-2 text-right">
-                                            <p className="text-sm text-muted-foreground">Subtotal:</p>
-                                            <p className="text-2xl font-bold text-foreground">
-                                                Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                            </p>
+                                        <div className="flex justify-end gap-8">
+                                            <div className="space-y-2 text-right">
+                                                <p className="text-sm text-muted-foreground">Subtotal:</p>
+                                                <p className="text-2xl font-bold text-foreground">
+                                                    Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2 text-right">
+                                                <p className="text-sm font-medium text-foreground">Total:</p>
+                                                <p className="text-2xl font-bold text-[var(--brand-primary)]">
+                                                    Bs. {totales.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2 text-right">
-                                            <p className="text-sm font-medium text-foreground">Total:</p>
-                                            <p className="text-2xl font-bold text-[var(--brand-primary)]">
-                                                Bs. {totales.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                        {totales.total !== proforma.total && (
+                                            <p className="text-xs text-amber-600 dark:text-amber-400 text-right italic">
+                                                ℹ️ Total modificado desde: Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                             </p>
-                                        </div>
+                                        )}
                                     </div>
-                                    {totales.total !== proforma.total && (
-                                        <p className="text-xs text-amber-600 dark:text-amber-400 text-right italic">
-                                            ℹ️ Total modificado desde: Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
+                                )}
                             </CardContent>
                         </Card>
 
@@ -1668,7 +1744,7 @@ export default function ProformasShow({ item: proforma }: Props) {
             <ProductSelectionDialog
                 open={showAgregarProductoDialog}
                 onOpenChange={setShowAgregarProductoDialog}
-                productos={productosDisponibles}
+                productos={productosDisponibles as Producto[]}
                 searchTerm={searchProducto}
                 onSearchChange={setSearchProducto}
                 onSelectProducto={handleAgregarProducto}

@@ -29,6 +29,7 @@ class Proforma extends Model
         'estado_proforma_id',
         'canal_origen',
         'tipo_entrega',  // NUEVO: DELIVERY o PICKUP
+        'politica_pago',  // ✅ NUEVO: CONTRA_ENTREGA, ANTICIPADO_100, MEDIO_MEDIO, CREDITO
         'cliente_id',
         'usuario_creador_id',
         'usuario_aprobador_id',
@@ -117,6 +118,15 @@ class Proforma extends Model
     const TIPO_DELIVERY = 'DELIVERY';
 
     const TIPO_PICKUP = 'PICKUP';
+
+    // Políticas de pago
+    const POLITICA_CONTRA_ENTREGA = 'CONTRA_ENTREGA';
+
+    const POLITICA_ANTICIPADO_100 = 'ANTICIPADO_100';
+
+    const POLITICA_MEDIO_MEDIO = 'MEDIO_MEDIO';
+
+    const POLITICA_CREDITO = 'CREDITO';
 
     // Relaciones
     public function cliente(): BelongsTo
@@ -234,6 +244,38 @@ class Proforma extends Model
     public function requiereDireccion(): bool
     {
         return $this->esDelivery();
+    }
+
+    // ✅ Helpers para política de pago
+    public function esContraEntrega(): bool
+    {
+        return $this->politica_pago === self::POLITICA_CONTRA_ENTREGA;
+    }
+
+    public function esAnticipadoCompleto(): bool
+    {
+        return $this->politica_pago === self::POLITICA_ANTICIPADO_100;
+    }
+
+    public function esMedioMedio(): bool
+    {
+        return $this->politica_pago === self::POLITICA_MEDIO_MEDIO;
+    }
+
+    public function solicitaCredito(): bool
+    {
+        return $this->politica_pago === self::POLITICA_CREDITO;
+    }
+
+    public function validarPoliticaPago(): bool
+    {
+        // Si solicita crédito, validar que cliente tenga permisos
+        if ($this->solicitaCredito() && !$this->cliente?->puede_tener_credito) {
+            throw new \Exception(
+                "Cliente '{$this->cliente?->nombre}' no tiene permisos para solicitar crédito"
+            );
+        }
+        return true;
     }
 
     /**

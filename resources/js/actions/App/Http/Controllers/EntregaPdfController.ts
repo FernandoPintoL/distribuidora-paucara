@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\EntregaPdfController::descargar
  * @see app/Http/Controllers/EntregaPdfController.php:53
@@ -66,41 +66,6 @@ descargar.head = (args: { entrega: number | { id: number } } | [entrega: number 
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\EntregaPdfController::descargar
- * @see app/Http/Controllers/EntregaPdfController.php:53
- * @route '/api/entregas/{entrega}/descargar'
- */
-    const descargarForm = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: descargar.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\EntregaPdfController::descargar
- * @see app/Http/Controllers/EntregaPdfController.php:53
- * @route '/api/entregas/{entrega}/descargar'
- */
-        descargarForm.get = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: descargar.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\EntregaPdfController::descargar
- * @see app/Http/Controllers/EntregaPdfController.php:53
- * @route '/api/entregas/{entrega}/descargar'
- */
-        descargarForm.head = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: descargar.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    descargar.form = descargarForm
 /**
 * @see \App\Http\Controllers\EntregaPdfController::preview
  * @see app/Http/Controllers/EntregaPdfController.php:114
@@ -168,41 +133,6 @@ preview.head = (args: { entrega: number | { id: number } } | [entrega: number | 
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\EntregaPdfController::preview
- * @see app/Http/Controllers/EntregaPdfController.php:114
- * @route '/api/entregas/{entrega}/preview'
- */
-    const previewForm = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: preview.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\EntregaPdfController::preview
- * @see app/Http/Controllers/EntregaPdfController.php:114
- * @route '/api/entregas/{entrega}/preview'
- */
-        previewForm.get = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: preview.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\EntregaPdfController::preview
- * @see app/Http/Controllers/EntregaPdfController.php:114
- * @route '/api/entregas/{entrega}/preview'
- */
-        previewForm.head = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: preview.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    preview.form = previewForm
 /**
 * @see \App\Http\Controllers\EntregaPdfController::debug
  * @see app/Http/Controllers/EntregaPdfController.php:23
@@ -269,42 +199,6 @@ debug.head = (args: { entrega: number | { id: number } } | [entrega: number | { 
     url: debug.url(args, options),
     method: 'head',
 })
-
-    /**
-* @see \App\Http\Controllers\EntregaPdfController::debug
- * @see app/Http/Controllers/EntregaPdfController.php:23
- * @route '/api/entregas/{entrega}/debug'
- */
-    const debugForm = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: debug.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\EntregaPdfController::debug
- * @see app/Http/Controllers/EntregaPdfController.php:23
- * @route '/api/entregas/{entrega}/debug'
- */
-        debugForm.get = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: debug.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\EntregaPdfController::debug
- * @see app/Http/Controllers/EntregaPdfController.php:23
- * @route '/api/entregas/{entrega}/debug'
- */
-        debugForm.head = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: debug.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    debug.form = debugForm
 const EntregaPdfController = { descargar, preview, debug }
 
 export default EntregaPdfController

@@ -21,6 +21,7 @@ class CrearProformaDTO extends BaseDTO
         public ?int $almacen_id = 2,
         public ?string $observaciones = null,
         public ?string $canal = 'PRESENCIAL',
+        public ?string $politica_pago = 'CONTRA_ENTREGA',
         public ?int $usuario_id = null,
     ) {}
 
@@ -42,6 +43,7 @@ class CrearProformaDTO extends BaseDTO
             almacen_id: (int) $request->input('almacen_id', 1),
             observaciones: $request->input('observaciones'),
             canal: $request->input('canal', 'PRESENCIAL'),
+            politica_pago: $request->input('politica_pago', 'CONTRA_ENTREGA'),
             usuario_id: $user ? $user->id : null,
         );
     }

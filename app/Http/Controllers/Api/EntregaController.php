@@ -12,6 +12,7 @@ use App\Models\EstadoLogistica;
 use App\Models\Proforma;
 use App\Models\Venta;  // ✅ Importar modelo Venta
 use App\Models\EntregaVentaConfirmacion;  // ✅ Importar modelo confirmaciones
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -201,6 +202,166 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener trabajos',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /api/chofer/estadisticas
+     * Obtener estadísticas rápidas del chofer para dashboard
+     * Retorna: total, completadas, pendientes, en_ruta, tasa_exito, km_estimados, etc.
+     * Endpoint optimizado para cargar rápido (sin ventas detalladas)
+     * ✅ RELACIÓN CORRECTA: Usa FK estado_entrega_id → estados_logistica.id
+     */
+    public function estadisticasChofer(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $hoy = Carbon::today();
+
+            // DEBUG: Loguear información del usuario
+            Log::info('📊 [estadisticasChofer] Debug', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'hoy' => $hoy->toDateString(),
+            ]);
+
+            // Obtener todas las entregas del chofer (SIN filtro de fecha por ahora)
+            // Usar with() para cargar relación estadoEntrega
+            $entregas = Entrega::where('chofer_id', $user->id)
+                // DEBUG: Quitamos el filtro de fecha temporalmente para ver si hay entregas
+                // ->whereDate('fecha_asignacion', '>=', $hoy)
+                ->select(['id', 'estado_entrega_id', 'numero_entrega', 'fecha_asignacion', 'fecha_entrega'])
+                ->with(['estadoEntrega:id,codigo,es_estado_final', 'vehiculo:id,placa'])
+                ->get();
+
+            // DEBUG: Loguear entregas encontradas
+            Log::info('📊 [estadisticasChofer] Entregas encontradas', [
+                'cantidad' => $entregas->count(),
+                'ids' => $entregas->pluck('id')->toArray(),
+                'números' => $entregas->pluck('numero_entrega')->toArray(),
+            ]);
+
+            // Calcular estadísticas usando relación estadoEntrega
+            $totalEntregas = $entregas->count();
+
+            // ✅ ESTADOS AGRUPADOS PARA EL CHOFER (según tabla estados_logistica)
+            // Estados de PREPARACIÓN (PREPARACION_CARGA + EN_CARGA)
+            $entregasEnPreparacion = $entregas->filter(function ($e) {
+                return $e->estadoEntrega &&
+                       in_array($e->estadoEntrega->codigo, ['PREPARACION_CARGA', 'EN_CARGA']);
+            })->count();
+
+            // Estados LISTO PARA ENTREGA
+            $entregasListasEntrega = $entregas->filter(function ($e) {
+                return $e->estadoEntrega && $e->estadoEntrega->codigo === 'LISTO_PARA_ENTREGA';
+            })->count();
+
+            // Estados EN RUTA (EN_TRANSITO + EN_CAMINO + LLEGO)
+            $entregasEnRuta = $entregas->filter(function ($e) {
+                return $e->estadoEntrega &&
+                       in_array($e->estadoEntrega->codigo, ['EN_TRANSITO', 'EN_CAMINO', 'LLEGO']);
+            })->count();
+
+            // Estados ENTREGADO (completadas con éxito)
+            $entregasEntregadas = $entregas->filter(function ($e) {
+                return $e->estadoEntrega && $e->estadoEntrega->codigo === 'ENTREGADO';
+            })->count();
+
+            // Entregas completadas: estado_final = true (ENTREGADO, RECHAZADO, CANCELADA)
+            $entregasCompletadas = $entregas->filter(function ($e) {
+                return $e->estadoEntrega && $e->estadoEntrega->es_estado_final;
+            })->count();
+
+            // Entregas pendientes: NOT estado_final
+            $entregasPendientes = $entregas->filter(function ($e) {
+                return !($e->estadoEntrega && $e->estadoEntrega->es_estado_final);
+            })->count();
+
+            $tasaExito = $totalEntregas > 0
+                ? round(($entregasCompletadas / $totalEntregas) * 100, 2)
+                : 0;
+
+            // Obtener próxima entrega pendiente (para mostrar en dashboard)
+            // Filtrar entregas que NO estén en estado final
+            $proximaEntrega = Entrega::where('chofer_id', $user->id)
+                ->whereHas('estadoEntrega', function ($q) {
+                    // Solo entregas cuyo estado NO sea final
+                    $q->where('es_estado_final', false);
+                })
+                ->orderBy('fecha_asignacion')
+                ->select(['id', 'numero_entrega', 'estado_entrega_id', 'fecha_asignacion'])
+                ->with(['vehiculo:id,placa', 'estadoEntrega:id,codigo,nombre'])
+                ->first();
+
+            // Calcular km estimados (sumar distancias de entregas pendientes)
+            // Por ahora, usaremos aproximado basado en cantidad
+            $kmEstimados = $entregasPendientes > 0 ? ($entregasPendientes * 15.5) : 0;
+
+            // Calcular tiempo promedio de entrega (de las completadas hoy)
+            $tiempoPromedio = 0;
+            $entregasCompletadasHoy = Entrega::where('chofer_id', $user->id)
+                ->whereDate('fecha_entrega', $hoy)
+                ->whereHas('estadoEntrega', function ($q) {
+                    // Solo entregas completadas (estado final)
+                    $q->where('es_estado_final', true);
+                })
+                ->select(['fecha_asignacion', 'fecha_entrega'])
+                ->get();
+
+            if ($entregasCompletadasHoy->count() > 0) {
+                $tiempoTotal = 0;
+                foreach ($entregasCompletadasHoy as $entrega) {
+                    if ($entrega->fecha_asignacion && $entrega->fecha_entrega) {
+                        $tiempoTotal += $entrega->fecha_entrega->diffInMinutes($entrega->fecha_asignacion);
+                    }
+                }
+                $tiempoPromedio = round($tiempoTotal / $entregasCompletadasHoy->count(), 0);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    // Contadores principales (totales)
+                    'total_entregas' => $totalEntregas,
+                    'entregas_completadas' => $entregasCompletadas,
+                    'entregas_pendientes' => $entregasPendientes,
+
+                    // ✅ ESTADOS PRINCIPALES DEL CHOFER (agrupados)
+                    'entregas_en_preparacion' => $entregasEnPreparacion,     // PREPARACION_CARGA + EN_CARGA
+                    'entregas_listas_entrega' => $entregasListasEntrega,     // LISTO_PARA_ENTREGA
+                    'entregas_en_ruta' => $entregasEnRuta,                   // EN_TRANSITO + EN_CAMINO + LLEGO
+                    'entregas_entregadas' => $entregasEntregadas,            // ENTREGADO
+
+                    // KPIs
+                    'tasa_exito' => $tasaExito,
+                    'km_estimados' => round($kmEstimados, 2),
+                    'tiempo_promedio_minutos' => $tiempoPromedio,
+
+                    // Próxima entrega
+                    'proxima_entrega' => $proximaEntrega ? [
+                        'id' => $proximaEntrega->id,
+                        'numero_entrega' => $proximaEntrega->numero_entrega,
+                        'codigo_estado' => $proximaEntrega->estadoEntrega?->codigo,
+                        'nombre_estado' => $proximaEntrega->estadoEntrega?->nombre,
+                        'vehiculo' => $proximaEntrega->vehiculo ? [
+                            'placa' => $proximaEntrega->vehiculo->placa,
+                        ] : null,
+                    ] : null,
+                    'timestamp' => now()->toIso8601String(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en estadisticasChofer', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener estadísticas',
                 'error' => $e->getMessage(),
             ], 500);
         }

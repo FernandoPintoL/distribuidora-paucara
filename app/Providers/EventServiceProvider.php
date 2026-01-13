@@ -39,6 +39,7 @@ use App\Listeners\SendProformaCoordinationNotification;
 use App\Listeners\SendProformaConvertedNotification;
 use App\Listeners\SendProformaCreatedNotification;
 use App\Listeners\SendProformaRejectedNotification;
+use App\Listeners\SendEntregaAsignadaNotification;
 use App\Listeners\Venta\BroadcastProformaCreada;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
@@ -109,6 +110,7 @@ class EventServiceProvider extends ServiceProvider
 
         EntregaAsignada::class => [
             BroadcastEntregaAsignada::class,
+            SendEntregaAsignadaNotification::class, // ✅ NUEVO: Guarda notificación en BD para chofer
         ],
 
         EntregaEnCamino::class => [

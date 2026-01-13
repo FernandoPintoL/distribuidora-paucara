@@ -53,6 +53,11 @@ class ApiProformaController extends Controller
             $requestData['hora_entrega_solicitada_fin'] = $request->hora_fin_preferida;
         }
 
+        // ✅ NUEVO: Normalizar política de pago (default: CONTRA_ENTREGA)
+        if (!isset($requestData['politica_pago'])) {
+            $requestData['politica_pago'] = 'CONTRA_ENTREGA';
+        }
+
         $validator = Validator::make($requestData, [
             'cliente_id' => 'required|exists:clientes,id',
             'productos' => 'required|array|min:1',
@@ -60,6 +65,8 @@ class ApiProformaController extends Controller
             'productos.*.cantidad' => 'required|numeric|min:1',
             // NUEVO: tipo_entrega es requerido
             'tipo_entrega' => 'required|in:DELIVERY,PICKUP',
+            // ✅ NUEVO: Validación de política de pago
+            'politica_pago' => 'sometimes|string|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
             // Solicitud de entrega del cliente (REQUERIDO)
             'fecha_entrega_solicitada' => 'required|date|after_or_equal:today',
             'hora_entrega_solicitada' => 'nullable|date_format:H:i',
@@ -106,6 +113,23 @@ class ApiProformaController extends Controller
         try {
             // Obtener el cliente (por cliente_id, no por usuario autenticado)
             $cliente = Cliente::findOrFail($request->cliente_id);
+
+            // ✅ NUEVO: Validar política de pago (si es CREDITO, validar permisos del cliente)
+            if ($requestData['politica_pago'] === 'CREDITO') {
+                if (!$cliente->puede_tener_credito) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito",
+                    ], 422);
+                }
+
+                if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado",
+                    ], 422);
+                }
+            }
 
             // Obtener el usuario del cliente (user_id) para asociar como creador
             // IMPORTANTE: usuario_creador_id debe ser el user_id del cliente, NO el cliente_id
@@ -193,6 +217,8 @@ class ApiProformaController extends Controller
                 // Usuario creador: el usuario asociado al cliente
                 // IMPORTANTE: esto es user_id, NO cliente_id
                 'usuario_creador_id' => $usuarioCreador,
+                // ✅ NUEVO: Política de pago
+                'politica_pago' => $requestData['politica_pago'],
                 // Solicitud de entrega del cliente (usa campos normalizados)
                 'fecha_entrega_solicitada' => $fechaEntrega,
                 'hora_entrega_solicitada' => $horaEntrega,
@@ -231,6 +257,7 @@ class ApiProformaController extends Controller
                     'numero' => $proforma->numero,
                     'total' => $proforma->total,
                     'estado' => $proforma->estado,
+                    'politica_pago' => $proforma->politica_pago,  // ✅ Incluir política de pago en respuesta
                     'detalles_rangos' => $detallesConRangos,  // ✅ Información de rangos aplicados
                     'subtotal' => $subtotal,
                     'impuesto' => $impuesto,

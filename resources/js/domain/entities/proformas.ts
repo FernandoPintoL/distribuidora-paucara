@@ -24,7 +24,7 @@ export interface Direccion {
 export interface PaymentData {
     con_pago: boolean; // Flag indicando si el cliente realizó un pago
     tipo_pago_id?: number; // ID del tipo de pago (efectivo, transferencia, etc.)
-    politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO';
+    politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO' | 'CREDITO'; // ✅ ACTUALIZADO: Incluir CREDITO
     monto_pagado?: number; // Monto pagado por el cliente
     fecha_pago?: string; // Fecha del pago
     numero_recibo?: string; // Número de recibo o comprobante
@@ -35,6 +35,7 @@ export interface Proforma extends BaseEntity {
     id: Id;
     numero: string;
     fecha: string;
+    fecha_vencimiento: string;
     estado: string; // Estado del documento (PENDIENTE, APROBADA, RECHAZADA, CONVERTIDA, VENCIDA)
     subtotal: number;
     descuento: number;
@@ -42,11 +43,18 @@ export interface Proforma extends BaseEntity {
     total: number;
     observaciones?: string;
     cliente_id: Id;
-    usuario_id: Id;
-    estado_documento_id: Id;
-    moneda_id: Id;
+    cliente_nombre: string;
+    cliente: Cliente;
+    usuario_id?: Id;
+    estado_documento_id?: Id;
+    moneda_id?: Id;
+    moneda?: Moneda; // ✅ NUEVO: Objeto de moneda con código y símbolo
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
     canal?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL'; // Campo devuelto por el backend
+    tipo_entrega?: 'DELIVERY' | 'PICKUP'; // ✅ NUEVO: Tipo de entrega
+    politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO' | 'CREDITO'; // ✅ NUEVO: Política de pago
+    estado_pago?: 'PENDIENTE' | 'PAGADO' | 'PARCIAL'; // ✅ NUEVO: Estado de pago
+    items_count?: number; // ✅ NUEVO: Cantidad de items
     requiere_envio?: boolean;
 
     // Solicitud de entrega del cliente (inicial)

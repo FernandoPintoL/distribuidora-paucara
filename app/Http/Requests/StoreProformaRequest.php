@@ -50,6 +50,9 @@ class StoreProformaRequest extends FormRequest
             'impuesto' => ['required', 'numeric', 'min:0'],
             'total' => ['required', 'numeric', 'min:0'],
 
+            // Política de pago
+            'politica_pago' => ['sometimes', 'string', 'in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO'],
+
             // Opcionales
             'observaciones' => ['nullable', 'string', 'max:1000'],
             'canal' => ['nullable', 'string', 'in:PRESENCIAL,ONLINE,TELEFONO'],
@@ -85,6 +88,8 @@ class StoreProformaRequest extends FormRequest
             'subtotal.required' => 'El subtotal es requerido',
             'impuesto.required' => 'El impuesto es requerido',
             'total.required' => 'El total es requerido',
+
+            'politica_pago.in' => 'La política de pago seleccionada no es válida',
         ];
     }
 

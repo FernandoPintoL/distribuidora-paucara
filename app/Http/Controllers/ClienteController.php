@@ -291,10 +291,10 @@ class ClienteController extends Controller
                         $usernick = $this->generarUsernickUnico($telefono);
 
                         $userData = [
-                            'name'     => $request->nombre,
-                            'usernick' => $usernick,
-                            'password' => Hash::make($telefono),
-                            'activo'   => true,
+                            'name'       => $request->nombre,
+                            'usernick'   => $usernick,
+                            'password'   => Hash::make($telefono),
+                            'activo'     => true,
                             // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
                             'empresa_id' => Auth::user()?->empresa_id,
                         ];
@@ -531,7 +531,7 @@ class ClienteController extends Controller
         }
 
         // Si es Cliente, obtener su cliente vinculado
-        if ($user->hasRole('Cliente')) {
+        if ($user->hasRole(['Cliente', 'cliente', 'Preventista', 'preventista', 'Admin', 'admin', 'Manager'])) {
             $cliente = $user->cliente;
 
             if (! $cliente) {
@@ -622,10 +622,10 @@ class ClienteController extends Controller
             $usernick = $this->generarUsernickUnico($telefono);
 
             $userData = [
-                'name'     => $request->nombre,
-                'usernick' => $usernick,
-                'password' => Hash::make($telefono), // Usar teléfono como password
-                'activo'   => true,
+                'name'       => $request->nombre,
+                'usernick'   => $usernick,
+                'password'   => Hash::make($telefono), // Usar teléfono como password
+                'activo'     => true,
                 // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
                 'empresa_id' => Auth::user()?->empresa_id,
             ];
@@ -817,8 +817,8 @@ class ClienteController extends Controller
             ->get(['id', 'venta_id', 'monto_original', 'saldo_pendiente', 'fecha_vencimiento', 'dias_vencido', 'estado']);
 
         // Calcular totales
-        $saldoUtilizado = $cuentasPendientes->sum('saldo_pendiente');
-        $saldoDisponible = max(0, $cliente->limite_credito - $saldoUtilizado);
+        $saldoUtilizado        = $cuentasPendientes->sum('saldo_pendiente');
+        $saldoDisponible       = max(0, $cliente->limite_credito - $saldoUtilizado);
         $porcentajeUtilizacion = $cliente->limite_credito > 0 ? ($saldoUtilizado / $cliente->limite_credito) * 100 : 0;
 
         // Obtener historial de pagos (últimos pagos realizados)
@@ -853,54 +853,54 @@ class ClienteController extends Controller
         }
 
         return ApiResponse::success([
-            'cliente' => [
-                'id'    => $cliente->id,
-                'nombre' => $cliente->nombre,
-                'codigo' => $cliente->codigo_cliente,
-                'nit'    => $cliente->nit,
-                'email'  => $cliente->email,
+            'cliente'            => [
+                'id'       => $cliente->id,
+                'nombre'   => $cliente->nombre,
+                'codigo'   => $cliente->codigo_cliente,
+                'nit'      => $cliente->nit,
+                'email'    => $cliente->email,
                 'telefono' => $cliente->telefono,
-                'activo' => $cliente->activo,
+                'activo'   => $cliente->activo,
             ],
-            'credito' => [
-                'limite_credito'        => (float) $cliente->limite_credito,
-                'saldo_utilizado'       => (float) $saldoUtilizado,
-                'saldo_disponible'      => (float) $saldoDisponible,
+            'credito'            => [
+                'limite_credito'         => (float) $cliente->limite_credito,
+                'saldo_utilizado'        => (float) $saldoUtilizado,
+                'saldo_disponible'       => (float) $saldoDisponible,
                 'porcentaje_utilizacion' => round($porcentajeUtilizacion, 2),
-                'estado'                => $estado,
+                'estado'                 => $estado,
             ],
             'cuentas_pendientes' => [
-                'total'   => $cuentasPendientes->count(),
-                'monto_total' => (float) $saldoUtilizado,
-                'cuentas_vencidas' => $cuentasVencidas->count(),
+                'total'               => $cuentasPendientes->count(),
+                'monto_total'         => (float) $saldoUtilizado,
+                'cuentas_vencidas'    => $cuentasVencidas->count(),
                 'dias_maximo_vencido' => $cuentasVencidas->max('dias_vencido') ?? 0,
-                'detalles' => $cuentasPendientes->map(fn($c) => [
-                    'id' => $c->id,
-                    'venta_id' => $c->venta_id,
-                    'numero_venta' => $c->venta?->numero,
-                    'fecha_venta' => $c->venta?->fecha,
-                    'monto_original' => (float) $c->monto_original,
-                    'saldo_pendiente' => (float) $c->saldo_pendiente,
+                'detalles'            => $cuentasPendientes->map(fn($c) => [
+                    'id'                => $c->id,
+                    'venta_id'          => $c->venta_id,
+                    'numero_venta'      => $c->venta?->numero,
+                    'fecha_venta'       => $c->venta?->fecha,
+                    'monto_original'    => (float) $c->monto_original,
+                    'saldo_pendiente'   => (float) $c->saldo_pendiente,
                     'fecha_vencimiento' => $c->fecha_vencimiento->format('Y-m-d'),
-                    'dias_vencido' => $c->dias_vencido,
-                    'estado' => $c->estado,
+                    'dias_vencido'      => $c->dias_vencido,
+                    'estado'            => $c->estado,
                 ]),
             ],
-            'historial_pagos' => $historialPagos->map(fn($p) => [
-                'id' => $p->id,
-                'monto' => (float) $p->monto,
-                'fecha_pago' => $p->fecha_pago->format('Y-m-d H:i:s'),
-                'tipo_pago' => $p->tipoPago?->nombre,
+            'historial_pagos'    => $historialPagos->map(fn($p) => [
+                'id'            => $p->id,
+                'monto'         => (float) $p->monto,
+                'fecha_pago'    => $p->fecha_pago->format('Y-m-d H:i:s'),
+                'tipo_pago'     => $p->tipoPago?->nombre,
                 'numero_recibo' => $p->numero_recibo,
-                'usuario' => $p->usuario?->name,
+                'usuario'       => $p->usuario?->name,
                 'observaciones' => $p->observaciones,
             ]),
-            'auditoria' => $auditoria->map(fn($a) => [
-                'id' => $a->id,
-                'fecha' => $a->created_at->format('Y-m-d H:i:s'),
-                'accion' => $a->accion,
-                'cambios' => $a->cambios,
-                'motivo' => $a->motivo,
+            'auditoria'          => $auditoria->map(fn($a) => [
+                'id'          => $a->id,
+                'fecha'       => $a->created_at->format('Y-m-d H:i:s'),
+                'accion'      => $a->accion,
+                'cambios'     => $a->cambios,
+                'motivo'      => $a->motivo,
                 'responsable' => $a->usuario?->name ?? $a->preventista?->user?->name ?? 'Sistema',
             ]),
         ]);
@@ -966,7 +966,7 @@ class ClienteController extends Controller
             ]);
 
             // Actualizar el saldo pendiente de la cuenta
-            $nuevoSaldo = $cuenta->saldo_pendiente - $validated['monto'];
+            $nuevoSaldo  = $cuenta->saldo_pendiente - $validated['monto'];
             $nuevoEstado = $nuevoSaldo > 0 ? 'parcial' : 'pagado';
 
             $cuenta->update([
@@ -979,8 +979,8 @@ class ClienteController extends Controller
                 $venta = $cuenta->venta;
                 if ($venta) {
                     $venta->update([
-                        'estado_pago' => 'pagado',
-                        'monto_pagado' => $venta->monto_total,
+                        'estado_pago'     => 'pagado',
+                        'monto_pagado'    => $venta->monto_total,
                         'monto_pendiente' => 0,
                     ]);
                 }
@@ -989,10 +989,10 @@ class ClienteController extends Controller
             return ApiResponse::success([
                 'pago'   => $pago,
                 'cuenta' => [
-                    'id'                => $cuenta->id,
-                    'saldo_anterior'    => $cuenta->getOriginal('saldo_pendiente'),
-                    'saldo_pendiente'   => $nuevoSaldo,
-                    'estado'            => $nuevoEstado,
+                    'id'              => $cuenta->id,
+                    'saldo_anterior'  => $cuenta->getOriginal('saldo_pendiente'),
+                    'saldo_pendiente' => $nuevoSaldo,
+                    'estado'          => $nuevoEstado,
                 ],
             ], 'Pago registrado exitosamente', 201);
 

@@ -374,6 +374,15 @@ class Venta extends Model
 
     const TIPO_PICKUP = 'PICKUP';
 
+    // Políticas de pago
+    const POLITICA_CONTRA_ENTREGA = 'CONTRA_ENTREGA';
+
+    const POLITICA_ANTICIPADO_100 = 'ANTICIPADO_100';
+
+    const POLITICA_MEDIO_MEDIO = 'MEDIO_MEDIO';
+
+    const POLITICA_CREDITO = 'CREDITO';
+
     // Estados Logísticos
     const ESTADO_LOGISTICO_SIN_ENTREGA = 'SIN_ENTREGA';
     const ESTADO_LOGISTICO_PROGRAMADO = 'PROGRAMADO';
@@ -430,6 +439,27 @@ class Venta extends Model
     public function esDelivery(): bool
     {
         return $this->tipo_entrega === self::TIPO_DELIVERY;
+    }
+
+    // ✅ Helpers para política de pago
+    public function esContraEntrega(): bool
+    {
+        return $this->politica_pago === self::POLITICA_CONTRA_ENTREGA;
+    }
+
+    public function esAnticipadoCompleto(): bool
+    {
+        return $this->politica_pago === self::POLITICA_ANTICIPADO_100;
+    }
+
+    public function esMedioMedio(): bool
+    {
+        return $this->politica_pago === self::POLITICA_MEDIO_MEDIO;
+    }
+
+    public function solicitaCredito(): bool
+    {
+        return $this->politica_pago === self::POLITICA_CREDITO;
     }
 
     public function puedeConfirmarsePickupPorCliente(): bool

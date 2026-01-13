@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ReservaStockController::index
  * @see app/Http/Controllers/ReservaStockController.php:17
@@ -42,41 +42,6 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
- * @route '/inventario/reservas'
- */
-    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: index.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
- * @route '/inventario/reservas'
- */
-        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
- * @route '/inventario/reservas'
- */
-        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    index.form = indexForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
  * @see app/Http/Controllers/ReservaStockController.php:330
@@ -120,41 +85,6 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
- * @route '/inventario/reservas/dashboard'
- */
-    const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: dashboard.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
- * @route '/inventario/reservas/dashboard'
- */
-        dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: dashboard.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
- * @route '/inventario/reservas/dashboard'
- */
-        dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: dashboard.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::create
  * @see app/Http/Controllers/ReservaStockController.php:47
@@ -198,41 +128,6 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
- * @route '/inventario/reservas/create'
- */
-    const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: create.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
- * @route '/inventario/reservas/create'
- */
-        createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
- * @route '/inventario/reservas/create'
- */
-        createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: create.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    create.form = createForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::store
  * @see app/Http/Controllers/ReservaStockController.php:62
@@ -267,27 +162,6 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::store
- * @see app/Http/Controllers/ReservaStockController.php:62
- * @route '/inventario/reservas'
- */
-    const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: store.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::store
- * @see app/Http/Controllers/ReservaStockController.php:62
- * @route '/inventario/reservas'
- */
-        storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: store.url(options),
-            method: 'post',
-        })
-    
-    store.form = storeForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::show
  * @see app/Http/Controllers/ReservaStockController.php:116
@@ -355,41 +229,6 @@ show.head = (args: { reservaStock: number | { id: number } } | [reservaStock: nu
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
- * @route '/inventario/reservas/{reservaStock}'
- */
-    const showForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
- * @route '/inventario/reservas/{reservaStock}'
- */
-        showForm.get = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
- * @route '/inventario/reservas/{reservaStock}'
- */
-        showForm.head = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show.form = showForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::edit
  * @see app/Http/Controllers/ReservaStockController.php:130
@@ -457,41 +296,6 @@ edit.head = (args: { reservaStock: number | { id: number } } | [reservaStock: nu
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
- * @route '/inventario/reservas/{reservaStock}/edit'
- */
-    const editForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: edit.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
- * @route '/inventario/reservas/{reservaStock}/edit'
- */
-        editForm.get = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
- * @route '/inventario/reservas/{reservaStock}/edit'
- */
-        editForm.head = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: edit.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    edit.form = editForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::update
  * @see app/Http/Controllers/ReservaStockController.php:151
@@ -550,37 +354,6 @@ update.put = (args: { reservaStock: number | { id: number } } | [reservaStock: n
     method: 'put',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::update
- * @see app/Http/Controllers/ReservaStockController.php:151
- * @route '/inventario/reservas/{reservaStock}'
- */
-    const updateForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: update.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'PUT',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::update
- * @see app/Http/Controllers/ReservaStockController.php:151
- * @route '/inventario/reservas/{reservaStock}'
- */
-        updateForm.put = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: update.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PUT',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    update.form = updateForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::destroy
  * @see app/Http/Controllers/ReservaStockController.php:230
@@ -639,37 +412,6 @@ destroy.delete = (args: { reservaStock: number | { id: number } } | [reservaStoc
     method: 'delete',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::destroy
- * @see app/Http/Controllers/ReservaStockController.php:230
- * @route '/inventario/reservas/{reservaStock}'
- */
-    const destroyForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: destroy.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'DELETE',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::destroy
- * @see app/Http/Controllers/ReservaStockController.php:230
- * @route '/inventario/reservas/{reservaStock}'
- */
-        destroyForm.delete = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: destroy.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'DELETE',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::utilizar
  * @see app/Http/Controllers/ReservaStockController.php:187
@@ -728,27 +470,6 @@ utilizar.post = (args: { reservaStock: number | { id: number } } | [reservaStock
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::utilizar
- * @see app/Http/Controllers/ReservaStockController.php:187
- * @route '/inventario/reservas/{reservaStock}/utilizar'
- */
-    const utilizarForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: utilizar.url(args, options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::utilizar
- * @see app/Http/Controllers/ReservaStockController.php:187
- * @route '/inventario/reservas/{reservaStock}/utilizar'
- */
-        utilizarForm.post = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: utilizar.url(args, options),
-            method: 'post',
-        })
-    
-    utilizar.form = utilizarForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::liberar
  * @see app/Http/Controllers/ReservaStockController.php:208
@@ -807,27 +528,6 @@ liberar.post = (args: { reservaStock: number | { id: number } } | [reservaStock:
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::liberar
- * @see app/Http/Controllers/ReservaStockController.php:208
- * @route '/inventario/reservas/{reservaStock}/liberar'
- */
-    const liberarForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: liberar.url(args, options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::liberar
- * @see app/Http/Controllers/ReservaStockController.php:208
- * @route '/inventario/reservas/{reservaStock}/liberar'
- */
-        liberarForm.post = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: liberar.url(args, options),
-            method: 'post',
-        })
-    
-    liberar.form = liberarForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
  * @see app/Http/Controllers/ReservaStockController.php:250
@@ -871,41 +571,6 @@ apiStockDisponible.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
- * @route '/inventario/reservas/api/stock-disponible'
- */
-    const apiStockDisponibleForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: apiStockDisponible.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
- * @route '/inventario/reservas/api/stock-disponible'
- */
-        apiStockDisponibleForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: apiStockDisponible.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
- * @route '/inventario/reservas/api/stock-disponible'
- */
-        apiStockDisponibleForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: apiStockDisponible.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    apiStockDisponible.form = apiStockDisponibleForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
  * @see app/Http/Controllers/ReservaStockController.php:274
@@ -949,41 +614,6 @@ apiReservasPorProducto.head = (options?: RouteQueryOptions): RouteDefinition<'he
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
- * @route '/inventario/reservas/api/reservas-por-producto'
- */
-    const apiReservasPorProductoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: apiReservasPorProducto.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
- * @route '/inventario/reservas/api/reservas-por-producto'
- */
-        apiReservasPorProductoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: apiReservasPorProducto.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
- * @route '/inventario/reservas/api/reservas-por-producto'
- */
-        apiReservasPorProductoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: apiReservasPorProducto.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    apiReservasPorProducto.form = apiReservasPorProductoForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
  * @see app/Http/Controllers/ReservaStockController.php:314
@@ -1017,28 +647,6 @@ apiLiberarVencidas.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
     url: apiLiberarVencidas.url(options),
     method: 'post',
 })
-
-    /**
-* @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
- * @see app/Http/Controllers/ReservaStockController.php:314
- * @route '/inventario/reservas/api/liberar-vencidas'
- */
-    const apiLiberarVencidasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: apiLiberarVencidas.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
- * @see app/Http/Controllers/ReservaStockController.php:314
- * @route '/inventario/reservas/api/liberar-vencidas'
- */
-        apiLiberarVencidasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: apiLiberarVencidas.url(options),
-            method: 'post',
-        })
-    
-    apiLiberarVencidas.form = apiLiberarVencidasForm
 const ReservaStockController = { index, dashboard, create, store, show, edit, update, destroy, utilizar, liberar, apiStockDisponible, apiReservasPorProducto, apiLiberarVencidas }
 
 export default ReservaStockController

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
  * @see app/Http/Controllers/CuentaPorPagarController.php:11
@@ -42,41 +42,6 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
- * @route '/compras/cuentas-por-pagar'
- */
-    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: index.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
- * @route '/compras/cuentas-por-pagar'
- */
-        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
- * @route '/compras/cuentas-por-pagar'
- */
-        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: index.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    index.form = indexForm
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
  * @see app/Http/Controllers/CuentaPorPagarController.php:95
@@ -120,41 +85,6 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
- * @route '/compras/cuentas-por-pagar/export'
- */
-    const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: exportMethod.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
- * @route '/compras/cuentas-por-pagar/export'
- */
-        exportMethodForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: exportMethod.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
- * @route '/compras/cuentas-por-pagar/export'
- */
-        exportMethodForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: exportMethod.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    exportMethod.form = exportMethodForm
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
  * @see app/Http/Controllers/CuentaPorPagarController.php:73
@@ -222,41 +152,6 @@ show.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id:
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
- * @route '/compras/cuentas-por-pagar/{cuenta}/show'
- */
-    const showForm = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
- * @route '/compras/cuentas-por-pagar/{cuenta}/show'
- */
-        showForm.get = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
- * @route '/compras/cuentas-por-pagar/{cuenta}/show'
- */
-        showForm.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show.form = showForm
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
  * @see app/Http/Controllers/CuentaPorPagarController.php:82
@@ -314,38 +209,6 @@ actualizarEstado.patch = (args: { cuenta: number | { id: number } } | [cuenta: n
     url: actualizarEstado.url(args, options),
     method: 'patch',
 })
-
-    /**
-* @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
- * @see app/Http/Controllers/CuentaPorPagarController.php:82
- * @route '/compras/cuentas-por-pagar/{cuenta}/estado'
- */
-    const actualizarEstadoForm = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: actualizarEstado.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'PATCH',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
- * @see app/Http/Controllers/CuentaPorPagarController.php:82
- * @route '/compras/cuentas-por-pagar/{cuenta}/estado'
- */
-        actualizarEstadoForm.patch = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: actualizarEstado.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'PATCH',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    actualizarEstado.form = actualizarEstadoForm
 const CuentaPorPagarController = { index, exportMethod, show, actualizarEstado, export: exportMethod }
 
 export default CuentaPorPagarController

@@ -99,7 +99,24 @@ class ProformaService
         // 1. Validar datos
         $dto->validarDetalles();
 
-        // 2. Validar stock ANTES de transacción
+        // 2. Validar política de pago (si es CREDITO, validar permisos del cliente)
+        if ($dto->politica_pago === \App\Models\Proforma::POLITICA_CREDITO) {
+            $cliente = \App\Models\Cliente::findOrFail($dto->cliente_id);
+
+            if (!$cliente->puede_tener_credito) {
+                throw new \Exception(
+                    "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito"
+                );
+            }
+
+            if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                throw new \Exception(
+                    "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado"
+                );
+            }
+        }
+
+        // 3. Validar stock ANTES de transacción
         $validacion = $this->stockService->validarDisponible(
             $dto->detalles,
             $dto->almacen_id ?? 2
@@ -125,6 +142,7 @@ class ProformaService
                 'observaciones' => $dto->observaciones,
                 'almacen_id' => $dto->almacen_id ?? 2,
                 'canal' => $dto->canal ?? 'PRESENCIAL',
+                'politica_pago' => $dto->politica_pago ?? 'CONTRA_ENTREGA',
             ]);
 
             // 3.2 Crear detalles
@@ -545,12 +563,23 @@ class ProformaService
      * Obtener política de pago para la venta
      *
      * Prioridad:
-     * 1. Política específica del cliente (si existe en tabla clientes)
-     * 2. Política por categoría de cliente
-     * 3. Default: CONTRA_ENTREGA
+     * 1. Política de la proforma (establecida en el formulario)
+     * 2. Política específica del cliente (si existe en tabla clientes)
+     * 3. Política por categoría de cliente
+     * 4. Default: CONTRA_ENTREGA
      */
     private function obtenerPoliticaPago(Proforma $proforma): string
     {
+        // 1. Si la proforma tiene una política explícita, usarla
+        if ($proforma->politica_pago && in_array($proforma->politica_pago, [
+            \App\Models\Proforma::POLITICA_CONTRA_ENTREGA,
+            \App\Models\Proforma::POLITICA_ANTICIPADO_100,
+            \App\Models\Proforma::POLITICA_MEDIO_MEDIO,
+            \App\Models\Proforma::POLITICA_CREDITO,
+        ])) {
+            return $proforma->politica_pago;
+        }
+
         // TODO: Cuando se agregue campo politica_pago en tabla clientes
         // if ($proforma->cliente && $proforma->cliente->politica_pago) {
         //     return $proforma->cliente->politica_pago;

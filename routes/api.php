@@ -495,6 +495,9 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 // CHOFER - Entregas y tracking
 Route::middleware(['auth:sanctum', 'platform'])->group(function () {
     Route::prefix('chofer')->group(function () {
+        // ✅ NUEVO: Obtener estadísticas rápidas (optimizado para dashboard)
+        Route::get('/estadisticas', [EntregaController::class, 'estadisticasChofer']);
+
         // Nuevo endpoint que combina entregas + envios
         Route::get('/trabajos', [EntregaController::class, 'misTrabjos']);
 

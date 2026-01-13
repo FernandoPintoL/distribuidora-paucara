@@ -38,6 +38,7 @@ class VentaResponseDTO extends BaseDTO
         public ?array $estadoLogistica = null,    // ✅ NUEVO: Objeto con id, codigo, nombre
         public ?string $canal_origen = null,
         public ?array $tipo_pago = null,
+        public ?string $politica_pago = 'CONTRA_ENTREGA',
         public ?array $proforma = null,
         public ?array $direccion_cliente = null,
     ) {}
@@ -138,6 +139,7 @@ class VentaResponseDTO extends BaseDTO
                 'id' => $venta->tipoPago->id,
                 'nombre' => $venta->tipoPago->nombre,
             ] : null,
+            politica_pago: $venta->politica_pago ?? 'CONTRA_ENTREGA',
             proforma: $venta->proforma ? [
                 'id' => $venta->proforma->id,
                 'numero' => $venta->proforma->numero,

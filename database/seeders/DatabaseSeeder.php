@@ -79,15 +79,9 @@ class DatabaseSeeder extends Seeder
                 $admin->forceFill(['usernick' => 'admin'])->save();
             }
         }
-        // Darle el rol de Super Admin al usuario admin principal
-        $admin->assignRole('Super Admin');
-
-        // Asegurar que el rol Super Admin tenga todos los permisos
-        $superAdminRole = Role::where('name', 'Super Admin')->first();
-        if ($superAdminRole) {
-            // Sincronizar todos los permisos disponibles al rol Super Admin
-            $superAdminRole->syncPermissions(Permission::all());
-        }
+        // ✅ NOTA: Los roles se asignan en RolesAndPermissionsSeeder
+        // No asignamos roles aquí para evitar conflictos
+        // El usuario admin@admin.com recibirá múltiples roles en RolesAndPermissionsSeeder
 
         // ✅ IMPORTANTE: Crear choferes ANTES de los vehículos
         // Crear usuario chofer de prueba
