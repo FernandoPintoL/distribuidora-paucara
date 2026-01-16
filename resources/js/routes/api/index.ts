@@ -4,6 +4,8 @@ import proformas from './proformas'
 import ventas from './ventas'
 import compras from './compras'
 import productos from './productos'
+import cliente from './cliente'
+import creditos from './creditos'
 import geocoding from './geocoding'
 import entregas from './entregas'
 import proveedores from './proveedores'
@@ -173,6 +175,8 @@ proformas,
 ventas,
 compras,
 productos,
+cliente,
+creditos,
 geocoding,
 entregas,
 proveedores,

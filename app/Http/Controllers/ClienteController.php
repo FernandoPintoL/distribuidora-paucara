@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Events\CreditoPagoRegistrado;
 use App\Helpers\ApiResponse;
 use App\Http\Requests\ChangeClienteCredentialsRequest;
 use App\Http\Requests\StoreClienteRequest;
@@ -127,7 +128,7 @@ class ClienteController extends Controller
 
             // Cargar relaciones según el tipo de request
             if ($this->isApiRequest()) {
-                $clientes->getCollection()->load('localidad', 'categorias', 'direcciones', 'user');
+                $clientes->getCollection()->load('localidad', 'categorias', 'direcciones', 'user', 'ventanasEntrega');
             } else {
                 $clientes->getCollection()->load('localidad');
             }
@@ -252,7 +253,7 @@ class ClienteController extends Controller
             $this->authorize('update', $cliente);
 
             return $this->dataResponse('clientes/form', [
-                'cliente'     => $cliente->load(['localidad', 'direcciones', 'ventanasEntrega']),
+                'cliente'     => $cliente->load(['localidad', 'direcciones', 'ventanasEntrega', 'user']),
                 'localidades' => Localidad::where('activo', true)
                     ->orderBy('nombre')
                     ->get(['id', 'nombre', 'codigo']),
@@ -282,6 +283,16 @@ class ClienteController extends Controller
                         'name'  => $request->nombre,
                         'email' => $request->email,
                     ];
+
+                    // NUEVO: Cambiar password si se proporciona
+                    if ($request->filled('password')) {
+                        $userUpdates['password'] = Hash::make($request->password);
+                        Log::info('✅ Contraseña de usuario actualizada', [
+                            'cliente_id' => $cliente->id,
+                            'user_id' => $cliente->user->id
+                        ]);
+                    }
+
                     $cliente->user->update($userUpdates);
                     $user = $cliente->user;
                 } else {
@@ -812,7 +823,7 @@ class ClienteController extends Controller
         // Obtener cuentas por cobrar pendientes
         $cuentasPendientes = $cliente->cuentasPorCobrar()
             ->where('saldo_pendiente', '>', 0)
-            ->with(['venta:id,numero,fecha,monto_total,estado_pago'])
+            ->with(['venta:id,numero,fecha,total,estado_pago'])
             ->orderByDesc('fecha_vencimiento')
             ->get(['id', 'venta_id', 'monto_original', 'saldo_pendiente', 'fecha_vencimiento', 'dias_vencido', 'estado']);
 
@@ -986,6 +997,9 @@ class ClienteController extends Controller
                 }
             }
 
+            // ✅ NUEVO: Disparar evento para notificación WebSocket
+            event(new CreditoPagoRegistrado($pago, $cuenta->fresh()));
+
             return ApiResponse::success([
                 'pago'   => $pago,
                 'cuenta' => [
@@ -1158,6 +1172,308 @@ class ClienteController extends Controller
 
         // Actualizar el cliente con el user_id
         $cliente->update(['user_id' => $user->id]);
+    }
+
+    // ============================================
+    // ✅ FASE 3: NUEVOS MÉTODOS PARA CRÉDITOS
+    // ============================================
+
+    /**
+     * Obtener cuentas pendientes de un cliente
+     */
+    public function obtenerCuentasPendientes(ClienteModel $cliente): JsonResponse
+    {
+        try {
+            $cuentas = $cliente->cuentasPorCobrar()
+                ->where('estado', '!=', 'pagada')
+                ->with('venta')
+                ->orderBy('fecha_vencimiento', 'asc')
+                ->get();
+
+            return ApiResponse::success($cuentas->toArray(), 'Cuentas pendientes obtenidas', 200);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al obtener cuentas pendientes: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Obtener cuentas vencidas de un cliente
+     */
+    public function obtenerCuentasVencidas(ClienteModel $cliente): JsonResponse
+    {
+        try {
+            $cuentas = $cliente->cuentasPorCobrar()
+                ->where('estado', 'vencida')
+                ->with('venta')
+                ->orderBy('dias_vencido', 'desc')
+                ->get();
+
+            return ApiResponse::success($cuentas->toArray(), 'Cuentas vencidas obtenidas', 200);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al obtener cuentas vencidas: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Obtener historial de pagos de un cliente
+     */
+    public function obtenerHistorialPagos(ClienteModel $cliente, Request $request): JsonResponse
+    {
+        try {
+            $limit = $request->integer('limit', 10);
+
+            $pagos = \App\Models\Pago::whereHas('cuentaPorCobrar', function ($q) use ($cliente) {
+                $q->where('cliente_id', $cliente->id);
+            })
+                ->with('cuentaPorCobrar')
+                ->orderBy('fecha_pago', 'desc')
+                ->limit($limit)
+                ->get();
+
+            return ApiResponse::success($pagos->toArray(), 'Historial de pagos obtenido', 200);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al obtener historial de pagos: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Listar todos los créditos (admin)
+     */
+    public function listarCreditos(Request $request): JsonResponse
+    {
+        try {
+            $clientes = ClienteModel::with('cuentasPorCobrar')
+                ->where('puede_tener_credito', true)
+                ->paginate($request->integer('per_page', 15));
+
+            // Transform data to include credit info
+            $creditoData = $clientes->map(function ($cliente) {
+                $cuentasPendientes = $cliente->cuentasPorCobrar;
+
+                // Credit limit is stored directly in Cliente model
+                $limiteCredito = (float)$cliente->limite_credito ?? 0;
+                $saldoPendiente = $cuentasPendientes->sum('saldo_pendiente') ?? 0;
+                $saldoDisponible = $limiteCredito - $saldoPendiente;
+                $porcentajeUtilizacion = $limiteCredito > 0 ? round(($saldoPendiente / $limiteCredito) * 100, 2) : 0;
+
+                // Determine credit status
+                $estado = 'disponible';
+                if ($saldoPendiente > 0) {
+                    if ($porcentajeUtilizacion > 100) {
+                        $estado = 'excedido';
+                    } elseif ($porcentajeUtilizacion > 80) {
+                        $estado = 'critico';
+                    } else {
+                        $estado = 'en_uso';
+                    }
+                }
+
+                // Count overdue accounts
+                $cuentasVencidas = $cuentasPendientes->filter(function ($cuenta) {
+                    return $cuenta->dias_vencido && $cuenta->dias_vencido > 0;
+                })->count();
+
+                return [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'email' => $cliente->email,
+                    'limite_credito' => (float) $limiteCredito,
+                    'saldo_disponible' => (float) max(0, $saldoDisponible),
+                    'saldo_utilizado' => (float) $saldoPendiente,
+                    'porcentaje_utilizacion' => (float) $porcentajeUtilizacion,
+                    'estado' => $estado,
+                    'cuentas_pendientes' => $cuentasPendientes->count(),
+                    'cuentas_vencidas' => $cuentasVencidas,
+                ];
+            });
+
+            return ApiResponse::success([
+                'data' => $creditoData->values()->toArray(),
+                'pagination' => [
+                    'total' => $clientes->total(),
+                    'per_page' => $clientes->perPage(),
+                    'current_page' => $clientes->currentPage(),
+                    'last_page' => $clientes->lastPage(),
+                ]
+            ], 'Créditos obtenidos', 200);
+        } catch (\Exception $e) {
+            \Log::error('Error al listar créditos: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return ApiResponse::error('Error al listar créditos: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Obtener crédito del usuario actual
+     */
+    public function obtenerMiCredito(): JsonResponse
+    {
+        try {
+            /** @var User $user */
+            $user = Auth::user();
+
+            $cliente = $user->cliente;
+            if (!$cliente) {
+                return ApiResponse::error('Usuario no tiene cliente asociado', 404);
+            }
+
+            if (!$cliente->puede_tener_credito || $cliente->limite_credito <= 0) {
+                return ApiResponse::error('Cliente no tiene crédito disponible', 404);
+            }
+
+            // Load credit data
+            $cliente->load('cuentasPorCobrar');
+            $cuentasPendientes = $cliente->cuentasPorCobrar;
+
+            $limiteCredito = (float)$cliente->limite_credito;
+            $saldoPendiente = $cuentasPendientes->sum('saldo_pendiente') ?? 0;
+            $saldoDisponible = $limiteCredito - $saldoPendiente;
+            $porcentajeUtilizacion = $limiteCredito > 0 ? round(($saldoPendiente / $limiteCredito) * 100, 2) : 0;
+
+            $creditoData = [
+                'id' => $cliente->id,
+                'cliente_id' => $cliente->id,
+                'cliente_nombre' => $cliente->nombre,
+                'limite_credito' => $limiteCredito,
+                'saldo_disponible' => (float)max(0, $saldoDisponible),
+                'saldo_utilizado' => (float)$saldoPendiente,
+                'porcentaje_utilizacion' => (float)$porcentajeUtilizacion,
+                'cuentas_pendientes' => $cuentasPendientes->count(),
+                'cuentas_vencidas' => $cuentasPendientes->filter(function ($cuenta) {
+                    return $cuenta->dias_vencido && $cuenta->dias_vencido > 0;
+                })->count(),
+            ];
+
+            return ApiResponse::success($creditoData, 'Crédito obtenido', 200);
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener mi crédito: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return ApiResponse::error('Error al obtener crédito: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Obtener resumen de crédito de un cliente
+     */
+    public function obtenerResumenCredito(Request $request): JsonResponse
+    {
+        try {
+            $clienteId = $request->integer('clienteId');
+
+            $cliente = ClienteModel::findOrFail($clienteId);
+            $credito = $cliente->credito;
+
+            if (!$credito) {
+                return ApiResponse::error('Cliente no tiene crédito', 404);
+            }
+
+            $resumen = [
+                'cliente_id' => $cliente->id,
+                'cliente_nombre' => $cliente->nombre,
+                'limite_credito' => $credito->limite_credito_aprobado,
+                'saldo_disponible' => $credito->saldo_disponible,
+                'saldo_utilizado' => $credito->saldo_utilizado,
+                'porcentaje_utilizado' => $credito->porcentaje_utilizado,
+                'estado' => $credito->estado,
+                'cuentas_pendientes' => $cliente->cuentasPorCobrar()->where('estado', '!=', 'pagada')->count(),
+                'cuentas_vencidas' => $cliente->cuentasPorCobrar()->where('estado', 'vencida')->count(),
+            ];
+
+            return ApiResponse::success($resumen, 'Resumen de crédito obtenido', 200);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al obtener resumen: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Obtener estadísticas de créditos
+     */
+    public function obtenerEstadisticasCreditos(): JsonResponse
+    {
+        try {
+            $stats = [
+                'total_clientes' => ClienteModel::count(),
+                'clientes_con_credito' => ClienteModel::where('puede_tener_credito', true)->count(),
+                'credito_total_aprobado' => \App\Models\Credito::sum('limite_credito_aprobado'),
+                'credito_utilizado' => \App\Models\Credito::sum('saldo_utilizado'),
+                'credito_disponible' => \App\Models\Credito::sum('saldo_disponible'),
+                'clientes_criticos' => \App\Models\Credito::where('estado', 'critico')->count(),
+                'clientes_excedidos' => \App\Models\Credito::where('estado', 'excedido')->count(),
+                'cuentas_vencidas_total' => \App\Models\CuentaPorCobrar::where('estado', 'vencida')->count(),
+            ];
+
+            return ApiResponse::success($stats, 'Estadísticas obtenidas', 200);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al obtener estadísticas: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Exportar reporte de créditos
+     */
+    public function exportarReporteCreditos(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        try {
+            $formato = $request->string('formato', 'pdf');
+
+            // Obtener datos de créditos
+            $creditos = ClienteModel::with('credito')
+                ->where('puede_tener_credito', true)
+                ->get();
+
+            // TODO: Implementar exportación a PDF o Excel
+            // Por ahora, retornar JSON
+            return response()->json([
+                'success' => true,
+                'message' => 'Exportación de créditos en proceso',
+                'format' => $formato,
+                'data' => $creditos,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al exportar: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Ajustar límite de crédito de un cliente
+     */
+    public function ajustarLimiteCredito(ClienteModel $cliente, Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'nuevo_limite' => 'required|numeric|min:0',
+                'razon' => 'nullable|string|max:500',
+            ]);
+
+            $credito = $cliente->credito;
+            if (!$credito) {
+                return ApiResponse::error('Cliente no tiene crédito', 404);
+            }
+
+            $limiteAnterior = $credito->limite_credito_aprobado;
+
+            $credito->update([
+                'limite_credito_aprobado' => $validated['nuevo_limite'],
+                'saldo_disponible' => $validated['nuevo_limite'] - $credito->saldo_utilizado,
+            ]);
+
+            Log::info('Límite de crédito ajustado', [
+                'cliente_id' => $cliente->id,
+                'limite_anterior' => $limiteAnterior,
+                'limite_nuevo' => $validated['nuevo_limite'],
+                'razon' => $validated['razon'] ?? 'Sin especificar',
+                'usuario_id' => Auth::id(),
+            ]);
+
+            return ApiResponse::success($credito->toArray(), 'Límite de crédito ajustado exitosamente', 200);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Error al ajustar límite: ' . $e->getMessage(), 500);
+        }
     }
 
     /**

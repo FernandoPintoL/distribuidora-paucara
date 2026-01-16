@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\Cliente;
 use App\Models\Venta;
+use App\Models\VisitaPreventistaCliente;
 use App\Policies\ClientePolicy;
 use App\Policies\VentaPolicy;
+use App\Policies\VisitaPreventistaPolicy;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -22,6 +24,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Cliente::class => ClientePolicy::class,
         Venta::class => VentaPolicy::class,
+        VisitaPreventistaCliente::class => VisitaPreventistaPolicy::class,
         // Pedido::class => PedidoPolicy::class,    // Descomentar cuando exista modelo
         // Inventario::class => InventarioPolicy::class, // Descomentar cuando exista modelo
     ];

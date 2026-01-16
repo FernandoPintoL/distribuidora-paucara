@@ -3,6 +3,7 @@ import codigosBarra from './codigos-barra'
 import precios from './precios'
 import ganancias from './ganancias'
 import credito from './credito'
+import visitas from './visitas'
 import inventario from './inventario'
 /**
 * @see \App\Http\Controllers\ReporteCargoListController::estadisticas
@@ -137,6 +138,84 @@ exportarZip.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
         })
     
     exportarZip.form = exportarZipForm
+/**
+* @see \App\Http\Controllers\ReporteVisitasController::visitas
+ * @see app/Http/Controllers/ReporteVisitasController.php:19
+ * @route '/reportes/visitas'
+ */
+export const visitas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: visitas.url(options),
+    method: 'get',
+})
+
+visitas.definition = {
+    methods: ["get","head"],
+    url: '/reportes/visitas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteVisitasController::visitas
+ * @see app/Http/Controllers/ReporteVisitasController.php:19
+ * @route '/reportes/visitas'
+ */
+visitas.url = (options?: RouteQueryOptions) => {
+    return visitas.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteVisitasController::visitas
+ * @see app/Http/Controllers/ReporteVisitasController.php:19
+ * @route '/reportes/visitas'
+ */
+visitas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: visitas.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteVisitasController::visitas
+ * @see app/Http/Controllers/ReporteVisitasController.php:19
+ * @route '/reportes/visitas'
+ */
+visitas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: visitas.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteVisitasController::visitas
+ * @see app/Http/Controllers/ReporteVisitasController.php:19
+ * @route '/reportes/visitas'
+ */
+    const visitasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: visitas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteVisitasController::visitas
+ * @see app/Http/Controllers/ReporteVisitasController.php:19
+ * @route '/reportes/visitas'
+ */
+        visitasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: visitas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteVisitasController::visitas
+ * @see app/Http/Controllers/ReporteVisitasController.php:19
+ * @route '/reportes/visitas'
+ */
+        visitasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: visitas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    visitas.form = visitasForm
 const reportes = {
     estadisticas,
 exportarZip,
@@ -144,6 +223,7 @@ codigosBarra,
 precios,
 ganancias,
 credito,
+visitas,
 inventario,
 }
 

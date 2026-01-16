@@ -57,7 +57,15 @@ export default function VentanasEntregaSelector({
     const handleUpdateVentana = (index: number, field: keyof VentanaEntregaCliente, newValue: any) => {
         const newVentanas = value.map((ventana, i) => {
             if (i === index) {
-                return { ...ventana, [field]: newValue };
+                // Normalizar formato de hora a HH:MM si es necesario
+                let finalValue = newValue;
+                if ((field === 'hora_inicio' || field === 'hora_fin') && typeof newValue === 'string') {
+                    // Si la hora viene en formato HH:MM:SS, convertir a HH:MM
+                    if (newValue.length > 5) {
+                        finalValue = newValue.substring(0, 5);
+                    }
+                }
+                return { ...ventana, [field]: finalValue };
             }
             return ventana;
         });
@@ -107,7 +115,7 @@ export default function VentanasEntregaSelector({
                                                         </Label>
                                                         <input
                                                             type="time"
-                                                            value={ventana.hora_inicio}
+                                                            value={ventana.hora_inicio && ventana.hora_inicio.length > 5 ? ventana.hora_inicio.substring(0, 5) : ventana.hora_inicio}
                                                             onChange={(e) =>
                                                                 handleUpdateVentana(
                                                                     index,
@@ -125,7 +133,7 @@ export default function VentanasEntregaSelector({
                                                         </Label>
                                                         <input
                                                             type="time"
-                                                            value={ventana.hora_fin}
+                                                            value={ventana.hora_fin && ventana.hora_fin.length > 5 ? ventana.hora_fin.substring(0, 5) : ventana.hora_fin}
                                                             onChange={(e) =>
                                                                 handleUpdateVentana(
                                                                     index,

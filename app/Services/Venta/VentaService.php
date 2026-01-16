@@ -188,8 +188,8 @@ class VentaService
             \Log::info('✅ [VentaService::crear] Asiento contable omitido (será habilitado después)');
 
             // 3.5 Emitir evento (DESPUÉS de que todo esté persisted)
-            \Log::debug('📢 [VentaService::crear] Evento de venta creada omitido (no existe VentaCreada event)');
-            // event(new \App\Events\VentaCreada($venta));
+            \Log::debug('📢 [VentaService::crear] Disparando evento VentaCreada');
+            event(new \App\Events\VentaCreada($venta));
 
             return $venta;
         });

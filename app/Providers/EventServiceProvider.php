@@ -41,6 +41,17 @@ use App\Listeners\SendProformaCreatedNotification;
 use App\Listeners\SendProformaRejectedNotification;
 use App\Listeners\SendEntregaAsignadaNotification;
 use App\Listeners\Venta\BroadcastProformaCreada;
+use App\Events\CreditoCreado;
+use App\Events\CreditoPagoRegistrado;
+use App\Events\CreditoVencido;
+use App\Events\CreditoCritico;
+use App\Events\VentaCreada;
+use App\Listeners\CrearCuentaPorCobrarListener;
+use App\Listeners\CreateCuentaPorCobrarFromVentaListener;
+use App\Listeners\SendCreditoCreadoNotification;
+use App\Listeners\SendCreditoPagoRegistradoNotification;
+use App\Listeners\SendCreditoVencidoNotification;
+use App\Listeners\SendCreditoCriticoNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -94,10 +105,31 @@ class EventServiceProvider extends ServiceProvider
 
         ProformaConvertida::class => [
             SendProformaConvertedNotification::class,
+            CrearCuentaPorCobrarListener::class, // ✅ NUEVO: Crear cuenta por cobrar si es crédito
         ],
 
         ProformaCoordinacionActualizada::class => [
             SendProformaCoordinationNotification::class,
+        ],
+
+        // ══════════════════════════════════════════════════════════
+        // CREDITO EVENTS
+        // ══════════════════════════════════════════════════════════
+
+        CreditoCreado::class => [
+            SendCreditoCreadoNotification::class, // ✅ NUEVO: Notificar WebSocket cuando se crea crédito
+        ],
+
+        CreditoPagoRegistrado::class => [
+            SendCreditoPagoRegistradoNotification::class, // ✅ NUEVO: Notificar WebSocket cuando se paga
+        ],
+
+        CreditoVencido::class => [
+            SendCreditoVencidoNotification::class, // ✅ NUEVO: Notificar cuando crédito se vence
+        ],
+
+        CreditoCritico::class => [
+            SendCreditoCriticoNotification::class, // ✅ NUEVO: Notificar cuando crédito crítico
         ],
 
         // ══════════════════════════════════════════════════════════
@@ -152,6 +184,10 @@ class EventServiceProvider extends ServiceProvider
         // ══════════════════════════════════════════════════════════
         // VENTA EVENTS
         // ══════════════════════════════════════════════════════════
+
+        VentaCreada::class => [
+            CreateCuentaPorCobrarFromVentaListener::class, // ✅ NUEVO: Crear cuenta por cobrar si política_pago='CREDITO'
+        ],
 
         VentaEstadoCambiado::class => [
             SendVentaEstadoCambiadoNotification::class,

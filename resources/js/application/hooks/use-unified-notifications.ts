@@ -148,6 +148,18 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
         title: '📦 Pedido Entregado',
         message: (d) => `${d.clienteNombre} - ${d.pedidoNumero}`,
       },
+      'credito.vencido': {
+        title: '⚠️ Crédito Vencido',
+        message: (d) => `${d.cliente_nombre} - Deuda: Bs. ${d.saldo_pendiente}`,
+      },
+      'credito.critico': {
+        title: '🔴 Crédito Crítico',
+        message: (d) => `${d.cliente_nombre} - ${d.porcentaje_utilizado}% utilizado`,
+      },
+      'credito.pago-registrado': {
+        title: '✅ Pago Registrado',
+        message: (d) => `Bs. ${d.monto} - ${d.tipo_pago}`,
+      },
       'dashboard.metrics-updated': {
         title: '📊 Dashboard Actualizado',
         message: () => 'Métricas de negocio actualizadas',
@@ -257,6 +269,9 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
       'chofer.en-camino',
       'chofer.llego',
       'pedido.entregado',
+      'credito.vencido',
+      'credito.critico',
+      'credito.pago-registrado',
       'dashboard.metrics-updated',
     ];
 

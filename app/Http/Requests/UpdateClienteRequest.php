@@ -111,6 +111,8 @@ class UpdateClienteRequest extends FormRequest
         return [
             // Campos básicos
             'crear_usuario'                  => 'nullable|boolean',
+            'password'                       => 'nullable|string|min:8',
+            'password_confirmation'          => 'required_with:password|same:password',
             'nombre'                         => 'sometimes|required|string|max:255',
             'razon_social'                   => 'nullable|string|max:255',
             'nit'                            => 'nullable|string|max:50',
@@ -174,6 +176,9 @@ class UpdateClienteRequest extends FormRequest
             'limite_credito.numeric'                    => 'El límite de crédito debe ser un número.',
             'limite_credito.min'                        => 'El límite de crédito no puede ser negativo.',
             'puede_tener_credito.boolean'               => 'El campo habilitación de crédito debe ser verdadero o falso.',
+            'password.min'                              => 'La contraseña debe tener al menos 8 caracteres.',
+            'password_confirmation.required_with'       => 'Debe confirmar la contraseña.',
+            'password_confirmation.same'                => 'Las contraseñas no coinciden.',
 
             'foto_perfil.image'                         => 'La foto de perfil debe ser una imagen válida.',
             'foto_perfil.mimes'                         => 'La foto de perfil debe ser JPEG, PNG o GIF.',

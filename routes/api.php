@@ -459,6 +459,23 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::delete('{cliente}/fotos/{foto}', [\App\Http\Controllers\FotoLugarClienteController::class, 'destroy']);
         Route::delete('{cliente}/direcciones/{direccion}', [DireccionClienteApiController::class, 'destroy']);
         Route::patch('{cliente}/direcciones/{direccion}/principal', [DireccionClienteApiController::class, 'establecerPrincipal']);
+
+        // ✅ FASE 3: Nuevas rutas para créditos mejoradas
+        Route::get('{cliente}/credito-detalles', [ClienteController::class, 'obtenerDetallesCreditoApi'])->name('api.cliente.credito-detalles');
+        Route::get('{cliente}/cuentas-pendientes', [ClienteController::class, 'obtenerCuentasPendientes'])->name('api.cliente.cuentas-pendientes');
+        Route::get('{cliente}/cuentas-vencidas', [ClienteController::class, 'obtenerCuentasVencidas'])->name('api.cliente.cuentas-vencidas');
+        Route::get('{cliente}/pagos', [ClienteController::class, 'obtenerHistorialPagos'])->name('api.cliente.pagos');
+        Route::post('{cliente}/registrar-pago', [ClienteController::class, 'registrarPagoApi'])->name('api.cliente.registrar-pago');
+        Route::post('{cliente}/ajustar-limite', [ClienteController::class, 'ajustarLimiteCredito'])->name('api.cliente.ajustar-limite');
+    });
+
+    // ✅ FASE 3: Grupo de rutas para gestión de créditos
+    Route::group(['prefix' => 'creditos'], function () {
+        Route::get('/', [ClienteController::class, 'listarCreditos'])->name('api.creditos.index');
+        Route::get('mi-credito', [ClienteController::class, 'obtenerMiCredito'])->name('api.creditos.mi-credito');
+        Route::get('cliente/{clienteId}/resumen', [ClienteController::class, 'obtenerResumenCredito'])->name('api.creditos.resumen');
+        Route::get('estadisticas', [ClienteController::class, 'obtenerEstadisticasCreditos'])->name('api.creditos.estadisticas');
+        Route::get('exportar', [ClienteController::class, 'exportarReporteCreditos'])->name('api.creditos.exportar');
     });
 
     Route::group(['prefix' => 'localidades'], function () {
@@ -898,4 +915,15 @@ Route::prefix('estados')->group(function () {
 // Obtener mapeos entre estados de diferentes categorías
 Route::prefix('mapeos')->group(function () {
     Route::get('/{categoriaOrigen}/{codigoOrigen}/{categoriaDestino}', [EstadoLogisticoController::class, 'obtenerMapeo']);
+});
+
+// ==========================================
+// 📋 VISITAS DE PREVENTISTAS
+// ==========================================
+Route::middleware(['auth:sanctum'])->prefix('visitas')->group(function () {
+    Route::post('/', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'store']);
+    Route::get('/', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'index']);
+    Route::get('/estadisticas', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'estadisticas']);
+    Route::get('/validar-horario', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'validarHorario']);
+    Route::get('/{visita}', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'show']);
 });

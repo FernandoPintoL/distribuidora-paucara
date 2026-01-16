@@ -176,6 +176,96 @@ export class NotificationService {
       }
     );
   }
+
+  // ==========================================
+  // CREDIT-SPECIFIC NOTIFICATIONS (FASE 3)
+  // ==========================================
+
+  /**
+   * Notificación de crédito vencido
+   * Se dispara cuando una cuenta de crédito vence
+   */
+  static creditoVencido(data: {
+    clienteNombre: string;
+    saldoPendiente: number;
+    diasVencido: number;
+  }, options?: ToastOptions) {
+    const message = `⚠️ Crédito Vencido - ${data.clienteNombre}\nDeuda: Bs. ${data.saldoPendiente.toFixed(2)} | Vencido hace ${data.diasVencido} días`;
+    return this.warning(message, {
+      autoClose: 8000,
+      ...options,
+    });
+  }
+
+  /**
+   * Notificación de crédito crítico
+   * Se dispara cuando el utilización del crédito supera el 80%
+   */
+  static creditoCritico(data: {
+    clienteNombre: string;
+    porcentajeUtilizado: number;
+    saldoDisponible: number;
+  }, options?: ToastOptions) {
+    const message = `🔴 Crédito Crítico - ${data.clienteNombre}\nUtilización: ${data.porcentajeUtilizado.toFixed(1)}% | Disponible: Bs. ${data.saldoDisponible.toFixed(2)}`;
+    return this.error(message, {
+      autoClose: 8000,
+      ...options,
+    });
+  }
+
+  /**
+   * Notificación de crédito excedido
+   * Se dispara cuando el cliente excede el límite de crédito
+   */
+  static creditoExcedido(data: {
+    clienteNombre: string;
+    montoExcedido: number;
+  }, options?: ToastOptions) {
+    const message = `❌ Crédito Excedido - ${data.clienteNombre}\nMonto excedido: Bs. ${data.montoExcedido.toFixed(2)}\nContacta a ventas para más información.`;
+    return this.error(message, {
+      autoClose: 10000,
+      ...options,
+    });
+  }
+
+  /**
+   * Notificación de pago de crédito registrado
+   * Se dispara cuando se registra un pago exitosamente
+   */
+  static creditoPagoRegistrado(data: {
+    clienteNombre: string;
+    monto: number;
+    metodoPago: string;
+    saldoRestante: number;
+  }, options?: ToastOptions) {
+    const message = `✅ Pago Registrado - ${data.clienteNombre}\nMonto: Bs. ${data.monto.toFixed(2)} vía ${data.metodoPago}\nSaldo restante: Bs. ${data.saldoRestante.toFixed(2)}`;
+    return this.success(message, {
+      autoClose: 5000,
+      ...options,
+    });
+  }
+
+  /**
+   * Mostrar notificación del navegador para crédito
+   * Requiere permisos de notificación del navegador
+   */
+  static showBrowserNotification(data: {
+    title: string;
+    body: string;
+    tag?: string;
+    icon?: string;
+  }) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(data.title, {
+        body: data.body,
+        icon: data.icon || '/favicon.ico',
+        tag: data.tag || 'credito-notification',
+        badge: '/favicon.ico',
+      });
+    } else if ('Notification' in window) {
+      console.log('Permisos de notificación no otorgados');
+    }
+  }
 }
 
 export default NotificationService;

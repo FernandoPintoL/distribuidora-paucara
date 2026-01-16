@@ -43,6 +43,14 @@ export interface Cliente extends BaseEntity {
         activa?: boolean;
     }>;
     ventanas_entrega?: VentanaEntregaCliente[];
+    user_id?: Id | null;
+    user?: {
+        id: Id;
+        name: string;
+        email?: string | null;
+        usernick: string;
+        activo: boolean;
+    } | null;
 }
 
 export interface ClienteFormData extends BaseFormData {
@@ -71,6 +79,10 @@ export interface ClienteFormData extends BaseFormData {
     }>;
     // Ventanas de entrega del cliente
     ventanas_entrega?: VentanaEntregaCliente[];
+    // Campos para gestión de usuario
+    crear_usuario?: boolean;
+    password?: string | null;
+    password_confirmation?: string | null;
 }
 
 // ✅ PageProps para el formulario de clientes

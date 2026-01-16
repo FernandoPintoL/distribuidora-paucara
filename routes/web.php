@@ -72,6 +72,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('clientes/{cliente}/credito', function (\App\Models\Cliente $cliente) {
         return \Inertia\Inertia::render('clientes/credito', ['clienteId' => $cliente->id]);
     })->name('clientes.credito');
+
+    // ✅ FASE 3: Ruta para página principal de créditos del usuario actual
+    Route::get('creditos', function () {
+        return \Inertia\Inertia::render('creditos/index');
+    })->name('creditos.index');
+
     // ⚠️ RUTAS ESPECÍFICAS DEBEN IR ANTES DEL RESOURCE
     // Rutas para carga masiva de productos
     Route::get('productos/carga-masiva', function () {
@@ -519,6 +525,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('credito', [\App\Http\Controllers\ReporteCreditoController::class, 'index'])->middleware('permission:reportes.credito.index')->name('credito.index');
         Route::get('credito/graficos', [\App\Http\Controllers\ReporteCreditoController::class, 'obtenerGraficosCreditoApi'])->name('credito.graficos');
         Route::get('credito/vencidos', [\App\Http\Controllers\ReporteCreditoController::class, 'obtenerClientesVencidosApi'])->name('credito.vencidos');
+
+        // Reportes de visitas de preventistas
+        Route::get('visitas', [\App\Http\Controllers\ReporteVisitasController::class, 'index'])->middleware('role:Admin|Super Admin')->name('visitas');
+        Route::get('visitas/exportar-excel', [\App\Http\Controllers\ReporteVisitasController::class, 'exportarExcel'])->middleware('role:Admin|Super Admin')->name('visitas.exportar-excel');
 
         // Reportes de inventario
         Route::prefix('inventario')->name('inventario.')->group(function () {

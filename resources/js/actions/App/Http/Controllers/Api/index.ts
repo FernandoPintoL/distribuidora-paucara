@@ -20,6 +20,7 @@ import EntregaBatchController from './EntregaBatchController'
 import VentaLogisticaController from './VentaLogisticaController'
 import ReporteCargoController from './ReporteCargoController'
 import EstadoLogisticoController from './EstadoLogisticoController'
+import VisitaPreventistaController from './VisitaPreventistaController'
 const Api = {
     AuthController,
 EmpleadoApiController,
@@ -43,6 +44,7 @@ EntregaBatchController,
 VentaLogisticaController,
 ReporteCargoController,
 EstadoLogisticoController,
+VisitaPreventistaController,
 }
 
 export default Api

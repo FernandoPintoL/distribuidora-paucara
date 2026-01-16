@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\CreditoCreado;
 use App\Models\Cliente;
 use App\Models\Venta;
 use App\Models\CuentaPorCobrar;
@@ -49,7 +50,7 @@ class CreditoService
      */
     public function crearCuentaPorCobrar(
         Venta $venta,
-        ?int $diasVencimiento = 30,
+        ?int $diasVencimiento = 7,
     ): CuentaPorCobrar {
         $cuentaPorCobrar = CuentaPorCobrar::create([
             'venta_id' => $venta->id,
@@ -71,6 +72,9 @@ class CreditoService
             ],
             'Venta a crédito registrada'
         );
+
+        // ✅ NUEVO: Disparar evento para notificación WebSocket
+        event(new CreditoCreado($cuentaPorCobrar));
 
         return $cuentaPorCobrar;
     }

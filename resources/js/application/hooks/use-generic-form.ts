@@ -28,7 +28,12 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
         // Solo guardamos null para que no se envíe al backend
         if (fileFields.some(field => key.includes(field)) && typeof value === 'string') {
           // Guardamos la ruta en un campo especial para preview pero no en el campo real
-          (entityData as any)[`${key}_preview`] = value;
+          // Asegurar que la ruta tenga el prefijo /storage/ para que sea accesible
+          let previewPath = value;
+          if (!previewPath.startsWith('/storage/')) {
+            previewPath = `/storage/${previewPath}`;
+          }
+          (entityData as any)[`${key}_preview`] = previewPath;
           (entityData as any)[key] = null;
         }
       });

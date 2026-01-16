@@ -3,8 +3,8 @@ namespace Database\Seeders;
 
 use App\Models\ModuloSidebar;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class ModuloSidebarSeeder extends Seeder
 {
@@ -30,15 +30,15 @@ class ModuloSidebarSeeder extends Seeder
     {
         return [
             // ===== MÓDULO: PRODUCTOS =====
-            'productos' => [
-                'modulo' => [
-                    'titulo' => 'Productos',
-                    'ruta' => '/productos',
-                    'icono' => 'Package',
+            'productos'       => [
+                'modulo'  => [
+                    'titulo'      => 'Productos',
+                    'ruta'        => '/productos',
+                    'icono'       => 'Package',
                     'descripcion' => 'Gestión de productos y catálogo',
-                    'orden' => 1,
-                    'categoria' => 'Inventario',
-                    'permisos' => ['productos.manage'],
+                    'orden'       => 1,
+                    'categoria'   => 'Inventario',
+                    'permisos'    => ['productos.manage'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Productos', 'ruta' => '/productos', 'icono' => 'Package', 'orden' => 1, 'permisos' => ['productos.manage']],
@@ -54,15 +54,15 @@ class ModuloSidebarSeeder extends Seeder
             ],
 
             // ===== MÓDULO: INVENTARIO =====
-            'inventario' => [
-                'modulo' => [
-                    'titulo' => 'Inventario',
-                    'ruta' => '/inventario/dashboard',
-                    'icono' => 'Boxes',
+            'inventario'      => [
+                'modulo'  => [
+                    'titulo'      => 'Inventario',
+                    'ruta'        => '/inventario/dashboard',
+                    'icono'       => 'Boxes',
                     'descripcion' => 'Control y gestión de inventario',
-                    'orden' => 2,
-                    'categoria' => 'Inventario',
-                    'permisos' => ['inventario.manage', 'inventario.dashboard'],
+                    'orden'       => 2,
+                    'categoria'   => 'Inventario',
+                    'permisos'    => ['inventario.manage', 'inventario.dashboard'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Dashboard', 'ruta' => '/inventario/dashboard', 'icono' => 'BarChart3', 'orden' => 1, 'permisos' => ['inventario.dashboard']],
@@ -81,15 +81,15 @@ class ModuloSidebarSeeder extends Seeder
             ],
 
             // ===== MÓDULO: VENTAS =====
-            'ventas' => [
-                'modulo' => [
-                    'titulo' => 'Ventas',
-                    'ruta' => '/ventas',
-                    'icono' => 'ShoppingCart',
+            'ventas'          => [
+                'modulo'  => [
+                    'titulo'      => 'Ventas',
+                    'ruta'        => '/ventas',
+                    'icono'       => 'ShoppingCart',
                     'descripcion' => 'Gestión de ventas y facturación',
-                    'orden' => 3,
-                    'categoria' => 'Comercial',
-                    'permisos' => ['ventas.index'],
+                    'orden'       => 3,
+                    'categoria'   => 'Comercial',
+                    'permisos'    => ['ventas.index'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Lista de Ventas', 'ruta' => '/ventas', 'icono' => 'List', 'orden' => 1, 'permisos' => ['ventas.index']],
@@ -98,15 +98,15 @@ class ModuloSidebarSeeder extends Seeder
             ],
 
             // ===== MÓDULO: COMPRAS =====
-            'compras' => [
-                'modulo' => [
-                    'titulo' => 'Compras',
-                    'ruta' => '/compras',
-                    'icono' => 'Truck',
+            'compras'         => [
+                'modulo'  => [
+                    'titulo'      => 'Compras',
+                    'ruta'        => '/compras',
+                    'icono'       => 'Truck',
                     'descripcion' => 'Gestión de compras y proveedores',
-                    'orden' => 4,
-                    'categoria' => 'Comercial',
-                    'permisos' => ['compras.index'],
+                    'orden'       => 4,
+                    'categoria'   => 'Comercial',
+                    'permisos'    => ['compras.index'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Lista de Compras', 'ruta' => '/compras', 'icono' => 'List', 'orden' => 1, 'permisos' => ['compras.index']],
@@ -119,15 +119,15 @@ class ModuloSidebarSeeder extends Seeder
             ],
 
             // ===== MÓDULO: EMPLEADOS =====
-            'empleados' => [
-                'modulo' => [
-                    'titulo' => 'Empleados',
-                    'ruta' => '/empleados',
-                    'icono' => 'Users',
+            'empleados'       => [
+                'modulo'  => [
+                    'titulo'      => 'Empleados',
+                    'ruta'        => '/empleados',
+                    'icono'       => 'Users',
                     'descripcion' => 'Gestión de empleados',
-                    'orden' => 5,
-                    'categoria' => 'Recursos Humanos',
-                    'permisos' => ['empleados.index'],
+                    'orden'       => 5,
+                    'categoria'   => 'Recursos Humanos',
+                    'permisos'    => ['empleados.index'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Lista de Empleados', 'ruta' => '/empleados', 'icono' => 'Users', 'orden' => 1, 'permisos' => ['empleados.index']],
@@ -136,15 +136,15 @@ class ModuloSidebarSeeder extends Seeder
             ],
 
             // ===== MÓDULO: LOGÍSTICA =====
-            'logistica' => [
-                'modulo' => [
-                    'titulo' => 'Logística',
-                    'ruta' => '/logistica/entregas',
-                    'icono' => 'Truck',
+            'logistica'       => [
+                'modulo'  => [
+                    'titulo'      => 'Logística',
+                    'ruta'        => '/logistica/entregas',
+                    'icono'       => 'Truck',
                     'descripcion' => 'Gestión de entregas y logística',
-                    'orden' => 6,
-                    'categoria' => 'Logística',
-                    'permisos' => ['entregas.index', 'logistica.dashboard', 'envios.index'],
+                    'orden'       => 6,
+                    'categoria'   => 'Logística',
+                    'permisos'    => ['entregas.index', 'logistica.dashboard', 'envios.index'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Dashboard Logística', 'ruta' => '/logistica/dashboard', 'icono' => 'BarChart3', 'orden' => 1, 'permisos' => ['logistica.dashboard']],
@@ -158,16 +158,35 @@ class ModuloSidebarSeeder extends Seeder
                 ],
             ],
 
+            // ===== MÓDULO: CRÉDITOS =====
+            'creditos'        => [
+                'modulo'  => [
+                    'titulo'      => 'Créditos',
+                    'ruta'        => '/creditos',
+                    'icono'       => 'CreditCard',
+                    'descripcion' => 'Gestión de créditos de clientes',
+                    'orden'       => 7,
+                    'categoria'   => 'Finanzas',
+                    'permisos'    => ['creditos.index'],
+                ],
+                'submenu' => [
+                    ['titulo' => 'Mis Créditos', 'ruta' => '/creditos', 'icono' => 'CreditCard', 'orden' => 1, 'permisos' => ['creditos.index']],
+                    ['titulo' => 'Mi Crédito', 'ruta' => '/creditos/mi-credito', 'icono' => 'User', 'orden' => 2, 'permisos' => ['creditos.mi-credito']],
+                    ['titulo' => 'Estadísticas', 'ruta' => '/creditos/estadisticas', 'icono' => 'BarChart3', 'orden' => 3, 'permisos' => ['creditos.estadisticas']],
+                    ['titulo' => 'Reportes de Crédito', 'ruta' => '/reportes/credito', 'icono' => 'FileText', 'orden' => 4, 'permisos' => ['reportes.credito.index']],
+                ],
+            ],
+
             // ===== MÓDULO: PROFORMAS =====
-            'proformas' => [
-                'modulo' => [
-                    'titulo' => 'Proformas',
-                    'ruta' => '/proformas',
-                    'icono' => 'FileText',
+            'proformas'       => [
+                'modulo'  => [
+                    'titulo'      => 'Proformas',
+                    'ruta'        => '/proformas',
+                    'icono'       => 'FileText',
                     'descripcion' => 'Gestión de proformas y cotizaciones',
-                    'orden' => 7,
-                    'categoria' => 'Ventas',
-                    'permisos' => ['proformas.index'],
+                    'orden'       => 8,
+                    'categoria'   => 'Ventas',
+                    'permisos'    => ['proformas.index'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Proformas', 'ruta' => '/proformas', 'icono' => 'FileText', 'orden' => 1, 'permisos' => ['proformas.index']],
@@ -178,20 +197,21 @@ class ModuloSidebarSeeder extends Seeder
             ],
 
             // ===== MÓDULO: REPORTES =====
-            'reportes' => [
-                'modulo' => [
-                    'titulo' => 'Reportes',
-                    'ruta' => '/reportes/precios',
-                    'icono' => 'BarChart4',
+            'reportes'        => [
+                'modulo'  => [
+                    'titulo'      => 'Reportes',
+                    'ruta'        => '/reportes/precios',
+                    'icono'       => 'BarChart4',
                     'descripcion' => 'Reportes y análisis',
-                    'orden' => 8,
-                    'categoria' => 'Reportes',
-                    'permisos' => ['reportes.precios.index'],
+                    'orden'       => 9,
+                    'categoria'   => 'Reportes',
+                    'permisos'    => ['reportes.precios.index'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Reportes de Precios', 'ruta' => '/reportes/precios', 'icono' => 'DollarSign', 'orden' => 1, 'permisos' => ['reportes.precios.index']],
                     ['titulo' => 'Reportes de Ganancias', 'ruta' => '/reportes/ganancias', 'icono' => 'TrendingUp', 'orden' => 2, 'permisos' => ['reportes.ganancias.index']],
-                    ['titulo' => 'Reporte de Crédito', 'ruta' => '/reportes/credito', 'icono' => 'CreditCard', 'orden' => 3, 'permisos' => ['reportes.credito.index']],
+                    // ['titulo' => 'Reporte de Crédito', 'ruta' => '/reportes/credito', 'icono' => 'CreditCard', 'orden' => 3, 'permisos' => ['reportes.credito.index']],
+                    ['titulo' => 'Visitas de Preventistas', 'ruta' => '/reportes/visitas', 'icono' => 'MapPin', 'orden' => 3, 'permisos' => ['reportes.visitas.index']],
                     ['titulo' => 'Stock Actual', 'ruta' => '/reportes/inventario/stock-actual', 'icono' => 'Package', 'orden' => 4, 'permisos' => ['reportes.inventario.stock-actual']],
                     ['titulo' => 'Movimientos', 'ruta' => '/reportes/inventario/movimientos', 'icono' => 'ArrowUpDown', 'orden' => 5, 'permisos' => ['reportes.inventario.movimientos']],
                     ['titulo' => 'Rotación', 'ruta' => '/reportes/inventario/rotacion', 'icono' => 'RotateCcw', 'orden' => 6, 'permisos' => ['reportes.inventario.rotacion']],
@@ -200,105 +220,105 @@ class ModuloSidebarSeeder extends Seeder
             ],
 
             // ===== MÓDULOS SIMPLES (sin submenu) =====
-            'cajas' => [
+            'cajas'           => [
                 'modulo' => [
-                    'titulo' => 'Gestión de Cajas',
-                    'ruta' => '/cajas',
-                    'icono' => 'Wallet',
+                    'titulo'      => 'Gestión de Cajas',
+                    'ruta'        => '/cajas',
+                    'icono'       => 'Wallet',
                     'descripcion' => 'Control de cajas y tesorería',
-                    'orden' => 10,
-                    'categoria' => 'Finanzas',
-                    'permisos' => ['cajas.index'],
+                    'orden'       => 10,
+                    'categoria'   => 'Finanzas',
+                    'permisos'    => ['cajas.index'],
                 ],
             ],
-            'almacenes' => [
+            'almacenes'       => [
                 'modulo' => [
-                    'titulo' => 'Almacenes',
-                    'ruta' => '/almacenes',
-                    'icono' => 'Building2',
+                    'titulo'      => 'Almacenes',
+                    'ruta'        => '/almacenes',
+                    'icono'       => 'Building2',
                     'descripcion' => 'Gestión de almacenes',
-                    'orden' => 11,
-                    'categoria' => 'Logística',
-                    'permisos' => ['almacenes.manage'],
+                    'orden'       => 11,
+                    'categoria'   => 'Logística',
+                    'permisos'    => ['almacenes.manage'],
                 ],
             ],
-            'proveedores' => [
+            'proveedores'     => [
                 'modulo' => [
-                    'titulo' => 'Proveedores',
-                    'ruta' => '/proveedores',
-                    'icono' => 'Users',
+                    'titulo'      => 'Proveedores',
+                    'ruta'        => '/proveedores',
+                    'icono'       => 'Users',
                     'descripcion' => 'Gestión de proveedores',
-                    'orden' => 12,
-                    'categoria' => 'Comercial',
-                    'permisos' => ['proveedores.manage'],
+                    'orden'       => 12,
+                    'categoria'   => 'Comercial',
+                    'permisos'    => ['proveedores.manage'],
                 ],
             ],
-            'clientes' => [
+            'clientes'        => [
                 'modulo' => [
-                    'titulo' => 'Clientes',
-                    'ruta' => '/clientes',
-                    'icono' => 'UserCheck',
+                    'titulo'      => 'Clientes',
+                    'ruta'        => '/clientes',
+                    'icono'       => 'UserCheck',
                     'descripcion' => 'Gestión de clientes',
-                    'orden' => 13,
-                    'categoria' => 'Comercial',
-                    'permisos' => ['clientes.manage'],
+                    'orden'       => 13,
+                    'categoria'   => 'Comercial',
+                    'permisos'    => ['clientes.manage'],
                 ],
             ],
-            'localidades' => [
+            'localidades'     => [
                 'modulo' => [
-                    'titulo' => 'Localidades',
-                    'ruta' => '/localidades',
-                    'icono' => 'MapPin',
+                    'titulo'      => 'Localidades',
+                    'ruta'        => '/localidades',
+                    'icono'       => 'MapPin',
                     'descripcion' => 'Gestión de localidades',
-                    'orden' => 14,
-                    'categoria' => 'Configuración',
-                    'permisos' => ['localidades.manage'],
+                    'orden'       => 14,
+                    'categoria'   => 'Configuración',
+                    'permisos'    => ['localidades.manage'],
                 ],
             ],
-            'monedas' => [
+            'monedas'         => [
                 'modulo' => [
-                    'titulo' => 'Monedas',
-                    'ruta' => '/monedas',
-                    'icono' => 'DollarSign',
+                    'titulo'      => 'Monedas',
+                    'ruta'        => '/monedas',
+                    'icono'       => 'DollarSign',
                     'descripcion' => 'Gestión de monedas',
-                    'orden' => 15,
-                    'categoria' => 'Configuración',
-                    'permisos' => ['monedas.manage'],
+                    'orden'       => 15,
+                    'categoria'   => 'Configuración',
+                    'permisos'    => ['monedas.manage'],
                 ],
             ],
-            'tipos_pago' => [
+            'tipos_pago'      => [
                 'modulo' => [
-                    'titulo' => 'Tipo Pagos',
-                    'ruta' => '/tipos-pago',
-                    'icono' => 'CreditCard',
+                    'titulo'      => 'Tipo Pagos',
+                    'ruta'        => '/tipos-pago',
+                    'icono'       => 'CreditCard',
                     'descripcion' => 'Gestión de tipos de pago',
-                    'orden' => 16,
-                    'categoria' => 'Configuración',
-                    'permisos' => ['tipos-pago.manage'],
+                    'orden'       => 16,
+                    'categoria'   => 'Configuración',
+                    'permisos'    => ['tipos-pago.manage'],
                 ],
             ],
             'tipos_documento' => [
                 'modulo' => [
-                    'titulo' => 'Tipos de Documento',
-                    'ruta' => '/tipos-documento',
-                    'icono' => 'FileText',
+                    'titulo'      => 'Tipos de Documento',
+                    'ruta'        => '/tipos-documento',
+                    'icono'       => 'FileText',
                     'descripcion' => 'Gestión de tipos de documento',
-                    'orden' => 17,
-                    'categoria' => 'Configuración',
-                    'permisos' => ['tipos_documento.manage'],
+                    'orden'       => 17,
+                    'categoria'   => 'Configuración',
+                    'permisos'    => ['tipos_documento.manage'],
                 ],
             ],
 
             // ===== MÓDULO: ADMINISTRACIÓN =====
-            'administracion' => [
-                'modulo' => [
-                    'titulo' => 'Administración',
-                    'ruta' => '/usuarios',
-                    'icono' => 'Settings',
+            'administracion'  => [
+                'modulo'  => [
+                    'titulo'      => 'Administración',
+                    'ruta'        => '/usuarios',
+                    'icono'       => 'Settings',
                     'descripcion' => 'Configuración del sistema',
-                    'orden' => 99,
-                    'categoria' => 'Sistema',
-                    'permisos' => ['usuarios.index'],
+                    'orden'       => 99,
+                    'categoria'   => 'Sistema',
+                    'permisos'    => ['usuarios.index'],
                 ],
                 'submenu' => [
                     ['titulo' => 'Usuarios', 'ruta' => '/usuarios', 'icono' => 'Users', 'orden' => 1, 'permisos' => ['usuarios.index']],
@@ -316,7 +336,7 @@ class ModuloSidebarSeeder extends Seeder
         $this->command->info('');
 
         // PASO 1: Limpiar duplicados
-        // $this->limpiarDuplicados();
+        $this->limpiarDuplicados();
 
         // PASO 2: Crear/actualizar todos los módulos
         $this->crearModulos();
@@ -336,11 +356,13 @@ class ModuloSidebarSeeder extends Seeder
     {
         $this->command->info('🧹 Limpiando módulos duplicados...');
 
-        // Eliminar Logística antigua (ID: 31) si existe
-        $logisticaAntiga = ModuloSidebar::find(31);
-        if ($logisticaAntiga) {
-            ModuloSidebar::where('modulo_padre_id', 31)->delete();
-            $logisticaAntiga->delete();
+        // Eliminar Logística antigua (ID: 1 y 31) si existe
+        $logisticasAntiguos = ModuloSidebar::whereIn('id', [1, 31])->get();
+        foreach ($logisticasAntiguos as $logistica) {
+            ModuloSidebar::where('modulo_padre_id', $logistica->id)->delete();
+            $logistica->delete();
+        }
+        if ($logisticasAntiguos->count() > 0) {
             $this->command->line('  ✓ Logística antigua eliminada');
         }
 
@@ -371,22 +393,22 @@ class ModuloSidebarSeeder extends Seeder
         foreach ($config as $moduloKey => $moduloData) {
             $modulo = ModuloSidebar::firstOrCreate(
                 [
-                    'titulo' => $moduloData['modulo']['titulo'],
-                    'ruta' => $moduloData['modulo']['ruta'],
+                    'titulo'     => $moduloData['modulo']['titulo'],
+                    'ruta'       => $moduloData['modulo']['ruta'],
                     'es_submenu' => false,
                 ],
                 [
-                    'icono' => $moduloData['modulo']['icono'],
+                    'icono'       => $moduloData['modulo']['icono'],
                     'descripcion' => $moduloData['modulo']['descripcion'],
-                    'orden' => $moduloData['modulo']['orden'],
-                    'categoria' => $moduloData['modulo']['categoria'],
-                    'activo' => true,
-                    'permisos' => $moduloData['modulo']['permisos'],
+                    'orden'       => $moduloData['modulo']['orden'],
+                    'categoria'   => $moduloData['modulo']['categoria'],
+                    'activo'      => true,
+                    'permisos'    => $moduloData['modulo']['permisos'],
                 ]
             );
 
             // Si el módulo tiene submenu, crearlo
-            if (isset($moduloData['submenu']) && !empty($moduloData['submenu'])) {
+            if (isset($moduloData['submenu']) && ! empty($moduloData['submenu'])) {
                 $this->crearSubmenu($modulo, $moduloData['submenu']);
             }
         }
@@ -402,15 +424,15 @@ class ModuloSidebarSeeder extends Seeder
         foreach ($submenu as $item) {
             ModuloSidebar::updateOrCreate(
                 [
-                    'titulo' => $item['titulo'],
-                    'ruta' => $item['ruta'],
-                    'es_submenu' => true,
+                    'titulo'          => $item['titulo'],
+                    'ruta'            => $item['ruta'],
+                    'es_submenu'      => true,
                     'modulo_padre_id' => $modulo->id,
                 ],
                 [
-                    'icono' => $item['icono'],
-                    'orden' => $item['orden'],
-                    'activo' => true,
+                    'icono'    => $item['icono'],
+                    'orden'    => $item['orden'],
+                    'activo'   => true,
                     'permisos' => $item['permisos'],
                 ]
             );
@@ -427,7 +449,7 @@ class ModuloSidebarSeeder extends Seeder
      */
     private function getPermissionsByRole(): array
     {
-        $config = $this->getModulesConfiguration();
+        $config          = $this->getModulesConfiguration();
         $permisosModulos = [];
 
         // Extraer todos los permisos de la configuración de módulos
@@ -451,8 +473,8 @@ class ModuloSidebarSeeder extends Seeder
 
         return [
             'Super Admin' => array_merge($permisosModulos, $permisosAdicionales),
-            'Admin' => array_merge($permisosModulos, $permisosAdicionales),
-            'Cajero' => array_merge($permisosModulos, $permisosAdicionales),
+            'Admin'       => array_merge($permisosModulos, $permisosAdicionales),
+            'Cajero'      => array_merge($permisosModulos, $permisosAdicionales),
         ];
     }
 
@@ -469,8 +491,8 @@ class ModuloSidebarSeeder extends Seeder
 
         // Obtener roles
         $superAdmin = Role::firstOrCreate(['name' => 'Super Admin'], ['guard_name' => 'web']);
-        $admin = Role::firstOrCreate(['name' => 'Admin'], ['guard_name' => 'web']);
-        $cajero = Role::firstOrCreate(['name' => 'Cajero'], ['guard_name' => 'web']);
+        $admin      = Role::firstOrCreate(['name' => 'Admin'], ['guard_name' => 'web']);
+        $cajero     = Role::firstOrCreate(['name' => 'Cajero'], ['guard_name' => 'web']);
 
         // Crear permisos en la BD (si no existen)
         $todosLosPermisos = array_unique(array_merge(...array_values($permisosPorRol)));

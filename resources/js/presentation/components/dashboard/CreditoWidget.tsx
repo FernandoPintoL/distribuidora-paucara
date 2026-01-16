@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/presentation/components/ui/card';
 import { Progress } from '@/presentation/components/ui/progress';
-import { AlertCircle, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { AlertCircle, TrendingUp, Users, DollarSign, Zap } from 'lucide-react';
+import websocketService from '@/infrastructure/services/websocket.service';
 
 interface CreditoMetrics {
     total_clientes: number;
@@ -18,7 +19,57 @@ interface CreditoWidgetProps {
     data: CreditoMetrics;
 }
 
-export default function CreditoWidget({ data }: CreditoWidgetProps) {
+export default function CreditoWidget({ data: initialData }: CreditoWidgetProps) {
+    const [data, setData] = useState(initialData);
+    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+    // Subscribe to real-time credit updates via WebSocket
+    useEffect(() => {
+        // Handle credit vencido event
+        const handleCreditoVencido = (eventData: any) => {
+            setData((prev) => ({
+                ...prev,
+                clientes_cerca_limite: Math.max(0, (prev.clientes_cerca_limite || 1) - 1),
+            }));
+            setLastUpdate(new Date());
+        };
+
+        // Handle credit crítico event
+        const handleCreditoCritico = (eventData: any) => {
+            setData((prev) => ({
+                ...prev,
+                clientes_cerca_limite: (prev.clientes_cerca_limite || 0) + 1,
+            }));
+            setLastUpdate(new Date());
+        };
+
+        // Handle payment registered event
+        const handleCreditoPagoRegistrado = (eventData: any) => {
+            if (eventData.saldo_disponible !== undefined) {
+                setData((prev) => ({
+                    ...prev,
+                    saldo_disponible: eventData.saldo_disponible,
+                    saldo_utilizado: eventData.saldo_utilizado || prev.saldo_utilizado,
+                    porcentaje_utilizacion: eventData.porcentaje_utilizado ||
+                        ((prev.saldo_utilizado / prev.limite_total_credito) * 100),
+                }));
+            }
+            setLastUpdate(new Date());
+        };
+
+        // Register WebSocket listeners
+        websocketService.on('credito.vencido', handleCreditoVencido);
+        websocketService.on('credito.critico', handleCreditoCritico);
+        websocketService.on('credito.pago-registrado', handleCreditoPagoRegistrado);
+
+        // Cleanup listeners
+        return () => {
+            websocketService.off('credito.vencido', handleCreditoVencido);
+            websocketService.off('credito.critico', handleCreditoCritico);
+            websocketService.off('credito.pago-registrado', handleCreditoPagoRegistrado);
+        };
+    }, []);
+
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('es-BO', {
             style: 'currency',
@@ -42,9 +93,20 @@ export default function CreditoWidget({ data }: CreditoWidgetProps) {
                         <CardTitle className="text-white flex items-center gap-2">
                             <span>💳</span>
                             <span>Crédito de Clientes</span>
+                            {lastUpdate && (
+                                <span className="inline-flex items-center gap-1 text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
+                                    <Zap className="w-3 h-3" />
+                                    En vivo
+                                </span>
+                            )}
                         </CardTitle>
                         <CardDescription>
                             Estado actual del crédito en el sistema
+                            {lastUpdate && (
+                                <span className="text-xs text-gray-400 ml-2">
+                                    Actualizado hace {Math.round((new Date().getTime() - lastUpdate.getTime()) / 1000)}s
+                                </span>
+                            )}
                         </CardDescription>
                     </div>
                 </div>

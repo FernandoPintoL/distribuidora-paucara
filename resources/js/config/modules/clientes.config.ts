@@ -25,6 +25,12 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             order: 1,
         },
         {
+            id: 'Acceso al Sistema',
+            title: 'Acceso al Sistema',
+            description: 'Credenciales de usuario para acceso al sistema',
+            order: 1.5,
+        },
+        {
             id: 'Configuración de Crédito',
             title: 'Configuración de Crédito',
             description: 'Control de crédito y límites',
@@ -202,6 +208,157 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             section: 'Información Personal',
             description: 'Marcar como activo para poder realizar ventas',
         },
+        // 🔐 SECCIÓN DE ACCESO AL SISTEMA
+        {
+            key: 'crear_usuario',
+            label: 'Crear usuario de acceso al sistema',
+            type: 'boolean',
+            defaultValue: false,
+            colSpan: 3,
+            section: 'Acceso al Sistema',
+            description: 'Habilita esta opción para crear credenciales de acceso al sistema para este cliente',
+        },
+        // Campo: Información de usuario existente (solo visible en edición CON usuario)
+        {
+            key: 'usuario_info',
+            label: 'Información del Usuario',
+            type: 'custom',
+            colSpan: 3,
+            section: 'Acceso al Sistema',
+            visible: (data) => {
+                // Solo visible en modo edición Y si tiene user_id
+                return !!data.id && !!data.user_id;
+            },
+            render: ({ formData }) => {
+                const cliente = formData as any;
+                const user = cliente.user;
+
+                if (!user) return null;
+
+                return createElement('div', {
+                    className: 'rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4'
+                }, [
+                    createElement('div', {
+                        key: 'header',
+                        className: 'flex items-center gap-2 mb-3'
+                    }, [
+                        createElement('svg', {
+                            className: 'w-5 h-5 text-blue-600 dark:text-blue-400',
+                            fill: 'currentColor',
+                            viewBox: '0 0 20 20'
+                        }, createElement('path', {
+                            fillRule: 'evenodd',
+                            d: 'M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z',
+                            clipRule: 'evenodd'
+                        })),
+                        createElement('h4', {
+                            className: 'font-semibold text-blue-900 dark:text-blue-100'
+                        }, 'Usuario del Sistema')
+                    ]),
+                    createElement('div', {
+                        key: 'info',
+                        className: 'space-y-2 text-sm'
+                    }, [
+                        createElement('div', { key: 'name', className: 'flex gap-2' }, [
+                            createElement('span', { className: 'font-medium text-gray-700 dark:text-gray-300 min-w-24' }, 'Nombre:'),
+                            createElement('span', { className: 'text-gray-900 dark:text-gray-100' }, user.name)
+                        ]),
+                        createElement('div', { key: 'username', className: 'flex gap-2' }, [
+                            createElement('span', { className: 'font-medium text-gray-700 dark:text-gray-300 min-w-24' }, 'Username:'),
+                            createElement('span', { className: 'text-gray-900 dark:text-gray-100 font-mono' }, user.usernick)
+                        ]),
+                        user.email ? createElement('div', { key: 'email', className: 'flex gap-2' }, [
+                            createElement('span', { className: 'font-medium text-gray-700 dark:text-gray-300 min-w-24' }, 'Email:'),
+                            createElement('span', { className: 'text-gray-900 dark:text-gray-100' }, user.email)
+                        ]) : null,
+                        createElement('div', { key: 'status', className: 'flex gap-2' }, [
+                            createElement('span', { className: 'font-medium text-gray-700 dark:text-gray-300 min-w-24' }, 'Estado:'),
+                            createElement('span', {
+                                className: user.activo
+                                    ? 'text-green-600 dark:text-green-400 font-medium'
+                                    : 'text-red-600 dark:text-red-400 font-medium'
+                            }, user.activo ? '✓ Activo' : '✗ Inactivo')
+                        ])
+                    ]),
+                    createElement('div', {
+                        key: 'divider',
+                        className: 'border-t border-blue-200 dark:border-blue-800 my-3'
+                    }),
+                    createElement('p', {
+                        key: 'help',
+                        className: 'text-xs text-blue-700 dark:text-blue-300'
+                    }, 'Puedes cambiar la contraseña del usuario completando los campos a continuación.')
+                ]);
+            }
+        },
+        // Campo: Password
+        {
+            key: 'password',
+            label: 'Contraseña',
+            type: 'password',
+            colSpan: 3,
+            section: 'Acceso al Sistema',
+            placeholder: 'Dejar vacío para usar el teléfono como contraseña',
+            validation: {
+                minLength: 8,
+            },
+            visible: (data) => {
+                // Visible si está creando usuario NUEVO
+                if (data.crear_usuario) return true;
+
+                // Visible si está EDITANDO y tiene usuario existente
+                if (data.id && data.user_id) return true;
+
+                return false;
+            },
+            required: (data) => {
+                // Solo requerido si crear_usuario=true Y no está editando
+                return Boolean(data.crear_usuario && !data.id);
+            },
+            description: (data) => {
+                // Mensaje diferente según contexto
+                if (data.id && data.user_id) {
+                    return '💡 Dejar vacío para mantener la contraseña actual. Mínimo 8 caracteres si deseas cambiarla.';
+                }
+                return '💡 Mínimo 8 caracteres. Si se deja vacío, se usará el teléfono como contraseña.';
+            }
+        },
+        // Campo: Confirmación de password
+        {
+            key: 'password_confirmation',
+            label: 'Confirmar Contraseña',
+            type: 'password',
+            colSpan: 3,
+            section: 'Acceso al Sistema',
+            placeholder: 'Repetir contraseña',
+            visible: (data) => {
+                // Visible solo si:
+                // 1. Está creando usuario (crear_usuario = true)
+                // 2. O está editando y tiene usuario Y ingresó un password nuevo
+                const isCreatingUser = data.crear_usuario === true;
+                const hasPasswordInput = data.password && String(data.password).trim().length > 0;
+                const isEditingWithUser = data.id && data.user_id;
+
+                // Si está creando usuario, mostrar siempre
+                if (isCreatingUser) return true;
+
+                // Si está editando y tiene usuario, mostrar solo si ingresó contraseña
+                if (isEditingWithUser && hasPasswordInput) return true;
+
+                return false;
+            },
+            required: (data) => {
+                // Requerido solo si password tiene valor realmente ingresado
+                return Boolean(data.password && String(data.password).trim().length > 0);
+            },
+            description: (data) => {
+                const hasPassword = data.password && String(data.password).trim().length > 0;
+                if (hasPassword) {
+                    return '⚠️ Debe coincidir con la contraseña ingresada arriba';
+                }
+                return 'Campo opcional - solo requerido si ingresas contraseña nueva';
+            }
+        },
         // 💳 SECCIÓN DE CONFIGURACIÓN DE CRÉDITO
         {
             key: 'puede_tener_credito',
@@ -247,7 +404,7 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             type: 'custom',
             fullWidth: true, // Ocupa TODO el ancho de la pantalla
             section: 'Direcciones',
-            render: ({ value, onChange, disabled, formData, setFieldValue }) => {
+            render: ({ value, onChange, disabled, formData }) => {
                 // value es un array de DireccionData
                 const addresses = Array.isArray(value) ? value : [];
                 // Obtener localidad_id del formulario actual
@@ -263,12 +420,14 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                     disabled: Boolean(disabled),
                     height: '450px',
                     localidadId: localidadId,
-                    // ✨ NUEVO: Callback para auto-rellenar localidad cuando se detecta
+                    // ✨ NUEVO: Callback para actualizar localidad cuando se detecta
                     onLocalidadDetected: (id: number, nombre: string) => {
-                        if (setFieldValue) {
-                            setFieldValue('localidad_id', id);
-                            console.log(`✅ Localidad auto-detectada: ${nombre} (ID: ${id})`);
-                        }
+                        // Disparar evento personalizado para que el formulario lo detecte
+                        const event = new CustomEvent('localidadDetected', {
+                            detail: { localidadId: id, localidadNombre: nombre }
+                        });
+                        window.dispatchEvent(event);
+                        console.log(`✅ Localidad auto-detectada: ${nombre} (ID: ${id})`);
                     }
                 });
             }

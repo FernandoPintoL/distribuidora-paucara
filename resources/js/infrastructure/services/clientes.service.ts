@@ -132,6 +132,51 @@ export class ClientesService extends ExtendableService<Cliente, ClienteFormData>
   async validateData(data: ClienteFormData): Promise<string[]> {
     return await this.validator.validateAsync(data);
   }
+
+  // ============================================
+  // Preparación de datos antes de enviar al backend
+  // ============================================
+  prepareDataForBackend(data: ClienteFormData): ClienteFormData {
+    const preparedData = { ...data };
+
+    // 🔐 IMPORTANTE: Si password está vacío, remover ambos campos (password y password_confirmation)
+    // Esto asegura que en edición, si el usuario no ingresa password, no cambie la contraseña
+    if (!preparedData.password || preparedData.password.trim() === '') {
+      (preparedData as any).password = null;
+      (preparedData as any).password_confirmation = null;
+    } else if (preparedData.password && !preparedData.password_confirmation) {
+      // Si ingresó password pero no confirmó, usar el mismo password como confirmación
+      // (El backend validará que coincidan)
+      preparedData.password_confirmation = preparedData.password;
+    }
+
+    // Normalizar ventanas de entrega: asegurar que las horas estén en formato HH:MM
+    if (Array.isArray(preparedData.ventanas_entrega)) {
+      preparedData.ventanas_entrega = preparedData.ventanas_entrega.map((ventana) => {
+        const normalized = { ...ventana };
+
+        // Normalizar hora_inicio
+        if (normalized.hora_inicio && typeof normalized.hora_inicio === 'string') {
+          // Si viene como HH:MM:SS, tomar solo HH:MM
+          if (normalized.hora_inicio.length > 5) {
+            normalized.hora_inicio = normalized.hora_inicio.substring(0, 5);
+          }
+        }
+
+        // Normalizar hora_fin
+        if (normalized.hora_fin && typeof normalized.hora_fin === 'string') {
+          // Si viene como HH:MM:SS, tomar solo HH:MM
+          if (normalized.hora_fin.length > 5) {
+            normalized.hora_fin = normalized.hora_fin.substring(0, 5);
+          }
+        }
+
+        return normalized;
+      });
+    }
+
+    return preparedData;
+  }
 }
 
 export const clientesService = new ClientesService();

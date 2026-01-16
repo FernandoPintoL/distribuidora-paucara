@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { usePage } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
@@ -10,7 +8,17 @@ import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
 
-interface ClienteCredito {
+// Import services
+import { creditoService } from '@/infrastructure/services/credito.service';
+import NotificationService from '@/infrastructure/services/notification.service';
+
+// Import domain helpers
+import { getCreditoColorByEstado, getCreditoEstadoLabel, type CreditoEstado } from '@/domain/entities/credito';
+
+// Import types
+import type { CuentaPorCobrarDetalle, PagoDetalle, AuditoriaCredito, CambioAuditoria } from '@/types/credito.types';
+
+interface CreditoDetallesData {
     cliente: {
         id: number;
         nombre: string;
@@ -25,47 +33,22 @@ interface ClienteCredito {
         saldo_utilizado: number;
         saldo_disponible: number;
         porcentaje_utilizacion: number;
-        estado: string;
+        estado: CreditoEstado;
     };
     cuentas_pendientes: {
         total: number;
         monto_total: number;
         cuentas_vencidas: number;
         dias_maximo_vencido: number;
-        detalles: Array<{
-            id: number;
-            venta_id: number;
-            numero_venta: string;
-            fecha_venta: string;
-            monto_original: number;
-            saldo_pendiente: number;
-            fecha_vencimiento: string;
-            dias_vencido: number;
-            estado: string;
-        }>;
+        detalles: CuentaPorCobrarDetalle[];
     };
-    historial_pagos: Array<{
-        id: number;
-        monto: number;
-        fecha_pago: string;
-        tipo_pago: string;
-        numero_recibo: string;
-        usuario: string;
-        observaciones: string;
-    }>;
-    auditoria: Array<{
-        id: number;
-        fecha: string;
-        accion: string;
-        cambios: any;
-        motivo: string;
-        responsable: string;
-    }>;
+    historial_pagos: PagoDetalle[];
+    auditoria: AuditoriaCredito[];
 }
 
 export default function CreditoPage() {
     const { clienteId } = usePage<{ clienteId: number }>().props;
-    const [credito, setCredito] = useState<ClienteCredito | null>(null);
+    const [credito, setCredito] = useState<CreditoDetallesData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
@@ -77,40 +60,24 @@ export default function CreditoPage() {
     const cargarDetallesCredito = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`/api/clientes/${clienteId}/credito/detalles`);
-            setCredito(response.data.data);
             setError('');
+
+            // Use creditoService instead of axios
+            const response = await creditoService.obtenerDetallesCliente(clienteId);
+
+            if (response && response.data) {
+                setCredito(response.data);
+            } else {
+                throw new Error('Estructura de respuesta inválida');
+            }
         } catch (err) {
-            setError('Error al cargar los detalles de crédito');
-            console.error(err);
+            const message = err instanceof Error ? err.message : 'Error al cargar los detalles de crédito';
+            setError(message);
+            NotificationService.error(message);
+            console.error('Error cargando detalles de crédito:', err);
         } finally {
             setLoading(false);
         }
-    };
-
-    const getEstadoColor = (estado: string) => {
-        switch (estado) {
-            case 'normal':
-                return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-            case 'critico':
-                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-            case 'vencido':
-                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-            case 'excedido':
-                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-            default:
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-        }
-    };
-
-    const getEstadoLabel = (estado: string) => {
-        const labels: { [key: string]: string } = {
-            normal: 'Normal',
-            critico: 'Crítico',
-            vencido: 'Vencido',
-            excedido: 'Excedido',
-        };
-        return labels[estado] || estado;
     };
 
     const formatCurrency = (value: number) => {
@@ -141,7 +108,7 @@ export default function CreditoPage() {
                 <div className="space-y-4">
                     <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>Error al cargar los datos de crédito</AlertDescription>
+                        <AlertDescription>{error || 'Error al cargar los datos de crédito'}</AlertDescription>
                     </Alert>
                 </div>
             </AppLayout>
@@ -152,7 +119,7 @@ export default function CreditoPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-6">
+            <div className="space-y-6 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -205,8 +172,8 @@ export default function CreditoPage() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>Estado del Crédito</CardTitle>
-                                <Badge className={getEstadoColor(creditoData.estado)}>
-                                    {getEstadoLabel(creditoData.estado)}
+                                <Badge className={getCreditoColorByEstado(creditoData.estado)}>
+                                    {getCreditoEstadoLabel(creditoData.estado)}
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -234,13 +201,12 @@ export default function CreditoPage() {
                                 </div>
                                 <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                     <div
-                                        className={`h-full transition-all ${
-                                            creditoData.porcentaje_utilizacion > 100
-                                                ? 'bg-red-600'
-                                                : creditoData.porcentaje_utilizacion > 80
-                                                  ? 'bg-yellow-500'
-                                                  : 'bg-green-600'
-                                        }`}
+                                        className={`h-full transition-all ${creditoData.porcentaje_utilizacion > 100
+                                            ? 'bg-red-600'
+                                            : creditoData.porcentaje_utilizacion > 80
+                                                ? 'bg-yellow-500'
+                                                : 'bg-green-600'
+                                            }`}
                                         style={{
                                             width: `${Math.min(creditoData.porcentaje_utilizacion, 100)}%`,
                                         }}
@@ -465,7 +431,7 @@ export default function CreditoPage() {
                                         {audit.cambios && (
                                             <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                                                 {Object.entries(audit.cambios)
-                                                    .map(([key, value]: [string, any]) => `${key}: ${value.anterior} → ${value.actual}`)
+                                                    .map(([key, value]: [string, CambioAuditoria]) => `${key}: ${value.anterior} → ${value.actual}`)
                                                     .join(', ')}
                                             </p>
                                         )}

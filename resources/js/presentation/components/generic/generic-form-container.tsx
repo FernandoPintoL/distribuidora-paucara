@@ -1,5 +1,6 @@
 // Application Layer: Modern Generic form container with improved design
 import { Head, Link } from '@inertiajs/react';
+import { useEffect } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import GenericFormFields from '@/presentation/components/generic/generic-form-fields';
@@ -54,6 +55,26 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
 
   console.log('data del formulario (hook):', data);
   console.log('========================================');
+
+  // 🎯 Escuchar evento de detección automática de localidad desde el mapa
+  useEffect(() => {
+    const handleLocalidadDetected = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { localidadId } = customEvent.detail;
+
+      if (localidadId) {
+        // Actualizar el campo localidad_id cuando se detecta automáticamente
+        handleFieldChange('localidad_id', localidadId);
+        console.log('🔄 Localidad seleccionada automáticamente:', localidadId);
+      }
+    };
+
+    window.addEventListener('localidadDetected', handleLocalidadDetected);
+
+    return () => {
+      window.removeEventListener('localidadDetected', handleLocalidadDetected);
+    };
+  }, [handleFieldChange]);
 
   const pageTitle = isEditing ? `Editar ${config.singularName}` : `Nuevo ${config.singularName}`;
   const submitButtonText = isEditing ? 'Actualizar' : 'Crear';

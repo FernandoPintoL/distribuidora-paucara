@@ -22,6 +22,10 @@ const initialClienteData: ClienteFormData = {
   direcciones: [],
   // Inicializar ventanas de entrega como array vacío
   ventanas_entrega: [],
+  // Campos para gestión de usuario
+  crear_usuario: false,
+  password: null,
+  password_confirmation: null,
 };
 
 export default function ClientesForm({ cliente, localidades }: ClientesFormPageProps) {

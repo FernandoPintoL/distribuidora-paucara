@@ -56,6 +56,7 @@ import AdminController from './AdminController'
 import RutaController from './RutaController'
 import ReportePreciosController from './ReportePreciosController'
 import ReporteCreditoController from './ReporteCreditoController'
+import ReporteVisitasController from './ReporteVisitasController'
 import ReporteInventarioController from './ReporteInventarioController'
 import ReservaStockController from './ReservaStockController'
 import ConteoFisicoController from './ConteoFisicoController'
@@ -120,6 +121,7 @@ AdminController,
 RutaController,
 ReportePreciosController,
 ReporteCreditoController,
+ReporteVisitasController,
 ReporteInventarioController,
 ReservaStockController,
 ConteoFisicoController,

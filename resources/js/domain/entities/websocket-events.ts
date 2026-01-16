@@ -23,6 +23,7 @@ export type NotificationType =
   | 'ubicacion'
   | 'novedad'
   | 'chofer'
+  | 'creditos'
   | 'dashboard'
   | 'general';
 
@@ -261,6 +262,43 @@ export interface DashboardMetricsUpdatedEvent {
   };
 }
 
+// ==================== CREDITOS EVENTS ====================
+export interface CreditoVencidoEvent {
+  cuenta_por_cobrar_id: number;
+  cliente_id: number;
+  cliente_nombre: string;
+  venta_id: number;
+  numero_venta: string;
+  saldo_pendiente: number;
+  dias_vencido: number;
+  fecha_vencimiento: string;
+  timestamp: string;
+}
+
+export interface CreditoCriticoEvent {
+  cliente_id: number;
+  cliente_nombre: string;
+  limite_credito: number;
+  saldo_disponible: number;
+  porcentaje_utilizado: number;
+  cantidad_cuentas_pendientes: number;
+  monto_total_pendiente: number;
+  timestamp: string;
+}
+
+export interface CreditoPagoRegistradoEvent {
+  pago_id: number;
+  cuenta_por_cobrar_id: number;
+  cliente_id: number;
+  cliente_nombre: string;
+  monto: number;
+  tipo_pago: string;
+  numero_recibo?: string;
+  fecha_pago: string;
+  usuario_nombre?: string;
+  timestamp: string;
+}
+
 // ==================== UNION TYPE ====================
 export type WebSocketEvent =
   | { event: 'proforma.creada'; data: ProformaCreatedEvent }
@@ -284,6 +322,9 @@ export type WebSocketEvent =
   | { event: 'chofer.en-camino'; data: ChoferEnCaminoEvent }
   | { event: 'chofer.llego'; data: ChoferLlegoEvent }
   | { event: 'pedido.entregado'; data: PedidoEntregadoEvent }
+  | { event: 'credito.vencido'; data: CreditoVencidoEvent }
+  | { event: 'credito.critico'; data: CreditoCriticoEvent }
+  | { event: 'credito.pago-registrado'; data: CreditoPagoRegistradoEvent }
   | { event: 'dashboard.metrics-updated'; data: DashboardMetricsUpdatedEvent };
 
 // ==================== EVENT HANDLERS ====================
@@ -319,6 +360,10 @@ export const EVENT_ROLE_MAPPING: Record<string, string[]> = {
 
   'pedido.entregado': ['cliente', 'logistica', 'cobrador', 'manager', 'admin'],
 
+  'credito.vencido': ['cobrador', 'manager', 'admin', 'cliente'],
+  'credito.critico': ['cobrador', 'manager', 'admin', 'cliente'],
+  'credito.pago-registrado': ['cobrador', 'cajero', 'manager', 'admin', 'cliente'],
+
   'dashboard.metrics-updated': ['manager', 'admin'],
 };
 
@@ -329,6 +374,7 @@ export const getEventCategory = (eventName: string): NotificationType => {
   if (eventName.startsWith('ubicacion')) return 'ubicacion';
   if (eventName.startsWith('novedad')) return 'novedad';
   if (eventName.startsWith('chofer')) return 'chofer';
+  if (eventName.startsWith('credito')) return 'creditos';
   if (eventName.startsWith('dashboard')) return 'dashboard';
   return 'general';
 };
