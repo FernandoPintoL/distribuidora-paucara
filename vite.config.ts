@@ -39,12 +39,14 @@ export default defineConfig({
             }),
     ],
     server: {
-        host: "192.168.100.22",
+        host: "0.0.0.0",
         port: 5173,
         strictPort: false,
         cors: true,
         hmr: {
-            port: 5174,
+            host: 'localhost',
+            protocol: 'ws',
+            port: 5173,
         },
     },
     esbuild: {

@@ -8,6 +8,9 @@ use App\Http\Controllers\Api\ChoferPreferenciaController;
 use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EntregaBatchController;
 use App\Http\Controllers\Api\EntregaController;
+use App\Http\Controllers\Api\ChoferCajaController;
+use App\Http\Controllers\Api\ChoferGastoController;
+use App\Http\Controllers\Api\AdminCajaApiController;
 use App\Http\Controllers\Api\EncargadoController;
 use App\Http\Controllers\Api\EstadoLogisticoController;
 use App\Http\Controllers\Api\GeocodingController;
@@ -543,6 +546,15 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/entregas/{id}/reportar-novedad', [EntregaController::class, 'reportarNovedad']);
         Route::post('/entregas/{id}/ubicacion', [EntregaController::class, 'registrarUbicacion']);
         Route::get('/historial', [EntregaController::class, 'historialEntregas']);
+
+        // ✅ NUEVO: Rutas para gestión de cajas del chofer
+        Route::prefix('cajas')->middleware('can.open.caja')->group(function () {
+            Route::get('/estado', [ChoferCajaController::class, 'obtenerEstado']);
+            Route::post('/abrir', [ChoferCajaController::class, 'abrirCaja']);
+            Route::post('/cerrar', [ChoferCajaController::class, 'cerrarCaja']);
+            Route::get('/movimientos', [ChoferCajaController::class, 'obtenerMovimientos']);
+            Route::get('/resumen', [ChoferCajaController::class, 'obtenerResumen']);
+        });
     });
 
     // CLIENTE - Tracking de pedidos
@@ -882,6 +894,39 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 // ✅ Rutas API de auditoría de cajas (Sprint 4)
 Route::middleware(['auth', 'permission:admin.auditoria'])->prefix('cajas/auditoria')->group(function () {
     Route::get('/estadisticas', [\App\Http\Controllers\AuditoriaCajaController::class, 'estadisticas'])->name('api.cajas.auditoria.estadisticas');
+});
+
+// ✅ Rutas API de gastos para chofer (Sprint 5)
+Route::middleware(['auth'])->prefix('cajas/gastos')->group(function () {
+    Route::post('/', [ChoferGastoController::class, 'store'])->name('api.gastos.store');
+    Route::get('/', [ChoferGastoController::class, 'index'])->name('api.gastos.index');
+    Route::get('/estadisticas', [ChoferGastoController::class, 'estadisticas'])->name('api.gastos.estadisticas');
+    Route::delete('/{id}', [ChoferGastoController::class, 'destroy'])->name('api.gastos.destroy');
+});
+
+// ✅ Rutas API para monitoreo en tiempo real (Admin) - Sprint 6
+Route::middleware(['auth', 'permission:cajas.index'])->prefix('admin/cajas')->group(function () {
+    // Estado general de todas las cajas
+    Route::get('/estado-general', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'estadoGeneral'])
+        ->name('api.admin.cajas.estado-general');
+
+    // Alertas activas
+    Route::get('/alertas', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'obtenerAlertas'])
+        ->name('api.admin.cajas.alertas');
+
+    // Estadísticas del día
+    Route::get('/estadisticas', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'estadisticas'])
+        ->name('api.admin.cajas.estadisticas');
+
+    // Detalle en tiempo real de una caja
+    Route::get('/{id}/detalle', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'detalleCaja'])
+        ->name('api.admin.cajas.detalle');
+});
+
+// ✅ Rutas API para gastos en tiempo real (Admin) - Sprint 6
+Route::middleware(['auth', 'permission:cajas.gastos'])->prefix('admin/gastos')->group(function () {
+    Route::get('/resumen', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'resumenGastos'])
+        ->name('api.admin.gastos.resumen');
 });
 
 // ========================================

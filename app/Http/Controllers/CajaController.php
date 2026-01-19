@@ -303,4 +303,129 @@ class CajaController extends Controller
 
         return $montoEsperado + $totalMovimientos;
     }
+
+    /**
+     * ADMIN: Dashboard de todas las cajas
+     */
+    public function dashboard()
+    {
+        $cajas = Caja::with(['usuario'])->get();
+
+        $aperturas_hoy = AperturaCaja::whereDate('fecha', today())
+            ->with(['cierre'])
+            ->get();
+
+        $metricas = [
+            'total_cajas' => $cajas->count(),
+            'cajas_abiertas' => $aperturas_hoy->filter(fn($a) => !$a->cierre)->count(),
+            'total_ingresos' => MovimientoCaja::whereDate('fecha', today())
+                ->where('monto', '>', 0)
+                ->sum('monto'),
+            'total_egresos' => abs(MovimientoCaja::whereDate('fecha', today())
+                ->where('monto', '<', 0)
+                ->sum('monto')),
+            'diferencias_detectadas' => CierreCaja::whereDate('fecha', today())
+                ->where('diferencia', '!=', 0)
+                ->count(),
+        ];
+
+        return Inertia::render('Cajas/Dashboard', [
+            'cajas' => $cajas,
+            'aperturas_hoy' => $aperturas_hoy,
+            'metricas' => $metricas,
+        ]);
+    }
+
+    /**
+     * ADMIN: Detalle de una caja específica
+     */
+    public function detalle($id)
+    {
+        $caja = Caja::with(['usuario'])->findOrFail($id);
+
+        $aperturas = AperturaCaja::where('caja_id', $id)
+            ->with(['cierre'])
+            ->orderBy('fecha', 'desc')
+            ->get();
+
+        $movimientosHoy = MovimientoCaja::where('caja_id', $id)
+            ->whereDate('fecha', today())
+            ->with(['tipoOperacion', 'usuario'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return Inertia::render('Cajas/Detalle', [
+            'caja' => $caja,
+            'aperturas' => $aperturas,
+            'movimientosHoy' => $movimientosHoy,
+        ]);
+    }
+
+    /**
+     * ADMIN: Reportes de cajas
+     */
+    public function reportes(Request $request)
+    {
+        $fecha_inicio = $request->get('fecha_inicio', today()->subDays(30)->toDateString());
+        $fecha_fin = $request->get('fecha_fin', today()->toDateString());
+
+        // Obtener discrepancias en el período
+        $discrepancias = CierreCaja::whereBetween('fecha', [$fecha_inicio, $fecha_fin])
+            ->with(['apertura.usuario', 'apertura.caja'])
+            ->where('diferencia', '!=', 0)
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->map(function ($cierre) {
+                return [
+                    'id' => $cierre->id,
+                    'caja_id' => $cierre->apertura->caja_id,
+                    'usuario' => $cierre->apertura->usuario->name,
+                    'fecha' => $cierre->fecha,
+                    'monto_apertura' => $cierre->apertura->monto_apertura,
+                    'monto_cierre' => $cierre->monto_real,
+                    'diferencia' => $cierre->diferencia,
+                    'observaciones' => $cierre->observaciones,
+                ];
+            });
+
+        // Resumen diario por usuario
+        $resumen_diario = CierreCaja::whereBetween('fecha', [$fecha_inicio, $fecha_fin])
+            ->with(['apertura.usuario'])
+            ->get()
+            ->groupBy(function ($item) {
+                return $item->apertura->usuario->id . '-' . $item->fecha->format('Y-m-d');
+            })
+            ->map(function ($grupo) {
+                $primer = $grupo->first();
+                return [
+                    'fecha' => $primer->fecha->format('Y-m-d'),
+                    'usuario' => $primer->apertura->usuario->name,
+                    'total_apertura' => $grupo->sum('apertura.monto_apertura'),
+                    'total_ingresos' => $grupo->sum('monto_real'),
+                    'total_egresos' => 0,
+                    'diferencia_total' => $grupo->sum('diferencia'),
+                ];
+            });
+
+        $estadisticas = [
+            'total_discrepancias' => $discrepancias->count(),
+            'discrepancias_positivas' => $discrepancias->filter(fn($d) => $d['diferencia'] > 0)->count(),
+            'discrepancias_negativas' => $discrepancias->filter(fn($d) => $d['diferencia'] < 0)->count(),
+            'diferencia_total' => $discrepancias->sum('diferencia'),
+            'promedio_discrepancia' => $discrepancias->count() > 0 ? $discrepancias->sum('diferencia') / $discrepancias->count() : 0,
+            'usuario_con_mas_discrepancias' => $discrepancias->groupBy('usuario')
+                ->map(fn($g) => $g->count())
+                ->max() ? key($discrepancias->groupBy('usuario')
+                ->map(fn($g) => $g->count())
+                ->toArray()) : 'N/A',
+        ];
+
+        return Inertia::render('Cajas/Reportes', [
+            'discrepancias' => $discrepancias,
+            'resumen_diario' => $resumen_diario->values(),
+            'estadisticas' => $estadisticas,
+            'fecha_inicio' => $fecha_inicio,
+            'fecha_fin' => $fecha_fin,
+        ]);
+    }
 }

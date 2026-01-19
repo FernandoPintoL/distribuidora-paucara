@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::alertas
- * @see app/Http/Controllers/AuditoriaCajaController.php:122
+ * @see app/Http/Controllers/AuditoriaCajaController.php:174
  * @route '/cajas/auditoria/alertas'
  */
 export const alertas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ alertas.definition = {
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::alertas
- * @see app/Http/Controllers/AuditoriaCajaController.php:122
+ * @see app/Http/Controllers/AuditoriaCajaController.php:174
  * @route '/cajas/auditoria/alertas'
  */
 alertas.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ alertas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::alertas
- * @see app/Http/Controllers/AuditoriaCajaController.php:122
+ * @see app/Http/Controllers/AuditoriaCajaController.php:174
  * @route '/cajas/auditoria/alertas'
  */
 alertas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ alertas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::alertas
- * @see app/Http/Controllers/AuditoriaCajaController.php:122
+ * @see app/Http/Controllers/AuditoriaCajaController.php:174
  * @route '/cajas/auditoria/alertas'
  */
 alertas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ alertas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\AuditoriaCajaController::alertas
- * @see app/Http/Controllers/AuditoriaCajaController.php:122
+ * @see app/Http/Controllers/AuditoriaCajaController.php:174
  * @route '/cajas/auditoria/alertas'
  */
     const alertasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ alertas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::alertas
- * @see app/Http/Controllers/AuditoriaCajaController.php:122
+ * @see app/Http/Controllers/AuditoriaCajaController.php:174
  * @route '/cajas/auditoria/alertas'
  */
         alertasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ alertas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::alertas
- * @see app/Http/Controllers/AuditoriaCajaController.php:122
+ * @see app/Http/Controllers/AuditoriaCajaController.php:174
  * @route '/cajas/auditoria/alertas'
  */
         alertasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ alertas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     alertas.form = alertasForm
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::show
- * @see app/Http/Controllers/AuditoriaCajaController.php:108
+ * @see app/Http/Controllers/AuditoriaCajaController.php:160
  * @route '/cajas/auditoria/{id}'
  */
 export const show = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -172,7 +172,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::show
- * @see app/Http/Controllers/AuditoriaCajaController.php:108
+ * @see app/Http/Controllers/AuditoriaCajaController.php:160
  * @route '/cajas/auditoria/{id}'
  */
 show.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -200,7 +200,7 @@ show.url = (args: { id: string | number } | [id: string | number ] | string | nu
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::show
- * @see app/Http/Controllers/AuditoriaCajaController.php:108
+ * @see app/Http/Controllers/AuditoriaCajaController.php:160
  * @route '/cajas/auditoria/{id}'
  */
 show.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -209,7 +209,7 @@ show.get = (args: { id: string | number } | [id: string | number ] | string | nu
 })
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::show
- * @see app/Http/Controllers/AuditoriaCajaController.php:108
+ * @see app/Http/Controllers/AuditoriaCajaController.php:160
  * @route '/cajas/auditoria/{id}'
  */
 show.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -219,7 +219,7 @@ show.head = (args: { id: string | number } | [id: string | number ] | string | n
 
     /**
 * @see \App\Http\Controllers\AuditoriaCajaController::show
- * @see app/Http/Controllers/AuditoriaCajaController.php:108
+ * @see app/Http/Controllers/AuditoriaCajaController.php:160
  * @route '/cajas/auditoria/{id}'
  */
     const showForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -229,7 +229,7 @@ show.head = (args: { id: string | number } | [id: string | number ] | string | n
 
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::show
- * @see app/Http/Controllers/AuditoriaCajaController.php:108
+ * @see app/Http/Controllers/AuditoriaCajaController.php:160
  * @route '/cajas/auditoria/{id}'
  */
         showForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -238,7 +238,7 @@ show.head = (args: { id: string | number } | [id: string | number ] | string | n
         })
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::show
- * @see app/Http/Controllers/AuditoriaCajaController.php:108
+ * @see app/Http/Controllers/AuditoriaCajaController.php:160
  * @route '/cajas/auditoria/{id}'
  */
         showForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -254,7 +254,7 @@ show.head = (args: { id: string | number } | [id: string | number ] | string | n
     show.form = showForm
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::exportar
- * @see app/Http/Controllers/AuditoriaCajaController.php:209
+ * @see app/Http/Controllers/AuditoriaCajaController.php:261
  * @route '/cajas/auditoria/exportar/csv'
  */
 export const exportar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -269,7 +269,7 @@ exportar.definition = {
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::exportar
- * @see app/Http/Controllers/AuditoriaCajaController.php:209
+ * @see app/Http/Controllers/AuditoriaCajaController.php:261
  * @route '/cajas/auditoria/exportar/csv'
  */
 exportar.url = (options?: RouteQueryOptions) => {
@@ -278,7 +278,7 @@ exportar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::exportar
- * @see app/Http/Controllers/AuditoriaCajaController.php:209
+ * @see app/Http/Controllers/AuditoriaCajaController.php:261
  * @route '/cajas/auditoria/exportar/csv'
  */
 exportar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -287,7 +287,7 @@ exportar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::exportar
- * @see app/Http/Controllers/AuditoriaCajaController.php:209
+ * @see app/Http/Controllers/AuditoriaCajaController.php:261
  * @route '/cajas/auditoria/exportar/csv'
  */
 exportar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -297,7 +297,7 @@ exportar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\AuditoriaCajaController::exportar
- * @see app/Http/Controllers/AuditoriaCajaController.php:209
+ * @see app/Http/Controllers/AuditoriaCajaController.php:261
  * @route '/cajas/auditoria/exportar/csv'
  */
     const exportarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -307,7 +307,7 @@ exportar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::exportar
- * @see app/Http/Controllers/AuditoriaCajaController.php:209
+ * @see app/Http/Controllers/AuditoriaCajaController.php:261
  * @route '/cajas/auditoria/exportar/csv'
  */
         exportarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -316,7 +316,7 @@ exportar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::exportar
- * @see app/Http/Controllers/AuditoriaCajaController.php:209
+ * @see app/Http/Controllers/AuditoriaCajaController.php:261
  * @route '/cajas/auditoria/exportar/csv'
  */
         exportarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

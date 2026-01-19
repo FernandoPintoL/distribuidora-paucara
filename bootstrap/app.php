@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CanOpenCaja;
 use App\Http\Middleware\CheckCajaAbierta;
 use App\Http\Middleware\CheckPlatformAccess;
 use App\Http\Middleware\CheckUserActive;
@@ -57,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'caja.abierta' => CheckCajaAbierta::class,
+            'can.open.caja' => CanOpenCaja::class,
             'platform' => CheckPlatformAccess::class,
         ]);
     })

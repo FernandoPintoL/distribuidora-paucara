@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import admin from './admin'
 import gastos from './gastos'
 import auditoria from './auditoria'
 /**
@@ -345,12 +346,92 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     movimientos.form = movimientosForm
+/**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:367
+ * @route '/cajas/reportes'
+ */
+export const reportes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: reportes.url(options),
+    method: 'get',
+})
+
+reportes.definition = {
+    methods: ["get","head"],
+    url: '/cajas/reportes',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:367
+ * @route '/cajas/reportes'
+ */
+reportes.url = (options?: RouteQueryOptions) => {
+    return reportes.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:367
+ * @route '/cajas/reportes'
+ */
+reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: reportes.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:367
+ * @route '/cajas/reportes'
+ */
+reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: reportes.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:367
+ * @route '/cajas/reportes'
+ */
+    const reportesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: reportes.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:367
+ * @route '/cajas/reportes'
+ */
+        reportesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: reportes.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:367
+ * @route '/cajas/reportes'
+ */
+        reportesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: reportes.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    reportes.form = reportesForm
 const cajas = {
     index,
 abrir,
 cerrar,
 estado,
 movimientos,
+admin,
+reportes,
 gastos,
 auditoria,
 }

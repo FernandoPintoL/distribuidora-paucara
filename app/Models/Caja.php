@@ -11,6 +11,7 @@ class Caja extends Model
     use HasFactory, HasActiveScope;
 
     protected $fillable = [
+        'user_id',
         'nombre',
         'ubicacion',
         'monto_inicial_dia',
@@ -26,6 +27,11 @@ class Caja extends Model
     }
 
     // Relaciones
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function movimientos()
     {
         return $this->hasMany(MovimientoCaja::class);

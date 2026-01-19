@@ -2,41 +2,36 @@
 namespace Database\Seeders;
 
 use App\Models\Caja;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class CajaSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * Crea una caja individual para CADA usuario.
+     * Esto permite que cualquier usuario (chofer, vendedor, gerente, etc.)
+     * pueda tener su propia caja para manejar dinero.
      */
     public function run(): void
     {
-        $cajas = [
-            [
-                'nombre'            => 'Caja Principal',
-                'ubicacion'         => 'Mostrador Principal',
-                'monto_inicial_dia' => 1000.00,
-                'activa'            => true,
-            ],
-            /* [
-                'nombre' => 'Caja Secundaria',
-                'ubicacion' => 'Mostrador 2',
-                'monto_inicial_dia' => 500.00,
-                'activa' => true,
-            ],
-            [
-                'nombre' => 'Caja Almacén',
-                'ubicacion' => 'Área de Almacén',
-                'monto_inicial_dia' => 200.00,
-                'activa' => true,
-            ], */
-        ];
+        // Obtener todos los usuarios
+        $usuarios = User::all();
 
-        foreach ($cajas as $caja) {
+        foreach ($usuarios as $usuario) {
+            // Crear/actualizar caja para cada usuario
             Caja::updateOrCreate(
-                ['nombre' => $caja['nombre']],
-                $caja
+                ['user_id' => $usuario->id],
+                [
+                    'nombre'            => "Caja {$usuario->name}",
+                    'ubicacion'         => $usuario->empleado?->ubicacion ?? 'Ruta',
+                    'monto_inicial_dia' => 100.00, // Default inicial
+                    'activa'            => true,
+                ]
             );
         }
+
+        $this->command->info("✅ {$usuarios->count()} cajas creadas exitosamente (1 por usuario)");
     }
 }

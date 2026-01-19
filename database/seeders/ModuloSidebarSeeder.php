@@ -219,9 +219,9 @@ class ModuloSidebarSeeder extends Seeder
                 ],
             ],
 
-            // ===== MÓDULOS SIMPLES (sin submenu) =====
+            // ===== MÓDULO: CAJAS =====
             'cajas'           => [
-                'modulo' => [
+                'modulo'  => [
                     'titulo'      => 'Gestión de Cajas',
                     'ruta'        => '/cajas',
                     'icono'       => 'Wallet',
@@ -229,6 +229,12 @@ class ModuloSidebarSeeder extends Seeder
                     'orden'       => 10,
                     'categoria'   => 'Finanzas',
                     'permisos'    => ['cajas.index'],
+                ],
+                'submenu' => [
+                    ['titulo' => 'Dashboard', 'ruta' => '/cajas', 'icono' => 'BarChart3', 'orden' => 1, 'permisos' => ['cajas.index']],
+                    ['titulo' => 'Reportes', 'ruta' => '/cajas/reportes', 'icono' => 'FileText', 'orden' => 2, 'permisos' => ['cajas.reportes']],
+                    ['titulo' => 'Auditoría', 'ruta' => '/cajas/auditoria', 'icono' => 'Shield', 'orden' => 3, 'permisos' => ['cajas.auditoria']],
+                    ['titulo' => 'Gastos', 'ruta' => '/cajas/gastos', 'icono' => 'DollarSign', 'orden' => 4, 'permisos' => ['cajas.gastos']],
                 ],
             ],
             'almacenes'       => [

@@ -10,6 +10,8 @@ import geocoding from './geocoding'
 import entregas from './entregas'
 import proveedores from './proveedores'
 import cajas from './cajas'
+import gastos from './gastos'
+import admin from './admin'
 import dashboard from './dashboard'
 import codigosBarra from './codigos-barra'
 /**
@@ -181,6 +183,8 @@ geocoding,
 entregas,
 proveedores,
 cajas,
+gastos,
+admin,
 dashboard,
 codigosBarra,
 }

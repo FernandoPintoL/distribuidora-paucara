@@ -14,11 +14,14 @@ import PrecioRangoProductoController from './PrecioRangoProductoController'
 import GeocodingController from './GeocodingController'
 import RutaApiController from './RutaApiController'
 import EntregaController from './EntregaController'
+import ChoferCajaController from './ChoferCajaController'
 import TrackingController from './TrackingController'
 import EncargadoController from './EncargadoController'
 import EntregaBatchController from './EntregaBatchController'
 import VentaLogisticaController from './VentaLogisticaController'
 import ReporteCargoController from './ReporteCargoController'
+import ChoferGastoController from './ChoferGastoController'
+import AdminCajaApiController from './AdminCajaApiController'
 import EstadoLogisticoController from './EstadoLogisticoController'
 import VisitaPreventistaController from './VisitaPreventistaController'
 const Api = {
@@ -38,11 +41,14 @@ PrecioRangoProductoController,
 GeocodingController,
 RutaApiController,
 EntregaController,
+ChoferCajaController,
 TrackingController,
 EncargadoController,
 EntregaBatchController,
 VentaLogisticaController,
 ReporteCargoController,
+ChoferGastoController,
+AdminCajaApiController,
 EstadoLogisticoController,
 VisitaPreventistaController,
 }

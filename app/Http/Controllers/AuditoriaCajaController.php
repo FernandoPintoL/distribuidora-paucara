@@ -60,7 +60,7 @@ class AuditoriaCajaController extends Controller
             $query->porAccion($filtros['accion']);
         }
 
-        if ($filtros['exitosa'] !== null) {
+        if (($filtros['exitosa'] ?? null) !== null) {
             $query->where('exitosa', $filtros['exitosa']);
         }
 
@@ -83,21 +83,73 @@ class AuditoriaCajaController extends Controller
 
         // Paginación
         $perPage = $filtros['per_page'] ?? 50;
-        $auditorias = $query->paginate($perPage);
+        $registrosPaginados = $query->paginate($perPage);
 
-        // Usuarios para filtro
-        $usuarios = User::with('roles')
-            ->whereHas('roles', function ($q) {
-                $q->where('name', 'Cajero');
-            })
-            ->select('id', 'name', 'email')
-            ->get();
+        // Mapear datos al formato esperado por React
+        $registros = $registrosPaginados->getCollection()->map(function ($auditoria) {
+            return [
+                'id' => $auditoria->id,
+                'user_id' => $auditoria->user_id,
+                'usuario' => $auditoria->usuario->name,
+                'tipo_evento' => $auditoria->accion,
+                'descripcion' => $auditoria->descripcion,
+                'ip_address' => $auditoria->ip_address,
+                'user_agent' => $auditoria->user_agent,
+                'severidad' => $this->obtenerSeveridad($auditoria->accion, $auditoria->exitosa),
+                'created_at' => $auditoria->fecha_intento,
+            ];
+        })->toArray();
 
-        return Inertia::render('admin/cajas/auditoria/index', [
-            'auditorias' => $auditorias,
-            'usuarios' => $usuarios,
-            'filtros' => $filtros,
+        // Estadísticas de auditoría
+        $estadisticas = [
+            'total_eventos' => AuditoriaCaja::count(),
+            'eventos_sospechosos' => AuditoriaCaja::fallidos()->where('fecha_intento', '>=', now()->subDay())->count(),
+            'usuarios_con_intentos' => AuditoriaCaja::distinct('user_id')->count(),
+            'evento_mas_comun' => AuditoriaCaja::selectRaw('accion, COUNT(*) as total')
+                ->groupBy('accion')
+                ->orderByDesc('total')
+                ->first()?->accion ?? 'N/A',
+        ];
+
+        // Alertas activas
+        $alertas = AuditoriaCaja::selectRaw('user_id, accion, COUNT(*) as cantidad, MAX(fecha_intento) as fecha')
+            ->where('fecha_intento', '>=', now()->subHour())
+            ->fallidos()
+            ->groupBy(['user_id', 'accion'])
+            ->havingRaw('COUNT(*) >= 3')
+            ->with('usuario')
+            ->get()
+            ->map(function ($alerta) {
+                return [
+                    'id' => $alerta->id ?? rand(),
+                    'usuario' => $alerta->usuario->name,
+                    'tipo' => $alerta->accion,
+                    'mensaje' => "Múltiples intentos fallidos de: {$alerta->accion}",
+                    'cantidad_intentos' => $alerta->cantidad,
+                    'fecha' => $alerta->fecha,
+                ];
+            });
+
+        return Inertia::render('Cajas/Auditoria', [
+            'registros' => $registros,
+            'alertas' => $alertas,
+            'estadisticas' => $estadisticas,
         ]);
+    }
+
+    /**
+     * Obtener severidad basada en acción y éxito
+     */
+    private function obtenerSeveridad($accion, $exitosa)
+    {
+        if ($exitosa) return 'bajo';
+
+        return match ($accion) {
+            'INTENTO_SIN_CAJA' => 'alto',
+            'ERROR_SISTEMA' => 'crítico',
+            'ACCESO_DENEGADO' => 'medio',
+            default => 'bajo',
+        };
     }
 
     /**
