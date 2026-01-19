@@ -338,4 +338,15 @@ bajo,
 resumen,
 }
 
+export default stockhod: 'get',
+        })
+    
+    resumen.form = resumenForm
+const stock = {
+    verificar,
+producto,
+bajo,
+resumen,
+}
+
 export default stock

@@ -12,9 +12,9 @@ use App\Services\AbacService;
  * ============================================
  *
  * Control de acceso basado en:
- * - Super-Admin: Acceso total
- * - Admin: Ver todos (lectura)
- * - Preventista: Ver/editar solo SUS clientes (preventista_id)
+ * - Super-Admin: Acceso total a cualquier operación
+ * - Admin: Acceso total a cualquier operación (crear, editar, eliminar, etc.)
+ * - Preventista: Gestión completa solo de SUS clientes (preventista_id)
  * - Cliente: Ver solo su propio registro
  */
 class ClientePolicy
@@ -27,16 +27,17 @@ class ClientePolicy
     }
 
     /**
-     * ✅ ACTUALIZADO: Super Admin y Admin pueden hacer casi cualquier cosa
+     * ✅ ACTUALIZADO: Super Admin y Admin pueden hacer cualquier gestión sobre clientes
      */
     public function before(User $user, string $ability): ?bool
     {
+        // ✅ Super-Admin: acceso total
         if ($user->hasRole('Super Admin')) {
             return true;
         }
 
-        // Admin: puede ver todo pero no editar
-        if ($user->hasRole('Admin') && in_array($ability, ['view', 'viewAny', 'audit'])) {
+        // ✅ Admin (cualquier variante): acceso total a cualquier gestión de clientes
+        if ($user->hasRole(['Admin', 'admin'])) {
             return true;
         }
 
@@ -53,8 +54,8 @@ class ClientePolicy
             return true;
         }
 
-        // Preventista: ver solo SUS clientes (por preventista_id)
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante): ver solo SUS clientes (por preventista_id)
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             return $user->empleado?->id === $cliente->preventista_id;
         }
 
@@ -79,34 +80,29 @@ class ClientePolicy
 
     /**
      * ✅ Crear cliente
-     * Solo Preventista y Super-Admin pueden crear
+     * Super-Admin, Admin y Preventista pueden crear
      */
     public function create(User $user): bool
     {
-        // Super-Admin siempre
-        if ($user->hasRole('Super Admin')) {
-            return true;
-        }
-
-        // Preventista con permiso
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante) con permiso
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             return $user->hasPermissionTo('clientes.create') ||
                    $user->hasPermissionTo('clientes.manage');
         }
 
-        // Admin NO puede crear
+        // Super-Admin y Admin son autorizados en before()
         return false;
     }
 
     /**
      * ✅ Editar cliente
+     * Super-Admin, Admin: editan cualquier cliente
      * Preventista: solo SUS clientes
-     * Admin: NO puede editar
      */
     public function update(User $user, Cliente $cliente): bool
     {
-        // Preventista: editar solo SUS clientes
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante): editar solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             // Verificar que sea el preventista asignado al cliente
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
@@ -117,22 +113,19 @@ class ClientePolicy
                    $user->hasPermissionTo('clientes.manage');
         }
 
-        // Admin NO puede editar
-        if ($user->hasRole('Admin')) {
-            return false;
-        }
-
+        // Super-Admin y Admin son autorizados en before()
         return false;
     }
 
     /**
      * ✅ Eliminar cliente
-     * Solo Super-Admin o Preventista (el creador)
+     * Super-Admin, Admin: eliminan cualquier cliente
+     * Preventista: solo SUS clientes
      */
     public function delete(User $user, Cliente $cliente): bool
     {
-        // Preventista: eliminar solo SUS clientes
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante): eliminar solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
             }
@@ -140,16 +133,19 @@ class ClientePolicy
                    $user->hasPermissionTo('clientes.manage');
         }
 
+        // Super-Admin y Admin son autorizados en before()
         return false;
     }
 
     /**
-     * ✅ NUEVO: Bloquear cliente
+     * ✅ Bloquear cliente
+     * Super-Admin, Admin: bloquean cualquier cliente
+     * Preventista: solo SUS clientes
      */
     public function block(User $user, Cliente $cliente): bool
     {
-        // Preventista: bloquear solo SUS clientes
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante): bloquear solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
             }
@@ -157,16 +153,19 @@ class ClientePolicy
                    $user->hasPermissionTo('clientes.manage');
         }
 
+        // Super-Admin y Admin son autorizados en before()
         return false;
     }
 
     /**
-     * ✅ NUEVO: Ver auditoría
+     * ✅ Ver auditoría
+     * Super-Admin, Admin: ver auditoría de cualquier cliente
+     * Preventista: solo de SUS clientes
      */
     public function audit(User $user, Cliente $cliente): bool
     {
-        // Preventista: ver auditoría solo de SUS clientes
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante): ver auditoría solo de SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             if ($user->empleado?->id !== $cliente->preventista_id) {
                 return false;
             }
@@ -174,46 +173,49 @@ class ClientePolicy
                    $user->hasPermissionTo('clientes.manage');
         }
 
-        // Admin: ver auditoría de cualquiera
-        if ($user->hasRole('Admin')) {
-            return $user->hasPermissionTo('clientes.audit');
-        }
-
+        // Super-Admin y Admin son autorizados en before()
         return false;
     }
 
     /**
-     * ✅ NUEVO: Cambiar estado
+     * ✅ Cambiar estado
+     * Super-Admin, Admin: cambiar estado de cualquier cliente
+     * Preventista: solo de SUS clientes
      */
     public function changeState(User $user, Cliente $cliente): bool
     {
-        // Preventista: cambiar estado solo de SUS clientes
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante): cambiar estado solo de SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             return $user->empleado?->id === $cliente->preventista_id;
         }
 
+        // Super-Admin y Admin son autorizados en before()
         return false;
     }
 
     /**
-     * ✅ NUEVO: Restaurar cliente eliminado
+     * ✅ Restaurar cliente eliminado
+     * Super-Admin, Admin: restaurar cualquier cliente
+     * Preventista: solo SUS clientes
      */
     public function restore(User $user, Cliente $cliente): bool
     {
-        // Preventista: restaurar solo SUS clientes
-        if ($user->hasRole('Preventista')) {
+        // ✅ Preventista (cualquier variante): restaurar solo SUS clientes
+        if ($user->hasRole(['Preventista', 'preventista'])) {
             return $user->empleado?->id === $cliente->preventista_id;
         }
 
+        // Super-Admin y Admin son autorizados en before()
         return false;
     }
 
     /**
-     * ✅ NUEVO: Eliminar permanentemente
+     * ✅ Eliminar permanentemente
+     * Super-Admin y Admin: eliminar permanentemente
      */
     public function forceDelete(User $user, Cliente $cliente): bool
     {
-        // Solo Super-Admin
-        return $user->hasRole('Super Admin');
+        // ✅ Super-Admin y Admin (ambos tienen acceso por before())
+        return $user->hasRole(['Super Admin', 'Admin', 'admin']);
     }
 }

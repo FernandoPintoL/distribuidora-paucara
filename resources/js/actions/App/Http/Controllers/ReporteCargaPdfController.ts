@@ -307,4 +307,7 @@ previewPdf.head = (args: { reporte: number | { id: number } } | [reporte: number
     previewPdf.form = previewPdfForm
 const ReporteCargaPdfController = { generarPdf, generarPdfDetallado, previewPdf }
 
+export default ReporteCargaPdfControllerorm = previewPdfForm
+const ReporteCargaPdfController = { generarPdf, generarPdfDetallado, previewPdf }
+
 export default ReporteCargaPdfController

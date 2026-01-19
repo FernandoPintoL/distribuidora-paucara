@@ -22,6 +22,38 @@ class ClienteController extends Controller
     use ApiInertiaUnifiedResponse;
 
     /**
+     * Cache del rol Cliente para evitar múltiples queries
+     */
+    private static $clientRoleCache = null;
+
+    /**
+     * Obtiene el rol Cliente con cache para evitar queries repetidas
+     */
+    private function getClientRole()
+    {
+        if (self::$clientRoleCache === null) {
+            self::$clientRoleCache = \Spatie\Permission\Models\Role::where('name', 'cliente')->first();
+        }
+        return self::$clientRoleCache;
+    }
+
+    /**
+     * Asigna el rol Cliente de forma optimizada
+     */
+    private function assignClientRoleOptimized($user): void
+    {
+        try {
+            $clientRole = $this->getClientRole();
+            if ($clientRole && !$user->hasRole('cliente')) {
+                $user->roles()->attach($clientRole->id);
+                Log::info('✅ Rol cliente asignado', ['user_id' => $user->id]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('⚠️ Error al asignar rol cliente', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Método privado para construir la query de clientes con filtros comunes
      */
     private function buildClientesQuery(Request $request, array $options = []): \Illuminate\Pagination\LengthAwarePaginator
@@ -212,8 +244,7 @@ class ClienteController extends Controller
             // Determinar si se deben manejar direcciones
             $handleDirecciones = $this->isApiRequest() || $request->has('direcciones');
 
-            // Usar el método compartido para crear el cliente
-            // ✅ FIX: Always process files ($processFiles = true) for both API and web requests
+            // ✅ OPTIMIZACIÓN: Procesar archivos de forma sincrónica (pero de forma rápida)
             $cliente = $this->handleClientCreation($request, $data, false, $handleDirecciones, true);
 
             // Guardar ventanas de entrega (tanto para web como API)
@@ -289,7 +320,7 @@ class ClienteController extends Controller
                         $userUpdates['password'] = Hash::make($request->password);
                         Log::info('✅ Contraseña de usuario actualizada', [
                             'cliente_id' => $cliente->id,
-                            'user_id' => $cliente->user->id
+                            'user_id'    => $cliente->user->id,
                         ]);
                     }
 
@@ -316,7 +347,7 @@ class ClienteController extends Controller
                         }
 
                         $user = User::create($userData);
-                        $user->assignRole('Cliente');
+                        $this->assignClientRoleOptimized($user);
                         $data['user_id'] = $user->id;
                     }
                 }
@@ -525,7 +556,7 @@ class ClienteController extends Controller
 
         // Agregar al cliente
         $cliente->credito_utilizado = (float) $creditoUtilizado;
-        $cliente->saldo_credito = (float) $saldoDisponible;
+        $cliente->saldo_credito     = (float) $saldoDisponible;
 
         Log::info('📡 API: Cliente cargado completamente', [
             'cliente_id'        => $cliente->id,
@@ -555,7 +586,7 @@ class ClienteController extends Controller
         }
 
         // Si es Cliente, obtener su cliente vinculado
-        if ($user->hasRole(['Cliente', 'cliente', 'Preventista', 'preventista', 'Admin', 'admin', 'Manager'])) {
+        if ($user->hasRole(['cliente', 'Preventista', 'preventista', 'Admin', 'admin', 'Manager'])) {
             $cliente = $user->cliente;
 
             if (! $cliente) {
@@ -582,7 +613,7 @@ class ClienteController extends Controller
 
             // Agregar al cliente
             $cliente->credito_utilizado = (float) $creditoUtilizado;
-            $cliente->saldo_credito = (float) $saldoDisponible;
+            $cliente->saldo_credito     = (float) $saldoDisponible;
 
             return ApiResponse::success($cliente);
         }
@@ -672,9 +703,7 @@ class ClienteController extends Controller
             }
 
             $user = User::create($userData);
-
-            // Asignar rol de cliente
-            $user->assignRole('Cliente');
+            $this->assignClientRoleOptimized($user);
         }
 
         // ✅ NUEVO: Obtener el preventista (empleado) asociado al usuario autenticado
@@ -1192,7 +1221,7 @@ class ClienteController extends Controller
         }
 
         $user = User::create($userData);
-        $user->assignRole('Cliente');
+        $this->assignClientRoleOptimized($user);
 
         // Actualizar el cliente con el user_id
         $cliente->update(['user_id' => $user->id]);
@@ -1275,9 +1304,9 @@ class ClienteController extends Controller
                 $cuentasPendientes = $cliente->cuentasPorCobrar;
 
                 // Credit limit is stored directly in Cliente model
-                $limiteCredito = (float)$cliente->limite_credito ?? 0;
-                $saldoPendiente = $cuentasPendientes->sum('saldo_pendiente') ?? 0;
-                $saldoDisponible = $limiteCredito - $saldoPendiente;
+                $limiteCredito         = (float) $cliente->limite_credito ?? 0;
+                $saldoPendiente        = $cuentasPendientes->sum('saldo_pendiente') ?? 0;
+                $saldoDisponible       = $limiteCredito - $saldoPendiente;
                 $porcentajeUtilizacion = $limiteCredito > 0 ? round(($saldoPendiente / $limiteCredito) * 100, 2) : 0;
 
                 // Determine credit status
@@ -1298,31 +1327,31 @@ class ClienteController extends Controller
                 })->count();
 
                 return [
-                    'id' => $cliente->id,
-                    'nombre' => $cliente->nombre,
-                    'email' => $cliente->email,
-                    'limite_credito' => (float) $limiteCredito,
-                    'saldo_disponible' => (float) max(0, $saldoDisponible),
-                    'saldo_utilizado' => (float) $saldoPendiente,
+                    'id'                     => $cliente->id,
+                    'nombre'                 => $cliente->nombre,
+                    'email'                  => $cliente->email,
+                    'limite_credito'         => (float) $limiteCredito,
+                    'saldo_disponible'       => (float) max(0, $saldoDisponible),
+                    'saldo_utilizado'        => (float) $saldoPendiente,
                     'porcentaje_utilizacion' => (float) $porcentajeUtilizacion,
-                    'estado' => $estado,
-                    'cuentas_pendientes' => $cuentasPendientes->count(),
-                    'cuentas_vencidas' => $cuentasVencidas,
+                    'estado'                 => $estado,
+                    'cuentas_pendientes'     => $cuentasPendientes->count(),
+                    'cuentas_vencidas'       => $cuentasVencidas,
                 ];
             });
 
             return ApiResponse::success([
-                'data' => $creditoData->values()->toArray(),
+                'data'       => $creditoData->values()->toArray(),
                 'pagination' => [
-                    'total' => $clientes->total(),
-                    'per_page' => $clientes->perPage(),
+                    'total'        => $clientes->total(),
+                    'per_page'     => $clientes->perPage(),
                     'current_page' => $clientes->currentPage(),
-                    'last_page' => $clientes->lastPage(),
-                ]
+                    'last_page'    => $clientes->lastPage(),
+                ],
             ], 'Créditos obtenidos', 200);
         } catch (\Exception $e) {
             \Log::error('Error al listar créditos: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             return ApiResponse::error('Error al listar créditos: ' . $e->getMessage(), 500);
         }
@@ -1338,11 +1367,11 @@ class ClienteController extends Controller
             $user = Auth::user();
 
             $cliente = $user->cliente;
-            if (!$cliente) {
+            if (! $cliente) {
                 return ApiResponse::error('Usuario no tiene cliente asociado', 404);
             }
 
-            if (!$cliente->puede_tener_credito || $cliente->limite_credito <= 0) {
+            if (! $cliente->puede_tener_credito || $cliente->limite_credito <= 0) {
                 return ApiResponse::error('Cliente no tiene crédito disponible', 404);
             }
 
@@ -1350,21 +1379,21 @@ class ClienteController extends Controller
             $cliente->load('cuentasPorCobrar');
             $cuentasPendientes = $cliente->cuentasPorCobrar;
 
-            $limiteCredito = (float)$cliente->limite_credito;
-            $saldoPendiente = $cuentasPendientes->sum('saldo_pendiente') ?? 0;
-            $saldoDisponible = $limiteCredito - $saldoPendiente;
+            $limiteCredito         = (float) $cliente->limite_credito;
+            $saldoPendiente        = $cuentasPendientes->sum('saldo_pendiente') ?? 0;
+            $saldoDisponible       = $limiteCredito - $saldoPendiente;
             $porcentajeUtilizacion = $limiteCredito > 0 ? round(($saldoPendiente / $limiteCredito) * 100, 2) : 0;
 
             $creditoData = [
-                'id' => $cliente->id,
-                'cliente_id' => $cliente->id,
-                'cliente_nombre' => $cliente->nombre,
-                'limite_credito' => $limiteCredito,
-                'saldo_disponible' => (float)max(0, $saldoDisponible),
-                'saldo_utilizado' => (float)$saldoPendiente,
-                'porcentaje_utilizacion' => (float)$porcentajeUtilizacion,
-                'cuentas_pendientes' => $cuentasPendientes->count(),
-                'cuentas_vencidas' => $cuentasPendientes->filter(function ($cuenta) {
+                'id'                     => $cliente->id,
+                'cliente_id'             => $cliente->id,
+                'cliente_nombre'         => $cliente->nombre,
+                'limite_credito'         => $limiteCredito,
+                'saldo_disponible'       => (float) max(0, $saldoDisponible),
+                'saldo_utilizado'        => (float) $saldoPendiente,
+                'porcentaje_utilizacion' => (float) $porcentajeUtilizacion,
+                'cuentas_pendientes'     => $cuentasPendientes->count(),
+                'cuentas_vencidas'       => $cuentasPendientes->filter(function ($cuenta) {
                     return $cuenta->dias_vencido && $cuenta->dias_vencido > 0;
                 })->count(),
             ];
@@ -1372,7 +1401,7 @@ class ClienteController extends Controller
             return ApiResponse::success($creditoData, 'Crédito obtenido', 200);
         } catch (\Exception $e) {
             \Log::error('Error al obtener mi crédito: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             return ApiResponse::error('Error al obtener crédito: ' . $e->getMessage(), 500);
         }
@@ -1389,20 +1418,20 @@ class ClienteController extends Controller
             $cliente = ClienteModel::findOrFail($clienteId);
             $credito = $cliente->credito;
 
-            if (!$credito) {
+            if (! $credito) {
                 return ApiResponse::error('Cliente no tiene crédito', 404);
             }
 
             $resumen = [
-                'cliente_id' => $cliente->id,
-                'cliente_nombre' => $cliente->nombre,
-                'limite_credito' => $credito->limite_credito_aprobado,
-                'saldo_disponible' => $credito->saldo_disponible,
-                'saldo_utilizado' => $credito->saldo_utilizado,
+                'cliente_id'           => $cliente->id,
+                'cliente_nombre'       => $cliente->nombre,
+                'limite_credito'       => $credito->limite_credito_aprobado,
+                'saldo_disponible'     => $credito->saldo_disponible,
+                'saldo_utilizado'      => $credito->saldo_utilizado,
                 'porcentaje_utilizado' => $credito->porcentaje_utilizado,
-                'estado' => $credito->estado,
-                'cuentas_pendientes' => $cliente->cuentasPorCobrar()->where('estado', '!=', 'pagada')->count(),
-                'cuentas_vencidas' => $cliente->cuentasPorCobrar()->where('estado', 'vencida')->count(),
+                'estado'               => $credito->estado,
+                'cuentas_pendientes'   => $cliente->cuentasPorCobrar()->where('estado', '!=', 'pagada')->count(),
+                'cuentas_vencidas'     => $cliente->cuentasPorCobrar()->where('estado', 'vencida')->count(),
             ];
 
             return ApiResponse::success($resumen, 'Resumen de crédito obtenido', 200);
@@ -1418,13 +1447,13 @@ class ClienteController extends Controller
     {
         try {
             $stats = [
-                'total_clientes' => ClienteModel::count(),
-                'clientes_con_credito' => ClienteModel::where('puede_tener_credito', true)->count(),
+                'total_clientes'         => ClienteModel::count(),
+                'clientes_con_credito'   => ClienteModel::where('puede_tener_credito', true)->count(),
                 'credito_total_aprobado' => \App\Models\Credito::sum('limite_credito_aprobado'),
-                'credito_utilizado' => \App\Models\Credito::sum('saldo_utilizado'),
-                'credito_disponible' => \App\Models\Credito::sum('saldo_disponible'),
-                'clientes_criticos' => \App\Models\Credito::where('estado', 'critico')->count(),
-                'clientes_excedidos' => \App\Models\Credito::where('estado', 'excedido')->count(),
+                'credito_utilizado'      => \App\Models\Credito::sum('saldo_utilizado'),
+                'credito_disponible'     => \App\Models\Credito::sum('saldo_disponible'),
+                'clientes_criticos'      => \App\Models\Credito::where('estado', 'critico')->count(),
+                'clientes_excedidos'     => \App\Models\Credito::where('estado', 'excedido')->count(),
                 'cuentas_vencidas_total' => \App\Models\CuentaPorCobrar::where('estado', 'vencida')->count(),
             ];
 
@@ -1452,8 +1481,8 @@ class ClienteController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Exportación de créditos en proceso',
-                'format' => $formato,
-                'data' => $creditos,
+                'format'  => $formato,
+                'data'    => $creditos,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1471,11 +1500,11 @@ class ClienteController extends Controller
         try {
             $validated = $request->validate([
                 'nuevo_limite' => 'required|numeric|min:0',
-                'razon' => 'nullable|string|max:500',
+                'razon'        => 'nullable|string|max:500',
             ]);
 
             $credito = $cliente->credito;
-            if (!$credito) {
+            if (! $credito) {
                 return ApiResponse::error('Cliente no tiene crédito', 404);
             }
 
@@ -1483,15 +1512,15 @@ class ClienteController extends Controller
 
             $credito->update([
                 'limite_credito_aprobado' => $validated['nuevo_limite'],
-                'saldo_disponible' => $validated['nuevo_limite'] - $credito->saldo_utilizado,
+                'saldo_disponible'        => $validated['nuevo_limite'] - $credito->saldo_utilizado,
             ]);
 
             Log::info('Límite de crédito ajustado', [
-                'cliente_id' => $cliente->id,
+                'cliente_id'      => $cliente->id,
                 'limite_anterior' => $limiteAnterior,
-                'limite_nuevo' => $validated['nuevo_limite'],
-                'razon' => $validated['razon'] ?? 'Sin especificar',
-                'usuario_id' => Auth::id(),
+                'limite_nuevo'    => $validated['nuevo_limite'],
+                'razon'           => $validated['razon'] ?? 'Sin especificar',
+                'usuario_id'      => Auth::id(),
             ]);
 
             return ApiResponse::success($credito->toArray(), 'Límite de crédito ajustado exitosamente', 200);
