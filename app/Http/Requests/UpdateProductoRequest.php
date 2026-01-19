@@ -88,6 +88,7 @@ class UpdateProductoRequest extends FormRequest
             'proveedor_id'             => ['nullable', 'exists:proveedores,id'],
             'stock_minimo'             => ['nullable', 'integer', 'min:0'],
             'stock_maximo'             => ['nullable', 'integer', 'min:0'],
+            'limite_venta'             => ['nullable', 'integer', 'min:1'], // ✨ NUEVO
 
             // Precios
             'precios'                  => ['nullable', 'array'],
@@ -154,6 +155,9 @@ class UpdateProductoRequest extends FormRequest
             'stock_maximo.integer'                     => 'El stock máximo debe ser un número entero.',
             'stock_maximo.min'                         => 'El stock máximo no puede ser negativo.',
 
+            'limite_venta.integer'                     => 'El límite de venta debe ser un número entero.', // ✨ NUEVO
+            'limite_venta.min'                         => 'El límite de venta debe ser mayor que 0.',       // ✨ NUEVO
+
             'precios.array'                            => 'Los precios deben ser un arreglo.',
             'precios.*.monto.required_with'            => 'El monto del precio es obligatorio.',
             'precios.*.monto.numeric'                  => 'El monto del precio debe ser un número.',
@@ -217,6 +221,7 @@ class UpdateProductoRequest extends FormRequest
             'proveedor_id'      => 'proveedor',
             'stock_minimo'      => 'stock mínimo',
             'stock_maximo'      => 'stock máximo',
+            'limite_venta'      => 'límite de venta', // ✨ NUEVO
 
             'precios'           => 'precios',
             'precios.*.monto'   => 'monto del precio',

@@ -22,6 +22,7 @@ export interface Step1Props {
     activo?: boolean;
     stock_minimo?: number | null;
     stock_maximo?: number | null;
+    limite_venta?: number | null; // ✨ NUEVO - Límite de cantidad por venta
     es_fraccionado?: boolean; // ✨ NUEVO
   };
   errors: Record<string, string>;
@@ -105,8 +106,9 @@ export default function Step1DatosProducto({
 
   // ✨ Función para cargar datos cuando se selecciona un producto existente
   const handleProductoSelection = (selectedValue: string | number | null) => {
+    // ✅ El nombre ya se guardó en el onChange, así que solo procesamos si es un producto existente
     if (!selectedValue) {
-      setData('nombre', '');
+      // Si está vacío, no hacer nada (el onChange ya manejó el setData)
       return;
     }
 
@@ -116,7 +118,7 @@ export default function Step1DatosProducto({
       const productoData = productosCacheMap[productoId];
       console.log('✨ Cargando producto existente:', productoData);
 
-      // Cargar todos los datos del producto en el formulario
+      // ✅ IMPORTANTE: Cargar TODOS los datos del producto existente
       setData('nombre', productoData.nombre);
       setData('sku', productoData.sku || '');
       setData('descripcion', productoData.descripcion || '');
@@ -127,13 +129,12 @@ export default function Step1DatosProducto({
       setData('proveedor_id', productoData.proveedor_id ? Number(productoData.proveedor_id) : '');
       setData('stock_minimo', productoData.stock_minimo || 0);
       setData('stock_maximo', productoData.stock_maximo || 50);
+      setData('limite_venta', productoData.limite_venta || null); // ✨ NUEVO
       setData('activo', productoData.activo ?? true);
 
       NotificationService.success(`Producto "${productoData.nombre}" cargado correctamente`);
-    } else {
-      // Es un texto nuevo - usar como nombre
-      setData('nombre', String(selectedValue));
     }
+    // ✅ Si no es un ID numérico válido, no hacer nada (ya se guardó el nombre en el onChange)
   };
 
   // 🔍 Función de búsqueda para proveedores - Busca en la API
@@ -195,6 +196,9 @@ export default function Step1DatosProducto({
             label="Nombre del Producto *"
             value={data.nombre ?? ''}
             onChange={(value) => {
+              // 🔑 IMPORTANTE: Guardar INMEDIATAMENTE el nombre mientras escribes
+              setData('nombre', String(value || ''));
+              // Luego procesar la selección (búsqueda, carga de producto existente, etc)
               handleProductoSelection(value);
             }}
             onSearch={searchProductos}
@@ -450,6 +454,26 @@ export default function Step1DatosProducto({
             {errors.stock_maximo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.stock_maximo}</div>}
             <div className="text-xs text-muted-foreground">
               💡 Recibirás una alerta cuando el stock total supere este valor
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="limite_venta" className="flex items-center gap-2">
+              Límite de Venta
+              <span className="text-xs font-normal text-muted-foreground">(Máximo por venta)</span>
+            </Label>
+            <Input
+              id="limite_venta"
+              type="number"
+              min="0"
+              step="1"
+              value={data.limite_venta ?? ''}
+              onChange={e => setData('limite_venta', e.target.value ? Number(e.target.value) : null)}
+              className={getInputClassName('limite_venta')}
+              placeholder="Ej: 50 (dejar vacío para sin límite)"
+            />
+            {errors.limite_venta && <div className="text-red-500 text-sm mt-1">⚠️ {errors.limite_venta}</div>}
+            <div className="text-xs text-muted-foreground">
+              💡 Cantidad máxima permitida para adicionar al carrito. Dejar vacío = sin límite
             </div>
           </div>
         </div>

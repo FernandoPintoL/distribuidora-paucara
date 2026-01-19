@@ -706,6 +706,7 @@ class VentaController extends Controller
                 'tipoDocumento',
                 'moneda',
                 'estadoDocumento',
+                'accessToken',
             ]);
 
             return view($plantilla->vista_blade, [

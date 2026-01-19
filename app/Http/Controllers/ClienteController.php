@@ -516,12 +516,25 @@ class ClienteController extends Controller
             },
         ]);
 
+        // ✅ NUEVO: Calcular crédito utilizado y disponible
+        $creditoUtilizado = $cliente->cuentasPorCobrar()
+            ->where('saldo_pendiente', '>', 0)
+            ->sum('saldo_pendiente');
+
+        $saldoDisponible = max(0, ($cliente->limite_credito ?? 0) - $creditoUtilizado);
+
+        // Agregar al cliente
+        $cliente->credito_utilizado = (float) $creditoUtilizado;
+        $cliente->saldo_credito = (float) $saldoDisponible;
+
         Log::info('📡 API: Cliente cargado completamente', [
             'cliente_id'        => $cliente->id,
             'nombre'            => $cliente->nombre,
             'categorias_count'  => $cliente->categorias->count(),
             'ventanas_count'    => $cliente->ventanasEntrega->count(),
             'direcciones_count' => $cliente->direcciones->count(),
+            'credito_utilizado' => $creditoUtilizado,
+            'saldo_disponible'  => $saldoDisponible,
         ]);
 
         return ApiResponse::success($cliente);
@@ -559,6 +572,17 @@ class ClienteController extends Controller
                     $query->where('saldo_pendiente', '>', 0)->orderByDesc('fecha_vencimiento');
                 },
             ]);
+
+            // ✅ NUEVO: Calcular crédito utilizado y disponible
+            $creditoUtilizado = $cliente->cuentasPorCobrar()
+                ->where('saldo_pendiente', '>', 0)
+                ->sum('saldo_pendiente');
+
+            $saldoDisponible = max(0, ($cliente->limite_credito ?? 0) - $creditoUtilizado);
+
+            // Agregar al cliente
+            $cliente->credito_utilizado = (float) $creditoUtilizado;
+            $cliente->saldo_credito = (float) $saldoDisponible;
 
             return ApiResponse::success($cliente);
         }

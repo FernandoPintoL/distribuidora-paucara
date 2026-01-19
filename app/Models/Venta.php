@@ -287,6 +287,14 @@ class Venta extends Model
     }
 
     /**
+     * Relación con el token de acceso público
+     */
+    public function accessToken()
+    {
+        return $this->hasOne(VentaAccessToken::class);
+    }
+
+    /**
      * Métodos de Utilidad para Logística
      */
 

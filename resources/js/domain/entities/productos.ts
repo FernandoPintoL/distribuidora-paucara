@@ -97,6 +97,7 @@ export interface ProductoFormData extends BaseFormData {
   proveedor_id?: Id | '';
   stock_minimo?: number | null;
   stock_maximo?: number | null;
+  limite_venta?: number | null; // ✨ NUEVO: Límite máximo por venta
   activo?: boolean;
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   precios: Precio[];

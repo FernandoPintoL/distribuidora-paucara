@@ -26,6 +26,7 @@ class Producto extends Model
         'unidad_medida_id',
         'stock_minimo',
         'stock_maximo',
+        'limite_venta', // ✨ NUEVO - Límite de cantidad por venta
         'activo',
         'fecha_creacion',
         'es_alquilable',
@@ -42,6 +43,7 @@ class Producto extends Model
             'peso' => 'float',
             'stock_minimo' => 'integer',
             'stock_maximo' => 'integer',
+            'limite_venta' => 'integer', // ✨ NUEVO
             'activo' => 'boolean',
             'es_alquilable' => 'boolean',
             'es_fraccionado' => 'boolean',

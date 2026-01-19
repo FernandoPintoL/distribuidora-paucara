@@ -24,6 +24,12 @@ Route::get('/test-logo', function () {
     return view('test-logo', ['empresa' => $empresa]);
 })->name('test.logo');
 
+// Rutas públicas para compartir ventas con clientes
+Route::prefix('venta')->name('venta.')->group(function () {
+    Route::get('preview/{token}', [App\Http\Controllers\VentaPublicController::class, 'preview'])->name('preview');
+    Route::get('download/{token}', [App\Http\Controllers\VentaPublicController::class, 'show'])->name('download');
+});
+
 // ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma web
 Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
@@ -313,7 +319,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // Acciones POST - usan ProformaController (compatible con ReservaStock del web UI)
         Route::post('/{id}/aprobar', [\App\Http\Controllers\ProformaController::class, 'aprobar'])->name('aprobar');
         Route::post('/{id}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
-        Route::post('/{id}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])->name('convertir-venta');
+        Route::post('/{id}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])
+            ->middleware('caja.abierta')
+            ->name('convertir-venta');
         Route::post('/{id}/renovar-reservas', [\App\Http\Controllers\ProformaController::class, 'renovarReservas'])->name('renovar-reservas');
 
         Route::get('{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
@@ -327,6 +335,13 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('/cerrar', [\App\Http\Controllers\CajaController::class, 'cerrarCaja'])->name('cerrar');
         Route::get('/estado', [\App\Http\Controllers\CajaController::class, 'estadoCajas'])->name('estado');
         Route::get('/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosDia'])->name('movimientos');
+
+        // ✅ Rutas para gastos/cajas chicas
+        Route::prefix('gastos')->name('gastos.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\GastoController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\GastoController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\GastoController::class, 'store'])->name('store');
+        });
 
         // ✅ Rutas de auditoría de cajas (Sprint 4)
         Route::prefix('auditoria')->name('auditoria.')->middleware('permission:admin.auditoria')->group(function () {
@@ -537,6 +552,14 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::get('rotacion', [\App\Http\Controllers\ReporteInventarioController::class, 'rotacion'])->name('rotacion');
             Route::get('movimientos', [\App\Http\Controllers\ReporteInventarioController::class, 'movimientos'])->name('movimientos');
             Route::get('export', [\App\Http\Controllers\ReporteInventarioController::class, 'export'])->name('export');
+        });
+
+        // Reportes de ventas
+        Route::prefix('ventas')->name('ventas.')->group(function () {
+            Route::get('por-periodo', [\App\Http\Controllers\ReporteVentasController::class, 'porPeriodo'])->name('por-periodo');
+            Route::get('por-cliente-producto', [\App\Http\Controllers\ReporteVentasController::class, 'porClienteProducto'])->name('por-cliente-producto');
+            Route::get('por-vendedor-estado-pago', [\App\Http\Controllers\ReporteVentasController::class, 'porVendedorEstadoPago'])->name('por-vendedor-estado-pago');
+            Route::post('export', [\App\Http\Controllers\ReporteVentasController::class, 'export'])->name('export');
         });
     });
 

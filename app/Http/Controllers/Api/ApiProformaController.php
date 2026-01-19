@@ -1877,8 +1877,10 @@ class ApiProformaController extends Controller
                     'estado_logistico' => $proforma->esDeAppExterna()
                         ? \App\Models\Venta::ESTADO_PENDIENTE_ENVIO
                         : null,
-                    // Estado del documento
-                    'estado_documento_id' => \App\Models\EstadoDocumento::where('nombre', 'PENDIENTE')->first()?->id,
+                    // ✅ Estado del documento: APROBADO (ID=3) cuando se convierte proforma aprobada a venta
+                    'estado_documento_id' => \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
+                        ->where('activo', true)
+                        ->first()?->id ?? 3,
                 ];
 
                 // Crear la venta
@@ -2164,8 +2166,10 @@ class ApiProformaController extends Controller
                     'estado_pago' => $estadoPago,
                     'monto_pagado' => $montoPagado,
                     'monto_pendiente' => $total - $montoPagado,
-                    // Estado del documento
-                    'estado_documento_id' => \App\Models\EstadoDocumento::where('nombre', 'Pendiente')->first()?->id ?? 2,
+                    // ✅ Estado del documento: APROBADO (ID=3) cuando se convierte proforma aprobada a venta
+                    'estado_documento_id' => \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
+                        ->where('activo', true)
+                        ->first()?->id ?? 3,
                 ];
 
                 // Crear la venta

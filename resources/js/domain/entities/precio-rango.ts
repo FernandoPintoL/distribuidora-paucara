@@ -25,6 +25,15 @@ export interface PrecioRango extends BaseEntity {
     nombre: string;
     codigo: string;
   };
+  // ✅ NUEVO: Soportar también formato snake_case del API
+  tipo_precio?: {
+    id: number;
+    nombre: string;
+    codigo: string;
+  };
+  rango_texto?: string;
+  precio_unitario?: number;
+  vigente?: boolean;
 }
 
 export interface PrecioRangoFormData extends BaseFormData {

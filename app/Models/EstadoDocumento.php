@@ -47,4 +47,18 @@ class EstadoDocumento extends Model
     {
         return $this->hasMany(Proforma::class, 'estado_documento_id');
     }
+
+    /**
+     * Obtener el estado inicial para documentos nuevos
+     * Busca por código PENDIENTE, si no existe usa id=2 como fallback
+     */
+    public static function obtenerEstadoInicial(): int
+    {
+        $estado = self::where('codigo', 'PENDIENTE')
+            ->where('activo', true)
+            ->first();
+
+        // Si existe, retorna su ID, si no usa fallback 2
+        return $estado?->id ?? 2;
+    }
 }

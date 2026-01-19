@@ -13,8 +13,22 @@
         }
 
         body {
-            font-family: {{ $empresa->configuracion_impresion['fuente_hoja'] ?? 'Arial' }}, sans-serif;
-            font-size: {{ $empresa->configuracion_impresion['tamaño_fuente_hoja'] ?? '10px' }};
+            font-family: {
+                    {
+                    $empresa->configuracion_impresion['fuente_hoja'] ?? 'Arial'
+                }
+            }
+
+            ,
+            sans-serif;
+
+            font-size: {
+                    {
+                    $empresa->configuracion_impresion['tamaño_fuente_hoja'] ?? '10px'
+                }
+            }
+
+            ;
             color: #333;
             line-height: 1.4;
         }
@@ -22,8 +36,16 @@
         .page {
             width: 210mm;
             min-height: 297mm;
-            padding: {{ $empresa->configuracion_impresion['margen_hoja'] ?? '10mm' }};
+
+            padding: {
+                    {
+                    $empresa->configuracion_impresion['margen_hoja'] ?? '10mm'
+                }
+            }
+
+            ;
             margin: 0 auto;
+            box-sizing: border-box;
         }
 
         /* Header con información de empresa */
@@ -193,22 +215,171 @@
             color: #4F81BD;
         }
 
+        /* Dirección de Entrega */
+        .entrega-info {
+            margin: 15px 0;
+            padding: 10px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+            font-size: 9px;
+        }
+
+        .entrega-info strong {
+            color: #2196F3;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Estado Logístico */
+        .estado-logistico {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+            border-radius: 4px;
+            font-size: 9px;
+        }
+
+        .estado-logistico strong {
+            color: #9c27b0;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Información de Pago */
+        .informacion-pago {
+            margin: 15px 0;
+            padding: 10px;
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            border-radius: 4px;
+            font-size: 9px;
+        }
+
+        .informacion-pago p {
+            margin: 5px 0;
+        }
+
+        /* Cliente Info */
+        .cliente-info {
+            font-size: 9px;
+        }
+
+        .cliente-info p {
+            margin: 3px 0;
+        }
+
+        /* QR Code */
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        .qr-box {
+            text-align: center;
+        }
+
+        .qr-code {
+            max-width: 80px;
+            max-height: 80px;
+            width: 100%;
+            height: auto;
+            border: 1px solid #4F81BD;
+            padding: 3px;
+            background: white;
+        }
+
+        .qr-label {
+            font-size: 7px;
+            margin-top: 3px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        /* Términos y Condiciones */
+        .terminos-condiciones {
+            margin-top: 25px;
+            padding: 12px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 7px;
+            page-break-inside: avoid;
+        }
+
+        .terminos-titulo {
+            display: block;
+            color: #333;
+            font-size: 8px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        .terminos-contenido {
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        .terminos-contenido ul {
+            margin: 5px 0;
+            padding-left: 15px;
+        }
+
+        .terminos-contenido li {
+            margin: 3px 0;
+            font-size: 7px;
+        }
+
+        .terminos-contacto {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+            font-size: 8px;
+        }
+
+        .terminos-contacto strong {
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .terminos-contacto p {
+            margin: 2px 0;
+            font-size: 7px;
+        }
+
         /* Utilities */
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .text-left { text-align: left; }
-        .bold { font-weight: bold; }
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
 
         @yield('estilos-adicionales')
+
     </style>
 </head>
 <body>
     <div class="page">
         {{-- Header con datos de empresa --}}
-        <div class="header">
+        <div class="header" style="padding-left: 25px; padding-right: 25px;">
             <div class="header-logo">
                 @if($empresa->logo_principal)
-                    <img src="{{ $empresa->logo_principal }}" alt="{{ $empresa->nombre_comercial }}">
+                <img src="{{ $empresa->logo_principal }}" alt="{{ $empresa->nombre_comercial }}">
                 @endif
             </div>
             <div class="header-empresa">
@@ -218,38 +389,40 @@
                 <p>{{ $empresa->direccion }}</p>
                 <p>{{ $empresa->ciudad }} - {{ $empresa->pais }}</p>
                 @if($empresa->telefono)
-                    <p>Tel: {{ $empresa->telefono }}</p>
+                <p>Tel: {{ $empresa->telefono }}</p>
                 @endif
                 @if($empresa->email)
-                    <p>Email: {{ $empresa->email }}</p>
+                <p>Email: {{ $empresa->email }}</p>
                 @endif
             </div>
         </div>
 
         {{-- Contenido específico de cada documento --}}
-        @yield('contenido')
+        <div style="padding-left: 25px; padding-right: 25px;">
+            @yield('contenido')
+        </div>
 
         {{-- Footer --}}
-        <div class="footer">
+        <div class="footer" style="padding-left: 25px; padding-right: 25px;">
             @if($empresa->logo_footer)
-                <div style="margin-bottom: 10px;">
-                    <img src="{{ $empresa->logo_footer }}" alt="Logo Footer" style="max-width: 80px; max-height: 30px; object-fit: contain;">
-                </div>
+            <div style="margin-bottom: 10px;">
+                <img src="{{ $empresa->logo_footer }}" alt="Logo Footer" style="max-width: 80px; max-height: 30px; object-fit: contain;">
+            </div>
             @elseif($empresa->logo_principal)
-                <div style="margin-bottom: 10px;">
-                    <img src="{{ $empresa->logo_principal }}" alt="Logo Footer" style="max-width: 80px; max-height: 30px; object-fit: contain;">
-                </div>
+            <div style="margin-bottom: 10px;">
+                <img src="{{ $empresa->logo_principal }}" alt="Logo Footer" style="max-width: 80px; max-height: 30px; object-fit: contain;">
+            </div>
             @endif
             @if($empresa->mensaje_footer)
-                <p>{{ $empresa->mensaje_footer }}</p>
+            <p>{{ $empresa->mensaje_footer }}</p>
             @endif
             @if($empresa->mensaje_legal)
-                <p style="font-size: 7px; margin-top: 5px;">{{ $empresa->mensaje_legal }}</p>
+            <p style="font-size: 7px; margin-top: 5px;">{{ $empresa->mensaje_legal }}</p>
             @endif
             <p style="margin-top: 5px;">
                 Impreso: {{ $fecha_impresion->format('d/m/Y H:i:s') }}
                 @if($usuario)
-                    | Usuario: {{ $usuario->name }}
+                | Usuario: {{ $usuario->name }}
                 @endif
             </p>
         </div>

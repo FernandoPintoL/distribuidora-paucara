@@ -40,6 +40,7 @@ export function ApprovalPaymentForm({
     onCancel,
     isSubmitting
 }: ApprovalPaymentFormProps) {
+
     const [tiposPago, setTiposPago] = useState<TipoPago[]>([]);
     const [loadingTiposPago, setLoadingTiposPago] = useState(true);
     const [payment, setPayment] = useState<PaymentData>({
@@ -47,6 +48,9 @@ export function ApprovalPaymentForm({
         politica_pago: proforma.politica_pago || 'CONTRA_ENTREGA', // ✅ NUEVO: Usar politica_pago de proforma
         monto_pagado: 0,
     });
+
+    // ✅ NUEVO: Estado para datos de crédito del cliente
+    const [clienteConCredito, setClienteConCredito] = useState(proforma.cliente);
 
     // ✅ NUEVO: Hook para obtener políticas de pago disponibles (desde API)
     const {
@@ -57,7 +61,7 @@ export function ApprovalPaymentForm({
         validarMonto,
         getMensajeCreditoNoDisponible
     } = usePoliticasPago({
-        cliente: proforma.cliente,
+        cliente: clienteConCredito,
     });
 
     // Cargar tipos de pago al montar el componente
@@ -66,9 +70,14 @@ export function ApprovalPaymentForm({
             .then(res => res.json())
             .then(data => {
                 setTiposPago(data.data || []);
-                // Establecer tipo de pago por defecto al primero activo
-                const defaultTipo = data.data?.find((t: TipoPago) => t.activo);
+                // ✅ Establecer tipo de pago por defecto: EFECTIVO (si existe) o el primero activo
+                const efectivo = data.data?.find((t: TipoPago) => t.codigo === 'EFECTIVO' && t.activo);
+                const defaultTipo = efectivo || data.data?.find((t: TipoPago) => t.activo);
                 if (defaultTipo) {
+                    console.log('%c💰 Tipo de pago por defecto:', 'color: green;', {
+                        codigo: defaultTipo.codigo,
+                        nombre: defaultTipo.nombre,
+                    });
                     setPayment(prev => ({ ...prev, tipo_pago_id: defaultTipo.id }));
                 }
             })
@@ -79,9 +88,89 @@ export function ApprovalPaymentForm({
                     { id: 1, codigo: 'EFECTIVO', nombre: 'Efectivo', activo: true },
                     { id: 2, codigo: 'TRANSFERENCIA', nombre: 'Transferencia', activo: true },
                 ]);
+                // ✅ Establecer EFECTIVO como default en fallback también
+                setPayment(prev => ({ ...prev, tipo_pago_id: 1 }));
             })
             .finally(() => setLoadingTiposPago(false));
     }, []);
+
+    // ✅ NUEVO: Cargar cliente completo SIEMPRE (no solo si es CRÉDITO)
+    // Esto es necesario para filtrar tipos de pago según puede_tener_credito
+    useEffect(() => {
+        if (proforma.cliente?.id) {
+            console.log('%c📊 Cargando datos completos del cliente:', 'color: green;', {
+                cliente_id: proforma.cliente.id,
+                cliente_nombre: proforma.cliente.nombre,
+            });
+
+            fetch(`/api/clientes/${proforma.cliente.id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.data) {
+                        // Convertir limite_credito a número si viene como string
+                        const clienteActualizado = {
+                            ...data.data,
+                            limite_credito: parseFloat(data.data.limite_credito || '0'),
+                        };
+
+                        // Actualizar el estado con el cliente completo
+                        setClienteConCredito(clienteActualizado);
+
+                        console.log('%c✅ Cliente cargado completamente:', 'color: green;', {
+                            puede_tener_credito: clienteActualizado.puede_tener_credito,
+                            credito_utilizado: clienteActualizado.credito_utilizado,
+                            saldo_credito: clienteActualizado.saldo_credito,
+                            limite_credito: clienteActualizado.limite_credito,
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al cargar datos del cliente:', error);
+                });
+        }
+    }, [proforma.cliente?.id]);
+
+    // ✅ NUEVO: Filtrar tipos de pago según permisos del cliente
+    useEffect(() => {
+        if (tiposPago.length > 0) {
+            const puedeCredito = clienteConCredito?.puede_tener_credito === true;
+
+            const tiposFiltrados = tiposPago.filter(tipo => {
+                // Si es tipo de pago CRÉDITO, solo mostrarlo si el cliente puede tener crédito
+                if (tipo.codigo === 'CREDITO') {
+                    console.log('%c💳 Filtrando tipo CRÉDITO:', 'color: orange;', {
+                        puede_tener_credito: puedeCredito,
+                        mostrar: puedeCredito,
+                    });
+                    return puedeCredito;
+                }
+                // Los demás tipos siempre están disponibles
+                return true;
+            });
+
+            console.log('%c📊 Tipos de pago filtrados:', 'color: green;', {
+                total: tiposPago.length,
+                filtrados: tiposFiltrados.length,
+                tipos: tiposFiltrados.map(t => t.codigo),
+            });
+
+            // Solo actualizar si hay cambios
+            if (tiposFiltrados.length !== tiposPago.length) {
+                setTiposPago(tiposFiltrados);
+
+                // ✅ NUEVO: Si el cliente NO puede tener crédito y la política seleccionada es CRÉDITO,
+                // cambiar a CONTRA_ENTREGA
+                if (!puedeCredito && payment.politica_pago === 'CREDITO') {
+                    console.log('%c⚠️ Cliente sin permiso de crédito, cambiando política a CONTRA_ENTREGA:', 'color: red;');
+                    setPayment(prev => ({
+                        ...prev,
+                        politica_pago: 'CONTRA_ENTREGA',
+                        monto_pagado: 0,
+                    }));
+                }
+            }
+        }
+    }, [clienteConCredito?.puede_tener_credito, payment.politica_pago]);
 
     // Actualizar estado de coordinación cuando cambie el pago
     useEffect(() => {
@@ -235,13 +324,49 @@ export function ApprovalPaymentForm({
                             </span>
                         </div>
                         {proforma.politica_pago === 'CREDITO' && (
-                            <div className="mt-2 rounded bg-white p-2 dark:bg-slate-900">
-                                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                                    Límite de crédito disponible:
-                                </p>
-                                <p className="font-semibold text-slate-900 dark:text-slate-100">
-                                    Bs. {(proforma.cliente?.limite_credito ?? 0).toFixed(2)}
-                                </p>
+                            <div className="mt-2 space-y-2 rounded bg-gradient-to-br from-blue-50 to-indigo-50 p-3 dark:from-slate-800 dark:to-slate-900">
+                                {/* Límite de crédito */}
+                                <div className="flex items-center justify-between border-b border-blue-200 pb-2 dark:border-slate-700">
+                                    <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                        Límite de crédito:
+                                    </p>
+                                    <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                        Bs. {(parseFloat(clienteConCredito?.limite_credito || '0') || 0).toFixed(2)}
+                                    </p>
+                                </div>
+
+                                {/* Crédito utilizado */}
+                                <div className="flex items-center justify-between border-b border-orange-200 pb-2 dark:border-orange-900/30">
+                                    <p className="text-xs font-medium text-orange-700 dark:text-orange-300">
+                                        Crédito utilizado:
+                                    </p>
+                                    <p className="font-semibold text-orange-900 dark:text-orange-100">
+                                        Bs. {(clienteConCredito?.credito_utilizado ?? 0).toFixed(2)}
+                                    </p>
+                                </div>
+
+                                {/* Crédito disponible (calculado) */}
+                                <div className="flex items-center justify-between rounded bg-white p-2 dark:bg-slate-800">
+                                    <p className="text-xs font-medium font-bold text-green-700 dark:text-green-300">
+                                        Crédito disponible:
+                                    </p>
+                                    <p className={`font-bold ${
+                                        ((clienteConCredito?.saldo_credito ?? 0) >= proforma.total)
+                                            ? 'text-green-900 dark:text-green-100'
+                                            : 'text-red-900 dark:text-red-100'
+                                    }`}>
+                                        Bs. {(clienteConCredito?.saldo_credito ?? 0).toFixed(2)}
+                                    </p>
+                                </div>
+
+                                {/* Advertencia si no hay suficiente crédito */}
+                                {(clienteConCredito?.saldo_credito ?? 0) < proforma.total && (
+                                    <div className="mt-2 rounded bg-red-50 p-2 dark:bg-red-950">
+                                        <p className="text-xs text-red-700 dark:text-red-300">
+                                            ⚠️ Crédito insuficiente. Necesita Bs. {(proforma.total - (clienteConCredito?.saldo_credito ?? 0)).toFixed(2)} adicional.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </CardContent>
@@ -273,7 +398,11 @@ export function ApprovalPaymentForm({
                                 <SelectValue placeholder="Seleccione método de pago" />
                             </SelectTrigger>
                             <SelectContent className="bg-popover dark:bg-popover text-popover-foreground dark:text-popover-foreground border-input dark:border-input">
-                                {tiposPago.filter(t => t.activo).map(tipo => (
+                                {tiposPago.filter(t =>
+                                    t.activo &&
+                                    // ✅ Filtrar CRÉDITO solo si el cliente puede tener crédito
+                                    (t.codigo !== 'CREDITO' || clienteConCredito?.puede_tener_credito === true)
+                                ).map(tipo => (
                                     <SelectItem
                                         key={tipo.id}
                                         value={tipo.id.toString()}
@@ -298,57 +427,58 @@ export function ApprovalPaymentForm({
                                 <span className="ml-2 text-sm text-muted-foreground">Cargando políticas...</span>
                             </div>
                         ) : (
-                        <div className="space-y-2">
-                            {politicasDisponibles.map((politica) => {
-                                const isSelected = payment.politica_pago === politica.codigo;
-                                const isDisabled = !puedeUsarPolitica(politica.codigo);
-                                const creditoMsg = politica.codigo === 'CREDITO' ? getMensajeCreditoNoDisponible() : null;
+                            <div className="space-y-2">
+                                {politicasDisponibles
+                                    // ✅ Filtrar CRÉDITO solo si el cliente puede tener crédito
+                                    .filter(p => p.codigo !== 'CREDITO' || clienteConCredito?.puede_tener_credito === true)
+                                    .map((politica) => {
+                                    const isSelected = payment.politica_pago === politica.codigo;
+                                    const isDisabled = !puedeUsarPolitica(politica.codigo);
+                                    const creditoMsg = politica.codigo === 'CREDITO' ? getMensajeCreditoNoDisponible() : null;
 
-                                return (
-                                    <label
-                                        key={politica.codigo}
-                                        htmlFor={`politica_${politica.codigo}`}
-                                        className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                            isDisabled
-                                                ? 'opacity-50 cursor-not-allowed'
-                                                : 'hover:bg-accent/5 dark:hover:bg-accent/10'
-                                        } ${
-                                            isSelected
-                                                ? 'border-accent bg-accent/5 dark:bg-accent/10'
-                                                : 'border-input'
-                                        }`}
-                                    >
-                                        <input
-                                            type="radio"
-                                            id={`politica_${politica.codigo}`}
-                                            name="politica_pago"
-                                            value={politica.codigo}
-                                            checked={isSelected}
-                                            onChange={(e) => handlePolicyChange(e.target.value)}
-                                            disabled={isSubmitting || isDisabled}
-                                            className="h-4 w-4 cursor-pointer"
-                                        />
-                                        <div className="ml-3 flex-1">
-                                            <div className="flex items-center gap-2 font-medium text-sm">
-                                                {getPolicyIcon(politica.codigo)}
-                                                <span>{politica.nombre}</span>
-                                                {politica.codigo === 'CREDITO' && isDisabled && (
-                                                    <AlertCircle className="h-4 w-4 text-amber-500" title={creditoMsg || ''} />
+                                    return (
+                                        <label
+                                            key={politica.codigo}
+                                            htmlFor={`politica_${politica.codigo}`}
+                                            className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${isDisabled
+                                                    ? 'opacity-50 cursor-not-allowed'
+                                                    : 'hover:bg-accent/5 dark:hover:bg-accent/10'
+                                                } ${isSelected
+                                                    ? 'border-accent bg-accent/5 dark:bg-accent/10'
+                                                    : 'border-input'
+                                                }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                id={`politica_${politica.codigo}`}
+                                                name="politica_pago"
+                                                value={politica.codigo}
+                                                checked={isSelected}
+                                                onChange={(e) => handlePolicyChange(e.target.value)}
+                                                disabled={isSubmitting || isDisabled}
+                                                className="h-4 w-4 cursor-pointer"
+                                            />
+                                            <div className="ml-3 flex-1">
+                                                <div className="flex items-center gap-2 font-medium text-sm">
+                                                    {getPolicyIcon(politica.codigo)}
+                                                    <span>{politica.nombre}</span>
+                                                    {politica.codigo === 'CREDITO' && isDisabled && (
+                                                        <AlertCircle className="h-4 w-4 text-amber-500" title={creditoMsg || ''} />
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {politica.descripcion}
+                                                </p>
+                                                {creditoMsg && isDisabled && (
+                                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                                        {creditoMsg}
+                                                    </p>
                                                 )}
                                             </div>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                {politica.descripcion}
-                                            </p>
-                                            {creditoMsg && isDisabled && (
-                                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                                                    {creditoMsg}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </label>
-                                );
-                            })}
-                        </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
 

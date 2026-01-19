@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import gastos from './gastos'
 import auditoria from './auditoria'
 /**
 * @see \App\Http\Controllers\CajaController::index
@@ -350,6 +351,7 @@ abrir,
 cerrar,
 estado,
 movimientos,
+gastos,
 auditoria,
 }
 

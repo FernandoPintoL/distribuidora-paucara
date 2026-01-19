@@ -21,6 +21,7 @@ import ReporteCargoListController from './ReporteCargoListController'
 import ProveedorController from './ProveedorController'
 import ImageBackupController from './ImageBackupController'
 import AuditoriaCajaController from './AuditoriaCajaController'
+import VentaPublicController from './VentaPublicController'
 import DashboardController from './DashboardController'
 import RoleController from './RoleController'
 import CategoriaController from './CategoriaController'
@@ -46,6 +47,7 @@ import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import ProformaController from './ProformaController'
 import CajaController from './CajaController'
+import GastoController from './GastoController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import InventarioInicialController from './InventarioInicialController'
 import Web from './Web'
@@ -58,6 +60,7 @@ import ReportePreciosController from './ReportePreciosController'
 import ReporteCreditoController from './ReporteCreditoController'
 import ReporteVisitasController from './ReporteVisitasController'
 import ReporteInventarioController from './ReporteInventarioController'
+import ReporteVentasController from './ReporteVentasController'
 import ReservaStockController from './ReservaStockController'
 import ConteoFisicoController from './ConteoFisicoController'
 import AnalisisAbcController from './AnalisisAbcController'
@@ -86,6 +89,7 @@ ReporteCargoListController,
 ProveedorController,
 ImageBackupController,
 AuditoriaCajaController,
+VentaPublicController,
 DashboardController,
 RoleController,
 CategoriaController,
@@ -111,6 +115,7 @@ DetalleCompraController,
 DetalleVentaController,
 ProformaController,
 CajaController,
+GastoController,
 TipoAjusteInventarioController,
 InventarioInicialController,
 Web,
@@ -123,6 +128,7 @@ ReportePreciosController,
 ReporteCreditoController,
 ReporteVisitasController,
 ReporteInventarioController,
+ReporteVentasController,
 ReservaStockController,
 ConteoFisicoController,
 AnalisisAbcController,

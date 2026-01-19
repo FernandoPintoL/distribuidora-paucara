@@ -1,17 +1,15 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(EmpresaSeeder::class);
         $this->call(CoreCatalogSeeder::class);
         $this->call(AlmacenesUbicacionSeeder::class);
         // Asignar almacenes a empresas (antes de que se usen para búsquedas)
@@ -41,14 +39,14 @@ class DatabaseSeeder extends Seeder
         $this->call(EstadoDocumentoSeeder::class);
         $this->call(EstadoMermaSeeder::class);
         $this->call(EstadosLogisticaSeeder::class);
-        $this->call(ImpuestoSeeder::class);
+        // $this->call(ImpuestoSeeder::class);
         $this->call(ModuloSidebarSeeder::class);
 
         // ✅ NUEVO: Limpiar módulos duplicados del sidebar
-        $this->call(CleanupDuplicateModulesSeeder::class);
+        // $this->call(CleanupDuplicateModulesSeeder::class);
 
         // ✅ NUEVO: Actualizar permisos del sidebar para Cajero
-        $this->call(UpdateSidebarPermissionsSeeder::class);
+        // $this->call(UpdateSidebarPermissionsSeeder::class);
 
         $this->call(MonedaSeeder::class);
         // $this->call(ProformaAppExternaSeeder::class);
@@ -62,15 +60,15 @@ class DatabaseSeeder extends Seeder
         $this->call(LocalidadSeeder::class);
         $this->call(EstadosLogisticaSeeder::class);
         $this->call(EstadosLogisticaPickupSeeder::class);
-        $this->call(EmpresaSeeder::class);
+
         // Create a default admin user if not exists
         $admin = User::query()->where('email', 'admin@admin.com')->first();
         if (! $admin) {
             $admin = User::factory()->create([
-                'name' => 'Administrador',
-                'usernick' => 'admin',
-                'email' => 'admin@admin.com',
-                'password' => Hash::make('password'),
+                'name'       => 'Administrador',
+                'usernick'   => 'admin',
+                'email'      => 'admin@admin.com',
+                'password'   => Hash::make('password'),
                 'empresa_id' => 1,
             ]);
         } else {
@@ -87,11 +85,14 @@ class DatabaseSeeder extends Seeder
         // Crear usuario chofer de prueba
         $this->call(ChoferTestSeeder::class);
 
+        // ✅ NUEVO: Crear preventistas de prueba
+        $this->call(PreventistaTestSeeder::class);
+
         // ✅ Crear vehículos DESPUÉS de los choferes para poder asignarlos
         $this->call(VehiculoSeeder::class);
 
         // Crear usuarios cajero de prueba
-        $this->call(CajeroTestSeeder::class);
+        // $this->call(CajeroTestSeeder::class);
 
         // ✅ NUEVO: Actualizar permisos de logística para el Cajero
         $this->call(UpdateCajeroLogisticsPermissionsSeeder::class);

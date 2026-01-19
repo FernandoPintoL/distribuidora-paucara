@@ -24,7 +24,7 @@ function AppLayoutContent({ children, breadcrumbs, ...props }: AppLayoutProps) {
     // Logging de estado de conexión
     useEffect(() => {
         if (isConnected && user) {
-            console.log(`✅ WebSocket conectado para usuario: ${user.name}`);
+            console.log(`✅ WebSockets conectado para usuario: ${user.name}`);
             console.log(`   ID: ${user.id}, Email: ${user.email}`);
             console.log(`✅ El servidor ha unido automáticamente al usuario a las salas correctas`);
         }

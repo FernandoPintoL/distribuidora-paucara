@@ -1,10 +1,9 @@
 <?php
-
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class UpdateCajeroLogisticsPermissionsSeeder extends Seeder
 {
@@ -16,7 +15,7 @@ class UpdateCajeroLogisticsPermissionsSeeder extends Seeder
         $this->command->info('🚚 Actualizando permisos de logística para el rol Cajero...');
 
         // Obtener o crear el rol Cajero
-        $rolCajero = Role::firstOrCreate(['name' => 'Cajero']);
+        $rolCajero = Role::firstOrCreate(['name' => 'cajero']);
 
         // Definir todos los permisos que debe tener el Cajero
         $permisosCajero = [

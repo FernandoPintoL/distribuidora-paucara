@@ -183,6 +183,9 @@ export default function InputSearch({
             if (!selectedOption || selectedOption.label !== newQuery) {
                 setSelectedOption(null);
             }
+            // ✅ IMPORTANTE: Llamar onChange con el texto que el usuario está escribiendo
+            // Esto asegura que el valor se guarde en el form state incluso si no selecciona de la lista
+            onChange(newQuery);
         }
 
         // Resetear el flag después de un pequeño delay

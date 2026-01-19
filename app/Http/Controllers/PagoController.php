@@ -139,6 +139,40 @@ class PagoController extends Controller
             'estado'          => $nuevoSaldo == 0 ? 'PAGADO' : 'PARCIAL',
         ]);
 
+        // ✅ REGISTRAR MOVIMIENTO DE CAJA (EGRESO) PARA PAGO DE COMPRA
+        try {
+            $user = Auth::user();
+            $cajaAbierta = $user->empleado?->cajaAbierta();
+
+            if ($cajaAbierta) {
+                $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'COMPRA')->first();
+
+                if ($tipoOperacion) {
+                    \App\Models\MovimientoCaja::create([
+                        'caja_id' => $cajaAbierta->id,
+                        'tipo_operacion_id' => $tipoOperacion->id,
+                        'numero_documento' => $pago->numero_recibo ?? $pago->numero_transferencia ?? "PAGO-{$pago->id}",
+                        'descripcion' => "Pago Compra #{$cuentaPorPagar->compra->numero} - Proveedor: {$cuentaPorPagar->compra->proveedor?->nombre}",
+                        'monto' => -$request->monto,
+                        'fecha' => $request->fecha_pago,
+                        'user_id' => Auth::id(),
+                        'observaciones' => $request->observaciones,
+                    ]);
+
+                    Log::info("✅ MovimientoCaja (EGRESO) registrado", [
+                        'pago_id' => $pago->id,
+                        'monto' => $request->monto,
+                    ]);
+                }
+            } else {
+                Log::warning("⚠️ Usuario no tiene caja abierta", [
+                    'pago_id' => $pago->id,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error("❌ Error registrando MovimientoCaja: " . $e->getMessage());
+        }
+
         return redirect()->route('compras.pagos.index')
             ->with('success', 'Pago registrado correctamente.');
     }

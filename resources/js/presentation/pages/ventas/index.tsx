@@ -5,7 +5,6 @@ import { useAuth } from '@/application/hooks/use-auth';
 import FiltrosVentasComponent from '@/presentation/components/ventas/filtros-ventas';
 import EstadisticasVentasComponent from '@/presentation/components/ventas/estadisticas-ventas';
 import TablaVentas from '@/presentation/components/ventas/tabla-ventas';
-import StockBajoAlerts from '@/presentation/components/ventas/stock-bajo-alerts';
 import { Plus } from 'lucide-react';
 
 // Importar tipos del domain
@@ -29,6 +28,7 @@ export default function VentasIndex() {
     const { can } = useAuth();
 
     const ventas = props.ventas;
+    console.log('🚀 ~ file: index.tsx:26 ~ VentasIndex ~ ventas:', ventas);
     const filtros = props.filtros || {};
     const estadisticas = props.estadisticas;
     const datosParaFiltros = props.datosParaFiltros || {
@@ -44,7 +44,7 @@ export default function VentasIndex() {
 
             <div className="space-y-6 p-6">
                 {/* Alertas de stock bajo */}
-                <StockBajoAlerts />
+                {/* <StockBajoAlerts /> */}
 
                 {/* Header */}
                 <div className="flex items-center justify-between py-4">

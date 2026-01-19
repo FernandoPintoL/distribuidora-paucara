@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -31,14 +30,14 @@ class EstadosLogisticaSeeder extends Seeder
         // VENTA LOGISTIC STATES
         $ventaStates = [
             ['codigo' => 'PENDIENTE_RETIRO', 'nombre' => 'Pendiente de Retiro', 'color' => '#FFC107', 'icono' => 'local-shipping', 'orden' => 0],
-            ['codigo' => 'PENDIENTE_ENVIO', 'nombre' => 'Pendiente de Envío', 'color' => '#FF9800', 'icono' => 'schedule', 'orden' => 0],
-            ['codigo' => 'SIN_ENTREGA', 'nombre' => 'Sin Entrega Asignada', 'color' => '#E0E0E0', 'icono' => 'inbox', 'orden' => 1],
-            ['codigo' => 'PROGRAMADO', 'nombre' => 'Entrega Programada', 'color' => '#FFC107', 'icono' => 'calendar', 'orden' => 2],
-            ['codigo' => 'EN_PREPARACION', 'nombre' => 'En Preparación', 'color' => '#9C27B0', 'icono' => 'inventory', 'orden' => 3],
-            ['codigo' => 'EN_TRANSITO', 'nombre' => 'En Tránsito', 'color' => '#2196F3', 'icono' => 'local-shipping', 'orden' => 4],
-            ['codigo' => 'ENTREGADA', 'nombre' => 'Entregada', 'color' => '#28A745', 'icono' => 'check-circle', 'orden' => 5, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'PROBLEMAS', 'nombre' => 'Con Problemas', 'color' => '#FF5722', 'icono' => 'warning', 'orden' => 6],
-            ['codigo' => 'CANCELADA', 'nombre' => 'Cancelada', 'color' => '#6C757D', 'icono' => 'ban', 'orden' => 7, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'PENDIENTE_ENVIO', 'nombre' => 'Pendiente de Envío', 'color' => '#FF9800', 'icono' => 'schedule', 'orden' => 1],
+            ['codigo' => 'SIN_ENTREGA', 'nombre' => 'Sin Entrega Asignada', 'color' => '#E0E0E0', 'icono' => 'inbox', 'orden' => 2],
+            ['codigo' => 'PROGRAMADO', 'nombre' => 'Entrega Programada', 'color' => '#FFC107', 'icono' => 'calendar', 'orden' => 3],
+            ['codigo' => 'EN_PREPARACION', 'nombre' => 'En Preparación', 'color' => '#9C27B0', 'icono' => 'inventory', 'orden' => 4],
+            ['codigo' => 'EN_TRANSITO', 'nombre' => 'En Tránsito', 'color' => '#2196F3', 'icono' => 'local-shipping', 'orden' => 5],
+            ['codigo' => 'ENTREGADA', 'nombre' => 'Entregada', 'color' => '#28A745', 'icono' => 'check-circle', 'orden' => 6, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'PROBLEMAS', 'nombre' => 'Con Problemas', 'color' => '#FF5722', 'icono' => 'warning', 'orden' => 7],
+            ['codigo' => 'CANCELADA', 'nombre' => 'Cancelada', 'color' => '#6C757D', 'icono' => 'ban', 'orden' => 8, 'es_estado_final' => true, 'permite_edicion' => false],
         ];
 
         // ENTREGA (DELIVERY) STATES
@@ -76,27 +75,27 @@ class EstadosLogisticaSeeder extends Seeder
 
         // Insert all states
         foreach (['proforma', 'venta_logistica', 'entrega', 'vehiculo', 'pago'] as $categoria) {
-            $states = match($categoria) {
-                'proforma' => $proformaStates,
+            $states = match ($categoria) {
+                'proforma'        => $proformaStates,
                 'venta_logistica' => $ventaStates,
-                'entrega' => $entregaStates,
-                'vehiculo' => $vehiculoStates,
-                'pago' => $pagoStates,
+                'entrega'         => $entregaStates,
+                'vehiculo'        => $vehiculoStates,
+                'pago'            => $pagoStates,
             };
 
             foreach ($states as $state) {
                 DB::table('estados_logistica')->insert([
-                    'codigo' => $state['codigo'],
-                    'categoria' => $categoria,
-                    'nombre' => $state['nombre'],
-                    'color' => $state['color'],
-                    'icono' => $state['icono'],
-                    'orden' => $state['orden'],
-                    'es_estado_final' => $state['es_estado_final'] ?? false,
-                    'permite_edicion' => $state['permite_edicion'] ?? true,
+                    'codigo'              => $state['codigo'],
+                    'categoria'           => $categoria,
+                    'nombre'              => $state['nombre'],
+                    'color'               => $state['color'],
+                    'icono'               => $state['icono'],
+                    'orden'               => $state['orden'],
+                    'es_estado_final'     => $state['es_estado_final'] ?? false,
+                    'permite_edicion'     => $state['permite_edicion'] ?? true,
                     'requiere_aprobacion' => $state['requiere_aprobacion'] ?? false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
                 ]);
             }
         }
@@ -133,13 +132,13 @@ class EstadosLogisticaSeeder extends Seeder
 
         foreach ($transitions as $transition) {
             DB::table('transiciones_estado')->insert([
-                'estado_origen_id' => $states[$transition['origen']]->id,
+                'estado_origen_id'  => $states[$transition['origen']]->id,
                 'estado_destino_id' => $states[$transition['destino']]->id,
-                'categoria' => 'proforma',
-                'requiere_permiso' => $transition['requiere_permiso'] ?? null,
-                'automatica' => $transition['automatica'] ?? false,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'categoria'         => 'proforma',
+                'requiere_permiso'  => $transition['requiere_permiso'] ?? null,
+                'automatica'        => $transition['automatica'] ?? false,
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
         }
     }
@@ -188,12 +187,12 @@ class EstadosLogisticaSeeder extends Seeder
 
         foreach ($transitions as $transition) {
             DB::table('transiciones_estado')->insert([
-                'estado_origen_id' => $states[$transition['origen']]->id,
+                'estado_origen_id'  => $states[$transition['origen']]->id,
                 'estado_destino_id' => $states[$transition['destino']]->id,
-                'categoria' => 'entrega',
-                'automatica' => $transition['automatica'] ?? false,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'categoria'         => 'entrega',
+                'automatica'        => $transition['automatica'] ?? false,
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
         }
     }
@@ -228,11 +227,11 @@ class EstadosLogisticaSeeder extends Seeder
 
         foreach ($transitions as $transition) {
             DB::table('transiciones_estado')->insert([
-                'estado_origen_id' => $states[$transition['origen']]->id,
+                'estado_origen_id'  => $states[$transition['origen']]->id,
                 'estado_destino_id' => $states[$transition['destino']]->id,
-                'categoria' => 'venta_logistica',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'categoria'         => 'venta_logistica',
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
         }
     }
@@ -256,11 +255,11 @@ class EstadosLogisticaSeeder extends Seeder
 
         foreach ($transitions as $transition) {
             DB::table('transiciones_estado')->insert([
-                'estado_origen_id' => $states[$transition['origen']]->id,
+                'estado_origen_id'  => $states[$transition['origen']]->id,
                 'estado_destino_id' => $states[$transition['destino']]->id,
-                'categoria' => 'vehiculo',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'categoria'         => 'vehiculo',
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
         }
     }
@@ -286,14 +285,14 @@ class EstadosLogisticaSeeder extends Seeder
 
         foreach ($mappings as $mapping) {
             DB::table('mapeos_estado')->insert([
-                'categoria_origen' => 'entrega',
-                'estado_origen_id' => $estados[$mapping['origen']]->id,
+                'categoria_origen'  => 'entrega',
+                'estado_origen_id'  => $estados[$mapping['origen']]->id,
                 'categoria_destino' => 'venta_logistica',
                 'estado_destino_id' => $estados[$mapping['destino']]->id,
-                'prioridad' => $mapping['prioridad'],
-                'activo' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'prioridad'         => $mapping['prioridad'],
+                'activo'            => true,
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
         }
     }

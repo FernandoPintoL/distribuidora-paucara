@@ -35,7 +35,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $superAdmin = Role::findOrCreate('Super Admin');
 
         // Nivel 2: Admin/Manager (casi todo, excepto crear Super Admins)
-        $admin = Role::findOrCreate('Admin');
+        $admin = Role::findOrCreate('admin');
 
         // ============================================
         // NIVEL 1: Super Admin - Acceso Total
@@ -87,7 +87,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'password' => bcrypt('password'),
                 'activo'   => true,
             ]);
-            $cajeroUser->assignRole('Cajero');
+            $cajeroUser->assignRole('cajero');
         }
     }
 
@@ -116,9 +116,8 @@ class RolesAndPermissionsSeeder extends Seeder
         // Roles que debe tener el usuario admin
         $adminRoles = [
             'Super Admin', // Acceso total
-            'Admin',       // Rol administrativo estándar
-            'admin',
-            'Manager', // Acceso a reportes
+            'admin',       // Rol administrativo estándar (minúscula)
+            'manager', // Acceso a reportes (minúscula)
         ];
 
         // Sincronizar roles (reemplaza los existentes)
@@ -268,13 +267,13 @@ class RolesAndPermissionsSeeder extends Seeder
         $modules = $this->getPermissionsByModule();
 
         return [
-            'Vendedor'             => [
+            'vendedor'             => [
                  ...$modules['ventas'],
                 'proformas.index', 'proformas.show', 'proformas.aprobar', 'proformas.rechazar', 'proformas.convertir-venta',
                 ...$modules['clientes'],
                 'productos.manage',
             ],
-            'Compras'              => [
+            'compras'              => [
                  ...$modules['compras'],
                 'proveedores.manage', 'productos.manage', 'monedas.manage',
             ],
@@ -282,7 +281,7 @@ class RolesAndPermissionsSeeder extends Seeder
                  ...$modules['inventario'],
                 'productos.manage', 'almacenes.manage',
             ],
-            'Reportes'             => [
+            'reportes'             => [
                  ...$modules['reportes'],
             ],
             'Gestor de Logística'  => [
@@ -292,17 +291,17 @@ class RolesAndPermissionsSeeder extends Seeder
                 'reportes-carga.crear', 'reportes-carga.show', 'reportes-carga.view', 'reportes-carga.actualizar-detalle', 'reportes-carga.verificar-detalle',
                 'reportes-carga.confirmar', 'reportes-carga.listo-para-entrega',
             ],
-            'Contabilidad'         => [
+            'contabilidad'         => [
                  ...$modules['contabilidad'],
             ],
-            'Gerente'              => [
+            'gerente'              => [
                  ...$modules['reportes'],
                 'ventas.index', 'ventas.show', 'compras.index', 'compras.show',
                 'inventario.dashboard',
                 'empleados.index', 'empleados.show',
                 'configuracion-global.ganancias',
             ],
-            'Cajero'               => [
+            'cajero'               => [
                  ...$modules['cajas'],
                 'ventas.index', 'ventas.create', 'ventas.store', 'ventas.show', 'ventas.edit', 'ventas.update',
                 ...$modules['proformas'],
@@ -319,7 +318,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'productos.manage',
                 'ventas.index', 'ventas.show',
             ],
-            'Chofer'               => [
+            'chofer'               => [
                 'envios.index', 'envios.show',
                 'logistica.dashboard', 'logistica.envios.seguimiento',
                 'envios.confirmar-entrega', 'envios.confirmar-salida', 'envios.iniciar-preparacion',
@@ -332,7 +331,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'clientes.manage',
                 'empleados.show',
             ],
-            'Cliente'              => [
+            'cliente'              => [
                 'clientes.manage',
             ],
             'Gestor de Almacén'    => [
@@ -346,7 +345,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'productos.manage',
                 'reportes.inventario.stock-actual', 'reportes.inventario.vencimientos', 'reportes.inventario.movimientos',
             ],
-            'Comprador'            => [
+            'comprador'            => [
                 'compras.index', 'compras.create', 'compras.store', 'compras.show', 'compras.edit', 'compras.update',
                 'compras.detalles.index', 'compras.detalles.store', 'compras.detalles.update', 'compras.detalles.destroy',
                 'compras.cuentas-por-pagar.index', 'compras.cuentas-por-pagar.show',
@@ -356,7 +355,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'productos.manage',
                 'reportes.precios.index', 'reportes.precios.export',
             ],
-            'Manager'              => [
+            'manager'              => [
                  ...$modules['ventas'],
                 ...$modules['proformas'],
                 ...$modules['compras'],
@@ -375,10 +374,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 'modulos-sidebar.index', 'modulos-sidebar.show',
                 'admin.config',
             ],
-            'Empleado'             => [
+            'empleado'             => [
                 'empleados.show',
             ],
-            'Preventista'          => [
+            'preventista'          => [
                  ...$modules['clientes'],
                 'categorias.manage',
                 'envios.index', 'envios.show',

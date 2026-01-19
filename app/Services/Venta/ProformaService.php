@@ -1,11 +1,11 @@
 <?php
-
 namespace App\Services\Venta;
 
 use App\DTOs\Venta\CrearProformaDTO;
 use App\DTOs\Venta\ProformaResponseDTO;
 use App\Exceptions\Stock\StockInsuficientException;
 use App\Exceptions\Venta\EstadoInvalidoException;
+use App\Models\Cliente;
 use App\Models\DetalleProforma;
 use App\Models\Proforma;
 use App\Models\ReservaStock;
@@ -13,6 +13,7 @@ use App\Services\Stock\StockService;
 use App\Services\Traits\LogsOperations;
 use App\Services\Traits\ManagesTransactions;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 /**
  * ProformaService - ÚNICA FUENTE DE VERDAD para Proformas
@@ -37,11 +38,11 @@ class ProformaService
     use ManagesTransactions, LogsOperations;
 
     private static array $transicionesValidas = [
-        'PENDIENTE' => ['APROBADA', 'RECHAZADA'],
-        'APROBADA' => ['CONVERTIDA', 'RECHAZADA'],
+        'PENDIENTE'  => ['APROBADA', 'RECHAZADA'],
+        'APROBADA'   => ['CONVERTIDA', 'RECHAZADA'],
         'CONVERTIDA' => [],
-        'RECHAZADA' => [],
-        'VENCIDA' => [],
+        'RECHAZADA'  => [],
+        'VENCIDA'    => [],
     ];
 
     public function __construct(
@@ -57,29 +58,29 @@ class ProformaService
         $query = Proforma::query();
 
         // Filtrar por estado
-        if (!empty($filtros['estado'])) {
+        if (! empty($filtros['estado'])) {
             $query->where('estado', $filtros['estado']);
         }
 
         // Filtrar por cliente
-        if (!empty($filtros['cliente_id'])) {
+        if (! empty($filtros['cliente_id'])) {
             $query->where('cliente_id', $filtros['cliente_id']);
         }
 
         // Buscar por número o cliente
-        if (!empty($filtros['q'])) {
+        if (! empty($filtros['q'])) {
             $search = $filtros['q'];
             $query->where(function ($q) use ($search) {
                 $q->where('numero', 'like', "%{$search}%")
-                  ->orWhereHas('cliente', function ($q) use ($search) {
-                      $q->where('nombre', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('cliente', function ($q) use ($search) {
+                        $q->where('nombre', 'like', "%{$search}%");
+                    });
             });
         }
 
         return $query->with(['cliente', 'detalles'])
-                    ->latest()
-                    ->paginate($perPage);
+            ->latest()
+            ->paginate($perPage);
     }
 
     /**
@@ -100,16 +101,16 @@ class ProformaService
         $dto->validarDetalles();
 
         // 2. Validar política de pago (si es CREDITO, validar permisos del cliente)
-        if ($dto->politica_pago === \App\Models\Proforma::POLITICA_CREDITO) {
-            $cliente = \App\Models\Cliente::findOrFail($dto->cliente_id);
+        if ($dto->politica_pago === Proforma::POLITICA_CREDITO) {
+            $cliente = Cliente::findOrFail($dto->cliente_id);
 
-            if (!$cliente->puede_tener_credito) {
+            if (! $cliente->puede_tener_credito) {
                 throw new \Exception(
                     "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito"
                 );
             }
 
-            if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+            if (! $cliente->limite_credito || $cliente->limite_credito <= 0) {
                 throw new \Exception(
                     "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado"
                 );
@@ -117,52 +118,59 @@ class ProformaService
         }
 
         // 3. Validar stock ANTES de transacción
+        // 🔧 Usar almacén del usuario autenticado (consistencia con convertirAVenta)
+        $almacenId = auth()->user()?->empresa?->almacen_id ?? 2;
         $validacion = $this->stockService->validarDisponible(
             $dto->detalles,
-            $dto->almacen_id ?? 2
+            $almacenId
         );
 
-        if (!$validacion->esValida()) {
+        if (! $validacion->esValida()) {
             throw StockInsuficientException::create($validacion->detalles);
         }
 
         // 3. Crear dentro de transacción
-        $proforma = $this->transaction(function () use ($dto) {
+        $proforma = $this->transaction(function () use ($dto, $almacenId) {
             // 3.1 Crear Proforma
+            // ✅ Obtener el estado PENDIENTE para la proforma inicial
+            $estadoPendiente = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE')
+                ->where('activo', true)
+                ->first();
+
             $proforma = Proforma::create([
-                'numero' => $this->generarNumero(),
-                'cliente_id' => $dto->cliente_id,
-                'usuario_id' => $dto->usuario_id ?? Auth::id(),
-                'fecha' => $dto->fecha,
+                'numero'            => $this->generarNumero(),
+                'cliente_id'        => $dto->cliente_id,
+                'usuario_creador_id'=> $dto->usuario_id ?? Auth::id(),
+                'fecha'             => $dto->fecha,
                 'fecha_vencimiento' => $dto->fecha_vencimiento,
-                'subtotal' => $dto->subtotal,
-                'impuesto' => $dto->impuesto,
-                'total' => $dto->total,
-                'estado' => 'PENDIENTE',
-                'observaciones' => $dto->observaciones,
-                'almacen_id' => $dto->almacen_id ?? 2,
-                'canal' => $dto->canal ?? 'PRESENCIAL',
-                'politica_pago' => $dto->politica_pago ?? 'CONTRA_ENTREGA',
+                'subtotal'          => $dto->subtotal,
+                'impuesto'          => $dto->impuesto,
+                'total'             => $dto->total,
+                'estado_proforma_id'=> $estadoPendiente?->id ?? 1,
+                'observaciones'     => $dto->observaciones,
+                'canal_origen'      => $dto->canal ?? 'PRESENCIAL',
+                'politica_pago'     => $dto->politica_pago ?? 'CONTRA_ENTREGA',
+                // Nota: almacen_id no se asigna en proforma, se usa del usuario al convertir a venta
             ]);
 
             // 3.2 Crear detalles
             foreach ($dto->detalles as $detalle) {
                 DetalleProforma::create([
-                    'proforma_id' => $proforma->id,
-                    'producto_id' => $detalle['producto_id'],
-                    'cantidad' => $detalle['cantidad'],
+                    'proforma_id'     => $proforma->id,
+                    'producto_id'     => $detalle['producto_id'],
+                    'cantidad'        => $detalle['cantidad'],
                     'precio_unitario' => $detalle['precio_unitario'],
-                    'subtotal' => $detalle['cantidad'] * $detalle['precio_unitario'],
+                    'subtotal'        => $detalle['cantidad'] * $detalle['precio_unitario'],
                 ]);
             }
 
             // 3.3 RESERVAR stock (no consumir)
             foreach ($dto->detalles as $detalle) {
                 ReservaStock::create([
-                    'proforma_id' => $proforma->id,
-                    'producto_id' => $detalle['producto_id'],
-                    'cantidad' => $detalle['cantidad'],
-                    'almacen_id' => $dto->almacen_id ?? 2,
+                    'proforma_id'               => $proforma->id,
+                    'producto_id'               => $detalle['producto_id'],
+                    'cantidad'                  => $detalle['cantidad'],
+                    'almacen_id'                => $almacenId,
                     'fecha_vencimiento_reserva' => $dto->fecha_vencimiento,
                 ]);
             }
@@ -175,7 +183,7 @@ class ProformaService
 
         $this->logSuccess('Proforma creada', [
             'proforma_id' => $proforma->id,
-            'numero' => $proforma->numero,
+            'numero'      => $proforma->numero,
         ]);
 
         return ProformaResponseDTO::fromModel($proforma);
@@ -201,7 +209,13 @@ class ProformaService
                 throw new \Exception('Proforma vencida, no puede ser aprobada');
             }
 
-            $proforma->update(['estado' => 'APROBADA']);
+            // ✅ Obtener el estado APROBADA (ID=2 en estados_logistica, categoría: proforma)
+            $estadoAprobada = \App\Models\EstadoLogistica::where('codigo', 'APROBADA')
+                ->where('categoria', 'proforma')
+                ->where('activo', true)
+                ->first();
+
+            $proforma->update(['estado_proforma_id' => $estadoAprobada?->id ?? 2]);
 
             event(new \App\Events\ProformaAprobada($proforma));
 
@@ -230,8 +244,14 @@ class ProformaService
             // Liberar reserva de stock
             ReservaStock::where('proforma_id', $proformaId)->delete();
 
+            // ✅ Obtener el estado RECHAZADA (ID=3 en estados_logistica, categoría: proforma)
+            $estadoRechazada = \App\Models\EstadoLogistica::where('codigo', 'RECHAZADA')
+                ->where('categoria', 'proforma')
+                ->where('activo', true)
+                ->first();
+
             $proforma->update([
-                'estado' => 'RECHAZADA',
+                'estado_proforma_id' => $estadoRechazada?->id ?? 3,
                 'observaciones' => ($proforma->observaciones ?? '') . "\nMotivo rechazo: {$motivo}",
             ]);
 
@@ -242,7 +262,7 @@ class ProformaService
 
         $this->logSuccess('Proforma rechazada', [
             'proforma_id' => $proformaId,
-            'motivo' => $motivo,
+            'motivo'      => $motivo,
         ]);
 
         return ProformaResponseDTO::fromModel($proforma);
@@ -265,26 +285,26 @@ class ProformaService
     public function convertirAVenta(int $proformaId): \App\DTOs\Venta\VentaResponseDTO
     {
         $ventaDTO = $this->transaction(function () use ($proformaId) {
-            \Log::info('🔄 [ProformaService::convertirAVenta] Iniciando transacción', [
+            Log::info('🔄 [ProformaService::convertirAVenta] Iniciando transacción', [
                 'proforma_id' => $proformaId,
-                'timestamp' => now()->toIso8601String(),
+                'timestamp'   => now()->toIso8601String(),
             ]);
 
             $proforma = Proforma::lockForUpdate()->with('detalles')->findOrFail($proformaId);
 
-            \Log::info('📋 [ProformaService::convertirAVenta] Proforma cargada', [
+            Log::info('📋 [ProformaService::convertirAVenta] Proforma cargada', [
                 'proforma_id' => $proformaId,
-                'estado' => $proforma->estado,
-                'numero' => $proforma->numero,
-                'cliente_id' => $proforma->cliente_id,
-                'total' => $proforma->total,
+                'estado'      => $proforma->estado,
+                'numero'      => $proforma->numero,
+                'cliente_id'  => $proforma->cliente_id,
+                'total'       => $proforma->total,
             ]);
 
             // Validar estado
             if ($proforma->estado !== 'APROBADA') {
-                \Log::warning('⚠️ [ProformaService::convertirAVenta] Estado inválido', [
-                    'proforma_id' => $proformaId,
-                    'estado_actual' => $proforma->estado,
+                Log::warning('⚠️ [ProformaService::convertirAVenta] Estado inválido', [
+                    'proforma_id'     => $proformaId,
+                    'estado_actual'   => $proforma->estado,
                     'estado_esperado' => 'APROBADA',
                 ]);
                 throw EstadoInvalidoException::transicionInvalida(
@@ -297,8 +317,8 @@ class ProformaService
 
             // Validar que siga vigente
             if ($proforma->fecha_vencimiento < now()) {
-                \Log::warning('⚠️ [ProformaService::convertirAVenta] Proforma vencida', [
-                    'proforma_id' => $proformaId,
+                Log::warning('⚠️ [ProformaService::convertirAVenta] Proforma vencida', [
+                    'proforma_id'       => $proformaId,
                     'fecha_vencimiento' => $proforma->fecha_vencimiento,
                 ]);
                 throw new \Exception('Proforma vencida, no puede ser convertida');
@@ -306,8 +326,8 @@ class ProformaService
 
             // Preparar datos para crear venta
             $detalles = $proforma->detalles->map(fn($det) => [
-                'producto_id' => $det->producto_id,
-                'cantidad' => $det->cantidad,
+                'producto_id'     => $det->producto_id,
+                'cantidad'        => $det->cantidad,
                 'precio_unitario' => $det->precio_unitario,
             ])->toArray();
 
@@ -315,22 +335,22 @@ class ProformaService
             // Fórmula: pesoTotal = Σ(cantidad × peso_producto)
             $pesoTotal = 0;
             foreach ($proforma->detalles as $detalle) {
-                $pesoProducto = $detalle->producto?->peso ?? 0;
-                $pesoTotal += $detalle->cantidad * $pesoProducto;
+                $pesoProducto  = $detalle->producto?->peso ?? 0;
+                $pesoTotal    += $detalle->cantidad * $pesoProducto;
             }
 
-            \Log::info('📦 [ProformaService::convertirAVenta] Detalles preparados', [
-                'proforma_id' => $proformaId,
-                'cantidad_detalles' => count($detalles),
+            Log::info('📦 [ProformaService::convertirAVenta] Detalles preparados', [
+                'proforma_id'         => $proformaId,
+                'cantidad_detalles'   => count($detalles),
                 'peso_total_estimado' => $pesoTotal,
-                'detalles' => $detalles,
+                'detalles'            => $detalles,
             ]);
 
             // Crear venta (StockService consume stock dentro)
-            \Log::info('🔄 [ProformaService::convertirAVenta] Llamando a VentaService::crear()', [
+            Log::info('🔄 [ProformaService::convertirAVenta] Llamando a VentaService::crear()', [
                 'proforma_id' => $proformaId,
-                'cliente_id' => $proforma->cliente_id,
-                'total' => $proforma->total,
+                'cliente_id'  => $proforma->cliente_id,
+                'total'       => $proforma->total,
             ]);
 
             // Determinar si requiere envío basado en las direcciones de la proforma
@@ -343,8 +363,29 @@ class ProformaService
             $ventanas = $this->calcularVentanasEntrega($proforma);
 
             // Obtener dirección de entrega confirmada (prioridad) o solicitada
-            $direccionClienteId = $proforma->direccion_entrega_confirmada_id
-                ?? $proforma->direccion_entrega_solicitada_id;
+            $direccionClienteId = $proforma->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id;
+
+            // ✅ NUEVO: Obtener el estado APROBADO para la venta creada desde proforma
+            $estadoAprobado = \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
+                ->where('activo', true)
+                ->first();
+
+            $estadoDocumentoIdFinal = $estadoAprobado?->id ?? 3;
+            Log::info('📋 [ProformaService::convertirAVenta] Estado APROBADO obtenido', [
+                'estado_documento_id_encontrado' => $estadoAprobado?->id,
+                'estado_documento_id_final' => $estadoDocumentoIdFinal,
+                'estado_codigo' => $estadoAprobado?->codigo ?? 'FALLBACK A 3',
+            ]);
+
+            // ✅ NUEVO: Obtener montos pagados en la aprobación (si los hay)
+            // Esto permite saber si hubo pago inicial cuando se aprobó
+            $montoPagadoInicial = 0;
+            // Por ahora, asumimos que si se pagó, se registró como Pago en la BD
+            // En futuro, esto podría venir del registro de aprobación
+            Log::info('💰 [ProformaService::convertirAVenta] Monto pagado inicial', [
+                'monto_pagado' => $montoPagadoInicial,
+                'nota'         => 'Será actualizado cuando se implemente registro de pagos en aprobación',
+            ]);
 
             $ventaDTO = $this->ventaService->crear(
                 new \App\DTOs\Venta\CrearVentaDTO(
@@ -354,8 +395,8 @@ class ProformaService
                     subtotal: $proforma->subtotal,
                     impuesto: $proforma->impuesto,
                     total: $proforma->total,
-                    peso_total_estimado: $pesoTotal,  // ✅ NUEVO: Pasar peso calculado
-                    // 🔧 Obtener almacén del usuario autenticado (no de la proforma)
+                    peso_total_estimado: $pesoTotal, // ✅ NUEVO: Pasar peso calculado
+                                                     // 🔧 Obtener almacén del usuario autenticado (no de la proforma)
                     almacen_id: auth()->user()?->empresa?->almacen_id ?? 2,
                     observaciones: "Convertida desde proforma #{$proforma->numero}",
                     usuario_id: Auth::id(),
@@ -368,7 +409,7 @@ class ProformaService
                     estado_logistico_id: $this->obtenerEstadoLogisticoInicial($requiereEnvio),
                     // Campos de política de pago
                     politica_pago: $politicaPago,
-                    estado_pago: 'PENDIENTE',
+                    // ✅ estado_pago se calcula dinámicamente en VentaService basado en monto_pagado_inicial
                     // Campos de SLA y compromisos de entrega
                     fecha_entrega_comprometida: $proforma->fecha_entrega_confirmada,
                     hora_entrega_comprometida: $proforma->hora_entrega_confirmada
@@ -379,6 +420,10 @@ class ProformaService
                     ventana_entrega_ini: $ventanas['inicio'],
                     ventana_entrega_fin: $ventanas['fin'],
                     idempotency_key: "proforma-{$proforma->id}-" . now()->timestamp,
+                    // ✅ NUEVO: Estado APROBADO para venta desde proforma aprobada
+                    estado_documento_id: $estadoDocumentoIdFinal,
+                    // ✅ NUEVO: Monto pagado inicial (si lo hay)
+                    monto_pagado_inicial: $montoPagadoInicial > 0 ? $montoPagadoInicial : null,
                 )
             );
 
@@ -387,17 +432,17 @@ class ProformaService
                 ? \App\Models\EstadoLogistica::find($ventaDTO->estado_logistico_id)?->codigo
                 : 'SIN_LOGISTICA';
 
-            \Log::info('✅ [ProformaService::convertirAVenta] Venta creada exitosamente', [
-                'proforma_id' => $proformaId,
-                'venta_id' => $ventaDTO->id,
-                'venta_numero' => $ventaDTO->numero,
-                'requiere_envio' => $requiereEnvio,
-                'estado_logistico_id' => $ventaDTO->estado_logistico_id,
+            Log::info('✅ [ProformaService::convertirAVenta] Venta creada exitosamente', [
+                'proforma_id'             => $proformaId,
+                'venta_id'                => $ventaDTO->id,
+                'venta_numero'            => $ventaDTO->numero,
+                'requiere_envio'          => $requiereEnvio,
+                'estado_logistico_id'     => $ventaDTO->estado_logistico_id,
                 'estado_logistico_codigo' => $estadoLogisticoInfo,
             ]);
 
             // Liberar reserva de stock (COMENTADO: sera implementado con referencia_id correctamente)
-            \Log::info('🔄 [ProformaService::convertirAVenta] Liberando reserva de stock', [
+            Log::info('🔄 [ProformaService::convertirAVenta] Liberando reserva de stock', [
                 'proforma_id' => $proformaId,
             ]);
 
@@ -407,7 +452,7 @@ class ProformaService
                 ->where('referencia_id', $proformaId)
                 ->update(['estado' => 'utilizada']);
 
-            \Log::info('✅ [ProformaService::convertirAVenta] Reserva de stock marcada como utilizada', [
+            Log::info('✅ [ProformaService::convertirAVenta] Reserva de stock marcada como utilizada', [
                 'proforma_id' => $proformaId,
             ]);
 
@@ -415,7 +460,7 @@ class ProformaService
             // 🔧 Usar el ID correcto del estado (4 = CONVERTIDA en estados_logistica)
             $proforma->update(['estado_proforma_id' => 4]);
 
-            \Log::info('✅ [ProformaService::convertirAVenta] Proforma marcada como CONVERTIDA', [
+            Log::info('✅ [ProformaService::convertirAVenta] Proforma marcada como CONVERTIDA', [
                 'proforma_id' => $proformaId,
             ]);
 
@@ -425,12 +470,12 @@ class ProformaService
 
             // Disparar evento de proforma convertida
             if ($ventaModel) {
-                \Log::debug('📢 [ProformaService::convertirAVenta] Disparando evento ProformaConvertida');
+                Log::debug('📢 [ProformaService::convertirAVenta] Disparando evento ProformaConvertida');
                 event(new \App\Events\ProformaConvertida($proforma, $ventaModel));
             } else {
-                \Log::warning('⚠️ [ProformaService::convertirAVenta] No se pudo obtener el modelo Venta para el evento', [
+                Log::warning('⚠️ [ProformaService::convertirAVenta] No se pudo obtener el modelo Venta para el evento', [
                     'proforma_id' => $proformaId,
-                    'venta_id' => $ventaDTO->id,
+                    'venta_id'    => $ventaDTO->id,
                 ]);
             }
 
@@ -454,7 +499,7 @@ class ProformaService
             'detalles.producto.marca',
             'cliente',
             'direccionSolicitada',
-            'direccionConfirmada'
+            'direccionConfirmada',
         ])->findOrFail($proformaId);
 
         return ProformaResponseDTO::fromModel($proforma);
@@ -487,7 +532,7 @@ class ProformaService
 
         $this->logSuccess('Validez de proforma extendida', [
             'proforma_id' => $proformaId,
-            'dias' => $dias,
+            'dias'        => $dias,
         ]);
 
         return ProformaResponseDTO::fromModel($proforma);
@@ -502,7 +547,7 @@ class ProformaService
     {
         $permitidas = self::$transicionesValidas[$estadoActual] ?? [];
 
-        if (!in_array($estadoNuevo, $permitidas)) {
+        if (! in_array($estadoNuevo, $permitidas)) {
             throw EstadoInvalidoException::transicionInvalida(
                 'Proforma',
                 0,
@@ -517,7 +562,7 @@ class ProformaService
      */
     private function generarNumero(): string
     {
-        $year = now()->year;
+        $year  = now()->year;
         $count = Proforma::whereYear('created_at', $year)->count() + 1;
 
         return sprintf('PF-%d-%06d', $year, $count);
@@ -605,10 +650,10 @@ class ProformaService
      */
     private function calcularVentanasEntrega(Proforma $proforma): array
     {
-        if (!$proforma->hora_entrega_confirmada) {
+        if (! $proforma->hora_entrega_confirmada) {
             return [
                 'inicio' => null,
-                'fin' => null,
+                'fin'    => null,
             ];
         }
 
@@ -620,11 +665,11 @@ class ProformaService
         }
 
         $horaInicio = $horaConfirmada->copy()->subHour();
-        $horaFin = $horaConfirmada->copy()->addHour();
+        $horaFin    = $horaConfirmada->copy()->addHour();
 
         return [
             'inicio' => $horaInicio->format('H:i:s'),
-            'fin' => $horaFin->format('H:i:s'),
+            'fin'    => $horaFin->format('H:i:s'),
         ];
     }
 
@@ -641,8 +686,8 @@ class ProformaService
      */
     private function obtenerEstadoLogisticoInicial(bool $requiereEnvio): ?int
     {
-        if (!$requiereEnvio) {
-            return null;  // Venta de mostrador, no requiere logística
+        if (! $requiereEnvio) {
+            return null; // Venta de mostrador, no requiere logística
         }
 
         // Por defecto, usar PENDIENTE_ENVIO para ventas que requieren envío
@@ -650,10 +695,10 @@ class ProformaService
             ->where('categoria', 'venta_logistica')
             ->value('id');
 
-        if (!$estadoId) {
-            \Log::error('❌ [ProformaService] Estado PENDIENTE_ENVIO no encontrado en estados_logistica', [
+        if (! $estadoId) {
+            Log::error('❌ [ProformaService] Estado PENDIENTE_ENVIO no encontrado en estados_logistica', [
                 'categoria' => 'venta_logistica',
-                'codigo' => 'PENDIENTE_ENVIO',
+                'codigo'    => 'PENDIENTE_ENVIO',
             ]);
 
             // Fallback a PENDIENTE_RETIRO si PENDIENTE_ENVIO no existe
@@ -662,8 +707,8 @@ class ProformaService
                 ->value('id');
         }
 
-        if (!$estadoId) {
-            \Log::error('❌ [ProformaService] No hay estados logísticos disponibles', [
+        if (! $estadoId) {
+            Log::error('❌ [ProformaService] No hay estados logísticos disponibles', [
                 'categoria' => 'venta_logistica',
             ]);
         }

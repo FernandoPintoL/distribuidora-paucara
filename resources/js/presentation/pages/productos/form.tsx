@@ -3,6 +3,7 @@ import Step1DatosProducto from './steps/Step1DatosProducto';
 import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
 import Step3Conversiones from './steps/Step3Conversiones'; // ✨ NUEVO
 import Step4Imagenes from './steps/Step4Imagenes';
+import Step5PrecioRango from './steps/Step5PrecioRango'; // ✨ NUEVO
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/presentation/components/ui/card';
@@ -34,6 +35,7 @@ const initialProductoData: ProductoFormData = {
   es_fraccionado: false, // ✨ NUEVO
   stock_minimo: 0,
   stock_maximo: 50,
+  limite_venta: null, // ✨ NUEVO
   precios: [
     { monto: 0, tipo_precio_id: 1 },
     { monto: 0, tipo_precio_id: 2 },
@@ -56,6 +58,7 @@ export default function ProductoForm({
   console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
   console.log('👤 Proveedor en producto:', producto?.proveedor);
   console.log('🆔 proveedor_id en producto:', producto?.proveedor_id);
+  console.log('💰 tipos_precio recibidos del backend:', tipos_precio);
   // Nota: Los proveedores se buscan por API, no se precarga aquí
 
   // Normalizadores para compatibilidad: el backend puede enviar {id,nombre,...} o {value,label,...}
@@ -95,6 +98,7 @@ export default function ProductoForm({
       es_fraccionado: producto.es_fraccionado ?? false, // ✨ NUEVO
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
+      limite_venta: producto.limite_venta ?? null, // ✨ NUEVO
       precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
       codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
       conversiones: producto.conversiones?.length ? producto.conversiones : [], // ✨ NUEVO
@@ -165,10 +169,14 @@ export default function ProductoForm({
     // Limpiar errores previos
     (clearErrors as unknown as () => void)();
 
-    // Validación básica: si no hay nombre, ir a tab de datos pero dejar que el backend valide
-    if (!data.nombre || !String(data.nombre).trim()) {
+    // ✅ VALIDACIÓN CRÍTICA: El nombre es obligatorio
+    console.log('📝 Nombre en data:', data.nombre, 'Tipo:', typeof data.nombre);
+
+    const nombreTrimmed = data.nombre ? String(data.nombre).trim() : '';
+    if (!nombreTrimmed) {
+      NotificationService.error('❌ El nombre del producto es obligatorio');
       setActiveTab('datos');
-      // El backend mostrará el error al recibir la respuesta
+      return; // ✅ IMPORTANTE: Detener aquí, no continuar
     }
 
     // Advertencia si no hay precios, pero permitir guardar
@@ -192,7 +200,7 @@ export default function ProductoForm({
 
     // Campos básicos
     Object.entries({
-      nombre: data.nombre.trim(),
+      nombre: nombreTrimmed, // ✅ Usar el nombre ya validado y trimmed
       sku: data.sku?.trim() ?? '',
       descripcion: data.descripcion?.trim() ?? '',
       peso: data.peso ?? '',
@@ -204,6 +212,7 @@ export default function ProductoForm({
       activo: data.activo ? 1 : 0,
       stock_minimo: data.stock_minimo ?? '',
       stock_maximo: data.stock_maximo ?? '',
+      limite_venta: data.limite_venta ?? '', // ✨ NUEVO - Vacío = sin límite
     }).forEach(([k, v]) => formData.append(k, String(v ?? '')));
 
     // Imágenes (desde estado separado)
@@ -263,7 +272,11 @@ export default function ProductoForm({
         savingToast = NotificationService.loading('Guardando producto...');
       },
       onSuccess: () => {
-        // NotificationService se maneja en el useEffect
+        // ✨ Mostrar toast de éxito INMEDIATAMENTE (antes de la redirección)
+        NotificationService.success(
+          isEditing ? 'Producto actualizado correctamente' : 'Producto creado correctamente'
+        );
+
         // limpiar draft en localStorage
         try {
           localStorage.removeItem(DRAFT_KEY);
@@ -271,8 +284,15 @@ export default function ProductoForm({
           // prevenir fallo si el storage no está disponible (por ejemplo en SSR)
           console.warn('No se pudo eliminar draft:', err);
         }
-        // Redirigir al índice al finalizar correctamente
-        router.visit(productosService.indexUrl());
+
+        // ✅ Recargar la página DESPUÉS de actualizar para obtener datos frescos de la BD
+        // Esto evita que Inertia use datos cacheados en memoria
+        if (isEditing) {
+          // Esperar un pequeño delay para que el toast se vea antes de recargar
+          setTimeout(() => {
+            router.reload();
+          }, 500);
+        }
       },
       onError: (errors: Record<string, string | string[]>) => {
         console.error('Error al guardar producto:', errors);
@@ -447,7 +467,7 @@ export default function ProductoForm({
 
           <CardContent>
             <Tabs defaultValue="datos" className="w-full">
-              <TabsList className={`grid w-full ${permite_productos_fraccionados && data.es_fraccionado ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              <TabsList className={`grid w-full ${permite_productos_fraccionados && data.es_fraccionado ? 'grid-cols-5' : 'grid-cols-4'}`}>
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
                 <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
                 {permite_productos_fraccionados && data.es_fraccionado && (
@@ -455,6 +475,7 @@ export default function ProductoForm({
                     ✨ Conversiones
                   </TabsTrigger>
                 )}
+                <TabsTrigger value="precio-rango">Rango de Precios</TabsTrigger>
                 <TabsTrigger value="imagenes">Imágenes</TabsTrigger>
               </TabsList>
 
@@ -527,6 +548,23 @@ export default function ProductoForm({
                   />
                 </TabsContent>
               </form>
+
+              {/* ✨ NUEVA PESTAÑA: Rango de Precios - FUERA DEL FORMULARIO PRINCIPAL */}
+              <TabsContent value="precio-rango" className="space-y-6 mt-6">
+                {producto?.id && (
+                  <Step5PrecioRango
+                    productoId={producto.id}
+                    tiposPrecio={
+                      tipos_precio?.map((t: any) => ({
+                        id: t.value ?? t.id,
+                        nombre: t.label ?? t.nombre,
+                        codigo: t.code ?? t.codigo,
+                      })) || []
+                    }
+                    isEditing={isEditing}
+                  />
+                )}
+              </TabsContent>
             </Tabs>
           </CardContent>
 

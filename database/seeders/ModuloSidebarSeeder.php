@@ -473,8 +473,8 @@ class ModuloSidebarSeeder extends Seeder
 
         return [
             'Super Admin' => array_merge($permisosModulos, $permisosAdicionales),
-            'Admin'       => array_merge($permisosModulos, $permisosAdicionales),
-            'Cajero'      => array_merge($permisosModulos, $permisosAdicionales),
+            'admin'       => array_merge($permisosModulos, $permisosAdicionales),
+            'cajero'      => array_merge($permisosModulos, $permisosAdicionales),
         ];
     }
 
@@ -491,8 +491,8 @@ class ModuloSidebarSeeder extends Seeder
 
         // Obtener roles
         $superAdmin = Role::firstOrCreate(['name' => 'Super Admin'], ['guard_name' => 'web']);
-        $admin      = Role::firstOrCreate(['name' => 'Admin'], ['guard_name' => 'web']);
-        $cajero     = Role::firstOrCreate(['name' => 'Cajero'], ['guard_name' => 'web']);
+        $admin      = Role::firstOrCreate(['name' => 'admin'], ['guard_name' => 'web']);
+        $cajero     = Role::firstOrCreate(['name' => 'cajero'], ['guard_name' => 'web']);
 
         // Crear permisos en la BD (si no existen)
         $todosLosPermisos = array_unique(array_merge(...array_values($permisosPorRol)));
@@ -501,10 +501,10 @@ class ModuloSidebarSeeder extends Seeder
         }
 
         // Asignar permisos a cada rol
-        $admin->syncPermissions($permisosPorRol['Admin']);
+        $admin->syncPermissions($permisosPorRol['admin']);
         $this->command->line('  ✓ Admin: permisos asignados');
 
-        $cajero->syncPermissions($permisosPorRol['Cajero']);
+        $cajero->syncPermissions($permisosPorRol['cajero']);
         $this->command->line('  ✓ Cajero: permisos asignados');
 
         // Super Admin recibe todos los permisos

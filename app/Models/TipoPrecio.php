@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use App\Models\Traits\HasActiveScope;
@@ -29,12 +28,12 @@ class TipoPrecio extends Model
     protected function casts(): array
     {
         return [
-            'es_ganancia' => 'boolean',
-            'es_precio_base' => 'boolean',
-            'activo' => 'boolean',
-            'es_sistema' => 'boolean',
-            'configuracion' => 'array',
-            'orden' => 'integer',
+            'es_ganancia'         => 'boolean',
+            'es_precio_base'      => 'boolean',
+            'activo'              => 'boolean',
+            'es_sistema'          => 'boolean',
+            'configuracion'       => 'array',
+            'orden'               => 'integer',
             'porcentaje_ganancia' => 'decimal:2',
         ];
     }
@@ -58,7 +57,7 @@ class TipoPrecio extends Model
 
     public function scopeOrdenados($query)
     {
-        return $query->orderBy('orden', 'asc')->orderBy('nombre', 'asc');
+        return $query->orderBy('orden', 'asc')->orderBy('id', 'asc');
     }
 
     public function scopeGanancias($query)
@@ -119,16 +118,16 @@ class TipoPrecio extends Model
             ->get()
             ->map(function ($tipo) {
                 return [
-                    'value' => $tipo->id,
-                    'code' => $tipo->codigo,
-                    'label' => $tipo->nombre,
-                    'description' => $tipo->descripcion,
-                    'color' => $tipo->color,
-                    'es_ganancia' => $tipo->es_ganancia,
-                    'es_precio_base' => $tipo->es_precio_base,
-                    'icono' => $tipo->getIcono(),
-                    'tooltip' => $tipo->getTooltip(),
-                    'configuracion' => $tipo->configuracion,
+                    'value'               => $tipo->id,
+                    'code'                => $tipo->codigo,
+                    'label'               => $tipo->nombre,
+                    'description'         => $tipo->descripcion,
+                    'color'               => $tipo->color,
+                    'es_ganancia'         => $tipo->es_ganancia,
+                    'es_precio_base'      => $tipo->es_precio_base,
+                    'icono'               => $tipo->getIcono(),
+                    'tooltip'             => $tipo->getTooltip(),
+                    'configuracion'       => $tipo->configuracion,
                     'porcentaje_ganancia' => $tipo->porcentaje_ganancia,
                 ];
             })

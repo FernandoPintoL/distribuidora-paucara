@@ -6,7 +6,7 @@ import type { Precio } from '@/domain/entities/productos';
 import type { TipoPrecio } from '@/domain/entities/tipos-precio';
 import tiposPrecioService from '@/infrastructure/services/tipos-precio.service';
 import { Link } from '@inertiajs/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 // Importar react-qr-barcode-scanner
 import BarcodeScannerComponent from 'react-qr-barcode-scanner';
 // Importar ZXing como fallback
@@ -536,7 +536,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                 <div className="space-y-6">
 
                     <div className={`rounded border border-border bg-secondary p-3 ${compactCodigos ? 'hidden' : ''}`}>
-                        <div className="mb-2 flex items-center justify-between">
+                        <div className="mb-3 flex items-center justify-between">
                             <div className="text-sm font-medium text-foreground">Elegir tipos de precio a usar</div>
                             <Button asChild size="sm" variant="outline">
                                 <Link href={tiposPrecioService.createUrl()}>
@@ -549,175 +549,211 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                 </Link>
                             </Button>
                         </div>
-                        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-                            {tipos_precio.map((tp: TipoPrecioOption) => {
-                                const currId = tpId(tp);
-                                const checked = (data.precios || []).some((p: Precio) => Number(p.tipo_precio_id) === currId);
-                                const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
-                                const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
-                                const pct = Number.isFinite(pctNum) ? pctNum : 0;
-                                const precioIdx = (data.precios || []).findIndex((p: Precio) => Number(p.tipo_precio_id) === currId);
-                                const precioSel = precioIdx >= 0 ? (data.precios as Precio[])[precioIdx] : null;
-                                return (
-                                    <div
-                                        key={currId}
-                                        className={[
-                                            'text-sm',
-                                            'rounded border border-border bg-card px-2 py-2',
-                                            'text-foreground hover:border-accent hover:bg-accent/40',
-                                            'transition-colors duration-150',
-                                            checked
-                                                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
-                                                : 'border-border bg-card dark:border-neutral-700 dark:bg-neutral-900',
-                                        ].join(' ')}
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 select-none">
-                                                <Checkbox id={`tp-${currId}`} checked={checked} onCheckedChange={(v) => {
-                                                    const isChecked = !!v;
-                                                    // Al desmarcar, limpiamos cualquier override manual asociado a este tipo
-                                                    if (!isChecked) {
-                                                        manualOverrideIdsRef.current.delete(currId);
-                                                    } else {
-                                                        // Al volver a marcar, reiniciamos el estado manual para permitir cálculo automático inicial
-                                                        manualOverrideIdsRef.current.delete(currId);
-                                                    }
-                                                    toggleTipoPrecio(currId, isChecked);
-                                                }} />
-                                                <label htmlFor={`tp-${currId}`} className="flex items-center gap-1 cursor-pointer">
-                                                    <span>{tpIcono(tp)}</span>
-                                                    <span>{tpNombre(tp)}</span>
-                                                </label>
-                                            </div>
-                                            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-foreground">
-                                                {pct}%
-                                            </span>
-                                        </div>
-                                        {checked && (
-                                            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                                                <Label className="mb-1 block text-xs font-medium">Monto (BOB)</Label>
-                                                <Input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={precioSel ? (precioSel.monto === 0 ? '' : precioSel.monto) : ''}
-                                                    onChange={(e) => {
-                                                        if (precioIdx >= 0) {
-                                                            // Marcar este tipo de precio como modificado manualmente
-                                                            manualOverrideIdsRef.current.add(currId);
-                                                            setPrecio(precioIdx, 'monto', e.target.value);
-                                                            if (precioSel && (precioSel.moneda === undefined || precioSel.moneda === '')) {
-                                                                setPrecio(precioIdx, 'moneda', 'BOB');
-                                                            }
-                                                        }
-                                                    }}
-                                                    onFocus={(e) => e.target.select()}
-                                                    onBlur={(e) => {
-                                                        if (precioIdx >= 0 && e.target.value === '') {
-                                                            // Si se deja vacío, lo consideramos una edición manual a 0
-                                                            manualOverrideIdsRef.current.add(currId);
-                                                            setPrecio(precioIdx, 'monto', 0);
-                                                        }
-                                                    }}
-                                                    className={`h-8 text-sm ${errors[`precios.${precioIdx}.monto`] ? 'border-red-500' : ''}`}
-                                                    placeholder="0.00"
-                                                    inputMode="decimal"
-                                                    pattern="\d+(\.\d{1,2})?"
-                                                />
-                                                {errors[`precios.${precioIdx}.monto`] && (
-                                                    <div className="mt-1 text-xs text-red-500">⚠️ {errors[`precios.${precioIdx}.monto`]}</div>
-                                                )}
-                                                {/* Input para motivo del cambio de precio */}
-                                                <Label className="mb-1 mt-2 block text-xs font-medium">Motivo del cambio</Label>
-                                                <Input
-                                                    type="text"
-                                                    value={precioSel?.motivo_cambio || ''}
-                                                    onChange={(e) => {
-                                                        if (precioIdx >= 0) {
-                                                            setPrecio(precioIdx, 'motivo_cambio', e.target.value);
-                                                        }
-                                                    }}
-                                                    className="h-8 text-xs"
-                                                    placeholder="Motivo del cambio de precio (opcional)"
-                                                />
 
-                                                {/* ✨ NUEVA SECCIÓN: Precios por Unidad (si es fraccionado) */}
-                                                {props.data.es_fraccionado && props.data.conversiones && props.data.conversiones.length > 0 && (
-                                                    <div className="mt-4 space-y-2 border-t pt-3">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                                                Precios por unidad:
-                                                            </p>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    // Recalcular precios automáticos
-                                                                    const pct = tp?.configuracion?.porcentaje_ganancia || props.porcentajeInteres;
-                                                                    calcularPreciosPorUnidad(props.precioCosto, currId, pct);
+                        {/* Table Layout */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-sm">
+                                <thead>
+                                    <tr className="border-b border-border bg-muted">
+                                        <th className="px-2 py-2 text-left font-medium text-foreground w-8"></th>
+                                        <th className="px-2 py-2 text-left font-medium text-foreground w-8">Icono</th>
+                                        <th className="px-2 py-2 text-left font-medium text-foreground">Tipo de Precio</th>
+                                        <th className="px-2 py-2 text-center font-medium text-foreground w-16">%</th>
+                                        <th className="px-2 py-2 text-left font-medium text-foreground">Monto (BOB)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tipos_precio.map((tp: TipoPrecioOption) => {
+                                        const currId = tpId(tp);
+                                        const checked = (data.precios || []).some((p: Precio) => Number(p.tipo_precio_id) === currId);
+                                        const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
+                                        const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
+                                        const pct = Number.isFinite(pctNum) ? pctNum : 0;
+                                        const precioIdx = (data.precios || []).findIndex((p: Precio) => Number(p.tipo_precio_id) === currId);
+                                        const precioSel = precioIdx >= 0 ? (data.precios as Precio[])[precioIdx] : null;
+                                        const hasUnits = props.data.es_fraccionado && props.data.conversiones && props.data.conversiones.length > 0;
+
+                                        return (
+                                            <React.Fragment key={currId}>
+                                                <tr
+                                                    className={`border-b-2 border-border transition-all duration-200 cursor-pointer group
+                                                        ${checked
+                                                            ? 'bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 border-blue-400 dark:border-blue-600 shadow-sm'
+                                                            : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-50 dark:hover:from-gray-900/30 dark:hover:to-gray-900/10'
+                                                        }`}
+                                                    onClick={(e) => {
+                                                        // Solo toggle si hacemos click en el nombre, icono o porcentaje, NO en checkbox ni input
+                                                        const target = e.target as HTMLElement;
+                                                        if (target.closest('input') || target.closest('[role="checkbox"]')) {
+                                                            return; // No hacer nada, dejar que el checkbox maneje su propio evento
+                                                        }
+
+                                                        const isChecked = !checked;
+                                                        if (!isChecked) {
+                                                            manualOverrideIdsRef.current.delete(currId);
+                                                        } else {
+                                                            manualOverrideIdsRef.current.delete(currId);
+                                                        }
+                                                        toggleTipoPrecio(currId, isChecked);
+                                                    }}
+                                                >
+                                                    <td className="px-3 py-3 w-12">
+                                                        <div className="flex items-center justify-center">
+                                                            <Checkbox
+                                                                id={`tp-${currId}`}
+                                                                checked={checked}
+                                                                onCheckedChange={(v) => {
+                                                                    const isChecked = !!v;
+                                                                    if (!isChecked) {
+                                                                        manualOverrideIdsRef.current.delete(currId);
+                                                                    } else {
+                                                                        manualOverrideIdsRef.current.delete(currId);
+                                                                    }
+                                                                    toggleTipoPrecio(currId, isChecked);
                                                                 }}
-                                                                className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
-                                                                title="Recalcular precios automáticamente"
-                                                            >
-                                                                🔄 Recalcular
-                                                            </button>
+                                                                className={`w-5 h-5 cursor-pointer transition-all ${checked ? 'ring-2 ring-blue-500 ring-offset-2' : 'group-hover:ring-2 group-hover:ring-blue-300'}`}
+                                                            />
                                                         </div>
-
-                                                        {/* Precio en unidad base */}
-                                                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 p-2 rounded">
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[70px] font-medium">
-                                                                {props.unidades?.find(u => u.id === props.data.unidad_medida_id)?.codigo || 'Base'}:
-                                                            </span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-xl group-hover:scale-110 transition-transform">{tpIcono(tp)}</td>
+                                                    <td className="px-3 py-3 font-semibold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{tpNombre(tp)}</td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold transition-all ${checked ? 'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-50' : 'bg-secondary text-foreground group-hover:bg-gray-300 dark:group-hover:bg-gray-600'}`}>
+                                                            {pct}%
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-3 py-3">
+                                                        {checked ? (
                                                             <Input
                                                                 type="number"
                                                                 step="0.01"
-                                                                value={preciosPorUnidad[currId]?.[Number(props.data.unidad_medida_id)]?.monto || (precioSel?.monto === 0 ? '' : precioSel?.monto) || ''}
+                                                                min="0"
+                                                                value={precioSel ? (precioSel.monto === 0 ? '' : precioSel.monto) : ''}
                                                                 onChange={(e) => {
-                                                                    handlePrecioUnidadChange(currId, Number(props.data.unidad_medida_id), Number(e.target.value) || 0);
-                                                                    setPrecio(precioIdx, 'monto', e.target.value);
+                                                                    if (precioIdx >= 0) {
+                                                                        manualOverrideIdsRef.current.add(currId);
+                                                                        setPrecio(precioIdx, 'monto', e.target.value);
+                                                                        if (precioSel && (precioSel.moneda === undefined || precioSel.moneda === '')) {
+                                                                            setPrecio(precioIdx, 'moneda', 'BOB');
+                                                                        }
+                                                                    }
                                                                 }}
-                                                                className="flex-1 text-xs h-7"
+                                                                onFocus={(e) => {
+                                                                    e.stopPropagation();
+                                                                    e.target.select();
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    if (precioIdx >= 0 && e.target.value === '') {
+                                                                        manualOverrideIdsRef.current.add(currId);
+                                                                        setPrecio(precioIdx, 'monto', 0);
+                                                                    }
+                                                                }}
+                                                                onMouseDown={(e) => e.stopPropagation()}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className={`h-8 w-full text-sm font-mono ${errors[`precios.${precioIdx}.monto`] ? 'border-red-500' : ''}`}
                                                                 placeholder="0.00"
+                                                                inputMode="decimal"
+                                                                pattern="\d+(\.\d{1,2})?"
                                                             />
-                                                            <span className="text-xs text-gray-500 min-w-[50px]">Bs</span>
-                                                        </div>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
 
-                                                        {/* Precios en unidades destino */}
-                                                        {props.data.conversiones.map((conv: any) => {
-                                                            const unidadDestino = props.unidades?.find(u => u.id === conv.unidad_destino_id);
-                                                            const esManual = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.manual;
-                                                            const monto = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.monto || 0;
+                                                {/* Error row */}
+                                                {checked && errors[`precios.${precioIdx}.monto`] && (
+                                                    <tr className="border-b border-border bg-red-50 dark:bg-red-900/20">
+                                                        <td colSpan={5} className="px-2 py-2">
+                                                            <div className="text-xs text-red-600 dark:text-red-400">⚠️ {errors[`precios.${precioIdx}.monto`]}</div>
+                                                        </td>
+                                                    </tr>
+                                                )}
 
-                                                            return (
-                                                                <div key={conv.id} className="flex items-center gap-2">
-                                                                    <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[70px]">
-                                                                        {unidadDestino?.codigo || `ID:${conv.unidad_destino_id}`}:
+                                                {/* Unit prices row (if fractioned product) */}
+                                                {checked && hasUnits && (
+                                                    <tr className="border-b border-border bg-blue-50 dark:bg-blue-900/20">
+                                                        <td colSpan={5} className="px-4 py-3">
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                                                        Precios por unidad:
+                                                                    </p>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const pct = tp?.configuracion?.porcentaje_ganancia || props.porcentajeInteres;
+                                                                            calcularPreciosPorUnidad(props.precioCosto, currId, pct);
+                                                                        }}
+                                                                        className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
+                                                                        title="Recalcular precios automáticamente"
+                                                                    >
+                                                                        🔄 Recalcular
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Base unit price */}
+                                                                <div className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-200 dark:border-blue-700">
+                                                                    <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[70px] font-medium">
+                                                                        {props.unidades?.find(u => u.id === props.data.unidad_medida_id)?.codigo || 'Base'}:
                                                                     </span>
                                                                     <Input
                                                                         type="number"
                                                                         step="0.01"
-                                                                        value={monto === 0 ? '' : monto}
+                                                                        value={preciosPorUnidad[currId]?.[Number(props.data.unidad_medida_id)]?.monto || (precioSel?.monto === 0 ? '' : precioSel?.monto) || ''}
                                                                         onChange={(e) => {
-                                                                            handlePrecioUnidadChange(currId, conv.unidad_destino_id, Number(e.target.value) || 0);
+                                                                            handlePrecioUnidadChange(currId, Number(props.data.unidad_medida_id), Number(e.target.value) || 0);
+                                                                            setPrecio(precioIdx, 'monto', e.target.value);
                                                                         }}
-                                                                        className="flex-1 text-xs h-7"
+                                                                        className="flex-1 text-xs h-7 font-mono"
                                                                         placeholder="0.00"
                                                                     />
-                                                                    <span className="text-xs text-gray-500 min-w-[50px]">Bs</span>
-                                                                    {!esManual && monto > 0 && (
-                                                                        <span className="text-xs text-blue-600 dark:text-blue-400 min-w-fit whitespace-nowrap font-medium">
-                                                                            Auto ✓
-                                                                        </span>
-                                                                    )}
+                                                                    <span className="text-xs text-gray-500 min-w-[30px]">Bs</span>
                                                                 </div>
-                                                            );
-                                                        })}
-                                                    </div>
+
+                                                                {/* Other unit prices in a grid */}
+                                                                {props.data.conversiones && props.data.conversiones.length > 0 && (
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        {props.data.conversiones.map((conv: any) => {
+                                                                            const unidadDestino = props.unidades?.find(u => u.id === conv.unidad_destino_id);
+                                                                            const esManual = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.manual;
+                                                                            const monto = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.monto || 0;
+
+                                                                            return (
+                                                                                <div key={conv.id} className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-100 dark:border-blue-800">
+                                                                                    <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[50px] font-medium">
+                                                                                        {unidadDestino?.codigo || `ID:${conv.unidad_destino_id}`}:
+                                                                                    </span>
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        step="0.01"
+                                                                                        value={monto === 0 ? '' : monto}
+                                                                                        onChange={(e) => {
+                                                                                            handlePrecioUnidadChange(currId, conv.unidad_destino_id, Number(e.target.value) || 0);
+                                                                                        }}
+                                                                                        className="flex-1 text-xs h-7 font-mono"
+                                                                                        placeholder="0.00"
+                                                                                    />
+                                                                                    <span className="text-xs text-gray-500 min-w-[25px]">Bs</span>
+                                                                                    {!esManual && monto > 0 && (
+                                                                                        <span className="text-xs text-blue-600 dark:text-blue-400 min-w-fit font-medium">
+                                                                                            Auto ✓
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                 )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 

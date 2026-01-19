@@ -71,7 +71,11 @@ class ProductoController extends Controller
         $allowedOrder   = ['id' => 'productos.id', 'nombre' => 'productos.nombre', 'precio_base' => 'precio_base', 'fecha_creacion' => 'productos.fecha_creacion', 'stock_total' => 'stock_total_calc'];
         $orderColumnRaw = $allowedOrder[$orderBy] ?? 'productos.id';
 
+        $userEmpresaId = auth()->user()?->empresa_id;
         $items = Producto::query()
+            // ✨ NUEVO: Filtrar por empresa del usuario (si tiene empresa_id asignada)
+            // Si es admin sin empresa_id, mostrar todos los productos
+            ->when($userEmpresaId, fn($q) => $q->where('productos.empresa_id', $userEmpresaId))
             ->with([
                 'categoria:id,nombre',
                 'marca:id,nombre',
@@ -281,6 +285,8 @@ class ProductoController extends Controller
                 'categoria_id'     => $data['categoria_id'] ?? null,
                 'marca_id'         => $data['marca_id'] ?? null,
                 'proveedor_id'     => $data['proveedor_id'] ?? null,
+                'empresa_id'       => auth()->user()?->empresa_id, // ✨ NUEVO: Asignar empresa del usuario autenticado
+                'limite_venta'     => $data['limite_venta'] ?? null, // ✨ NUEVO
             ]);
 
             // Gestionar códigos de barra usando la nueva tabla
@@ -445,6 +451,13 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto): Response
     {
+        // ✨ NUEVO: Verificar que el producto pertenece a la empresa del usuario autenticado
+        $userEmpresaId = auth()->user()?->empresa_id;
+        // Si el usuario no tiene empresa_id (ej: admin global) o coincide, permitir acceso
+        if ($userEmpresaId && $producto->empresa_id !== $userEmpresaId) {
+            abort(403, 'No tienes permiso para editar este producto');
+        }
+
         $producto->load([
             'imagenes'     => function ($q) {
                 $q->orderBy('orden');
@@ -534,6 +547,7 @@ class ProductoController extends Controller
             'activo'            => (bool) $producto->activo,
             'stock_minimo'      => $producto->stock_minimo ? (int) $producto->stock_minimo : null,
             'stock_maximo'      => $producto->stock_maximo ? (int) $producto->stock_maximo : null,
+            'limite_venta'      => $producto->limite_venta ? (int) $producto->limite_venta : null, // ✨ NUEVO
             'perfil'            => $perfil ? ['id' => $perfil->id, 'url' => $perfil->url] : null,
             'galeria'           => $galeria,
             'precios'           => $precios,
@@ -591,6 +605,13 @@ class ProductoController extends Controller
 
     public function update(UpdateProductoRequest $request, Producto $producto): RedirectResponse
     {
+        // ✨ NUEVO: Verificar que el producto pertenece a la empresa del usuario autenticado
+        $userEmpresaId = auth()->user()?->empresa_id;
+        // Si el usuario no tiene empresa_id (ej: admin global) o coincide, permitir acceso
+        if ($userEmpresaId && $producto->empresa_id !== $userEmpresaId) {
+            abort(403, 'No tienes permiso para editar este producto');
+        }
+
         // Data already validated and prepared by UpdateProductoRequest
         $data = $request->validated();
 
@@ -606,6 +627,7 @@ class ProductoController extends Controller
                 'proveedor_id'     => $data['proveedor_id'] ?? $producto->proveedor_id,
                 'stock_minimo'     => $data['stock_minimo'] ?? $producto->stock_minimo,
                 'stock_maximo'     => $data['stock_maximo'] ?? $producto->stock_maximo,
+                'limite_venta'     => $data['limite_venta'] ?? $producto->limite_venta, // ✨ NUEVO
                 'activo'           => $data['activo'] ?? $producto->activo,
             ]);
 
@@ -1058,6 +1080,16 @@ class ProductoController extends Controller
      */
     public function showApi(Producto $producto, Request $request): JsonResponse
     {
+        // ✨ NUEVO: Verificar que el producto pertenece a la empresa del usuario autenticado
+        $userEmpresaId = auth()->user()?->empresa_id;
+        // Si el usuario no tiene empresa_id (ej: admin global) o coincide, permitir acceso
+        if ($userEmpresaId && $producto->empresa_id !== $userEmpresaId) {
+            return response()->json([
+                'message' => 'No tienes permiso para ver este producto',
+                'data' => []
+            ], 403);
+        }
+
         // Almacén dinámico: desde request o config
         // Nota: $request->integer() retorna 0 si no existe, no null, así que usamos has()
         $almacenId = $request->has('almacen_id')
@@ -1320,11 +1352,14 @@ class ProductoController extends Controller
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = strtolower($q);
+        $userEmpresaId = auth()->user()?->empresa_id;
         $productos   = Producto::select([
             'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
             'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
-            'stock_minimo', 'stock_maximo', 'activo', 'es_fraccionado'
+            'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id' // ✨ NUEVO
         ])
+            // ✨ NUEVO: Filtrar por empresa del usuario (si tiene empresa_id asignada)
+            ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
             ->where('activo', true)
             ->where(function ($query) use ($searchLower) {
                 $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
@@ -1344,7 +1379,7 @@ class ProductoController extends Controller
                 'categoria:id,nombre',
                 'marca:id,nombre',
                 'proveedor:id,nombre,razon_social', // ✨ NUEVO
-                'unidadMedida:id,nombre,codigo', // ✨ NUEVO
+                'unidad:id,nombre,codigo', // ✨ NUEVO - Corregido: era unidadMedida
                 'conversiones:id,producto_id,unidad_base_id,unidad_destino_id,factor_conversion,activo,es_conversion_principal', // ✨ NUEVO
                 'precios'      => function ($q) {
                     // Cargar SOLO precios activos
@@ -1395,6 +1430,9 @@ class ProductoController extends Controller
 
                     // Stock total de todos los almacenes
                     'stock_total'      => (int) $stockTotal,
+
+                    // ✨ Límite de venta
+                    'limite_venta'     => $producto->limite_venta ? (int) $producto->limite_venta : null,
 
                     'categoria'        => $producto->categoria?->nombre ?? '',
                     'marca'            => $producto->marca?->nombre ?? '',

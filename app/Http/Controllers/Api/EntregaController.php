@@ -762,6 +762,47 @@ class EntregaController extends Controller
                     'monto_recibido' => $montoRecibido,
                     'monto_pendiente' => $montoPendiente,
                 ]);
+
+                // ✅ REGISTRAR MOVIMIENTO DE CAJA PARA CONTRAENTREGA
+                if ($estadoPago === 'PAGADO' && $venta->politica_pago === \App\Models\Venta::POLITICA_CONTRA_ENTREGA) {
+                    try {
+                        $chofer = Auth::user();
+                        $cajaAbierta = $chofer->empleado?->cajaAbierta();
+
+                        if ($cajaAbierta) {
+                            $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'VENTA')->first();
+
+                            if ($tipoOperacion) {
+                                \App\Models\MovimientoCaja::create([
+                                    'caja_id' => $cajaAbierta->id,
+                                    'tipo_operacion_id' => $tipoOperacion->id,
+                                    'numero_documento' => $venta->numero,
+                                    'descripcion' => "Venta #{$venta->numero} - CONTRAENTREGA - Cliente: {$venta->cliente?->nombre}",
+                                    'monto' => $montoRecibido,
+                                    'fecha' => now(),
+                                    'user_id' => Auth::id(),
+                                    'observaciones' => "Cobro en entrega - Entrega #{$id}",
+                                ]);
+
+                                Log::info("✅ MovimientoCaja registrado para contraentrega", [
+                                    'venta_id' => $venta_id,
+                                    'entrega_id' => $id,
+                                    'monto' => $montoRecibido,
+                                    'caja_id' => $cajaAbierta->id,
+                                ]);
+                            }
+                        } else {
+                            Log::warning("⚠️ Chofer no tiene caja abierta", [
+                                'venta_id' => $venta_id,
+                                'chofer_id' => $chofer->id,
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error("❌ Error registrando MovimientoCaja: " . $e->getMessage(), [
+                            'venta_id' => $venta_id,
+                        ]);
+                    }
+                }
             }
 
             Log::info('✅ Venta entregada y registrada', [

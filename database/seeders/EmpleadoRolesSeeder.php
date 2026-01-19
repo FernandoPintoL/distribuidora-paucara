@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -47,14 +46,14 @@ class EmpleadoRolesSeeder extends Seeder
 
         foreach ($permisos as $permiso) {
             Permission::firstOrCreate([
-                'name' => $permiso,
+                'name'       => $permiso,
                 'guard_name' => 'web',
             ]);
         }
 
         // Crear roles específicos para empleados
         $roles = [
-            'Gerente RRHH' => [
+            'Gerente RRHH'           => [
                 'empleados.ver',
                 'empleados.crear',
                 'empleados.editar',
@@ -78,14 +77,14 @@ class EmpleadoRolesSeeder extends Seeder
                 'empleados.ver_horarios',
             ],
 
-            'Supervisor' => [
+            'supervisor'             => [
                 'empleados.ver',
                 'empleados.ver_documentos',
                 'empleados.ver_horarios',
                 'empleados.reportes.asistencia',
             ],
 
-            'Empleado' => [
+            'empleado'               => [
                 // Permisos básicos que ya están definidos en el sistema
                 // Un empleado regular solo puede ver su propia información
             ],
@@ -111,7 +110,7 @@ class EmpleadoRolesSeeder extends Seeder
 
         foreach ($roles as $nombreRol => $permisosRol) {
             $rol = Role::firstOrCreate([
-                'name' => $nombreRol,
+                'name'       => $nombreRol,
                 'guard_name' => 'web',
             ]);
 

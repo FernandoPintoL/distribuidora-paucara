@@ -189,6 +189,35 @@
             margin-bottom: 3px;
         }
 
+        /* QR Code para Tickets */
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 8px 0;
+            padding: 5px;
+            background: #f9f9f9;
+        }
+
+        .qr-box {
+            text-align: center;
+        }
+
+        .qr-code {
+            max-width: 60px;
+            max-height: 60px;
+            width: 100%;
+            height: auto;
+            border: 1px solid #000;
+            padding: 2px;
+            background: white;
+        }
+
+        .qr-label {
+            font-size: 6px;
+            margin-top: 2px;
+            color: #333;
+        }
+
         @yield('estilos-adicionales')
 
     </style>
@@ -198,7 +227,8 @@
         {{-- Header compacto --}}
         <div class="header">
             @if(!empty($logo_principal_base64))
-            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
+            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 50px; max-height: 25px; object-fit: contain;">
+
             @elseif($empresa->logo_compacto)
             <img src="{{ $empresa->logo_compacto }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
             @elseif($empresa->logo_principal)
@@ -214,7 +244,9 @@
         </div>
 
         {{-- Contenido específico del documento --}}
-        @yield('contenido')
+        <div style="padding-left: 15px; padding-right: 15px;">
+            @yield('contenido')
+        </div>
 
         {{-- Footer --}}
         <div class="footer">

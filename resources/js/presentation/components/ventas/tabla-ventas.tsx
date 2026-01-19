@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { Eye, Edit, Trash2, MoreHorizontal, FileText, Download, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar } from 'lucide-react';
+import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { Venta, FiltrosVentas } from '@/domain/entities/ventas';
 import type { Pagination } from '@/domain/entities/shared';
 import ventasService from '@/infrastructure/services/ventas.service';
 import AnularVentaModal from './AnularVentaModal';
+import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
 import { toast } from 'react-toastify';
 
 interface TablaVentasProps {
@@ -14,7 +15,7 @@ interface TablaVentasProps {
     onVentaDeleted?: (ventaId: number | string) => void;
 }
 
-export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVentasProps) {
+export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [anularModal, setAnularModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
     const [isAnulando, setIsAnulando] = useState(false);
@@ -88,7 +89,7 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
         }
     };
 
-    const getEstadoLogisticoColor = (estado: string) => {
+    const getEstadoLogisticoColor = (estado: string): string => {
         // ✅ ACTUALIZADO: Incluir todos los estados posibles desde BD
         const colorMap: { [key: string]: string } = {
             // Estados de entrega
@@ -110,7 +111,7 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
         return colorMap[estado] || 'gray';
     };
 
-    const getEstadoLogisticoLabel = (estado: string) => {
+    const getEstadoLogisticoLabel = (estado: string): string => {
         // ✅ ACTUALIZADO: Incluir todos los estados posibles desde BD
         const labelMap: { [key: string]: string } = {
             'SIN_ENTREGA': 'Sin Entrega',
@@ -131,7 +132,7 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
         return labelMap[estado] || 'Desconocido';
     };
 
-    const handleDelete = (venta: Venta) => {
+    /* const handleDelete = (venta: Venta) => {
         ventasService.destroy(venta.id, {
             onSuccess: () => {
                 if (onVentaDeleted) {
@@ -139,7 +140,7 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                 }
             }
         });
-    };
+    }; */
 
     const handleSort = (field: string) => {
         const currentSortDir = filtros?.sort_by === field && filtros?.sort_dir === 'asc' ? 'desc' : 'asc';
@@ -153,7 +154,7 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
         return filtros?.sort_dir === 'asc' ? '↑' : '↓';
     };
 
-    const getEstadoColor = (estado: string) => {
+    const getEstadoColor = (estado: string): string => {
         switch (estado.toLowerCase()) {
             case 'pendiente':
                 return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
@@ -242,23 +243,9 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                             <th
                                 scope="col"
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
-                                onClick={() => handleSort('fecha')}
-                            >
-                                Fecha {getSortIcon('fecha')}
-                            </th>
-                            <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
                                 onClick={() => handleSort('cliente_id')}
                             >
                                 Cliente {getSortIcon('cliente_id')}
-                            </th>
-                            <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
-                                onClick={() => handleSort('estado_documento_id')}
-                            >
-                                Estado {getSortIcon('estado_documento_id')}
                             </th>
                             <th
                                 scope="col"
@@ -274,19 +261,7 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                             >
                                 Tipo {getSortIcon('requiere_envio')}
                             </th>
-                            <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                            >
-                                Peso (kg)
-                            </th>
-                            <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                            >
-                                Usuario
-                            </th>
-                            <th scope="col" className="relative px-6 py-3">
+                            <th scope="col" className="px-6 py-3">
                                 <span className="sr-only">Acciones</span>
                             </th>
                         </tr>
@@ -295,160 +270,115 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                         {ventas.data.map((venta) => (
                             <React.Fragment key={venta.id}>
                                 <tr className="hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {venta.numero}
-                                    </div>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900 dark:text-white">
-                                        {formatDate(venta.fecha)}
-                                    </div>
-                                </td>
-
-                                <td className="px-6 py-4">
-                                    <div className="text-sm text-gray-900 dark:text-white">
-                                        {venta.cliente?.nombre || 'Sin cliente'}
-                                    </div>
-                                    {venta.cliente?.nit && (
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                                            NIT: {venta.cliente.nit}
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                            {venta.numero}
                                         </div>
-                                    )}
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(venta.estado_logistico || '')
-                                        }`}>
-                                        {venta.estado_logistico || 'Sin estado'}
-                                    </span>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {formatCurrency(venta.total, venta.moneda?.codigo)}
-                                    </div>
-                                    {venta.moneda && (
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                                            {venta.moneda.codigo}
+                                        <div className="text-sm text-gray-900 dark:text-white">
+                                            {formatDate(String(venta.fecha))}
                                         </div>
-                                    )}
-                                </td>
+                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(venta.estado_logistico || '')
+                                            }`}>
+                                            {String(venta.estado_documento?.codigo ?? 'Sin estado')}
+                                        </span>
+                                    </td>
 
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center space-x-2">
-                                        {venta.requiere_envio ? (
-                                            <>
-                                                <Truck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                                <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                                    Delivery
-                                                </span>
-                                                <button
-                                                    onClick={() => toggleRowExpanded(venta.id)}
-                                                    className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                                    title="Ver detalles de entrega"
-                                                >
-                                                    {expandedRows.has(venta.id) ? (
-                                                        <ChevronUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                                    ) : (
-                                                        <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                                    )}
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Store className="w-4 h-4 text-green-600 dark:text-green-400" />
-                                                <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                                    Presencial
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900 dark:text-white">
-                                        {venta.peso_total_estimado ? (
-                                            <>
-                                                <span className="font-semibold">{Number(venta.peso_total_estimado).toFixed(2)}</span>
-                                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">kg</span>
-                                            </>
-                                        ) : (
-                                            <span className="text-gray-400 dark:text-gray-500">-</span>
-                                        )}
-                                    </div>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900 dark:text-white">
-                                        {venta.usuario?.name || 'Usuario desconocido'}
-                                    </div>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div className="flex items-center justify-end space-x-2">
-                                        {/* Ver */}
-                                        <Link
-                                            href={ventasService.showUrl(venta.id)}
-                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                            title="Ver venta"
-                                        >
-                                            <Eye className="w-4 h-4" />
-                                        </Link>
-
-                                        {/* Editar - Deshabilitado por ahora */}
-                                        <button
-                                            disabled
-                                            className="text-gray-300 dark:text-gray-600 p-1 rounded cursor-not-allowed"
-                                            title="Editar venta (próximamente)"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </button>
-
-                                        {/* Anular */}
-                                        {venta.estado !== 'ANULADA' && (
-                                            <button
-                                                onClick={() => openAnularModal(venta)}
-                                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                title="Anular venta"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
-
-                                        {/* Menú más opciones */}
-                                        <div className="relative group">
-                                            <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                                <MoreHorizontal className="w-4 h-4" />
-                                            </button>
-
-                                            {/* Dropdown menu - se puede expandir más adelante */}
-                                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg border border-gray-200 dark:border-zinc-700 z-10 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200">
-                                                <div className="py-1">
-                                                    <button
-                                                        onClick={() => ventasService.duplicate(venta.id)}
-                                                        className="block w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 text-left transition-colors"
-                                                    >
-                                                        <FileText className="w-4 h-4 inline mr-2" />
-                                                        Duplicar
-                                                    </button>
-                                                    <button
-                                                        onClick={() => window.open(`/ventas/${venta.id}/pdf`, '_blank')}
-                                                        className="block w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 text-left transition-colors"
-                                                    >
-                                                        <Download className="w-4 h-4 inline mr-2" />
-                                                        Descargar PDF
-                                                    </button>
-                                                </div>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm text-gray-900 dark:text-white">
+                                            {venta.cliente?.nombre || 'Sin cliente'}
+                                        </div>
+                                        {venta.cliente?.nit && (
+                                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                NIT: {venta.cliente.nit}
                                             </div>
+                                        )}
+                                    </td>
+
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                            {formatCurrency(venta.total, venta.moneda?.codigo)}
                                         </div>
-                                    </div>
-                                </td>
+                                        {venta.moneda && (
+                                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                {venta.moneda.codigo}
+                                            </div>
+                                        )}
+                                    </td>
+
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center space-x-2">
+                                            {venta.requiere_envio ? (
+                                                <>
+                                                    <Truck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                                        Delivery
+                                                    </span>
+                                                    <button
+                                                        onClick={() => toggleRowExpanded(Number(venta.id))}
+                                                        className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                                        title="Ver detalles de entrega"
+                                                    >
+                                                        {expandedRows.has(Number(venta.id)) ? (
+                                                            <ChevronUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                        ) : (
+                                                            <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                        )}
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Store className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                                        Presencial
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <div className="flex items-center justify-end space-x-2">
+                                            {/* Ver */}
+                                            <Link
+                                                href={ventasService.showUrl(venta.id)}
+                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                title="Ver venta"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </Link>
+
+                                            {/* Editar - Deshabilitado por ahora */}
+                                            {/* <button
+                                                disabled
+                                                className="text-gray-300 dark:text-gray-600 p-1 rounded cursor-not-allowed"
+                                                title="Editar venta (próximamente)"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </button> */}
+
+                                            {/* Anular */}
+                                            {venta.estado !== 'ANULADA' && (
+                                                <button
+                                                    onClick={() => openAnularModal(venta)}
+                                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                    title="Anular venta"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+
+                                            {/* ✅ Descargar en formato - Usar FormatoSelector */}
+                                            <FormatoSelector
+                                                documentoId={venta.id}
+                                                tipoDocumento="venta"
+                                                className="h-9 px-2"
+                                            />
+                                        </div>
+                                    </td>
                                 </tr>
 
                                 {/* Fila expandible para detalles de delivery */}
-                                {venta.requiere_envio && expandedRows.has(venta.id) && (
+                                {venta.requiere_envio && expandedRows.has(Number(venta.id)) && (
                                     <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
                                         <td colSpan={9} className="px-6 py-4">
                                             <div className="space-y-4">
@@ -505,14 +435,13 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                                             Estado Logístico
                                                         </h4>
                                                         <div className="flex items-center space-x-2">
-                                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'blue' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'blue' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                                                                 getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'purple' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
-                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                                                                'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
-                                                            }`}>
+                                                                    getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                                                        getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'purple' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
+                                                                            getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                                                                                'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+                                                                }`}>
                                                                 {getEstadoLogisticoLabel(venta.estado_logistico || 'SIN_ENTREGA')}
                                                             </span>
                                                             {/* ✅ NUEVO: Mostrar estado_logistico_id */}
@@ -534,7 +463,22 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                                                 Fecha Prometida de Entrega
                                                             </h4>
                                                             <p className="text-sm text-gray-700 dark:text-gray-300">
-                                                                {formatDate(venta.fecha_entrega_comprometida)}
+                                                                {formatDate(String(venta.fecha_entrega_comprometida))}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Peso de la venta */}
+                                                {venta.peso_total_estimado && (
+                                                    <div className="flex items-start space-x-3">
+                                                        <Package className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                                                Peso Total Estimado
+                                                            </h4>
+                                                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                                                                {Number(venta.peso_total_estimado).toFixed(2)} kg
                                                             </p>
                                                         </div>
                                                     </div>
@@ -584,8 +528,8 @@ export default function TablaVentas({ ventas, filtros, onVentaDeleted }: TablaVe
                                             key={pageNum}
                                             onClick={() => ventasService.goToPage(pageNum)}
                                             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${pageNum === ventas.current_page
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-700'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-700'
                                                 }`}
                                         >
                                             {pageNum}

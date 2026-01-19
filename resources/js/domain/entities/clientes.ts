@@ -28,6 +28,8 @@ export interface Cliente extends BaseEntity {
     activo: boolean;
     limite_credito?: number | null;
     puede_tener_credito?: boolean;
+    credito_utilizado?: number | null;  // ✅ NUEVO: Crédito ya consumido
+    saldo_credito?: number | null;      // ✅ NUEVO: Crédito disponible (límite - utilizado)
     localidad?: {
         id: Id;
         nombre: string;

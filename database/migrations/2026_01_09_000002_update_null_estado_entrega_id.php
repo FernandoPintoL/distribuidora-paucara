@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -34,22 +32,19 @@ return new class extends Migration
 
         // Mapeo: estado ENUM → estado_logistica.id
         $mapeos = [
-            'PROGRAMADO' => $estados['PROGRAMADO'] ?? null,
-            'ASIGNADA' => $estados['ASIGNADA'] ?? null,
-            'PREPARACION_CARGA' => $estados['PREPARACION_CARGA'] ?? null,
-            'EN_CARGA' => $estados['EN_CARGA'] ?? null,
+            'PROGRAMADO'         => $estados['PROGRAMADO'] ?? null,
+            'PREPARACION_CARGA'  => $estados['PREPARACION_CARGA'] ?? null,
             'LISTO_PARA_ENTREGA' => $estados['LISTO_PARA_ENTREGA'] ?? null,
-            'EN_TRANSITO' => $estados['EN_TRANSITO'] ?? null,
-            'EN_CAMINO' => $estados['EN_CAMINO'] ?? null,
-            'LLEGO' => $estados['LLEGO'] ?? null,
-            'ENTREGADO' => $estados['ENTREGADO'] ?? null,
-            'NOVEDAD' => $estados['NOVEDAD'] ?? null,
-            'RECHAZADO' => $estados['RECHAZADO'] ?? null,
-            'CANCELADA' => $estados['CANCELADA'] ?? null,
+            'EN_TRANSITO'        => $estados['EN_TRANSITO'] ?? null,
+            'LLEGO'              => $estados['LLEGO'] ?? null,
+            'ENTREGADO'          => $estados['ENTREGADO'] ?? null,
+            'NOVEDAD'            => $estados['NOVEDAD'] ?? null,
+            'RECHAZADO'          => $estados['RECHAZADO'] ?? null,
+            'CANCELADA'          => $estados['CANCELADA'] ?? null,
         ];
 
         $actualizado = 0;
-        $noMapeado = 0;
+        $noMapeado   = 0;
 
         echo "\n🔄 Procesando entregas...\n";
 

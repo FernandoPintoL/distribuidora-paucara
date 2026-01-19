@@ -29,9 +29,9 @@ class TiposPrecioSeeder extends Seeder
                 ]),
             ],
             [
-                'codigo'              => 'VENTA',
-                'nombre'              => 'Precio de Venta',
-                'descripcion'         => 'Precio de venta al público general',
+                'codigo'              => 'LICORERIA',
+                'nombre'              => 'Precio de Licorería',
+                'descripcion'         => 'Precio de licorería',
                 'porcentaje_ganancia' => 20.00,
                 'color'               => 'green',
                 'es_ganancia'         => true,
@@ -41,13 +41,13 @@ class TiposPrecioSeeder extends Seeder
                 'es_sistema'          => true,
                 'configuracion'       => json_encode([
                     'icono'   => '💰',
-                    'tooltip' => 'Precio de venta al público',
+                    'tooltip' => 'Precio de lidcorería',
                 ]),
             ],
             [
-                'codigo'              => 'POR_MAYOR',
-                'nombre'              => 'Precio por Mayor',
-                'descripcion'         => 'Precio especial para ventas al por mayor',
+                'codigo'              => 'FRIA',
+                'nombre'              => 'Precio fria',
+                'descripcion'         => 'Precio fria',
                 'porcentaje_ganancia' => 10.00,
                 'color'               => 'purple',
                 'es_ganancia'         => true,
@@ -57,14 +57,14 @@ class TiposPrecioSeeder extends Seeder
                 'es_sistema'          => true,
                 'configuracion'       => json_encode([
                     'icono'           => '📦',
-                    'tooltip'         => 'Precio para ventas mayoristas',
+                    'tooltip'         => 'Precio fria',
                     'cantidad_minima' => 10,
                 ]),
             ],
             [
-                'codigo'              => 'DISTRIBUIDOR',
-                'nombre'              => 'Precio Distribuidor',
-                'descripcion'         => 'Precio especial para distribuidores autorizados',
+                'codigo'              => 'FACTURADO',
+                'nombre'              => 'Precio Facturado',
+                'descripcion'         => 'Precio facturado',
                 'porcentaje_ganancia' => 15.00,
                 'color'               => 'indigo',
                 'es_ganancia'         => true,
@@ -74,14 +74,14 @@ class TiposPrecioSeeder extends Seeder
                 'es_sistema'          => true,
                 'configuracion'       => json_encode([
                     'icono'                 => '🏢',
-                    'tooltip'               => 'Precio para distribuidores',
+                    'tooltip'               => 'Precio facturado',
                     'requiere_autorizacion' => true,
                 ]),
             ],
             [
-                'codigo'              => 'PROMOCIONAL',
-                'nombre'              => 'Precio Promocional',
-                'descripcion'         => 'Precio especial para promociones y ofertas',
+                'codigo'              => 'VENTA',
+                'nombre'              => 'Precio Venta',
+                'descripcion'         => 'Precio venta',
                 'porcentaje_ganancia' => 11.00,
                 'color'               => 'red',
                 'es_ganancia'         => true,
@@ -91,11 +91,61 @@ class TiposPrecioSeeder extends Seeder
                 'es_sistema'          => false,
                 'configuracion'       => json_encode([
                     'icono'    => '🎉',
-                    'tooltip'  => 'Precio promocional',
+                    'tooltip'  => 'Precio venta',
                     'temporal' => true,
                 ]),
             ],
-            // Especial
+            // DESCUENTO
+            [
+                'codigo'              => 'DESCUENTO',
+                'nombre'              => 'Precio Descuento',
+                'descripcion'         => 'Precio con descuento especial',
+                'porcentaje_ganancia' => -5.00,
+                'color'               => 'orange',
+                'es_ganancia'         => false,
+                'es_precio_base'      => false,
+                'orden'               => 7,
+                'activo'              => true,
+                'es_sistema'          => false,
+                'configuracion'       => json_encode([
+                    'icono'   => '🔖',
+                    'tooltip' => 'Precio con descuento especial',
+                ]),
+            ],
+            //ESPECIAL
+            [
+                'codigo'              => 'ESPECIAL',
+                'nombre'              => 'Precio Especial',
+                'descripcion'         => 'Precio especial para clientes VIP',
+                'porcentaje_ganancia' => 25.00,
+                'color'               => 'teal',
+                'es_ganancia'         => true,
+                'es_precio_base'      => false,
+                'orden'               => 8,
+                'activo'              => true,
+                'es_sistema'          => false,
+                'configuracion'       => json_encode([
+                    'icono'   => '🌟',
+                    'tooltip' => 'Precio especial para clientes VIP',
+                ]),
+            ],
+            // PUEBLOS
+            [
+                'codigo'              => 'PUEBLOS',
+                'nombre'              => 'Precio Pueblos',
+                'descripcion'         => 'Precio especial para zonas rurales',
+                'porcentaje_ganancia' => 12.00,
+                'color'               => 'brown',
+                'es_ganancia'         => true,
+                'es_precio_base'      => false,
+                'orden'               => 9,
+                'activo'              => true,
+                'es_sistema'          => false,
+                'configuracion'       => json_encode([
+                    'icono'   => '🏞️',
+                    'tooltip' => 'Precio especial para zonas rurales',
+                ]),
+            ],
         ];
 
         foreach ($tiposPrecios as $tipoPrecio) {

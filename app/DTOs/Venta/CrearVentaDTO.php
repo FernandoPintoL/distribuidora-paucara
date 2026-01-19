@@ -39,6 +39,10 @@ class CrearVentaDTO extends BaseDTO
         public ?string $ventana_entrega_ini = null,
         public ?string $ventana_entrega_fin = null,
         public ?string $idempotency_key = null,
+        // ✅ NUEVO: Estado inicial del documento (permite especificar PENDIENTE o APROBADA)
+        public ?int $estado_documento_id = null,
+        // ✅ NUEVO: Información de pago (para calcular estado_pago dinámicamente)
+        public ?float $monto_pagado_inicial = null,  // Monto pagado en el momento de la aprobación
     ) {}
 
     /**

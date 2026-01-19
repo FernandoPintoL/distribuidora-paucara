@@ -5,6 +5,7 @@ import ganancias from './ganancias'
 import credito from './credito'
 import visitas from './visitas'
 import inventario from './inventario'
+import ventas from './ventas'
 /**
 * @see \App\Http\Controllers\ReporteCargoListController::estadisticas
  * @see app/Http/Controllers/ReporteCargoListController.php:185
@@ -225,6 +226,7 @@ ganancias,
 credito,
 visitas,
 inventario,
+ventas,
 }
 
 export default reportes
