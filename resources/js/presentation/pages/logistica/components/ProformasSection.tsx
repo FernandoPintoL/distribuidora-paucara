@@ -21,6 +21,9 @@ interface ProformasSectionProps {
     setFiltroEstadoProforma: (value: string) => void;
     soloVencidas: boolean;
     setSoloVencidas: (value: boolean) => void;
+    filtroLocalidad: string;
+    setFiltroLocalidad: (value: string) => void;
+    localidades: Array<{ id: number; nombre: string }>;
     cambiarPagina: (page: number) => void;
     onVerProforma: (proforma: ProformaAppExterna) => void;
     getEstadoBadge: (estado: string, proforma: ProformaAppExterna) => any;
@@ -36,6 +39,9 @@ export function ProformasSection({
     setFiltroEstadoProforma,
     soloVencidas,
     setSoloVencidas,
+    filtroLocalidad,
+    setFiltroLocalidad,
+    localidades,
     cambiarPagina,
     onVerProforma,
     getEstadoBadge,
@@ -279,9 +285,9 @@ export function ProformasSection({
                                         setSearchInput('');
                                         setSearchProforma('');
                                     }}
-                                    className="dark:border-slate-600 dark:text-slate-300"
+                                    className="dark:border-slate-600 dark:text-slate-300 dark:text-white"
                                 >
-                                    <X className="h-4 w-4" />
+                                    <X className="h-4 w-4 text-white" />
                                 </Button>
                             )}
                         </div>
@@ -305,6 +311,23 @@ export function ProformasSection({
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    {/* ✅ Filtro de Localidad */}
+                    <div>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Filtrar por Localidad</label>
+                        <select
+                            value={filtroLocalidad}
+                            onChange={(e) => setFiltroLocalidad(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                        >
+                            <option value="">Todas las localidades</option>
+                            {localidades.map((localidad) => (
+                                <option key={localidad.id} value={localidad.id.toString()}>
+                                    {localidad.nombre}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Checkbox: Solo vencidas */}
