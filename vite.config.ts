@@ -43,11 +43,15 @@ export default defineConfig({
         port: 5173,
         strictPort: false,
         cors: true,
-        // ✅ HMR dinámico: detecta automáticamente el host desde el que accedes
-        hmr: {
-            host: process.env.VITE_HMR_HOST || '127.0.0.1',
+        // ✅ HMR dinámico: detecta automáticamente el host/puerto desde environment o defaults
+        hmr: process.env.VITE_HMR_HOST ? {
+            host: process.env.VITE_HMR_HOST,
             protocol: process.env.VITE_HMR_PROTOCOL || 'ws',
             port: parseInt(process.env.VITE_HMR_PORT || '5173'),
+        } : {
+            // Fallback: solo configurar si hay variables de entorno explícitas
+            // Sino, Vite detectará automáticamente
+            protocol: 'ws',
         },
     },
     esbuild: {
