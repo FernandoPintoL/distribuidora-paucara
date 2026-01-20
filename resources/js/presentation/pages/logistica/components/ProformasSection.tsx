@@ -4,7 +4,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
-import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { ProformaAppExterna } from '@/domain/entities/logistica';
 import { useEstadosProformas } from '@/application/hooks';
@@ -41,6 +41,7 @@ export function ProformasSection({
     getEstadoBadge,
     estaVencida,
 }: ProformasSectionProps) {
+    // console.log('🚀 ~ file: ProformasSection.tsx:48 ~ ProformasSection ~ proformas:', proformas);
     const [expandedProformaId, setExpandedProformaId] = useState<number | null>(null);
     const [sortField, setSortField] = useState<SortField>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -48,6 +49,7 @@ export function ProformasSection({
     const [dateTo, setDateTo] = useState<string>('');
     const [amountFrom, setAmountFrom] = useState<string>('');
     const [amountTo, setAmountTo] = useState<string>('');
+    const [searchInput, setSearchInput] = useState<string>(searchProforma);
 
     // Fase 3: Usar hook de estados centralizados para obtener estados dinámicamente
     const { estados: estadosAPI, isLoading, error } = useEstadosProformas();
@@ -250,12 +252,39 @@ export function ProformasSection({
                     {/* Búsqueda */}
                     <div>
                         <label className="text-sm font-medium mb-2 block dark:text-gray-300">Buscar</label>
-                        <Input
-                            placeholder="Número de proforma o cliente..."
-                            value={searchProforma}
-                            onChange={(e) => setSearchProforma(e.target.value)}
-                            className="dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
-                        />
+                        <div className="flex gap-2">
+                            <Input
+                                placeholder="Número de proforma o cliente..."
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                className="dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        setSearchProforma(searchInput);
+                                    }
+                                }}
+                            />
+                            <Button
+                                size="sm"
+                                onClick={() => setSearchProforma(searchInput)}
+                                className="dark:bg-blue-600 dark:hover:bg-blue-700"
+                            >
+                                <Search className="h-4 w-4" />
+                            </Button>
+                            {searchProforma && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setSearchInput('');
+                                        setSearchProforma('');
+                                    }}
+                                    className="dark:border-slate-600 dark:text-slate-300"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Filtro de estado - Fase 3: Dinámico desde API */}
