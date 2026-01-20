@@ -4,7 +4,8 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
-import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/presentation/components/ui/collapsible';
+import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X, ChevronDown } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { ProformaAppExterna } from '@/domain/entities/logistica';
 import { useEstadosProformas } from '@/application/hooks';
@@ -82,6 +83,7 @@ export function ProformasSection({
     const [amountFrom, setAmountFrom] = useState<string>('');
     const [amountTo, setAmountTo] = useState<string>('');
     const [searchInput, setSearchInput] = useState<string>(searchProforma);
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
 
     // Fase 3: Usar hook de estados centralizados para obtener estados dinámicamente
     const { estados: estadosAPI, isLoading, error } = useEstadosProformas();
@@ -91,6 +93,55 @@ export function ProformasSection({
         const estadosCodigos = estadosAPI.map(e => e.codigo);
         return ['TODOS' as const, ...estadosCodigos];
     }, [estadosAPI]);
+
+    // Función para contar filtros activos
+    const countActiveFilters = () => {
+        let count = 0;
+        if (filtroLocalidad) count++;
+        if (filtroTipoEntrega) count++;
+        if (filtroPoliticaPago) count++;
+        if (filtroEstadoLogistica) count++;
+        if (filtroCoordinacionCompletada) count++;
+        if (filtroUsuarioAprobador) count++;
+        if (soloVencidas) count++;
+        if (dateFrom || dateTo) count++;
+        if (amountFrom || amountTo) count++;
+        return count;
+    };
+
+    const activeFiltersCount = countActiveFilters();
+
+    // Función para obtener etiqueta del filtro activo
+    const getFilterLabel = (key: string, value: string): string => {
+        switch (key) {
+            case 'localidad':
+                return `Localidad: ${localidades.find(l => l.id.toString() === value)?.nombre || value}`;
+            case 'tipo_entrega':
+                return `Entrega: ${value === 'DELIVERY' ? '🚚 Delivery' : '🏪 Pickup'}`;
+            case 'politica_pago':
+                const politicas: Record<string, string> = {
+                    'CONTRA_ENTREGA': 'Contra Entrega',
+                    'ANTICIPADO_100': 'Anticipado 100%',
+                    'MEDIO_MEDIO': 'Medio/Medio',
+                    'CREDITO': 'Crédito'
+                };
+                return `Pago: ${politicas[value] || value}`;
+            case 'estado_logistica':
+                return `Logístico: ${estadosLogistica.find(e => e.id.toString() === value)?.nombre || value}`;
+            case 'coordinacion':
+                return `Coordinación: ${value === 'true' ? '✓ Completada' : '⏳ Pendiente'}`;
+            case 'usuario_aprobador':
+                return `Aprobador: ${usuariosAprobadores.find(u => u.id.toString() === value)?.name || value}`;
+            case 'vencidas':
+                return 'Solo Vencidas';
+            case 'rango_fecha':
+                return `Fechas: ${dateFrom || 'Inicio'} - ${dateTo || 'Fin'}`;
+            case 'rango_monto':
+                return `Monto: ${amountFrom || '0'} - ${amountTo || '∞'}`;
+            default:
+                return value;
+        }
+    };
 
     // Función para manejar el click en headers para ordenar
     const handleSort = (field: SortField) => {
@@ -279,14 +330,14 @@ export function ProformasSection({
                 <CardTitle className="dark:text-white">Proformas App Externa</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-                {/* Filtros */}
-                <div className="space-y-4">
+                {/* SECCIÓN 1: Búsqueda y Estado (Siempre Visible) */}
+                <div className="space-y-4 pb-4 border-b dark:border-slate-700">
                     {/* Búsqueda */}
                     <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Buscar</label>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Búsqueda</label>
                         <div className="flex gap-2">
                             <Input
-                                placeholder="Número de proforma o cliente..."
+                                placeholder="Número de proforma, cliente, CI, teléfono..."
                                 value={searchInput}
                                 onChange={(e) => setSearchInput(e.target.value)}
                                 className="dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
@@ -311,18 +362,18 @@ export function ProformasSection({
                                         setSearchInput('');
                                         setSearchProforma('');
                                     }}
-                                    className="dark:border-slate-600 dark:text-slate-300 dark:text-white"
+                                    className="dark:border-slate-600 dark:text-slate-300"
                                 >
-                                    <X className="h-4 w-4 text-white" />
+                                    <X className="h-4 w-4" />
                                 </Button>
                             )}
                         </div>
                     </div>
 
-                    {/* Filtro de estado - Fase 3: Dinámico desde API */}
+                    {/* Filtro de Estado */}
                     <div>
                         <label className="text-sm font-medium mb-2 block dark:text-gray-300">
-                            Filtrar por Estado
+                            Estado de Proforma
                             {isLoading && <span className="text-xs text-gray-500 ml-2">(cargando...)</span>}
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -338,178 +389,321 @@ export function ProformasSection({
                             ))}
                         </div>
                     </div>
-
-                    {/* ✅ Filtro de Localidad */}
-                    <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Filtrar por Localidad</label>
-                        <select
-                            value={filtroLocalidad}
-                            onChange={(e) => setFiltroLocalidad(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                        >
-                            <option value="">Todas las localidades</option>
-                            {localidades.map((localidad) => (
-                                <option key={localidad.id} value={localidad.id.toString()}>
-                                    {localidad.nombre}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* ✅ Filtro de Tipo de Entrega */}
-                    <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Tipo de Entrega</label>
-                        <select
-                            value={filtroTipoEntrega}
-                            onChange={(e) => setFiltroTipoEntrega(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                        >
-                            <option value="">Todos</option>
-                            <option value="DELIVERY">DELIVERY</option>
-                            <option value="PICKUP">PICKUP</option>
-                        </select>
-                    </div>
-
-                    {/* ✅ Filtro de Política de Pago */}
-                    <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Política de Pago</label>
-                        <select
-                            value={filtroPoliticaPago}
-                            onChange={(e) => setFiltroPoliticaPago(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                        >
-                            <option value="">Todos</option>
-                            <option value="CONTRA_ENTREGA">CONTRA ENTREGA</option>
-                            <option value="ANTICIPADO_100">ANTICIPADO 100%</option>
-                            <option value="MEDIO_MEDIO">MEDIO/MEDIO</option>
-                            <option value="CREDITO">CRÉDITO</option>
-                        </select>
-                    </div>
-
-                    {/* ✅ Filtro de Estado Logístico */}
-                    <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Estado Logístico</label>
-                        <select
-                            value={filtroEstadoLogistica}
-                            onChange={(e) => setFiltroEstadoLogistica(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                        >
-                            <option value="">Todos los estados</option>
-                            {estadosLogistica.map((estado) => (
-                                <option key={estado.id} value={estado.id.toString()}>
-                                    {estado.nombre}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* ✅ Filtro de Usuario Aprobador */}
-                    <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Aprobado Por</label>
-                        <select
-                            value={filtroUsuarioAprobador}
-                            onChange={(e) => setFiltroUsuarioAprobador(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                        >
-                            <option value="">Todos los aprobadores</option>
-                            {usuariosAprobadores.map((usuario) => (
-                                <option key={usuario.id} value={usuario.id.toString()}>
-                                    {usuario.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* ✅ Filtro de Coordinación Completada */}
-                    <div>
-                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Estado de Coordinación</label>
-                        <select
-                            value={filtroCoordinacionCompletada}
-                            onChange={(e) => setFiltroCoordinacionCompletada(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                        >
-                            <option value="">Todos</option>
-                            <option value="true">Completada</option>
-                            <option value="false">Pendiente</option>
-                        </select>
-                    </div>
-
-                    {/* Checkbox: Solo vencidas */}
-                    <div className="flex items-center gap-2">
-                        <Checkbox
-                            id="solo_vencidas"
-                            checked={soloVencidas}
-                            onCheckedChange={(checked) => setSoloVencidas(checked as boolean)}
-                            className="dark:border-slate-600"
-                        />
-                        <label htmlFor="solo_vencidas" className="text-sm cursor-pointer dark:text-gray-300">
-                            Solo vencidas
-                        </label>
-                    </div>
-
-                    {/* Filtro de Rango de Fechas */}
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="text-sm font-medium mb-1 block dark:text-gray-300">Desde</label>
-                            <Input
-                                type="date"
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                                className="dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium mb-1 block dark:text-gray-300">Hasta</label>
-                            <Input
-                                type="date"
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                                className="dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Filtro de Rango de Montos */}
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="text-sm font-medium mb-1 block dark:text-gray-300">Monto Desde</label>
-                            <Input
-                                type="number"
-                                placeholder="0"
-                                value={amountFrom}
-                                onChange={(e) => setAmountFrom(e.target.value)}
-                                className="dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-gray-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium mb-1 block dark:text-gray-300">Monto Hasta</label>
-                            <Input
-                                type="number"
-                                placeholder="0"
-                                value={amountTo}
-                                onChange={(e) => setAmountTo(e.target.value)}
-                                className="dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-gray-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Botón para limpiar filtros */}
-                    {(dateFrom || dateTo || amountFrom || amountTo) && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                                setDateFrom('');
-                                setDateTo('');
-                                setAmountFrom('');
-                                setAmountTo('');
-                            }}
-                            className="w-full dark:border-slate-600 dark:text-slate-300"
-                        >
-                            Limpiar Filtros
-                        </Button>
-                    )}
                 </div>
+
+                {/* SECCIÓN 2: Filtros Activos (Chips) */}
+                {activeFiltersCount > 0 && (
+                    <div className="space-y-2 pb-4 border-b dark:border-slate-700">
+                        <p className="text-sm font-medium dark:text-gray-300">
+                            Filtros Activos ({activeFiltersCount})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {filtroLocalidad && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    Localidad: {localidades.find(l => l.id.toString() === filtroLocalidad)?.nombre}
+                                    <button
+                                        onClick={() => setFiltroLocalidad('')}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {filtroTipoEntrega && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    {filtroTipoEntrega === 'DELIVERY' ? '🚚 Delivery' : '🏪 Pickup'}
+                                    <button
+                                        onClick={() => setFiltroTipoEntrega('')}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {filtroPoliticaPago && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    💳 {filtroPoliticaPago.replace(/_/g, ' ')}
+                                    <button
+                                        onClick={() => setFiltroPoliticaPago('')}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {filtroEstadoLogistica && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    Logístico: {estadosLogistica.find(e => e.id.toString() === filtroEstadoLogistica)?.nombre}
+                                    <button
+                                        onClick={() => setFiltroEstadoLogistica('')}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {filtroCoordinacionCompletada && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    {filtroCoordinacionCompletada === 'true' ? '✓ Completada' : '⏳ Pendiente'}
+                                    <button
+                                        onClick={() => setFiltroCoordinacionCompletada('')}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {filtroUsuarioAprobador && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    👤 {usuariosAprobadores.find(u => u.id.toString() === filtroUsuarioAprobador)?.name}
+                                    <button
+                                        onClick={() => setFiltroUsuarioAprobador('')}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {soloVencidas && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    ⚠️ Solo Vencidas
+                                    <button
+                                        onClick={() => setSoloVencidas(false)}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {(dateFrom || dateTo) && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    📅 {dateFrom}-{dateTo}
+                                    <button
+                                        onClick={() => {
+                                            setDateFrom('');
+                                            setDateTo('');
+                                        }}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {(amountFrom || amountTo) && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    💵 {amountFrom || '0'}-{amountTo || '∞'}
+                                    <button
+                                        onClick={() => {
+                                            setAmountFrom('');
+                                            setAmountTo('');
+                                        }}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    setFiltroLocalidad('');
+                                    setFiltroTipoEntrega('');
+                                    setFiltroPoliticaPago('');
+                                    setFiltroEstadoLogistica('');
+                                    setFiltroCoordinacionCompletada('');
+                                    setFiltroUsuarioAprobador('');
+                                    setSoloVencidas(false);
+                                    setDateFrom('');
+                                    setDateTo('');
+                                    setAmountFrom('');
+                                    setAmountTo('');
+                                }}
+                                className="dark:border-slate-600 dark:text-slate-300 text-red-600 dark:text-red-400"
+                            >
+                                Limpiar Todos
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* SECCIÓN 3: Filtros Avanzados (Collapsible) */}
+                <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+                    <CollapsibleTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="w-full dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800 justify-between"
+                        >
+                            <span className="flex items-center gap-2">
+                                <Filter className="w-4 h-4" />
+                                Filtros Avanzados
+                            </span>
+                            <ChevronDown className={`w-4 h-4 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+                        </Button>
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent className="space-y-4 pt-4 border-t dark:border-slate-700 mt-4">
+                        {/* Grid de 3 columnas */}
+                        <div className="grid grid-cols-3 gap-4">
+                            {/* Localidad */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Localidad</label>
+                                <select
+                                    value={filtroLocalidad}
+                                    onChange={(e) => setFiltroLocalidad(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                >
+                                    <option value="">Todas</option>
+                                    {localidades.map((localidad) => (
+                                        <option key={localidad.id} value={localidad.id.toString()}>
+                                            {localidad.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tipo de Entrega */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Tipo Entrega</label>
+                                <select
+                                    value={filtroTipoEntrega}
+                                    onChange={(e) => setFiltroTipoEntrega(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    <option value="DELIVERY">🚚 Delivery</option>
+                                    <option value="PICKUP">🏪 Pickup</option>
+                                </select>
+                            </div>
+
+                            {/* Estado Logístico */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Est. Logístico</label>
+                                <select
+                                    value={filtroEstadoLogistica}
+                                    onChange={(e) => setFiltroEstadoLogistica(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    {estadosLogistica.map((estado) => (
+                                        <option key={estado.id} value={estado.id.toString()}>
+                                            {estado.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Política de Pago */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Política Pago</label>
+                                <select
+                                    value={filtroPoliticaPago}
+                                    onChange={(e) => setFiltroPoliticaPago(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    <option value="CONTRA_ENTREGA">Contra Entrega</option>
+                                    <option value="ANTICIPADO_100">Anticipado 100%</option>
+                                    <option value="MEDIO_MEDIO">Medio/Medio</option>
+                                    <option value="CREDITO">Crédito</option>
+                                </select>
+                            </div>
+
+                            {/* Aprobado Por */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Aprobado Por</label>
+                                <select
+                                    value={filtroUsuarioAprobador}
+                                    onChange={(e) => setFiltroUsuarioAprobador(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    {usuariosAprobadores.map((usuario) => (
+                                        <option key={usuario.id} value={usuario.id.toString()}>
+                                            {usuario.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Coordinación */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Coordinación</label>
+                                <select
+                                    value={filtroCoordinacionCompletada}
+                                    onChange={(e) => setFiltroCoordinacionCompletada(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    <option value="true">✓ Completada</option>
+                                    <option value="false">⏳ Pendiente</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Separador */}
+                        <div className="border-t dark:border-slate-700 pt-4" />
+
+                        {/* Rango de Fechas */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Desde</label>
+                                <Input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                    className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Hasta</label>
+                                <Input
+                                    type="date"
+                                    value={dateTo}
+                                    onChange={(e) => setDateTo(e.target.value)}
+                                    className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Rango de Montos */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Monto Mín</label>
+                                <Input
+                                    type="number"
+                                    placeholder="0"
+                                    value={amountFrom}
+                                    onChange={(e) => setAmountFrom(e.target.value)}
+                                    className="dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-gray-500 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Monto Máx</label>
+                                <Input
+                                    type="number"
+                                    placeholder="0"
+                                    value={amountTo}
+                                    onChange={(e) => setAmountTo(e.target.value)}
+                                    className="dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-gray-500 text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Solo Vencidas */}
+                        <div className="flex items-center gap-2 pt-2">
+                            <Checkbox
+                                id="solo_vencidas"
+                                checked={soloVencidas}
+                                onCheckedChange={(checked) => setSoloVencidas(checked as boolean)}
+                                className="dark:border-slate-600"
+                            />
+                            <label htmlFor="solo_vencidas" className="text-sm cursor-pointer dark:text-gray-300">
+                                ⚠️ Mostrar solo proformas vencidas
+                            </label>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
 
                 {/* Información de paginación */}
                 <div className="text-sm text-gray-500 dark:text-gray-400">
