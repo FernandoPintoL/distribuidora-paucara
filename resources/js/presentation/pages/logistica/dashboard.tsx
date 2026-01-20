@@ -25,7 +25,7 @@ import type {
 // Utilidades centralizadas
 import { MOTIVOS_RECHAZO_PROFORMA } from '@/lib/proformas.utils';
 
-export default function LogisticaDashboard({ estadisticas, proformasRecientes }: DashboardLogisticaProps) {
+export default function LogisticaDashboard({ estadisticas, proformasRecientes, localidades }: DashboardLogisticaProps & { localidades: Array<{id: number; nombre: string}> }) {
     // Estados principales
     const [stats] = useState<DashboardLogisticaStats>(estadisticas);
     const [proformas, setProformas] = useState<ProformaAppExterna[]>(proformasRecientes.data);
@@ -70,8 +70,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
         console.log('Stats from Inertia (estadisticas):', stats);
         console.log('Proforma Stats from API:', proformaStats);
         console.log('Proforma Loading:', loadingProformaStats);
-        console.log('Proforma Error:', proformaError);
-        console.log('Logistica Stats:', logisticaStats);
         console.log('================================');
     }, [stats, proformaStats, loadingProformaStats, proformaError, logisticaStats]);
 
@@ -167,6 +165,9 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes }:
                     setFiltroEstadoProforma={proformaFilters.setFiltroEstadoProforma}
                     soloVencidas={proformaFilters.soloVencidas}
                     setSoloVencidas={proformaFilters.setSoloVencidas}
+                    filtroLocalidad={proformaFilters.filtroLocalidad}
+                    setFiltroLocalidad={proformaFilters.setFiltroLocalidad}
+                    localidades={localidades}
                     cambiarPagina={proformaFilters.cambiarPagina}
                     onVerProforma={handleVerProforma}
                     getEstadoBadge={getEstadoBadge}
