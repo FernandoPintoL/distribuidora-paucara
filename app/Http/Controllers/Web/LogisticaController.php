@@ -62,7 +62,7 @@ class LogisticaController extends Controller
                   ->whereNotIn('estado_proforma_id', [3, 4]);
         }
 
-        $proformasPaginated = $query->orderBy('fecha', 'desc')
+        $proformasPaginated = $query->orderBy('id', 'desc')
             ->paginate(15); // 15 por página
 
         $proformasRecientes = [
