@@ -43,10 +43,11 @@ export default defineConfig({
         port: 5173,
         strictPort: false,
         cors: true,
+        // ✅ HMR dinámico: detecta automáticamente el host desde el que accedes
         hmr: {
-            host: 'localhost',
-            protocol: 'ws',
-            port: 5173,
+            host: process.env.VITE_HMR_HOST || '127.0.0.1',
+            protocol: process.env.VITE_HMR_PROTOCOL || 'ws',
+            port: parseInt(process.env.VITE_HMR_PORT || '5173'),
         },
     },
     esbuild: {
