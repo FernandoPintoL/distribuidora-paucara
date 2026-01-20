@@ -25,7 +25,13 @@ import type {
 // Utilidades centralizadas
 import { MOTIVOS_RECHAZO_PROFORMA } from '@/lib/proformas.utils';
 
-export default function LogisticaDashboard({ estadisticas, proformasRecientes, localidades }: DashboardLogisticaProps & { localidades: Array<{id: number; nombre: string}> }) {
+interface DashboardProps extends DashboardLogisticaProps {
+    localidades: Array<{id: number; nombre: string}>;
+    usuariosAprobadores: Array<{id: number; name: string}>;
+    estadosLogistica: Array<{id: number; nombre: string; codigo: string}>;
+}
+
+export default function LogisticaDashboard({ estadisticas, proformasRecientes, localidades, usuariosAprobadores, estadosLogistica }: DashboardProps) {
     // Estados principales
     const [stats] = useState<DashboardLogisticaStats>(estadisticas);
     const [proformas, setProformas] = useState<ProformaAppExterna[]>(proformasRecientes.data);
@@ -168,6 +174,19 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
                     filtroLocalidad={proformaFilters.filtroLocalidad}
                     setFiltroLocalidad={proformaFilters.setFiltroLocalidad}
                     localidades={localidades}
+                    // ✅ Nuevos filtros
+                    filtroTipoEntrega={proformaFilters.filtroTipoEntrega}
+                    setFiltroTipoEntrega={proformaFilters.setFiltroTipoEntrega}
+                    filtroPoliticaPago={proformaFilters.filtroPoliticaPago}
+                    setFiltroPoliticaPago={proformaFilters.setFiltroPoliticaPago}
+                    filtroEstadoLogistica={proformaFilters.filtroEstadoLogistica}
+                    setFiltroEstadoLogistica={proformaFilters.setFiltroEstadoLogistica}
+                    filtroCoordinacionCompletada={proformaFilters.filtroCoordinacionCompletada}
+                    setFiltroCoordinacionCompletada={proformaFilters.setFiltroCoordinacionCompletada}
+                    filtroUsuarioAprobador={proformaFilters.filtroUsuarioAprobador}
+                    setFiltroUsuarioAprobador={proformaFilters.setFiltroUsuarioAprobador}
+                    usuariosAprobadores={usuariosAprobadores}
+                    estadosLogistica={estadosLogistica}
                     cambiarPagina={proformaFilters.cambiarPagina}
                     onVerProforma={handleVerProforma}
                     getEstadoBadge={getEstadoBadge}
