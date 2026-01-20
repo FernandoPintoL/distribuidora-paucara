@@ -73,7 +73,7 @@ class LogisticaController extends Controller
 
         // ✅ Filtro por estado logístico
         if (request()->has('estado_logistica_id') && request('estado_logistica_id') !== '' && request('estado_logistica_id') !== '0') {
-            $query->where('estado_logistica_id', request('estado_logistica_id'));
+            $query->where('estado_proforma_id', request('estado_logistica_id'));
         }
 
         // ✅ Filtro por coordinación completada
@@ -115,7 +115,7 @@ class LogisticaController extends Controller
                     'tipo_entrega'                    => $proforma->tipo_entrega ?? 'N/A',
                     'politica_pago'                   => $proforma->politica_pago ?? 'N/A',
                     'estado_logistica'                => $proforma->estadoLogistica->nombre ?? 'N/A',
-                    'estado_logistica_id'             => $proforma->estado_logistica_id,
+                    'estado_logistica_id'             => $proforma->estado_proforma_id,
                     'coordinacion_completada'         => (bool) $proforma->coordinacion_completada,
                     // Datos de solicitud
                     'fecha_entrega_solicitada'        => $proforma->fecha_entrega_solicitada,
@@ -168,9 +168,9 @@ class LogisticaController extends Controller
 
         // ✅ Obtener estados logísticos disponibles
         $estadosLogistica = EstadoLogistica::whereIn('id', function ($query) {
-                $query->select('estado_logistica_id')
+                $query->select('estado_proforma_id')
                     ->from('proformas')
-                    ->whereNotNull('estado_logistica_id')
+                    ->whereNotNull('estado_proforma_id')
                     ->distinct();
             })
             ->select('id', 'nombre', 'codigo')
