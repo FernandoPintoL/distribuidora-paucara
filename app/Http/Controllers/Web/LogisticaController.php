@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Entrega;
 use App\Models\Proforma;
 use App\Models\Localidad;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class LogisticaController extends Controller
@@ -29,12 +30,13 @@ class LogisticaController extends Controller
             }
         }
 
+        // ✅ Búsqueda case-insensitive en número y nombre del cliente
         if (request()->has('search') && request('search') !== '') {
-            $search = request('search');
+            $search = strtolower(request('search'));
             $query->where(function ($q) use ($search) {
-                $q->where('numero', 'like', "%{$search}%")
+                $q->whereRaw('LOWER(numero) like ?', ["%{$search}%"])
                     ->orWhereHas('cliente', function ($clienteQuery) use ($search) {
-                        $clienteQuery->where('nombre', 'like', "%{$search}%");
+                        $clienteQuery->whereRaw('LOWER(nombre) like ?', ["%{$search}%"]);
                     });
             });
         }
