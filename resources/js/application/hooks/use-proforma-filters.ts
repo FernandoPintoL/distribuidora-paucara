@@ -6,6 +6,11 @@ interface ProformaFilterState {
     filtroEstadoProforma: 'TODOS' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA' | 'VENCIDA';
     soloVencidas: boolean;
     filtroLocalidad: string;
+    filtroTipoEntrega: string;
+    filtroPoliticaPago: string;
+    filtroEstadoLogistica: string;
+    filtroCoordinacionCompletada: string;
+    filtroUsuarioAprobador: string;
     paginationInfo: {
         current_page: number;
         last_page: number;
@@ -26,6 +31,11 @@ export function useProformaFilters(initialPaginationInfo: any) {
     );
     const [soloVencidas, setSoloVencidas] = useState(urlParams.get('solo_vencidas') === 'true');
     const [filtroLocalidad, setFiltroLocalidad] = useState(urlParams.get('localidad_id') || '');
+    const [filtroTipoEntrega, setFiltroTipoEntrega] = useState(urlParams.get('tipo_entrega') || '');
+    const [filtroPoliticaPago, setFiltroPoliticaPago] = useState(urlParams.get('politica_pago') || '');
+    const [filtroEstadoLogistica, setFiltroEstadoLogistica] = useState(urlParams.get('estado_logistica_id') || '');
+    const [filtroCoordinacionCompletada, setFiltroCoordinacionCompletada] = useState(urlParams.get('coordinacion_completada') || '');
+    const [filtroUsuarioAprobador, setFiltroUsuarioAprobador] = useState(urlParams.get('usuario_aprobador_id') || '');
     const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
     const [paginationInfo, setPaginationInfo] = useState(initialPaginationInfo);
 
@@ -50,6 +60,31 @@ export function useProformaFilters(initialPaginationInfo: any) {
             params.localidad_id = filtroLocalidad;
         }
 
+        // ✅ Agregar filtro de tipo de entrega
+        if (filtroTipoEntrega && filtroTipoEntrega !== 'TODOS') {
+            params.tipo_entrega = filtroTipoEntrega;
+        }
+
+        // ✅ Agregar filtro de política de pago
+        if (filtroPoliticaPago && filtroPoliticaPago !== 'TODOS') {
+            params.politica_pago = filtroPoliticaPago;
+        }
+
+        // ✅ Agregar filtro de estado logístico
+        if (filtroEstadoLogistica && filtroEstadoLogistica !== '0') {
+            params.estado_logistica_id = filtroEstadoLogistica;
+        }
+
+        // ✅ Agregar filtro de coordinación completada
+        if (filtroCoordinacionCompletada && filtroCoordinacionCompletada !== '') {
+            params.coordinacion_completada = filtroCoordinacionCompletada;
+        }
+
+        // ✅ Agregar filtro de usuario aprobador
+        if (filtroUsuarioAprobador && filtroUsuarioAprobador !== '0') {
+            params.usuario_aprobador_id = filtroUsuarioAprobador;
+        }
+
         // Actualizar paginación inmediatamente (CRITICAL FIX: evitar race condition)
         setPaginationInfo((prev: any) => ({
             ...prev,
@@ -60,7 +95,7 @@ export function useProformaFilters(initialPaginationInfo: any) {
 
         // Use FilterService for navigation (proper service layer abstraction)
         FilterService.navigateProformaFilters(params);
-    }, [filtroEstadoProforma, searchProforma, soloVencidas, filtroLocalidad]);
+    }, [filtroEstadoProforma, searchProforma, soloVencidas, filtroLocalidad, filtroTipoEntrega, filtroPoliticaPago, filtroEstadoLogistica, filtroCoordinacionCompletada, filtroUsuarioAprobador]);
 
     // Aplicar filtros con debounce
     useEffect(() => {
@@ -77,7 +112,7 @@ export function useProformaFilters(initialPaginationInfo: any) {
         return () => {
             if (timeout) clearTimeout(timeout);
         };
-    }, [filtroEstadoProforma, soloVencidas, searchProforma, filtroLocalidad, aplicarFiltros]);
+    }, [filtroEstadoProforma, soloVencidas, searchProforma, filtroLocalidad, filtroTipoEntrega, filtroPoliticaPago, filtroEstadoLogistica, filtroCoordinacionCompletada, filtroUsuarioAprobador, aplicarFiltros]);
 
     // Cambiar página
     const cambiarPagina = (page: number) => {
@@ -93,6 +128,16 @@ export function useProformaFilters(initialPaginationInfo: any) {
         setSoloVencidas,
         filtroLocalidad,
         setFiltroLocalidad,
+        filtroTipoEntrega,
+        setFiltroTipoEntrega,
+        filtroPoliticaPago,
+        setFiltroPoliticaPago,
+        filtroEstadoLogistica,
+        setFiltroEstadoLogistica,
+        filtroCoordinacionCompletada,
+        setFiltroCoordinacionCompletada,
+        filtroUsuarioAprobador,
+        setFiltroUsuarioAprobador,
         paginationInfo,
         setPaginationInfo,
         cambiarPagina,
