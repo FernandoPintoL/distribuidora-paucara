@@ -320,29 +320,43 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 // Seguimiento: GET /api/entregas/{entrega}/seguimiento
 
 // ==========================================
-// RUTAS API EXISTENTES
+// RUTAS API EXISTENTES (Protegidas por autenticación)
 // ==========================================
+Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
+    // Rutas API básicas con nombres únicos para evitar conflictos con rutas web
+    Route::apiResource('compras', CompraController::class)->names('api.compras');
 
-// Rutas API básicas con nombres únicos para evitar conflictos con rutas web
-Route::apiResource('compras', CompraController::class)->names('api.compras');
-Route::apiResource('ventas', VentaController::class)->names('api.ventas');
+    // ✅ VENTAS: PDF Download (Impresión de tickets y facturas) - ANTES de apiResource
+    // Esto asegura que se procesen ANTES que las rutas genéricas de apiResource
+    Route::group(['prefix' => 'ventas'], function () {
+        // 🖨️ Descargar venta como PDF (múltiples formatos)
+        // Accesible por Chofer (para descargar PDFs de ventas asignadas)
+        // y por Cliente (para descargar sus propias ventas)
+        Route::get('{venta}/imprimir', [VentaController::class, 'imprimir'])
+            ->name('api.ventas.imprimir');
 
-// Rutas adicionales para ventas
-Route::group(['prefix' => 'ventas'], function () {
-    Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
-    Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);
-    Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
-    Route::get('{venta}/resumen-stock', [VentaController::class, 'obtenerResumenStock']);
-    Route::post('{venta}/anular', [VentaController::class, 'anular']);
+        // 🖨️ Vista previa de venta en navegador
+        Route::get('{venta}/preview', [VentaController::class, 'preview'])
+            ->name('api.ventas.preview');
+    });
 
-    // ✅ NUEVO: Endpoints para confirmación de pickup
-    Route::post('{venta}/confirmar-pickup-cliente', [ApiVentaController::class, 'confirmarPickupCliente'])
-        ->middleware('auth:sanctum,web')
-        ->name('api.ventas.confirmar-pickup-cliente');
+    Route::apiResource('ventas', VentaController::class)->names('api.ventas');
 
-    Route::post('{venta}/confirmar-pickup-empleado', [ApiVentaController::class, 'confirmarPickupEmpleado'])
-        ->middleware('auth:sanctum,web')
-        ->name('api.ventas.confirmar-pickup-empleado');
+    // Rutas adicionales para ventas
+    Route::group(['prefix' => 'ventas'], function () {
+        Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
+        Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);
+        Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
+        Route::get('{venta}/resumen-stock', [VentaController::class, 'obtenerResumenStock']);
+        Route::post('{venta}/anular', [VentaController::class, 'anular']);
+
+        // ✅ NUEVO: Endpoints para confirmación de pickup
+        Route::post('{venta}/confirmar-pickup-cliente', [ApiVentaController::class, 'confirmarPickupCliente'])
+            ->name('api.ventas.confirmar-pickup-cliente');
+
+        Route::post('{venta}/confirmar-pickup-empleado', [ApiVentaController::class, 'confirmarPickupEmpleado'])
+            ->name('api.ventas.confirmar-pickup-empleado');
+    });
 });
 
 // Rutas API para contabilidad
