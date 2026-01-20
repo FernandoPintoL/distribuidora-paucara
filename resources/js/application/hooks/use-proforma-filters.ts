@@ -5,6 +5,7 @@ interface ProformaFilterState {
     searchProforma: string;
     filtroEstadoProforma: 'TODOS' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA' | 'VENCIDA';
     soloVencidas: boolean;
+    filtroLocalidad: string;
     paginationInfo: {
         current_page: number;
         last_page: number;
@@ -24,6 +25,7 @@ export function useProformaFilters(initialPaginationInfo: any) {
         (urlParams.get('estado') as any) || 'TODOS'
     );
     const [soloVencidas, setSoloVencidas] = useState(urlParams.get('solo_vencidas') === 'true');
+    const [filtroLocalidad, setFiltroLocalidad] = useState(urlParams.get('localidad_id') || '');
     const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
     const [paginationInfo, setPaginationInfo] = useState(initialPaginationInfo);
 
@@ -43,6 +45,11 @@ export function useProformaFilters(initialPaginationInfo: any) {
             params.solo_vencidas = 'true';
         }
 
+        // ✅ Agregar filtro de localidad si está seleccionada
+        if (filtroLocalidad && filtroLocalidad !== '0') {
+            params.localidad_id = filtroLocalidad;
+        }
+
         // Actualizar paginación inmediatamente (CRITICAL FIX: evitar race condition)
         setPaginationInfo((prev: any) => ({
             ...prev,
@@ -53,7 +60,7 @@ export function useProformaFilters(initialPaginationInfo: any) {
 
         // Use FilterService for navigation (proper service layer abstraction)
         FilterService.navigateProformaFilters(params);
-    }, [filtroEstadoProforma, searchProforma, soloVencidas]);
+    }, [filtroEstadoProforma, searchProforma, soloVencidas, filtroLocalidad]);
 
     // Aplicar filtros con debounce
     useEffect(() => {
@@ -70,7 +77,7 @@ export function useProformaFilters(initialPaginationInfo: any) {
         return () => {
             if (timeout) clearTimeout(timeout);
         };
-    }, [filtroEstadoProforma, soloVencidas, searchProforma, aplicarFiltros]);
+    }, [filtroEstadoProforma, soloVencidas, searchProforma, filtroLocalidad, aplicarFiltros]);
 
     // Cambiar página
     const cambiarPagina = (page: number) => {
@@ -84,6 +91,8 @@ export function useProformaFilters(initialPaginationInfo: any) {
         setFiltroEstadoProforma,
         soloVencidas,
         setSoloVencidas,
+        filtroLocalidad,
+        setFiltroLocalidad,
         paginationInfo,
         setPaginationInfo,
         cambiarPagina,
