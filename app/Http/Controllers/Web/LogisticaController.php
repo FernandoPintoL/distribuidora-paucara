@@ -3,10 +3,10 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Entrega;
+use App\Models\EstadoLogistica;
 use App\Models\Localidad;
 use App\Models\Proforma;
 use App\Models\User;
-use App\Models\Estado;
 use Inertia\Inertia;
 
 class LogisticaController extends Controller
@@ -150,9 +150,13 @@ class LogisticaController extends Controller
             });
 
         // ✅ Obtener usuarios aprobadores (que hayan aprobado proformas)
-        $usuariosAprobadores = User::whereHas('proformasAprobadas')
+        $usuariosAprobadores = User::whereIn('id', function ($query) {
+                $query->select('usuario_aprobador_id')
+                    ->from('proformas')
+                    ->whereNotNull('usuario_aprobador_id')
+                    ->distinct();
+            })
             ->select('id', 'name')
-            ->distinct()
             ->orderBy('name', 'asc')
             ->get()
             ->map(function ($user) {
@@ -163,9 +167,13 @@ class LogisticaController extends Controller
             });
 
         // ✅ Obtener estados logísticos disponibles
-        $estadosLogistica = Estado::whereHas('proformas')
+        $estadosLogistica = EstadoLogistica::whereIn('id', function ($query) {
+                $query->select('estado_logistica_id')
+                    ->from('proformas')
+                    ->whereNotNull('estado_logistica_id')
+                    ->distinct();
+            })
             ->select('id', 'nombre', 'codigo')
-            ->distinct()
             ->orderBy('nombre', 'asc')
             ->get()
             ->map(function ($estado) {
@@ -177,10 +185,10 @@ class LogisticaController extends Controller
             });
 
         return Inertia::render('logistica/dashboard', [
-            'proformasRecientes'    => $proformasRecientes,
-            'localidades'           => $localidades,
-            'usuariosAprobadores'   => $usuariosAprobadores,
-            'estadosLogistica'      => $estadosLogistica,
+            'proformasRecientes'  => $proformasRecientes,
+            'localidades'         => $localidades,
+            'usuariosAprobadores' => $usuariosAprobadores,
+            'estadosLogistica'    => $estadosLogistica,
         ]);
     }
 
