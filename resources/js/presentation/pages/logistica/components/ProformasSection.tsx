@@ -24,6 +24,19 @@ interface ProformasSectionProps {
     filtroLocalidad: string;
     setFiltroLocalidad: (value: string) => void;
     localidades: Array<{ id: number; nombre: string }>;
+    // ✅ Nuevos filtros
+    filtroTipoEntrega: string;
+    setFiltroTipoEntrega: (value: string) => void;
+    filtroPoliticaPago: string;
+    setFiltroPoliticaPago: (value: string) => void;
+    filtroEstadoLogistica: string;
+    setFiltroEstadoLogistica: (value: string) => void;
+    filtroCoordinacionCompletada: string;
+    setFiltroCoordinacionCompletada: (value: string) => void;
+    filtroUsuarioAprobador: string;
+    setFiltroUsuarioAprobador: (value: string) => void;
+    usuariosAprobadores: Array<{ id: number; name: string }>;
+    estadosLogistica: Array<{ id: number; nombre: string; codigo: string }>;
     cambiarPagina: (page: number) => void;
     onVerProforma: (proforma: ProformaAppExterna) => void;
     getEstadoBadge: (estado: string, proforma: ProformaAppExterna) => any;
@@ -42,6 +55,19 @@ export function ProformasSection({
     filtroLocalidad,
     setFiltroLocalidad,
     localidades,
+    // ✅ Nuevos filtros
+    filtroTipoEntrega,
+    setFiltroTipoEntrega,
+    filtroPoliticaPago,
+    setFiltroPoliticaPago,
+    filtroEstadoLogistica,
+    setFiltroEstadoLogistica,
+    filtroCoordinacionCompletada,
+    setFiltroCoordinacionCompletada,
+    filtroUsuarioAprobador,
+    setFiltroUsuarioAprobador,
+    usuariosAprobadores,
+    estadosLogistica,
     cambiarPagina,
     onVerProforma,
     getEstadoBadge,
@@ -327,6 +353,84 @@ export function ProformasSection({
                                     {localidad.nombre}
                                 </option>
                             ))}
+                        </select>
+                    </div>
+
+                    {/* ✅ Filtro de Tipo de Entrega */}
+                    <div>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Tipo de Entrega</label>
+                        <select
+                            value={filtroTipoEntrega}
+                            onChange={(e) => setFiltroTipoEntrega(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                        >
+                            <option value="">Todos</option>
+                            <option value="DELIVERY">DELIVERY</option>
+                            <option value="PICKUP">PICKUP</option>
+                        </select>
+                    </div>
+
+                    {/* ✅ Filtro de Política de Pago */}
+                    <div>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Política de Pago</label>
+                        <select
+                            value={filtroPoliticaPago}
+                            onChange={(e) => setFiltroPoliticaPago(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                        >
+                            <option value="">Todos</option>
+                            <option value="CONTRA_ENTREGA">CONTRA ENTREGA</option>
+                            <option value="ANTICIPADO_100">ANTICIPADO 100%</option>
+                            <option value="MEDIO_MEDIO">MEDIO/MEDIO</option>
+                            <option value="CREDITO">CRÉDITO</option>
+                        </select>
+                    </div>
+
+                    {/* ✅ Filtro de Estado Logístico */}
+                    <div>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Estado Logístico</label>
+                        <select
+                            value={filtroEstadoLogistica}
+                            onChange={(e) => setFiltroEstadoLogistica(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                        >
+                            <option value="">Todos los estados</option>
+                            {estadosLogistica.map((estado) => (
+                                <option key={estado.id} value={estado.id.toString()}>
+                                    {estado.nombre}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* ✅ Filtro de Usuario Aprobador */}
+                    <div>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Aprobado Por</label>
+                        <select
+                            value={filtroUsuarioAprobador}
+                            onChange={(e) => setFiltroUsuarioAprobador(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                        >
+                            <option value="">Todos los aprobadores</option>
+                            {usuariosAprobadores.map((usuario) => (
+                                <option key={usuario.id} value={usuario.id.toString()}>
+                                    {usuario.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* ✅ Filtro de Coordinación Completada */}
+                    <div>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">Estado de Coordinación</label>
+                        <select
+                            value={filtroCoordinacionCompletada}
+                            onChange={(e) => setFiltroCoordinacionCompletada(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                        >
+                            <option value="">Todos</option>
+                            <option value="true">Completada</option>
+                            <option value="false">Pendiente</option>
                         </select>
                     </div>
 
