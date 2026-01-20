@@ -3,9 +3,10 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Entrega;
-use App\Models\Proforma;
 use App\Models\Localidad;
-use Illuminate\Support\Facades\DB;
+use App\Models\Proforma;
+use App\Models\User;
+use App\Models\Estado;
 use Inertia\Inertia;
 
 class LogisticaController extends Controller
@@ -18,7 +19,7 @@ class LogisticaController extends Controller
 
         // proformas recientes con paginación y filtros
         // Mostrar TODAS las proformas, no solo APP_EXTERNA
-        $query = Proforma::with(['cliente.localidad', 'usuarioCreador', 'estadoLogistica', 'direccionSolicitada']);
+        $query = Proforma::with(['cliente.localidad', 'usuarioCreador', 'usuarioAprobador', 'estadoLogistica', 'direccionSolicitada']);
 
         // Aplicar filtros desde query params
         if (request()->has('estado') && request('estado') !== 'TODOS') {
@@ -36,16 +37,16 @@ class LogisticaController extends Controller
             $query->where(function ($q) use ($search) {
                 // Búsqueda en número de proforma
                 $q->whereRaw('LOWER(numero) like ?', ["%{$search}%"])
-                    // Búsqueda en cliente (nombre, CI, teléfono, código_cliente)
+                // Búsqueda en cliente (nombre, CI, teléfono, código_cliente)
                     ->orWhereHas('cliente', function ($clienteQuery) use ($search) {
                         $clienteQuery->where(function ($innerQuery) use ($search) {
                             $innerQuery->whereRaw('LOWER(nombre) like ?', ["%{$search}%"])
-                                ->orWhereRaw('LOWER(ci) like ?', ["%{$search}%"])
+                                ->orWhereRaw('LOWER(nit) like ?', ["%{$search}%"])
                                 ->orWhereRaw('LOWER(telefono) like ?', ["%{$search}%"])
                                 ->orWhereRaw('LOWER(codigo_cliente) like ?', ["%{$search}%"]);
                         });
                     })
-                    // Búsqueda en preventista (usuario que creó la proforma)
+                // Búsqueda en preventista (usuario que creó la proforma)
                     ->orWhereHas('usuarioCreador', function ($preventistaQuery) use ($search) {
                         $preventistaQuery->whereRaw('LOWER(name) like ?', ["%{$search}%"]);
                     });
@@ -58,6 +59,32 @@ class LogisticaController extends Controller
             $query->whereHas('cliente', function ($clienteQuery) use ($localidadId) {
                 $clienteQuery->where('localidad_id', $localidadId);
             });
+        }
+
+        // ✅ Filtro por tipo de entrega (DELIVERY/PICKUP)
+        if (request()->has('tipo_entrega') && request('tipo_entrega') !== '' && request('tipo_entrega') !== 'TODOS') {
+            $query->where('tipo_entrega', request('tipo_entrega'));
+        }
+
+        // ✅ Filtro por política de pago
+        if (request()->has('politica_pago') && request('politica_pago') !== '' && request('politica_pago') !== 'TODOS') {
+            $query->where('politica_pago', request('politica_pago'));
+        }
+
+        // ✅ Filtro por estado logístico
+        if (request()->has('estado_logistica_id') && request('estado_logistica_id') !== '' && request('estado_logistica_id') !== '0') {
+            $query->where('estado_logistica_id', request('estado_logistica_id'));
+        }
+
+        // ✅ Filtro por coordinación completada
+        if (request()->has('coordinacion_completada') && request('coordinacion_completada') !== '' && request('coordinacion_completada') !== 'TODOS') {
+            $valor = request('coordinacion_completada') === 'true' ? 1 : 0;
+            $query->where('coordinacion_completada', $valor);
+        }
+
+        // ✅ Filtro por usuario aprobador
+        if (request()->has('usuario_aprobador_id') && request('usuario_aprobador_id') !== '' && request('usuario_aprobador_id') !== '0') {
+            $query->where('usuario_aprobador_id', request('usuario_aprobador_id'));
         }
 
         if (request()->has('solo_vencidas') && request('solo_vencidas') === 'true') {
@@ -82,7 +109,14 @@ class LogisticaController extends Controller
                     'estado'                          => $proforma->estado,
                     'canal_origen'                    => $proforma->canal_origen,
                     'usuario_creador_nombre'          => $proforma->usuarioCreador->name ?? 'Sistema',
+                    'usuario_aprobador_nombre'        => $proforma->usuarioAprobador->name ?? 'N/A',
                     'fecha_vencimiento'               => $proforma->fecha_vencimiento,
+                    // ✅ Nuevos campos de filtro
+                    'tipo_entrega'                    => $proforma->tipo_entrega ?? 'N/A',
+                    'politica_pago'                   => $proforma->politica_pago ?? 'N/A',
+                    'estado_logistica'                => $proforma->estadoLogistica->nombre ?? 'N/A',
+                    'estado_logistica_id'             => $proforma->estado_logistica_id,
+                    'coordinacion_completada'         => (bool) $proforma->coordinacion_completada,
                     // Datos de solicitud
                     'fecha_entrega_solicitada'        => $proforma->fecha_entrega_solicitada,
                     'hora_entrega_solicitada'         => $proforma->hora_entrega_solicitada,
@@ -110,14 +144,43 @@ class LogisticaController extends Controller
             ->get()
             ->map(function ($localidad) {
                 return [
-                    'id'   => $localidad->id,
+                    'id'     => $localidad->id,
                     'nombre' => $localidad->nombre,
                 ];
             });
 
+        // ✅ Obtener usuarios aprobadores (que hayan aprobado proformas)
+        $usuariosAprobadores = User::whereHas('proformasAprobadas')
+            ->select('id', 'name')
+            ->distinct()
+            ->orderBy('name', 'asc')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id'   => $user->id,
+                    'name' => $user->name,
+                ];
+            });
+
+        // ✅ Obtener estados logísticos disponibles
+        $estadosLogistica = Estado::whereHas('proformas')
+            ->select('id', 'nombre', 'codigo')
+            ->distinct()
+            ->orderBy('nombre', 'asc')
+            ->get()
+            ->map(function ($estado) {
+                return [
+                    'id'     => $estado->id,
+                    'nombre' => $estado->nombre,
+                    'codigo' => $estado->codigo,
+                ];
+            });
+
         return Inertia::render('logistica/dashboard', [
-            'proformasRecientes' => $proformasRecientes,
-            'localidades'        => $localidades,
+            'proformasRecientes'    => $proformasRecientes,
+            'localidades'           => $localidades,
+            'usuariosAprobadores'   => $usuariosAprobadores,
+            'estadosLogistica'      => $estadosLogistica,
         ]);
     }
 
