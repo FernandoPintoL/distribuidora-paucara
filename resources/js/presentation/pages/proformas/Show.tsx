@@ -1043,24 +1043,26 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         </div>
                                     )}
 
-                                    {/* Dirección */}
-                                    {proforma.cliente.direccion && (
+                                    {/* ✅ Dirección de Entrega (Solicitada o Confirmada) */}
+                                    {(proforma.direccion_solicitada || proforma.direccion_confirmada) && (
                                         <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Dirección</span>
+                                            <span className="text-xs text-muted-foreground font-medium">
+                                                {proforma.direccion_confirmada ? 'Dirección Confirmada' : 'Dirección Solicitada'}
+                                            </span>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-foreground truncate max-w-xs">{proforma.cliente.direccion}</span>
+                                                <span className="font-medium text-foreground truncate max-w-xs">
+                                                    {(proforma.direccion_confirmada || proforma.direccion_solicitada)?.direccion}
+                                                </span>
                                                 {/* ✅ Botón toggle para mostrar/ocultar card de dirección de entrega */}
-                                                {proforma.direccion_solicitada && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => setShowDireccionCard(!showDireccionCard)}
-                                                        title={showDireccionCard ? 'Ocultar dirección de entrega' : 'Mostrar dirección de entrega'}
-                                                        className="h-5 w-5 p-0 flex-shrink-0"
-                                                    >
-                                                        <MapPin className="h-4 w-4 text-[var(--brand-primary)]" />
-                                                    </Button>
-                                                )}
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => setShowDireccionCard(!showDireccionCard)}
+                                                    title={showDireccionCard ? 'Ocultar detalles de entrega' : 'Mostrar detalles de entrega'}
+                                                    className="h-5 w-5 p-0 flex-shrink-0"
+                                                >
+                                                    <MapPin className="h-4 w-4 text-[var(--brand-primary)]" />
+                                                </Button>
                                             </div>
                                         </div>
                                     )}
