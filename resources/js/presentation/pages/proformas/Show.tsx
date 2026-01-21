@@ -1381,7 +1381,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                             </ProformaCard>
                         )}
 
-                        {proforma.direccion_solicitada && (
+                        {/* ✅ Card de Dirección - Se oculta completamente cuando showDireccionCard es false */}
+                        {proforma.direccion_solicitada && showDireccionCard && (
                             <ProformaCard
                                 variant="info"
                                 title="Dirección de Entrega"
@@ -1393,14 +1394,9 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         onClick={() => setShowDireccionCard(!showDireccionCard)}
                                         className="h-6 w-6 p-0"
                                     >
-                                        {showDireccionCard ? (
-                                            <ChevronUp className="h-4 w-4" />
-                                        ) : (
-                                            <ChevronDown className="h-4 w-4" />
-                                        )}
+                                        <ChevronUp className="h-4 w-4" />
                                     </Button>
                                 }
-                                isCollapsed={!showDireccionCard}
                             >
                                 <div className="space-y-[var(--space-sm)]">
                                     <div>
