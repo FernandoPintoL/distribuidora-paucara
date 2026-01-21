@@ -924,7 +924,7 @@ export default function ProformasShow({ item: proforma }: Props) {
 
     return (
         <AppLayout>
-            <Head title={`Proforma ${proforma.numero}`} />
+            <Head title={`Proforma ${proforma.id}`} />
 
             <div className="space-y-6 p-4">
                 {/* Banner de advertencia si hay error de reservas */}
@@ -1047,7 +1047,21 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     {proforma.cliente.direccion && (
                                         <div className="flex flex-col">
                                             <span className="text-xs text-muted-foreground font-medium">Dirección</span>
-                                            <span className="font-medium text-foreground truncate max-w-xs">{proforma.cliente.direccion}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-foreground truncate max-w-xs">{proforma.cliente.direccion}</span>
+                                                {/* ✅ Botón toggle para mostrar/ocultar card de dirección de entrega */}
+                                                {proforma.direccion_solicitada && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setShowDireccionCard(!showDireccionCard)}
+                                                        title={showDireccionCard ? 'Ocultar dirección de entrega' : 'Mostrar dirección de entrega'}
+                                                        className="h-5 w-5 p-0 flex-shrink-0"
+                                                    >
+                                                        <MapPin className="h-4 w-4 text-[var(--brand-primary)]" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
