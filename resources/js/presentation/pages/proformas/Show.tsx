@@ -379,8 +379,8 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [motivoRechazo, setMotivoRechazo] = useState('')
     const [showCoordinacionForm, setShowCoordinacionForm] = useState(true)
     const [showMapaEntrega, setShowMapaEntrega] = useState(false)
-    // ✅ Estado para mostrar/ocultar card de dirección
-    const [showDireccionCard, setShowDireccionCard] = useState(true)
+    // ✅ Estado para mostrar/ocultar card de dirección (inicia OCULTO)
+    const [showDireccionCard, setShowDireccionCard] = useState(false)
     const [convertErrorState, setConvertErrorState] = useState<{ code?: string; message?: string; reservasExpiradas?: number } | null>(null)
 
     // ✅ NUEVO: Estados para navegación a siguiente proforma
