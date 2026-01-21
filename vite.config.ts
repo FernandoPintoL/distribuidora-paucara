@@ -39,7 +39,7 @@ export default defineConfig({
             }),
     ],
     server: {
-        host: "0.0.0.0",
+        host: process.env.VITE_HOST || 'localhost',  // ✅ Usa localhost para desarrollo, o env var
         port: 5173,
         strictPort: false,
         cors: true,
