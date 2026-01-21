@@ -1990,11 +1990,66 @@ class ApiProformaController extends Controller
 
         return DB::transaction(function () use ($proforma, $request) {
             try {
-                // ✅ VALIDACIÓN 0: Si la política es CREDITO, validar permisos del cliente
-                if ($request->input('politica_pago') === 'CREDITO') {
+                // ✅ VALIDACIÓN 0.1: Validar caja abierta para pagos inmediatos
+                // Políticas que REQUIEREN caja abierta: ANTICIPADO_100, MEDIO_MEDIO
+                $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
+                $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
+
+                $politicasQueRequierenCaja = ['ANTICIPADO_100', 'MEDIO_MEDIO'];
+
+                if (in_array($politica, $politicasQueRequierenCaja) && $montoPagado > 0) {
+                    $usuario = request()->user();
+                    $empleado = $usuario?->empleado;
+
+                    if (!$empleado) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Usuario no tiene un empleado asociado. No puede procesar pagos en caja.',
+                            'code' => 'USUARIO_SIN_EMPLEADO',
+                        ], 422);
+                    }
+
+                    if (!$empleado->esCajero()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Usuario no tiene rol de Cajero. No puede procesar pagos en caja.',
+                            'code' => 'USUARIO_NO_CAJERO',
+                        ], 422);
+                    }
+
+                    if (!$empleado->tieneCajaAbierta()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "No puede convertir proforma a venta con política '{$politica}' sin caja abierta. Por favor, abra una caja primero.",
+                            'code' => 'CAJA_NO_ABIERTA',
+                            'detalles' => [
+                                'politica_pago' => $politica,
+                                'monto_pagado' => $montoPagado,
+                                'motivo' => "La política {$politica} requiere que tenga una caja abierta para registrar el pago",
+                                'accion_requerida' => 'Abra una caja en /cajas antes de convertir esta proforma',
+                            ],
+                        ], 422);
+                    }
+
+                    Log::info('✅ [ApiProformaController::convertirAVenta] Validación de caja exitosa', [
+                        'proforma_id' => $proforma->id,
+                        'usuario_id' => $usuario->id,
+                        'caja_id' => $empleado->cajaAbierta()?->id,
+                        'politica' => $politica,
+                        'monto' => $montoPagado,
+                    ]);
+                }
+
+                // ✅ VALIDACIÓN 0.2: Si la política es CREDITO, validar permisos del cliente
+                if ($politica === 'CREDITO') {
                     $cliente = $proforma->cliente;
 
                     if (!$cliente->puede_tener_credito) {
+                        Log::warning('⚠️ Cliente no tiene permiso de crédito', [
+                            'cliente_id' => $cliente->id,
+                            'proforma_id' => $proforma->id,
+                        ]);
+
                         return response()->json([
                             'success' => false,
                             'message' => "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito",
@@ -2003,6 +2058,11 @@ class ApiProformaController extends Controller
                     }
 
                     if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                        Log::warning('⚠️ Cliente sin límite de crédito', [
+                            'cliente_id' => $cliente->id,
+                            'proforma_id' => $proforma->id,
+                        ]);
+
                         return response()->json([
                             'success' => false,
                             'message' => "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado",
@@ -2078,9 +2138,8 @@ class ApiProformaController extends Controller
 
                 // ✅ MEJORADO: Calcular estado de pago según política
                 // Ahora considera todas las políticas: CONTRA_ENTREGA, ANTICIPADO_100, MEDIO_MEDIO, CREDITO
-                $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
+                // Nota: $montoPagado y $politica ya fueron definidas en VALIDACIÓN 0.1
                 $total = (float) $proforma->total;
-                $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
 
                 // Lógica mejorada para determinar estado de pago según política
                 $estadoPago = match($politica) {
@@ -2187,11 +2246,38 @@ class ApiProformaController extends Controller
                 }
 
                 // Marcar la proforma como convertida
-                // IMPORTANTE: Esto dispara ProformaObserver::updated() que automáticamente
-                // consume las reservas (reduce cantidad física del stock)
                 if (!$proforma->marcarComoConvertida()) {
                     throw new \Exception('Error al marcar la proforma como convertida');
                 }
+
+                // ✅ CRÍTICO: Consumir reservas DIRECTAMENTE (no confiar en Observer en transacción)
+                // El Observer puede no dispararse dentro de una transacción en algunos casos
+                Log::info('🔄 [ApiProformaController::convertirAVenta] Consumiendo reservas después de convertida', [
+                    'proforma_id' => $proforma->id,
+                ]);
+
+                try {
+                    $proforma->consumirReservas();
+                    Log::info('✅ [ApiProformaController::convertirAVenta] Reservas consumidas exitosamente', [
+                        'proforma_id' => $proforma->id,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('❌ [ApiProformaController::convertirAVenta] Error al consumir reservas', [
+                        'proforma_id' => $proforma->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    throw $e;
+                }
+
+                // ✅ NUEVO: Registrar movimiento de caja para pagos inmediatos (anticipados)
+                // Se registra para políticas: ANTICIPADO_100, MEDIO_MEDIO
+                $this->registrarMovimientoCajaParaPago(
+                    $venta,
+                    $proforma,
+                    $politica,
+                    $montoPagado,
+                    request()->user()
+                );
 
                 // Cargar relaciones para la respuesta
                 $venta->load(['cliente', 'detalles.producto', 'moneda', 'estadoDocumento']);
@@ -2741,6 +2827,132 @@ class ApiProformaController extends Controller
                 'success' => false,
                 'message' => 'Error al obtener siguiente proforma: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    // ==========================================
+    // MÉTODOS PRIVADOS: REGISTRO DE CAJAS
+    // ==========================================
+
+    /**
+     * Registrar movimiento de caja para pagos inmediatos
+     *
+     * Registra los pagos/anticipos en la caja del usuario cuando se convierte
+     * una proforma a venta con políticas que requieren pago inmediato:
+     * - ANTICIPADO_100: 100% al contado
+     * - MEDIO_MEDIO: 50% anticipo + 50% contra entrega
+     *
+     * @param \App\Models\Venta $venta Venta recién creada
+     * @param \App\Models\Proforma $proforma Proforma original
+     * @param string $politica Política de pago (ANTICIPADO_100, MEDIO_MEDIO, etc.)
+     * @param float $montoPagado Monto pagado en la conversión
+     * @param \App\Models\User $usuario Usuario que realiza la conversión
+     *
+     * @return void
+     */
+    private function registrarMovimientoCajaParaPago(
+        \App\Models\Venta $venta,
+        \App\Models\Proforma $proforma,
+        string $politica,
+        float $montoPagado,
+        \App\Models\User $usuario
+    ): void {
+        // ✅ Solo registrar si hay monto a pagar y la política lo requiere
+        if ($montoPagado <= 0) {
+            Log::info('⏭️ [registrarMovimientoCajaParaPago] Sin monto a pagar, no registra movimiento', [
+                'venta_id' => $venta->id,
+                'proforma_id' => $proforma->id,
+                'monto_pagado' => $montoPagado,
+            ]);
+            return;
+        }
+
+        // ✅ Solo registrar para políticas que requieren pago inmediato
+        $politicasConPagoInmediato = ['ANTICIPADO_100', 'MEDIO_MEDIO'];
+        if (!in_array($politica, $politicasConPagoInmediato)) {
+            Log::info('⏭️ [registrarMovimientoCajaParaPago] Política no requiere registro inmediato', [
+                'venta_id' => $venta->id,
+                'politica' => $politica,
+            ]);
+            return;
+        }
+
+        try {
+            // Obtener la caja abierta del usuario
+            $empleado = $usuario?->empleado;
+
+            if (!$empleado) {
+                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene empleado asociado', [
+                    'usuario_id' => $usuario->id,
+                    'venta_id' => $venta->id,
+                ]);
+                return;
+            }
+
+            $cajaAbierta = $empleado->cajaAbierta();
+
+            if (!$cajaAbierta) {
+                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene caja abierta', [
+                    'usuario_id' => $usuario->id,
+                    'empleado_id' => $empleado->id,
+                    'venta_id' => $venta->id,
+                    'politica' => $politica,
+                ]);
+                return;
+            }
+
+            // Obtener el tipo de operación VENTA
+            $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'VENTA')->first();
+
+            if (!$tipoOperacion) {
+                Log::error('❌ [registrarMovimientoCajaParaPago] Tipo operación VENTA no existe', [
+                    'venta_id' => $venta->id,
+                ]);
+                return;
+            }
+
+            // Determinar descripción según la política
+            $descripcionPolitica = match($politica) {
+                'ANTICIPADO_100' => '100% ANTICIPADO',
+                'MEDIO_MEDIO' => '50% ANTICIPO',
+                default => 'ANTICIPO'
+            };
+
+            // Crear movimiento de caja
+            \App\Models\MovimientoCaja::create([
+                'caja_id' => $cajaAbierta->id,
+                'user_id' => $usuario->id,
+                'tipo_operacion_id' => $tipoOperacion->id,
+                'numero_documento' => $venta->numero,
+                'monto' => $montoPagado,
+                'fecha' => now(),
+                'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - Convertida desde proforma #{$proforma->numero}",
+            ]);
+
+            Log::info('✅ [registrarMovimientoCajaParaPago] Movimiento de caja registrado exitosamente', [
+                'venta_id' => $venta->id,
+                'proforma_id' => $proforma->id,
+                'caja_id' => $cajaAbierta->id,
+                'usuario_id' => $usuario->id,
+                'monto' => $montoPagado,
+                'politica' => $politica,
+                'tipo_pago' => $descripcionPolitica,
+            ]);
+
+        } catch (\Exception $e) {
+            // No bloquear la conversión si falla el registro en cajas
+            Log::error('❌ [registrarMovimientoCajaParaPago] Error al registrar movimiento de caja', [
+                'venta_id' => $venta->id,
+                'proforma_id' => $proforma->id,
+                'usuario_id' => $usuario->id,
+                'monto' => $montoPagado,
+                'politica' => $politica,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // ⚠️ Importante: No relanzamos la excepción para no bloquear la conversión
+            // El movimiento de caja es importante pero la venta ya está creada
         }
     }
 }

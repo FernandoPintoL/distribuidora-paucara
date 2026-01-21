@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ReservaStock;
+// ✅ COMENTADO: ReservaStock no existe, usar ReservaProforma en su lugar
+// use App\Models\ReservaStock;
 use App\Models\Producto;
 use App\Models\Almacen;
 use App\Models\StockProducto;

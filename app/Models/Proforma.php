@@ -399,10 +399,9 @@ class Proforma extends Model
     // Marcar como convertida
     public function marcarComoConvertida(): bool
     {
-        // Solo verificar que esté en estado APROBADA
-        // No verificamos si existe venta, ya que en el nuevo flujo la venta se crea
-        // justo antes de marcar como CONVERTIDA (dentro de la misma transacción)
-        if ($this->estado !== self::APROBADA) {
+        // ✅ ACTUALIZADO: Aceptar tanto APROBADA como PENDIENTE
+        // PENDIENTE puede ocurrir cuando se convierte directo sin paso de aprobación
+        if (!in_array($this->estado, [self::APROBADA, self::PENDIENTE])) {
             return false;
         }
 
@@ -417,7 +416,9 @@ class Proforma extends Model
     /**
      * Reservar stock para la proforma con protección contra race conditions
      *
-     * IMPORTANTE: Este método maneja su propia transacción
+     * ✅ ACTUALIZADO: Ya no maneja su propia transacción (la maneja el caller)
+     * Si se llama desde ProformaService::crear(), la transacción ya está activa
+     * Si se llama desde otro lugar, el caller debe manejar la transacción
      */
     public function reservarStock(): bool
     {
@@ -448,8 +449,7 @@ class Proforma extends Model
             return false;
         }
 
-        \Illuminate\Support\Facades\DB::beginTransaction();
-
+        // ✅ REMOVIDO: DB::beginTransaction() ya se maneja en ProformaService::crear()
         try {
             foreach ($this->detalles as $detalle) {
                 // Buscar stock disponible con BLOQUEO PESIMISTA para evitar race conditions
@@ -511,14 +511,10 @@ class Proforma extends Model
                         'cantidad_faltante' => $cantidadPendiente,
                     ]);
 
-                    // Rollback automático de la transacción
-                    \Illuminate\Support\Facades\DB::rollBack();
-                    return false;
+                    // ✅ REMOVIDO: No lanzar excepción aquí, dejar que el caller maneje el rollback
+                    throw new \Exception("Stock insuficiente para reservar proforma");
                 }
             }
-
-            // Todo exitoso, confirmar transacción
-            \Illuminate\Support\Facades\DB::commit();
 
             \Illuminate\Support\Facades\Log::info('Stock reservado completamente para proforma', [
                 'proforma_id' => $this->id,
@@ -528,15 +524,14 @@ class Proforma extends Model
             return true;
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
-
             \Illuminate\Support\Facades\Log::error('Error al reservar stock para proforma', [
                 'proforma_id' => $this->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return false;
+            // ✅ No hacer rollback aquí, dejar que $this->transaction() del caller lo maneje
+            throw $e;
         }
     }
 
@@ -550,7 +545,7 @@ class Proforma extends Model
      */
     public function liberarReservas(): bool
     {
-        $reservasActivas = $this->reservasActivas;
+        $reservasActivas = $this->reservasActivas()->get();
 
         if ($reservasActivas->isEmpty()) {
             \Illuminate\Support\Facades\Log::info('No hay reservas activas para liberar', [
@@ -603,7 +598,7 @@ class Proforma extends Model
     public function consumirReservas(): bool
     {
         // Validación: Debe tener reservas activas
-        $reservasActivas = $this->reservasActivas;
+        $reservasActivas = $this->reservasActivas()->get();
 
         if ($reservasActivas->isEmpty()) {
             \Illuminate\Support\Facades\Log::warning('Intento de consumir reservas en proforma sin reservas activas', [
@@ -677,7 +672,7 @@ class Proforma extends Model
     {
         $nuevaFechaExpiracion = now()->addHours($horas);
 
-        foreach ($this->reservasActivas as $reserva) {
+        foreach ($this->reservasActivas()->get() as $reserva) {
             $reserva->update(['fecha_expiracion' => $nuevaFechaExpiracion]);
         }
 
@@ -686,7 +681,10 @@ class Proforma extends Model
 
     public function tieneReservasExpiradas(): bool
     {
-        return $this->reservas()->expiradas()->count() > 0;
+        // ✅ Usar exists() en lugar de count() > 0 (más eficiente)
+        // exists() detiene la query tan pronto encuentra un registro
+        // count() debe contar todos
+        return $this->reservas()->expiradas()->exists();
     }
 
     /**
@@ -708,75 +706,79 @@ class Proforma extends Model
             'numero' => $this->numero,
         ]);
 
-        try {
-            // 1. Obtener las reservas expiradas
-            $reservasExpiradas = $this->reservas()->expiradas()->get();
+        // ✅ MEJORADO: Usar transacción para garantizar consistencia
+        return \Illuminate\Support\Facades\DB::transaction(function () {
+            try {
+                // 1. Obtener las reservas expiradas
+                $reservasExpiradas = $this->reservas()->expiradas()->get();
 
-            if ($reservasExpiradas->isEmpty()) {
-                \Illuminate\Support\Facades\Log::warning('⚠️ No hay reservas expiradas para renovar', [
+                if ($reservasExpiradas->isEmpty()) {
+                    \Illuminate\Support\Facades\Log::warning('⚠️ No hay reservas expiradas para renovar', [
+                        'proforma_id' => $this->id,
+                    ]);
+                    return false;
+                }
+
+                $nuevaFechaVencimiento = now()->addDays(7); // Renovar por 7 días
+                $reservasRenovadas = 0;
+
+                // 2. Procesar cada reserva expirada
+                foreach ($reservasExpiradas as $reservaVieja) {
+                    // Paso 1: Marcar la reserva vieja como LIBERADA
+                    // Esto devuelve el stock a disponible automáticamente
+                    $reservaVieja->update(['estado' => ReservaProforma::LIBERADA]);
+
+                    \Illuminate\Support\Facades\Log::info('✅ Reserva antigua liberada', [
+                        'reserva_vieja_id' => $reservaVieja->id,
+                        'stock_producto_id' => $reservaVieja->stock_producto_id,
+                    ]);
+
+                    // Paso 2: Crear nueva reserva con fecha extendida
+                    // El stock ya está disponible, simplemente creamos la nueva reserva
+                    $nuevaReserva = ReservaProforma::create([
+                        'proforma_id' => $this->id,
+                        'stock_producto_id' => $reservaVieja->stock_producto_id,
+                        'cantidad_reservada' => $reservaVieja->cantidad_reservada,
+                        'fecha_reserva' => now(),
+                        'fecha_expiracion' => $nuevaFechaVencimiento,
+                        'estado' => ReservaProforma::ACTIVA,
+                    ]);
+
+                    $reservasRenovadas++;
+
+                    \Illuminate\Support\Facades\Log::info('✅ Nueva reserva creada', [
+                        'reserva_vieja_id' => $reservaVieja->id,
+                        'reserva_nueva_id' => $nuevaReserva->id,
+                        'stock_producto_id' => $reservaVieja->stock_producto_id,
+                        'cantidad' => $reservaVieja->cantidad_reservada,
+                        'nueva_fecha_vencimiento' => $nuevaFechaVencimiento,
+                    ]);
+                }
+
+                // 3. Validar que se renovaron todas las reservas
+                if ($reservasRenovadas === 0) {
+                    throw new \Exception("No se pudo renovar ninguna reserva");
+                }
+
+                \Illuminate\Support\Facades\Log::info('✅ Renovación de reservas completada', [
                     'proforma_id' => $this->id,
-                ]);
-                return false;
-            }
-
-            $nuevaFechaVencimiento = now()->addDays(7); // Renovar por 7 días
-            $reservasRenovadas = 0;
-
-            // 2. Procesar cada reserva expirada
-            foreach ($reservasExpiradas as $reservaVieja) {
-                // Paso 1: Marcar la reserva vieja como LIBERADA
-                // Esto devuelve el stock a disponible automáticamente
-                $reservaVieja->update(['estado' => ReservaProforma::LIBERADA]);
-
-                \Illuminate\Support\Facades\Log::info('✅ Reserva antigua liberada', [
-                    'reserva_vieja_id' => $reservaVieja->id,
-                    'stock_producto_id' => $reservaVieja->stock_producto_id,
+                    'numero' => $this->numero,
+                    'reservas_renovadas' => $reservasRenovadas,
+                    'nueva_fecha_vencimiento' => $nuevaFechaVencimiento->toIso8601String(),
                 ]);
 
-                // Paso 2: Crear nueva reserva con fecha extendida
-                // El stock ya está disponible, simplemente creamos la nueva reserva
-                $nuevaReserva = ReservaProforma::create([
+                return true;
+
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('❌ Error al renovar reservas', [
                     'proforma_id' => $this->id,
-                    'stock_producto_id' => $reservaVieja->stock_producto_id,
-                    'cantidad_reservada' => $reservaVieja->cantidad_reservada,
-                    'fecha_reserva' => now(),
-                    'fecha_expiracion' => $nuevaFechaVencimiento,
-                    'estado' => ReservaProforma::ACTIVA,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
-
-                $reservasRenovadas++;
-
-                \Illuminate\Support\Facades\Log::info('✅ Nueva reserva creada', [
-                    'reserva_vieja_id' => $reservaVieja->id,
-                    'reserva_nueva_id' => $nuevaReserva->id,
-                    'stock_producto_id' => $reservaVieja->stock_producto_id,
-                    'cantidad' => $reservaVieja->cantidad_reservada,
-                    'nueva_fecha_vencimiento' => $nuevaFechaVencimiento,
-                ]);
+                // ✅ La transacción hará rollback automáticamente
+                throw $e;
             }
-
-            // 3. Validar que se renovaron todas las reservas
-            if ($reservasRenovadas === 0) {
-                throw new \Exception("No se pudo renovar ninguna reserva");
-            }
-
-            \Illuminate\Support\Facades\Log::info('✅ Renovación de reservas completada', [
-                'proforma_id' => $this->id,
-                'numero' => $this->numero,
-                'reservas_renovadas' => $reservasRenovadas,
-                'nueva_fecha_vencimiento' => $nuevaFechaVencimiento->toIso8601String(),
-            ]);
-
-            return true;
-
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error al renovar reservas', [
-                'proforma_id' => $this->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            throw $e;
-        }
+        });
     }
 
     public function verificarDisponibilidadStock(): array

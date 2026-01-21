@@ -1,8 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::preview
- * @see app/Http/Controllers/Api/EntregaBatchController.php:167
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:169
  * @route '/api/entregas/lote/preview'
  */
 export const preview = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -17,7 +16,7 @@ preview.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::preview
- * @see app/Http/Controllers/Api/EntregaBatchController.php:167
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:169
  * @route '/api/entregas/lote/preview'
  */
 preview.url = (options?: RouteQueryOptions) => {
@@ -26,7 +25,7 @@ preview.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::preview
- * @see app/Http/Controllers/Api/EntregaBatchController.php:167
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:169
  * @route '/api/entregas/lote/preview'
  */
 preview.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -36,7 +35,7 @@ preview.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::preview
- * @see app/Http/Controllers/Api/EntregaBatchController.php:167
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:169
  * @route '/api/entregas/lote/preview'
  */
     const previewForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -46,7 +45,7 @@ preview.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::preview
- * @see app/Http/Controllers/Api/EntregaBatchController.php:167
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:169
  * @route '/api/entregas/lote/preview'
  */
         previewForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -112,7 +111,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::optimizar
- * @see app/Http/Controllers/Api/EntregaBatchController.php:302
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:304
  * @route '/api/entregas/lote/optimizar'
  */
 export const optimizar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -127,7 +126,7 @@ optimizar.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::optimizar
- * @see app/Http/Controllers/Api/EntregaBatchController.php:302
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:304
  * @route '/api/entregas/lote/optimizar'
  */
 optimizar.url = (options?: RouteQueryOptions) => {
@@ -136,7 +135,7 @@ optimizar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::optimizar
- * @see app/Http/Controllers/Api/EntregaBatchController.php:302
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:304
  * @route '/api/entregas/lote/optimizar'
  */
 optimizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -146,7 +145,7 @@ optimizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::optimizar
- * @see app/Http/Controllers/Api/EntregaBatchController.php:302
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:304
  * @route '/api/entregas/lote/optimizar'
  */
     const optimizarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -156,7 +155,7 @@ optimizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\EntregaBatchController::optimizar
- * @see app/Http/Controllers/Api/EntregaBatchController.php:302
+ * @see app/Http/Controllers/Api/EntregaBatchController.php:304
  * @route '/api/entregas/lote/optimizar'
  */
         optimizarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

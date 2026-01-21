@@ -319,6 +319,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // Acciones POST - usan ProformaController (compatible con ReservaStock del web UI)
         Route::post('/{id}/aprobar', [\App\Http\Controllers\ProformaController::class, 'aprobar'])->name('aprobar');
         Route::post('/{id}/rechazar', [\App\Http\Controllers\ProformaController::class, 'rechazar'])->name('rechazar');
+
+        // ✅ NUEVO: Endpoint simplificado (un solo paso: convertir directamente)
+        Route::post('/{id}/procesar-venta', [\App\Http\Controllers\ProformaController::class, 'procesarVenta'])
+            ->middleware('caja.abierta')
+            ->name('procesar-venta');
+
         Route::post('/{id}/convertir-venta', [\App\Http\Controllers\ProformaController::class, 'convertirAVenta'])
             ->middleware('caja.abierta')
             ->name('convertir-venta');
@@ -338,6 +344,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('/', [\App\Http\Controllers\CajaController::class, 'index'])->name('index');
         Route::post('/abrir', [\App\Http\Controllers\CajaController::class, 'abrirCaja'])->name('abrir');
         Route::post('/cerrar', [\App\Http\Controllers\CajaController::class, 'cerrarCaja'])->name('cerrar');
+        Route::post('/cierres/{id}/corregir', [\App\Http\Controllers\CajaController::class, 'corregirCierre'])->middleware('permission:cajas.corregir')->name('cierres.corregir');
         Route::get('/estado', [\App\Http\Controllers\CajaController::class, 'estadoCajas'])->name('estado');
         Route::get('/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosDia'])->name('movimientos');
 
@@ -487,7 +494,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             // Rutas específicas de entregas
             Route::get('asignadas', fn() => Inertia::render('logistica/entregas/asignadas'))->name('asignadas');
             Route::get('en-transito', fn() => Inertia::render('logistica/entregas/en-transito'))->name('en-transito');
-            Route::get('dashboard', fn() => Inertia::render('logistica/entregas/dashboard'))->name('dashboard');
+
+            // ✅ UNIFICADO: Dashboard ahora es parte de index.tsx con ?view=dashboard
+            // Route::get('dashboard', ...) → Eliminado, usar /logistica/entregas?view=dashboard
+            // ✅ COMPATIBILIDAD: Redirigir URLs antiguas de dashboard a la nueva vista unificada
+            Route::redirect('dashboard', '/logistica/entregas?view=dashboard', 301);
+
             Route::get('dashboard-stats', [\App\Http\Controllers\EntregaController::class, 'dashboardStats'])->name('dashboard-stats');
 
             // 🔍 DEBUG: Endpoint para diagnosticar qué ventas están disponibles
@@ -496,6 +508,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             // ✅ FASE UNIFICADA: Una sola ruta para crear entregas simples o en lote
             // Soporta: ?venta_id=N para modo single, o sin parámetros para batch
             Route::get('create', [\App\Http\Controllers\EntregaController::class, 'create'])->name('create');
+
+            // ✅ NUEVO: Búsqueda de ventas en BD (para BatchVentaSelector)
+            // GET /logistica/entregas/ventas/search?q=...&fecha_desde=...&fecha_hasta=...
+            Route::get('ventas/search', [\App\Http\Controllers\EntregaController::class, 'searchVentas'])->name('ventas.search');
 
             // ⚠️ DEPRECATED: /crear-lote → Usar /create en su lugar
             // FASE UNIFICADA ha consolidado ambos flujos en una sola interfaz.
@@ -565,6 +581,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::redirect('/envios/api/vehiculos-disponibles', '/logistica/entregas/api/vehiculos-disponibles', 301);
     Route::redirect('/envios/api/choferes-disponibles', '/logistica/entregas/api/choferes-disponibles', 301);
     Route::get('/envios/{id}', fn($id) => redirect("/logistica/entregas/{$id}", 301))->where('id', '[0-9]+');
+
+    // ✅ COMPATIBILITY: Línea movida dentro del grupo de entregas para evitar conflicto con {entrega}
 
     // API routes para autocompletado (NOTA: Estas rutas deberían moverse a routes/api.php eventualmente)
     Route::get('api/proveedores/buscar', [\App\Http\Controllers\ProveedorController::class, 'buscarApi'])->name('api.proveedores.buscar');

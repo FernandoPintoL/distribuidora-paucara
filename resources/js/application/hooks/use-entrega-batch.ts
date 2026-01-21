@@ -12,6 +12,9 @@ export interface BatchFormData {
     chofer_id: Id | null;
     zona_id?: Id | null;
     observaciones?: string;
+    // Campos opcionales para caso single (1 venta)
+    fecha_programada?: string;
+    direccion_entrega?: string;
 }
 
 interface UseBatchState {
@@ -22,6 +25,17 @@ interface UseBatchState {
 }
 
 export function useEntregaBatch() {
+    // Helper para obtener fecha actual en formato datetime-local (YYYY-MM-DDTHH:MM)
+    const getTodayDateTimeLocal = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
     const [state, setState] = useState<UseBatchState>({
         formData: {
             venta_ids: [],
@@ -29,6 +43,8 @@ export function useEntregaBatch() {
             chofer_id: null,
             zona_id: null,
             observaciones: '',
+            fecha_programada: getTodayDateTimeLocal(),
+            direccion_entrega: undefined,
         },
         isSubmitting: false,
         submitError: null,
@@ -127,6 +143,8 @@ export function useEntregaBatch() {
                 chofer_id: state.formData.chofer_id,
                 zona_id: state.formData.zona_id,
                 observaciones: state.formData.observaciones,
+                fecha_programada: state.formData.fecha_programada,
+                direccion_entrega: state.formData.direccion_entrega,
             };
 
             const resultado = await optimizacionEntregasService.crearLote(request);
@@ -138,9 +156,10 @@ export function useEntregaBatch() {
                     isSubmitting: false,
                 }));
 
-                // Redirigir al dashboard de entregas después de 2 segundos
+                // Redirigir a entregas (vista dashboard) después de 2 segundos
+                // ✅ ACTUALIZADO: Usar ?view=dashboard en lugar de ruta separada
                 setTimeout(() => {
-                    router.visit('/logistica/entregas/dashboard');
+                    router.visit('/logistica/entregas?view=dashboard');
                 }, 2000);
             } else {
                 setState((prev) => ({

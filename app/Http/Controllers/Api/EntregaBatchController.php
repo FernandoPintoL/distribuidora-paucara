@@ -98,7 +98,9 @@ class EntregaBatchController extends Controller
                 vehiculoId: $request->input('vehiculo_id'),
                 choferId: $request->input('chofer_id'),
                 optimizar: $request->boolean('optimizar', true),
-                tipoReporte: $request->input('tipo_reporte', 'individual')
+                tipoReporte: $request->input('tipo_reporte', 'individual'),
+                fechaProgramada: $request->input('fecha_programada'),
+                direccionEntrega: $request->input('direccion_entrega')
             );
 
             Log::info('Entregas en lote creadas exitosamente', [

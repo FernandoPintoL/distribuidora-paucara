@@ -35,6 +35,8 @@ class Producto extends Model
         'marca_id',
         'proveedor_id',
         'empresa_id',
+        'precio_compra',
+        'precio_venta',
     ];
 
     protected function casts(): array
@@ -48,6 +50,8 @@ class Producto extends Model
             'es_alquilable' => 'boolean',
             'es_fraccionado' => 'boolean',
             'fecha_creacion' => 'datetime',
+            'precio_compra' => 'decimal:2',
+            'precio_venta' => 'decimal:2',
         ];
     }
 

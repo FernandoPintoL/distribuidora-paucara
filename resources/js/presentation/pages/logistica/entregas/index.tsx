@@ -1,321 +1,82 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import type { PageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
-import { Badge } from '@/presentation/components/ui/badge';
-import { Button } from '@/presentation/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/components/ui/table';
-import { Input } from '@/presentation/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
-import { Eye, Truck, User, Plus, Search, Filter, Route } from 'lucide-react';
 import type { Entrega } from '@/domain/entities/entregas';
 import type { Pagination } from '@/domain/entities/shared';
-import { getEstadoBadgeVariant, getEstadoLabel, formatearFecha } from '@/lib/entregas.utils';
-import { useEntregas } from '@/application/hooks/use-entregas';
-import { useEstadosEntregas } from '@/application/hooks';
-import { useState, useMemo } from 'react';
-import { Checkbox } from '@/presentation/components/ui/checkbox';
-import { ModalOptimizacionRutas } from '@/presentation/components/logistica/modal-optimizacion-rutas';
-import { PageHeader } from '@/presentation/components/entrega/PageHeader';
+import { useState } from 'react';
+
+// Componentes unificados
+import { EntregasHeader } from './components/EntregasHeader';
+import { EntregasTableView } from './components/EntregasTableView';
+import { EntregasDashboardView } from './components/EntregasDashboardView';
 
 interface Props extends PageProps {
     entregas: Pagination<Entrega>;
+    filtros?: {
+        estado?: string;
+        fecha_desde?: string;
+        fecha_hasta?: string;
+        search?: string;
+        view?: 'simple' | 'dashboard';
+    };
     vehiculos?: Array<{ id: number; placa: string; marca: string; modelo: string; capacidad_kg: number }>;
     choferes?: Array<{ id: number; nombre: string }>;
+    localidades?: Array<{ id: number; nombre: string; codigo: string }>;
+    estadosLogisticos?: Array<{ id: number; codigo: string; nombre: string; color?: string; icono?: string }>;
 }
 
-export default function EntregasIndex({ entregas, vehiculos = [], choferes = [] }: Props) {
-    const { handleVerEntrega, handlePaginaAnterior, handlePaginaSiguiente } = useEntregas();
+/**
+ * Página unificada de entregas con toggle entre vista simple y dashboard
+ *
+ * FUNCIONALIDADES:
+ * ✅ Vista simple: tabla de entregas con filtros y batch actions
+ * ✅ Vista dashboard: estadísticas y gráficos en tiempo real
+ * ✅ Cambio instantáneo sin recargar página
+ * ✅ URL persistence: ?view=simple|dashboard
+ * ✅ Lazy load: stats solo se cargan en vista dashboard
+ * ✅ Filtros compartidos entre vistas
+ */
+export default function EntregasIndex({ entregas, filtros, vehiculos = [], choferes = [], localidades = [], estadosLogisticos = [] }: Props) {
+    // Estado de vista (inicializado desde filtros o 'simple' por defecto)
+    const [view, setView] = useState<'simple' | 'dashboard'>(
+        (filtros?.view as 'simple' | 'dashboard') || 'simple'
+    );
 
-    // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
-    const { estados: estadosAPI, isLoading: estadosLoading } = useEstadosEntregas();
+    // Sincronizar vista con URL
+    const handleChangeView = (newView: 'simple' | 'dashboard') => {
+        setView(newView);
 
-    // Estados para filtros
-    const [filtroEstado, setFiltroEstado] = useState<string>('TODOS');
-    const [busqueda, setBusqueda] = useState<string>('');
-    const [entregasSeleccionadas, setEntregasSeleccionadas] = useState<number[]>([]);
-    const [mostrarOptimizacion, setMostrarOptimizacion] = useState(false);
-
-    // Generar opciones de estado desde el API
-    const estadoOptions = useMemo(() => {
-        return estadosAPI.map(estado => ({
-            value: estado.codigo,
-            label: estado.nombre
-        }));
-    }, [estadosAPI]);
-
-    // Filtrar entregas localmente
-    const entregasFiltradas = entregas.data.filter(entrega => {
-        const cumpleFiltroEstado = filtroEstado === 'TODOS' || entrega.estado === filtroEstado;
-        const cumpleBusqueda = busqueda === '' ||
-            entrega.venta?.cliente?.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-            entrega.proforma?.cliente?.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-            entrega.chofer?.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-            entrega.vehiculo?.placa?.toLowerCase().includes(busqueda.toLowerCase());
-
-        return cumpleFiltroEstado && cumpleBusqueda;
-    });
-
-    // Selección múltiple
-    const toggleSeleccion = (id: number) => {
-        setEntregasSeleccionadas(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
+        // Actualizar URL sin recargar página
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', newView);
+        window.history.pushState({}, '', url);
     };
-
-    const toggleSeleccionTodos = () => {
-        if (entregasSeleccionadas.length === entregasFiltradas.length) {
-            setEntregasSeleccionadas([]);
-        } else {
-            setEntregasSeleccionadas(entregasFiltradas.map(e => e.id));
-        }
-    };
-
-    const entregasProgramadas = entregasFiltradas.filter(e => e.estado === 'PROGRAMADO' || e.estado === 'PENDIENTE');
-    const puedeOptimizar = entregasSeleccionadas.length >= 2 &&
-        entregasSeleccionadas.every(id => {
-            const entrega = entregas.data.find(e => e.id === id);
-            return entrega && (entrega.estado === 'PROGRAMADO' || entrega.estado === 'PENDIENTE');
-        });
 
     return (
         <AppLayout>
-            <Head title="Gestión de Entregas" />
+            <Head title={view === 'simple' ? 'Entregas' : 'Dashboard de Entregas'} />
 
             <div className="space-y-6 p-4">
-                <PageHeader
-                    title="Gestión de Entregas"
-                    description={`${entregasProgramadas.length} entregas programadas disponibles para optimización`}
-                    actions={
-                        <>
-                            {entregasSeleccionadas.length > 0 && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setEntregasSeleccionadas([])}
-                                >
-                                    Limpiar selección ({entregasSeleccionadas.length})
-                                </Button>
-                            )}
-                            {puedeOptimizar && (
-                                <Button
-                                    variant="default"
-                                    className="bg-green-600 hover:bg-green-700"
-                                    onClick={() => setMostrarOptimizacion(true)}
-                                >
-                                    <Route className="h-4 w-4 mr-2" />
-                                    Optimizar Rutas ({entregasSeleccionadas.length})
-                                </Button>
-                            )}
-                            <Link href="/logistica/entregas/create">
-                                <Button>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Crear Entrega
-                                </Button>
-                            </Link>
-                        </>
-                    }
+                {/* Header con toggle */}
+                <EntregasHeader
+                    view={view}
+                    onChangeView={handleChangeView}
                 />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Truck className="h-5 w-5" />
-                            Lista de Entregas
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Filtros */}
-                        <div className="mb-6 flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg border">
-                            <div className="flex items-center gap-2">
-                                <Filter className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium">Filtros:</span>
-                            </div>
-
-                            <Select value={filtroEstado} onValueChange={setFiltroEstado} disabled={estadosLoading}>
-                                <SelectTrigger className="w-[180px] bg-background">
-                                    <SelectValue placeholder={estadosLoading ? "Cargando..." : "Estado"} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="TODOS">Todos los estados</SelectItem>
-                                    {estadoOptions.map(option => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            <div className="flex-1 min-w-[200px] max-w-md relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar cliente, chofer o vehículo..."
-                                    value={busqueda}
-                                    onChange={(e) => setBusqueda(e.target.value)}
-                                    className="pl-10 bg-background"
-                                />
-                            </div>
-
-                            <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>Mostrando {entregasFiltradas.length} de {entregas.data.length}</span>
-                            </div>
-                        </div>
-
-                        {entregas.data.length === 0 ? (
-                            <div className="text-center py-8">
-                                <p className="text-muted-foreground">No se encontraron entregas.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-12">
-                                                <Checkbox
-                                                    checked={entregasSeleccionadas.length === entregasFiltradas.length && entregasFiltradas.length > 0}
-                                                    onCheckedChange={toggleSeleccionTodos}
-                                                    aria-label="Seleccionar todas"
-                                                />
-                                            </TableHead>
-                                            <TableHead>Número</TableHead>
-                                            <TableHead>Cliente</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead>Fecha Programada</TableHead>
-                                            <TableHead>Vehículo</TableHead>
-                                            <TableHead>Chofer</TableHead>
-                                            <TableHead>Peso</TableHead>
-                                            <TableHead>Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {entregasFiltradas.map((entrega) => (
-                                            <TableRow
-                                                key={entrega.id}
-                                                className={entregasSeleccionadas.includes(entrega.id) ? 'bg-blue-50 dark:bg-blue-950' : ''}
-                                            >
-                                                <TableCell>
-                                                    <Checkbox
-                                                        checked={entregasSeleccionadas.includes(entrega.id)}
-                                                        onCheckedChange={() => toggleSeleccion(entrega.id)}
-                                                        aria-label={`Seleccionar entrega ${entrega.id}`}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="font-medium">
-                                                    {entrega.numero_entrega || entrega.numero_envio || `#${entrega.id}`}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="h-4 w-4 text-muted-foreground" />
-                                                        <div>
-                                                            <div className="font-medium">
-                                                                {entrega.venta?.cliente?.nombre || entrega.proforma?.cliente?.nombre || 'Sin cliente'}
-                                                            </div>
-                                                            <div className="text-sm text-muted-foreground">
-                                                                {entrega.venta ? `Venta: ${entrega.venta.numero}` :
-                                                                 entrega.proforma ? `Proforma: ${entrega.proforma.numero}` :
-                                                                 'Sin referencia'}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant={getEstadoBadgeVariant(entrega.estado)}>
-                                                        {getEstadoLabel(entrega.estado)}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {formatearFecha(entrega.fecha_programada)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {entrega.vehiculo ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <Truck className="h-4 w-4 text-muted-foreground" />
-                                                            <div>
-                                                                <div className="font-medium">{entrega.vehiculo.placa}</div>
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    {entrega.vehiculo.marca} {entrega.vehiculo.modelo}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">-</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {entrega.chofer ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <User className="h-4 w-4 text-muted-foreground" />
-                                                            {entrega.chofer.name || entrega.chofer.nombre}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">-</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {entrega.peso_kg ? (
-                                                        <span className="font-medium">{entrega.peso_kg} kg</span>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">-</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => handleVerEntrega(entrega.id)}
-                                                        >
-                                                            <Eye className="h-4 w-4 mr-1" />
-                                                            Ver
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-
-                                {/* Paginación simple */}
-                                {entregas.last_page > 1 && (
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm text-muted-foreground">
-                                            Página {entregas.current_page} de {entregas.last_page}
-                                            ({entregas.total} total)
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {entregas.current_page > 1 && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handlePaginaAnterior(entregas.current_page)}
-                                                >
-                                                    Anterior
-                                                </Button>
-                                            )}
-                                            {entregas.current_page < entregas.last_page && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handlePaginaSiguiente(entregas.current_page)}
-                                                >
-                                                    Siguiente
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Modal de optimización */}
-                <ModalOptimizacionRutas
-                    open={mostrarOptimizacion}
-                    onClose={() => setMostrarOptimizacion(false)}
-                    entregasIds={entregasSeleccionadas}
-                    vehiculos={vehiculos}
-                    choferes={choferes}
-                />
+                {/* Contenido condicional según vista */}
+                {view === 'simple' ? (
+                    <EntregasTableView
+                        entregas={entregas}
+                        vehiculos={vehiculos}
+                        choferes={choferes}
+                        localidades={localidades}
+                        estadosLogisticos={estadosLogisticos}
+                    />
+                ) : (
+                    <EntregasDashboardView
+                        autoRefresh={view === 'dashboard'} // Solo refrescar si está activa
+                    />
+                )}
             </div>
         </AppLayout>
     );

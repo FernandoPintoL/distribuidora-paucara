@@ -11,6 +11,9 @@ export interface CrearLoteRequest {
     chofer_id: Id;
     zona_id?: Id | null;
     observaciones?: string;
+    // Campos opcionales para caso single (unificación de flujos)
+    fecha_programada?: string;
+    direccion_entrega?: string;
 }
 
 export interface VentaEnEntrega {

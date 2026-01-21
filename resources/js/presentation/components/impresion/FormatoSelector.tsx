@@ -56,14 +56,17 @@ export function FormatoSelector({
     // en el futuro, esta lógica puede ser reactivada.
 
     const handleImprimir = (formato: string, accion: 'download' | 'stream' = 'download') => {
+        console.log('Iniciando impresión:', { formato, accion });
         setLoading(true);
 
         // Manejar casos especiales de API endpoints
         const url = tipoDocumento === 'reportes-carga'
             ? `/api/reportes-carga/${documentoId}/descargar?formato=${formato}&accion=${accion}`
             : tipoDocumento === 'entregas'
-            ? `/api/entregas/${documentoId}/descargar?formato=${formato}&accion=${accion}`
-            : `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
+                ? `/api/entregas/${documentoId}/descargar?formato=${formato}&accion=${accion}`
+                : `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
+
+        console.log('URL de impresión generada:', url);
 
         // Abrir en nueva ventana para stream, o descargar
         if (accion === 'stream') {
@@ -84,8 +87,8 @@ export function FormatoSelector({
             const url = tipoDocumento === 'reportes-carga'
                 ? `/api/reportes-carga/${documentoId}/preview?formato=${formato}`
                 : tipoDocumento === 'entregas'
-                ? `/api/entregas/${documentoId}/preview?formato=${formato}`
-                : `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
+                    ? `/api/entregas/${documentoId}/preview?formato=${formato}`
+                    : `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
             window.open(url, '_blank');
         }
     };

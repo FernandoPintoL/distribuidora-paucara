@@ -1,13 +1,11 @@
 <?php
-
 namespace App\Services\Venta;
 
-use App\Models\Empresa;
 use App\Models\Precio;
-use App\Models\PrecioProducto;
 use App\Models\PrecioRangoCantidadProducto;
 use App\Models\Producto;
 use App\Models\TipoPrecio;
+use Illuminate\Support\Facades\Log;
 
 class PrecioRangoProductoService
 {
@@ -47,56 +45,73 @@ class PrecioRangoProductoService
         array $items,
         ?int $empresaId = null
     ): array {
-        $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
-        $detalles = [];
-        $totalGeneral = 0;
+        $empresaId             = $empresaId ?? auth()->user()?->empresa_id ?? 1;
+        $detalles              = [];
+        $totalGeneral          = 0;
         $ahorroTotalDisponible = 0;
 
         foreach ($items as $item) {
             // Buscar producto ACTIVO (con scope)
             $producto = Producto::activos()->find($item['producto_id']);
 
-            if (!$producto) {
+            if (! $producto) {
                 // El producto no existe o está inactivo
-                \Log::warning("Producto {$item['producto_id']} no encontrado o inactivo en calcularCarrito");
+                Log::warning("Producto {$item['producto_id']} no encontrado o inactivo en calcularCarrito");
                 continue;
             }
 
             $cantidad = (int) $item['cantidad'];
+
+            // ✅ VALIDAR LÍMITE DE VENTA
+            if ($producto->limite_venta && $cantidad > $producto->limite_venta) {
+                Log::warning(
+                    "Cantidad excede límite de venta",
+                    [
+                        'producto_id'         => $producto->id,
+                        'cantidad_solicitada' => $cantidad,
+                        'limite_venta'        => $producto->limite_venta,
+                    ]
+                );
+                throw new \InvalidArgumentException(
+                    "El producto '{$producto->nombre}' tiene un límite máximo de venta de {$producto->limite_venta} unidades. "
+                    . "Cantidad solicitada: {$cantidad}."
+                );
+            }
+
             $precioInfo = $this->calcularPrecioCompleto($producto, $cantidad, $empresaId);
 
             // 🔑 NUEVO: Extraer tipo_precio_id del rango_aplicado
             // Si hay rango aplicado, usar el tipo_precio_id de ahí
             // Si no, usar tipo_precio_id=2 (VENTA - por defecto)
             if ($precioInfo['rango_aplicado']) {
-                $tipoPrecioId = $precioInfo['rango_aplicado']['tipo_precio_id'];
+                $tipoPrecioId     = $precioInfo['rango_aplicado']['tipo_precio_id'];
                 $tipoPrecioNombre = $precioInfo['rango_aplicado']['tipo_precio_nombre'];
             } else {
-                // Fallback: Si no hay rango, obtener el tipo_precio de la venta normal
-                $precioVenta = $producto->obtenerPrecio(2); // tipo_precio_id = 2 (VENTA)
-                $tipoPrecioId = 2;
+                                                                 // Fallback: Si no hay rango, obtener el tipo_precio de la venta normal
+                $precioVenta      = $producto->obtenerPrecio(2); // tipo_precio_id = 2 (VENTA)
+                $tipoPrecioId     = 2;
                 $tipoPrecioNombre = 'Precio de Venta';
             }
 
             $detalle = [
                 // ✅ DATOS PRINCIPALES
-                'producto_id' => $producto->id,
-                'producto_nombre' => $producto->nombre,
-                'producto_sku' => $producto->sku,
-                'cantidad' => $cantidad,
+                'producto_id'        => $producto->id,
+                'producto_nombre'    => $producto->nombre,
+                'producto_sku'       => $producto->sku,
+                'cantidad'           => $cantidad,
 
                 // 🔑 NUEVO: Tipo de precio en nivel superior (fácil acceso)
-                'tipo_precio_id' => $tipoPrecioId,
+                'tipo_precio_id'     => $tipoPrecioId,
                 'tipo_precio_nombre' => $tipoPrecioNombre,
 
                 // PRECIOS
-                'precio_unitario' => $precioInfo['precio_unitario'],
-                'subtotal' => $precioInfo['subtotal'],
+                'precio_unitario'    => $precioInfo['precio_unitario'],
+                'subtotal'           => $precioInfo['subtotal'],
 
                 // INFORMACIÓN DE RANGOS
-                'rango_aplicado' => $precioInfo['rango_aplicado'],
-                'proximo_rango' => $precioInfo['proximo_rango'],
-                'ahorro_proximo' => $precioInfo['ahorro_proximo'],
+                'rango_aplicado'     => $precioInfo['rango_aplicado'],
+                'proximo_rango'      => $precioInfo['proximo_rango'],
+                'ahorro_proximo'     => $precioInfo['ahorro_proximo'],
             ];
 
             $detalles[] = $detalle;
@@ -109,13 +124,13 @@ class PrecioRangoProductoService
         }
 
         return [
-            'detalles' => $detalles,
-            'subtotal' => $totalGeneral,
-            'total' => $totalGeneral, // Alias para compatibilidad
-            'cantidad_items' => count($detalles),
+            'detalles'                => $detalles,
+            'subtotal'                => $totalGeneral,
+            'total'                   => $totalGeneral, // Alias para compatibilidad
+            'cantidad_items'          => count($detalles),
 
             // 🔑 NUEVO: Ahorro disponible del carrito completo
-            'ahorro_disponible' => $ahorroTotalDisponible,
+            'ahorro_disponible'       => $ahorroTotalDisponible,
             'tiene_ahorro_disponible' => $ahorroTotalDisponible > 0,
         ];
     }
@@ -141,13 +156,13 @@ class PrecioRangoProductoService
         ?int $cantidadMaxima,
         TipoPrecio $tipoPrecio,
         ?int $empresaId = null,
-        ?\DateTime $fechaVigenciaInicio = null,
-        ?\DateTime $fechaVigenciaFin = null
-    ): PrecioRangoCantidadProducto {
+        ? \DateTime $fechaVigenciaInicio = null,
+        ? \DateTime $fechaVigenciaFin = null
+    ) : PrecioRangoCantidadProducto {
         $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
 
         // Validar que no exista solapamiento
-        if (!PrecioRangoCantidadProducto::validarNoSolapamiento(
+        if (! PrecioRangoCantidadProducto::validarNoSolapamiento(
             $empresaId,
             $producto->id,
             $cantidadMinima,
@@ -160,21 +175,21 @@ class PrecioRangoProductoService
 
         // Validar que exista precio para el tipo especificado
         $precioProducto = $producto->obtenerPrecio($tipoPrecio->id);
-        if (!$precioProducto) {
+        if (! $precioProducto) {
             throw new \InvalidArgumentException(
                 "El producto no tiene precio configurado para el tipo: {$tipoPrecio->nombre}"
             );
         }
 
         return PrecioRangoCantidadProducto::create([
-            'empresa_id' => $empresaId,
-            'producto_id' => $producto->id,
-            'tipo_precio_id' => $tipoPrecio->id,
-            'cantidad_minima' => $cantidadMinima,
-            'cantidad_maxima' => $cantidadMaxima,
+            'empresa_id'            => $empresaId,
+            'producto_id'           => $producto->id,
+            'tipo_precio_id'        => $tipoPrecio->id,
+            'cantidad_minima'       => $cantidadMinima,
+            'cantidad_maxima'       => $cantidadMaxima,
             'fecha_vigencia_inicio' => $fechaVigenciaInicio,
-            'fecha_vigencia_fin' => $fechaVigenciaFin,
-            'activo' => true,
+            'fecha_vigencia_fin'    => $fechaVigenciaFin,
+            'activo'                => true,
         ]);
     }
 
@@ -184,12 +199,12 @@ class PrecioRangoProductoService
     public function actualizarRango(
         PrecioRangoCantidadProducto $rango,
         array $datos = []
-    ): PrecioRangoCantidadProducto {
+    ) : PrecioRangoCantidadProducto {
         $cantidadMinima = $datos['cantidad_minima'] ?? $rango->cantidad_minima;
         $cantidadMaxima = $datos['cantidad_maxima'] ?? $rango->cantidad_maxima;
 
         // Validar que no exista solapamiento (excluyendo el rango actual)
-        if (!PrecioRangoCantidadProducto::validarNoSolapamiento(
+        if (! PrecioRangoCantidadProducto::validarNoSolapamiento(
             $rango->empresa_id,
             $rango->producto_id,
             $cantidadMinima,
@@ -230,7 +245,7 @@ class PrecioRangoProductoService
         ?int $empresaId = null
     ): array {
         $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
-        $rangos = $producto->rangosPrecios()
+        $rangos    = $producto->rangosPrecios()
             ->where('empresa_id', $empresaId)
             ->activos()
             ->orderBy('cantidad_minima', 'asc')
@@ -263,8 +278,8 @@ class PrecioRangoProductoService
         }
 
         return [
-            'es_valido' => empty($problemas),
-            'problemas' => $problemas,
+            'es_valido'       => empty($problemas),
+            'problemas'       => $problemas,
             'cantidad_rangos' => count($rangos),
         ];
     }
@@ -277,26 +292,26 @@ class PrecioRangoProductoService
         ?int $empresaId = null
     ): array {
         $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
-        $rangos = $this->obtenerRangosProducto($producto, $empresaId);
+        $rangos    = $this->obtenerRangosProducto($producto, $empresaId);
 
         return $rangos->map(function ($rango) {
             $precio = $rango->producto->obtenerPrecio($rango->tipo_precio_id);
 
             return [
-                'id' => $rango->id,
+                'id'              => $rango->id,
                 'cantidad_minima' => $rango->cantidad_minima,
                 'cantidad_maxima' => $rango->cantidad_maxima,
-                'rango_texto' => $rango->cantidad_maxima
+                'rango_texto'     => $rango->cantidad_maxima
                     ? "{$rango->cantidad_minima}-{$rango->cantidad_maxima}"
                     : "{$rango->cantidad_minima}+",
-                'tipo_precio' => [
-                    'id' => $rango->tipoPrecio->id,
+                'tipo_precio'     => [
+                    'id'     => $rango->tipoPrecio->id,
                     'nombre' => $rango->tipoPrecio->nombre,
                     'codigo' => $rango->tipoPrecio->codigo,
                 ],
                 'precio_unitario' => $precio?->precio,
-                'activo' => $rango->activo,
-                'vigente' => now()->between(
+                'activo'          => $rango->activo,
+                'vigente'         => now()->between(
                     $rango->fecha_vigencia_inicio ?? now()->subYear(),
                     $rango->fecha_vigencia_fin ?? now()->addYear()
                 ),

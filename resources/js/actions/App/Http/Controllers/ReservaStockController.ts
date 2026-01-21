@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
+ * @see app/Http/Controllers/ReservaStockController.php:18
  * @route '/inventario/reservas'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
+ * @see app/Http/Controllers/ReservaStockController.php:18
  * @route '/inventario/reservas'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
+ * @see app/Http/Controllers/ReservaStockController.php:18
  * @route '/inventario/reservas'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
+ * @see app/Http/Controllers/ReservaStockController.php:18
  * @route '/inventario/reservas'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
+ * @see app/Http/Controllers/ReservaStockController.php:18
  * @route '/inventario/reservas'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
+ * @see app/Http/Controllers/ReservaStockController.php:18
  * @route '/inventario/reservas'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReservaStockController::index
- * @see app/Http/Controllers/ReservaStockController.php:17
+ * @see app/Http/Controllers/ReservaStockController.php:18
  * @route '/inventario/reservas'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
+ * @see app/Http/Controllers/ReservaStockController.php:331
  * @route '/inventario/reservas/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
+ * @see app/Http/Controllers/ReservaStockController.php:331
  * @route '/inventario/reservas/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
+ * @see app/Http/Controllers/ReservaStockController.php:331
  * @route '/inventario/reservas/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
+ * @see app/Http/Controllers/ReservaStockController.php:331
  * @route '/inventario/reservas/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
+ * @see app/Http/Controllers/ReservaStockController.php:331
  * @route '/inventario/reservas/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
+ * @see app/Http/Controllers/ReservaStockController.php:331
  * @route '/inventario/reservas/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReservaStockController::dashboard
- * @see app/Http/Controllers/ReservaStockController.php:330
+ * @see app/Http/Controllers/ReservaStockController.php:331
  * @route '/inventario/reservas/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
+ * @see app/Http/Controllers/ReservaStockController.php:48
  * @route '/inventario/reservas/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -172,7 +172,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
+ * @see app/Http/Controllers/ReservaStockController.php:48
  * @route '/inventario/reservas/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
+ * @see app/Http/Controllers/ReservaStockController.php:48
  * @route '/inventario/reservas/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -190,7 +190,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
+ * @see app/Http/Controllers/ReservaStockController.php:48
  * @route '/inventario/reservas/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -200,7 +200,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
+ * @see app/Http/Controllers/ReservaStockController.php:48
  * @route '/inventario/reservas/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -210,7 +210,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
+ * @see app/Http/Controllers/ReservaStockController.php:48
  * @route '/inventario/reservas/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -219,7 +219,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReservaStockController::create
- * @see app/Http/Controllers/ReservaStockController.php:47
+ * @see app/Http/Controllers/ReservaStockController.php:48
  * @route '/inventario/reservas/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -235,7 +235,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::store
- * @see app/Http/Controllers/ReservaStockController.php:62
+ * @see app/Http/Controllers/ReservaStockController.php:63
  * @route '/inventario/reservas'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -250,7 +250,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::store
- * @see app/Http/Controllers/ReservaStockController.php:62
+ * @see app/Http/Controllers/ReservaStockController.php:63
  * @route '/inventario/reservas'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -259,7 +259,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::store
- * @see app/Http/Controllers/ReservaStockController.php:62
+ * @see app/Http/Controllers/ReservaStockController.php:63
  * @route '/inventario/reservas'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -269,7 +269,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::store
- * @see app/Http/Controllers/ReservaStockController.php:62
+ * @see app/Http/Controllers/ReservaStockController.php:63
  * @route '/inventario/reservas'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -279,7 +279,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::store
- * @see app/Http/Controllers/ReservaStockController.php:62
+ * @see app/Http/Controllers/ReservaStockController.php:63
  * @route '/inventario/reservas'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -290,10 +290,10 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
+ * @see app/Http/Controllers/ReservaStockController.php:117
  * @route '/inventario/reservas/{reservaStock}'
  */
-export const show = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -305,17 +305,14 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
+ * @see app/Http/Controllers/ReservaStockController.php:117
  * @route '/inventario/reservas/{reservaStock}'
  */
-show.url = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+show.url = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reservaStock: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reservaStock: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -326,9 +323,7 @@ show.url = (args: { reservaStock: number | { id: number } } | [reservaStock: num
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reservaStock: typeof args.reservaStock === 'object'
-                ? args.reservaStock.id
-                : args.reservaStock,
+                        reservaStock: args.reservaStock,
                 }
 
     return show.definition.url
@@ -338,48 +333,48 @@ show.url = (args: { reservaStock: number | { id: number } } | [reservaStock: num
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
+ * @see app/Http/Controllers/ReservaStockController.php:117
  * @route '/inventario/reservas/{reservaStock}'
  */
-show.get = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
 /**
 * @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
+ * @see app/Http/Controllers/ReservaStockController.php:117
  * @route '/inventario/reservas/{reservaStock}'
  */
-show.head = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
+ * @see app/Http/Controllers/ReservaStockController.php:117
  * @route '/inventario/reservas/{reservaStock}'
  */
-    const showForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
+ * @see app/Http/Controllers/ReservaStockController.php:117
  * @route '/inventario/reservas/{reservaStock}'
  */
-        showForm.get = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
             /**
 * @see \App\Http\Controllers\ReservaStockController::show
- * @see app/Http/Controllers/ReservaStockController.php:116
+ * @see app/Http/Controllers/ReservaStockController.php:117
  * @route '/inventario/reservas/{reservaStock}'
  */
-        showForm.head = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -392,10 +387,10 @@ show.head = (args: { reservaStock: number | { id: number } } | [reservaStock: nu
     show.form = showForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
+ * @see app/Http/Controllers/ReservaStockController.php:131
  * @route '/inventario/reservas/{reservaStock}/edit'
  */
-export const edit = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const edit = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
@@ -407,17 +402,14 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
+ * @see app/Http/Controllers/ReservaStockController.php:131
  * @route '/inventario/reservas/{reservaStock}/edit'
  */
-edit.url = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+edit.url = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reservaStock: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reservaStock: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -428,9 +420,7 @@ edit.url = (args: { reservaStock: number | { id: number } } | [reservaStock: num
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reservaStock: typeof args.reservaStock === 'object'
-                ? args.reservaStock.id
-                : args.reservaStock,
+                        reservaStock: args.reservaStock,
                 }
 
     return edit.definition.url
@@ -440,48 +430,48 @@ edit.url = (args: { reservaStock: number | { id: number } } | [reservaStock: num
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
+ * @see app/Http/Controllers/ReservaStockController.php:131
  * @route '/inventario/reservas/{reservaStock}/edit'
  */
-edit.get = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+edit.get = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
 /**
 * @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
+ * @see app/Http/Controllers/ReservaStockController.php:131
  * @route '/inventario/reservas/{reservaStock}/edit'
  */
-edit.head = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+edit.head = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: edit.url(args, options),
     method: 'head',
 })
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
+ * @see app/Http/Controllers/ReservaStockController.php:131
  * @route '/inventario/reservas/{reservaStock}/edit'
  */
-    const editForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const editForm = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: edit.url(args, options),
         method: 'get',
     })
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
+ * @see app/Http/Controllers/ReservaStockController.php:131
  * @route '/inventario/reservas/{reservaStock}/edit'
  */
-        editForm.get = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.get = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, options),
             method: 'get',
         })
             /**
 * @see \App\Http\Controllers\ReservaStockController::edit
- * @see app/Http/Controllers/ReservaStockController.php:130
+ * @see app/Http/Controllers/ReservaStockController.php:131
  * @route '/inventario/reservas/{reservaStock}/edit'
  */
-        editForm.head = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        editForm.head = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: edit.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -494,10 +484,10 @@ edit.head = (args: { reservaStock: number | { id: number } } | [reservaStock: nu
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::update
- * @see app/Http/Controllers/ReservaStockController.php:151
+ * @see app/Http/Controllers/ReservaStockController.php:152
  * @route '/inventario/reservas/{reservaStock}'
  */
-export const update = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+export const update = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
@@ -509,17 +499,14 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::update
- * @see app/Http/Controllers/ReservaStockController.php:151
+ * @see app/Http/Controllers/ReservaStockController.php:152
  * @route '/inventario/reservas/{reservaStock}'
  */
-update.url = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reservaStock: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reservaStock: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -530,9 +517,7 @@ update.url = (args: { reservaStock: number | { id: number } } | [reservaStock: n
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reservaStock: typeof args.reservaStock === 'object'
-                ? args.reservaStock.id
-                : args.reservaStock,
+                        reservaStock: args.reservaStock,
                 }
 
     return update.definition.url
@@ -542,20 +527,20 @@ update.url = (args: { reservaStock: number | { id: number } } | [reservaStock: n
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::update
- * @see app/Http/Controllers/ReservaStockController.php:151
+ * @see app/Http/Controllers/ReservaStockController.php:152
  * @route '/inventario/reservas/{reservaStock}'
  */
-update.put = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+update.put = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::update
- * @see app/Http/Controllers/ReservaStockController.php:151
+ * @see app/Http/Controllers/ReservaStockController.php:152
  * @route '/inventario/reservas/{reservaStock}'
  */
-    const updateForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const updateForm = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: update.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'PUT',
@@ -567,10 +552,10 @@ update.put = (args: { reservaStock: number | { id: number } } | [reservaStock: n
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::update
- * @see app/Http/Controllers/ReservaStockController.php:151
+ * @see app/Http/Controllers/ReservaStockController.php:152
  * @route '/inventario/reservas/{reservaStock}'
  */
-        updateForm.put = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        updateForm.put = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: update.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'PUT',
@@ -583,10 +568,10 @@ update.put = (args: { reservaStock: number | { id: number } } | [reservaStock: n
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::destroy
- * @see app/Http/Controllers/ReservaStockController.php:230
+ * @see app/Http/Controllers/ReservaStockController.php:231
  * @route '/inventario/reservas/{reservaStock}'
  */
-export const destroy = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -598,17 +583,14 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::destroy
- * @see app/Http/Controllers/ReservaStockController.php:230
+ * @see app/Http/Controllers/ReservaStockController.php:231
  * @route '/inventario/reservas/{reservaStock}'
  */
-destroy.url = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reservaStock: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reservaStock: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -619,9 +601,7 @@ destroy.url = (args: { reservaStock: number | { id: number } } | [reservaStock: 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reservaStock: typeof args.reservaStock === 'object'
-                ? args.reservaStock.id
-                : args.reservaStock,
+                        reservaStock: args.reservaStock,
                 }
 
     return destroy.definition.url
@@ -631,20 +611,20 @@ destroy.url = (args: { reservaStock: number | { id: number } } | [reservaStock: 
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::destroy
- * @see app/Http/Controllers/ReservaStockController.php:230
+ * @see app/Http/Controllers/ReservaStockController.php:231
  * @route '/inventario/reservas/{reservaStock}'
  */
-destroy.delete = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::destroy
- * @see app/Http/Controllers/ReservaStockController.php:230
+ * @see app/Http/Controllers/ReservaStockController.php:231
  * @route '/inventario/reservas/{reservaStock}'
  */
-    const destroyForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const destroyForm = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: destroy.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -656,10 +636,10 @@ destroy.delete = (args: { reservaStock: number | { id: number } } | [reservaStoc
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::destroy
- * @see app/Http/Controllers/ReservaStockController.php:230
+ * @see app/Http/Controllers/ReservaStockController.php:231
  * @route '/inventario/reservas/{reservaStock}'
  */
-        destroyForm.delete = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        destroyForm.delete = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: destroy.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',
@@ -672,10 +652,10 @@ destroy.delete = (args: { reservaStock: number | { id: number } } | [reservaStoc
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::utilizar
- * @see app/Http/Controllers/ReservaStockController.php:187
+ * @see app/Http/Controllers/ReservaStockController.php:188
  * @route '/inventario/reservas/{reservaStock}/utilizar'
  */
-export const utilizar = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const utilizar = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: utilizar.url(args, options),
     method: 'post',
 })
@@ -687,17 +667,14 @@ utilizar.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::utilizar
- * @see app/Http/Controllers/ReservaStockController.php:187
+ * @see app/Http/Controllers/ReservaStockController.php:188
  * @route '/inventario/reservas/{reservaStock}/utilizar'
  */
-utilizar.url = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+utilizar.url = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reservaStock: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reservaStock: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -708,9 +685,7 @@ utilizar.url = (args: { reservaStock: number | { id: number } } | [reservaStock:
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reservaStock: typeof args.reservaStock === 'object'
-                ? args.reservaStock.id
-                : args.reservaStock,
+                        reservaStock: args.reservaStock,
                 }
 
     return utilizar.definition.url
@@ -720,30 +695,30 @@ utilizar.url = (args: { reservaStock: number | { id: number } } | [reservaStock:
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::utilizar
- * @see app/Http/Controllers/ReservaStockController.php:187
+ * @see app/Http/Controllers/ReservaStockController.php:188
  * @route '/inventario/reservas/{reservaStock}/utilizar'
  */
-utilizar.post = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+utilizar.post = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: utilizar.url(args, options),
     method: 'post',
 })
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::utilizar
- * @see app/Http/Controllers/ReservaStockController.php:187
+ * @see app/Http/Controllers/ReservaStockController.php:188
  * @route '/inventario/reservas/{reservaStock}/utilizar'
  */
-    const utilizarForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const utilizarForm = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: utilizar.url(args, options),
         method: 'post',
     })
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::utilizar
- * @see app/Http/Controllers/ReservaStockController.php:187
+ * @see app/Http/Controllers/ReservaStockController.php:188
  * @route '/inventario/reservas/{reservaStock}/utilizar'
  */
-        utilizarForm.post = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        utilizarForm.post = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: utilizar.url(args, options),
             method: 'post',
         })
@@ -751,10 +726,10 @@ utilizar.post = (args: { reservaStock: number | { id: number } } | [reservaStock
     utilizar.form = utilizarForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::liberar
- * @see app/Http/Controllers/ReservaStockController.php:208
+ * @see app/Http/Controllers/ReservaStockController.php:209
  * @route '/inventario/reservas/{reservaStock}/liberar'
  */
-export const liberar = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const liberar = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: liberar.url(args, options),
     method: 'post',
 })
@@ -766,17 +741,14 @@ liberar.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::liberar
- * @see app/Http/Controllers/ReservaStockController.php:208
+ * @see app/Http/Controllers/ReservaStockController.php:209
  * @route '/inventario/reservas/{reservaStock}/liberar'
  */
-liberar.url = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+liberar.url = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reservaStock: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reservaStock: args.id }
-        }
     
     if (Array.isArray(args)) {
         args = {
@@ -787,9 +759,7 @@ liberar.url = (args: { reservaStock: number | { id: number } } | [reservaStock: 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reservaStock: typeof args.reservaStock === 'object'
-                ? args.reservaStock.id
-                : args.reservaStock,
+                        reservaStock: args.reservaStock,
                 }
 
     return liberar.definition.url
@@ -799,30 +769,30 @@ liberar.url = (args: { reservaStock: number | { id: number } } | [reservaStock: 
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::liberar
- * @see app/Http/Controllers/ReservaStockController.php:208
+ * @see app/Http/Controllers/ReservaStockController.php:209
  * @route '/inventario/reservas/{reservaStock}/liberar'
  */
-liberar.post = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+liberar.post = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: liberar.url(args, options),
     method: 'post',
 })
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::liberar
- * @see app/Http/Controllers/ReservaStockController.php:208
+ * @see app/Http/Controllers/ReservaStockController.php:209
  * @route '/inventario/reservas/{reservaStock}/liberar'
  */
-    const liberarForm = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const liberarForm = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: liberar.url(args, options),
         method: 'post',
     })
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::liberar
- * @see app/Http/Controllers/ReservaStockController.php:208
+ * @see app/Http/Controllers/ReservaStockController.php:209
  * @route '/inventario/reservas/{reservaStock}/liberar'
  */
-        liberarForm.post = (args: { reservaStock: number | { id: number } } | [reservaStock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        liberarForm.post = (args: { reservaStock: string | number } | [reservaStock: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: liberar.url(args, options),
             method: 'post',
         })
@@ -830,7 +800,7 @@ liberar.post = (args: { reservaStock: number | { id: number } } | [reservaStock:
     liberar.form = liberarForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
+ * @see app/Http/Controllers/ReservaStockController.php:251
  * @route '/inventario/reservas/api/stock-disponible'
  */
 export const apiStockDisponible = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -845,7 +815,7 @@ apiStockDisponible.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
+ * @see app/Http/Controllers/ReservaStockController.php:251
  * @route '/inventario/reservas/api/stock-disponible'
  */
 apiStockDisponible.url = (options?: RouteQueryOptions) => {
@@ -854,7 +824,7 @@ apiStockDisponible.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
+ * @see app/Http/Controllers/ReservaStockController.php:251
  * @route '/inventario/reservas/api/stock-disponible'
  */
 apiStockDisponible.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -863,7 +833,7 @@ apiStockDisponible.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =
 })
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
+ * @see app/Http/Controllers/ReservaStockController.php:251
  * @route '/inventario/reservas/api/stock-disponible'
  */
 apiStockDisponible.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -873,7 +843,7 @@ apiStockDisponible.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
+ * @see app/Http/Controllers/ReservaStockController.php:251
  * @route '/inventario/reservas/api/stock-disponible'
  */
     const apiStockDisponibleForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -883,7 +853,7 @@ apiStockDisponible.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
+ * @see app/Http/Controllers/ReservaStockController.php:251
  * @route '/inventario/reservas/api/stock-disponible'
  */
         apiStockDisponibleForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -892,7 +862,7 @@ apiStockDisponible.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
         })
             /**
 * @see \App\Http\Controllers\ReservaStockController::apiStockDisponible
- * @see app/Http/Controllers/ReservaStockController.php:250
+ * @see app/Http/Controllers/ReservaStockController.php:251
  * @route '/inventario/reservas/api/stock-disponible'
  */
         apiStockDisponibleForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -908,7 +878,7 @@ apiStockDisponible.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
     apiStockDisponible.form = apiStockDisponibleForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
+ * @see app/Http/Controllers/ReservaStockController.php:275
  * @route '/inventario/reservas/api/reservas-por-producto'
  */
 export const apiReservasPorProducto = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -923,7 +893,7 @@ apiReservasPorProducto.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
+ * @see app/Http/Controllers/ReservaStockController.php:275
  * @route '/inventario/reservas/api/reservas-por-producto'
  */
 apiReservasPorProducto.url = (options?: RouteQueryOptions) => {
@@ -932,7 +902,7 @@ apiReservasPorProducto.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
+ * @see app/Http/Controllers/ReservaStockController.php:275
  * @route '/inventario/reservas/api/reservas-por-producto'
  */
 apiReservasPorProducto.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -941,7 +911,7 @@ apiReservasPorProducto.get = (options?: RouteQueryOptions): RouteDefinition<'get
 })
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
+ * @see app/Http/Controllers/ReservaStockController.php:275
  * @route '/inventario/reservas/api/reservas-por-producto'
  */
 apiReservasPorProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -951,7 +921,7 @@ apiReservasPorProducto.head = (options?: RouteQueryOptions): RouteDefinition<'he
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
+ * @see app/Http/Controllers/ReservaStockController.php:275
  * @route '/inventario/reservas/api/reservas-por-producto'
  */
     const apiReservasPorProductoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -961,7 +931,7 @@ apiReservasPorProducto.head = (options?: RouteQueryOptions): RouteDefinition<'he
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
+ * @see app/Http/Controllers/ReservaStockController.php:275
  * @route '/inventario/reservas/api/reservas-por-producto'
  */
         apiReservasPorProductoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -970,7 +940,7 @@ apiReservasPorProducto.head = (options?: RouteQueryOptions): RouteDefinition<'he
         })
             /**
 * @see \App\Http\Controllers\ReservaStockController::apiReservasPorProducto
- * @see app/Http/Controllers/ReservaStockController.php:274
+ * @see app/Http/Controllers/ReservaStockController.php:275
  * @route '/inventario/reservas/api/reservas-por-producto'
  */
         apiReservasPorProductoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -986,7 +956,7 @@ apiReservasPorProducto.head = (options?: RouteQueryOptions): RouteDefinition<'he
     apiReservasPorProducto.form = apiReservasPorProductoForm
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
- * @see app/Http/Controllers/ReservaStockController.php:314
+ * @see app/Http/Controllers/ReservaStockController.php:315
  * @route '/inventario/reservas/api/liberar-vencidas'
  */
 export const apiLiberarVencidas = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1001,7 +971,7 @@ apiLiberarVencidas.definition = {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
- * @see app/Http/Controllers/ReservaStockController.php:314
+ * @see app/Http/Controllers/ReservaStockController.php:315
  * @route '/inventario/reservas/api/liberar-vencidas'
  */
 apiLiberarVencidas.url = (options?: RouteQueryOptions) => {
@@ -1010,7 +980,7 @@ apiLiberarVencidas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
- * @see app/Http/Controllers/ReservaStockController.php:314
+ * @see app/Http/Controllers/ReservaStockController.php:315
  * @route '/inventario/reservas/api/liberar-vencidas'
  */
 apiLiberarVencidas.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1020,7 +990,7 @@ apiLiberarVencidas.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
 
     /**
 * @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
- * @see app/Http/Controllers/ReservaStockController.php:314
+ * @see app/Http/Controllers/ReservaStockController.php:315
  * @route '/inventario/reservas/api/liberar-vencidas'
  */
     const apiLiberarVencidasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1030,7 +1000,7 @@ apiLiberarVencidas.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
 
             /**
 * @see \App\Http\Controllers\ReservaStockController::apiLiberarVencidas
- * @see app/Http/Controllers/ReservaStockController.php:314
+ * @see app/Http/Controllers/ReservaStockController.php:315
  * @route '/inventario/reservas/api/liberar-vencidas'
  */
         apiLiberarVencidasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

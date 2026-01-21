@@ -131,7 +131,7 @@ export function DashboardStats({
             </div>
 
             {/* Card de Monto Total */}
-            {proformaStats && proformaStats.monto_total && (
+            {/* {proformaStats && proformaStats.monto_total && (
                 <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 dark:border-blue-800">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium dark:text-blue-200">Monto Total en Proformas</CardTitle>
@@ -163,10 +163,10 @@ export function DashboardStats({
                         </div>
                     </CardContent>
                 </Card>
-            )}
+            )} */}
 
             {/* Estadísticas de Envíos */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card className="dark:bg-slate-900 dark:border-slate-700">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium dark:text-gray-300">Envíos Programados</CardTitle>
@@ -205,7 +205,7 @@ export function DashboardStats({
                         <p className="text-xs text-gray-500 dark:text-gray-400">Completados</p>
                     </CardContent>
                 </Card>
-            </div>
+            </div> */}
         </>
     );
 }

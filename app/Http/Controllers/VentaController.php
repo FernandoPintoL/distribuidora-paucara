@@ -55,7 +55,7 @@ class VentaController extends Controller
             $isApiRequest = $request->expectsJson() || str_starts_with($request->path(), 'api/');
 
             // Aplicar permisos SOLO a peticiones WEB
-            if (!$isApiRequest) {
+            if (! $isApiRequest) {
                 // Para web, aplicar validaciones de permisos en el método si es necesario
                 // Por ahora permitir acceso con autenticación
             }
@@ -710,10 +710,10 @@ class VentaController extends Controller
     public function imprimir(Venta $venta, Request $request)
     {
         // ✅ DEBUG: Verificar que el método se está llamando
-        \Log::info('🖨️ [VentaController::imprimir] Método llamado', [
+        Log::info('🖨️ [VentaController::imprimir] Método llamado', [
             'venta_id' => $venta->id,
-            'user_id' => auth()->id(),
-            'formato' => $request->input('formato'),
+            'user_id'  => auth()->id(),
+            'formato'  => $request->input('formato'),
         ]);
 
         $user = auth()->user();
@@ -722,19 +722,19 @@ class VentaController extends Controller
         // - Super Admin y Admin: acceso a todas las ventas
         // - Chofer: solo ventas asignadas a sus entregas
         // - Cliente: solo sus propias ventas
-        if (!$this->userCanAccessVenta($user, $venta)) {
-            \Log::warning('❌ [VentaController::imprimir] Autorización fallida', [
-                'user_id' => $user->id,
+        if (! $this->userCanAccessVenta($user, $venta)) {
+            Log::warning('❌ [VentaController::imprimir] Autorización fallida', [
+                'user_id'    => $user->id,
                 'user_roles' => $user->getRoleNames()->toArray(),
-                'venta_id' => $venta->id,
+                'venta_id'   => $venta->id,
             ]);
             return response()->json([
                 'message' => 'No tiene permiso para descargar esta venta',
             ], 403);
         }
 
-        \Log::info('✅ [VentaController::imprimir] Autorización exitosa', [
-            'user_id' => $user->id,
+        Log::info('✅ [VentaController::imprimir] Autorización exitosa', [
+            'user_id'  => $user->id,
             'venta_id' => $venta->id,
         ]);
 
@@ -766,7 +766,7 @@ class VentaController extends Controller
         $user = auth()->user();
 
         // ✅ AUTORIZACIÓN: Validar que el usuario tiene permiso para ver preview de esta venta
-        if (!$this->userCanAccessVenta($user, $venta)) {
+        if (! $this->userCanAccessVenta($user, $venta)) {
             abort(403, 'No tiene permiso para ver el preview de esta venta');
         }
 
@@ -842,15 +842,15 @@ class VentaController extends Controller
      */
     private function userCanAccessVenta($user, Venta $venta): bool
     {
-        \Log::debug('🔐 [userCanAccessVenta] Verificando autorización', [
-            'user_id' => $user->id,
+        Log::debug('🔐 [userCanAccessVenta] Verificando autorización', [
+            'user_id'    => $user->id,
             'user_roles' => $user->getRoleNames()->toArray(),
-            'venta_id' => $venta->id,
+            'venta_id'   => $venta->id,
         ]);
 
         // Super Admin y Admin: acceso a todas las ventas
         if ($user->hasRole(['Super Admin', 'Admin', 'admin'])) {
-            \Log::debug('✅ [userCanAccessVenta] Admin/Super Admin access granted');
+            Log::debug('✅ [userCanAccessVenta] Admin/Super Admin access granted');
             return true;
         }
 
@@ -858,10 +858,10 @@ class VentaController extends Controller
         // ✅ Verificar ambas variaciones de rol: 'Cliente' y 'cliente'
         if ($user->hasRole(['Cliente', 'cliente'])) {
             $canAccess = $venta->cliente_id === $user->cliente_id;
-            \Log::debug('🔐 [userCanAccessVenta] Cliente check', [
-                'user_cliente_id' => $user->cliente_id,
+            Log::debug('🔐 [userCanAccessVenta] Cliente check', [
+                'user_cliente_id'  => $user->cliente_id,
                 'venta_cliente_id' => $venta->cliente_id,
-                'can_access' => $canAccess,
+                'can_access'       => $canAccess,
             ]);
             return $canAccess;
         }
@@ -869,25 +869,25 @@ class VentaController extends Controller
         // Chofer: puede acceder a ventas asignadas a sus entregas
         // ✅ Verificar ambas variaciones de rol: 'Chofer' y 'chofer'
         if ($user->hasRole(['Chofer', 'chofer'])) {
-            \Log::debug('🔐 [userCanAccessVenta] Checking chofer entregas...');
+            Log::debug('🔐 [userCanAccessVenta] Checking chofer entregas...');
 
             // ✅ CORREGIDO: Relación es 1:N directa (Venta.entrega_id -> Entrega.id)
             // NO es many-to-many via tabla pivot
             $canAccess = $venta->entrega_id &&
-                        $venta->entrega &&
-                        $venta->entrega->chofer_id === $user->id;
+            $venta->entrega &&
+            $venta->entrega->chofer_id === $user->id;
 
-            \Log::debug('🔐 [userCanAccessVenta] Chofer entrega check', [
-                'user_chofer_id' => $user->id,
-                'venta_entrega_id' => $venta->entrega_id,
+            Log::debug('🔐 [userCanAccessVenta] Chofer entrega check', [
+                'user_chofer_id'    => $user->id,
+                'venta_entrega_id'  => $venta->entrega_id,
                 'entrega_chofer_id' => $venta->entrega?->chofer_id,
-                'can_access' => $canAccess,
+                'can_access'        => $canAccess,
             ]);
 
             return $canAccess;
         }
 
-        \Log::debug('❌ [userCanAccessVenta] No matching role found');
+        Log::debug('❌ [userCanAccessVenta] No matching role found');
         // Si no es Super Admin, Admin, Cliente o Chofer, denegar acceso
         return false;
     }

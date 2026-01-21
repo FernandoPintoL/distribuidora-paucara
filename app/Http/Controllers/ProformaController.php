@@ -149,23 +149,36 @@ class ProformaController extends Controller
      * POST /proformas/{id}/aprobar
      *
      * Mantiene la reserva de stock (no la consume)
+     *
+     * ✅ RETORNA SIEMPRE JSON (sin redirecciones)
      */
-    public function aprobar(string $id): JsonResponse | RedirectResponse
+    public function aprobar(string $id): JsonResponse
     {
         try {
             $proformaDTO = $this->proformaService->aprobar((int) $id);
 
-            return $this->respondSuccess(
-                data: $proformaDTO,
-                message: 'Proforma aprobada',
-                redirectTo: route('proformas.show', $id),
-            );
+            // ✅ SIEMPRE retornar JSON, sin redirectTo
+            return response()->json([
+                'success' => true,
+                'message' => 'Proforma aprobada',
+                'data' => $proformaDTO->toArray(),
+            ], 200);
 
         } catch (EstadoInvalidoException $e) {
-            return $this->respondError($e->getMessage(), statusCode: 422);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
 
         } catch (\Exception $e) {
-            return $this->respondError($e->getMessage());
+            Log::error('Error al aprobar proforma', [
+                'proforma_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al aprobar proforma',
+            ], 500);
         }
     }
 
@@ -175,22 +188,37 @@ class ProformaController extends Controller
      * POST /proformas/{id}/rechazar
      *
      * Libera la reserva de stock
+     *
+     * ✅ RETORNA SIEMPRE JSON (sin redirecciones)
      */
-    public function rechazar(string $id): JsonResponse | RedirectResponse
+    public function rechazar(string $id): JsonResponse
     {
         try {
             $motivo = request()->input('motivo', '');
-
             $proformaDTO = $this->proformaService->rechazar((int) $id, $motivo);
 
-            return $this->respondSuccess(
-                data: $proformaDTO,
-                message: 'Proforma rechazada',
-                redirectTo: route('proformas.index'),
-            );
+            // ✅ SIEMPRE retornar JSON, sin redirectTo
+            return response()->json([
+                'success' => true,
+                'message' => 'Proforma rechazada',
+                'data' => $proformaDTO->toArray(),
+            ], 200);
 
         } catch (DomainException $e) {
-            return $this->respondError($e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Error al rechazar proforma', [
+                'proforma_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al rechazar proforma',
+            ], 500);
         }
     }
 
@@ -221,17 +249,14 @@ class ProformaController extends Controller
                 'timestamp'    => now()->toIso8601String(),
             ]);
 
-            // Retornar respuesta con redirección
-            // El frontend manejará la redirección después de recibir la respuesta exitosa
+            // ✅ SIEMPRE retornar JSON puro, sin redirecciones HTTP
+            // El frontend maneja la redirección usando el campo redirect_to
             return response()->json([
                 'success'     => true,
                 'message'     => 'Proforma convertida a venta exitosamente',
                 'data'        => $ventaDTO->toArray(),
                 'redirect_to' => route('ventas.show', $ventaDTO->id),
-            ], 200, [
-                'X-Inertia'         => true,
-                'X-Inertia-Version' => \Illuminate\Support\Facades\Session::token(),
-            ]);
+            ], 200);
 
         } catch (\App\Exceptions\Proforma\ReservasExpirasException $e) {
             Log::warning('⚠️ [ProformaController::convertirAVenta] Reservas expiradas', [
@@ -259,19 +284,110 @@ class ProformaController extends Controller
             Log::warning('⚠️ [ProformaController::convertirAVenta] Estado inválido', [
                 'proforma_id' => $id,
                 'error'       => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Error al convertir proforma a venta', [
+                'proforma_id' => $id,
+                'error'       => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al convertir la proforma a venta',
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVO ENDPOINT SIMPLIFICADO: Procesar proforma (aprobar + convertir en un solo paso)
+     *
+     * POST /proformas/{id}/procesar-venta
+     *
+     * Flujo simplificado:
+     * 1. Valida que proforma esté en estado PENDIENTE
+     * 2. Convierte directamente a venta (sin paso de aprobación manual)
+     * 3. Retorna la venta creada
+     */
+    public function procesarVenta(string $id): JsonResponse
+    {
+        try {
+            Log::info('🔄 [ProformaController::procesarVenta] Iniciando procesamiento simplificado', [
+                'proforma_id' => $id,
                 'timestamp'   => now()->toIso8601String(),
+            ]);
+
+            $proforma = Proforma::findOrFail((int) $id);
+
+            // ✅ IDEMPOTENTE: Si ya está CONVERTIDA, obtener la venta asociada y retornar
+            if ($proforma->estado === 'CONVERTIDA') {
+                Log::info('ℹ️  [ProformaController::procesarVenta] Proforma ya CONVERTIDA, retornando venta asociada', [
+                    'proforma_id' => $id,
+                    'proforma_numero' => $proforma->numero,
+                ]);
+
+                $venta = $proforma->venta;
+                if (!$venta) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Proforma convertida pero venta no encontrada',
+                        'code'    => 'VENTA_NO_ENCONTRADA',
+                    ], 422);
+                }
+
+                $ventaDTO = \App\DTOs\Venta\VentaResponseDTO::fromModel($venta);
+
+                return response()->json([
+                    'success'     => true,
+                    'message'     => 'Proforma ya convertida a venta (operación idempotente)',
+                    'data'        => $ventaDTO->toArray(),
+                    'redirect_to' => route('ventas.show', $ventaDTO->id),
+                ], 200);
+            }
+
+            // Si no está convertida, proceder con la conversión
+            $ventaDTO = $this->proformaService->convertirAVenta((int) $id);
+
+            Log::info('✅ [ProformaController::procesarVenta] Proforma procesada exitosamente', [
+                'proforma_id'  => $id,
+                'venta_id'     => $ventaDTO->id,
+                'venta_numero' => $ventaDTO->numero,
+                'timestamp'    => now()->toIso8601String(),
+            ]);
+
+            return response()->json([
+                'success'     => true,
+                'message'     => '✅ Proforma convertida a venta exitosamente',
+                'data'        => $ventaDTO->toArray(),
+                'redirect_to' => route('ventas.show', $ventaDTO->id),
+            ], 200);
+
+        } catch (\App\Exceptions\Proforma\ReservasExpirasException $e) {
+            Log::warning('⚠️ [ProformaController::procesarVenta] Reservas expiradas', [
+                'proforma_id' => $id,
+                'error'       => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'code'    => 'RESERVAS_EXPIRADAS',
+            ], 422);
+
+        } catch (EstadoInvalidoException $e) {
+            Log::warning('⚠️ [ProformaController::procesarVenta] Estado inválido', [
+                'proforma_id' => $id,
+                'error'       => $e->getMessage(),
             ]);
             return $this->respondError($e->getMessage(), statusCode: 422);
 
         } catch (\Exception $e) {
-            Log::error('❌ [ProformaController::convertirAVenta] Error general', [
+            Log::error('❌ [ProformaController::procesarVenta] Error', [
                 'proforma_id' => $id,
                 'error'       => $e->getMessage(),
-                'error_class' => get_class($e),
-                'file'        => $e->getFile(),
-                'line'        => $e->getLine(),
-                'trace'       => $e->getTraceAsString(),
-                'timestamp'   => now()->toIso8601String(),
             ]);
             return $this->respondError($e->getMessage());
         }

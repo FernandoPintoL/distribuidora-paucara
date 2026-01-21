@@ -45,8 +45,8 @@ interface MapeoResponse {
  * Servicio para consumir API de estados logísticos
  */
 export class EstadosApiService {
-    private baseUrl = '/api/estados';
-    private mapeosUrl = '/api/mapeos';
+    private baseUrl = '/estados';
+    private mapeosUrl = '/mapeos';
 
     /**
      * Obtiene todas las categorías disponibles

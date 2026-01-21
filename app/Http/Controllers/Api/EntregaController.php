@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\EntregaAsignada;
 use App\Events\UbicacionActualizada;
 use App\Events\MarcarLlegadaConfirmada;
 use App\Events\EntregaConfirmada;
@@ -12,6 +13,7 @@ use App\Models\EstadoLogistica;
 use App\Models\Proforma;
 use App\Models\Venta;  // ✅ Importar modelo Venta
 use App\Models\EntregaVentaConfirmacion;  // ✅ Importar modelo confirmaciones
+use App\Services\ImpresionEntregaService;  // ✅ NUEVO: Importar servicio de productos
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +24,13 @@ use Illuminate\Support\Facades\Log;
 
 class EntregaController extends Controller
 {
+    private $impresionService;
+
+    public function __construct(ImpresionEntregaService $impresionService)
+    {
+        $this->impresionService = $impresionService;
+    }
+
     /**
      * ENDPOINTS PARA CHOFER
      */
@@ -416,7 +425,7 @@ class EntregaController extends Controller
                 'ventas.cliente',
                 'ventas.direccionCliente',  // NUEVO: Cargar ubicación de entrega desde venta
                 'ventas.estadoLogistica',   // NUEVO: Cargar estado logístico de venta (tabla estados_logistica)
-                'ventas.detalles.producto',
+                'ventas.detalles.producto.unidad',  // ✅ ACTUALIZADO: Incluir unidad (correcta relación) para obtenerProductosGenerico()
                 'chofer',  // FASE 3: chofer apunta a users.id, no a empleados.id
                 'vehiculo',
                 'reportes',
@@ -435,9 +444,20 @@ class EntregaController extends Controller
                 ], 403);
             }
 
+            // ✅ NUEVO: Obtener lista genérica de productos de la entrega
+            $productosGenerico = $this->impresionService->obtenerProductosGenerico($entrega);
+
+            // 🔍 DEBUG: Verificar que los productos se están obteniendo
+            Log::info('📦 [API_SHOWENTREGA] Obteniendo productos genéricos', [
+                'entrega_id' => $entrega->id,
+                'cantidad_productos' => $productosGenerico->count(),
+                'ventas_asignadas' => $entrega->ventas->count(),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'data' => $entrega,
+                'productos' => $productosGenerico->toArray(),  // ✅ NUEVO: Incluir productos genéricos
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -1578,9 +1598,13 @@ class EntregaController extends Controller
                 'venta_ids' => 'required|array|min:1',
                 'venta_ids.*' => 'integer|exists:ventas,id',
                 'vehiculo_id' => 'required|integer|exists:vehiculos,id',
-                'chofer_id' => 'required|integer|exists:empleados,id',
+                // ✅ CORREGIDO: chofer_id apunta a users.id, no empleados.id
+                'chofer_id' => 'required|integer|exists:users,id',
                 'zona_id' => 'nullable|integer|exists:localidades,id',
                 'observaciones' => 'nullable|string|max:500',
+                // ✅ NUEVO: Campos opcionales para caso single (1 venta)
+                'fecha_programada' => 'nullable|date_format:Y-m-d\TH:i',
+                'direccion_entrega' => 'nullable|string|max:255',
             ]);
 
             Log::info('✅ Validation passed', ['validated' => $validated]);
@@ -1589,18 +1613,42 @@ class EntregaController extends Controller
 
             Log::info('🔧 Service instantiated, calling crearEntregaConsolidada...');
 
+            // ✅ NUEVO: Construir observaciones incluyendo dirección si se proporciona
+            $observacionesCompletas = $validated['observaciones'] ?? '';
+            if (!empty($validated['direccion_entrega'])) {
+                $observacionesCompletas = trim($observacionesCompletas ? "{$observacionesCompletas}\n📍 Dirección: {$validated['direccion_entrega']}" : "📍 Dirección: {$validated['direccion_entrega']}");
+            }
+
             $entrega = $service->crearEntregaConsolidada(
                 ventaIds: $validated['venta_ids'],
                 vehiculoId: $validated['vehiculo_id'],
                 choferId: $validated['chofer_id'],
                 zonaId: $validated['zona_id'],
                 datos: [
-                    'observaciones' => $validated['observaciones'] ?? null,
+                    'observaciones' => !empty($observacionesCompletas) ? $observacionesCompletas : null,
+                    // ✅ NUEVO: Parámetros opcionales para caso single (1 venta)
+                    'fecha_programada' => $validated['fecha_programada'] ?? null,
                     'usuario_id' => Auth::id(),
                 ]
             );
 
             Log::info('✅ Service call successful', ['entrega_id' => $entrega->id ?? 'unknown']);
+
+            // ✅ NUEVO: Disparar evento para notificar al chofer (igual que ProformaAprobada en línea 902)
+            try {
+                event(new EntregaAsignada($entrega));
+                Log::info('📢 Evento EntregaAsignada disparado exitosamente', [
+                    'entrega_id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'chofer_id' => $entrega->chofer_id,
+                ]);
+            } catch (Exception $broadcastError) {
+                Log::warning('⚠️  Error al emitir evento de entrega asignada (no crítico)', [
+                    'entrega_id' => $entrega->id,
+                    'error' => $broadcastError->getMessage(),
+                ]);
+                // La entrega ya fue creada exitosamente, así que continuamos
+            }
 
             // Cargar relaciones para la respuesta
             Log::info('📍 Loading relationships...', ['entrega_id' => $entrega->id]);

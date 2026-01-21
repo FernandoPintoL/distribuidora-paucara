@@ -2,6 +2,194 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
 /**
 * @see \Illuminate\Routing\RedirectController::__invoke
  * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+const RedirectController33cb836ccba7f84d26d80b45324e572f = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'get',
+})
+
+RedirectController33cb836ccba7f84d26d80b45324e572f.definition = {
+    methods: ["get","head","post","put","patch","delete","options"],
+    url: '/logistica/entregas/dashboard',
+} satisfies RouteDefinition<["get","head","post","put","patch","delete","options"]>
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.url = (options?: RouteQueryOptions) => {
+    return RedirectController33cb836ccba7f84d26d80b45324e572f.definition.url + queryParams(options)
+}
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'get',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'head',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'post',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'put',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.patch = (options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'patch',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'delete',
+})
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+RedirectController33cb836ccba7f84d26d80b45324e572f.options = (options?: RouteQueryOptions): RouteDefinition<'options'> => ({
+    url: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+    method: 'options',
+})
+
+    /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+    const RedirectController33cb836ccba7f84d26d80b45324e572fForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+        RedirectController33cb836ccba7f84d26d80b45324e572fForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+            method: 'get',
+        })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+        RedirectController33cb836ccba7f84d26d80b45324e572fForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: RedirectController33cb836ccba7f84d26d80b45324e572f.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+        RedirectController33cb836ccba7f84d26d80b45324e572fForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: RedirectController33cb836ccba7f84d26d80b45324e572f.url(options),
+            method: 'post',
+        })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+        RedirectController33cb836ccba7f84d26d80b45324e572fForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: RedirectController33cb836ccba7f84d26d80b45324e572f.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+        RedirectController33cb836ccba7f84d26d80b45324e572fForm.patch = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: RedirectController33cb836ccba7f84d26d80b45324e572f.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+        RedirectController33cb836ccba7f84d26d80b45324e572fForm.delete = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: RedirectController33cb836ccba7f84d26d80b45324e572f.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'DELETE',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+            /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+ * @route '/logistica/entregas/dashboard'
+ */
+        RedirectController33cb836ccba7f84d26d80b45324e572fForm.options = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: RedirectController33cb836ccba7f84d26d80b45324e572f.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'OPTIONS',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    RedirectController33cb836ccba7f84d26d80b45324e572f.form = RedirectController33cb836ccba7f84d26d80b45324e572fForm
+    /**
+* @see \Illuminate\Routing\RedirectController::__invoke
+ * @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
  * @route '/envios'
  */
 const RedirectController0e0282185c02bf06412c7bc696eb340c = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -941,6 +1129,7 @@ RedirectController4b87d2df7e3aa853f6720faea796e36c.options = (options?: RouteQue
     RedirectController4b87d2df7e3aa853f6720faea796e36c.form = RedirectController4b87d2df7e3aa853f6720faea796e36cForm
 
 const RedirectController = {
+    '/logistica/entregas/dashboard': RedirectController33cb836ccba7f84d26d80b45324e572f,
     '/envios': RedirectController0e0282185c02bf06412c7bc696eb340c,
     '/envios/create': RedirectController58f9bd12e31a9c8fd7f71cf7f521e703,
     '/envios/api/vehiculos-disponibles': RedirectController5f22b8c738f355d0f4539e8d63535101,

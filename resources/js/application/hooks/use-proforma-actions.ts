@@ -127,74 +127,146 @@ export function useProformaActions(
         console.log('Payload de aprobación:', payload);
 
         // PASO 1: APROBAR LA PROFORMA
-        router.post(
-            proformasService.aprobarUrl(proforma.id),
-            payload,
-            {
-                onSuccess: () => {
-                    console.log('%c✅ Proforma aprobada', 'color: green; font-weight: bold;');
-                    NotificationService.success('Proforma aprobada correctamente');
+        // ✅ Usar fetch en lugar de router.post para mejor control de errores
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-                    // PASO 2: Si incluye pago, CONVERTIR A VENTA
-                    if (coordinacion?.payment?.con_pago) {
-                        console.log('%c📤 PASO 2: Convirtiendo a venta...', 'font-size: 14px; color: blue; font-weight: bold;');
+        fetch(proformasService.aprobarUrl(proforma.id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': csrfToken,
+                'X-Inertia': 'false', // ✅ NUEVO: Indicar que NO es Inertia, es JSON
+            },
+            body: JSON.stringify(payload),
+            redirect: 'manual', // ✅ NUEVO: No seguir redirects automáticamente
+        })
+            .then(response => {
+                console.log('%c📥 Respuesta de aprobación recibida', 'color: blue;', {
+                    status: response.status,
+                    ok: response.ok,
+                    redirected: response.redirected,
+                    type: response.type,
+                });
 
-                        const datosConversion = {
-                            con_pago: true,
-                            tipo_pago_id: coordinacion.payment.tipo_pago_id,
-                            politica_pago: coordinacion.payment.politica_pago,
-                            monto_pagado: coordinacion.payment.monto_pagado,
-                            fecha_pago: coordinacion.payment.fecha_pago,
-                            numero_recibo: coordinacion.payment.numero_recibo,
-                            numero_transferencia: coordinacion.payment.numero_transferencia,
-                        };
+                // ✅ NUEVO: Detectar redirects
+                if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+                    throw new Error('⚠️ El servidor está redirigiendo. Verifica que el endpoint devuelva JSON, no redirecciones.');
+                }
 
-                        console.log('Datos de pago:', datosConversion);
+                // Verificar que es JSON antes de parsear
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.error('❌ Content-Type incorrecto:', contentType);
+                    console.error('Response headers:', response.headers);
+                    throw new Error(`❌ Respuesta no es JSON. Content-Type: ${contentType || 'desconocido'}`);
+                }
 
-                        // Llamar al endpoint de conversión
-                        router.post(
-                            `/api/proformas/${proforma.id}/convertir-venta`,
-                            datosConversion,
-                            {
-                                onSuccess: () => {
-                                    console.log('%c✅ Proforma convertida a venta', 'color: green; font-weight: bold;');
-                                    NotificationService.success('Proforma convertida a venta exitosamente');
-                                    options?.onSuccess?.();
-                                    setIsSubmitting(false);
-                                },
-                                onError: (errors: any) => {
-                                    console.error('❌ Error al convertir a venta:', errors);
+                return response.json().then(data => ({
+                    ok: response.ok,
+                    status: response.status,
+                    data,
+                }));
+            })
+            .then((response) => {
+                if (!response.ok) {
+                    const errorMessage = response.data?.message || `Error ${response.status} al aprobar la proforma`;
+                    throw new Error(errorMessage);
+                }
 
-                                    // Extraer mensaje de error del servidor si está disponible
-                                    const errorMessage = errors?.message || 'Error al convertir la proforma a venta';
-                                    NotificationService.error(errorMessage);
-                                    options?.onError?.(new Error(errorMessage));
-                                    setIsSubmitting(false);
+                console.log('%c✅ Proforma aprobada', 'color: green; font-weight: bold;');
+                NotificationService.success('Proforma aprobada correctamente');
 
-                                    // Log detallado para debugging
-                                    console.log('%c📋 Detalles del error de conversión:', 'color: red; font-weight: bold;', {
-                                        fullError: errors,
-                                        status: errors?.status,
-                                        statusText: errors?.statusText,
-                                    });
-                                },
+                // PASO 2: Si incluye pago, CONVERTIR A VENTA
+                if (coordinacion?.payment?.con_pago) {
+                    console.log('%c📤 PASO 2: Convirtiendo a venta...', 'font-size: 14px; color: blue; font-weight: bold;');
+
+                    const datosConversion = {
+                        con_pago: true,
+                        tipo_pago_id: coordinacion.payment.tipo_pago_id,
+                        politica_pago: coordinacion.payment.politica_pago,
+                        monto_pagado: coordinacion.payment.monto_pagado,
+                        fecha_pago: coordinacion.payment.fecha_pago,
+                        numero_recibo: coordinacion.payment.numero_recibo,
+                        numero_transferencia: coordinacion.payment.numero_transferencia,
+                    };
+
+                    console.log('Datos de pago:', datosConversion);
+
+                    // ✅ Llamar al endpoint de conversión con fetch (no router.post)
+                    fetch(`/proformas/${proforma.id}/convertir-venta`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-Token': csrfToken,
+                            'X-Inertia': 'false',
+                        },
+                        body: JSON.stringify(datosConversion),
+                        redirect: 'manual',
+                    })
+                        .then(response => {
+                            if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+                                throw new Error('El servidor está redirigiendo en conversión');
                             }
-                        );
-                    } else {
-                        // Sin conversión, solo aprobación
-                        options?.onSuccess?.();
-                        setIsSubmitting(false);
-                    }
-                },
-                onError: (errors: any) => {
-                    console.error('❌ Error al aprobar:', errors);
-                    const errorMessage = errors?.message || 'Error al aprobar la proforma';
-                    NotificationService.error(errorMessage);
-                    options?.onError?.(new Error(errorMessage));
+
+                            const contentType = response.headers.get('content-type');
+                            if (!contentType || !contentType.includes('application/json')) {
+                                throw new Error(`Respuesta de conversión no es JSON`);
+                            }
+
+                            return response.json().then(data => ({
+                                ok: response.ok,
+                                status: response.status,
+                                data,
+                            }));
+                        })
+                        .then((response) => {
+                            if (!response.ok) {
+                                const errorMessage = response.data?.message || 'Error al convertir a venta';
+                                throw new Error(errorMessage);
+                            }
+
+                            console.log('%c✅ Proforma convertida a venta', 'color: green; font-weight: bold;');
+                            NotificationService.success('Proforma convertida a venta exitosamente');
+                            options?.onSuccess?.();
+                            setIsSubmitting(false);
+
+                            // Redirigir si hay redirect_to
+                            if (response.data?.redirect_to) {
+                                setTimeout(() => {
+                                    router.visit(response.data.redirect_to);
+                                }, 1000);
+                            }
+                        })
+                        .catch((error) => {
+                            console.error('❌ Error al convertir a venta:', error);
+                            const errorMessage = error?.message || 'Error al convertir la proforma a venta';
+                            NotificationService.error(errorMessage);
+                            options?.onError?.(new Error(errorMessage));
+                            setIsSubmitting(false);
+                        });
+                } else {
+                    // Sin conversión, solo aprobación
+                    options?.onSuccess?.();
                     setIsSubmitting(false);
-                },
-            }
-        );
+                }
+            })
+            .catch((error) => {
+                console.error('❌ Error en flujo combinado:', error);
+                const errorMessage = error?.message || 'Error al aprobar la proforma';
+                NotificationService.error(errorMessage);
+                options?.onError?.(new Error(errorMessage));
+                setIsSubmitting(false);
+
+                // Log detallado para debugging
+                console.log('%c📋 Detalles del error:', 'color: red; font-weight: bold;', {
+                    message: error?.message,
+                    stack: error?.stack,
+                });
+            });
     }, [proforma.id, puedeAprobar, options]);
 
     // ============================================

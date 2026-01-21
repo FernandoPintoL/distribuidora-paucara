@@ -44,7 +44,6 @@ export interface Proforma extends BaseEntity {
     observaciones?: string;
     cliente_id: Id;
     cliente_nombre: string;
-    cliente: Cliente;
     usuario_id?: Id;
     estado_documento_id?: Id;
     moneda_id?: Id;
@@ -94,7 +93,6 @@ export interface Proforma extends BaseEntity {
     usuario?: Usuario;
     usuarioCreador?: Usuario; // Usuario del sistema que creó la proforma
     estado_documento?: EstadoDocumento;
-    moneda?: Moneda;
     detalles: ProformaDetalle[]; // ✅ OBLIGATORIO - Una proforma siempre tiene detalles
 
     // Timestamps

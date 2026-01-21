@@ -199,7 +199,7 @@ export function VehicleRecommendationCard({
                 </p>
               </div>
             </div>
-            <Badge className={`${vehiculoActual?.id === recomendado?.id ? 'bg-green-600 dark:bg-green-700' : 'bg-blue-600 dark:bg-blue-700'} hover:bg-opacity-90`}>
+            <Badge className={`${vehiculoActual?.id === recomendado?.id ? 'bg-green-600 dark:bg-green-700 text-white' : 'bg-blue-600 dark:bg-blue-700 text-white'} hover:bg-opacity-90`}>
               {vehiculoActual?.id === recomendado?.id ? 'ÓPTIMO' : 'SELECCIONADO'}
             </Badge>
           </div>
@@ -248,17 +248,25 @@ export function VehicleRecommendationCard({
             </div>
 
             {/* Chofer por defecto */}
-            {!seleccionarChoferManualmente && vehiculoActual?.choferAsignado && (
+            {!seleccionarChoferManualmente && (
               <div className="p-3 rounded-lg bg-white dark:bg-slate-800 border border-green-200 dark:border-green-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  Chofer del vehículo:
-                </p>
-                <p className="font-semibold text-gray-900 dark:text-white">
-                  {vehiculoActual.choferAsignado.nombre || vehiculoActual.choferAsignado.name}
-                </p>
-                {vehiculoActual.choferAsignado.telefono && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Tel: {vehiculoActual.choferAsignado.telefono}
+                {vehiculoActual?.choferAsignado ? (
+                  <>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                      Chofer del vehículo:
+                    </p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {vehiculoActual.choferAsignado.nombre || vehiculoActual.choferAsignado.name}
+                    </p>
+                    {vehiculoActual.choferAsignado.telefono && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Tel: {vehiculoActual.choferAsignado.telefono}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                    Sin chofer asignado al vehículo - Selecciona uno manualmente
                   </p>
                 )}
               </div>
@@ -301,13 +309,21 @@ export function VehicleRecommendationCard({
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Uso de Capacidad
               </span>
-              <span
-                className={`text-sm font-bold ${getCapacityTextColor(
-                  vehiculoActual?.porcentaje_uso_actual ?? 0
-                )}`}
-              >
-                {vehiculoActual?.porcentaje_uso_actual}%
-              </span>
+              <div className="flex flex-col items-end gap-0.5">
+                <span
+                  className={`text-sm font-bold ${getCapacityTextColor(
+                    vehiculoActual?.porcentaje_uso_actual ?? 0
+                  )}`}
+                >
+                  {vehiculoActual?.porcentaje_uso_actual ?? 0}%
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {Math.round(
+                    (Number(vehiculoActual?.porcentaje_uso_actual ?? 0) / 100) * Number(vehiculoActual?.capacidad_kg ?? 0)
+                  )}{' '}
+                  / {Number(vehiculoActual?.capacidad_kg ?? 0)} kg
+                </span>
+              </div>
             </div>
             <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
@@ -417,12 +433,12 @@ function VehicleOption({
             <span>•</span>
             <span
               className={
-                vehiculo.porcentaje_uso_actual > 80
+                (vehiculo.porcentaje_uso_actual ?? 0) > 80
                   ? 'text-red-600 dark:text-red-400 font-semibold'
                   : ''
               }
             >
-              {vehiculo.porcentaje_uso_actual}% uso
+              {vehiculo.porcentaje_uso_actual ?? 0}% uso
             </span>
           </div>
         </div>

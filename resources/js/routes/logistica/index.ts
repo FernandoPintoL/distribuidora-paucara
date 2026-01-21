@@ -137,7 +137,7 @@ resincronizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
     resincronizar.form = resincronizarForm
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -152,7 +152,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -161,7 +161,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -170,7 +170,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -180,7 +180,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -190,7 +190,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -199,7 +199,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

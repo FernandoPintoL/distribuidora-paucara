@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Web\LogisticaController::dashboard
- * @see app/Http/Controllers/Web/LogisticaController.php:14
+ * @see app/Http/Controllers/Web/LogisticaController.php:17
  * @route '/logistica/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:185
+ * @see app/Http/Controllers/Web/LogisticaController.php:201
  * @route '/logistica/envios/{envio}/seguimiento'
  */
 export const seguimiento = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ seguimiento.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:185
+ * @see app/Http/Controllers/Web/LogisticaController.php:201
  * @route '/logistica/envios/{envio}/seguimiento'
  */
 seguimiento.url = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -122,7 +122,7 @@ seguimiento.url = (args: { envio: string | number } | [envio: string | number ] 
 
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:185
+ * @see app/Http/Controllers/Web/LogisticaController.php:201
  * @route '/logistica/envios/{envio}/seguimiento'
  */
 seguimiento.get = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -131,7 +131,7 @@ seguimiento.get = (args: { envio: string | number } | [envio: string | number ] 
 })
 /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:185
+ * @see app/Http/Controllers/Web/LogisticaController.php:201
  * @route '/logistica/envios/{envio}/seguimiento'
  */
 seguimiento.head = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -141,7 +141,7 @@ seguimiento.head = (args: { envio: string | number } | [envio: string | number ]
 
     /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:185
+ * @see app/Http/Controllers/Web/LogisticaController.php:201
  * @route '/logistica/envios/{envio}/seguimiento'
  */
     const seguimientoForm = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -151,7 +151,7 @@ seguimiento.head = (args: { envio: string | number } | [envio: string | number ]
 
             /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:185
+ * @see app/Http/Controllers/Web/LogisticaController.php:201
  * @route '/logistica/envios/{envio}/seguimiento'
  */
         seguimientoForm.get = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -160,7 +160,7 @@ seguimiento.head = (args: { envio: string | number } | [envio: string | number ]
         })
             /**
 * @see \App\Http\Controllers\Web\LogisticaController::seguimiento
- * @see app/Http/Controllers/Web/LogisticaController.php:185
+ * @see app/Http/Controllers/Web/LogisticaController.php:201
  * @route '/logistica/envios/{envio}/seguimiento'
  */
         seguimientoForm.head = (args: { envio: string | number } | [envio: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

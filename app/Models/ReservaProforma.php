@@ -73,15 +73,14 @@ class ReservaProforma extends Model
     /**
      * Liberar reserva (devolver a cantidad_disponible)
      *
-     * IMPORTANTE: Operación atómica para evitar inconsistencias
+     * IMPORTANTE: Sin transacción anidada (la transacción la maneja el caller)
+     * PostgreSQL no soporta transacciones anidadas sin savepoints
      */
     public function liberar(): bool
     {
         if ($this->estado !== self::ACTIVA) {
             return false;
         }
-
-        \Illuminate\Support\Facades\DB::beginTransaction();
 
         try {
             // Actualizar estado de reserva
@@ -101,9 +100,7 @@ class ReservaProforma extends Model
                 throw new \Exception("Error al liberar reserva - stock insuficiente o no encontrado");
             }
 
-            \Illuminate\Support\Facades\DB::commit();
-
-            \Illuminate\Support\Facades\Log::info('Reserva liberada', [
+            \Illuminate\Support\Facades\Log::info('✅ Reserva liberada', [
                 'reserva_id' => $this->id,
                 'proforma_id' => $this->proforma_id,
                 'stock_producto_id' => $this->stock_producto_id,
@@ -113,11 +110,10 @@ class ReservaProforma extends Model
             return true;
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
-
-            \Illuminate\Support\Facades\Log::error('Error al liberar reserva', [
+            \Illuminate\Support\Facades\Log::error('❌ Error al liberar reserva', [
                 'reserva_id' => $this->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return false;
@@ -127,15 +123,14 @@ class ReservaProforma extends Model
     /**
      * Consumir reserva (reducir cantidad física del stock)
      *
-     * IMPORTANTE: Operación atómica para evitar inconsistencias
+     * IMPORTANTE: Sin transacción anidada (la transacción la maneja el caller)
+     * PostgreSQL no soporta transacciones anidadas sin savepoints
      */
     public function consumir(): bool
     {
         if ($this->estado !== self::ACTIVA) {
             return false;
         }
-
-        \Illuminate\Support\Facades\DB::beginTransaction();
 
         try {
             // Actualizar estado de reserva
@@ -157,9 +152,7 @@ class ReservaProforma extends Model
                 throw new \Exception("Error al consumir reserva - stock insuficiente o no encontrado");
             }
 
-            \Illuminate\Support\Facades\DB::commit();
-
-            \Illuminate\Support\Facades\Log::info('Reserva consumida', [
+            \Illuminate\Support\Facades\Log::info('✅ Reserva consumida', [
                 'reserva_id' => $this->id,
                 'proforma_id' => $this->proforma_id,
                 'stock_producto_id' => $this->stock_producto_id,
@@ -169,11 +162,10 @@ class ReservaProforma extends Model
             return true;
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
-
-            \Illuminate\Support\Facades\Log::error('Error al consumir reserva', [
+            \Illuminate\Support\Facades\Log::error('❌ Error al consumir reserva', [
                 'reserva_id' => $this->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return false;

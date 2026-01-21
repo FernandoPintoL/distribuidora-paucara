@@ -31,6 +31,26 @@ use Inertia\Response;
 
 class ProductoController extends Controller
 {
+    // ✅ Cache del tipo de precio de venta para evitar múltiples queries
+    private static $tipoPrecioVentaCache = null;
+
+    /**
+     * Obtiene el ID del tipo de precio de venta buscando por código 'VENTA'
+     * Se cachea para evitar N+1 queries
+     */
+    private function getTipoPrecioVentaId(): int
+    {
+        if (self::$tipoPrecioVentaCache === null) {
+            $tipoPrecio = TipoPrecio::where('codigo', 'VENTA')->first();
+            if (!$tipoPrecio) {
+                Log::error('❌ Tipo de precio VENTA no encontrado en la BD');
+                throw new \Exception('Tipo de precio VENTA no encontrado en la base de datos');
+            }
+            self::$tipoPrecioVentaCache = $tipoPrecio->id;
+        }
+        return self::$tipoPrecioVentaCache;
+    }
+
     public function historialPrecios(Producto $producto): JsonResponse
     {
         $producto->load(['precios' => function ($q) {
@@ -887,6 +907,30 @@ class ProductoController extends Controller
      */
     public function indexApi(Request $request): JsonResponse
     {
+        $user = auth()->user();
+
+        Log::info('🔍 [indexApi] INICIO', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+        ]);
+
+        // ✅ VALIDACIÓN 1: Verificar rol permitido
+        // Solo Preventista, Cliente, Chofer y Super Admin pueden ver productos
+        $rolesPermitidos = ['Preventista', 'preventista', 'cliente', 'Cliente', 'Chofer', 'chofer', 'Super Admin'];
+        $userRoles = $user->getRoleNames()->toArray();
+        Log::info('✅ [indexApi] VAL 1 - Roles del usuario', [
+            'user_roles' => $userRoles,
+            'roles_permitidos' => $rolesPermitidos,
+        ]);
+
+        if (!$user->hasAnyRole($rolesPermitidos)) {
+            Log::warning('❌ [indexApi] Rol NO permitido', ['roles' => $userRoles]);
+            return response()->json([
+                'message' => 'No tienes permisos para ver productos. Solo Preventistas, Clientes y Choferes pueden listarlos.',
+                'data' => []
+            ], 403);
+        }
+
         $perPage     = $request->integer('per_page', 20);
         $q           = $request->string('q');
         $categoriaId = $request->integer('categoria_id');
@@ -894,19 +938,31 @@ class ProductoController extends Controller
         $proveedorId = $request->integer('proveedor_id');
         $activo      = $request->boolean('activo', true);
 
-        // Obtener empresa del usuario autenticado
-        $empresa = auth()->user()->empresa;
+        // ✅ VALIDACIÓN 2: Obtener empresa del usuario autenticado
+        $empresa = $user->empresa;
+        Log::info('✅ [indexApi] VAL 2 - Empresa', [
+            'empresa_id' => $empresa?->id,
+            'empresa_nombre' => $empresa?->nombre,
+        ]);
+
         if (!$empresa) {
+            Log::warning('❌ [indexApi] Usuario sin empresa');
             return response()->json([
                 'message' => 'El usuario no tiene asociada una empresa',
                 'data' => []
             ], 403);
         }
 
-        // ✅ SEGURIDAD: Obtener almacén de venta de la empresa del usuario autenticado
+        // ✅ VALIDACIÓN 3: Obtener almacén de venta de la empresa del usuario autenticado
         // Se IGNORA COMPLETAMENTE cualquier parámetro 'almacen_id' en el request
+        // El almacén se obtiene exclusivamente de: empresa->almacen_id
         $almacenId = $empresa->almacen_id;
+        Log::info('✅ [indexApi] VAL 3 - Almacén', [
+            'almacen_id' => $almacenId,
+        ]);
+
         if (!$almacenId) {
+            Log::warning('❌ [indexApi] Empresa sin almacén de venta');
             return response()->json([
                 'message' => 'La empresa no tiene un almacén de venta asignado',
                 'data' => []
@@ -918,6 +974,46 @@ class ProductoController extends Controller
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = $q ? strtolower($q) : '';
+
+        // 🔍 DEBUGGEO: Contar productos por etapas
+        Log::info('📊 [indexApi] DEBUGGEO PRODUCTOS', [
+            'total_en_bd' => Producto::count(),
+            'por_empresa' => Producto::where('empresa_id', $empresa->id)->count(),
+            'activos' => Producto::where('activo', true)->count(),
+            'en_empresa_activos' => Producto::where('empresa_id', $empresa->id)->where('activo', true)->count(),
+        ]);
+
+        // ✅ Obtener ID del tipo de precio de venta dinámicamente por código
+        try {
+            $tipoPrecioVentaId = $this->getTipoPrecioVentaId();
+            Log::info('✅ [indexApi] Tipo de precio VENTA obtenido', [
+                'tipo_precio_id' => $tipoPrecioVentaId,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ [indexApi] ' . $e->getMessage());
+            return response()->json([
+                'message' => $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+
+        // 🔍 DEBUGGEO: Verificar stock y precios
+        $productosConStock = Producto::whereHas('stock', function ($q) use ($almacenId) {
+            $q->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
+        })->count();
+
+        $productosConPrecio = Producto::whereHas('precios', function ($q) use ($tipoPrecioVentaId) {
+            $q->where('tipo_precio_id', $tipoPrecioVentaId)->where('activo', true)->where('precio', '>', 0);
+        })->count();
+
+        Log::info('📊 [indexApi] DEBUGGEO STOCK Y PRECIO', [
+            'almacen_id' => $almacenId,
+            'tipo_precio_venta_id' => $tipoPrecioVentaId,
+            'productos_con_stock' => $productosConStock,
+            'productos_con_precio_venta' => $productosConPrecio,
+            'empresa_id' => $empresa->id,
+        ]);
+
         $productos   = Producto::with([
             'categoria:id,nombre',
             'marca:id,nombre',
@@ -936,7 +1032,7 @@ class ProductoController extends Controller
             },
             'stock.almacen:id,nombre', // Cargar todos los stocks con almacenes
         ])
-            ->where('empresa_id', $empresa->id) // Filtrar por empresa
+            ->where('empresa_id', $empresa->id) // Filtro 1: Por empresa
             ->when($q, fn($query) => $query->where(function ($subQuery) use ($searchLower) {
                 $subQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
                     ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
@@ -962,22 +1058,22 @@ class ProductoController extends Controller
             ->when($categoriaId, fn($query) => $query->where('categoria_id', $categoriaId))
             ->when($marcaId, fn($query) => $query->where('marca_id', $marcaId))
             ->when($proveedorId, fn($query) => $query->where('proveedor_id', $proveedorId))
-            // FILTROS OBLIGATORIOS PARA VENTA:
-            // 1. Solo productos con stock disponible en el almacén de la empresa
+            // ✅ VALIDACIÓN 4: FILTRO 2 - Stock disponible > 0 en el almacén
             ->whereHas('stock', function ($stockQuery) use ($almacenId) {
                 $stockQuery->where('almacen_id', $almacenId)
                     ->where('cantidad_disponible', '>', 0);
             })
-            // 2. Solo productos con precio de venta válido (> 0)
-            ->whereHas('precios', function ($precioQuery) {
-                $precioQuery->where('tipo_precio_id', 2) // tipo_precio_id = 2 es precio de venta
+            // ✅ VALIDACIÓN 5: FILTRO 3 - Precio de venta válido
+            ->whereHas('precios', function ($precioQuery) use ($tipoPrecioVentaId) {
+                $precioQuery->where('tipo_precio_id', $tipoPrecioVentaId)
                     ->where('activo', true)
                     ->where('precio', '>', 0);
             })
+            // ✅ VALIDACIÓN 6: FILTRO 4 - Producto activo
             ->where('activo', $activo)
             ->orderBy('nombre')
             ->paginate($perPage)
-            ->through(function ($producto) use ($almacenId, $almacenPrincipal) {
+            ->through(function ($producto) use ($almacenId, $almacenPrincipal, $tipoPrecioVentaId) {
                 // Consolidar stock por almacén (suma de lotes)
                 $stockConsolidado = $producto->stock->groupBy('almacen_id')->map(function ($stocks) {
                     $primero = $stocks->first();
@@ -1016,8 +1112,8 @@ class ProductoController extends Controller
                         'cantidad_reservada'  => (int) $s->cantidad_reservada,
                     ])->values();
 
-                // Obtener precio de venta (tipo_precio_id = 2) para mostrar al cliente
-                $precioVenta = $producto->precios->firstWhere('tipo_precio_id', 2);
+                // ✅ Obtener precio de venta para mostrar al cliente
+                $precioVenta = $producto->precios->firstWhere('tipo_precio_id', $tipoPrecioVentaId);
 
                 // Obtener solo el string del segundo código de barra
                 $segundoCodigoBarra = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';
@@ -1034,6 +1130,7 @@ class ProductoController extends Controller
                     // 'stock_minimo' => $producto->stock_minimo,
                     // 'stock_maximo' => $producto->stock_maximo,
                     'activo'              => $producto->activo,
+                    'limite_venta'        => $producto->limite_venta,
                     // 'fecha_creacion'      => $producto->fecha_creacion,
                     // 'es_alquilable' => $producto->es_alquilable,
                     'categoria_id'        => $producto->categoria_id,
@@ -1157,8 +1254,9 @@ class ProductoController extends Controller
                 'cantidad_reservada'  => (int) $s->cantidad_reservada,
             ])->values();
 
-        // Obtener precio de venta (tipo_precio_id = 2) para mostrar al cliente
-        $precioVenta = $producto->precios->firstWhere('tipo_precio_id', 2);
+        // ✅ Obtener precio de venta para mostrar al cliente (dinámico por código 'VENTA')
+        $tipoPrecioVentaId = $this->getTipoPrecioVentaId();
+        $precioVenta = $producto->precios->firstWhere('tipo_precio_id', $tipoPrecioVentaId);
 
         // Obtener solo el string del segundo código de barra
         $segundoCodigoBarra = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';

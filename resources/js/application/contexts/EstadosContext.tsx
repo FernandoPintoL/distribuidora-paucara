@@ -178,10 +178,10 @@ export function EstadosProvider({ children }: EstadosProviderProps) {
      */
     useEffect(() => {
         // Solo inicializar una vez
-        if (!isInitialized && !isLoading) {
+        if (!isInitialized) {
             initializeEstados();
         }
-    }, [isInitialized, isLoading, initializeEstados]);
+    }, [isInitialized, initializeEstados]);
 
     /**
      * Valor del contexto

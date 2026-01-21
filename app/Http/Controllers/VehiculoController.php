@@ -7,6 +7,7 @@ use App\Models\Empleado;
 use App\Models\Vehiculo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,22 +15,22 @@ class VehiculoController extends Controller
 {
     public function index(Request $request): Response
     {
-        $q = $request->string('q');
-        $activo = $request->query('activo');
-        $orderBy = $request->string('order_by', 'placa');
+        $q        = $request->string('q');
+        $activo   = $request->query('activo');
+        $orderBy  = $request->string('order_by', 'placa');
         $orderDir = $request->string('order_dir', 'asc');
 
         // Validar columnas permitidas para ordenamiento
         $allowedOrderColumns = ['id', 'placa', 'marca', 'modelo', 'anho', 'capacidad_kg'];
-        if (!in_array($orderBy, $allowedOrderColumns)) {
+        if (! in_array($orderBy, $allowedOrderColumns)) {
             $orderBy = 'placa';
         }
 
         $items = Vehiculo::query()
-            ->when($q, fn($qq) => $qq->where(function($query) use ($q) {
+            ->when($q, fn($qq) => $qq->where(function ($query) use ($q) {
                 $query->where('placa', 'ilike', "%{$q}%")
-                      ->orWhere('marca', 'ilike', "%{$q}%")
-                      ->orWhere('modelo', 'ilike', "%{$q}%");
+                    ->orWhere('marca', 'ilike', "%{$q}%")
+                    ->orWhere('modelo', 'ilike', "%{$q}%");
             }))
             ->when($activo !== null, fn($qq) => $qq->where('activo', $activo === '1'))
             ->orderBy($orderBy, $orderDir)
@@ -39,9 +40,9 @@ class VehiculoController extends Controller
         return Inertia::render('inventario/vehiculos/index', [
             'vehiculos' => $items,
             'filters'   => [
-                'q' => $q,
-                'activo' => $activo,
-                'order_by' => $orderBy,
+                'q'         => $q,
+                'activo'    => $activo,
+                'order_by'  => $orderBy,
                 'order_dir' => $orderDir,
             ],
         ]);
@@ -164,7 +165,7 @@ class VehiculoController extends Controller
     {
         try {
             $pesoTotal = (float) $request->input('peso_total', 0);
-            $ventaIds = $request->input('venta_ids', []);
+            $ventaIds  = $request->input('venta_ids', []);
 
             if ($pesoTotal <= 0) {
                 return response()->json([
@@ -175,7 +176,7 @@ class VehiculoController extends Controller
 
             // Obtener localidad de destino de las ventas seleccionadas
             $localidadesDestino = [];
-            if (!empty($ventaIds)) {
+            if (! empty($ventaIds)) {
                 $localidadesDestino = \App\Models\Venta::whereIn('id', $ventaIds)
                     ->with('cliente')
                     ->get()
@@ -191,20 +192,20 @@ class VehiculoController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Las ventas seleccionadas tienen destinos en diferentes localidades. Por favor selecciona ventas de la misma localidad.',
-                    'data' => [
+                    'data'    => [
                         'recomendado' => null,
-                        'peso_total' => $pesoTotal,
+                        'peso_total'  => $pesoTotal,
                         'disponibles' => [],
-                        'alerta' => 'DESTINOS MÚLTIPLES',
+                        'alerta'      => 'DESTINOS MÚLTIPLES',
                     ],
                 ], 422);
             }
 
             $localidadDestino = $localidadesDestino[0] ?? null;
-            \Log::info('Recomendación de vehículo', [
-                'peso_total' => $pesoTotal,
+            Log::info('Recomendación de vehículo', [
+                'peso_total'        => $pesoTotal,
                 'localidad_destino' => $localidadDestino,
-                'venta_ids' => $ventaIds,
+                'venta_ids'         => $ventaIds,
             ]);
 
             // Obtener vehículos disponibles ordenados por capacidad (menor primero)
@@ -220,39 +221,39 @@ class VehiculoController extends Controller
                 })
                 ->values()
                 ->map(function ($vehiculo) use ($pesoTotal) {
-                    $pesoCargado = $vehiculo->obtenerPesoCargado();
-                    $capacidadDisponible = $vehiculo->obtenerCapacidadDisponible();
-                    $porcentajeUsoActual = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
+                    $pesoCargado                 = $vehiculo->obtenerPesoCargado();
+                    $capacidadDisponible         = $vehiculo->obtenerCapacidadDisponible();
+                    $porcentajeUsoActual         = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
                     $porcentajeUsoConNuevasCarga = round((($pesoCargado + $pesoTotal) / $vehiculo->capacidad_kg) * 100, 1);
 
                     // Debug logging
-                    \Log::info('Mapeando vehículo (con peso actual):', [
-                        'vehiculo_id' => $vehiculo->id,
-                        'placa' => $vehiculo->placa,
-                        'capacidad_total_kg' => $vehiculo->capacidad_kg,
-                        'peso_cargado_actual' => $pesoCargado,
-                        'capacidad_disponible' => $capacidadDisponible,
-                        'peso_nuevas_cargas' => $pesoTotal,
-                        'porcentaje_uso_actual' => $porcentajeUsoActual,
+                    Log::info('Mapeando vehículo (con peso actual):', [
+                        'vehiculo_id'                      => $vehiculo->id,
+                        'placa'                            => $vehiculo->placa,
+                        'capacidad_total_kg'               => $vehiculo->capacidad_kg,
+                        'peso_cargado_actual'              => $pesoCargado,
+                        'capacidad_disponible'             => $capacidadDisponible,
+                        'peso_nuevas_cargas'               => $pesoTotal,
+                        'porcentaje_uso_actual'            => $porcentajeUsoActual,
                         'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
                     ]);
 
                     return [
-                        'id' => $vehiculo->id,
-                        'placa' => $vehiculo->placa,
-                        'marca' => $vehiculo->marca,
-                        'modelo' => $vehiculo->modelo,
-                        'anho' => $vehiculo->anho,
-                        'capacidad_kg' => $vehiculo->capacidad_kg,
-                        'peso_cargado_actual' => $pesoCargado,
-                        'capacidad_disponible' => $capacidadDisponible,
-                        'porcentaje_uso_actual' => $porcentajeUsoActual,
+                        'id'                               => $vehiculo->id,
+                        'placa'                            => $vehiculo->placa,
+                        'marca'                            => $vehiculo->marca,
+                        'modelo'                           => $vehiculo->modelo,
+                        'anho'                             => $vehiculo->anho,
+                        'capacidad_kg'                     => $vehiculo->capacidad_kg,
+                        'peso_cargado_actual'              => $pesoCargado,
+                        'capacidad_disponible'             => $capacidadDisponible,
+                        'porcentaje_uso_actual'            => $porcentajeUsoActual,
                         'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
-                        'estado' => 'recomendado',
-                        'choferAsignado' => $vehiculo->choferAsignado ? [
-                            'id' => $vehiculo->choferAsignado->id,
-                            'name' => $vehiculo->choferAsignado->name,
-                            'nombre' => $vehiculo->choferAsignado->name,
+                        'estado'                           => 'recomendado',
+                        'choferAsignado'                   => $vehiculo->choferAsignado ? [
+                            'id'       => $vehiculo->choferAsignado->id,
+                            'name'     => $vehiculo->choferAsignado->name,
+                            'nombre'   => $vehiculo->choferAsignado->name,
                             'telefono' => $vehiculo->choferAsignado->phone ?? null,
                         ] : null,
                     ];
@@ -261,7 +262,7 @@ class VehiculoController extends Controller
             // El primero es el recomendado (menor capacidad que cabe el peso)
             $recomendado = $vehiculosDisponibles->first();
 
-            if (!$recomendado) {
+            if (! $recomendado) {
                 // Si no hay vehículos con capacidad suficiente, mostrar todos disponibles
                 $todosDisponibles = Vehiculo::where('activo', true)
                     ->whereRaw('LOWER(estado) = ?', ['disponible'])
@@ -269,39 +270,39 @@ class VehiculoController extends Controller
                     ->orderBy('capacidad_kg', 'asc')
                     ->get()
                     ->map(function ($vehiculo) use ($pesoTotal) {
-                        $pesoCargado = $vehiculo->obtenerPesoCargado();
-                        $capacidadDisponible = $vehiculo->obtenerCapacidadDisponible();
-                        $porcentajeUsoActual = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
+                        $pesoCargado                 = $vehiculo->obtenerPesoCargado();
+                        $capacidadDisponible         = $vehiculo->obtenerCapacidadDisponible();
+                        $porcentajeUsoActual         = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
                         $porcentajeUsoConNuevasCarga = round((($pesoCargado + $pesoTotal) / $vehiculo->capacidad_kg) * 100, 1);
-                        $excesoCarga = ($pesoCargado + $pesoTotal) > $vehiculo->capacidad_kg;
+                        $excesoCarga                 = ($pesoCargado + $pesoTotal) > $vehiculo->capacidad_kg;
 
                         // Debug logging
                         \Log::info('Mapeando vehículo (capacidad insuficiente):', [
-                            'vehiculo_id' => $vehiculo->id,
-                            'placa' => $vehiculo->placa,
-                            'capacidad_total_kg' => $vehiculo->capacidad_kg,
-                            'peso_cargado_actual' => $pesoCargado,
+                            'vehiculo_id'          => $vehiculo->id,
+                            'placa'                => $vehiculo->placa,
+                            'capacidad_total_kg'   => $vehiculo->capacidad_kg,
+                            'peso_cargado_actual'  => $pesoCargado,
                             'capacidad_disponible' => $capacidadDisponible,
-                            'peso_nuevas_cargas' => $pesoTotal,
-                            'exceso_carga' => $excesoCarga,
+                            'peso_nuevas_cargas'   => $pesoTotal,
+                            'exceso_carga'         => $excesoCarga,
                         ]);
 
                         return [
-                            'id' => $vehiculo->id,
-                            'placa' => $vehiculo->placa,
-                            'marca' => $vehiculo->marca,
-                            'modelo' => $vehiculo->modelo,
-                            'anho' => $vehiculo->anho,
-                            'capacidad_kg' => $vehiculo->capacidad_kg,
-                            'peso_cargado_actual' => $pesoCargado,
-                            'capacidad_disponible' => $capacidadDisponible,
-                            'porcentaje_uso_actual' => $porcentajeUsoActual,
+                            'id'                               => $vehiculo->id,
+                            'placa'                            => $vehiculo->placa,
+                            'marca'                            => $vehiculo->marca,
+                            'modelo'                           => $vehiculo->modelo,
+                            'anho'                             => $vehiculo->anho,
+                            'capacidad_kg'                     => $vehiculo->capacidad_kg,
+                            'peso_cargado_actual'              => $pesoCargado,
+                            'capacidad_disponible'             => $capacidadDisponible,
+                            'porcentaje_uso_actual'            => $porcentajeUsoActual,
                             'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
-                            'estado' => $excesoCarga ? 'excede_capacidad' : 'capacidad_insuficiente',
-                            'choferAsignado' => $vehiculo->choferAsignado ? [
-                                'id' => $vehiculo->choferAsignado->id,
-                                'name' => $vehiculo->choferAsignado->name,
-                                'nombre' => $vehiculo->choferAsignado->name,
+                            'estado'                           => $excesoCarga ? 'excede_capacidad' : 'capacidad_insuficiente',
+                            'choferAsignado'                   => $vehiculo->choferAsignado ? [
+                                'id'       => $vehiculo->choferAsignado->id,
+                                'name'     => $vehiculo->choferAsignado->name,
+                                'nombre'   => $vehiculo->choferAsignado->name,
                                 'telefono' => $vehiculo->choferAsignado->phone ?? null,
                             ] : null,
                         ];
@@ -310,11 +311,11 @@ class VehiculoController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'No hay vehículos con capacidad suficiente',
-                    'data' => [
+                    'data'    => [
                         'recomendado' => null,
-                        'peso_total' => $pesoTotal,
+                        'peso_total'  => $pesoTotal,
                         'disponibles' => $todosDisponibles,
-                        'alerta' => 'CARGA EXCEDE CAPACIDAD',
+                        'alerta'      => 'CARGA EXCEDE CAPACIDAD',
                     ],
                 ], 200);
             }
@@ -322,30 +323,30 @@ class VehiculoController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Vehículo recomendado obtenido',
-                'data' => [
-                    'recomendado' => $recomendado,
-                    'peso_total' => $pesoTotal,
+                'data'    => [
+                    'recomendado'       => $recomendado,
+                    'peso_total'        => $pesoTotal,
                     'disponibles_count' => $vehiculosDisponibles->count(),
-                    'disponibles' => $vehiculosDisponibles->map(fn($v) => [
-                        'id' => $v['id'],
-                        'placa' => $v['placa'],
-                        'marca' => $v['marca'],
-                        'modelo' => $v['modelo'],
-                        'anho' => $v['anho'],
-                        'capacidad_kg' => $v['capacidad_kg'],
-                        'peso_cargado_actual' => $v['peso_cargado_actual'],
-                        'capacidad_disponible' => $v['capacidad_disponible'],
-                        'porcentaje_uso_actual' => $v['porcentaje_uso_actual'],
+                    'disponibles'       => $vehiculosDisponibles->map(fn($v) => [
+                        'id'                               => $v['id'],
+                        'placa'                            => $v['placa'],
+                        'marca'                            => $v['marca'],
+                        'modelo'                           => $v['modelo'],
+                        'anho'                             => $v['anho'],
+                        'capacidad_kg'                     => $v['capacidad_kg'],
+                        'peso_cargado_actual'              => $v['peso_cargado_actual'],
+                        'capacidad_disponible'             => $v['capacidad_disponible'],
+                        'porcentaje_uso_actual'            => $v['porcentaje_uso_actual'],
                         'porcentaje_uso_con_nuevas_cargas' => $v['porcentaje_uso_con_nuevas_cargas'],
-                        'estado' => 'disponible',
-                        'choferAsignado' => $v['choferAsignado'],
+                        'estado'                           => 'disponible',
+                        'choferAsignado'                   => $v['choferAsignado'],
                     ])->toArray(),
                 ],
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error sugerindo vehículo', [
+            Log::error('Error sugerindo vehículo', [
                 'peso_total' => $request->input('peso_total'),
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
 
             return response()->json([

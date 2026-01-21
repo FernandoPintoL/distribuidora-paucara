@@ -183,8 +183,9 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             'cajas'          => [
                 'cajas.index', 'cajas.create', 'cajas.store', 'cajas.show', 'cajas.edit', 'cajas.update',
-                'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones',
+                'cajas.abrir', 'cajas.cerrar', 'cajas.transacciones', 'cajas.corregir',
                 'cajas.reportes', 'cajas.auditoria', 'cajas.gastos.index', 'cajas.gastos.create', 'admin.auditoria',
+                'admin.cierres.ver', 'admin.cierres.consolidar', 'admin.cierres.rechazar',
             ],
             'contabilidad'   => [
                 'contabilidad.manage', 'contabilidad.asientos.index', 'contabilidad.asientos.show', 'contabilidad.reportes.libro-mayor', 'contabilidad.reportes.balance-comprobacion',

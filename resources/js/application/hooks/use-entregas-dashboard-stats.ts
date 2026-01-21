@@ -136,12 +136,13 @@ export function useEntregasDashboardStats(options: UseEntregasDashboardStatsOpti
 
     /**
      * Efecto para carga inicial (si no hay datos iniciales)
+     * ✅ LAZY LOAD: Solo cargar si autoRefresh=true
      */
     useEffect(() => {
-        if (!initialData) {
+        if (!initialData && autoRefresh) {
             fetchStats();
         }
-    }, [initialData, fetchStats]);
+    }, [initialData, autoRefresh, fetchStats]);
 
     /**
      * ✅ Efecto para conectar a WebSocket y escuchar actualizaciones en tiempo real

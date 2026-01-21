@@ -693,9 +693,12 @@ export default function ProformasShow({ item: proforma }: Props) {
 
                 const actualizarResponse = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {
                     method: 'POST',
+                    redirect: 'manual', // ✅ NO seguir redirects automáticamente
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
                     },
                     body: JSON.stringify({ detalles: detallesParaGuardar }),
                 });
@@ -718,13 +721,16 @@ export default function ProformasShow({ item: proforma }: Props) {
             }
 
             // PASO 1: Aprobar proforma con coordinación
-            console.log('%c⏳ PASO 1: Aprobando proforma...', 'color: blue;');
+            console.log('%c⏳ PASO 1: Aprobando proforma...');
 
             const aprobarResponse = await fetch(`/api/proformas/${proforma.id}/aprobar`, {
                 method: 'POST',
+                redirect: 'manual', // ✅ NO seguir redirects automáticamente
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
                 },
                 body: JSON.stringify({
                     fecha_entrega_confirmada: coordinacion.fecha_entrega_confirmada,
@@ -739,7 +745,22 @@ export default function ProformasShow({ item: proforma }: Props) {
                 }),
             });
 
-            console.log('%c📥 Respuesta de aprobación recibida', 'color: gray;', aprobarResponse);
+            console.log('%c📥 Respuesta de aprobación recibida', 'color: gray;', {
+                status: aprobarResponse.status,
+                ok: aprobarResponse.ok,
+                redirected: aprobarResponse.redirected,
+                type: aprobarResponse.type,
+                url: aprobarResponse.url,
+            });
+
+            // ✅ Detectar redirects (cuando redirect: 'manual')
+            if (aprobarResponse.redirected || (aprobarResponse.status >= 300 && aprobarResponse.status < 400)) {
+                console.error('❌ Servidor está redirigiendo en lugar de retornar JSON:', {
+                    redirectedTo: aprobarResponse.url,
+                    status: aprobarResponse.status,
+                });
+                throw new Error(`El servidor está redirigiendo a ${aprobarResponse.url} en lugar de retornar JSON. Esto indica un problema de middleware.`);
+            }
 
             if (!aprobarResponse.ok) {
                 const errorData = await aprobarResponse.json();
@@ -783,12 +804,24 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             const convertirResponse = await fetch(`/api/proformas/${proforma.id}/convertir-venta`, {
                 method: 'POST',
+                redirect: 'manual', // ✅ NO seguir redirects automáticamente
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
                 },
                 body: JSON.stringify(paymentData),
             });
+
+            // ✅ Detectar redirects
+            if (convertirResponse.redirected || (convertirResponse.status >= 300 && convertirResponse.status < 400)) {
+                console.error('❌ Servidor está redirigiendo en conversión:', {
+                    redirectedTo: convertirResponse.url,
+                    status: convertirResponse.status,
+                });
+                throw new Error(`El servidor está redirigiendo en conversión. Middleware issue.`);
+            }
 
             if (!convertirResponse.ok) {
                 const errorData = await convertirResponse.json();
@@ -807,13 +840,23 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             const procesarResponse = await fetch(`/proformas/${proforma.id}/procesar-venta`, {
                 method: 'POST',
+                redirect: 'manual', // ✅ NO seguir redirects automáticamente
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
                 },
             });
 
-            if (!procesarResponse.ok) {
+            // ✅ Detectar redirects
+            if (procesarResponse.redirected || (procesarResponse.status >= 300 && procesarResponse.status < 400)) {
+                console.warn('⚠️ Servidor está redirigiendo en procesar-venta:', {
+                    redirectedTo: procesarResponse.url,
+                    status: procesarResponse.status,
+                });
+                toast('⚠️ Proforma convertida, pero hubo un aviso al actualizar stocks');
+            } else if (!procesarResponse.ok) {
                 const errorData = await procesarResponse.json();
                 console.warn('⚠️ PASO 3 completado con aviso:', errorData);
                 toast('⚠️ Proforma convertida, pero hubo un aviso al actualizar stocks');

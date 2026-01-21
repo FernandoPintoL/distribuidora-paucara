@@ -1,16 +1,15 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ImportarPrecioRangoCSVRequest;
 use App\Http\Requests\StorePrecioRangoRequest;
 use App\Http\Requests\UpdatePrecioRangoRequest;
-use App\Http\Requests\ImportarPrecioRangoCSVRequest;
-use App\Models\Producto;
 use App\Models\PrecioRangoCantidadProducto;
+use App\Models\Producto;
 use App\Models\TipoPrecio;
-use App\Services\Venta\PrecioRangoProductoService;
 use App\Services\CSV\ImportarPrecioRangoCSVService;
+use App\Services\Venta\PrecioRangoProductoService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -35,8 +34,8 @@ class PrecioRangoProductoController extends Controller
         $rangos = $this->service->obtenerResumenRangos($producto, $empresaId);
 
         return response()->json([
-            'success' => true,
-            'data' => $rangos,
+            'success'    => true,
+            'data'       => $rangos,
             'integridad' => $this->service->validarIntegridad($producto, $empresaId),
         ]);
     }
@@ -48,7 +47,7 @@ class PrecioRangoProductoController extends Controller
     public function store(StorePrecioRangoRequest $request, Producto $producto)
     {
         try {
-            $empresaId = auth()->user()->empresa_id;
+            $empresaId  = auth()->user()->empresa_id;
             $tipoPrecio = TipoPrecio::findOrFail($request->tipo_precio_id);
 
             $rango = $this->service->crearRango(
@@ -64,7 +63,7 @@ class PrecioRangoProductoController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Rango de precio creado exitosamente',
-                'data' => $rango->load('tipoPrecio'),
+                'data'    => $rango->load('tipoPrecio'),
             ], Response::HTTP_CREATED);
         } catch (\InvalidArgumentException $e) {
             return response()->json([
@@ -99,7 +98,7 @@ class PrecioRangoProductoController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $rango->load('tipoPrecio', 'producto'),
+            'data'    => $rango->load('tipoPrecio', 'producto'),
         ]);
     }
 
@@ -138,7 +137,7 @@ class PrecioRangoProductoController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Rango de precio actualizado exitosamente',
-                'data' => $rango->load('tipoPrecio'),
+                'data'    => $rango->load('tipoPrecio'),
             ]);
         } catch (\InvalidArgumentException $e) {
             return response()->json([
@@ -195,7 +194,7 @@ class PrecioRangoProductoController extends Controller
         ]);
 
         $empresaId = auth()->user()->empresa_id;
-        $detalles = $this->service->calcularPrecioCompleto(
+        $detalles  = $this->service->calcularPrecioCompleto(
             $producto,
             $request->cantidad,
             $empresaId
@@ -203,7 +202,7 @@ class PrecioRangoProductoController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $detalles,
+            'data'    => $detalles,
         ]);
     }
 
@@ -222,25 +221,34 @@ class PrecioRangoProductoController extends Controller
     public function calcularCarrito(Request $request)
     {
         $request->validate([
-            'items' => 'required|array|min:1',
+            'items'               => 'required|array|min:1',
             'items.*.producto_id' => [
                 'required',
                 'integer',
                 'exists:productos,id,activo,1', // ← Validar que esté activo
             ],
-            'items.*.cantidad' => 'required|numeric|min:0.01', // ← Permite decimales (0.01 en adelante)
+            'items.*.cantidad'    => 'required|numeric|min:0.01', // ← Permite decimales (0.01 en adelante)
         ]);
 
-        $empresaId = auth()->user()->empresa_id;
-        $resultado = $this->service->calcularCarrito(
-            $request->items,
-            $empresaId
-        );
+        try {
+            $empresaId = auth()->user()->empresa_id;
+            $resultado = $this->service->calcularCarrito(
+                $request->items,
+                $empresaId
+            );
 
-        return response()->json([
-            'success' => true,
-            'data' => $resultado,
-        ]);
+            return response()->json([
+                'success' => true,
+                'data'    => $resultado,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            // Error de validación como límite de venta excedido
+            return response()->json([
+                'success'    => false,
+                'error'      => $e->getMessage(),
+                'error_code' => 'VALIDATION_ERROR',
+            ], 422);
+        }
     }
 
     /**
@@ -254,7 +262,7 @@ class PrecioRangoProductoController extends Controller
 
         return response()->json([
             'success' => $resultado['es_valido'],
-            'data' => $resultado,
+            'data'    => $resultado,
         ]);
     }
 
@@ -285,7 +293,7 @@ class PrecioRangoProductoController extends Controller
             foreach ($rangosOrigen as $rangoOrigen) {
                 // Validar que el producto destino tenga precio para el tipo
                 $precioDestino = $productoDestino->obtenerPrecio($rangoOrigen->tipo_precio_id);
-                if (!$precioDestino) {
+                if (! $precioDestino) {
                     continue;
                 }
 
@@ -307,7 +315,7 @@ class PrecioRangoProductoController extends Controller
                 'success' => true,
                 'message' => "Se copiaron {$copiados} rangos exitosamente",
                 'datos' => [
-                    'rangos_copiados' => $copiados,
+                    'rangos_copiados'    => $copiados,
                     'rangos_disponibles' => count($rangosOrigen),
                 ],
             ]);
@@ -330,11 +338,11 @@ class PrecioRangoProductoController extends Controller
     public function previsualizarCSV(Request $request)
     {
         $request->validate([
-            'archivo' => 'required|file|mimes:csv,txt',
+            'archivo'     => 'required|file|mimes:csv,txt',
             'producto_id' => 'nullable|integer|exists:productos,id',
         ]);
 
-        $empresaId = auth()->user()->empresa_id ?? 1;
+        $empresaId  = auth()->user()->empresa_id ?? 1;
         $csvService = new ImportarPrecioRangoCSVService();
 
         $preview = $csvService->previsualizarArchivo(
@@ -348,7 +356,7 @@ class PrecioRangoProductoController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $preview,
+            'data'    => $preview,
         ]);
     }
 
@@ -364,7 +372,7 @@ class PrecioRangoProductoController extends Controller
                     $resultado[$key] = $this->limpiarDatosUTF8($value);
                 } elseif (is_string($value)) {
                     // Validar y convertir a UTF-8 si es necesario
-                    if (!mb_check_encoding($value, 'UTF-8')) {
+                    if (! mb_check_encoding($value, 'UTF-8')) {
                         $value = mb_convert_encoding($value, 'UTF-8', 'auto');
                     }
                     $resultado[$key] = $value;
@@ -388,7 +396,7 @@ class PrecioRangoProductoController extends Controller
      */
     public function importarCSV(ImportarPrecioRangoCSVRequest $request)
     {
-        $empresaId = auth()->user()->empresa_id ?? 1;
+        $empresaId  = auth()->user()->empresa_id ?? 1;
         $csvService = new ImportarPrecioRangoCSVService();
 
         // Obtener correcciones si existen
@@ -412,7 +420,7 @@ class PrecioRangoProductoController extends Controller
             $filasEliminadas
         );
 
-        $success = $resultado['errores'] === 0;
+        $success    = $resultado['errores'] === 0;
         $statusCode = $success ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY;
 
         return response()->json([
@@ -431,12 +439,12 @@ class PrecioRangoProductoController extends Controller
     public function descargarPlantillaCSV()
     {
         $empresaId = auth()->user()->empresa_id ?? 1;
-        $csv = ImportarPrecioRangoCSVService::generarPlantillaCSV($empresaId);
+        $csv       = ImportarPrecioRangoCSVService::generarPlantillaCSV($empresaId);
 
         return response($csv, Response::HTTP_OK, [
-            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Type'        => 'text/csv; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="plantilla_rangos_precios.csv"',
-            'Content-Length' => strlen($csv),
+            'Content-Length'      => strlen($csv),
         ]);
     }
 }

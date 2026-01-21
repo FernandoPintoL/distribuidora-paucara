@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::index
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:31
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:30
  * @route '/api/productos/{producto}/rangos-precio'
  */
 export const index = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::index
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:31
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:30
  * @route '/api/productos/{producto}/rangos-precio'
  */
 index.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ index.url = (args: { producto: number | { id: number } } | [producto: number | {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::index
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:31
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:30
  * @route '/api/productos/{producto}/rangos-precio'
  */
 index.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -58,7 +58,7 @@ index.get = (args: { producto: number | { id: number } } | [producto: number | {
 })
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::index
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:31
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:30
  * @route '/api/productos/{producto}/rangos-precio'
  */
 index.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -68,7 +68,7 @@ index.head = (args: { producto: number | { id: number } } | [producto: number | 
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::index
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:31
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:30
  * @route '/api/productos/{producto}/rangos-precio'
  */
     const indexForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -78,7 +78,7 @@ index.head = (args: { producto: number | { id: number } } | [producto: number | 
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::index
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:31
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:30
  * @route '/api/productos/{producto}/rangos-precio'
  */
         indexForm.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -87,7 +87,7 @@ index.head = (args: { producto: number | { id: number } } | [producto: number | 
         })
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::index
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:31
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:30
  * @route '/api/productos/{producto}/rangos-precio'
  */
         indexForm.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -103,7 +103,7 @@ index.head = (args: { producto: number | { id: number } } | [producto: number | 
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::store
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:48
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:47
  * @route '/api/productos/{producto}/rangos-precio'
  */
 export const store = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -118,7 +118,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::store
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:48
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:47
  * @route '/api/productos/{producto}/rangos-precio'
  */
 store.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -151,7 +151,7 @@ store.url = (args: { producto: number | { id: number } } | [producto: number | {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::store
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:48
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:47
  * @route '/api/productos/{producto}/rangos-precio'
  */
 store.post = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -161,7 +161,7 @@ store.post = (args: { producto: number | { id: number } } | [producto: number | 
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::store
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:48
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:47
  * @route '/api/productos/{producto}/rangos-precio'
  */
     const storeForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -171,7 +171,7 @@ store.post = (args: { producto: number | { id: number } } | [producto: number | 
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::store
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:48
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:47
  * @route '/api/productos/{producto}/rangos-precio'
  */
         storeForm.post = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -182,7 +182,7 @@ store.post = (args: { producto: number | { id: number } } | [producto: number | 
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::show
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:81
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:80
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 export const show = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -197,7 +197,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::show
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:81
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:80
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 show.url = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -227,7 +227,7 @@ show.url = (args: { producto: number | { id: number }, rango: number | { id: num
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::show
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:81
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:80
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 show.get = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -236,7 +236,7 @@ show.get = (args: { producto: number | { id: number }, rango: number | { id: num
 })
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::show
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:81
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:80
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 show.head = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -246,7 +246,7 @@ show.head = (args: { producto: number | { id: number }, rango: number | { id: nu
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::show
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:81
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:80
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
     const showForm = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -256,7 +256,7 @@ show.head = (args: { producto: number | { id: number }, rango: number | { id: nu
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::show
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:81
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:80
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
         showForm.get = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -265,7 +265,7 @@ show.head = (args: { producto: number | { id: number }, rango: number | { id: nu
         })
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::show
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:81
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:80
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
         showForm.head = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -281,7 +281,7 @@ show.head = (args: { producto: number | { id: number }, rango: number | { id: nu
     show.form = showForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::update
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:110
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:109
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 export const update = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -296,7 +296,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::update
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:110
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:109
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 update.url = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -326,7 +326,7 @@ update.url = (args: { producto: number | { id: number }, rango: number | { id: n
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::update
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:110
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:109
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 update.put = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -336,7 +336,7 @@ update.put = (args: { producto: number | { id: number }, rango: number | { id: n
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::update
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:110
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:109
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
     const updateForm = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -351,7 +351,7 @@ update.put = (args: { producto: number | { id: number }, rango: number | { id: n
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::update
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:110
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:109
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
         updateForm.put = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -367,7 +367,7 @@ update.put = (args: { producto: number | { id: number }, rango: number | { id: n
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::destroy
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:155
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:154
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 export const destroy = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -382,7 +382,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::destroy
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:155
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:154
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 destroy.url = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -412,7 +412,7 @@ destroy.url = (args: { producto: number | { id: number }, rango: number | { id: 
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::destroy
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:155
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:154
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
 destroy.delete = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -422,7 +422,7 @@ destroy.delete = (args: { producto: number | { id: number }, rango: number | { i
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::destroy
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:155
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:154
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
     const destroyForm = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -437,7 +437,7 @@ destroy.delete = (args: { producto: number | { id: number }, rango: number | { i
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::destroy
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:155
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:154
  * @route '/api/productos/{producto}/rangos-precio/{rango}'
  */
         destroyForm.delete = (args: { producto: number | { id: number }, rango: number | { id: number } } | [producto: number | { id: number }, rango: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -453,7 +453,7 @@ destroy.delete = (args: { producto: number | { id: number }, rango: number | { i
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::validarIntegridad
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:250
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:258
  * @route '/api/productos/{producto}/rangos-precio/validar'
  */
 export const validarIntegridad = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -468,7 +468,7 @@ validarIntegridad.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::validarIntegridad
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:250
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:258
  * @route '/api/productos/{producto}/rangos-precio/validar'
  */
 validarIntegridad.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -501,7 +501,7 @@ validarIntegridad.url = (args: { producto: number | { id: number } } | [producto
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::validarIntegridad
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:250
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:258
  * @route '/api/productos/{producto}/rangos-precio/validar'
  */
 validarIntegridad.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -510,7 +510,7 @@ validarIntegridad.get = (args: { producto: number | { id: number } } | [producto
 })
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::validarIntegridad
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:250
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:258
  * @route '/api/productos/{producto}/rangos-precio/validar'
  */
 validarIntegridad.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -520,7 +520,7 @@ validarIntegridad.head = (args: { producto: number | { id: number } } | [product
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::validarIntegridad
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:250
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:258
  * @route '/api/productos/{producto}/rangos-precio/validar'
  */
     const validarIntegridadForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -530,7 +530,7 @@ validarIntegridad.head = (args: { producto: number | { id: number } } | [product
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::validarIntegridad
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:250
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:258
  * @route '/api/productos/{producto}/rangos-precio/validar'
  */
         validarIntegridadForm.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -539,7 +539,7 @@ validarIntegridad.head = (args: { producto: number | { id: number } } | [product
         })
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::validarIntegridad
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:250
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:258
  * @route '/api/productos/{producto}/rangos-precio/validar'
  */
         validarIntegridadForm.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -555,7 +555,7 @@ validarIntegridad.head = (args: { producto: number | { id: number } } | [product
     validarIntegridad.form = validarIntegridadForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::copiarRangos
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:265
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:273
  * @route '/api/productos/{producto}/rangos-precio/copiar/{productoDestino}'
  */
 export const copiarRangos = (args: { producto: string | number, productoDestino: number | { id: number } } | [producto: string | number, productoDestino: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -570,7 +570,7 @@ copiarRangos.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::copiarRangos
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:265
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:273
  * @route '/api/productos/{producto}/rangos-precio/copiar/{productoDestino}'
  */
 copiarRangos.url = (args: { producto: string | number, productoDestino: number | { id: number } } | [producto: string | number, productoDestino: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -598,7 +598,7 @@ copiarRangos.url = (args: { producto: string | number, productoDestino: number |
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::copiarRangos
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:265
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:273
  * @route '/api/productos/{producto}/rangos-precio/copiar/{productoDestino}'
  */
 copiarRangos.post = (args: { producto: string | number, productoDestino: number | { id: number } } | [producto: string | number, productoDestino: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -608,7 +608,7 @@ copiarRangos.post = (args: { producto: string | number, productoDestino: number 
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::copiarRangos
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:265
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:273
  * @route '/api/productos/{producto}/rangos-precio/copiar/{productoDestino}'
  */
     const copiarRangosForm = (args: { producto: string | number, productoDestino: number | { id: number } } | [producto: string | number, productoDestino: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -618,7 +618,7 @@ copiarRangos.post = (args: { producto: string | number, productoDestino: number 
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::copiarRangos
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:265
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:273
  * @route '/api/productos/{producto}/rangos-precio/copiar/{productoDestino}'
  */
         copiarRangosForm.post = (args: { producto: string | number, productoDestino: number | { id: number } } | [producto: string | number, productoDestino: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -629,7 +629,7 @@ copiarRangos.post = (args: { producto: string | number, productoDestino: number 
     copiarRangos.form = copiarRangosForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularPrecio
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:191
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:190
  * @route '/api/productos/{producto}/calcular-precio'
  */
 export const calcularPrecio = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -644,7 +644,7 @@ calcularPrecio.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularPrecio
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:191
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:190
  * @route '/api/productos/{producto}/calcular-precio'
  */
 calcularPrecio.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -677,7 +677,7 @@ calcularPrecio.url = (args: { producto: number | { id: number } } | [producto: n
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularPrecio
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:191
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:190
  * @route '/api/productos/{producto}/calcular-precio'
  */
 calcularPrecio.post = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -687,7 +687,7 @@ calcularPrecio.post = (args: { producto: number | { id: number } } | [producto: 
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularPrecio
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:191
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:190
  * @route '/api/productos/{producto}/calcular-precio'
  */
     const calcularPrecioForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -697,7 +697,7 @@ calcularPrecio.post = (args: { producto: number | { id: number } } | [producto: 
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularPrecio
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:191
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:190
  * @route '/api/productos/{producto}/calcular-precio'
  */
         calcularPrecioForm.post = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -708,7 +708,7 @@ calcularPrecio.post = (args: { producto: number | { id: number } } | [producto: 
     calcularPrecio.form = calcularPrecioForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::previsualizarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:330
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:338
  * @route '/api/productos/rangos-precio/previsualizar-csv'
  */
 export const previsualizarCSV = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -723,7 +723,7 @@ previsualizarCSV.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::previsualizarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:330
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:338
  * @route '/api/productos/rangos-precio/previsualizar-csv'
  */
 previsualizarCSV.url = (options?: RouteQueryOptions) => {
@@ -732,7 +732,7 @@ previsualizarCSV.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::previsualizarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:330
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:338
  * @route '/api/productos/rangos-precio/previsualizar-csv'
  */
 previsualizarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -742,7 +742,7 @@ previsualizarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::previsualizarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:330
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:338
  * @route '/api/productos/rangos-precio/previsualizar-csv'
  */
     const previsualizarCSVForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -752,7 +752,7 @@ previsualizarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::previsualizarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:330
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:338
  * @route '/api/productos/rangos-precio/previsualizar-csv'
  */
         previsualizarCSVForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -763,7 +763,7 @@ previsualizarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
     previsualizarCSV.form = previsualizarCSVForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::importarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:389
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:397
  * @route '/api/productos/rangos-precio/importar-csv'
  */
 export const importarCSV = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -778,7 +778,7 @@ importarCSV.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::importarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:389
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:397
  * @route '/api/productos/rangos-precio/importar-csv'
  */
 importarCSV.url = (options?: RouteQueryOptions) => {
@@ -787,7 +787,7 @@ importarCSV.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::importarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:389
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:397
  * @route '/api/productos/rangos-precio/importar-csv'
  */
 importarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -797,7 +797,7 @@ importarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::importarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:389
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:397
  * @route '/api/productos/rangos-precio/importar-csv'
  */
     const importarCSVForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -807,7 +807,7 @@ importarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::importarCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:389
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:397
  * @route '/api/productos/rangos-precio/importar-csv'
  */
         importarCSVForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -818,7 +818,7 @@ importarCSV.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     importarCSV.form = importarCSVForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::descargarPlantillaCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:431
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:439
  * @route '/api/productos/rangos-precio/plantilla-csv'
  */
 export const descargarPlantillaCSV = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -833,7 +833,7 @@ descargarPlantillaCSV.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::descargarPlantillaCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:431
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:439
  * @route '/api/productos/rangos-precio/plantilla-csv'
  */
 descargarPlantillaCSV.url = (options?: RouteQueryOptions) => {
@@ -842,7 +842,7 @@ descargarPlantillaCSV.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::descargarPlantillaCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:431
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:439
  * @route '/api/productos/rangos-precio/plantilla-csv'
  */
 descargarPlantillaCSV.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -851,7 +851,7 @@ descargarPlantillaCSV.get = (options?: RouteQueryOptions): RouteDefinition<'get'
 })
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::descargarPlantillaCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:431
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:439
  * @route '/api/productos/rangos-precio/plantilla-csv'
  */
 descargarPlantillaCSV.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -861,7 +861,7 @@ descargarPlantillaCSV.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::descargarPlantillaCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:431
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:439
  * @route '/api/productos/rangos-precio/plantilla-csv'
  */
     const descargarPlantillaCSVForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -871,7 +871,7 @@ descargarPlantillaCSV.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::descargarPlantillaCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:431
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:439
  * @route '/api/productos/rangos-precio/plantilla-csv'
  */
         descargarPlantillaCSVForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -880,7 +880,7 @@ descargarPlantillaCSV.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::descargarPlantillaCSV
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:431
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:439
  * @route '/api/productos/rangos-precio/plantilla-csv'
  */
         descargarPlantillaCSVForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -896,7 +896,7 @@ descargarPlantillaCSV.head = (options?: RouteQueryOptions): RouteDefinition<'hea
     descargarPlantillaCSV.form = descargarPlantillaCSVForm
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularCarrito
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:222
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:221
  * @route '/api/carrito/calcular'
  */
 export const calcularCarrito = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -911,7 +911,7 @@ calcularCarrito.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularCarrito
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:222
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:221
  * @route '/api/carrito/calcular'
  */
 calcularCarrito.url = (options?: RouteQueryOptions) => {
@@ -920,7 +920,7 @@ calcularCarrito.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularCarrito
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:222
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:221
  * @route '/api/carrito/calcular'
  */
 calcularCarrito.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -930,7 +930,7 @@ calcularCarrito.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
     /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularCarrito
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:222
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:221
  * @route '/api/carrito/calcular'
  */
     const calcularCarritoForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -940,7 +940,7 @@ calcularCarrito.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
             /**
 * @see \App\Http\Controllers\Api\PrecioRangoProductoController::calcularCarrito
- * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:222
+ * @see app/Http/Controllers/Api/PrecioRangoProductoController.php:221
  * @route '/api/carrito/calcular'
  */
         calcularCarritoForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

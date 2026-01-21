@@ -30,7 +30,7 @@ class ImpresionEntregaService
                     'cantidad' => $detalle->cantidad,
                     'precio_unitario' => $detalle->precio_unitario,
                     'subtotal' => $detalle->subtotal,
-                    'unidad_medida' => $detalle->producto->unidadMedida?->nombre ?? 'UND',
+                    'unidad_medida' => $detalle->producto->unidad?->nombre ?? 'UND',  // ✅ CORREGIDO: unidad (no unidadMedida)
                 ]);
             }
         }

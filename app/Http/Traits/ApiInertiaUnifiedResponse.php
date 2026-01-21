@@ -245,10 +245,24 @@ trait ApiInertiaUnifiedResponse
 
     /**
      * ¿Es una petición API/JSON?
+     * ✅ MEJORADO: Detectar mejor peticiones JSON desde fetch()
      */
     protected function isApiRequest(?Request $request = null): bool
     {
-        return request()->wantsJson() || request()->is('api/*');
+        $req = $request ?? request();
+
+        // Checklist de condiciones para detectar petición JSON:
+        return
+            // 1. Header Accept: application/json (AJAX estándar)
+            $req->wantsJson()
+            // 2. Header X-Requested-With: XMLHttpRequest (AJAX clásico)
+            || $req->header('X-Requested-With') === 'XMLHttpRequest'
+            // 3. Content-Type: application/json (para POST/PUT)
+            || str_contains($req->header('Content-Type', ''), 'application/json')
+            // 4. URL /api/* (endpoints API)
+            || $req->is('api/*')
+            // 5. Header X-Inertia: false (indicador explícito de que NO es Inertia)
+            || $req->header('X-Inertia') === 'false';
     }
 
     /**

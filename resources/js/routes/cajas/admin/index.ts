@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\CajaController::dashboard
- * @see app/Http/Controllers/CajaController.php:310
+ * @see app/Http/Controllers/CajaController.php:323
  * @route '/cajas/admin/dashboard'
  */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::dashboard
- * @see app/Http/Controllers/CajaController.php:310
+ * @see app/Http/Controllers/CajaController.php:323
  * @route '/cajas/admin/dashboard'
  */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CajaController::dashboard
- * @see app/Http/Controllers/CajaController.php:310
+ * @see app/Http/Controllers/CajaController.php:323
  * @route '/cajas/admin/dashboard'
  */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CajaController::dashboard
- * @see app/Http/Controllers/CajaController.php:310
+ * @see app/Http/Controllers/CajaController.php:323
  * @route '/cajas/admin/dashboard'
  */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CajaController::dashboard
- * @see app/Http/Controllers/CajaController.php:310
+ * @see app/Http/Controllers/CajaController.php:323
  * @route '/cajas/admin/dashboard'
  */
     const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CajaController::dashboard
- * @see app/Http/Controllers/CajaController.php:310
+ * @see app/Http/Controllers/CajaController.php:323
  * @route '/cajas/admin/dashboard'
  */
         dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CajaController::dashboard
- * @see app/Http/Controllers/CajaController.php:310
+ * @see app/Http/Controllers/CajaController.php:323
  * @route '/cajas/admin/dashboard'
  */
         dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\CajaController::detalle
- * @see app/Http/Controllers/CajaController.php:342
+ * @see app/Http/Controllers/CajaController.php:355
  * @route '/cajas/{id}'
  */
 export const detalle = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ detalle.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::detalle
- * @see app/Http/Controllers/CajaController.php:342
+ * @see app/Http/Controllers/CajaController.php:355
  * @route '/cajas/{id}'
  */
 detalle.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -122,7 +122,7 @@ detalle.url = (args: { id: string | number } | [id: string | number ] | string |
 
 /**
 * @see \App\Http\Controllers\CajaController::detalle
- * @see app/Http/Controllers/CajaController.php:342
+ * @see app/Http/Controllers/CajaController.php:355
  * @route '/cajas/{id}'
  */
 detalle.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -131,7 +131,7 @@ detalle.get = (args: { id: string | number } | [id: string | number ] | string |
 })
 /**
 * @see \App\Http\Controllers\CajaController::detalle
- * @see app/Http/Controllers/CajaController.php:342
+ * @see app/Http/Controllers/CajaController.php:355
  * @route '/cajas/{id}'
  */
 detalle.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -141,7 +141,7 @@ detalle.head = (args: { id: string | number } | [id: string | number ] | string 
 
     /**
 * @see \App\Http\Controllers\CajaController::detalle
- * @see app/Http/Controllers/CajaController.php:342
+ * @see app/Http/Controllers/CajaController.php:355
  * @route '/cajas/{id}'
  */
     const detalleForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -151,7 +151,7 @@ detalle.head = (args: { id: string | number } | [id: string | number ] | string 
 
             /**
 * @see \App\Http\Controllers\CajaController::detalle
- * @see app/Http/Controllers/CajaController.php:342
+ * @see app/Http/Controllers/CajaController.php:355
  * @route '/cajas/{id}'
  */
         detalleForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -160,7 +160,7 @@ detalle.head = (args: { id: string | number } | [id: string | number ] | string 
         })
             /**
 * @see \App\Http\Controllers\CajaController::detalle
- * @see app/Http/Controllers/CajaController.php:342
+ * @see app/Http/Controllers/CajaController.php:355
  * @route '/cajas/{id}'
  */
         detalleForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

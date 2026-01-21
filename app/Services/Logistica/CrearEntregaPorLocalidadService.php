@@ -192,32 +192,6 @@ class CrearEntregaPorLocalidadService
             // Continuar sin fallar - la sincronización es no-bloqueante
         }
 
-        // ✅ NUEVO: Disparar evento para notificar al chofer
-        try {
-            // Cargar relaciones necesarias para el evento
-            $entrega->load(['vehiculo', 'chofer']);
-
-            Log::info('📢 Disparando evento EntregaAsignada', [
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'chofer_id' => $entrega->chofer_id,
-            ]);
-
-            event(new EntregaAsignada($entrega));
-
-            Log::info('✅ Evento EntregaAsignada disparado exitosamente', [
-                'entrega_id' => $entrega->id,
-                'chofer_id' => $entrega->chofer_id,
-            ]);
-        } catch (Exception $e) {
-            Log::error('❌ Error disparando evento de entrega asignada', [
-                'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            // Continuar sin fallar - la notificación es no-bloqueante
-        }
-
         return $entrega;
     }
 
@@ -339,6 +313,14 @@ class CrearEntregaPorLocalidadService
 
         if (!$choferUser || !$choferUser->empleado) {
             throw new Exception("Chofer (Usuario) #$choferId no existe o no tiene datos de empleado");
+        }
+
+        // ✅ VALIDACIÓN CRÍTICA: Verificar que el usuario tenga rol 'chofer'/'Chofer'
+        if (!$choferUser->hasRole(['Chofer', 'chofer'])) {
+            throw new Exception(
+                "Usuario #{$choferId} no tiene el rol 'chofer'. " .
+                "Roles actuales: " . $choferUser->getRoleNames()->implode(', ')
+            );
         }
 
         $chofer = $choferUser->empleado;
@@ -490,24 +472,36 @@ class CrearEntregaPorLocalidadService
         }
 
         // Determinar fecha programada
-        // Usar la fecha comprometida más próxima o hoy + 1 día por defecto
+        // PRIORIDAD: datos['fecha_programada'] > fechas de ventas > hoy (same-day delivery)
         $fechaProgramada = null;
-        if (!empty($ventas)) {
-            $fechas = [];
-            foreach ($ventas as $venta) {
-                $v = is_array($venta) ? Venta::find($venta['id']) : $venta;
-                if ($v && $v->fecha_entrega_comprometida) {
-                    $fechas[] = $v->fecha_entrega_comprometida;
+
+        // ✅ NUEVO: Si se proporciona fecha_programada en datos, usar esa
+        if (!empty($datos['fecha_programada'])) {
+            $fechaProgramada = $datos['fecha_programada'];
+            Log::info('📅 Usando fecha_programada del request', ['fecha' => $fechaProgramada]);
+        } else {
+            // Fallback: calcular desde fechas comprometidas de ventas
+            if (!empty($ventas)) {
+                $fechas = [];
+                foreach ($ventas as $venta) {
+                    $v = is_array($venta) ? Venta::find($venta['id']) : $venta;
+                    if ($v && $v->fecha_entrega_comprometida) {
+                        $fechas[] = $v->fecha_entrega_comprometida;
+                    }
+                }
+                if (!empty($fechas)) {
+                    // Usar la fecha más temprana (puede ser hoy mismo si está comprometida)
+                    $fechaProgramada = min($fechas);
+                    Log::info('📅 Fecha programada calculada desde ventas', ['fecha' => $fechaProgramada]);
                 }
             }
-            if (!empty($fechas)) {
-                // Usar la fecha más temprana
-                $fechaProgramada = min($fechas);
-            }
         }
-        // Si no hay fecha comprometida, asignar mañana
+
+        // ✅ MEJORADO: Si no hay fecha programada, permitir entrega el MISMO DÍA (same-day delivery)
+        // El usuario puede cambiar esto manualmente si es necesario
         if (!$fechaProgramada) {
-            $fechaProgramada = now()->addDay();
+            $fechaProgramada = now(); // Usar HOY como fecha de entrega
+            Log::info('📅 Usando fecha por defecto (hoy - same-day delivery)', ['fecha' => $fechaProgramada]);
         }
 
         // Obtener el estado inicial PREPARACION_CARGA desde estados_logistica

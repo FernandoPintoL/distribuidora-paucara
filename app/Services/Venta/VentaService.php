@@ -417,6 +417,17 @@ class VentaService
                     $tipoVenta === 'delivery'
                         ? $q->where('requiere_envio', true)
                         : ($tipoVenta === 'presencial' ? $q->where('requiere_envio', false) : $q)
+                )
+                // ✅ NUEVO: Filtro de estado de pago (para Flutter app)
+                ->when($filtros['estado_pago'] ?? null, fn($q, $estadoPago) =>
+                    $q->where('estado_pago', $estadoPago)
+                )
+                // ✅ NUEVO: Filtro de estado logístico (para Flutter app)
+                // Filtrar por código de estado_logistica a través de la relación
+                ->when($filtros['estado_logistico'] ?? null, fn($q, $estadoLogistico) =>
+                    $q->whereHas('estadoLogistica', fn($subQ) =>
+                        $subQ->where('codigo', $estadoLogistico)
+                    )
                 );
 
             $resultado = $query

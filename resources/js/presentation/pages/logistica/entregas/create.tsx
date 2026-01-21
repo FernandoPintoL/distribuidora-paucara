@@ -45,7 +45,7 @@ export default function Create({
                 { title: 'Crear', href: '#' },
             ]}
         >
-            <Head title="Crear Entrega/s - Unificado" />
+            <Head title="Crear Entrega" />
 
             <CreateEntregasUnificado
                 ventas={ventas}

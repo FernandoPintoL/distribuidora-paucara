@@ -1,15 +1,13 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { AlertCircle, Package, CheckCircle2, Plus, Zap } from 'lucide-react';
+import { AlertCircle, Package, CheckCircle2, Plus, Calendar } from 'lucide-react';
 import { Card } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import BatchVentaSelector from './BatchVentaSelector';
-import SimpleEntregaForm from './SimpleEntregaForm';
 import ConsolidacionAutomaticaModal from './ConsolidacionAutomaticaModal';
 import { VehicleRecommendationCard } from '@/presentation/components/entrega/VehicleRecommendationCard';
 import { useEntregaBatch } from '@/application/hooks/use-entrega-batch';
-import { useSimpleEntregaSubmit } from '@/application/hooks/use-simple-entrega-submit';
 import { useVehiculoRecomendado } from '@/application/hooks/use-vehiculo-recomendado';
-import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega, EntregaFormData } from '@/domain/entities/entregas';
+import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega } from '@/domain/entities/entregas';
 import type { Id } from '@/domain/entities/shared';
 
 interface CreateEntregasUnificadoProps {
@@ -51,8 +49,9 @@ interface CreateEntregasUnificadoProps {
  * - Panel Izquierdo (4/12): BatchVentaSelector sticky
  * - Panel Derecho (8/12): renderDynamicFormPanel()
  *   - 0 ventas: Mensaje instructivo
- *   - 1 venta: SimpleEntregaForm (usa Inertia.js router.post())
- *   - 2+ ventas: BatchUI con optimización
+ *   - 1+ ventas: BatchUI unificado con VehicleRecommendationCard
+ *     - Para 1 venta: Muestra opciones adicionales (fecha, dirección)
+ *     - Para 2+ ventas: Muestra recomendación inteligente
  * - Footer Sticky: Solo cuando hay ≥1 venta seleccionada
  */
 export default function CreateEntregasUnificado({
@@ -79,9 +78,6 @@ export default function CreateEntregasUnificado({
         updateFormData,
         handleSubmit: handleSubmitBatch,
     } = useEntregaBatch();
-
-    // Hook para envío de entrega simple
-    const { submitEntrega } = useSimpleEntregaSubmit();
 
     // Memoized callbacks para vehicle recommendation
     // Estos callbacks deben ser estables para que el useEffect en VehicleRecommendationCard funcione correctamente
@@ -147,9 +143,36 @@ export default function CreateEntregasUnificado({
 
     // Detectar modo - DEBE IR ANTES del useEffect que lo usa
     const selectedCount = selectedVentaIds.length;
-    const isSingleMode = selectedCount === 1;
     const isBatchMode = selectedCount > 1;
     const isEmptyMode = selectedCount === 0;
+
+    // Pre-llenar datos para caso single (1 venta)
+    useEffect(() => {
+        if (selectedCount === 1) {
+            const selectedVenta = ventas.find((v) => v.id === selectedVentaIds[0]);
+
+            if (selectedVenta) {
+                console.log('📋 [Pre-fill Single] Llenando datos para venta única:', {
+                    venta_id: selectedVenta.id,
+                    numero_venta: selectedVenta.numero_venta,
+                });
+
+                // Auto-completar fecha programada si no está ya definida
+                if (!formData.fecha_programada && selectedVenta.fecha_entrega_comprometida) {
+                    const fecha = new Date(selectedVenta.fecha_entrega_comprometida);
+                    const isoString = fecha.toISOString().slice(0, 16);
+                    updateFormData({ fecha_programada: isoString });
+                    console.log('✅ Fecha programada auto-completada:', isoString);
+                }
+
+                // Auto-completar dirección si no está ya definida
+                if (!formData.direccion_entrega && selectedVenta.direccionCliente?.direccion) {
+                    updateFormData({ direccion_entrega: selectedVenta.direccionCliente.direccion });
+                    console.log('✅ Dirección auto-completada:', selectedVenta.direccionCliente.direccion);
+                }
+            }
+        }
+    }, [selectedCount, selectedVentaIds, ventas]);
 
     // Totales seleccionados - DEBE IR ANTES del useEffect que lo usa
     const totals = useMemo(() => {
@@ -174,7 +197,6 @@ export default function CreateEntregasUnificado({
                 formData: {
                     vehiculo_id: formData.vehiculo_id ?? 'undefined',
                     chofer_id: formData.chofer_id ?? 'undefined',
-                    tipo_reporte: formData.tipo_reporte,
                 },
                 validaciones: {
                     capacidadInsuficiente,
@@ -205,11 +227,6 @@ export default function CreateEntregasUnificado({
                 }))
             });
 
-            // Limpiar preview si deselecciona en batch con optimización activa
-            if (prev.length >= 2 && updated.length >= 2 && formData.optimizar) {
-                updateFormData({ optimizar: false });
-            }
-
             return updated;
         });
     };
@@ -222,10 +239,15 @@ export default function CreateEntregasUnificado({
         setSelectedVentaIds([]);
     };
 
-    // Handler para SimpleEntregaForm (1 venta)
-    // Delega al hook de application que usa el servicio de infrastructure
-    const handleSubmitSimple = async (data: EntregaFormData): Promise<void> => {
-        await submitEntrega(data);
+    // Helper para obtener fecha actual en formato datetime-local (YYYY-MM-DDTHH:MM)
+    const getTodayDateTimeLocal = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
     // Renderizar panel dinámico según selección
@@ -245,11 +267,11 @@ export default function CreateEntregasUnificado({
                         <ul className="text-sm text-left inline-block space-y-2 text-blue-700 dark:text-blue-300">
                             <li className="flex items-center gap-2">
                                 <span className="text-lg">✓</span>
-                                <span><strong>1 venta</strong> → Formulario simple</span>
+                                <span><strong>1 venta</strong> → Recomendación inteligente + opciones de programación</span>
                             </li>
                             <li className="flex items-center gap-2">
                                 <span className="text-lg">✓</span>
-                                <span><strong>2+ ventas</strong> → Optimización inteligente</span>
+                                <span><strong>2+ ventas</strong> → Recomendación inteligente + consolidación</span>
                             </li>
                         </ul>
                     </div>
@@ -257,35 +279,33 @@ export default function CreateEntregasUnificado({
             );
         }
 
-        // Caso 1: Una venta - SimpleEntregaForm
-        if (isSingleMode) {
-            const selectedVenta = ventas.find((v) => v.id === selectedVentaIds[0]);
-            if (!selectedVenta) return null;
-
-            return (
-                <SimpleEntregaForm
-                    venta={selectedVenta}
-                    vehiculos={vehiculos}
-                    choferes={choferes}
-                    onSubmit={handleSubmitSimple}
-                />
-            );
-        }
-
-        // Caso 2+: Múltiples ventas - Batch UI
+        // Caso 1+: Una o múltiples ventas - Batch UI Unificado
         return (
             <>
-                {/* Encabezado */}
-                <div className="mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Crear {selectedCount} Entregas en Lote
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Asigna un vehículo y chofer para todas las entregas
-                    </p>
-                </div>
+                {/* BLOQUE 1: Resumen de Selección */}
+                <Card className="bg-gradient-to-r from-blue-50 to-blue-50/50 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800 p-4 mb-6">
+                    <div className="grid grid-cols-3 gap-4">
+                        <div>
+                            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Ventas</p>
+                            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">{selectedCount}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Peso Total</p>
+                            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1 font-mono">{totals.pesoTotal.toFixed(1)} kg</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Monto</p>
+                            <p className="text-xl font-bold text-blue-900 dark:text-blue-100 mt-1 font-mono">
+                                Bs {totals.montoTotal.toLocaleString('es-BO', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}
+                            </p>
+                        </div>
+                    </div>
+                </Card>
 
-                {/* Mensajes de estado */}
+                {/* Mensajes de Estado (Error/Éxito) */}
                 {submitError && (
                     <Card className="mb-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 p-4">
                         <div className="flex items-start gap-3">
@@ -294,12 +314,10 @@ export default function CreateEntregasUnificado({
                                 <h3 className="font-semibold text-red-800 dark:text-red-200">Error al crear entregas</h3>
                                 <p className="text-sm text-red-700 dark:text-red-300 mt-1">{submitError}</p>
 
-                                {/* Acciones para diferentes tipos de error */}
                                 {submitError.includes('no está disponible') && (
                                     <div className="mt-3 flex gap-2">
                                         <button
                                             onClick={() => {
-                                                // Limpiar selección de vehículo/chofer para re-obtener recomendación
                                                 updateFormData({ vehiculo_id: null, chofer_id: null });
                                                 console.log('🔄 Limpiando selección para solicitar nueva recomendación');
                                             }}
@@ -320,17 +338,20 @@ export default function CreateEntregasUnificado({
                             <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                             <div>
                                 <h3 className="font-semibold text-green-800 dark:text-green-200">¡Éxito!</h3>
-                                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                                    {successMessage}
-                                </p>
+                                <p className="text-sm text-green-700 dark:text-green-300 mt-1">{successMessage}</p>
                             </div>
                         </div>
                     </Card>
                 )}
 
-                {/* Asignación de Recursos - Recomendación + Selección Manual */}
-                <div className="space-y-4 mb-4">
-                    {/* Recomendación Inteligente de Vehículo (si está disponible) */}
+                {/* BLOQUE 2: Asignación de Recursos */}
+                <div className="space-y-4 mb-6 pb-6 border-b border-gray-200 dark:border-slate-700">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        Asignación de Recursos
+                    </h2>
+
+                    {/* Recomendación Inteligente de Vehículo */}
                     {(recomendado || alertaRecomendacion || errorRecomendacion || loadingRecomendacion) && (
                         <VehicleRecommendationCard
                             recomendado={recomendado}
@@ -347,161 +368,198 @@ export default function CreateEntregasUnificado({
                         />
                     )}
 
-                    {/* Selección Manual de Vehículo y Chofer (siempre disponible como fallback) */}
-                    {/* <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4">
-                        <BatchVehiculoAssignment
-                            vehiculos={vehiculos}
-                            choferes={choferes}
-                            selectedVehiculoId={formData.vehiculo_id}
-                            selectedChoferId={formData.chofer_id}
-                            pesoTotal={totals.pesoTotal}
-                            onVehiculoSelect={(id) => updateFormData({ vehiculo_id: id })}
-                            onChoferSelect={(id) => updateFormData({ chofer_id: id })}
+                    {/* Fecha de Entrega Programada */}
+                    <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-amber-500">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                            Fecha de Entrega
+                        </h3>
+                        <input
+                            type="datetime-local"
+                            value={formData.fecha_programada || getTodayDateTimeLocal()}
+                            onChange={(e) => updateFormData({ fecha_programada: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-white transition-colors focus:ring-2 focus:ring-amber-500 text-sm"
                         />
-                    </Card> */}
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                            {selectedCount === 1
+                                ? '📦 Se aplicará a esta entrega'
+                                : `📦 Se aplicará a las ${selectedCount} entregas consolidadas`
+                            }
+                        </p>
+                    </Card>
+
+                    {/* Dirección de Entrega (Solo Single) */}
+                    {selectedCount === 1 && (
+                        <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-purple-500">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
+                                Dirección de Entrega
+                            </h3>
+                            <input
+                                type="text"
+                                value={formData.direccion_entrega || ''}
+                                onChange={(e) => updateFormData({ direccion_entrega: e.target.value })}
+                                placeholder="Ej: Calle Principal 123, Zona Sur"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-white transition-colors text-sm"
+                            />
+                        </Card>
+                    )}
                 </div>
 
-                {/* Tipo de Reporte de Carga - Automático */}
-                <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                    <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        {selectedCount === 1
-                            ? `Se creará 1 reporte individual para esta entrega`
-                            : `Se creará 1 reporte consolidado para las ${selectedCount} entregas`
-                        }
-                    </p>
-                </Card>
+                {/* BLOQUE 3: Opciones & Validación */}
+                <div className="space-y-3">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                        Validación & Opciones
+                    </h2>
 
-                {/* Opciones de optimización */}
-                {/* <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 mb-4">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={formData.optimizar}
-                            onChange={(e) => updateFormData({ optimizar: e.target.checked })}
-                            className="w-4 h-4 rounded"
-                        />
-                        <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">
-                                Calcular optimización de rutas
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Usa algoritmos inteligentes para sugerir el mejor orden de entregas
-                            </p>
-                        </div>
-                    </label>
-                </Card> */}
-
-                {/* Advertencias */}
-                {capacidadInsuficiente && (
-                    <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 p-4 mb-4">
-                        <div className="flex items-start gap-3">
-                            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                                    Capacidad insuficiente
-                                </p>
-                                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                                    El peso total ({totals.pesoTotal.toFixed(1)} kg) excede la capacidad
-                                    del vehículo ({(selectedVehiculo?.capacidad_kg ?? 0).toFixed(1)} kg)
-                                </p>
-                            </div>
-                        </div>
+                    {/* Tipo de Reporte */}
+                    <Card className="dark:bg-slate-900 dark:border-slate-700 p-3 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                            <span>
+                                {selectedCount === 1
+                                    ? `Se creará 1 reporte individual`
+                                    : `Se creará 1 reporte consolidado para ${selectedCount} entregas`
+                                }
+                            </span>
+                        </p>
                     </Card>
-                )}
 
-                {/* Preview de Optimización */}
-                {/* {formData.optimizar && (
-                    <div className="space-y-3">
-                        <button
-                            onClick={obtenerPreview}
-                            disabled={
-                                !selectedVentaIds.length ||
-                                !formData.vehiculo_id ||
-                                !formData.chofer_id ||
-                                isLoading
-                            }
-                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:bg-blue-700 dark:hover:bg-blue-600 dark:disabled:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
-                        >
-                            {isLoading ? 'Calculando...' : 'Ver Preview de Optimización'}
-                        </button>
-                        <BatchOptimizationResult
-                            preview={preview}
-                            error={previewError}
-                            isLoading={isLoading}
-                        />
-                    </div>
-                )} */}
+                    {/* Advertencias */}
+                    {capacidadInsuficiente && (
+                        <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 p-3">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                                        Capacidad insuficiente
+                                    </p>
+                                    <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                        Peso: {totals.pesoTotal.toFixed(1)} kg / Capacidad: {(selectedVehiculo?.capacidad_kg ?? 0).toFixed(1)} kg
+                                    </p>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+                </div>
             </>
         );
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-slate-950 py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-white dark:bg-slate-950 p-4">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8 flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            Crear Entrega o Entregas
+                            Crear Entregas ({selectedCount} Seleccionada{selectedCount !== 1 ? 's' : ''})
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400 mt-2">
                             Selecciona una o más ventas para continuar
                         </p>
                     </div>
-                    {/* <Button
-                        onClick={() => setIsConsolidacionModalOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white whitespace-nowrap"
-                    >
-                        <Zap className="h-4 w-4 mr-2" />
-                        Consolidar Automáticamente
-                    </Button> */}
                 </div>
 
-                {/* Layout Principal: Grid 4/8 */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* PANEL IZQUIERDO: Lista Persistente (4/12 = 1/3) */}
-                    <div className="lg:col-span-4">
-                        <div className="lg:sticky lg:top-6">
-                            <Card className="dark:bg-slate-900 dark:border-slate-700 p-4">
-                                <BatchVentaSelector
-                                    ventas={ventas}
-                                    selectedIds={selectedVentaIds}
-                                    onToggleVenta={handleToggleVenta}
-                                    onSelectAll={handleSelectAll}
-                                    onClearSelection={handleClearSelection}
-                                />
-                            </Card>
-                        </div>
-                    </div>
+                {/* Layout Principal: Vertical Stack */}
+                <div className="space-y-8">
+                    {/* SECCIÓN 1: Selector de Ventas */}
+                    <Card className="dark:bg-slate-900 dark:border-slate-700 p-4">
+                        <BatchVentaSelector
+                            ventas={ventas}
+                            selectedIds={selectedVentaIds}
+                            onToggleVenta={handleToggleVenta}
+                            onSelectAll={handleSelectAll}
+                            onClearSelection={handleClearSelection}
+                        />
+                    </Card>
 
-                    {/* PANEL DERECHO: Formulario Dinámico (8/12 = 2/3) */}
-                    <div className="lg:col-span-8">
+                    {/* SECCIÓN 2: Configuración de Entregas */}
+                    {selectedCount >= 1 && (
                         <div className="space-y-6">
-                            {renderDynamicFormPanel()}
+
+                            {/* Panel de Configuración */}
+                            <div className="space-y-6">
+                                {renderDynamicFormPanel()}
+                            </div>
+
+                            {/* Botón Cancelar en sección */}
+                            <div className="pt-4">
+                                <Button
+                                    onClick={handleClearSelection}
+                                    variant="outline"
+                                    className="w-full"
+                                >
+                                    Cancelar Selección
+                                </Button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Footer Sticky - Solo cuando hay selección en modo batch (2+) */}
-                {isBatchMode && (
-                    <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 flex gap-3 justify-end sticky bottom-0 bg-white dark:bg-slate-950 py-4">
-                        <Button
-                            onClick={handleClearSelection}
-                            variant="outline"
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
+                {/* Botón Flotante (FAB) - Crear Entrega */}
+                {selectedCount >= 1 && (
+                    <div className="fixed bottom-6 right-6 z-50">
+                        {/* Botón principal flotante */}
+                        <button
                             onClick={handleSubmitBatch}
                             disabled={
                                 !formData.vehiculo_id || !formData.chofer_id || capacidadInsuficiente || isSubmitting
                             }
-                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 dark:bg-green-700 dark:hover:bg-green-600 dark:disabled:bg-gray-600 text-white"
+                            title={
+                                !formData.vehiculo_id || !formData.chofer_id
+                                    ? 'Selecciona vehículo y chofer'
+                                    : capacidadInsuficiente
+                                        ? 'Revisa la capacidad del vehículo'
+                                        : 'Crear entregas'
+                            }
+                            className={`
+                                flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-white shadow-lg
+                                transition-all duration-300 transform hover:scale-110 active:scale-95
+                                ${!formData.vehiculo_id || !formData.chofer_id || capacidadInsuficiente || isSubmitting
+                                    ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                                    : 'bg-green-600 dark:bg-green-700 hover:bg-green-700 dark:hover:bg-green-600 hover:shadow-xl'
+                                }
+                            `}
                         >
-                            {isSubmitting ? 'Creando...' : `Crear ${selectedCount} Entregas`}
-                            {!isSubmitting && <Plus className="h-4 w-4 ml-2" />}
-                        </Button>
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span className="hidden sm:inline text-sm">Creando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Plus className="h-5 w-5" />
+                                    <span className="hidden sm:inline text-sm">
+                                        {selectedCount} {selectedCount === 1 ? 'Entrega' : 'Entregas'}
+                                    </span>
+                                </>
+                            )}
+                        </button>
+
+                        {/* Indicador de estado */}
+                        {(capacidadInsuficiente || !formData.vehiculo_id || !formData.chofer_id) && (
+                            <div className="absolute -top-12 right-0 whitespace-nowrap">
+                                <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs px-3 py-1 rounded-full border border-red-200 dark:border-red-800 shadow-sm">
+                                    {capacidadInsuficiente
+                                        ? '⚠️ Revisar capacidad'
+                                        : !formData.vehiculo_id && !formData.chofer_id
+                                            ? '⏳ Vehículo + Chofer'
+                                            : !formData.vehiculo_id
+                                                ? '⏳ Vehículo'
+                                                : '⏳ Chofer'}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Indicador de éxito */}
+                        {formData.vehiculo_id && formData.chofer_id && !capacidadInsuficiente && (
+                            <div className="absolute -top-12 right-0 whitespace-nowrap">
+                                <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs px-3 py-1 rounded-full border border-green-200 dark:border-green-800 shadow-sm">
+                                    ✅ Listo para crear
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

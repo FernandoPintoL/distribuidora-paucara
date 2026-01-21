@@ -937,6 +937,27 @@ Route::middleware(['auth', 'permission:cajas.index'])->prefix('admin/cajas')->gr
         ->name('api.admin.cajas.detalle');
 });
 
+// ✅ Rutas API para gestión de cierres de caja (Workflow de Aprobación) - Sprint 7
+Route::middleware(['auth', 'permission:admin.cierres.ver'])->prefix('admin/cierres')->group(function () {
+    // Listar cierres pendientes de verificación
+    Route::get('/pendientes', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'cierresPendientes'])
+        ->name('api.admin.cierres.pendientes');
+
+    // Estadísticas de cierres del día
+    Route::get('/estadisticas', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'estadisticasCierres'])
+        ->name('api.admin.cierres.estadisticas');
+
+    // Consolidar un cierre (aprobar)
+    Route::post('/{id}/consolidar', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'consolidarCierre'])
+        ->middleware('permission:admin.cierres.consolidar')
+        ->name('api.admin.cierres.consolidar');
+
+    // Rechazar un cierre
+    Route::post('/{id}/rechazar', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'rechazarCierre'])
+        ->middleware('permission:admin.cierres.rechazar')
+        ->name('api.admin.cierres.rechazar');
+});
+
 // ✅ Rutas API para gastos en tiempo real (Admin) - Sprint 6
 Route::middleware(['auth', 'permission:cajas.gastos'])->prefix('admin/gastos')->group(function () {
     Route::get('/resumen', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'resumenGastos'])

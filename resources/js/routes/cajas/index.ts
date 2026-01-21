@@ -4,7 +4,7 @@ import gastos from './gastos'
 import auditoria from './auditoria'
 /**
 * @see \App\Http\Controllers\CajaController::index
- * @see app/Http/Controllers/CajaController.php:30
+ * @see app/Http/Controllers/CajaController.php:31
  * @route '/cajas'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -19,7 +19,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::index
- * @see app/Http/Controllers/CajaController.php:30
+ * @see app/Http/Controllers/CajaController.php:31
  * @route '/cajas'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -28,7 +28,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CajaController::index
- * @see app/Http/Controllers/CajaController.php:30
+ * @see app/Http/Controllers/CajaController.php:31
  * @route '/cajas'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -37,7 +37,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CajaController::index
- * @see app/Http/Controllers/CajaController.php:30
+ * @see app/Http/Controllers/CajaController.php:31
  * @route '/cajas'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -47,7 +47,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CajaController::index
- * @see app/Http/Controllers/CajaController.php:30
+ * @see app/Http/Controllers/CajaController.php:31
  * @route '/cajas'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -57,7 +57,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CajaController::index
- * @see app/Http/Controllers/CajaController.php:30
+ * @see app/Http/Controllers/CajaController.php:31
  * @route '/cajas'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -66,7 +66,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CajaController::index
- * @see app/Http/Controllers/CajaController.php:30
+ * @see app/Http/Controllers/CajaController.php:31
  * @route '/cajas'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\CajaController::abrir
- * @see app/Http/Controllers/CajaController.php:65
+ * @see app/Http/Controllers/CajaController.php:66
  * @route '/cajas/abrir'
  */
 export const abrir = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -97,7 +97,7 @@ abrir.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::abrir
- * @see app/Http/Controllers/CajaController.php:65
+ * @see app/Http/Controllers/CajaController.php:66
  * @route '/cajas/abrir'
  */
 abrir.url = (options?: RouteQueryOptions) => {
@@ -106,7 +106,7 @@ abrir.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CajaController::abrir
- * @see app/Http/Controllers/CajaController.php:65
+ * @see app/Http/Controllers/CajaController.php:66
  * @route '/cajas/abrir'
  */
 abrir.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -116,7 +116,7 @@ abrir.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\CajaController::abrir
- * @see app/Http/Controllers/CajaController.php:65
+ * @see app/Http/Controllers/CajaController.php:66
  * @route '/cajas/abrir'
  */
     const abrirForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -126,7 +126,7 @@ abrir.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\CajaController::abrir
- * @see app/Http/Controllers/CajaController.php:65
+ * @see app/Http/Controllers/CajaController.php:66
  * @route '/cajas/abrir'
  */
         abrirForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -137,7 +137,7 @@ abrir.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     abrir.form = abrirForm
 /**
 * @see \App\Http\Controllers\CajaController::cerrar
- * @see app/Http/Controllers/CajaController.php:146
+ * @see app/Http/Controllers/CajaController.php:147
  * @route '/cajas/cerrar'
  */
 export const cerrar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -152,7 +152,7 @@ cerrar.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::cerrar
- * @see app/Http/Controllers/CajaController.php:146
+ * @see app/Http/Controllers/CajaController.php:147
  * @route '/cajas/cerrar'
  */
 cerrar.url = (options?: RouteQueryOptions) => {
@@ -161,7 +161,7 @@ cerrar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CajaController::cerrar
- * @see app/Http/Controllers/CajaController.php:146
+ * @see app/Http/Controllers/CajaController.php:147
  * @route '/cajas/cerrar'
  */
 cerrar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -171,7 +171,7 @@ cerrar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\CajaController::cerrar
- * @see app/Http/Controllers/CajaController.php:146
+ * @see app/Http/Controllers/CajaController.php:147
  * @route '/cajas/cerrar'
  */
     const cerrarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -181,7 +181,7 @@ cerrar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\CajaController::cerrar
- * @see app/Http/Controllers/CajaController.php:146
+ * @see app/Http/Controllers/CajaController.php:147
  * @route '/cajas/cerrar'
  */
         cerrarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -192,7 +192,7 @@ cerrar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     cerrar.form = cerrarForm
 /**
 * @see \App\Http\Controllers\CajaController::estado
- * @see app/Http/Controllers/CajaController.php:230
+ * @see app/Http/Controllers/CajaController.php:243
  * @route '/cajas/estado'
  */
 export const estado = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -207,7 +207,7 @@ estado.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::estado
- * @see app/Http/Controllers/CajaController.php:230
+ * @see app/Http/Controllers/CajaController.php:243
  * @route '/cajas/estado'
  */
 estado.url = (options?: RouteQueryOptions) => {
@@ -216,7 +216,7 @@ estado.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CajaController::estado
- * @see app/Http/Controllers/CajaController.php:230
+ * @see app/Http/Controllers/CajaController.php:243
  * @route '/cajas/estado'
  */
 estado.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -225,7 +225,7 @@ estado.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CajaController::estado
- * @see app/Http/Controllers/CajaController.php:230
+ * @see app/Http/Controllers/CajaController.php:243
  * @route '/cajas/estado'
  */
 estado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -235,7 +235,7 @@ estado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CajaController::estado
- * @see app/Http/Controllers/CajaController.php:230
+ * @see app/Http/Controllers/CajaController.php:243
  * @route '/cajas/estado'
  */
     const estadoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -245,7 +245,7 @@ estado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CajaController::estado
- * @see app/Http/Controllers/CajaController.php:230
+ * @see app/Http/Controllers/CajaController.php:243
  * @route '/cajas/estado'
  */
         estadoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -254,7 +254,7 @@ estado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CajaController::estado
- * @see app/Http/Controllers/CajaController.php:230
+ * @see app/Http/Controllers/CajaController.php:243
  * @route '/cajas/estado'
  */
         estadoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -270,7 +270,7 @@ estado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     estado.form = estadoForm
 /**
 * @see \App\Http\Controllers\CajaController::movimientos
- * @see app/Http/Controllers/CajaController.php:259
+ * @see app/Http/Controllers/CajaController.php:272
  * @route '/cajas/movimientos'
  */
 export const movimientos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -285,7 +285,7 @@ movimientos.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::movimientos
- * @see app/Http/Controllers/CajaController.php:259
+ * @see app/Http/Controllers/CajaController.php:272
  * @route '/cajas/movimientos'
  */
 movimientos.url = (options?: RouteQueryOptions) => {
@@ -294,7 +294,7 @@ movimientos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CajaController::movimientos
- * @see app/Http/Controllers/CajaController.php:259
+ * @see app/Http/Controllers/CajaController.php:272
  * @route '/cajas/movimientos'
  */
 movimientos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -303,7 +303,7 @@ movimientos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CajaController::movimientos
- * @see app/Http/Controllers/CajaController.php:259
+ * @see app/Http/Controllers/CajaController.php:272
  * @route '/cajas/movimientos'
  */
 movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -313,7 +313,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CajaController::movimientos
- * @see app/Http/Controllers/CajaController.php:259
+ * @see app/Http/Controllers/CajaController.php:272
  * @route '/cajas/movimientos'
  */
     const movimientosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -323,7 +323,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CajaController::movimientos
- * @see app/Http/Controllers/CajaController.php:259
+ * @see app/Http/Controllers/CajaController.php:272
  * @route '/cajas/movimientos'
  */
         movimientosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -332,7 +332,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CajaController::movimientos
- * @see app/Http/Controllers/CajaController.php:259
+ * @see app/Http/Controllers/CajaController.php:272
  * @route '/cajas/movimientos'
  */
         movimientosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -348,7 +348,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     movimientos.form = movimientosForm
 /**
 * @see \App\Http\Controllers\CajaController::reportes
- * @see app/Http/Controllers/CajaController.php:367
+ * @see app/Http/Controllers/CajaController.php:380
  * @route '/cajas/reportes'
  */
 export const reportes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -363,7 +363,7 @@ reportes.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::reportes
- * @see app/Http/Controllers/CajaController.php:367
+ * @see app/Http/Controllers/CajaController.php:380
  * @route '/cajas/reportes'
  */
 reportes.url = (options?: RouteQueryOptions) => {
@@ -372,7 +372,7 @@ reportes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CajaController::reportes
- * @see app/Http/Controllers/CajaController.php:367
+ * @see app/Http/Controllers/CajaController.php:380
  * @route '/cajas/reportes'
  */
 reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -381,7 +381,7 @@ reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CajaController::reportes
- * @see app/Http/Controllers/CajaController.php:367
+ * @see app/Http/Controllers/CajaController.php:380
  * @route '/cajas/reportes'
  */
 reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -391,7 +391,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CajaController::reportes
- * @see app/Http/Controllers/CajaController.php:367
+ * @see app/Http/Controllers/CajaController.php:380
  * @route '/cajas/reportes'
  */
     const reportesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -401,7 +401,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CajaController::reportes
- * @see app/Http/Controllers/CajaController.php:367
+ * @see app/Http/Controllers/CajaController.php:380
  * @route '/cajas/reportes'
  */
         reportesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -410,7 +410,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CajaController::reportes
- * @see app/Http/Controllers/CajaController.php:367
+ * @see app/Http/Controllers/CajaController.php:380
  * @route '/cajas/reportes'
  */
         reportesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

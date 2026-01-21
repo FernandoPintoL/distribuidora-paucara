@@ -6,23 +6,40 @@
  * ✅ Mostrar información de apertura/cierre
  * ✅ Mostrar montos y movimientos
  * ✅ Proveer botones de acción (Abrir/Cerrar)
+ * ✅ Mostrar estado del cierre (PENDIENTE/CONSOLIDADA/RECHAZADA)
+ * ✅ Permitir corrección si está rechazado
  */
 
 import type { AperturaCaja } from '@/domain/entities/cajas';
 import { formatCurrency, formatTime, getMovimientoColor } from '@/lib/cajas.utils';
+import EstadoCierreBadge from '@/presentation/components/cajas/EstadoCierreBadge';
+
+interface Cierre {
+    id: number;
+    estado?: string;
+    observaciones_rechazo?: string;
+    requiere_reapertura?: boolean;
+    diferencia: number;
+    monto_esperado: number;
+    monto_real: number;
+}
 
 interface Props {
     cajaAbiertaHoy: AperturaCaja | null;
     totalMovimientos: number;
     onAbrirClick: () => void;
     onCerrarClick: () => void;
+    onCorregirClick?: () => void;
+    cierreDatos?: Cierre | null;
 }
 
 export function CajaEstadoCard({
     cajaAbiertaHoy,
     totalMovimientos,
     onAbrirClick,
-    onCerrarClick
+    onCerrarClick,
+    onCorregirClick,
+    cierreDatos
 }: Props) {
     if (!cajaAbiertaHoy) {
         return (
@@ -143,15 +160,72 @@ export function CajaEstadoCard({
                                 🔒 Cerrar Caja
                             </button>
                         ) : (
-                            <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                    Caja cerrada a las {formatTime(cajaAbiertaHoy.cierre.created_at)}
-                                </p>
-                                {cajaAbiertaHoy.cierre.diferencia !== 0 && (
-                                    <p className={`text-sm font-medium ${cajaAbiertaHoy.cierre.diferencia > 0 ? 'text-green-600' : 'text-red-600'
-                                        }`}>
-                                        Diferencia: {formatCurrency(cajaAbiertaHoy.cierre.diferencia)}
+                            <div className="space-y-3">
+                                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                        Caja cerrada a las {formatTime(cajaAbiertaHoy.cierre.created_at)}
                                     </p>
+                                    {cajaAbiertaHoy.cierre.diferencia !== 0 && (
+                                        <p className={`text-sm font-medium ${cajaAbiertaHoy.cierre.diferencia > 0 ? 'text-green-600' : 'text-red-600'
+                                            }`}>
+                                            Diferencia: {formatCurrency(cajaAbiertaHoy.cierre.diferencia)}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Estado del Cierre - NUEVO */}
+                                {cierreDatos && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Estado:
+                                            </span>
+                                            <EstadoCierreBadge
+                                                estado={cierreDatos.estado as any}
+                                                size="md"
+                                            />
+                                        </div>
+
+                                        {cierreDatos.estado === 'RECHAZADA' && cierreDatos.observaciones_rechazo && (
+                                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                                                <p className="text-xs font-semibold text-red-800 dark:text-red-300 mb-1">
+                                                    ⚠️ Motivo del Rechazo:
+                                                </p>
+                                                <p className="text-sm text-red-700 dark:text-red-200">
+                                                    {cierreDatos.observaciones_rechazo}
+                                                </p>
+                                                {cierreDatos.requiere_reapertura && (
+                                                    <p className="text-xs text-red-600 dark:text-red-300 mt-2 font-semibold">
+                                                        ⚠️ Requiere reapertura de caja
+                                                    </p>
+                                                )}
+                                                {onCorregirClick && (
+                                                    <button
+                                                        onClick={onCorregirClick}
+                                                        className="mt-3 w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700"
+                                                    >
+                                                        🔧 Corregir Cierre
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {cierreDatos.estado === 'CONSOLIDADA' && (
+                                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                                                <p className="text-sm text-green-700 dark:text-green-200">
+                                                    ✅ Tu cierre fue consolidado y aprobado
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {cierreDatos.estado === 'PENDIENTE' && (
+                                            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                                                <p className="text-sm text-yellow-700 dark:text-yellow-200">
+                                                    ⏳ Tu cierre está pendiente de verificación por el administrador
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         )}

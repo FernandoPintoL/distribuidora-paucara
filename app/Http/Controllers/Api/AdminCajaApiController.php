@@ -315,4 +315,143 @@ class AdminCajaApiController extends Controller
             'timestamp' => now()->toIso8601String(),
         ]);
     }
+
+    /**
+     * GET /api/admin/cierres/pendientes
+     * Lista de cierres pendientes de verificación
+     */
+    public function cierresPendientes()
+    {
+        $cierres = CierreCaja::pendientes()
+            ->with(['apertura.usuario', 'apertura.caja', 'estadoCierre'])
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->map(function ($cierre) {
+                return [
+                    'id' => $cierre->id,
+                    'caja' => $cierre->apertura->caja->nombre,
+                    'usuario' => $cierre->apertura->usuario->name,
+                    'fecha' => $cierre->fecha->toIso8601String(),
+                    'monto_esperado' => (float)$cierre->monto_esperado,
+                    'monto_real' => (float)$cierre->monto_real,
+                    'diferencia' => (float)$cierre->diferencia,
+                    'observaciones' => $cierre->observaciones,
+                    'estado' => [
+                        'codigo' => $cierre->estadoCierre->codigo,
+                        'nombre' => $cierre->estadoCierre->nombre,
+                        'color' => $cierre->estadoCierre->color,
+                    ],
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $cierres,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * POST /api/admin/cierres/{id}/consolidar
+     * Consolidar un cierre de caja
+     */
+    public function consolidarCierre(Request $request, $id)
+    {
+        $request->validate([
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        $cierre = CierreCaja::with(['apertura.usuario', 'apertura.caja'])->findOrFail($id);
+
+        if (!$cierre->puedeConsolidar()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El cierre no puede ser consolidado. Estado actual: ' . $cierre->estado,
+            ], 422);
+        }
+
+        if ($cierre->consolidar(auth()->user(), $request->observaciones)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Cierre consolidado exitosamente.',
+                'data' => [
+                    'cierre_id' => $cierre->id,
+                    'caja' => $cierre->apertura->caja->nombre,
+                    'usuario' => $cierre->apertura->usuario->name,
+                ],
+                'timestamp' => now()->toIso8601String(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al consolidar el cierre.',
+        ], 500);
+    }
+
+    /**
+     * POST /api/admin/cierres/{id}/rechazar
+     * Rechazar un cierre de caja
+     */
+    public function rechazarCierre(Request $request, $id)
+    {
+        $request->validate([
+            'motivo' => 'required|string|max:500',
+            'requiere_reapertura' => 'boolean',
+        ]);
+
+        $cierre = CierreCaja::with(['apertura.usuario', 'apertura.caja'])->findOrFail($id);
+
+        if (!$cierre->puedeRechazar()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El cierre no puede ser rechazado. Estado actual: ' . $cierre->estado,
+            ], 422);
+        }
+
+        if ($cierre->rechazar(auth()->user(), $request->motivo, $request->requiere_reapertura ?? false)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Cierre rechazado. El cajero fue notificado.',
+                'data' => [
+                    'cierre_id' => $cierre->id,
+                    'caja' => $cierre->apertura->caja->nombre,
+                    'usuario' => $cierre->apertura->usuario->name,
+                    'motivo' => $request->motivo,
+                ],
+                'timestamp' => now()->toIso8601String(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al rechazar el cierre.',
+        ], 500);
+    }
+
+    /**
+     * GET /api/admin/cierres/estadisticas
+     * Estadísticas de cierres del día
+     */
+    public function estadisticasCierres()
+    {
+        $hoy = today();
+
+        $stats = [
+            'pendientes' => CierreCaja::pendientes()->whereDate('fecha', $hoy)->count(),
+            'consolidadas' => CierreCaja::consolidadas()->whereDate('fecha', $hoy)->count(),
+            'rechazadas' => CierreCaja::rechazadas()->whereDate('fecha', $hoy)->count(),
+            'requieren_atencion' => CierreCaja::requierenAtencion()->count(),
+            'con_diferencias' => CierreCaja::pendientes()
+                ->whereDate('fecha', $hoy)
+                ->conDiferencias()
+                ->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
 }

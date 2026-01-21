@@ -76,20 +76,6 @@ export default function FiltrosVentasComponent({
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 mb-6">
             {/* Filtros básicos */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Búsqueda general */}
-                {/* <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Buscar en ventas..."
-                        value={filtros.search || ''}
-                        onChange={(e) => handleFiltroChange('search', e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    />
-                </div> */}
 
                 {/* Número de venta */}
                 <div className="relative">

@@ -18,10 +18,10 @@ class ProformaObserver
         // Actualizar sin disparar eventos para evitar loop infinito
         $proforma->updateQuietly(['numero' => $nuevoNumero]);
 
-        // Reservar stock automáticamente al crear proforma desde app externa
-        if ($proforma->esDeAppExterna() && $proforma->estado === Proforma::PENDIENTE) {
-            $proforma->reservarStock();
-        }
+        // ✅ DESACTIVADO: ProformaService::crear() ahora maneja las reservas de stock
+        // Antes: if ($proforma->esDeAppExterna() && $proforma->estado === Proforma::PENDIENTE) {
+        //            $proforma->reservarStock();
+        //        }
     }
 
     /**

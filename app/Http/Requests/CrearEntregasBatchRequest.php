@@ -40,6 +40,9 @@ class CrearEntregasBatchRequest extends FormRequest
             'vehiculo_id' => 'required|integer|exists:vehiculos,id',
             'chofer_id' => 'required|integer|exists:empleados,id',
             'tipo_reporte' => 'required|string|in:individual,consolidado',
+            // Campos opcionales para caso single (unificación de flujos)
+            'fecha_programada' => 'nullable|date_format:Y-m-d\TH:i',
+            'direccion_entrega' => 'nullable|string|max:500',
         ];
     }
 
@@ -59,6 +62,8 @@ class CrearEntregasBatchRequest extends FormRequest
             'chofer_id.exists' => 'El chofer seleccionado no existe',
             'tipo_reporte.required' => 'Debe seleccionar un tipo de reporte',
             'tipo_reporte.in' => 'El tipo de reporte debe ser individual o consolidado',
+            'fecha_programada.date_format' => 'El formato de fecha programada es inválido',
+            'direccion_entrega.max' => 'La dirección no puede exceder 500 caracteres',
         ];
     }
 }

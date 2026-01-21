@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services\Logistica;
 
 use App\DTOs\Logistica\EntregaResponseDTO;
@@ -12,6 +11,7 @@ use App\Services\Traits\LogsOperations;
 use App\Services\Traits\ManagesTransactions;
 use App\Services\WebSocket\EntregaWebSocketService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 /**
  * EntregaService - Logística de entregas
@@ -38,17 +38,17 @@ class EntregaService
      * validan dinámicamente desde la BD.
      */
     private static array $transicionesValidas = [
-        'PROGRAMADO' => ['ASIGNADA', 'CANCELADA'],          // Nuevo estado inicial
-        'PENDIENTE' => ['ASIGNADA', 'CANCELADA'],           // Legacy
-        'ASIGNADA' => ['EN_CAMINO', 'PROGRAMADO', 'PENDIENTE', 'CANCELADA'],
-        'EN_CAMINO' => ['LLEGO', 'NOVEDAD', 'CANCELADA'],
-        'LLEGO' => ['ENTREGADO', 'NOVEDAD', 'CANCELADA'],
-        'ENTREGADO' => [],
-        'NOVEDAD' => ['ASIGNADA', 'CANCELADA'],             // Para reintentar
-        'CANCELADA' => [],
+        'PROGRAMADO' => ['ASIGNADA', 'CANCELADA'], // Nuevo estado inicial
+        'PENDIENTE'  => ['ASIGNADA', 'CANCELADA'], // Legacy
+        'ASIGNADA'   => ['EN_CAMINO', 'PROGRAMADO', 'PENDIENTE', 'CANCELADA'],
+        'EN_CAMINO'  => ['LLEGO', 'NOVEDAD', 'CANCELADA'],
+        'LLEGO'      => ['ENTREGADO', 'NOVEDAD', 'CANCELADA'],
+        'ENTREGADO'  => [],
+        'NOVEDAD'    => ['ASIGNADA', 'CANCELADA'], // Para reintentar
+        'CANCELADA'  => [],
         // Legacy states
-        'ENTREGADA' => [],
-        'RECHAZADA' => ['ASIGNADA'],
+        'ENTREGADA'  => [],
+        'RECHAZADA'  => ['ASIGNADA'],
     ];
 
     public function __construct(
@@ -97,7 +97,7 @@ class EntregaService
                 ->firstOrFail();
 
             // 2️⃣ Validar transición dinámicamente
-            if (!$entrega->estadoEntrega->puedeTransicionarA($estadoNuevo)) {
+            if (! $entrega->estadoEntrega->puedeTransicionarA($estadoNuevo)) {
                 throw EstadoInvalidoException::transicionInvalida(
                     'Entrega',
                     $entrega->id,
@@ -112,8 +112,8 @@ class EntregaService
             // 4️⃣ Actualizar entrega (FK normalizado + ENUM legacy)
             $entrega->update([
                 'estado_entrega_id' => $estadoNuevo->id,
-                'estado' => $codigoEstadoNuevo,  // Mantener ENUM para retrocompatibilidad
-                ...$datosAdicionales,
+                'estado'            => $codigoEstadoNuevo, // Mantener ENUM para retrocompatibilidad
+                 ...$datosAdicionales,
             ]);
 
             // 5️⃣ Registrar en historial
@@ -154,7 +154,7 @@ class EntregaService
             $entregas = [];
 
             // Si la venta no requiere entrega (venta mostrador), no crear
-            if (!$venta->requiere_envio) {
+            if (! $venta->requiere_envio) {
                 return $entregas;
             }
 
@@ -166,19 +166,19 @@ class EntregaService
                 ->where('categoria', 'entrega')
                 ->first();
 
-            if (!$estadoInicial) {
-                \Log::error('❌ Estado PREPARACION_CARGA no encontrado en estados_logistica', [
+            if (! $estadoInicial) {
+                Log::error('❌ Estado PREPARACION_CARGA no encontrado en estados_logistica', [
                     'venta_id' => $venta->id,
                 ]);
                 return $entregas;
             }
 
             $entrega = Entrega::create([
-                'venta_id' => $venta->id,
-                'estado' => 'PROGRAMADO',  // Mantener estado ENUM
-                'estado_entrega_id' => $estadoInicial->id,  // ✅ FK a estados_logistica con ID de PREPARACION_CARGA
-                'direccion' => $direccion,
-                'fecha_programada' => $venta->fecha_entrega_programada ?? now()->addDays(3),
+                'venta_id'            => $venta->id,
+                'estado'              => 'PROGRAMADO',       // Mantener estado ENUM
+                'estado_entrega_id'   => $estadoInicial->id, // ✅ FK a estados_logistica con ID de PREPARACION_CARGA
+                'direccion'           => $direccion,
+                'fecha_programada'    => $venta->fecha_entrega_programada ?? now()->addDays(3),
                 'usuario_asignado_id' => Auth::id(),
             ]);
 
@@ -186,10 +186,9 @@ class EntregaService
             $this->registrarCambioEstado(
                 $entrega,
                 null,
-                $estadoProgramado->codigo,  // ✅ Usar el estado válido
+                $estadoProgramado->codigo, // ✅ Usar el estado válido
                 'Entrega creada desde venta'
             );
-
 
             $entregas[] = $entrega;
 
@@ -222,7 +221,7 @@ class EntregaService
             $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
             // Validar transición (soporta PROGRAMADO y PENDIENTE)
-            if (!in_array($entrega->estado, ['PROGRAMADO', 'PENDIENTE'])) {
+            if (! in_array($entrega->estado, ['PROGRAMADO', 'PENDIENTE'])) {
                 throw EstadoInvalidoException::transicionInvalida(
                     'Entrega',
                     $entregaId,
@@ -234,10 +233,10 @@ class EntregaService
             // Validar que chofer y vehículo existan y estén disponibles
             // chofer_id en entregas apunta a users.id (User con rol Chofer)
             $choferUser = \App\Models\User::with('empleado')->findOrFail($choferId);
-            $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
+            $vehiculo   = \App\Models\Vehiculo::findOrFail($vehiculoId);
 
             // Validar que el usuario tenga asociado un empleado (chofer)
-            if (!$choferUser->empleado) {
+            if (! $choferUser->empleado) {
                 throw new \Exception("Usuario {$choferUser->name} no tiene datos de empleado");
             }
 
@@ -265,9 +264,9 @@ class EntregaService
 
             // Actualizar entrega
             $entrega->update([
-                'chofer_id' => $choferId,
-                'vehiculo_id' => $vehiculoId,
-                'estado' => 'ASIGNADA',
+                'chofer_id'        => $choferId,
+                'vehiculo_id'      => $vehiculoId,
+                'estado'           => 'ASIGNADA',
                 'fecha_asignacion' => now(),
             ]);
 
@@ -279,13 +278,12 @@ class EntregaService
                 "Asignado chofer: {$choferEmpleado->nombre}, Vehículo: {$vehiculo->placa}"
             );
 
-
             return $entrega;
         });
 
         $this->logSuccess('Entrega asignada', [
-            'entrega_id' => $entregaId,
-            'chofer_id' => $choferId,
+            'entrega_id'  => $entregaId,
+            'chofer_id'   => $choferId,
             'vehiculo_id' => $vehiculoId,
         ]);
 
@@ -310,7 +308,7 @@ class EntregaService
 
         // Lógica específica: reducir stock
         $venta = $entrega->venta;
-        if ($venta && $venta->detalles && !in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
+        if ($venta && $venta->detalles && ! in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
             $this->procesarStockEntrega($entrega, 'reducir');
         }
 
@@ -369,10 +367,10 @@ class EntregaService
 
         // Actualizar con registros de firma/foto
         $datosAdicionales = [
-            'fecha_entrega' => now(),
+            'fecha_entrega'       => now(),
             'fecha_firma_entrega' => $firmaDigitalUrl ? now() : null,
-            'firma_digital_url' => $firmaDigitalUrl,
-            'foto_entrega_url' => $fotoEntregaUrl,
+            'firma_digital_url'   => $firmaDigitalUrl,
+            'foto_entrega_url'    => $fotoEntregaUrl,
         ];
 
         // Usar método centralizado para cambio de estado
@@ -385,8 +383,8 @@ class EntregaService
 
         $this->logSuccess('Entrega confirmada', [
             'entrega_id' => $entregaId,
-            'con_firma' => $firmaDigitalUrl !== null,
-            'con_foto' => $fotoEntregaUrl !== null,
+            'con_firma'  => $firmaDigitalUrl !== null,
+            'con_foto'   => $fotoEntregaUrl !== null,
         ]);
 
         return EntregaResponseDTO::fromModel($entrega);
@@ -412,7 +410,7 @@ class EntregaService
         // Lógica específica: revertir stock SOLO si es rechazo definitivo
         if ($devolverStock) {
             $venta = $entrega->venta;
-            if ($venta && $venta->detalles && !\in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
+            if ($venta && $venta->detalles && ! \in_array($venta->estado, ['PENDIENTE', 'BORRADOR'], true)) {
                 $this->stockService->devolverStock(
                     $venta->detalles->toArray(),
                     "ENTREGA#{$entregaId}-NOVEDAD",
@@ -430,8 +428,8 @@ class EntregaService
         );
 
         $this->logSuccess('Novedad reportada', [
-            'entrega_id' => $entregaId,
-            'motivo' => $motivoNovedad,
+            'entrega_id'      => $entregaId,
+            'motivo'          => $motivoNovedad,
             'stock_revertido' => $devolverStock,
         ]);
 
@@ -482,10 +480,10 @@ class EntregaService
 
         if ($entregas->isEmpty()) {
             return [
-                'rutas' => [],
+                'rutas'        => [],
                 'estadisticas' => [
                     'total_entregas' => 0,
-                    'rutas_creadas' => 0,
+                    'rutas_creadas'  => 0,
                 ],
             ];
         }
@@ -493,18 +491,18 @@ class EntregaService
         // Preparar datos para algoritmo
         $entregasParaOptimizar = $entregas->map(function ($entrega) {
             $primeraVenta = $entrega->ventas?->first();
-            $direccion = $primeraVenta?->direccionCliente ?? null;
+            $direccion    = $primeraVenta?->direccionCliente ?? null;
 
             return [
-                'id' => $entrega->id,
+                'id'         => $entrega->id,
                 'entrega_id' => $entrega->id,
-                'venta_id' => $primeraVenta?->id,
+                'venta_id'   => $primeraVenta?->id,
                 'cliente_id' => $primeraVenta?->cliente_id,
-                'peso' => $entrega->peso_kg ?? 10, // Default 10kg si no está configurado
-                'peso_kg' => $entrega->peso_kg ?? 10,
-                'lat' => $direccion?->latitud ?? -17.3895,  // Default: Cochabamba centro
-                'lon' => $direccion?->longitud ?? -66.1568,
-                'direccion' => $primeraVenta?->direccion ?? $direccion?->direccion ?? 'Sin dirección',
+                'peso'       => $entrega->peso_kg ?? 10, // Default 10kg si no está configurado
+                'peso_kg'    => $entrega->peso_kg ?? 10,
+                'lat'        => $direccion?->latitud ?? -17.3895, // Default: Cochabamba centro
+                'lon'        => $direccion?->longitud ?? -66.1568,
+                'direccion'  => $primeraVenta?->direccion ?? $direccion?->direccion ?? 'Sin dirección',
             ];
         })->toArray();
 
@@ -516,9 +514,9 @@ class EntregaService
 
         // Agregar información adicional a cada ruta
         foreach ($resultado['rutas'] as &$ruta) {
-            $ruta['entregas_ids'] = array_column($ruta['ruta'], 'entrega_id');
+            $ruta['entregas_ids']        = array_column($ruta['ruta'], 'entrega_id');
             $ruta['sugerencia_vehiculo'] = $this->sugerirVehiculo($ruta['peso_total_bin']);
-            $ruta['sugerencia_chofer'] = $this->sugerirChofer();
+            $ruta['sugerencia_chofer']   = $this->sugerirChofer();
         }
         unset($ruta);
 
@@ -535,15 +533,15 @@ class EntregaService
             ->orderBy('capacidad_kg', 'asc')
             ->first();
 
-        if (!$vehiculo) {
+        if (! $vehiculo) {
             return null;
         }
 
         return [
-            'id' => $vehiculo->id,
-            'placa' => $vehiculo->placa,
-            'marca' => $vehiculo->marca,
-            'modelo' => $vehiculo->modelo,
+            'id'           => $vehiculo->id,
+            'placa'        => $vehiculo->placa,
+            'marca'        => $vehiculo->marca,
+            'modelo'       => $vehiculo->modelo,
             'capacidad_kg' => $vehiculo->capacidad_kg,
         ];
     }
@@ -559,19 +557,19 @@ class EntregaService
         $chofer = \App\Models\Empleado::with('user')
             ->where('estado', 'activo')
             ->whereNotNull('licencia')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereNull('fecha_vencimiento_licencia')
-                  ->orWhere('fecha_vencimiento_licencia', '>=', now());
+                    ->orWhere('fecha_vencimiento_licencia', '>=', now());
             })
             ->first();
 
-        if (!$chofer || !$chofer->user) {
+        if (! $chofer || ! $chofer->user) {
             return null;
         }
 
         return [
-            'id' => $chofer->user_id,  // Retornar user_id, no empleado.id
-            'nombre' => $chofer->nombre,
+            'id'       => $chofer->user_id, // Retornar user_id, no empleado.id
+            'nombre'   => $chofer->nombre,
             'licencia' => $chofer->licencia,
         ];
     }
@@ -585,7 +583,7 @@ class EntregaService
     {
         $permitidas = self::$transicionesValidas[$estadoActual] ?? [];
 
-        if (!\in_array($estadoNuevo, $permitidas, true)) {
+        if (! \in_array($estadoNuevo, $permitidas, true)) {
             throw EstadoInvalidoException::transicionInvalida(
                 'Entrega',
                 0,
@@ -610,11 +608,11 @@ class EntregaService
         // El campo es nullable, así evitamos validaciones que podrían fallar dentro de una transacción
 
         return EntregaEstadoHistorial::create([
-            'entrega_id' => $entrega->id,
+            'entrega_id'      => $entrega->id,
             'estado_anterior' => $estadoAnterior,
-            'estado_nuevo' => $estadoNuevo,
-            'comentario' => $razon,
-            'usuario_id' => null,
+            'estado_nuevo'    => $estadoNuevo,
+            'comentario'      => $razon,
+            'usuario_id'      => null,
         ]);
     }
 
@@ -629,7 +627,7 @@ class EntregaService
     private function procesarStockEntrega(Entrega $entrega, string $operacion): void
     {
         $venta = $entrega->venta;
-        if (!$venta || !$venta->detalles) {
+        if (! $venta || ! $venta->detalles) {
             return;
         }
 
@@ -637,7 +635,7 @@ class EntregaService
         $productos = $venta->detalles->map(function ($detalle) {
             return [
                 'producto_id' => $detalle->producto_id,
-                'cantidad' => $detalle->cantidad,
+                'cantidad'    => $detalle->cantidad,
             ];
         })->toArray();
 
@@ -652,14 +650,14 @@ class EntregaService
             $this->stockService->procesarSalidaVenta($productos, $referencia, $almacenId);
             $this->logSuccess('Stock reducido para entrega', [
                 'entrega_id' => $entrega->id,
-                'venta_id' => $venta->id,
+                'venta_id'   => $venta->id,
                 'almacen_id' => $almacenId,
             ]);
         } elseif ($operacion === 'restaurar') {
             $this->stockService->devolverStock($productos, $referencia, $almacenId);
             $this->logSuccess('Stock restaurado para entrega', [
                 'entrega_id' => $entrega->id,
-                'venta_id' => $venta->id,
+                'venta_id'   => $venta->id,
                 'almacen_id' => $almacenId,
             ]);
         }
@@ -687,11 +685,13 @@ class EntregaService
         int $vehiculoId,
         int $choferId,
         bool $optimizar = true,
-        string $tipoReporte = 'individual'
+        string $tipoReporte = 'individual',
+        ?string $fechaProgramada = null,
+        ?string $direccionEntrega = null
     ): array {
         $resultado = $this->transaction(function () use ($ventaIds, $vehiculoId, $choferId, $optimizar, $tipoReporte) {
             $entregasCreadas = collect(); // Usar Collection en lugar de array para acceso a métodos como count() y isEmpty()
-            $errores = [];
+            $errores         = [];
 
             // Validar vehículo y chofer
             $vehiculo = \App\Models\Vehiculo::findOrFail($vehiculoId);
@@ -699,7 +699,7 @@ class EntregaService
             $choferUser = \App\Models\User::with('empleado')->findOrFail($choferId);
 
             // Validar que el usuario tenga asociado un empleado
-            if (!$choferUser->empleado) {
+            if (! $choferUser->empleado) {
                 throw new \Exception("Usuario {$choferUser->name} no tiene datos de empleado");
             }
 
@@ -726,16 +726,17 @@ class EntregaService
 
                     // Crear una entrega por venta con todos los datos disponibles
                     // ✅ CORREGIDO: Removido 'usuario_asignado_id' que no existe en el modelo
+                    // ✅ UNIFICACIÓN: Usar parámetros opcionales si se proporcionan (para caso single)
                     $entrega = Entrega::create([
-                        'venta_id'              => $venta->id,
-                        'estado'                => 'PROGRAMADO',
-                        'estado_entrega_id'     => $estadoProgramado?->id,  // ✅ FK a estados_logistica
-                        'direccion_entrega'     => $venta->direccion_entrega ?? $venta->direccionCliente?->direccion,
-                        'direccion_cliente_id'  => $venta->direccion_cliente_id,
-                        'fecha_programada'      => $venta->fecha_entrega_programada ?? now()->addDays(3),
-                        'peso_kg'               => $venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10,
-                        'chofer_id'             => $choferId,
-                        'vehiculo_id'           => $vehiculoId,
+                        'venta_id'             => $venta->id,
+                        'estado'               => 'PROGRAMADO',
+                        'estado_entrega_id'    => $estadoProgramado?->id, // ✅ FK a estados_logistica
+                        'direccion_entrega'    => $direccionEntrega ?? $venta->direccion_entrega ?? $venta->direccionCliente?->direccion,
+                        'direccion_cliente_id' => $venta->direccion_cliente_id,
+                        'fecha_programada'     => $fechaProgramada ?? $venta->fecha_entrega_programada ?? now()->addDays(3),
+                        'peso_kg'              => $venta->detalles->sum(fn($det) => $det->cantidad * 2) ?? 10,
+                        'chofer_id'            => $choferId,
+                        'vehiculo_id'          => $vehiculoId,
                     ]);
 
                     // Registrar en historial
@@ -746,6 +747,23 @@ class EntregaService
                         'Entrega creada en lote'
                     );
 
+                    // ✨ NUEVO: Disparar evento EntregaAsignada para notificar al chofer vía WebSocket
+                    try {
+                        event(new \App\Events\EntregaAsignada($entrega));
+
+                        $this->logSuccess('Evento EntregaAsignada disparado - Notificación enviada al chofer', [
+                            'entrega_id' => $entrega->id,
+                            'numero_entrega' => $entrega->numero_entrega,
+                            'chofer_id' => $choferId,
+                        ]);
+                    } catch (\Exception $e) {
+                        $this->logError('Error disparando evento EntregaAsignada (continuando con creación)', [
+                            'entrega_id' => $entrega->id,
+                            'chofer_id' => $choferId,
+                            'error' => $e->getMessage(),
+                        ]);
+                        // Continuar sin fallar, la entrega ya se creó correctamente
+                    }
 
                     // FASE 3: Generar reporte individual si tipo_reporte === 'individual'
                     if ($tipoReporte === 'individual') {
@@ -753,8 +771,8 @@ class EntregaService
                             $reporte = $this->reporteCargoService->generarReporteDesdeEntrega(
                                 $entrega,
                                 [
-                                    'vehiculo_id' => $vehiculoId,
-                                    'descripcion' => "Reporte automático - Batch individual",
+                                    'vehiculo_id'   => $vehiculoId,
+                                    'descripcion'   => "Reporte automático - Batch individual",
                                     'peso_total_kg' => $entrega->peso_kg,
                                 ]
                             );
@@ -767,12 +785,12 @@ class EntregaService
                             // Log error pero continuar con las demás entregas
                             $this->logError('Error generando reporte individual', [
                                 'entrega_id' => $entrega->id,
-                                'error' => $e->getMessage(),
+                                'error'      => $e->getMessage(),
                             ]);
 
                             $errores[] = [
                                 'entrega_id' => $entrega->id,
-                                'error' => "Reporte no generado: {$e->getMessage()}",
+                                'error'      => "Reporte no generado: {$e->getMessage()}",
                             ];
                         }
                     }
@@ -781,13 +799,13 @@ class EntregaService
                 } catch (\Exception $e) {
                     $errores[] = [
                         'venta_id' => $ventaId,
-                        'error' => $e->getMessage(),
+                        'error'    => $e->getMessage(),
                     ];
                 }
             }
 
             // FASE 3: Generar reporte consolidado si tipo_reporte === 'consolidado'
-            if ($tipoReporte === 'consolidado' && !$entregasCreadas->isEmpty()) {
+            if ($tipoReporte === 'consolidado' && ! $entregasCreadas->isEmpty()) {
                 try {
                     $reporteConsolidado = $this->reporteCargoService->generarReporteConsolidado(
                         $entregasCreadas->toArray(),
@@ -798,7 +816,7 @@ class EntregaService
                     );
 
                     $this->logSuccess('Reporte consolidado generado', [
-                        'reporte_id' => $reporteConsolidado->id,
+                        'reporte_id'     => $reporteConsolidado->id,
                         'entregas_count' => $entregasCreadas->count(),
                     ]);
 
@@ -810,7 +828,7 @@ class EntregaService
                     ]);
 
                     $errores[] = [
-                        'tipo' => 'reporte_consolidado',
+                        'tipo'  => 'reporte_consolidado',
                         'error' => "Reporte consolidado no generado: {$e->getMessage()}",
                     ];
                 }
@@ -818,38 +836,39 @@ class EntregaService
 
             // 2. Preparar respuesta
             $respuesta = [
-                'entregas' => $entregasCreadas,
+                'entregas'     => $entregasCreadas,
                 'estadisticas' => [
                     'total_creadas' => count($entregasCreadas),
                     'total_errores' => count($errores),
-                    'peso_total' => $entregasCreadas->sum('peso_kg'),
-                    'vehiculo' => [
-                        'id' => $vehiculo->id,
-                        'placa' => $vehiculo->placa,
+                    'peso_total'    => $entregasCreadas->sum('peso_kg'),
+                    'vehiculo'      => [
+                        'id'           => $vehiculo->id,
+                        'placa'        => $vehiculo->placa,
                         'capacidad_kg' => $vehiculo->capacidad_kg,
                     ],
-                    'chofer' => [
-                        'id' => $choferUser->id,
+                    'chofer'        => [
+                        'id'     => $choferUser->id,
                         'nombre' => $choferEmpleado->nombre,
                     ],
                 ],
-                'errores' => $errores,
+                'errores'      => $errores,
             ];
 
             // 3. Si se solicita optimización, calcular sugerencias de rutas
-            if ($optimizar && !$entregasCreadas->isEmpty()) {
-                $entregaIds = $entregasCreadas->pluck('id')->toArray();
-                $optimizacion = $this->optimizarAsignacionMasiva($entregaIds, $vehiculo->capacidad_kg);
+            if ($optimizar && ! $entregasCreadas->isEmpty()) {
+                $entregaIds                = $entregasCreadas->pluck('id')->toArray();
+                $optimizacion              = $this->optimizarAsignacionMasiva($entregaIds, $vehiculo->capacidad_kg);
                 $respuesta['optimizacion'] = $optimizacion;
             }
 
             return $respuesta;
         });
 
-        $this->logSuccess('Entregas en lote creadas', [
-            'total' => count($resultado['entregas']),
-            'vehiculo_id' => $vehiculoId,
-            'chofer_id' => $choferId,
+        $this->logSuccess('Entregas en lote creadas - Notificaciones WebSocket enviadas', [
+            'total'                => count($resultado['entregas']),
+            'vehiculo_id'          => $vehiculoId,
+            'chofer_id'            => $choferId,
+            'eventos_disparados'   => count($resultado['entregas']),  // Eventos EntregaAsignada disparados
         ]);
 
         return $resultado;
@@ -915,8 +934,8 @@ class EntregaService
 
             // Actualizar a EN_CARGA
             $entrega->update([
-                'estado' => Entrega::ESTADO_EN_CARGA,
-                'confirmado_carga_por' => Auth::id(),
+                'estado'                   => Entrega::ESTADO_EN_CARGA,
+                'confirmado_carga_por'     => Auth::id(),
                 'fecha_confirmacion_carga' => now(),
             ]);
 
@@ -941,7 +960,7 @@ class EntregaService
         } catch (\Exception $e) {
             $this->logError('Error enviando notificación WebSocket de carga confirmada', [
                 'entrega_id' => $entregaId,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
 
@@ -971,7 +990,7 @@ class EntregaService
                 Entrega::ESTADO_EN_CARGA,
             ];
 
-            if (!in_array($entrega->estado, $estadosValidos)) {
+            if (! in_array($entrega->estado, $estadosValidos)) {
                 throw EstadoInvalidoException::transicionInvalida(
                     'Entrega',
                     $entregaId,
@@ -987,20 +1006,20 @@ class EntregaService
                 ->where('categoria', 'entrega')
                 ->value('id');
 
-            if (!$estadoListoParaEntregaId) {
+            if (! $estadoListoParaEntregaId) {
                 throw new \Exception('Estado LISTO_PARA_ENTREGA no encontrado en tabla estados_logistica');
             }
 
             // ✅ Actualizar a LISTO_PARA_ENTREGA usando estado_entrega_id (FK normalizad)
             // También mantener el ENUM legacy por compatibilidad
             $entrega->update([
-                'estado' => Entrega::ESTADO_LISTO_PARA_ENTREGA,
+                'estado'            => Entrega::ESTADO_LISTO_PARA_ENTREGA,
                 'estado_entrega_id' => $estadoListoParaEntregaId,
             ]);
 
             \Log::info('✅ [LISTO_ENTREGA] Entrega marcada como LISTO_PARA_ENTREGA', [
-                'entrega_id' => $entrega->id,
-                'estado_anterior' => $estadoAnterior,
+                'entrega_id'        => $entrega->id,
+                'estado_anterior'   => $estadoAnterior,
                 'estado_entrega_id' => $estadoListoParaEntregaId,
             ]);
 
@@ -1010,7 +1029,6 @@ class EntregaService
                 Entrega::ESTADO_LISTO_PARA_ENTREGA,
                 'Carga completada - Entrega lista para partida'
             );
-
 
             // Recargar relaciones para WebSocket
             $entrega->load(['chofer', 'ventas.cliente', 'vehiculo']);
@@ -1026,7 +1044,7 @@ class EntregaService
         } catch (\Exception $e) {
             $this->logError('Error enviando notificación WebSocket de listo para entrega', [
                 'entrega_id' => $entregaId,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
 
@@ -1062,8 +1080,8 @@ class EntregaService
             $entrega,
             'EN_TRANSITO',
             [
-                'latitud_actual' => $latitud,
-                'longitud_actual' => $longitud,
+                'latitud_actual'         => $latitud,
+                'longitud_actual'        => $longitud,
                 'fecha_ultima_ubicacion' => now(),
             ],
             "Chofer iniciando tránsito - Ubicación inicial: ({$latitud}, {$longitud})"
@@ -1071,8 +1089,8 @@ class EntregaService
 
         $this->logSuccess('Entrega iniciada en tránsito', [
             'entrega_id' => $entregaId,
-            'latitud' => $latitud,
-            'longitud' => $longitud,
+            'latitud'    => $latitud,
+            'longitud'   => $longitud,
         ]);
 
         // Recargar relaciones para WebSocket
@@ -1084,7 +1102,7 @@ class EntregaService
         } catch (\Exception $e) {
             $this->logError('Error enviando notificación WebSocket de inicio de tránsito', [
                 'entrega_id' => $entregaId,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
 
@@ -1105,15 +1123,15 @@ class EntregaService
 
         if ($entrega->estado === Entrega::ESTADO_EN_TRANSITO) {
             $entrega->update([
-                'latitud_actual' => $latitud,
-                'longitud_actual' => $longitud,
+                'latitud_actual'         => $latitud,
+                'longitud_actual'        => $longitud,
                 'fecha_ultima_ubicacion' => now(),
             ]);
 
             $this->logSuccess('Ubicación GPS actualizada', [
                 'entrega_id' => $entregaId,
-                'latitud' => $latitud,
-                'longitud' => $longitud,
+                'latitud'    => $latitud,
+                'longitud'   => $longitud,
             ]);
 
             // Notificar por WebSocket a cliente sobre actualización de ubicación
@@ -1122,7 +1140,7 @@ class EntregaService
             } catch (\Exception $e) {
                 $this->logError('Error enviando notificación WebSocket de actualización de ubicación', [
                     'entrega_id' => $entregaId,
-                    'error' => $e->getMessage(),
+                    'error'      => $e->getMessage(),
                 ]);
             }
         }

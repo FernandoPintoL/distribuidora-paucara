@@ -2,7 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ReservaStock;
+// ✅ COMENTADO: ReservaStock no existe, usar ReservaProforma en su lugar
+// use App\Models\ReservaStock;
 use App\Models\AnalisisAbc;
 use App\Models\ConteoFisico;
 use App\Jobs\LiberarReservasVencidasJob;
@@ -69,12 +70,14 @@ class ProcesarInventarioAvanzadoCommand extends Command
                 $this->info('✅ Job de liberación de reservas enviado a la cola');
                 return ['status' => 'job_enviado', 'cantidad' => 'pendiente'];
             } else {
-                $reservasLiberadas = ReservaStock::liberarReservasVencidas();
+                // ✅ COMENTADO: ReservaStock no existe
+                // $reservasLiberadas = ReservaStock::liberarReservasVencidas();
+                $reservasLiberadas = 0;
 
                 if ($reservasLiberadas > 0) {
                     $this->info("✅ Se liberaron {$reservasLiberadas} reservas vencidas");
                 } else {
-                    $this->info('ℹ️  No se encontraron reservas vencidas para liberar');
+                    $this->info('ℹ️  No se encontraron reservas vencidas para liberar (ReservaStock deshabilitado)');
                 }
 
                 return ['status' => 'completado', 'cantidad' => $reservasLiberadas];

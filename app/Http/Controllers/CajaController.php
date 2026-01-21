@@ -22,6 +22,7 @@ class CajaController extends Controller
         $this->middleware('permission:cajas.abrir')->only('abrirCaja');
         $this->middleware('permission:cajas.cerrar')->only('cerrarCaja');
         $this->middleware('permission:cajas.transacciones')->only('movimientosDia');
+        $this->middleware('permission:cajas.corregir')->only('corregirCierre');
     }
 
     /**
@@ -173,7 +174,10 @@ class CajaController extends Controller
             // Calcular diferencia
             $diferencia = $request->monto_real - $montoEsperado;
 
-            // Crear cierre de caja
+            // Obtener estado PENDIENTE
+            $estadoPendiente = \App\Models\EstadoCierre::obtenerIdPendiente();
+
+            // Crear cierre de caja en estado PENDIENTE
             $cierre = CierreCaja::create([
                 'caja_id' => $apertura->caja_id,
                 'user_id' => $user->id,
@@ -183,6 +187,7 @@ class CajaController extends Controller
                 'monto_real' => $request->monto_real,
                 'diferencia' => $diferencia,
                 'observaciones' => $request->observaciones,
+                'estado_cierre_id' => $estadoPendiente,
             ]);
 
             // Si hay diferencia, crear movimiento de ajuste
@@ -204,6 +209,14 @@ class CajaController extends Controller
 
             DB::commit();
 
+            // Notificar a admins de nuevo cierre pendiente
+            try {
+                app(\App\Services\WebSocket\CajaWebSocketService::class)
+                    ->notifyCierrePendiente($cierre->fresh(['usuario', 'caja']));
+            } catch (\Exception $e) {
+                Log::warning('Error notificando cierre pendiente', ['cierre_id' => $cierre->id]);
+            }
+
             Log::info('Caja cerrada exitosamente', [
                 'user_id' => $user->id,
                 'caja_id' => $apertura->caja_id,
@@ -212,7 +225,7 @@ class CajaController extends Controller
                 'diferencia' => $diferencia,
             ]);
 
-            return back()->with('success', 'Caja cerrada exitosamente. Diferencia: '.number_format($diferencia, 2).' Bs.');
+            return back()->with('success', 'Caja cerrada exitosamente. Pendiente de verificación. Diferencia: '.number_format($diferencia, 2).' Bs.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -426,6 +439,42 @@ class CajaController extends Controller
             'estadisticas' => $estadisticas,
             'fecha_inicio' => $fecha_inicio,
             'fecha_fin' => $fecha_fin,
+        ]);
+    }
+
+    /**
+     * Corregir un cierre de caja rechazado
+     */
+    public function corregirCierre(Request $request, $id)
+    {
+        $request->validate([
+            'monto_real' => 'required|numeric|min:0',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        $user = Auth::user();
+        $cierre = CierreCaja::findOrFail($id);
+
+        // Verificar que el usuario sea el dueño del cierre
+        if ($cierre->user_id !== $user->id) {
+            return back()->withErrors([
+                'cierre' => 'No estás autorizado para corregir este cierre.',
+            ]);
+        }
+
+        // Verificar que el cierre esté en estado RECHAZADA
+        if ($cierre->estado !== CierreCaja::RECHAZADA) {
+            return back()->withErrors([
+                'cierre' => 'Solo puedes corregir cierres rechazados.',
+            ]);
+        }
+
+        if ($cierre->corregir($user, $request->monto_real, $request->observaciones)) {
+            return back()->with('success', 'Cierre corregido exitosamente. Pendiente de nueva verificación.');
+        }
+
+        return back()->withErrors([
+            'cierre' => 'Error al corregir el cierre. Intenta nuevamente.',
         ]);
     }
 }

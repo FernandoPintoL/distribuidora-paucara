@@ -3,16 +3,17 @@ namespace App\Services\Venta;
 
 use App\DTOs\Venta\CrearProformaDTO;
 use App\DTOs\Venta\ProformaResponseDTO;
+use App\Exceptions\Caja\CajaNoAbiertaException;
 use App\Exceptions\Stock\StockInsuficientException;
 use App\Exceptions\Venta\EstadoInvalidoException;
 use App\Models\Cliente;
 use App\Models\DetalleProforma;
 use App\Models\Proforma;
-use App\Models\ReservaStock;
 use App\Services\Stock\StockService;
 use App\Services\Traits\LogsOperations;
 use App\Services\Traits\ManagesTransactions;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -119,7 +120,7 @@ class ProformaService
 
         // 3. Validar stock ANTES de transacción
         // 🔧 Usar almacén del usuario autenticado (consistencia con convertirAVenta)
-        $almacenId = auth()->user()?->empresa?->almacen_id ?? 2;
+        $almacenId  = auth()->user()?->empresa?->almacen_id ?? 2;
         $validacion = $this->stockService->validarDisponible(
             $dto->detalles,
             $almacenId
@@ -138,18 +139,19 @@ class ProformaService
                 ->first();
 
             $proforma = Proforma::create([
-                'numero'            => $this->generarNumero(),
-                'cliente_id'        => $dto->cliente_id,
-                'usuario_creador_id'=> $dto->usuario_id ?? Auth::id(),
-                'fecha'             => $dto->fecha,
-                'fecha_vencimiento' => $dto->fecha_vencimiento,
-                'subtotal'          => $dto->subtotal,
-                'impuesto'          => $dto->impuesto,
-                'total'             => $dto->total,
-                'estado_proforma_id'=> $estadoPendiente?->id ?? 1,
-                'observaciones'     => $dto->observaciones,
-                'canal_origen'      => $dto->canal ?? 'PRESENCIAL',
-                'politica_pago'     => $dto->politica_pago ?? 'CONTRA_ENTREGA',
+                'numero'             => $this->generarNumero(),
+                'cliente_id'         => $dto->cliente_id,
+                'usuario_creador_id' => $dto->usuario_id ?? Auth::id(),
+                'fecha'              => $dto->fecha,
+                'fecha_vencimiento'  => $dto->fecha_vencimiento,
+                'subtotal'           => $dto->subtotal,
+                'impuesto'           => $dto->impuesto,
+                'total'              => $dto->total,
+                'estado_proforma_id' => $estadoPendiente?->id ?? 1,
+                'observaciones'      => $dto->observaciones,
+                'canal_origen'       => $dto->canal ?? 'PRESENCIAL',
+                'politica_pago'      => $dto->politica_pago ?? 'CONTRA_ENTREGA',
+                'moneda_id'          => 1,  // ✅ Bolivianos por defecto
                 // Nota: almacen_id no se asigna en proforma, se usa del usuario al convertir a venta
             ]);
 
@@ -164,16 +166,25 @@ class ProformaService
                 ]);
             }
 
-            // 3.3 RESERVAR stock (no consumir)
-            foreach ($dto->detalles as $detalle) {
-                ReservaStock::create([
-                    'proforma_id'               => $proforma->id,
-                    'producto_id'               => $detalle['producto_id'],
-                    'cantidad'                  => $detalle['cantidad'],
-                    'almacen_id'                => $almacenId,
-                    'fecha_vencimiento_reserva' => $dto->fecha_vencimiento,
-                ]);
+            // 3.3 RESERVAR stock (manejado por Proforma::reservarStock())
+            // Ver: El modelo Proforma tiene el método reservarStock() que:
+            // - Crea registros en tabla reservas_proforma
+            // - Decrementa stock_productos.cantidad_disponible
+            // - Usa transacciones y bloqueos pesimistas
+
+            Log::info('🔄 [ProformaService::crear] Reservando stock para proforma', [
+                'proforma_id' => $proforma->id,
+            ]);
+
+            if (!$proforma->reservarStock()) {
+                throw new \Exception(
+                    'No se pudo reservar el stock requerido para la proforma. Verifica disponibilidad.'
+                );
             }
+
+            Log::info('✅ [ProformaService::crear] Stock reservado exitosamente', [
+                'proforma_id' => $proforma->id,
+            ]);
 
             // 3.4 Emitir evento
             event(new \App\Events\ProformaCreada($proforma));
@@ -241,8 +252,9 @@ class ProformaService
 
             $this->validarTransicion($proforma->estado, 'RECHAZADA');
 
-            // Liberar reserva de stock
-            ReservaStock::where('proforma_id', $proformaId)->delete();
+            // Liberar reservas de stock (manejado por modelo Proforma)
+            // Esto devuelve la cantidad_disponible y elimina registros de reservas_proforma
+            $proforma->liberarReservas();
 
             // ✅ Obtener el estado RECHAZADA (ID=3 en estados_logistica, categoría: proforma)
             $estadoRechazada = \App\Models\EstadoLogistica::where('codigo', 'RECHAZADA')
@@ -250,9 +262,10 @@ class ProformaService
                 ->where('activo', true)
                 ->first();
 
-            $proforma->update([
+            // ✅ Usar updateQuietly() para NO disparar el observer (ya liberamos reservas arriba)
+            $proforma->updateQuietly([
                 'estado_proforma_id' => $estadoRechazada?->id ?? 3,
-                'observaciones' => ($proforma->observaciones ?? '') . "\nMotivo rechazo: {$motivo}",
+                'observaciones'      => ($proforma->observaciones ?? '') . "\nMotivo rechazo: {$motivo}",
             ]);
 
             event(new \App\Events\ProformaRechazada($proforma, $motivo));
@@ -300,12 +313,13 @@ class ProformaService
                 'total'       => $proforma->total,
             ]);
 
-            // Validar estado
-            if ($proforma->estado !== 'APROBADA') {
+            // ✅ SIMPLIFICADO: Aceptar tanto PENDIENTE como APROBADA
+            // Esto permite convertir directamente sin paso de aprobación manual
+            if (!in_array($proforma->estado, ['PENDIENTE', 'APROBADA'])) {
                 Log::warning('⚠️ [ProformaService::convertirAVenta] Estado inválido', [
                     'proforma_id'     => $proformaId,
                     'estado_actual'   => $proforma->estado,
-                    'estado_esperado' => 'APROBADA',
+                    'estado_esperado' => 'PENDIENTE o APROBADA',
                 ]);
                 throw EstadoInvalidoException::transicionInvalida(
                     'Proforma',
@@ -359,6 +373,52 @@ class ProformaService
             // Obtener política de pago (puede venir del cliente o usar default)
             $politicaPago = $this->obtenerPoliticaPago($proforma);
 
+            // ✅ NUEVO: Validar que hay caja abierta si requiere pago inmediato
+            // Políticas que requieren pago en efectivo/caja abierta:
+            // - ANTICIPADO_100: 100% al contado
+            // - MEDIO_MEDIO: 50% ahora + 50% al recibir
+            $politicasQueRequierenCaja = [
+                Proforma::POLITICA_ANTICIPADO_100,
+                Proforma::POLITICA_MEDIO_MEDIO,
+            ];
+
+            if (in_array($politicaPago, $politicasQueRequierenCaja)) {
+                $usuarioActual = Auth::user();
+                $empleado      = $usuarioActual?->empleado;
+
+                // Verificar que el usuario es cajero con caja abierta
+                if (! $empleado || ! $empleado->esCajero() || ! $empleado->tieneCajaAbierta()) {
+                    $descripcionPolitica = $politicaPago === Proforma::POLITICA_ANTICIPADO_100
+                        ? 'AL CONTADO (100% ANTICIPADO)'
+                        : 'MEDIO-MEDIO (50% AHORA + 50% AL RECIBIR)';
+
+                    Log::warning('⚠️ [ProformaService::convertirAVenta] Intento de conversión sin caja abierta', [
+                        'proforma_id'        => $proformaId,
+                        'politica_pago'      => $politicaPago,
+                        'usuario_id'         => $usuarioActual?->id,
+                        'es_cajero'          => $empleado?->esCajero() ?? false,
+                        'tiene_caja_abierta' => $empleado?->tieneCajaAbierta() ?? false,
+                    ]);
+
+                    throw CajaNoAbiertaException::conDetalles(
+                        operacion: "Convertir proforma a venta (pago $descripcionPolitica)",
+                        usuarioId: $usuarioActual?->id,
+                        extra: [
+                            'proforma_id'   => $proformaId,
+                            'politica_pago' => $politicaPago,
+                            'motivo'        => "Esta proforma tiene política de pago $descripcionPolitica que requiere caja abierta",
+                        ]
+                    );
+                }
+
+                Log::info('✅ [ProformaService::convertirAVenta] Validación de caja exitosa', [
+                    'proforma_id'   => $proformaId,
+                    'politica_pago' => $politicaPago,
+                    'usuario_id'    => $usuarioActual->id,
+                    'caja_id'       => $empleado->cajaAbierta()?->id,
+                ]);
+            }
+
             // Calcular ventanas de entrega
             $ventanas = $this->calcularVentanasEntrega($proforma);
 
@@ -373,8 +433,8 @@ class ProformaService
             $estadoDocumentoIdFinal = $estadoAprobado?->id ?? 3;
             Log::info('📋 [ProformaService::convertirAVenta] Estado APROBADO obtenido', [
                 'estado_documento_id_encontrado' => $estadoAprobado?->id,
-                'estado_documento_id_final' => $estadoDocumentoIdFinal,
-                'estado_codigo' => $estadoAprobado?->codigo ?? 'FALLBACK A 3',
+                'estado_documento_id_final'      => $estadoDocumentoIdFinal,
+                'estado_codigo'                  => $estadoAprobado?->codigo ?? 'FALLBACK A 3',
             ]);
 
             // ✅ NUEVO: Obtener montos pagados en la aprobación (si los hay)
@@ -441,24 +501,41 @@ class ProformaService
                 'estado_logistico_codigo' => $estadoLogisticoInfo,
             ]);
 
-            // Liberar reserva de stock (COMENTADO: sera implementado con referencia_id correctamente)
-            Log::info('🔄 [ProformaService::convertirAVenta] Liberando reserva de stock', [
+            Log::debug('🔍 [ProformaService::convertirAVenta] Punto crítico: verificando proforma..', [
                 'proforma_id' => $proformaId,
+                'proforma_estado_en_memoria' => $proforma->estado,
             ]);
 
-            // ReservaStock::where('proforma_id', $proformaId)->delete();
-            // Usar referencia_id en su lugar cuando se implemente correctamente
-            ReservaStock::where('referencia_tipo', 'proforma')
-                ->where('referencia_id', $proformaId)
-                ->update(['estado' => 'utilizada']);
+            // ✅ IMPORTANTE: Consumir las reservas de stock (manejado por modelo Proforma)
+            // Esto marca las reservas_proforma como consumidas
+            Log::info('🔄 [ProformaService::convertirAVenta] Consumiendo reservas de stock', [
+                'proforma_id' => $proformaId,
+                'transaction_level' => DB::transactionLevel(),
+            ]);
 
-            Log::info('✅ [ProformaService::convertirAVenta] Reserva de stock marcada como utilizada', [
+            try {
+                $resultadoConsumir = $proforma->consumirReservas();
+                Log::info('✅ consumirReservas() retornó', [
+                    'proforma_id' => $proformaId,
+                    'resultado' => $resultadoConsumir,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('❌ consumirReservas() lanzó excepción', [
+                    'proforma_id' => $proformaId,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                throw $e;
+            }
+
+            Log::info('✅ [ProformaService::convertirAVenta] Reservas de stock consumidas', [
                 'proforma_id' => $proformaId,
             ]);
 
             // Marcar proforma como convertida
             // 🔧 Usar el ID correcto del estado (4 = CONVERTIDA en estados_logistica)
-            $proforma->update(['estado_proforma_id' => 4]);
+            // ✅ Usar updateQuietly() para NO disparar el observer (ya consumimos reservas arriba)
+            $proforma->updateQuietly(['estado_proforma_id' => 4]);
 
             Log::info('✅ [ProformaService::convertirAVenta] Proforma marcada como CONVERTIDA', [
                 'proforma_id' => $proformaId,
@@ -500,6 +577,7 @@ class ProformaService
             'cliente',
             'direccionSolicitada',
             'direccionConfirmada',
+            'moneda',
         ])->findOrFail($proformaId);
 
         return ProformaResponseDTO::fromModel($proforma);
@@ -523,9 +601,9 @@ class ProformaService
 
             $proforma->update(['fecha_vencimiento' => $nuevaFechaVencimiento]);
 
-            // Actualizar también reservas
-            ReservaStock::where('proforma_id', $proformaId)
-                ->update(['fecha_vencimiento_reserva' => $nuevaFechaVencimiento]);
+            // ✅ Actualizar también reservas (usar ReservaProforma, no ReservaStock)
+            \App\Models\ReservaProforma::where('proforma_id', $proformaId)
+                ->update(['fecha_expiracion' => $nuevaFechaVencimiento]);
 
             return $proforma;
         });

@@ -144,6 +144,7 @@ export interface Entrega extends BaseEntity {
     proforma_id?: Id;
     vehiculo_id?: Id;
     chofer_id?: Id;
+    zona_id?: Id;                  // FK a localidades (agrupación por localidad de entrega)
 
     // Información de entrega
     fecha_programada: string;
