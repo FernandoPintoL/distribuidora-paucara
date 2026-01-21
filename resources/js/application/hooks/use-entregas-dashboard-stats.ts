@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useWebSocketContext } from '@/application/contexts';
 
 // ✅ ACTUALIZADO: Usar Record<string, number> para soportar cualquier código de estado
 // Esto permite que el dashboard sea agnóstico a qué códigos existen en la BD
@@ -68,9 +69,9 @@ export interface EntregasDashboardStats {
 }
 
 interface UseEntregasDashboardStatsOptions {
-    /** Habilitar actualización automática (default: true) */
+    /** Habilitar actualización automática vía WebSocket (default: true) */
     autoRefresh?: boolean;
-    /** Intervalo de actualización en segundos (default: 30) */
+    /** Intervalo de polling fallback en segundos (default: 60, solo si WebSocket falla) */
     refreshInterval?: number;
     /** Datos iniciales del servidor (SSR con Inertia) */
     initialData?: Partial<EntregasDashboardStats>;
@@ -79,7 +80,7 @@ interface UseEntregasDashboardStatsOptions {
 export function useEntregasDashboardStats(options: UseEntregasDashboardStatsOptions = {}) {
     const {
         autoRefresh = true,
-        refreshInterval = 30,
+        refreshInterval = 60,
         initialData,
     } = options;
 
@@ -89,9 +90,19 @@ export function useEntregasDashboardStats(options: UseEntregasDashboardStatsOpti
     const [loading, setLoading] = useState<boolean>(!initialData);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+    const [usingWebSocket, setUsingWebSocket] = useState<boolean>(false);
+
+    // ✅ Acceder al contexto WebSocket
+    let wsContext: any = null;
+    try {
+        wsContext = useWebSocketContext();
+    } catch (e) {
+        // WebSocketProvider no está disponible, usar polling
+        console.log('⚠️ WebSocket no disponible, usando polling...');
+    }
 
     /**
-     * Cargar estadísticas desde el endpoint
+     * Cargar estadísticas desde el endpoint HTTP
      */
     const fetchStats = useCallback(async () => {
         try {
@@ -103,6 +114,7 @@ export function useEntregasDashboardStats(options: UseEntregasDashboardStatsOpti
             if (response.data.success) {
                 setStats(response.data.data);
                 setLastUpdate(new Date());
+                console.log('✅ Stats cargadas desde HTTP');
             } else {
                 throw new Error('Error en la respuesta del servidor');
             }
@@ -132,17 +144,46 @@ export function useEntregasDashboardStats(options: UseEntregasDashboardStatsOpti
     }, [initialData, fetchStats]);
 
     /**
-     * Efecto para actualización automática
+     * ✅ Efecto para conectar a WebSocket y escuchar actualizaciones en tiempo real
      */
     useEffect(() => {
-        if (!autoRefresh) return;
+        if (!wsContext || !autoRefresh) return;
+
+        const handleStatsUpdate = (newStats: EntregasDashboardStats) => {
+            console.log('📡 Estadísticas actualizadas desde WebSocket:', newStats);
+            setStats(newStats);
+            setLastUpdate(new Date());
+            setUsingWebSocket(true);
+            setError(null);
+        };
+
+        // Escuchar evento de actualización de estadísticas de entregas
+        wsContext.on('entregas:stats-updated', handleStatsUpdate);
+
+        // Solicitar stats iniciales por WebSocket cuando se conecta
+        if (wsContext.isConnected) {
+            console.log('🚀 Solicitando stats por WebSocket...');
+            wsContext.emit('entregas:get-stats');
+        }
+
+        return () => {
+            wsContext.off('entregas:stats-updated', handleStatsUpdate);
+        };
+    }, [wsContext?.isConnected, autoRefresh, wsContext]);
+
+    /**
+     * ✅ Efecto para polling fallback (solo si WebSocket no está disponible o deshabilitado)
+     */
+    useEffect(() => {
+        if (!autoRefresh || usingWebSocket) return;
 
         const intervalId = setInterval(() => {
+            console.log('⏰ Polling fallback: actualizando stats...');
             fetchStats();
         }, refreshInterval * 1000);
 
         return () => clearInterval(intervalId);
-    }, [autoRefresh, refreshInterval, fetchStats]);
+    }, [autoRefresh, refreshInterval, fetchStats, usingWebSocket]);
 
     return {
         stats,
@@ -150,5 +191,6 @@ export function useEntregasDashboardStats(options: UseEntregasDashboardStatsOpti
         error,
         lastUpdate,
         refresh,
+        usingWebSocket,
     };
 }
