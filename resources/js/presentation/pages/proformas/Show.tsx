@@ -379,6 +379,8 @@ export default function ProformasShow({ item: proforma }: Props) {
     const [motivoRechazo, setMotivoRechazo] = useState('')
     const [showCoordinacionForm, setShowCoordinacionForm] = useState(true)
     const [showMapaEntrega, setShowMapaEntrega] = useState(false)
+    // ✅ Estado para mostrar/ocultar card de dirección
+    const [showDireccionCard, setShowDireccionCard] = useState(true)
     const [convertErrorState, setConvertErrorState] = useState<{ code?: string; message?: string; reservasExpiradas?: number } | null>(null)
 
     // ✅ NUEVO: Estados para navegación a siguiente proforma
@@ -800,6 +802,27 @@ export default function ProformasShow({ item: proforma }: Props) {
             console.log('%c✅ PASO 2 completado: Proforma convertida a venta', 'color: green;', convertirData);
             toast.success('✅ Proforma convertida a venta exitosamente');
 
+            // ✅ PASO 3: Actualizar stocks (nuevo endpoint simplificado)
+            console.log('%c⏳ PASO 3: Actualizando stocks...', 'color: blue;');
+
+            const procesarResponse = await fetch(`/proformas/${proforma.id}/procesar-venta`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            if (!procesarResponse.ok) {
+                const errorData = await procesarResponse.json();
+                console.warn('⚠️ PASO 3 completado con aviso:', errorData);
+                toast.warning('Proforma convertida, pero hubo un aviso al actualizar stocks');
+            } else {
+                const procesarData = await procesarResponse.json();
+                console.log('%c✅ PASO 3 completado: Stocks actualizados', 'color: green;', procesarData);
+                toast.success('✅ Stocks actualizados correctamente');
+            }
+
             // Actualizar estado del flujo con éxito
             if (approvalFlow) {
                 approvalFlow.setVentaCreada(convertirData.data?.venta || {});
@@ -811,7 +834,7 @@ export default function ProformasShow({ item: proforma }: Props) {
             setShowAprobarDialog(false);
 
             // Mostrar notificación de éxito
-            const successMessage = `Proforma aprobada y convertida a venta exitosamente`;
+            const successMessage = `Proforma aprobada, convertida a venta y stocks actualizados exitosamente`;
             console.log('%c🎉 ' + successMessage, 'color: green; font-weight: bold;');
 
             // ✅ CRÍTICO: Resetear flag ANTES de recargar la página
@@ -934,8 +957,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
                                 </p>
 
-                                {/* Grid de información adicional */}
-                                <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
+                                {/* Información adicional - Horizontal en una sola línea */}
+                                <div className="flex flex-wrap gap-4 mt-3 text-sm">
                                     {/* Origen */}
                                     {proforma.canal_origen && (
                                         <div className="flex flex-col">
@@ -968,6 +991,14 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         </div>
                                     )}
 
+                                    {/* Moneda */}
+                                    {proforma.moneda && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Moneda</span>
+                                            <span className="font-medium text-foreground">{proforma.moneda.codigo}</span>
+                                        </div>
+                                    )}
+
                                     {/* Items */}
                                     {(proforma.items_count ?? 0) > 0 && (
                                         <div className="flex flex-col">
@@ -975,12 +1006,48 @@ export default function ProformasShow({ item: proforma }: Props) {
                                             <span className="font-medium text-foreground">{proforma.items_count} producto{(proforma.items_count ?? 0) !== 1 ? 's' : ''}</span>
                                         </div>
                                     )}
+                                </div>
 
-                                    {/* Moneda */}
-                                    {proforma.moneda && (
+                                {/* Información del Cliente - Horizontal */}
+                                <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border/30 text-sm">
+                                    {/* Nombre del Cliente */}
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-muted-foreground font-medium">Cliente</span>
+                                        <span className="font-medium text-foreground">{proforma.cliente.nombre}</span>
+                                    </div>
+
+                                    {/* Email */}
+                                    {proforma.cliente.email && (
                                         <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Moneda</span>
-                                            <span className="font-medium text-foreground">{proforma.moneda.codigo}</span>
+                                            <span className="text-xs text-muted-foreground font-medium">Email</span>
+                                            <span className="font-medium text-foreground truncate">{proforma.cliente.email}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Teléfono */}
+                                    {proforma.cliente.telefono && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Teléfono</span>
+                                            <div className="flex items-center gap-1">
+                                                <span className="font-medium text-foreground">{proforma.cliente.telefono}</span>
+                                                <a
+                                                    href={`https://wa.me/${proforma.cliente.telefono.replace(/\D/g, '')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    title="Abrir en WhatsApp"
+                                                    className="inline-flex items-center justify-center h-5 w-5 rounded bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                                                >
+                                                    <MessageCircle className="h-3 w-3" />
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Dirección */}
+                                    {proforma.cliente.direccion && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Dirección</span>
+                                            <span className="font-medium text-foreground truncate max-w-xs">{proforma.cliente.direccion}</span>
                                         </div>
                                     )}
                                 </div>
@@ -998,7 +1065,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                             </div>
                         </div>
                     </div>
-                    <div className="flex gap-[var(--space-sm)] flex-wrap items-center">
+                    <div className="flex flex-col md:flex-row gap-[var(--space-sm)] flex-wrap items-center">
                         <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
 
                         {puedeAprobar && (
@@ -1062,7 +1129,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                     </div>
                 </div>
 
-                <div className="grid gap-[var(--space-lg)] lg:grid-cols-3">
+                <div className="grid gap-[var(--space-lg)]">
                     {/* Información principal */}
                     <div className="lg:col-span-2 space-y-[var(--space-lg)]">
                         {/* Advertencia sobre cambios locales */}
@@ -1298,8 +1365,114 @@ export default function ProformasShow({ item: proforma }: Props) {
                             </ProformaCard>
                         )}
 
+                        {proforma.direccion_solicitada && (
+                            <ProformaCard
+                                variant="info"
+                                title="Dirección de Entrega"
+                                // ✅ Botón toggle en el header para mostrar/ocultar
+                                headerAction={
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setShowDireccionCard(!showDireccionCard)}
+                                        className="h-6 w-6 p-0"
+                                    >
+                                        {showDireccionCard ? (
+                                            <ChevronUp className="h-4 w-4" />
+                                        ) : (
+                                            <ChevronDown className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                }
+                                isCollapsed={!showDireccionCard}
+                            >
+                                <div className="space-y-[var(--space-sm)]">
+                                    <div>
+                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase">Dirección Solicitada</div>
+                                        <div className="text-[var(--text-sm)] mt-2 text-muted-foreground">
+                                            {proforma.direccion_solicitada.direccion}
+                                        </div>
+                                    </div>
 
+                                    {proforma.direccion_solicitada.latitud && proforma.direccion_solicitada.longitud ? (
+                                        <>
+                                            {/* Mostrar coordenadas */}
+                                            <div className="text-[var(--text-xs)] text-muted-foreground">
+                                                <span className="font-medium">Coordenadas:</span> {proforma.direccion_solicitada.latitud.toFixed(4)}, {proforma.direccion_solicitada.longitud.toFixed(4)}
+                                            </div>
 
+                                            {/* Botón para mostrar mapa - LAZY LOAD */}
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => setShowMapaEntrega(true)}
+                                                className="w-full mt-2 text-sm"
+                                            >
+                                                <MapPin className="h-4 w-4 mr-1" />
+                                                Ver ubicación en mapa
+                                            </Button>
+
+                                            {/* Modal expandible con mapa - Optimizado para mobile */}
+                                            {showMapaEntrega && (
+                                                <div className="pt-[var(--space-sm)] border-t space-y-[var(--space-sm)] animate-in fade-in duration-200">
+                                                    <div className="text-[var(--text-xs)] font-medium text-muted-foreground mb-2">
+                                                        📍 Ubicación en el mapa:
+                                                    </div>
+
+                                                    {/* Contenedor responsive del mapa */}
+                                                    <div className="rounded-lg overflow-hidden border border-border/50">
+                                                        <MapViewWithFallback
+                                                            latitude={proforma.direccion_solicitada.latitud}
+                                                            longitude={proforma.direccion_solicitada.longitud}
+                                                            height="280px"
+                                                            zoom={16}
+                                                            markerTitle="Ubicación de entrega solicitada"
+                                                        />
+                                                    </div>
+
+                                                    {/* Botón para cerrar - Mobile optimizado */}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setShowMapaEntrega(false)}
+                                                        className="w-full text-xs hover:bg-muted"
+                                                    >
+                                                        ✕ Cerrar mapa
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="text-[var(--text-xs)] text-amber-600 dark:text-amber-400">
+                                            No hay coordenadas disponibles para esta dirección
+                                        </div>
+                                    )}
+
+                                    {proforma.fecha_entrega_solicitada && (
+                                        <div className="pt-[var(--space-sm)] border-t">
+                                            <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase mb-1">Fecha Solicitada</div>
+                                            <div className="text-[var(--text-sm)] font-medium">
+                                                {new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES')}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {proforma.hora_entrega_solicitada && (
+                                        <div>
+                                            <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase mb-1">Hora Solicitada</div>
+                                            <div className="text-[var(--text-sm)] font-medium">
+                                                {proforma.hora_entrega_solicitada}
+                                                {proforma.hora_entrega_solicitada_fin && (
+                                                    <span>
+                                                        {' - '}
+                                                        {proforma.hora_entrega_solicitada_fin}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </ProformaCard>
+                        )}
                         {/* Coordinación de Entrega - Mostrar cuando está PENDIENTE */}
                         {proforma.estado === 'PENDIENTE' && (
                             <Card>
@@ -1550,179 +1723,6 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 )}
                             </Card>
                         )}
-                    </div>
-
-                    {/* Información lateral */}
-                    <div className="space-y-[var(--space-lg)]">
-                        {/* Cliente */}
-                        <ProformaCard variant="default" title="Información del Cliente">
-                            <div className="space-y-[var(--space-md)]">
-                                {/* Nombre */}
-                                <div>
-                                    <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Nombre</div>
-                                    <div className="font-semibold text-[var(--text-base)] mt-1">{proforma.cliente.nombre}</div>
-                                </div>
-
-                                {/* Email */}
-                                {proforma.cliente.email && (
-                                    <div>
-                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Email</div>
-                                        <div className="text-[var(--text-sm)] mt-1 break-all">{proforma.cliente.email}</div>
-                                    </div>
-                                )}
-
-                                {/* Teléfono */}
-                                {proforma.cliente.telefono && (
-                                    <div className="space-y-2">
-                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Teléfono</div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[var(--text-sm)]">{proforma.cliente.telefono}</span>
-                                            <a
-                                                href={`https://wa.me/${proforma.cliente.telefono.replace(/\D/g, '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title="Abrir en WhatsApp"
-                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
-                                            >
-                                                <MessageCircle className="h-4 w-4" />
-                                            </a>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Dirección del cliente */}
-                                {proforma.cliente.direccion && (
-                                    <div className="border-t pt-[var(--space-md)]">
-                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase tracking-wide">Dirección Registrada</div>
-                                        <div className="text-[var(--text-sm)] mt-1 text-muted-foreground">
-                                            {proforma.cliente.direccion}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </ProformaCard>
-
-                        {/* Dirección de Entrega Solicitada */}
-                        {proforma.direccion_solicitada && (
-                            <ProformaCard variant="info" title="Dirección de Entrega">
-                                <div className="space-y-[var(--space-sm)]">
-                                    <div>
-                                        <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase">Dirección Solicitada</div>
-                                        <div className="text-[var(--text-sm)] mt-2 text-muted-foreground">
-                                            {proforma.direccion_solicitada.direccion}
-                                        </div>
-                                    </div>
-
-                                    {proforma.direccion_solicitada.latitud && proforma.direccion_solicitada.longitud ? (
-                                        <>
-                                            {/* Mostrar coordenadas */}
-                                            <div className="text-[var(--text-xs)] text-muted-foreground">
-                                                <span className="font-medium">Coordenadas:</span> {proforma.direccion_solicitada.latitud.toFixed(4)}, {proforma.direccion_solicitada.longitud.toFixed(4)}
-                                            </div>
-
-                                            {/* Botón para mostrar mapa - LAZY LOAD */}
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => setShowMapaEntrega(true)}
-                                                className="w-full mt-2 text-sm"
-                                            >
-                                                <MapPin className="h-4 w-4 mr-1" />
-                                                Ver ubicación en mapa
-                                            </Button>
-
-                                            {/* Modal expandible con mapa - Optimizado para mobile */}
-                                            {showMapaEntrega && (
-                                                <div className="pt-[var(--space-sm)] border-t space-y-[var(--space-sm)] animate-in fade-in duration-200">
-                                                    <div className="text-[var(--text-xs)] font-medium text-muted-foreground mb-2">
-                                                        📍 Ubicación en el mapa:
-                                                    </div>
-
-                                                    {/* Contenedor responsive del mapa */}
-                                                    <div className="rounded-lg overflow-hidden border border-border/50">
-                                                        <MapViewWithFallback
-                                                            latitude={proforma.direccion_solicitada.latitud}
-                                                            longitude={proforma.direccion_solicitada.longitud}
-                                                            height="280px"
-                                                            zoom={16}
-                                                            markerTitle="Ubicación de entrega solicitada"
-                                                        />
-                                                    </div>
-
-                                                    {/* Botón para cerrar - Mobile optimizado */}
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => setShowMapaEntrega(false)}
-                                                        className="w-full text-xs hover:bg-muted"
-                                                    >
-                                                        ✕ Cerrar mapa
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="text-[var(--text-xs)] text-amber-600 dark:text-amber-400">
-                                            No hay coordenadas disponibles para esta dirección
-                                        </div>
-                                    )}
-
-                                    {proforma.fecha_entrega_solicitada && (
-                                        <div className="pt-[var(--space-sm)] border-t">
-                                            <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase mb-1">Fecha Solicitada</div>
-                                            <div className="text-[var(--text-sm)] font-medium">
-                                                {new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES')}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {proforma.hora_entrega_solicitada && (
-                                        <div>
-                                            <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase mb-1">Hora Solicitada</div>
-                                            <div className="text-[var(--text-sm)] font-medium">
-                                                {proforma.hora_entrega_solicitada}
-                                                {proforma.hora_entrega_solicitada_fin && (
-                                                    <span>
-                                                        {' - '}
-                                                        {proforma.hora_entrega_solicitada_fin}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </ProformaCard>
-                        )}
-
-
-                        {/* Información adicional */}
-                        {/* <Card>
-                            <CardHeader>
-                                <CardTitle>Información y Auditoría</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div>
-                                    <div className="text-sm font-medium">Fecha de Creación:</div>
-                                    <div className="text-sm text-muted-foreground">
-                                        {new Date(proforma.fecha).toLocaleDateString('es-ES')}
-                                    </div>
-                                </div>
-                                <div className="border-t pt-3">
-                                    <div className="text-sm font-medium">Usuario Creador (Sistema):</div>
-                                    <div className="text-sm text-muted-foreground">
-                                        {proforma.usuarioCreador?.name || 'Sin asignar'}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Es el usuario del sistema asociado al cliente que creó la proforma
-                                    </p>
-                                </div>
-                                <div className="border-t pt-3">
-                                    <div className="text-sm font-medium">Última Actualización:</div>
-                                    <div className="text-sm text-muted-foreground">
-                                        {new Date(proforma.updated_at).toLocaleDateString('es-ES')}
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card> */}
                     </div>
                 </div>
             </div>

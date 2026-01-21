@@ -10,6 +10,10 @@ interface ProformaCardProps {
   children: React.ReactNode;
   className?: string;
   footerAction?: React.ReactNode;
+  // ✅ Nuevo: acción en el header (ej: botón toggle para mostrar/ocultar)
+  headerAction?: React.ReactNode;
+  // ✅ Nuevo: control de visibilidad del contenido
+  isCollapsed?: boolean;
 }
 
 const variantStyles: Record<CardVariant, string> = {
@@ -25,7 +29,9 @@ export function ProformaCard({
   icon,
   children,
   className,
-  footerAction
+  footerAction,
+  headerAction,
+  isCollapsed = false
 }: ProformaCardProps) {
   return (
     <Card className={cn(variantStyles[variant], className)}>
@@ -36,16 +42,23 @@ export function ProformaCard({
               {icon}
               {title}
             </span>
+            {/* ✅ Mostrar acción en el header si está disponible */}
+            {headerAction && <div className="ml-auto">{headerAction}</div>}
           </CardTitle>
         </CardHeader>
       )}
-      <CardContent className={!title ? 'pt-6' : ''}>
-        {children}
-      </CardContent>
-      {footerAction && (
-        <CardContent className="border-t pt-4 flex justify-end">
-          {footerAction}
-        </CardContent>
+      {/* ✅ Solo mostrar contenido si no está colapsado */}
+      {!isCollapsed && (
+        <>
+          <CardContent className={!title ? 'pt-6' : ''}>
+            {children}
+          </CardContent>
+          {footerAction && (
+            <CardContent className="border-t pt-4 flex justify-end">
+              {footerAction}
+            </CardContent>
+          )}
+        </>
       )}
     </Card>
   );
