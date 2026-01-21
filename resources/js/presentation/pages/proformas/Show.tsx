@@ -816,7 +816,7 @@ export default function ProformasShow({ item: proforma }: Props) {
             if (!procesarResponse.ok) {
                 const errorData = await procesarResponse.json();
                 console.warn('⚠️ PASO 3 completado con aviso:', errorData);
-                toast.warning('Proforma convertida, pero hubo un aviso al actualizar stocks');
+                toast('⚠️ Proforma convertida, pero hubo un aviso al actualizar stocks');
             } else {
                 const procesarData = await procesarResponse.json();
                 console.log('%c✅ PASO 3 completado: Stocks actualizados', 'color: green;', procesarData);
@@ -1245,40 +1245,6 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                         <span className="font-medium">{parseFloat(detalle.cantidad.toString()).toFixed(2)}</span>
                                                     )}
                                                 </TableCell>
-                                                {/* Columna de Rango */}
-                                                {/* <TableCell className="text-center">
-                                                    {(() => {
-                                                        const proximoRango = getProximoRango(detalle.producto_id as number)
-                                                        const ahorroDisponible = getAhorroDisponible(detalle.producto_id as number)
-
-                                                        if (ahorroDisponible && proximoRango) {
-                                                            return (
-                                                                <div className="text-xs space-y-1">
-                                                                    <div className="font-semibold text-amber-600 dark:text-amber-400">
-                                                                        Faltan {proximoRango.falta_cantidad} unidad{proximoRango.falta_cantidad !== 1 ? 'es' : ''}
-                                                                    </div>
-                                                                    <div className="text-muted-foreground">
-                                                                        para {proximoRango.cantidad_minima}+ ({proximoRango.tipo_precio_nombre})
-                                                                    </div>
-                                                                    <div className="text-green-600 dark:text-green-400 font-medium">
-                                                                        Ahorro: Bs {ahorroDisponible.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                                    </div>
-                                                                </div>
-                                                            )
-                                                        }
-
-                                                        const tipoPrecio = getTipoPrecio(detalle.producto_id as number)
-                                                        return tipoPrecio ? (
-                                                            <div className="text-xs">
-                                                                <div className="font-semibold text-foreground">
-                                                                    {tipoPrecio.nombre}
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground">Sin rango</span>
-                                                        )
-                                                    })()}
-                                                </TableCell> */}
                                                 {/* Precio actualizado según rango */}
                                                 <TableCell className="text-right font-medium">
                                                     {(() => {
@@ -1338,37 +1304,29 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 </Table>
 
                                 {/* Resumen de Totales en Tiempo Real */}
-                                {proforma.estado === 'PENDIENTE' && (
-                                    <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
-                                        {/* Indicador de cálculo en progreso */}
-                                        {isCalculandoRangos && (
-                                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex items-center gap-2">
-                                                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                                                <p className="text-xs text-blue-700 dark:text-blue-200">Recalculando precios...</p>
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-end gap-8">
-                                            {/* <div className="space-y-2 text-right">
-                                                <p className="text-sm text-muted-foreground">Subtotal:</p>
-                                                <p className="text-2xl font-bold text-foreground">
-                                                    Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </p>
-                                            </div> */}
-                                            <div className="space-y-2 text-right">
-                                                <p className="text-sm font-medium text-foreground">Total:</p>
-                                                <p className="text-2xl font-bold text-[var(--brand-primary)]">
-                                                    Bs. {totales.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                </p>
-                                            </div>
+                                <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
+                                    {/* Indicador de cálculo en progreso */}
+                                    {isCalculandoRangos && (
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex items-center gap-2">
+                                            <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                                            <p className="text-xs text-blue-700 dark:text-blue-200">Recalculando precios...</p>
                                         </div>
-                                        {totales.total !== proforma.total && (
-                                            <p className="text-xs text-amber-600 dark:text-amber-400 text-right italic">
-                                                ℹ️ Total modificado desde: Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                    )}
+
+                                    <div className="flex justify-end gap-8">
+                                        <div className="space-y-2 text-right">
+                                            <p className="text-sm font-medium text-foreground">Total:</p>
+                                            <p className="text-2xl font-bold text-[var(--brand-primary)]">
+                                                Bs. {totales.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                             </p>
-                                        )}
+                                        </div>
                                     </div>
-                                )}
+                                    {totales.total !== proforma.subtotal && (
+                                        <p className="text-xs text-amber-600 dark:text-amber-400 text-right italic">
+                                            ℹ️ Total modificado desde: Bs. {proforma.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                        </p>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
 
