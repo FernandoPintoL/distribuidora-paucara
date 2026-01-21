@@ -31,12 +31,14 @@ class LogisticaController extends Controller
             }
         }
 
-        // ✅ Búsqueda case-insensitive: número, cliente, CI, teléfono, código_cliente, preventista
+        // ✅ Búsqueda case-insensitive: ID, número, cliente, CI, teléfono, código_cliente, preventista
         if (request()->has('search') && request('search') !== '') {
             $search = strtolower(request('search'));
             $query->where(function ($q) use ($search) {
+                // Búsqueda en ID (número exacto)
+                $q->where('id', $search)
                 // Búsqueda en número de proforma
-                $q->whereRaw('LOWER(numero) like ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(numero) like ?', ["%{$search}%"])
                 // Búsqueda en cliente (nombre, CI, teléfono, código_cliente)
                     ->orWhereHas('cliente', function ($clienteQuery) use ($search) {
                         $clienteQuery->where(function ($innerQuery) use ($search) {
