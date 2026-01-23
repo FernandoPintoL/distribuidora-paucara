@@ -31,8 +31,8 @@ class CrearVentaDTO extends BaseDTO
         public ?string $canal_origen = 'WEB',
         public ?int $estado_logistico_id = null,
         // Campos de política de pago
-        public ?string $politica_pago = 'CONTRA_ENTREGA',
-        public ?string $estado_pago = 'PENDIENTE',
+        public ?string $politica_pago = 'ANTICIPADO_100',  // ✅ CAMBIO: Por defecto ANTICIPADO_100 para ventas directas
+        public ?string $estado_pago = 'PAGADO',  // ✅ CAMBIO: Por defecto PAGADO (consistente con proformas)
         // Campos de SLA y compromisos de entrega
         public ?string $fecha_entrega_comprometida = null,
         public ?string $hora_entrega_comprometida = null,
@@ -52,6 +52,10 @@ class CrearVentaDTO extends BaseDTO
     {
         $user = auth()->user();
 
+        // ✅ NUEVO: Obtener almacén de la empresa principal
+        $empresaPrincipal = \App\Models\Empresa::principal();
+        $almacenIdPorDefecto = $empresaPrincipal?->almacen_id ?? 1;
+
         return new self(
             cliente_id: (int) $request->input('cliente_id'),
             fecha: $request->input('fecha', today()->toDateString()),
@@ -60,9 +64,23 @@ class CrearVentaDTO extends BaseDTO
             impuesto: (float) $request->input('impuesto', 0),
             total: (float) $request->input('total', 0),
             peso_total_estimado: $request->has('peso_total_estimado') ? (float) $request->input('peso_total_estimado') : null,  // ✅ NUEVO
-            almacen_id: (int) $request->input('almacen_id', 1),
+            almacen_id: (int) $request->input('almacen_id', $almacenIdPorDefecto), // ✅ MODIFICADO: Usa almacén de empresa
             observaciones: $request->input('observaciones'),
             usuario_id: $user ? $user->id : null,
+            proforma_id: $request->has('proforma_id') ? (int) $request->input('proforma_id') : null,
+            direccion_cliente_id: $request->has('direccion_cliente_id') ? (int) $request->input('direccion_cliente_id') : null,
+            requiere_envio: $request->has('requiere_envio') ? (bool) $request->input('requiere_envio') : false,  // ✅ IMPORTANTE: Asegurar que se envíe false si no viene
+            canal_origen: $request->input('canal_origen', 'WEB'),
+            estado_logistico_id: $request->has('estado_logistico_id') ? (int) $request->input('estado_logistico_id') : null,
+            politica_pago: $request->input('politica_pago', 'ANTICIPADO_100'),
+            estado_pago: $request->input('estado_pago', 'PAGADO'),  // ✅ CAMBIO: Estado por defecto PAGADO (consistente con proformas)
+            fecha_entrega_comprometida: $request->input('fecha_entrega_comprometida'),
+            hora_entrega_comprometida: $request->input('hora_entrega_comprometida'),
+            ventana_entrega_ini: $request->input('ventana_entrega_ini'),
+            ventana_entrega_fin: $request->input('ventana_entrega_fin'),
+            idempotency_key: $request->input('idempotency_key'),
+            estado_documento_id: $request->has('estado_documento_id') ? (int) $request->input('estado_documento_id') : null,
+            monto_pagado_inicial: $request->has('monto_pagado_inicial') ? (float) $request->input('monto_pagado_inicial') : null,
         );
     }
 

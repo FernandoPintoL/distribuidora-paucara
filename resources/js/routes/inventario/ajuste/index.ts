@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\InventarioController::form
  * @see app/Http/Controllers/InventarioController.php:476
@@ -42,41 +42,6 @@ form.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:476
- * @route '/inventario/ajuste'
- */
-    const formForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: form.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:476
- * @route '/inventario/ajuste'
- */
-        formForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: form.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:476
- * @route '/inventario/ajuste'
- */
-        formForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: form.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    form.form = formForm
 /**
 * @see \App\Http\Controllers\InventarioController::procesar
  * @see app/Http/Controllers/InventarioController.php:500
@@ -110,28 +75,6 @@ procesar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: procesar.url(options),
     method: 'post',
 })
-
-    /**
-* @see \App\Http\Controllers\InventarioController::procesar
- * @see app/Http/Controllers/InventarioController.php:500
- * @route '/inventario/ajuste'
- */
-    const procesarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: procesar.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\InventarioController::procesar
- * @see app/Http/Controllers/InventarioController.php:500
- * @route '/inventario/ajuste'
- */
-        procesarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: procesar.url(options),
-            method: 'post',
-        })
-    
-    procesar.form = procesarForm
 const ajuste = {
     form,
 procesar,

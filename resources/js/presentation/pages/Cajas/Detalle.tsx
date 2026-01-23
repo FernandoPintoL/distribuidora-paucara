@@ -121,10 +121,10 @@ export default function Detalle({ caja, aperturas, movimientosHoy = [] }: Props)
   );
 
   const saldoEsperado =
-    aperturaSeleccionada?.monto_apertura || 0 + totalIngresos - totalEgresos;
+    (Number(aperturaSeleccionada?.monto_apertura) || 0) + totalIngresos - totalEgresos;
 
   const diferencia = aperturaSeleccionada?.cierre
-    ? aperturaSeleccionada.cierre.diferencia
+    ? Number(aperturaSeleccionada.cierre.diferencia) || 0
     : 0;
 
   return (
@@ -179,7 +179,7 @@ export default function Detalle({ caja, aperturas, movimientosHoy = [] }: Props)
                         Apertura
                       </p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        ${aperturaSeleccionada.monto_apertura.toFixed(2)}
+                        ${(Number(aperturaSeleccionada.monto_apertura) || 0).toFixed(2)}
                       </p>
                     </div>
                     <DollarSign className="h-8 w-8 text-blue-500" />
@@ -193,7 +193,7 @@ export default function Detalle({ caja, aperturas, movimientosHoy = [] }: Props)
                         Ingresos
                       </p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        ${totalIngresos.toFixed(2)}
+                        ${(Number(totalIngresos) || 0).toFixed(2)}
                       </p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-green-500" />
@@ -207,7 +207,7 @@ export default function Detalle({ caja, aperturas, movimientosHoy = [] }: Props)
                         Egresos
                       </p>
                       <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                        ${totalEgresos.toFixed(2)}
+                        ${(Number(totalEgresos) || 0).toFixed(2)}
                       </p>
                     </div>
                     <TrendingDown className="h-8 w-8 text-red-500" />
@@ -221,7 +221,7 @@ export default function Detalle({ caja, aperturas, movimientosHoy = [] }: Props)
                         Saldo Esperado
                       </p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        ${saldoEsperado.toFixed(2)}
+                        ${(Number(saldoEsperado) || 0).toFixed(2)}
                       </p>
                     </div>
                     <DollarSign className="h-8 w-8 text-gray-500" />
@@ -375,11 +375,11 @@ export default function Detalle({ caja, aperturas, movimientosHoy = [] }: Props)
                       )}
                     </TableCell>
                     <TableCell className="dark:text-gray-300">
-                      ${apertura.monto_apertura.toFixed(2)}
+                      ${(Number(apertura.monto_apertura) || 0).toFixed(2)}
                     </TableCell>
                     <TableCell className="dark:text-gray-300">
                       {apertura.cierre
-                        ? `$${apertura.cierre.montos_cierre.toFixed(2)}`
+                        ? `$${(Number(apertura.cierre.monto_real) || 0).toFixed(2)}`
                         : '-'}
                     </TableCell>
                     <TableCell>
@@ -393,7 +393,7 @@ export default function Detalle({ caja, aperturas, movimientosHoy = [] }: Props)
                               : 'text-red-600 dark:text-red-400 font-semibold'
                           }
                         >
-                          ${apertura.cierre.diferencia.toFixed(2)}
+                          ${(Number(apertura.cierre.diferencia) || 0).toFixed(2)}
                         </span>
                       ) : (
                         <span className="dark:text-gray-400">-</span>

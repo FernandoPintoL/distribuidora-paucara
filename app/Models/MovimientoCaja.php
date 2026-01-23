@@ -27,7 +27,7 @@ class MovimientoCaja extends Model
     {
         return [
             'fecha' => 'datetime',
-            'monto' => 'decimal:2',
+            'monto' => 'float',
         ];
     }
 
@@ -45,6 +45,11 @@ class MovimientoCaja extends Model
     public function tipoOperacion()
     {
         return $this->belongsTo(TipoOperacionCaja::class, 'tipo_operacion_id');
+    }
+
+    public function comprobantes()
+    {
+        return $this->hasMany(ComprobanteMovimiento::class, 'movimiento_caja_id');
     }
 
     // Scopes

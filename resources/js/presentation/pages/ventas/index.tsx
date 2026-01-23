@@ -1,10 +1,12 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
 import { useAuth } from '@/application/hooks/use-auth';
+import { useCajaWarning } from '@/application/hooks/use-caja-warning';
 import FiltrosVentasComponent from '@/presentation/components/ventas/filtros-ventas';
 import EstadisticasVentasComponent from '@/presentation/components/ventas/estadisticas-ventas';
 import TablaVentas from '@/presentation/components/ventas/tabla-ventas';
+import { AlertSinCaja } from '@/presentation/components/cajas/alert-sin-caja';
 import { Plus } from 'lucide-react';
 
 // Importar tipos del domain
@@ -26,6 +28,7 @@ interface PageProps extends InertiaPageProps {
 export default function VentasIndex() {
     const { props } = usePage<PageProps>();
     const { can } = useAuth();
+    const { shouldShowBanner } = useCajaWarning();
 
     const ventas = props.ventas;
     console.log('🚀 ~ file: index.tsx:26 ~ VentasIndex ~ ventas:', ventas);
@@ -43,6 +46,16 @@ export default function VentasIndex() {
             <Head title="Ventas" />
 
             <div className="space-y-6 p-6">
+                {/* Banner de advertencia - caja sin abrir */}
+                {shouldShowBanner && (
+                    <div className="mb-4">
+                        <AlertSinCaja
+                            onAbrir={() => router.visit('/cajas')}
+                            onVerCajas={() => router.visit('/cajas')}
+                        />
+                    </div>
+                )}
+
                 {/* Alertas de stock bajo */}
                 {/* <StockBajoAlerts /> */}
 

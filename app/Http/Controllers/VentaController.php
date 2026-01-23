@@ -246,13 +246,34 @@ class VentaController extends Controller
             'icono'  => $tipo->getIcon(),
         ])->toArray();
 
+        // ✅ NUEVO: Obtener almacén de la empresa principal
+        $empresaPrincipal = \App\Models\Empresa::principal();
+        $almacenIdEmpresa = (int) ($empresaPrincipal?->almacen_id ?? 1); // ✅ Cast a int explícito
+
+        Log::info('📦 VentaController::create - Obteniendo productos con stock', [
+            'almacen_id_empresa' => $almacenIdEmpresa,
+            'empresa_principal' => $empresaPrincipal?->nombre,
+        ]);
+
+        // ✅ MODIFICADO: NO cargar productos en la página
+        // Los productos se obtienen via API (/api/productos/buscar) cuando el usuario busca
+        // Esto es más eficiente si hay 1000+ productos
+        $productos = collect([]); // Array vacío (collection), se usan via API
+
+        Log::info('✅ VentaController::create - Usando búsqueda API para productos', [
+            'almacen_id_empresa' => $almacenIdEmpresa,
+            'nota' => 'Productos se cargan dinámicamente via /api/productos/buscar',
+        ]);
+
         return Inertia::render('ventas/create', [
-            'clientes'        => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
-            'productos'       => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
-            'almacenes'       => Almacen::activos()->select('id', 'nombre')->get(),
-            'monedas'         => Moneda::activos()->select('id', 'codigo', 'nombre', 'simbolo')->get(),
-            'tipos_documento' => TipoDocumento::activos()->select('id', 'codigo', 'nombre')->get(),
-            'tipos_pago'      => $tiposPago,
+            'clientes'           => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+            'productos'          => $productos, // ✅ MODIFICADO: Solo productos con stock en almacén
+            'almacenes'          => Almacen::activos()->select('id', 'nombre')->get(),
+            'monedas'            => Moneda::activos()->select('id', 'codigo', 'nombre', 'simbolo')->get(),
+            'tipos_documento'    => TipoDocumento::activos()->select('id', 'codigo', 'nombre')->get(),
+            'tipos_pago'         => $tiposPago,
+            'estados_documento'  => EstadoDocumento::where('activo', true)->select('id', 'codigo', 'nombre')->get(), // ✅ NUEVO: Estados de documento
+            'almacen_id_empresa' => $almacenIdEmpresa, // ✅ NUEVO: Almacén de la empresa
         ]);
     }
 
@@ -309,16 +330,15 @@ class VentaController extends Controller
                 ]);
             }
 
-            // 4. Responder según cliente
+            // 4. Responder siempre con JSON (el frontend maneja la redirección)
             return $this->respondSuccess(
                 data: $ventaDTO,
                 message: 'Venta creada exitosamente',
-                redirectTo: route('ventas.show', $ventaDTO->id),
                 statusCode: 201,
             );
 
         } catch (StockInsuficientException $e) {
-            // Excepción específica de negocio
+            // Excepción específica de negocio - retornar siempre JSON
             return $this->respondError(
                 message: $e->getMessage(),
                 errors: $e->getErrors(),
@@ -326,7 +346,7 @@ class VentaController extends Controller
             );
 
         } catch (DomainException $e) {
-            // Excepción genérica de negocio
+            // Excepción genérica de negocio - retornar siempre JSON
             return $this->respondError(
                 message: $e->getMessage(),
                 errors: $e->getErrors(),
@@ -660,37 +680,49 @@ class VentaController extends Controller
     public function verificarStock(Request $request): JsonResponse
     {
         try {
-            $detalles  = $request->input('detalles', []);
+            $productos = $request->input('productos', []);
             $almacenId = $request->input('almacen_id');
 
-            $verificacion = [];
-            foreach ($detalles as $detalle) {
-                $producto = Producto::find($detalle['producto_id']);
-                if (! $producto) {
-                    $verificacion[] = [
-                        'producto_id' => $detalle['producto_id'],
-                        'disponible'  => false,
-                        'razon'       => 'Producto no encontrado',
-                    ];
+            $errores = [];
+            $detalles = [];
+
+            foreach ($productos as $producto) {
+                $productoData = Producto::find($producto['producto_id']);
+                if (! $productoData) {
+                    $errores[] = "Producto {$producto['producto_id']} no encontrado";
                     continue;
                 }
 
-                $stockDisponible = $producto->stock()
+                $stockDisponible = $productoData->stock()
                     ->when($almacenId, fn($q) => $q->where('almacen_id', $almacenId))
                     ->sum('cantidad') ?? 0;
 
-                $verificacion[] = [
-                    'producto_id'         => $detalle['producto_id'],
-                    'nombre'              => $producto->nombre,
-                    'cantidad_solicitada' => $detalle['cantidad'],
-                    'stock_disponible'    => $stockDisponible,
-                    'disponible'          => $stockDisponible >= $detalle['cantidad'],
+                $cantidadSolicitada = $producto['cantidad'];
+                $tieneStock = $stockDisponible >= $cantidadSolicitada;
+
+                if (!$tieneStock) {
+                    $diferencia = $cantidadSolicitada - $stockDisponible;
+                    $errores[] = "{$productoData->nombre}: Faltan {$diferencia} unidades (solicitado: {$cantidadSolicitada}, disponible: {$stockDisponible})";
+                }
+
+                $detalles[] = [
+                    'producto_id' => $producto['producto_id'],
+                    'producto_nombre' => $productoData->nombre,
+                    'cantidad_solicitada' => $cantidadSolicitada,
+                    'stock_disponible' => $stockDisponible,
+                    'diferencia' => max(0, $cantidadSolicitada - $stockDisponible),
                 ];
             }
 
+            $valido = empty($errores);
+
             return response()->json([
                 'success' => true,
-                'data'    => $verificacion,
+                'data' => [
+                    'valido' => $valido,
+                    'errores' => $errores,
+                    'detalles' => $detalles,
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([

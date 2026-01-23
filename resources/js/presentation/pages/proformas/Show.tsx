@@ -382,6 +382,9 @@ export default function ProformasShow({ item: proforma }: Props) {
     // ✅ Estado para mostrar/ocultar card de dirección (inicia OCULTO)
     const [showDireccionCard, setShowDireccionCard] = useState(false)
     const [convertErrorState, setConvertErrorState] = useState<{ code?: string; message?: string; reservasExpiradas?: number } | null>(null)
+    // ✅ NUEVO: Estado para error de caja no disponible
+    const [showCajaErrorDialog, setShowCajaErrorDialog] = useState(false)
+    const [cajaErrorMessage, setCajaErrorMessage] = useState('')
 
     // ✅ NUEVO: Estados para navegación a siguiente proforma
     const [loadingSiguiente, setLoadingSiguiente] = useState(false)
@@ -663,6 +666,8 @@ export default function ProformasShow({ item: proforma }: Props) {
         // ✅ CRÍTICO: Establecer flag para evitar que el componente se remonte
         setIsFlowAprobacionConversion(true);
 
+        console.log("proforma:", proforma);
+
         // Inicializar flujo
         if (approvalFlow) {
             approvalFlow.initFlow(proforma);
@@ -673,13 +678,21 @@ export default function ProformasShow({ item: proforma }: Props) {
 
         try {
             // PASO 0: Detectar cambios en detalles y actualizar si es necesario
-            const hayChangios = editableDetalles.length !== proforma.detalles.length ||
+            // ✅ NUEVO: Solo actualizar si la proforma está en estado "pendiente"
+            console.log('%c🔍 PASO 0: Validando estado de proforma...', 'color: blue;', {
+                estado: proforma.estado,
+                esEditable: proforma.estado === 'pendiente',
+            });
+
+            const hayChangios = proforma.estado === 'pendiente' && (
+                editableDetalles.length !== proforma.detalles.length ||
                 editableDetalles.some((d, i) => {
                     const original = proforma.detalles[i];
                     return !original ||
                         d.cantidad !== (typeof original.cantidad === 'string' ? parseFloat(original.cantidad) : original.cantidad) ||
                         d.precio_unitario !== original.precio_unitario;
-                });
+                })
+            );
 
             if (hayChangios) {
                 console.log('%c⏳ PASO 0: Actualizando detalles de proforma...', 'color: blue;');
@@ -718,69 +731,93 @@ export default function ProformasShow({ item: proforma }: Props) {
                 if (approvalFlow) {
                     approvalFlow.setLoading(true, 'approving');
                 }
+            } else {
+                // ✅ NUEVO: Log claro cuando no hay cambios o proforma no está en pendiente
+                if (proforma.estado !== 'pendiente') {
+                    console.log('%c⏭️ PASO 0 omitido: Proforma no está en estado "pendiente"', 'color: orange;', {
+                        estado: proforma.estado,
+                        razon: 'Solo se actualizan detalles si la proforma está pendiente'
+                    });
+                } else {
+                    console.log('%c⏭️ PASO 0 omitido: No hay cambios en detalles', 'color: orange;');
+                }
             }
 
             // PASO 1: Aprobar proforma con coordinación
-            console.log('%c⏳ PASO 1: Aprobando proforma...');
-
-            const aprobarResponse = await fetch(`/api/proformas/${proforma.id}/aprobar`, {
-                method: 'POST',
-                redirect: 'manual', // ✅ NO seguir redirects automáticamente
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
-                },
-                body: JSON.stringify({
-                    fecha_entrega_confirmada: coordinacion.fecha_entrega_confirmada,
-                    // Ahora el backend devuelve tiempos en formato 'H:i', pero mantenemos la extracción por compatibilidad
-                    hora_entrega_confirmada: extractTime(coordinacion.hora_entrega_confirmada),
-                    hora_entrega_confirmada_fin: extractTime(coordinacion.hora_entrega_confirmada_fin),
-                    comentario_coordinacion: coordinacion.comentario_coordinacion,
-                    numero_intentos_contacto: coordinacion.numero_intentos_contacto,
-                    fecha_ultimo_intento: coordinacion.fecha_ultimo_intento || null,
-                    resultado_ultimo_intento: coordinacion.resultado_ultimo_intento,
-                    notas_llamada: coordinacion.notas_llamada || null,
-                }),
+            // ✅ NUEVO: Solo ejecutar si la proforma está en estado "pendiente"
+            console.log('%c🔍 PASO 1: Validando estado de proforma...', 'color: blue;', {
+                estado: proforma.estado,
+                ejecutar: proforma.estado === 'PENDIENTE',
             });
 
-            console.log('%c📥 Respuesta de aprobación recibida', 'color: gray;', {
-                status: aprobarResponse.status,
-                ok: aprobarResponse.ok,
-                redirected: aprobarResponse.redirected,
-                type: aprobarResponse.type,
-                url: aprobarResponse.url,
-            });
+            if (proforma.estado === 'PENDIENTE') {
+                console.log('%c⏳ PASO 1: Aprobando proforma...', 'color: blue;');
 
-            // ✅ Detectar redirects (cuando redirect: 'manual')
-            if (aprobarResponse.redirected || (aprobarResponse.status >= 300 && aprobarResponse.status < 400)) {
-                console.error('❌ Servidor está redirigiendo en lugar de retornar JSON:', {
-                    redirectedTo: aprobarResponse.url,
-                    status: aprobarResponse.status,
+                const aprobarResponse = await fetch(`/api/proformas/${proforma.id}/aprobar`, {
+                    method: 'POST',
+                    redirect: 'manual', // ✅ NO seguir redirects automáticamente
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
+                    },
+                    body: JSON.stringify({
+                        fecha_entrega_confirmada: coordinacion.fecha_entrega_confirmada,
+                        // Ahora el backend devuelve tiempos en formato 'H:i', pero mantenemos la extracción por compatibilidad
+                        hora_entrega_confirmada: extractTime(coordinacion.hora_entrega_confirmada),
+                        hora_entrega_confirmada_fin: extractTime(coordinacion.hora_entrega_confirmada_fin),
+                        comentario_coordinacion: coordinacion.comentario_coordinacion,
+                        numero_intentos_contacto: coordinacion.numero_intentos_contacto,
+                        fecha_ultimo_intento: coordinacion.fecha_ultimo_intento || null,
+                        resultado_ultimo_intento: coordinacion.resultado_ultimo_intento,
+                        notas_llamada: coordinacion.notas_llamada || null,
+                    }),
                 });
-                throw new Error(`El servidor está redirigiendo a ${aprobarResponse.url} en lugar de retornar JSON. Esto indica un problema de middleware.`);
-            }
 
-            if (!aprobarResponse.ok) {
-                const errorData = await aprobarResponse.json();
-                console.error('❌ Error en aprobación:', {
+                console.log('%c📥 Respuesta de aprobación recibida', 'color: gray;', {
                     status: aprobarResponse.status,
-                    error: errorData
+                    ok: aprobarResponse.ok,
+                    redirected: aprobarResponse.redirected,
+                    type: aprobarResponse.type,
+                    url: aprobarResponse.url,
                 });
-                const errorMessage = errorData.message || `Error ${aprobarResponse.status}: Error al aprobar proforma`;
-                toast.error(errorMessage);
-                throw new Error(errorMessage);
-            }
 
-            const aprobarData = await aprobarResponse.json();
-            console.log('%c✅ PASO 1 completado: Proforma aprobada', 'color: green;', aprobarData);
-            toast.success('✅ Proforma aprobada exitosamente');
+                // ✅ Detectar redirects (cuando redirect: 'manual')
+                if (aprobarResponse.redirected || (aprobarResponse.status >= 300 && aprobarResponse.status < 400)) {
+                    console.error('❌ Servidor está redirigiendo en lugar de retornar JSON:', {
+                        redirectedTo: aprobarResponse.url,
+                        status: aprobarResponse.status,
+                    });
+                    throw new Error(`El servidor está redirigiendo a ${aprobarResponse.url} en lugar de retornar JSON. Esto indica un problema de middleware.`);
+                }
 
-            // Actualizar estado del flujo
-            if (approvalFlow) {
-                approvalFlow.setProformaAprobada(aprobarData.data?.proforma || proforma);
-                approvalFlow.setLoading(true, 'converting');
+                if (!aprobarResponse.ok) {
+                    const errorData = await aprobarResponse.json();
+                    console.error('❌ Error en aprobación:', {
+                        status: aprobarResponse.status,
+                        error: errorData
+                    });
+                    const errorMessage = errorData.message || `Error ${aprobarResponse.status}: Error al aprobar proforma`;
+                    toast.error(errorMessage);
+                    throw new Error(errorMessage);
+                }
+
+                const aprobarData = await aprobarResponse.json();
+                console.log('%c✅ PASO 1 completado: Proforma aprobada', 'color: green;', aprobarData);
+                toast.success('✅ Proforma aprobada exitosamente');
+
+                // Actualizar estado del flujo
+                if (approvalFlow) {
+                    approvalFlow.setProformaAprobada(aprobarData.data?.proforma || proforma);
+                    approvalFlow.setLoading(true, 'converting');
+                }
+            } else {
+                // ✅ NUEVO: Log claro cuando se omite el PASO 1 porque no está pendiente
+                console.log('%c⏭️ PASO 1 omitido: Proforma no está en estado "pendiente"', 'color: orange;', {
+                    estado: proforma.estado,
+                    razon: 'Solo se aprueba si la proforma está pendiente'
+                });
             }
 
             // PASO 2: Convertir a venta con datos de pago
@@ -893,8 +930,21 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
 
-            // Mostrar notificación de error en toast
-            toast.error(`Error: ${errorMessage}`);
+            // ✅ NUEVO: Detectar si es error de caja no disponible
+            const isCajaError = errorMessage.includes('caja abierta') ||
+                errorMessage.includes('caja consolidada') ||
+                errorMessage.includes('CAJA_NO_DISPONIBLE');
+
+            if (isCajaError) {
+                console.warn('%c⚠️ Error de caja detectado, mostrando dialog de redirección:', 'color: orange;', errorMessage);
+
+                // Mostrar dialog para navegar a cajas
+                setCajaErrorMessage(errorMessage);
+                setShowCajaErrorDialog(true);
+            } else {
+                // Mostrar notificación de error en toast para otros errores
+                toast.error(`Error: ${errorMessage}`);
+            }
 
             // Actualizar estado de error
             if (approvalFlow) {
@@ -1150,7 +1200,7 @@ export default function ProformasShow({ item: proforma }: Props) {
 
                         {puedeConvertir && (
                             <Button
-                                onClick={() => setShowConvertirDialog(true)}
+                                onClick={() => setShowAprobarDialog(true)}
                                 className="bg-[var(--brand-secondary)] hover:bg-[var(--brand-secondary-hover)] text-white"
                             >
                                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -1804,6 +1854,54 @@ export default function ProformasShow({ item: proforma }: Props) {
                             disabled={isSubmitting || !motivoRechazo.trim()}
                         >
                             {isSubmitting ? 'Rechazando...' : 'Rechazar'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ✅ NUEVO: Diálogo para error de caja no disponible */}
+            <Dialog open={showCajaErrorDialog} onOpenChange={setShowCajaErrorDialog}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                            Caja No Disponible
+                        </DialogTitle>
+                        <DialogDescription>
+                            No puedes convertir la proforma a venta sin una caja abierta
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-4">
+                            <p className="text-sm text-red-800 dark:text-red-200">
+                                {cajaErrorMessage || 'Por favor, abre una caja antes de convertir esta proforma a venta.'}
+                            </p>
+                        </div>
+                        <div className="rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4">
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                                ¿Qué necesitas hacer?
+                            </p>
+                            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                                <li>Abre una nueva caja en el módulo de Cajas</li>
+                                <li>O utiliza una caja consolidada del día anterior</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <DialogFooter className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowCajaErrorDialog(false)}
+                        >
+                            Cerrar
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                // Navegar a la página de cajas
+                                window.location.href = '/cajas';
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            Ir a Cajas
                         </Button>
                     </DialogFooter>
                 </DialogContent>

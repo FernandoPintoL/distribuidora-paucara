@@ -273,7 +273,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::resource('compras.detalles', \App\Http\Controllers\DetalleCompraController::class)->shallow();
 
     // Rutas para gestión de ventas
-    Route::resource('ventas', \App\Http\Controllers\VentaController::class);
+    // ✅ NUEVO: Aplicar middleware CheckCajaAbierta para validar que hay caja abierta
+    Route::resource('ventas', \App\Http\Controllers\VentaController::class)->middleware('caja.abierta');
 
     // ==========================================
     // RUTAS DE IMPRESIÓN - VENTAS
@@ -334,70 +335,76 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
     });
 
-    // ✅ Rutas para gestión integral de cajas (Dashboard, Reportes, Auditoría, Gastos)
+    // ✅ RUTAS PARA USUARIO: Gestión de su propia caja
     Route::prefix('cajas')->name('cajas.')->middleware('permission:cajas.index')->group(function () {
-        // ==========================================
-        // RUTAS ESTÁTICAS (deben ir primero)
-        // ==========================================
+        // ✅ NUEVO: Dashboard de caja específica (admin viendo caja de usuario)
+        // Usa route model binding - {aperturaCaja} se inyecta automáticamente
+        Route::get('{aperturaCaja}', [\App\Http\Controllers\CajaController::class, 'index'])->name('show');
 
-        // Dashboard para usuario actual (empleado)
+        // Dashboard del usuario (su propia caja)
         Route::get('/', [\App\Http\Controllers\CajaController::class, 'index'])->name('index');
         Route::post('/abrir', [\App\Http\Controllers\CajaController::class, 'abrirCaja'])->name('abrir');
         Route::post('/cerrar', [\App\Http\Controllers\CajaController::class, 'cerrarCaja'])->name('cerrar');
-        Route::post('/cierres/{id}/corregir', [\App\Http\Controllers\CajaController::class, 'corregirCierre'])->middleware('permission:cajas.corregir')->name('cierres.corregir');
-        Route::get('/estado', [\App\Http\Controllers\CajaController::class, 'estadoCajas'])->name('estado');
         Route::get('/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosDia'])->name('movimientos');
+        Route::post('/movimientos', [\App\Http\Controllers\CajaController::class, 'registrarMovimiento'])->name('registrar-movimiento');
 
-        // ADMIN: Dashboard de todas las cajas
-        Route::get('/admin/dashboard', [\App\Http\Controllers\CajaController::class, 'dashboard'])
-            ->middleware('permission:cajas.index')
-            ->name('admin.dashboard');
-
-        // ADMIN: Reportes de discrepancias
-        Route::get('/reportes', [\App\Http\Controllers\CajaController::class, 'reportes'])
-            ->middleware('permission:cajas.reportes')
-            ->name('reportes');
-
-        // ==========================================
-        // RUTAS CON PREFIJOS (submódulos)
-        // ==========================================
-
-        // Rutas para gastos/cajas chicas
+        // Gastos del usuario
         Route::prefix('gastos')->name('gastos.')->middleware('permission:cajas.gastos')->group(function () {
             Route::get('/', [\App\Http\Controllers\GastoController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\GastoController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\GastoController::class, 'store'])->name('store');
+            Route::delete('/{id}', [\App\Http\Controllers\GastoController::class, 'destroy'])->name('destroy');
+        });
+    });
 
-            // ADMIN: Gestión de gastos de todos los usuarios
-            Route::get('/admin', [\App\Http\Controllers\GastoController::class, 'adminIndex'])->name('admin.index');
+    // ✅ RUTA PARA MOVIMIENTOS DE UNA APERTURA ESPECÍFICA
+    Route::get('cajas/apertura/{aperturaId}/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosApertura'])
+        ->name('cajas.apertura-movimientos')
+        ->middleware('permission:cajas.transacciones');
 
-            // ADMIN: Aprobar/Rechazar/Eliminar gastos
-            Route::post('/{id}/aprobar', [\App\Http\Controllers\GastoController::class, 'aprobar'])
-                ->name('aprobar');
+    // ✅ RUTAS PARA IMPRESIONES DE CIERRE DE CAJA
+    Route::prefix('cajas')->name('cajas.')->group(function () {
+        Route::get('/{aperturaCaja}/cierre/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirCierre'])
+            ->name('cierre.imprimir')
+            ->middleware('permission:cajas.cerrar');
 
-            Route::post('/{id}/rechazar', [\App\Http\Controllers\GastoController::class, 'rechazar'])
-                ->name('rechazar');
+        Route::get('/{aperturaCaja}/movimientos/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirMovimientos'])
+            ->name('movimientos.imprimir')
+            ->middleware('permission:cajas.transacciones');
+    });
 
-            Route::delete('/{id}', [\App\Http\Controllers\GastoController::class, 'destroy'])
-                ->name('destroy');
+    // ✅ RUTAS PARA ADMIN: Gestión de cajas de otros usuarios
+    Route::prefix('cajas/admin')->name('cajas.admin.')->middleware('permission:cajas.admin')->group(function () {
+        // Dashboard admin (ver todas las cajas)
+        Route::get('/dashboard', [\App\Http\Controllers\CajaController::class, 'dashboard'])->name('dashboard');
+
+        // Gestión de cajas por usuario
+        Route::prefix('cajas/{userId}')->name('cajas.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\CajaController::class, 'detalle'])->name('detalle');
+            Route::get('/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosDia'])->name('movimientos');
+            Route::post('/abrir', [\App\Http\Controllers\CajaController::class, 'abrirCaja'])->name('abrir');
+            Route::post('/cerrar', [\App\Http\Controllers\CajaController::class, 'cerrarCaja'])->name('cerrar');
+            Route::post('/consolidar', [\App\Http\Controllers\CajaController::class, 'consolidarCaja'])->name('consolidar');
         });
 
-        // Rutas de auditoría de cajas
+        // Reportes del admin
+        Route::get('/reportes', [\App\Http\Controllers\CajaController::class, 'reportes'])->middleware('permission:cajas.reportes')->name('reportes');
+
+        // Gastos (admin ve todos)
+        Route::prefix('gastos')->name('gastos.')->middleware('permission:cajas.gastos')->group(function () {
+            Route::get('/', [\App\Http\Controllers\GastoController::class, 'adminIndex'])->name('index');
+            Route::post('/{id}/aprobar', [\App\Http\Controllers\GastoController::class, 'aprobar'])->name('aprobar');
+            Route::post('/{id}/rechazar', [\App\Http\Controllers\GastoController::class, 'rechazar'])->name('rechazar');
+            Route::delete('/{id}', [\App\Http\Controllers\GastoController::class, 'destroy'])->name('destroy');
+        });
+
+        // Auditoría
         Route::prefix('auditoria')->name('auditoria.')->middleware('permission:cajas.auditoria')->group(function () {
             Route::get('/', [\App\Http\Controllers\AuditoriaCajaController::class, 'index'])->name('index');
             Route::get('/alertas', [\App\Http\Controllers\AuditoriaCajaController::class, 'alertas'])->name('alertas');
             Route::get('/{id}', [\App\Http\Controllers\AuditoriaCajaController::class, 'show'])->name('show');
             Route::get('/exportar/csv', [\App\Http\Controllers\AuditoriaCajaController::class, 'exportar'])->name('exportar');
         });
-
-        // ==========================================
-        // RUTAS DINÁMICAS (deben ir al final)
-        // ==========================================
-
-        // ADMIN: Detalle de una caja específica
-        Route::get('/{id}', [\App\Http\Controllers\CajaController::class, 'detalle'])
-            ->middleware('permission:cajas.index')
-            ->name('admin.detalle');
     });
 
     // Rutas para contabilidad

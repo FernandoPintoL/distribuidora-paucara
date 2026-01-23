@@ -53,6 +53,11 @@ export interface Cliente extends BaseEntity {
         usernick: string;
         activo: boolean;
     } | null;
+    empresa?: {
+        id: Id;
+        nombre_comercial: string;
+        logistica_envios: boolean;
+    } | null;
 }
 
 export interface ClienteFormData extends BaseFormData {

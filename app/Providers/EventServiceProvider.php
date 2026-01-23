@@ -48,6 +48,7 @@ use App\Events\CreditoCritico;
 use App\Events\VentaCreada;
 use App\Listeners\CrearCuentaPorCobrarListener;
 use App\Listeners\CreateCuentaPorCobrarFromVentaListener;
+use App\Listeners\RegisterCajaMovementFromVentaListener;
 use App\Listeners\SendCreditoCreadoNotification;
 use App\Listeners\SendCreditoPagoRegistradoNotification;
 use App\Listeners\SendCreditoVencidoNotification;
@@ -186,6 +187,7 @@ class EventServiceProvider extends ServiceProvider
         // ══════════════════════════════════════════════════════════
 
         VentaCreada::class => [
+            RegisterCajaMovementFromVentaListener::class, // ✅ NUEVO: Registrar movimiento de caja si hay pago
             CreateCuentaPorCobrarFromVentaListener::class, // ✅ NUEVO: Crear cuenta por cobrar si política_pago='CREDITO'
         ],
 

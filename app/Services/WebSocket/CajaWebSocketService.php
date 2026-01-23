@@ -70,17 +70,18 @@ class CajaWebSocketService extends BaseWebSocketService
     public function notifyCierreConsolidado(CierreCaja $cierre): bool
     {
         try {
+            $verificador = $cierre->verificador?->name ?? 'Admin';
             return $this->notifyUser($cierre->user_id, 'cierre.consolidado', [
                 'cierre_id' => $cierre->id,
                 'caja' => $cierre->caja->nombre,
                 'usuario' => $cierre->usuario->name,
-                'verificador' => $cierre->verificador?->name ?? 'Admin',
+                'verificador' => $verificador,
                 'diferencia' => (float)$cierre->diferencia,
                 'monto_esperado' => (float)$cierre->monto_esperado,
                 'monto_real' => (float)$cierre->monto_real,
                 'fecha' => $cierre->fecha->toIso8601String(),
                 'observaciones' => $cierre->observaciones_verificacion,
-                'mensaje' => "✅ Tu cierre de caja fue consolidado por {$cierre->verificador?->name ?? 'Admin'}",
+                'mensaje' => "✅ Tu cierre de caja fue consolidado por {$verificador}",
             ]);
         } catch (\Exception $e) {
             Log::warning('Error enviando WebSocket notifyCierreConsolidado', [

@@ -18,7 +18,7 @@ interface FormatoImpresion {
 
 interface FormatoSelectorProps {
     documentoId: number | string;
-    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga' | 'entregas';
+    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga' | 'entregas' | 'cajas' | 'cajas-cierre';
     formatos?: FormatoImpresion[];
     onPreview?: (formato: string) => void;
     className?: string;
@@ -60,11 +60,19 @@ export function FormatoSelector({
         setLoading(true);
 
         // Manejar casos especiales de API endpoints
-        const url = tipoDocumento === 'reportes-carga'
-            ? `/api/reportes-carga/${documentoId}/descargar?formato=${formato}&accion=${accion}`
-            : tipoDocumento === 'entregas'
-                ? `/api/entregas/${documentoId}/descargar?formato=${formato}&accion=${accion}`
-                : `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
+        let url: string;
+
+        if (tipoDocumento === 'reportes-carga') {
+            url = `/api/reportes-carga/${documentoId}/descargar?formato=${formato}&accion=${accion}`;
+        } else if (tipoDocumento === 'entregas') {
+            url = `/api/entregas/${documentoId}/descargar?formato=${formato}&accion=${accion}`;
+        } else if (tipoDocumento === 'cajas') {
+            url = `/cajas/${documentoId}/movimientos/imprimir?formato=${formato}&accion=${accion}`;
+        } else if (tipoDocumento === 'cajas-cierre') {
+            url = `/cajas/${documentoId}/cierre/imprimir?formato=${formato}&accion=${accion}`;
+        } else {
+            url = `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
+        }
 
         console.log('URL de impresión generada:', url);
 
@@ -84,11 +92,20 @@ export function FormatoSelector({
             onPreview(formato);
         } else {
             // Abrir preview en nueva ventana
-            const url = tipoDocumento === 'reportes-carga'
-                ? `/api/reportes-carga/${documentoId}/preview?formato=${formato}`
-                : tipoDocumento === 'entregas'
-                    ? `/api/entregas/${documentoId}/preview?formato=${formato}`
-                    : `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
+            let url: string;
+
+            if (tipoDocumento === 'reportes-carga') {
+                url = `/api/reportes-carga/${documentoId}/preview?formato=${formato}`;
+            } else if (tipoDocumento === 'entregas') {
+                url = `/api/entregas/${documentoId}/preview?formato=${formato}`;
+            } else if (tipoDocumento === 'cajas') {
+                url = `/cajas/${documentoId}/movimientos/imprimir?formato=${formato}&accion=stream`;
+            } else if (tipoDocumento === 'cajas-cierre') {
+                url = `/cajas/${documentoId}/cierre/imprimir?formato=${formato}&accion=stream`;
+            } else {
+                url = `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
+            }
+
             window.open(url, '_blank');
         }
     };

@@ -44,6 +44,7 @@ class AuditoriaCaja extends Model
         'sistema_operativo',
         'es_mobile',
         'fecha_intento',
+        'modo',
     ];
 
     protected $casts = [
@@ -176,7 +177,59 @@ class AuditoriaCaja extends Model
             'exitosa' => false,
             'ip_address' => $ip,
             'user_agent' => $userAgent,
+            'modo' => 'hard-block',
         ]);
+    }
+
+    /**
+     * Registrar acceso sin caja con advertencia suave
+     * Se usa para rutas web de ventas que permiten acceso sin caja abierta
+     *
+     * @param User $user
+     * @param string $operacion e.g., "GET /ventas"
+     * @param string $ip
+     * @param string $userAgent
+     * @param string $modo 'soft-warning' o 'hard-block'
+     */
+    public static function registrarAccesoSinCaja(
+        User $user,
+        string $operacion,
+        string $ip,
+        string $userAgent,
+        string $modo = 'soft-warning'
+    ): self {
+        return self::create([
+            'user_id' => $user->id,
+            'accion' => 'ACCESO_SIN_CAJA',
+            'operacion_intentada' => $operacion,
+            'operacion_tipo' => self::extraerTipoOperacion($operacion),
+            'detalle_operacion' => [
+                'modo' => $modo,
+                'ruta' => $operacion,
+            ],
+            'codigo_http' => 200,
+            'mensaje_error' => null,
+            'exitosa' => true,
+            'ip_address' => $ip,
+            'user_agent' => $userAgent,
+            'modo' => $modo,
+        ]);
+    }
+
+    /**
+     * Extraer tipo de operación desde la ruta
+     */
+    private static function extraerTipoOperacion(string $operacion): ?string
+    {
+        if (str_contains($operacion, 'venta')) {
+            return 'VENTA';
+        } elseif (str_contains($operacion, 'compra')) {
+            return 'COMPRA';
+        } elseif (str_contains($operacion, 'pago')) {
+            return 'PAGO';
+        }
+
+        return null;
     }
 
     /**

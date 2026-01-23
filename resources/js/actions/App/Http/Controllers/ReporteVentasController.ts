@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
  * @see app/Http/Controllers/ReporteVentasController.php:25
@@ -42,41 +42,6 @@ porPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
- * @route '/reportes/ventas/por-periodo'
- */
-    const porPeriodoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: porPeriodo.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
- * @route '/reportes/ventas/por-periodo'
- */
-        porPeriodoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: porPeriodo.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
- * @route '/reportes/ventas/por-periodo'
- */
-        porPeriodoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: porPeriodo.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    porPeriodo.form = porPeriodoForm
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
  * @see app/Http/Controllers/ReporteVentasController.php:56
@@ -120,41 +85,6 @@ porClienteProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
- * @route '/reportes/ventas/por-cliente-producto'
- */
-    const porClienteProductoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: porClienteProducto.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
- * @route '/reportes/ventas/por-cliente-producto'
- */
-        porClienteProductoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: porClienteProducto.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
- * @route '/reportes/ventas/por-cliente-producto'
- */
-        porClienteProductoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: porClienteProducto.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    porClienteProducto.form = porClienteProductoForm
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
  * @see app/Http/Controllers/ReporteVentasController.php:91
@@ -198,41 +128,6 @@ porVendedorEstadoPago.head = (options?: RouteQueryOptions): RouteDefinition<'hea
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
- * @route '/reportes/ventas/por-vendedor-estado-pago'
- */
-    const porVendedorEstadoPagoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: porVendedorEstadoPago.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
- * @route '/reportes/ventas/por-vendedor-estado-pago'
- */
-        porVendedorEstadoPagoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: porVendedorEstadoPago.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
- * @route '/reportes/ventas/por-vendedor-estado-pago'
- */
-        porVendedorEstadoPagoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: porVendedorEstadoPago.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    porVendedorEstadoPago.form = porVendedorEstadoPagoForm
 /**
 * @see \App\Http\Controllers\ReporteVentasController::exportMethod
  * @see app/Http/Controllers/ReporteVentasController.php:124
@@ -266,28 +161,6 @@ exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: exportMethod.url(options),
     method: 'post',
 })
-
-    /**
-* @see \App\Http\Controllers\ReporteVentasController::exportMethod
- * @see app/Http/Controllers/ReporteVentasController.php:124
- * @route '/reportes/ventas/export'
- */
-    const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: exportMethod.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteVentasController::exportMethod
- * @see app/Http/Controllers/ReporteVentasController.php:124
- * @route '/reportes/ventas/export'
- */
-        exportMethodForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: exportMethod.url(options),
-            method: 'post',
-        })
-    
-    exportMethod.form = exportMethodForm
 const ReporteVentasController = { porPeriodo, porClienteProducto, porVendedorEstadoPago, exportMethod, export: exportMethod }
 
 export default ReporteVentasController

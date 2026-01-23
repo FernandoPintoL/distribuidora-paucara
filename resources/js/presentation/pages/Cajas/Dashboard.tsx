@@ -7,9 +7,10 @@
  * ✅ Listado de usuarios y sus cajas
  * ✅ Últimos movimientos
  * ✅ Métricas diarias de cajas
+ * ✅ Soporte completo para Dark Mode
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -98,6 +99,47 @@ export default function Dashboard({
   metricas,
 }: Props) {
   const [search, setSearch] = useState('');
+  const [isDark, setIsDark] = useState(false);
+
+  // ✅ NUEVO: Detectar cambios de tema en tiempo real
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+
+    checkDarkMode();
+
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // ✅ NUEVO: Colores dinámicos basados en el tema
+  const chartColors = {
+    light: {
+      text: '#111827',
+      textSecondary: '#6b7280',
+      green: '#10b981',
+      greenDark: '#059669',
+      red: '#ef4444',
+      redDark: '#dc2626',
+      blue: '#3b82f6',
+      gridBorder: '#e5e7eb',
+    },
+    dark: {
+      text: '#f3f4f6',
+      textSecondary: '#9ca3af',
+      green: '#34d399',
+      greenDark: '#10b981',
+      red: '#f87171',
+      redDark: '#ef4444',
+      blue: '#60a5fa',
+      gridBorder: '#374151',
+    },
+  };
+
+  const colors = isDark ? chartColors.dark : chartColors.light;
 
   const cajasFiltradas = cajas.filter(
     (caja) =>
@@ -115,8 +157,8 @@ export default function Dashboard({
   const obtenerMontoCaja = (cajaId: number) => {
     const apertura = aperturas_hoy.find((a) => a.caja_id === cajaId);
     if (!apertura) return 0;
-    if (apertura.cierre) return apertura.cierre.montos_cierre;
-    return apertura.monto_apertura;
+    if (apertura.cierre) return Number(apertura.cierre.monto_real) || 0;
+    return Number(apertura.monto_apertura) || 0;
   };
 
   return (
@@ -128,10 +170,10 @@ export default function Dashboard({
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Gestión de Cajas
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Gestiónes de Cajas
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
                 Monitoreo en tiempo real de todas las cajas
               </p>
             </div>
@@ -139,73 +181,73 @@ export default function Dashboard({
 
           {/* Métricas principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card className="p-4">
+            <Card className="p-4 dark:bg-slate-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Total de Cajas
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {metricas.total_cajas}
                   </p>
                 </div>
-                <Users className="h-8 w-8 text-blue-500" />
+                <Users className="h-8 w-8 text-blue-500 dark:text-blue-400" />
               </div>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 dark:bg-slate-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Abiertas Hoy
                   </p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {metricas.cajas_abiertas}
                   </p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-green-500" />
+                <AlertCircle className="h-8 w-8 text-green-500 dark:text-green-400" />
               </div>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 dark:bg-slate-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Total Ingresos
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     ${metricas.total_ingresos.toFixed(2)}
                   </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-500" />
+                <TrendingUp className="h-8 w-8 text-green-500 dark:text-green-400" />
               </div>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 dark:bg-slate-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Total Egresos
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     ${Math.abs(metricas.total_egresos).toFixed(2)}
                   </p>
                 </div>
-                <DollarSign className="h-8 w-8 text-red-500" />
+                <DollarSign className="h-8 w-8 text-red-500 dark:text-red-400" />
               </div>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 dark:bg-slate-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Discrepancias
                   </p>
-                  <p className="text-2xl font-bold text-red-600">
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                     {metricas.diferencias_detectadas}
                   </p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-red-500" />
+                <AlertCircle className="h-8 w-8 text-red-500 dark:text-red-400" />
               </div>
             </Card>
           </div>
@@ -213,8 +255,8 @@ export default function Dashboard({
           {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Gráfico: Estado de Cajas */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <Card className="p-6 dark:bg-slate-800">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Estado de Cajas
               </h3>
               <div className="flex justify-center">
@@ -225,8 +267,8 @@ export default function Dashboard({
                       {
                         label: 'Cajas',
                         data: [metricas.cajas_abiertas, metricas.total_cajas - metricas.cajas_abiertas],
-                        backgroundColor: ['#10b981', '#ef4444'],
-                        borderColor: ['#059669', '#dc2626'],
+                        backgroundColor: [colors.green, colors.red],
+                        borderColor: [colors.greenDark, colors.redDark],
                         borderWidth: 2,
                       },
                     ],
@@ -237,6 +279,10 @@ export default function Dashboard({
                     plugins: {
                       legend: {
                         position: 'bottom',
+                        labels: {
+                          color: colors.text,
+                          font: { size: 12 },
+                        },
                       },
                     },
                   }}
@@ -247,8 +293,8 @@ export default function Dashboard({
             </Card>
 
             {/* Gráfico: Ingresos vs Egresos */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <Card className="p-6 dark:bg-slate-800">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Ingresos vs Egresos
               </h3>
               <Bar
@@ -258,12 +304,12 @@ export default function Dashboard({
                     {
                       label: 'Ingresos',
                       data: [metricas.total_ingresos],
-                      backgroundColor: '#10b981',
+                      backgroundColor: colors.green,
                     },
                     {
                       label: 'Egresos',
                       data: [Math.abs(metricas.total_egresos)],
-                      backgroundColor: '#ef4444',
+                      backgroundColor: colors.red,
                     },
                   ],
                 }}
@@ -274,11 +320,29 @@ export default function Dashboard({
                   plugins: {
                     legend: {
                       position: 'bottom',
+                      labels: {
+                        color: colors.text,
+                        font: { size: 12 },
+                      },
                     },
                   },
                   scales: {
                     x: {
                       beginAtZero: true,
+                      ticks: {
+                        color: colors.textSecondary,
+                      },
+                      grid: {
+                        color: colors.gridBorder,
+                      },
+                    },
+                    y: {
+                      ticks: {
+                        color: colors.textSecondary,
+                      },
+                      grid: {
+                        color: colors.gridBorder,
+                      },
                     },
                   },
                 }}
@@ -287,26 +351,26 @@ export default function Dashboard({
             </Card>
 
             {/* Gráfico: Métrica de Discrepancias */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <Card className="p-6 dark:bg-slate-800">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Resumen del Día
               </h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-600">Cajas Operativas</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Cajas Operativas</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {metricas.cajas_abiertas}/{metricas.total_cajas}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Neto del Día</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Neto del Día</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                     ${(metricas.total_ingresos - Math.abs(metricas.total_egresos)).toFixed(2)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Discrepancias</p>
-                  <p className={`text-2xl font-bold ${metricas.diferencias_detectadas > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Discrepancias</p>
+                  <p className={`text-2xl font-bold ${metricas.diferencias_detectadas > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                     {metricas.diferencias_detectadas}
                   </p>
                 </div>
@@ -315,20 +379,21 @@ export default function Dashboard({
           </div>
 
           {/* Búsqueda y filtros */}
-          <Card className="p-4">
+          <Card className="p-4 dark:bg-slate-800">
             <div className="flex gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <Input
                   placeholder="Buscar por nombre de caja o usuario..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                 />
               </div>
               <Button
                 onClick={() => router.visit('/cajas/reportes')}
                 variant="outline"
+                className="dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Reportes
@@ -337,16 +402,16 @@ export default function Dashboard({
           </Card>
 
           {/* Tabla de cajas */}
-          <Card>
+          <Card className="dark:bg-slate-800">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Caja</TableHead>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Monto Actual</TableHead>
-                  <TableHead>Última Actividad</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                <TableRow className="dark:border-slate-700">
+                  <TableHead className="dark:text-gray-300">Caja</TableHead>
+                  <TableHead className="dark:text-gray-300">Usuario</TableHead>
+                  <TableHead className="dark:text-gray-300">Estado</TableHead>
+                  <TableHead className="dark:text-gray-300">Monto Actual</TableHead>
+                  <TableHead className="dark:text-gray-300">Última Actividad</TableHead>
+                  <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -359,43 +424,45 @@ export default function Dashboard({
                     );
 
                     return (
-                      <TableRow key={caja.id}>
-                        <TableCell className="font-medium">
+                      <TableRow key={caja.id} className="dark:border-slate-700 hover:dark:bg-slate-700">
+                        <TableCell className="font-medium dark:text-white">
                           {caja.nombre}
                         </TableCell>
-                        <TableCell>{caja.usuario.name}</TableCell>
+                        <TableCell className="dark:text-gray-300">{caja.usuario.name}</TableCell>
                         <TableCell>
                           <Badge
                             variant={
                               estado === 'abierta' ? 'default' : 'secondary'
                             }
+                            className="dark:bg-slate-700"
                           >
                             {estado === 'abierta'
                               ? '🟢 Abierta'
                               : '🔴 Cerrada'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-semibold">
+                        <TableCell className="font-semibold dark:text-white">
                           ${monto.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600">
+                        <TableCell className="text-sm text-gray-600 dark:text-gray-400">
                           {apertura
                             ? format(
-                                parseISO(
-                                  apertura.cierre?.fecha_cierre ||
-                                    apertura.fecha
-                                ),
-                                'dd MMM HH:mm',
-                                { locale: es }
-                              )
+                              parseISO(
+                                apertura.cierre?.fecha_cierre ||
+                                apertura.fecha
+                              ),
+                              'dd MMM HH:mm',
+                              { locale: es }
+                            )
                             : 'Sin actividad'}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
                             size="sm"
                             variant="ghost"
+                            className="dark:hover:bg-slate-600 dark:text-gray-300"
                             onClick={() =>
-                              router.visit(`/cajas/${caja.id}`)
+                              router.visit(`/cajas/${caja.apertura.id}`)
                             }
                           >
                             <Eye className="h-4 w-4" />
@@ -405,8 +472,8 @@ export default function Dashboard({
                     );
                   })
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                  <TableRow className="dark:border-slate-700">
+                    <TableCell colSpan={6} className="text-center py-4 text-gray-500 dark:text-gray-400">
                       No se encontraron cajas
                     </TableCell>
                   </TableRow>

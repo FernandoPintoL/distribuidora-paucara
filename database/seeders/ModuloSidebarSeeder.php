@@ -231,10 +231,16 @@ class ModuloSidebarSeeder extends Seeder
                     'permisos'    => ['cajas.index'],
                 ],
                 'submenu' => [
-                    ['titulo' => 'Dashboard', 'ruta' => '/cajas', 'icono' => 'BarChart3', 'orden' => 1, 'permisos' => ['cajas.index']],
-                    ['titulo' => 'Reportes', 'ruta' => '/cajas/reportes', 'icono' => 'FileText', 'orden' => 2, 'permisos' => ['cajas.reportes']],
-                    ['titulo' => 'Auditoría', 'ruta' => '/cajas/auditoria', 'icono' => 'Shield', 'orden' => 3, 'permisos' => ['cajas.auditoria']],
-                    ['titulo' => 'Gastos', 'ruta' => '/cajas/gastos', 'icono' => 'DollarSign', 'orden' => 4, 'permisos' => ['cajas.gastos']],
+                    // ✅ Mi Caja - Para empleados (su propia caja)
+                    ['titulo' => 'Mi Caja', 'ruta' => '/cajas', 'icono' => 'Wallet', 'orden' => 1, 'permisos' => ['cajas.index']],
+                    // ✅ Dashboard Admin - Para admin/manager (todas las cajas)
+                    ['titulo' => 'Dashboard Admin', 'ruta' => '/cajas/admin/dashboard', 'icono' => 'BarChart3', 'orden' => 2, 'permisos' => ['cajas.index']],
+                    // ✅ Reportes - Para admin/manager (discrepancias y análisis)
+                    ['titulo' => 'Reportes', 'ruta' => '/cajas/reportes', 'icono' => 'FileText', 'orden' => 3, 'permisos' => ['cajas.reportes']],
+                    // ✅ Auditoría - Para admin (log de auditoría)
+                    ['titulo' => 'Auditoría', 'ruta' => '/cajas/auditoria', 'icono' => 'Shield', 'orden' => 4, 'permisos' => ['cajas.auditoria']],
+                    // ✅ Gastos - Para admin (gestión de gastos menores)
+                    ['titulo' => 'Gastos', 'ruta' => '/cajas/gastos/admin', 'icono' => 'DollarSign', 'orden' => 5, 'permisos' => ['cajas.gastos']],
                 ],
             ],
             'almacenes'       => [

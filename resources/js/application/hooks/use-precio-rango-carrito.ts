@@ -16,6 +16,7 @@ import precioRangoCarritoService, {
     type ItemCarrito,
     type DetalleCarritoConRango
 } from '@/infrastructure/services/precio-rango-carrito.service';
+import { NotificationService } from '@/infrastructure/services/notification.service';
 
 interface UsePrecioRangoCarritoState {
     loading: boolean;
@@ -33,6 +34,7 @@ export function usePrecioRangoCarrito(debounceDelayMs: number = 500) {
     });
 
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     /**
      * Ejecutar el cálculo del carrito
@@ -75,12 +77,44 @@ export function usePrecioRangoCarrito(debounceDelayMs: number = 500) {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Error desconocido al calcular carrito';
             console.error('❌ Error en executeCalculate:', errorMessage);
+
             setState(prev => ({
                 ...prev,
                 loading: false,
                 error: errorMessage,
                 carritoCalculado: null,
             }));
+
+            // ✅ MEJORADO: Mostrar notificación de error clara y específica
+            try {
+                // Extraer el mensaje del error para hacerlo más legible
+                let mensajeUsuario = errorMessage;
+
+                // Detectar errores comunes y personalizarlos
+                if (errorMessage.includes('límite') || errorMessage.includes('Cantidad')) {
+                    // Ya es un mensaje claro del servidor
+                    mensajeUsuario = `⚠️ ${errorMessage}`;
+                } else if (errorMessage.includes('422')) {
+                    mensajeUsuario = '⚠️ Error de validación: Verifica los datos ingresados';
+                } else {
+                    mensajeUsuario = `⚠️ Error al calcular precios: ${errorMessage}`;
+                }
+
+                NotificationService.error(mensajeUsuario);
+            } catch (notifError) {
+                console.error('Error al mostrar notificación:', notifError);
+            }
+
+            // Limpiar el error después de 5 segundos
+            if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current);
+            }
+            errorTimeoutRef.current = setTimeout(() => {
+                setState(prev => ({
+                    ...prev,
+                    error: null,
+                }));
+            }, 5000);
         }
     }, []);
 
@@ -164,6 +198,9 @@ export function usePrecioRangoCarrito(debounceDelayMs: number = 500) {
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
         }
+        if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+        }
         setState({
             loading: false,
             error: null,
@@ -177,6 +214,9 @@ export function usePrecioRangoCarrito(debounceDelayMs: number = 500) {
         return () => {
             if (debounceTimerRef.current) {
                 clearTimeout(debounceTimerRef.current);
+            }
+            if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current);
             }
         };
     }, []);

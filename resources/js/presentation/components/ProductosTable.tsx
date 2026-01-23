@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import BarcodeScannerComponent from 'react-qr-barcode-scanner';
@@ -7,6 +7,7 @@ import type { Producto } from '@/domain/entities/ventas';
 // Tipos para el componente - más genéricos para compatibilidad
 export interface DetalleProducto {
     id?: number | string;
+    numero?: number | string; // ✅ NUEVO: Número de línea o identificador
     producto_id: number | string;
     cantidad: number;
     precio_unitario: number;
@@ -21,11 +22,12 @@ export interface DetalleProducto {
         codigo_barras?: string;
         precio_venta?: number;
         precio_compra?: number;
+        peso?: number; // ✅ NUEVO: Peso del producto en kg
     };
 }
 
 interface ProductosTableProps {
-    productos: Producto[];
+    productos: Producto[]; // Ahora solo para referencia de IDs (podría no usarse)
     detalles: DetalleProducto[];
     onAddProduct: (producto: Producto) => void;
     onUpdateDetail: (index: number, field: keyof DetalleProducto, value: number | string) => void;
@@ -34,6 +36,8 @@ interface ProductosTableProps {
     tipo: 'compra' | 'venta';
     errors?: Record<string, string>;
     showLoteFields?: boolean; // Para mostrar campos de lote y fecha de vencimiento en compras
+    almacen_id?: number; // ✅ NUEVO: Almacén para búsqueda API
+    isCalculatingPrices?: boolean; // ✅ NUEVO: Mostrar indicador de carga al calcular precios
 }
 
 export default function ProductosTable({
@@ -41,62 +45,149 @@ export default function ProductosTable({
     detalles,
     onAddProduct,
     onUpdateDetail,
-    onRemoveDetail
+    onRemoveDetail,
+    almacen_id,
+    isCalculatingPrices = false // ✅ NUEVO: Indicador de carga
 }: ProductosTableProps) {
+    // ✅ DEBUG: Loguear props recibidos
+    /* console.log('📋 ProductosTable - Props recibidos:', {
+        productosCount: productos?.length || 0,
+        detallesCount: detalles?.length || 0,
+        isCalculatingPrices,
+        detalles: detalles.map(d => ({
+            producto_id: d.producto_id,
+            nombre: d.producto?.nombre,
+            cantidad: d.cantidad,
+            precio_unitario: d.precio_unitario
+        }))
+    }); */
     const [productSearch, setProductSearch] = useState('');
+    const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [showScannerModal, setShowScannerModal] = useState(false);
     const [scannerError, setScannerError] = useState<string | null>(null);
 
-    // Filtrar productos disponibles - solo mostrar cuando hay búsqueda
-    const productosDisponibles = productSearch.trim() === '' ? [] : productos.filter(p => {
-        const searchTerm = productSearch.toLowerCase().trim();
+    // ✅ NUEVO: Búsqueda via API cuando cambia productSearch
+    useEffect(() => {
+        const searchTerm = productSearch.trim();
 
-        // Buscar por ID (convertir a string para comparación)
-        if (String(p.id).toLowerCase().includes(searchTerm)) {
-            return true;
+        // Si no hay búsqueda, limpiar resultados
+        if (searchTerm === '') {
+            setProductosDisponibles([]);
+            setSearchError(null);
+            return;
         }
 
-        // Buscar por nombre
-        if (p.nombre.toLowerCase().includes(searchTerm)) {
-            return true;
+        // Si búsqueda muy corta, no hacer request
+        if (searchTerm.length < 2) {
+            setProductosDisponibles([]);
+            setSearchError(null);
+            return;
         }
 
-        // Buscar por código principal
-        if (p.codigo && p.codigo.toLowerCase().includes(searchTerm)) {
-            return true;
-        }
+        // Llamar a API de búsqueda
+        const buscarProductos = async () => {
+            setIsLoading(true);
+            setSearchError(null);
 
-        // Buscar por código de barras principal
-        if (p.codigo_barras && p.codigo_barras.toLowerCase().includes(searchTerm)) {
-            return true;
-        }
+            try {
+                const params = new URLSearchParams({
+                    q: searchTerm,
+                    limite: '10'
+                });
 
-        // Buscar en todos los códigos de barra relacionados
-        if (p.codigos_barras && p.codigos_barras.some(cb => cb.toLowerCase().includes(searchTerm))) {
-            return true;
-        }
+                // ✅ Pasar almacen_id si está disponible
+                if (almacen_id) {
+                    params.append('almacen_id', almacen_id.toString());
+                }
 
-        return false;
-    });
+                const response = await fetch(`/api/productos/buscar?${params.toString()}`);
 
-    // Función para manejar el resultado del escáner
-    const handleScannerResult = (result: string) => {
+                if (!response.ok) {
+                    throw new Error('Error en búsqueda de productos');
+                }
+
+                const data = await response.json();
+
+                // Transformar respuesta de API a formato Producto
+                const productosAPI = data.data.map((p: any) => ({
+                    id: p.id,
+                    nombre: p.nombre,
+                    codigo: p.sku || p.codigo_barras,
+                    codigo_barras: p.codigo_barras,
+                    precio_venta: p.precio_base || 0,
+                    stock: p.stock_disponible || 0,
+                    peso: p.peso,
+                    codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || []
+                }));
+
+                setProductosDisponibles(productosAPI);
+            } catch (error) {
+                console.error('Error buscando productos:', error);
+                setSearchError('Error al buscar productos');
+                setProductosDisponibles([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        // Debounce: esperar 300ms antes de hacer request
+        const timeoutId = setTimeout(buscarProductos, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [productSearch, almacen_id]);
+
+    // ✅ MODIFICADO: Manejar resultado del escáner via API (búsqueda EXACTA)
+    const handleScannerResult = async (result: string) => {
         if (result) {
-            // Buscar producto por código de barras
-            const productoEncontrado = productos.find(p => {
-                // Buscar en código principal
-                if (p.codigo_barras === result) return true;
-                // Buscar en códigos relacionados
-                if (p.codigos_barras && p.codigos_barras.includes(result)) return true;
-                return false;
-            });
+            try {
+                setIsLoading(true);
+                setSearchError(null);
 
-            if (productoEncontrado) {
-                onAddProduct(productoEncontrado);
-                setShowScannerModal(false);
-                NotificationService.success(`Producto escaneado: ${productoEncontrado.nombre}`);
-            } else {
-                NotificationService.error('No se encontró ningún producto con ese código de barras');
+                const params = new URLSearchParams({
+                    q: result,
+                    tipo_busqueda: 'exacta', // ✅ NUEVO: Búsqueda exacta para código de barras
+                    limite: '1'
+                });
+
+                if (almacen_id) {
+                    params.append('almacen_id', almacen_id.toString());
+                }
+
+                const response = await fetch(`/api/productos/buscar?${params.toString()}`);
+
+                if (!response.ok) {
+                    throw new Error('Error buscando producto');
+                }
+
+                const data = await response.json();
+
+                if (data.data && data.data.length > 0) {
+                    const productoAPI = data.data[0];
+                    const producto: Producto = {
+                        id: productoAPI.id,
+                        nombre: productoAPI.nombre,
+                        codigo: productoAPI.sku || productoAPI.codigo_barras,
+                        codigo_barras: productoAPI.codigo_barras,
+                        precio_venta: productoAPI.precio_base || 0,
+                        stock: productoAPI.stock_disponible || 0,
+                        peso: productoAPI.peso,
+                        codigos_barras: productoAPI.codigosBarra?.map((cb: any) => cb.codigo) || []
+                    };
+
+                    onAddProduct(producto);
+                    setShowScannerModal(false);
+                    setProductSearch('');
+                    NotificationService.success(`Producto escaneado: ${producto.nombre}`);
+                } else {
+                    NotificationService.error('No se encontró producto con ese código de barras');
+                }
+            } catch (error) {
+                console.error('Error escaneando:', error);
+                NotificationService.error('Error al buscar producto escaneado');
+            } finally {
+                setIsLoading(false);
             }
         }
     };
@@ -164,32 +255,44 @@ export default function ProductosTable({
 
                 {productSearch && (
                     <div className="mt-2 max-h-32 overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
-                        {productosDisponibles.slice(0, 10).map((producto) => (
-                            <button
-                                key={producto.id}
-                                type="button"
-                                onClick={() => handleAddProduct(producto)}
-                                className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
-                            >
-                                <div className="font-medium text-gray-900 dark:text-white">
-                                    {producto.nombre}
-                                </div>
-                                {producto.codigo && (
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                        Código: {producto.codigo} | Precio: {formatCurrency(producto.precio_venta || 0)}
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                        {productSearch && productosDisponibles.length === 0 && (
+                        {/* ✅ ESTADO: Cargando */}
+                        {isLoading && (
                             <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
-                                No se encontraron productos con ese criterio
+                                🔍 Buscando productos...
                             </div>
                         )}
 
-                        {!productSearch && (
-                            <div className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500 text-center">
-                                Escribe para buscar productos...
+                        {/* ✅ ESTADO: Error */}
+                        {searchError && !isLoading && (
+                            <div className="px-3 py-2 text-sm text-red-600 dark:text-red-400 text-center">
+                                {searchError}
+                            </div>
+                        )}
+
+                        {/* ✅ ESTADO: Resultados encontrados */}
+                        {!isLoading && productosDisponibles.length > 0 && (
+                            productosDisponibles.map((producto) => (
+                                <button
+                                    key={producto.id}
+                                    type="button"
+                                    onClick={() => handleAddProduct(producto)}
+                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
+                                >
+                                    <div className="font-medium text-gray-900 dark:text-white">
+                                        {producto.nombre}
+                                    </div>
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        Código: {producto.codigo} | Precio: {formatCurrency(producto.precio_venta || 0)}
+                                        {(producto as any).stock_disponible && ` | Stock: ${(producto as any).stock_disponible}`}
+                                    </div>
+                                </button>
+                            ))
+                        )}
+
+                        {/* ✅ ESTADO: Sin resultados */}
+                        {!isLoading && productSearch && productosDisponibles.length === 0 && !searchError && (
+                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                                No se encontraron productos con ese criterio
                             </div>
                         )}
                     </div>
@@ -198,7 +301,14 @@ export default function ProductosTable({
 
             {/* Lista de productos agregados */}
             {detalles.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto relative">
+                    {/* ✅ NUEVO: Indicador de carga de precios */}
+                    {isCalculatingPrices && (
+                        <div className="absolute top-0 right-0 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-bl-lg border-l border-b border-blue-200 dark:border-blue-800 z-10">
+                            <div className="w-4 h-4 border-2 border-blue-400 border-t-blue-700 dark:border-t-blue-300 rounded-full animate-spin"></div>
+                            <span className="text-sm font-medium">Actualizando precios...</span>
+                        </div>
+                    )}
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700">
                         <thead className="bg-gray-50 dark:bg-zinc-800">
                             <tr>
@@ -221,8 +331,18 @@ export default function ProductosTable({
                         </thead>
                         <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-700">
                             {detalles.map((detalle, index) => {
-                                // Buscar el producto correspondiente por ID
-                                const productoInfo = productos.find(p => p.id === detalle.producto_id);
+                                // ✅ MODIFICADO: Usar detalle.producto si existe, sino buscar en productos
+                                // detalle.producto ya tiene toda la información necesaria
+                                const productoInfo = detalle.producto || productos.find(p => p.id === detalle.producto_id);
+
+                                // ✅ DEBUG: Loguear búsqueda de producto
+                                console.log(`🔍 Detalle #${index}:`, {
+                                    detalleProductoId: detalle.producto_id,
+                                    detalleProductoNombre: detalle.producto?.nombre,
+                                    productoInfo: productoInfo?.nombre || 'NO ENCONTRADO',
+                                    usandoDetalleProducto: !!detalle.producto,
+                                    buscandoEnArray: !detalle.producto
+                                });
 
                                 return (
                                     <tr key={detalle.producto_id} className="hover:bg-gray-50 dark:hover:bg-zinc-800">
@@ -230,11 +350,14 @@ export default function ProductosTable({
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                 {productoInfo?.nombre || 'Producto no encontrado'}
                                             </div>
-                                            {productoInfo?.codigo && (
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {productoInfo.codigo}
-                                                </div>
-                                            )}
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mt-1">
+                                                {productoInfo?.codigo && (
+                                                    <div>Código: {productoInfo.codigo}</div>
+                                                )}
+                                                {productoInfo?.sku && (
+                                                    <div>SKU: {productoInfo.sku}</div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <input

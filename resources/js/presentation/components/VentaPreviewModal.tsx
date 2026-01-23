@@ -36,7 +36,8 @@ interface VentaPreviewData {
     tipo_documento_id?: Id;
     requiere_envio?: boolean;
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
-    estado_logistico?: 'PENDIENTE_ENVIO' | 'PREPARANDO' | 'ENVIADO' | 'ENTREGADO';
+    estado_logistico?: 'SIN_ENTREGA' | 'PENDIENTE_ENVIO' | 'PROGRAMADO' | 'EN_PREPARACION' | 'PREPARANDO' | 'EN_TRANSITO' | 'ENVIADO' | 'ENTREGADA' | 'ENTREGADO' | 'PROBLEMAS' | 'CANCELADA' | 'CANCELADO' | 'PENDIENTE_RETIRO' | 'RETIRADO';
+    empresa_logistica_id?: number | null; // ✅ NUEVO: Empresa de logística
 }
 
 interface VentaPreviewModalProps {

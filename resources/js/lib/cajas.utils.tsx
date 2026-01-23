@@ -8,15 +8,28 @@
  */
 
 /**
+ * Convertir valor a número (maneja strings de decimales)
+ * @example toNumber("1500.50") => 1500.50
+ * @example toNumber(1500.50) => 1500.50
+ * @example toNumber(null) => 0
+ */
+export function toNumber(value: any): number {
+    if (value === null || value === undefined) return 0;
+    const parsed = parseFloat(String(value));
+    return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
  * Format currency amount in Bolivianos (BOB)
  * @example formatCurrency(1500) => "Bs 1,500.00"
  */
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | string): string {
+    const numAmount = toNumber(amount);
     return new Intl.NumberFormat('es-BO', {
         style: 'currency',
         currency: 'BOB',
         minimumFractionDigits: 2
-    }).format(amount);
+    }).format(numAmount);
 }
 
 /**
@@ -28,6 +41,23 @@ export function formatTime(dateString: string): string {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+/**
+ * Format date and time from ISO date string
+ * @example formatDateTime("2025-12-17T14:30:00Z") => "17/12 14:30"
+ */
+export function formatDateTime(dateString: string): string {
+    const date = new Date(dateString);
+    const formattedDate = date.toLocaleDateString('es-BO', {
+        day: '2-digit',
+        month: '2-digit'
+    });
+    const formattedTime = date.toLocaleTimeString('es-BO', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    return `${formattedDate} ${formattedTime}`;
 }
 
 /**

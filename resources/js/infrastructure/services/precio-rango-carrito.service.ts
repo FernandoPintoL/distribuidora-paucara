@@ -87,22 +87,32 @@ class PrecioRangoCarritoService {
                 console.error('❌ Error en calcularCarrito:', {
                     status: response.status,
                     statusText: response.statusText,
-                    errors: data.errors,
-                    message: data.message,
+                    data: data,
                 });
 
-                // Si hay errores de validación, mostrarlos
-                if (data.errors) {
-                    const errorMessages = Object.entries(data.errors)
+                // ✅ MEJORADO: Manejar diferentes formatos de error
+                let errorMessage = response.statusText;
+
+                // Formato 1: error simple (del backend con throw new InvalidArgumentException)
+                if (data.error) {
+                    errorMessage = data.error;
+                }
+                // Formato 2: errors object (validación de Request)
+                else if (data.errors) {
+                    errorMessage = Object.entries(data.errors)
                         .map(([field, messages]: any) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
                         .join('\n');
-                    throw new Error(`Errores de validación:\n${errorMessages}`);
+                }
+                // Formato 3: message (otro formato)
+                else if (data.message) {
+                    errorMessage = data.message;
                 }
 
-                throw new Error(`Error ${response.status}: ${data.message || response.statusText}`);
+                throw new Error(errorMessage);
             }
 
-            console.log('✅ Respuesta exitosa:', data);
+            // ✅ MODIFICADO: Solo loguear en consola, NO mostrar toast de éxito
+            console.log('✅ Precios actualizados según rango:', data);
             return data;
         } catch (error) {
             console.error('❌ Error calculando carrito con rangos:', error);

@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/presentation/components/ui/select';
-import { Banknote, Send, CreditCard, Truck, Split, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { Banknote, Send, CreditCard, Truck, Split, CheckCircle2, AlertCircle, Info, Loader2 } from 'lucide-react';
 import type { Proforma, PaymentData } from '@/domain/entities/proformas';
 import type { CoordinacionData } from '@/application/hooks/use-proforma-actions';
 import { usePoliticasPago } from '@/application/hooks/use-politicas-pago';
@@ -187,7 +187,7 @@ export function ApprovalPaymentForm({
 
     // ✅ MEJORADO: Calcular monto mínimo usando el hook
     const getMinimumPayment = (): number => {
-        return calcularMinimo(payment.politica_pago as any, proforma.total);
+        return calcularMinimo(payment.politica_pago as any, proforma.subtotal);
     };
 
     // ✅ MEJORADO: Manejo de cambio de política con validación
@@ -350,11 +350,10 @@ export function ApprovalPaymentForm({
                                     <p className="text-xs font-medium font-bold text-green-700 dark:text-green-300">
                                         Crédito disponible:
                                     </p>
-                                    <p className={`font-bold ${
-                                        ((clienteConCredito?.saldo_credito ?? 0) >= proforma.total)
+                                    <p className={`font-bold ${((clienteConCredito?.saldo_credito ?? 0) >= proforma.total)
                                             ? 'text-green-900 dark:text-green-100'
                                             : 'text-red-900 dark:text-red-100'
-                                    }`}>
+                                        }`}>
                                         Bs. {(clienteConCredito?.saldo_credito ?? 0).toFixed(2)}
                                     </p>
                                 </div>
@@ -432,52 +431,52 @@ export function ApprovalPaymentForm({
                                     // ✅ Filtrar CRÉDITO solo si el cliente puede tener crédito
                                     .filter(p => p.codigo !== 'CREDITO' || clienteConCredito?.puede_tener_credito === true)
                                     .map((politica) => {
-                                    const isSelected = payment.politica_pago === politica.codigo;
-                                    const isDisabled = !puedeUsarPolitica(politica.codigo);
-                                    const creditoMsg = politica.codigo === 'CREDITO' ? getMensajeCreditoNoDisponible() : null;
+                                        const isSelected = payment.politica_pago === politica.codigo;
+                                        const isDisabled = !puedeUsarPolitica(politica.codigo);
+                                        const creditoMsg = politica.codigo === 'CREDITO' ? getMensajeCreditoNoDisponible() : null;
 
-                                    return (
-                                        <label
-                                            key={politica.codigo}
-                                            htmlFor={`politica_${politica.codigo}`}
-                                            className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${isDisabled
+                                        return (
+                                            <label
+                                                key={politica.codigo}
+                                                htmlFor={`politica_${politica.codigo}`}
+                                                className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${isDisabled
                                                     ? 'opacity-50 cursor-not-allowed'
                                                     : 'hover:bg-accent/5 dark:hover:bg-accent/10'
-                                                } ${isSelected
-                                                    ? 'border-accent bg-accent/5 dark:bg-accent/10'
-                                                    : 'border-input'
-                                                }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                id={`politica_${politica.codigo}`}
-                                                name="politica_pago"
-                                                value={politica.codigo}
-                                                checked={isSelected}
-                                                onChange={(e) => handlePolicyChange(e.target.value)}
-                                                disabled={isSubmitting || isDisabled}
-                                                className="h-4 w-4 cursor-pointer"
-                                            />
-                                            <div className="ml-3 flex-1">
-                                                <div className="flex items-center gap-2 font-medium text-sm">
-                                                    {getPolicyIcon(politica.codigo)}
-                                                    <span>{politica.nombre}</span>
-                                                    {politica.codigo === 'CREDITO' && isDisabled && (
-                                                        <AlertCircle className="h-4 w-4 text-amber-500" title={creditoMsg || ''} />
+                                                    } ${isSelected
+                                                        ? 'border-accent bg-accent/5 dark:bg-accent/10'
+                                                        : 'border-input'
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    id={`politica_${politica.codigo}`}
+                                                    name="politica_pago"
+                                                    value={politica.codigo}
+                                                    checked={isSelected}
+                                                    onChange={(e) => handlePolicyChange(e.target.value)}
+                                                    disabled={isSubmitting || isDisabled}
+                                                    className="h-4 w-4 cursor-pointer"
+                                                />
+                                                <div className="ml-3 flex-1">
+                                                    <div className="flex items-center gap-2 font-medium text-sm">
+                                                        {getPolicyIcon(politica.codigo)}
+                                                        <span>{politica.nombre}</span>
+                                                        {politica.codigo === 'CREDITO' && isDisabled && (
+                                                            <AlertCircle className="h-4 w-4 text-amber-500" title={creditoMsg || ''} />
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {politica.descripcion}
+                                                    </p>
+                                                    {creditoMsg && isDisabled && (
+                                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                                            {creditoMsg}
+                                                        </p>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    {politica.descripcion}
-                                                </p>
-                                                {creditoMsg && isDisabled && (
-                                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                                                        {creditoMsg}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </label>
-                                    );
-                                })}
+                                            </label>
+                                        );
+                                    })}
                             </div>
                         )}
                     </div>
@@ -615,10 +614,14 @@ export function ApprovalPaymentForm({
                     disabled={isSubmitting || !isPaymentValid()}
                     className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                    {isSubmitting
-                        ? (payment.con_pago ? 'Aprobando y Convirtiendo...' : 'Aprobando...')
-                        : (payment.con_pago ? 'Aprobar y Convertir a Venta' : 'Aprobar')
-                    }
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            {payment.con_pago ? 'Aprobando y Convirtiendo...' : 'Aprobando...'}
+                        </>
+                    ) : (
+                        payment.con_pago ? 'Aprobar y Convertir a Venta' : 'Aprobar'
+                    )}
                 </Button>
             </div>
         </div>

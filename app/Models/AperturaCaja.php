@@ -23,7 +23,7 @@ class AperturaCaja extends Model
     {
         return [
             'fecha' => 'datetime',
-            'monto_apertura' => 'decimal:2',
+            'monto_apertura' => 'float',
         ];
     }
 

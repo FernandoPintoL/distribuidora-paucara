@@ -1431,8 +1431,9 @@ class ProductoController extends Controller
      */
     public function buscarApi(Request $request): JsonResponse
     {
-        $q      = $request->string('q');
-        $limite = $request->integer('limite', 10);
+        $q             = $request->string('q');
+        $limite        = $request->integer('limite', 10);
+        $tipoBusqueda  = $request->string('tipo_busqueda', 'parcial'); // ✅ NUEVO: exacta o parcial
 
         // Obtener almacén: desde request > empresa autenticada > empresa principal > config
         // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
@@ -1448,25 +1449,46 @@ class ProductoController extends Controller
             return ApiResponse::success([]);
         }
 
+        Log::info('🔍 ProductoController::buscarApi', [
+            'q'              => $q,
+            'tipo_busqueda'  => $tipoBusqueda,
+            'almacen_id'     => $almacenId,
+            'limite'         => $limite,
+        ]);
+
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
         $searchLower = strtolower($q);
         $userEmpresaId = auth()->user()?->empresa_id;
-        $productos   = Producto::select([
+
+        // ✅ NUEVO: Determinar tipo de búsqueda
+        $esExacta = $tipoBusqueda === 'exacta';
+
+        $productos = Producto::select([
             'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
             'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
-            'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id' // ✨ NUEVO
+            'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id'
         ])
             // ✨ NUEVO: Filtrar por empresa del usuario (si tiene empresa_id asignada)
             ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
             ->where('activo', true)
-            ->where(function ($query) use ($searchLower) {
-                $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(codigo_barras) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"]) // ✨ NUEVO
-                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
-                        $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
-                    });
+            ->where(function ($query) use ($searchLower, $esExacta) {
+                if ($esExacta) {
+                    // ✅ BÚSQUEDA EXACTA: Para código de barras (escáner)
+                    $query->where('codigo_barras', $searchLower)
+                        ->orWhere('sku', $searchLower)
+                        ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                            $codigoQuery->where('codigo', $searchLower);
+                        });
+                } else {
+                    // ✅ BÚSQUEDA PARCIAL: Para texto (búsqueda manual)
+                    $query->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(codigo_barras) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"])
+                        ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                            $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
+                        });
+                }
             })
             ->with([
                 'codigosBarra' => function ($q) {
@@ -1503,8 +1525,12 @@ class ProductoController extends Controller
                 // Calcular stock total de todos los almacenes
                 $stockTotal = $producto->stock->sum('cantidad_disponible');
 
-                // Obtener precio base
-                $precioBase = $producto->precios->firstWhere('es_precio_base', true)?->precio ?? $producto->precios->first()?->precio ?? 0;
+                // ✅ MODIFICADO: Obtener precio de VENTA (tipos_precio.codigo = 'VENTA')
+                $precioVenta = $producto->precios
+                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'VENTA')?->precio;
+
+                // Fallback: Obtener precio base si no existe precio de venta
+                $precioBase = $precioVenta ?? $producto->precios->firstWhere('es_precio_base', true)?->precio ?? $producto->precios->first()?->precio ?? 0;
 
                 // Obtener nombre del almacén
                 $almacenNombre = $stockAlmacen?->almacen?->nombre ?? 'Almacén Principal';
@@ -1515,14 +1541,18 @@ class ProductoController extends Controller
                 return [
                     'id'               => $producto->id,
                     'nombre'           => $producto->nombre,
+                    'codigo'           => $producto->codigo, // ✅ NUEVO: Código del producto
+                    'sku'              => $producto->sku, // ✅ NUEVO: SKU del producto
                     'codigo_barras'    => $producto->codigo_barras,
                     'codigos_barras'   => $codigosTexto,
                     'codigos_barra'    => $segundoCodigoBarra, // String simple del segundo código
-                    'precio_base'      => (float) $precioBase,
+                    'precio_base'      => (float) $precioBase, // ✅ Ahora retorna precio de VENTA
+                    'precio_venta'     => (float) $precioBase, // ✅ NUEVO: Alias para compatibilidad
                     'precios'          => $producto->precios,
 
                     // Stock del almacén seleccionado
                     'stock_disponible' => (int) $stockDisponible,
+                    'stock'            => (int) $stockDisponible, // ✅ NUEVO: Alias para compatibilidad
                     'almacen_id'       => $almacenId,
                     'almacen_nombre'   => $almacenNombre,
 
@@ -1532,6 +1562,7 @@ class ProductoController extends Controller
                     // ✨ Límite de venta
                     'limite_venta'     => $producto->limite_venta ? (int) $producto->limite_venta : null,
 
+                    'peso'             => $producto->peso, // ✅ NUEVO: Peso del producto
                     'categoria'        => $producto->categoria?->nombre ?? '',
                     'marca'            => $producto->marca?->nombre ?? '',
                 ];

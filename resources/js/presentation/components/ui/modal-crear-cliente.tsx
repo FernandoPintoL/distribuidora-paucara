@@ -4,9 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
-import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { NotificationService } from '@/infrastructure/services/notification.service';
-import type { ClienteFormData, Cliente } from '@/domain/entities/clientes';
+import type { Cliente } from '@/domain/entities/clientes';
 
 interface ModalCrearClienteProps {
     isOpen: boolean;
@@ -21,14 +20,14 @@ export default function ModalCrearCliente({
     onClienteCreated,
     searchQuery = ''
 }: ModalCrearClienteProps) {
-    const { data, setData, processing, errors, reset } = useForm<ClienteFormData>({
+    const { data, setData, processing, errors, reset } = useForm({
         nombre: '',
         razon_social: '',
-        nit: null,
-        telefono: null,
-        email: null,
+        nit: '',
+        telefono: '',
+        email: '',
         activo: true,
-        limite_credito: null,
+        limite_credito: 0,
         puede_tener_credito: false,
     });
 
@@ -115,10 +114,10 @@ export default function ModalCrearCliente({
         submitData();
     };
 
-    const handleActivoChange = (checked: boolean | "indeterminate") => {
+    /* const handleActivoChange = (checked: boolean | "indeterminate") => {
         const isChecked = checked === true;
         setData((prevData) => ({ ...prevData, activo: isChecked }));
-    };
+    }; */
 
     const handleClose = () => {
         reset();
@@ -210,7 +209,7 @@ export default function ModalCrearCliente({
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    {/* <div className="flex items-center space-x-2">
                         <Checkbox
                             id="activo"
                             checked={data.activo ?? true}
@@ -219,10 +218,10 @@ export default function ModalCrearCliente({
                         <Label htmlFor="activo" className="text-sm">
                             Cliente activo
                         </Label>
-                    </div>
+                    </div> */}
 
                     {/* Sección de crédito */}
-                    <div className="border-t pt-6">
+                    {/* <div className="border-t pt-6">
                         <h3 className="text-sm font-semibold mb-4 flex items-center space-x-2">
                             <span>💳</span>
                             <span>Configuración de Crédito</span>
@@ -259,7 +258,7 @@ export default function ModalCrearCliente({
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </div> */}
 
                     <DialogFooter className="flex justify-end space-x-3 pt-6 border-t">
                         <Button

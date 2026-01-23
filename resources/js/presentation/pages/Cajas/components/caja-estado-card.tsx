@@ -29,8 +29,10 @@ interface Props {
     totalMovimientos: number;
     onAbrirClick: () => void;
     onCerrarClick: () => void;
+    onGastoClick?: () => void;
     onCorregirClick?: () => void;
     cierreDatos?: Cierre | null;
+    esVistaAdmin?: boolean; // ✅ NUEVO
 }
 
 export function CajaEstadoCard({
@@ -38,8 +40,10 @@ export function CajaEstadoCard({
     totalMovimientos,
     onAbrirClick,
     onCerrarClick,
+    onGastoClick,
     onCorregirClick,
-    cierreDatos
+    cierreDatos,
+    esVistaAdmin = false
 }: Props) {
     if (!cajaAbiertaHoy) {
         return (
@@ -112,10 +116,15 @@ export function CajaEstadoCard({
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Hora de Apertura
+                                Abierta desde
                             </label>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                                🕐 {formatTime(cajaAbiertaHoy.fecha)}
+                                {/* ✅ NUEVO: Mostrar fecha completa si es de otro día */}
+                                {new Date(cajaAbiertaHoy.fecha).toLocaleDateString('es-BO', {
+                                    weekday: 'long',
+                                    month: 'short',
+                                    day: 'numeric'
+                                })} a las {formatTime(cajaAbiertaHoy.fecha)}
                             </p>
                         </div>
                     </div>
@@ -151,14 +160,25 @@ export function CajaEstadoCard({
                     </div>
 
                     {/* Acciones */}
+                    {!esVistaAdmin && (
                     <div className="flex flex-col justify-center space-y-3">
                         {!cajaAbiertaHoy.cierre ? (
-                            <button
-                                onClick={onCerrarClick}
-                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
-                            >
-                                🔒 Cerrar Caja
-                            </button>
+                            <>
+                                <button
+                                    onClick={onCerrarClick}
+                                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+                                >
+                                    🔒 Cerrar Caja
+                                </button>
+                                {onGastoClick && (
+                                    <button
+                                        onClick={onGastoClick}
+                                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+                                    >
+                                        💱 Registrar Movimiento
+                                    </button>
+                                )}
+                            </>
                         ) : (
                             <div className="space-y-3">
                                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -230,6 +250,7 @@ export function CajaEstadoCard({
                             </div>
                         )}
                     </div>
+                    )}
                 </div>
             </div>
         </div>

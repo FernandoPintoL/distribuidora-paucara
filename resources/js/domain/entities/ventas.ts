@@ -41,6 +41,7 @@ export interface Producto extends BaseEntity {
     descripcion?: string;
     precio_venta?: number;
     stock?: number;
+    peso?: number; // ✅ NUEVO: Peso del producto en kg
 }
 
 // =============== ENTIDADES PRINCIPALES ===============

@@ -38,6 +38,7 @@ class Venta extends Model
         'canal_origen',
         'tipo_entrega',  // NUEVO: DELIVERY o PICKUP
         'estado_logistico_id',
+        'empresa_logistica_id',  // ✅ NUEVO: Empresa de logística seleccionada
         'entrega_id',    // NUEVO - FASE 3: FK a entregas (relación 1:N)
         // Campos para confirmación de pickup
         'pickup_confirmado_cliente_en',      // NUEVO
@@ -284,6 +285,14 @@ class Venta extends Model
     public function estadoLogistica()
     {
         return $this->belongsTo(EstadoLogistica::class, 'estado_logistico_id');
+    }
+
+    /**
+     * ✅ NUEVO: Relación con la empresa de logística
+     */
+    public function empresaLogistica()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_logistica_id');
     }
 
     /**

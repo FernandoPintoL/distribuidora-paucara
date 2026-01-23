@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use App\Models\Producto;
 use App\Models\Proforma;
+use App\Models\AperturaCaja;
+use App\Models\CierreCaja;
 use App\Events\ProformaCreada;
 use App\Events\ProformaAprobada;
 use App\Events\ProformaRechazada;
@@ -1990,55 +1992,50 @@ class ApiProformaController extends Controller
 
         return DB::transaction(function () use ($proforma, $request) {
             try {
-                // ✅ VALIDACIÓN 0.1: Validar caja abierta para pagos inmediatos
-                // Políticas que REQUIEREN caja abierta: ANTICIPADO_100, MEDIO_MEDIO
+                // ⭐ VALIDACIÓN PRINCIPAL: Caja abierta O consolidada es OBLIGATORIA para TODAS las conversiones
+                $usuario = request()->user();
                 $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
                 $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
 
-                $politicasQueRequierenCaja = ['ANTICIPADO_100', 'MEDIO_MEDIO'];
+                // ✅ VALIDACIÓN: Caja abierta HOY (sin importar si es admin o cajero)
+                $cajaAbiertaHoy = AperturaCaja::where('user_id', $usuario->id)
+                    ->whereDoesntHave('cierre')
+                    ->exists();
 
-                if (in_array($politica, $politicasQueRequierenCaja) && $montoPagado > 0) {
-                    $usuario = request()->user();
-                    $empleado = $usuario?->empleado;
+                // ✅ VALIDACIÓN: Caja consolidada en últimas 24h
+                $cierreConsolidadoReciente = CierreCaja::where('user_id', $usuario->id)
+                    ->whereHas('estadoCierre', function ($q) {
+                        $q->where('codigo', 'CONSOLIDADA');
+                    })
+                    ->whereDate('fecha', '>=', now()->subDay())
+                    ->whereDate('fecha', '<=', now())
+                    ->exists();
 
-                    if (!$empleado) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Usuario no tiene un empleado asociado. No puede procesar pagos en caja.',
-                            'code' => 'USUARIO_SIN_EMPLEADO',
-                        ], 422);
-                    }
-
-                    if (!$empleado->esCajero()) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Usuario no tiene rol de Cajero. No puede procesar pagos en caja.',
-                            'code' => 'USUARIO_NO_CAJERO',
-                        ], 422);
-                    }
-
-                    if (!$empleado->tieneCajaAbierta()) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => "No puede convertir proforma a venta con política '{$politica}' sin caja abierta. Por favor, abra una caja primero.",
-                            'code' => 'CAJA_NO_ABIERTA',
-                            'detalles' => [
-                                'politica_pago' => $politica,
-                                'monto_pagado' => $montoPagado,
-                                'motivo' => "La política {$politica} requiere que tenga una caja abierta para registrar el pago",
-                                'accion_requerida' => 'Abra una caja en /cajas antes de convertir esta proforma',
-                            ],
-                        ], 422);
-                    }
-
-                    Log::info('✅ [ApiProformaController::convertirAVenta] Validación de caja exitosa', [
-                        'proforma_id' => $proforma->id,
-                        'usuario_id' => $usuario->id,
-                        'caja_id' => $empleado->cajaAbierta()?->id,
-                        'politica' => $politica,
-                        'monto' => $montoPagado,
-                    ]);
+                // ❌ Si no tiene caja abierta NI caja consolidada → RECHAZAR
+                if (!$cajaAbiertaHoy && !$cierreConsolidadoReciente) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No puede convertir proforma a venta sin una caja abierta o consolidada del día anterior. Por favor, abra una caja primero.',
+                        'code' => 'CAJA_NO_DISPONIBLE',
+                        'detalles' => [
+                            'politica_pago' => $politica,
+                            'monto_pagado' => $montoPagado,
+                            'motivo' => 'Requiere caja abierta HOY o consolidada en las últimas 24 horas',
+                            'accion_requerida' => 'Abra una caja en /cajas antes de convertir esta proforma',
+                        ],
+                    ], 422);
                 }
+
+                // ✅ Log: Validación de caja exitosa
+                $estadoCajaActual = $cajaAbiertaHoy ? 'ABIERTA' : 'CONSOLIDADA_RECIENTE';
+
+                Log::info('✅ [ApiProformaController::convertirAVenta] Validación de caja exitosa', [
+                    'proforma_id' => $proforma->id,
+                    'usuario_id' => $usuario->id,
+                    'estado_caja' => $estadoCajaActual,
+                    'politica' => $politica,
+                    'monto' => $montoPagado,
+                ]);
 
                 // ✅ VALIDACIÓN 0.2: Si la política es CREDITO, validar permisos del cliente
                 if ($politica === 'CREDITO') {
@@ -2276,6 +2273,17 @@ class ApiProformaController extends Controller
                     $proforma,
                     $politica,
                     $montoPagado,
+                    request()->user()
+                );
+
+                // ✅ NUEVO: Registrar pago en tabla pagos para TODAS las políticas
+                // Se registra para: ANTICIPADO_100, MEDIO_MEDIO, CREDITO, CONTRA_ENTREGA
+                $this->registrarPagoEnVenta(
+                    $venta,
+                    $proforma,
+                    $politica,
+                    $montoPagado,
+                    $request->input('tipo_pago_id'),
                     request()->user()
                 );
 
@@ -2878,26 +2886,47 @@ class ApiProformaController extends Controller
         }
 
         try {
-            // Obtener la caja abierta del usuario
-            $empleado = $usuario?->empleado;
-
-            if (!$empleado) {
-                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene empleado asociado', [
-                    'usuario_id' => $usuario->id,
-                    'venta_id' => $venta->id,
-                ]);
-                return;
-            }
-
-            $cajaAbierta = $empleado->cajaAbierta();
+            // ✅ MEJORADO: Obtener caja abierta DIRECTAMENTE desde AperturaCaja
+            // Esto funciona para ADMINS y EMPLEADOS (los admins no tienen registro en empleados)
+            $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                ->whereDate('fecha', today())
+                ->whereDoesntHave('cierre')
+                ->with('caja')
+                ->first();
 
             if (!$cajaAbierta) {
-                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene caja abierta', [
+                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene caja abierta HOY', [
                     'usuario_id' => $usuario->id,
-                    'empleado_id' => $empleado->id,
+                    'usuario_nombre' => $usuario->name,
+                    'usuario_roles' => $usuario->getRoleNames()->toArray(),
                     'venta_id' => $venta->id,
+                    'proforma_id' => $proforma->id,
                     'politica' => $politica,
+                    'monto' => $montoPagado,
                 ]);
+
+                // ✅ REGISTRAR EN AUDITORÍA: Intento fallido
+                \App\Models\AuditoriaCaja::create([
+                    'user_id' => $usuario->id,
+                    'caja_id' => null,
+                    'apertura_caja_id' => null,
+                    'accion' => 'INTENTO_PAGO_SIN_CAJA',
+                    'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
+                    'operacion_tipo' => 'VENTA',
+                    'exitosa' => false,
+                    'detalle_operacion' => [
+                        'venta_id' => $venta->id,
+                        'proforma_id' => $proforma->id,
+                        'politica' => $politica,
+                        'monto_pagado' => $montoPagado,
+                        'motivo' => 'Usuario no tiene caja abierta HOY',
+                    ],
+                    'codigo_http' => 422,
+                    'mensaje_error' => 'Usuario no tiene caja abierta para registrar pago',
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+
                 return;
             }
 
@@ -2908,6 +2937,27 @@ class ApiProformaController extends Controller
                 Log::error('❌ [registrarMovimientoCajaParaPago] Tipo operación VENTA no existe', [
                     'venta_id' => $venta->id,
                 ]);
+
+                // ✅ REGISTRAR EN AUDITORÍA: Error de configuración
+                \App\Models\AuditoriaCaja::create([
+                    'user_id' => $usuario->id,
+                    'caja_id' => $cajaAbierta->caja_id,
+                    'apertura_caja_id' => $cajaAbierta->id,
+                    'accion' => 'ERROR_OPERACION_NO_EXISTE',
+                    'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
+                    'operacion_tipo' => 'VENTA',
+                    'exitosa' => false,
+                    'detalle_operacion' => [
+                        'venta_id' => $venta->id,
+                        'proforma_id' => $proforma->id,
+                        'motivo' => 'TipoOperacionCaja VENTA no existe en la BD',
+                    ],
+                    'codigo_http' => 500,
+                    'mensaje_error' => 'Tipo operación VENTA no encontrado',
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+
                 return;
             }
 
@@ -2918,9 +2968,9 @@ class ApiProformaController extends Controller
                 default => 'ANTICIPO'
             };
 
-            // Crear movimiento de caja
-            \App\Models\MovimientoCaja::create([
-                'caja_id' => $cajaAbierta->id,
+            // ✅ Crear movimiento de caja
+            $movimiento = \App\Models\MovimientoCaja::create([
+                'caja_id' => $cajaAbierta->caja_id,
                 'user_id' => $usuario->id,
                 'tipo_operacion_id' => $tipoOperacion->id,
                 'numero_documento' => $venta->numero,
@@ -2929,14 +2979,40 @@ class ApiProformaController extends Controller
                 'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - Convertida desde proforma #{$proforma->numero}",
             ]);
 
+            // ✅ REGISTRAR EN AUDITORÍA: Éxito
+            \App\Models\AuditoriaCaja::create([
+                'user_id' => $usuario->id,
+                'caja_id' => $cajaAbierta->caja_id,
+                'apertura_caja_id' => $cajaAbierta->id,
+                'accion' => 'PAGO_REGISTRADO',
+                'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
+                'operacion_tipo' => 'VENTA',
+                'exitosa' => true,
+                'detalle_operacion' => [
+                    'venta_id' => $venta->id,
+                    'proforma_id' => $proforma->id,
+                    'movimiento_caja_id' => $movimiento->id,
+                    'caja_numero' => $cajaAbierta->caja?->nombre,
+                    'politica' => $politica,
+                    'monto_pagado' => $montoPagado,
+                    'descripcion_politica' => $descripcionPolitica,
+                ],
+                'codigo_http' => 201,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
             Log::info('✅ [registrarMovimientoCajaParaPago] Movimiento de caja registrado exitosamente', [
                 'venta_id' => $venta->id,
                 'proforma_id' => $proforma->id,
-                'caja_id' => $cajaAbierta->id,
+                'caja_id' => $cajaAbierta->caja_id,
+                'caja_nombre' => $cajaAbierta->caja?->nombre,
                 'usuario_id' => $usuario->id,
+                'usuario_nombre' => $usuario->name,
                 'monto' => $montoPagado,
                 'politica' => $politica,
                 'tipo_pago' => $descripcionPolitica,
+                'movimiento_id' => $movimiento->id,
             ]);
 
         } catch (\Exception $e) {
@@ -2945,14 +3021,180 @@ class ApiProformaController extends Controller
                 'venta_id' => $venta->id,
                 'proforma_id' => $proforma->id,
                 'usuario_id' => $usuario->id,
+                'usuario_nombre' => $usuario->name,
                 'monto' => $montoPagado,
                 'politica' => $politica,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // ✅ REGISTRAR EN AUDITORÍA: Error al registrar
+            try {
+                \App\Models\AuditoriaCaja::create([
+                    'user_id' => $usuario->id,
+                    'caja_id' => null,
+                    'apertura_caja_id' => null,
+                    'accion' => 'ERROR_REGISTRO_PAGO',
+                    'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
+                    'operacion_tipo' => 'VENTA',
+                    'exitosa' => false,
+                    'detalle_operacion' => [
+                        'venta_id' => $venta->id,
+                        'proforma_id' => $proforma->id,
+                        'politica' => $politica,
+                        'monto_pagado' => $montoPagado,
+                    ],
+                    'codigo_http' => 500,
+                    'mensaje_error' => $e->getMessage(),
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+            } catch (\Exception $auditError) {
+                Log::error('❌ [registrarMovimientoCajaParaPago] Error al registrar auditoría', [
+                    'error_audit' => $auditError->getMessage(),
+                ]);
+            }
+
             // ⚠️ Importante: No relanzamos la excepción para no bloquear la conversión
             // El movimiento de caja es importante pero la venta ya está creada
+        }
+    }
+
+    /**
+     * ✅ Registrar pago en tabla pagos para TODAS las políticas de pago
+     * Se registra para: ANTICIPADO_100, MEDIO_MEDIO, CREDITO, CONTRA_ENTREGA
+     *
+     * @param \App\Models\Venta $venta
+     * @param \App\Models\Proforma $proforma
+     * @param string $politica
+     * @param float $montoPagado
+     * @param int|null $tipoPagoId
+     * @param \App\Models\User $usuario
+     */
+    private function registrarPagoEnVenta(
+        \App\Models\Venta $venta,
+        \App\Models\Proforma $proforma,
+        string $politica,
+        float $montoPagado,
+        ?int $tipoPagoId,
+        \App\Models\User $usuario
+    ): void {
+        try {
+            // ✅ Determinar monto a registrar según política
+            $montoRegistro = match($politica) {
+                // Para anticipados: Registrar el monto pagado
+                'ANTICIPADO_100' => $montoPagado,
+                'MEDIO_MEDIO' => $montoPagado,
+                // Para CREDITO y CONTRA_ENTREGA: Registrar 0 (no hay pago inmediato)
+                'CREDITO' => 0,
+                'CONTRA_ENTREGA' => 0,
+                default => 0,
+            };
+
+            // ✅ Determinar tipo de pago según política si no se proporciona
+            $tipoPagoFinal = $tipoPagoId;
+            if (!$tipoPagoFinal && in_array($politica, ['CREDITO', 'CONTRA_ENTREGA'])) {
+                // Para CREDITO y CONTRA_ENTREGA, obtener tipo de pago "PENDIENTE" o similar
+                $tipoPagoDefault = \App\Models\TipoPago::where('codigo', 'PENDIENTE')
+                    ->orWhere('nombre', 'Pendiente')
+                    ->first();
+                $tipoPagoFinal = $tipoPagoDefault?->id;
+            }
+
+            // Si aún no hay tipo_pago y el monto es 0, asignar tipo genérico
+            if (!$tipoPagoFinal && $montoRegistro === 0) {
+                $tipoPagoDefault = \App\Models\TipoPago::first();
+                $tipoPagoFinal = $tipoPagoDefault?->id;
+            }
+
+            // ✅ Crear registro en tabla pagos
+            $pago = \App\Models\Pago::create([
+                'venta_id' => $venta->id,
+                'tipo_pago_id' => $tipoPagoFinal,
+                'monto' => $montoRegistro,
+                'fecha' => now(),
+                'fecha_pago' => now()->toDateString(),
+                'observaciones' => "Pago por {$politica} - Convertida desde proforma #{$proforma->numero}",
+                'usuario_id' => $usuario->id,
+                'moneda_id' => $venta->moneda_id,
+            ]);
+
+            // ✅ REGISTRAR EN AUDITORÍA: Pago registrado exitosamente
+            \App\Models\AuditoriaCaja::create([
+                'user_id' => $usuario->id,
+                'caja_id' => null,
+                'apertura_caja_id' => null,
+                'accion' => 'PAGO_REGISTRADO_EN_VENTA',
+                'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
+                'operacion_tipo' => 'VENTA',
+                'exitosa' => true,
+                'detalle_operacion' => [
+                    'venta_id' => $venta->id,
+                    'proforma_id' => $proforma->id,
+                    'pago_id' => $pago->id,
+                    'politica' => $politica,
+                    'monto_pagado' => $montoPagado,
+                    'monto_registrado_tabla_pagos' => $montoRegistro,
+                    'tipo_pago_id' => $tipoPagoFinal,
+                ],
+                'codigo_http' => 201,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            Log::info('✅ [registrarPagoEnVenta] Pago registrado en tabla pagos', [
+                'venta_id' => $venta->id,
+                'proforma_id' => $proforma->id,
+                'pago_id' => $pago->id,
+                'usuario_id' => $usuario->id,
+                'usuario_nombre' => $usuario->name,
+                'politica' => $politica,
+                'monto_pagado' => $montoPagado,
+                'monto_registrado' => $montoRegistro,
+                'tipo_pago_id' => $tipoPagoFinal,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ [registrarPagoEnVenta] Error al registrar pago en tabla pagos', [
+                'venta_id' => $venta->id,
+                'proforma_id' => $proforma->id,
+                'usuario_id' => $usuario->id,
+                'usuario_nombre' => $usuario->name,
+                'politica' => $politica,
+                'monto_pagado' => $montoPagado,
+                'tipo_pago_id' => $tipoPagoId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // ✅ REGISTRAR EN AUDITORÍA: Error al registrar pago
+            try {
+                \App\Models\AuditoriaCaja::create([
+                    'user_id' => $usuario->id,
+                    'caja_id' => null,
+                    'apertura_caja_id' => null,
+                    'accion' => 'ERROR_REGISTRAR_PAGO_VENTA',
+                    'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
+                    'operacion_tipo' => 'VENTA',
+                    'exitosa' => false,
+                    'detalle_operacion' => [
+                        'venta_id' => $venta->id,
+                        'proforma_id' => $proforma->id,
+                        'politica' => $politica,
+                        'monto_pagado' => $montoPagado,
+                    ],
+                    'codigo_http' => 500,
+                    'mensaje_error' => $e->getMessage(),
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+            } catch (\Exception $auditError) {
+                Log::error('❌ [registrarPagoEnVenta] Error al registrar auditoría', [
+                    'error_audit' => $auditError->getMessage(),
+                ]);
+            }
+
+            // ⚠️ No relanzar excepción para no bloquear la conversión
         }
     }
 }

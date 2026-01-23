@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::stockActual
  * @see app/Http/Controllers/ReporteInventarioController.php:19
@@ -42,41 +42,6 @@ stockActual.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReporteInventarioController::stockActual
- * @see app/Http/Controllers/ReporteInventarioController.php:19
- * @route '/reportes/inventario/stock-actual'
- */
-    const stockActualForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: stockActual.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::stockActual
- * @see app/Http/Controllers/ReporteInventarioController.php:19
- * @route '/reportes/inventario/stock-actual'
- */
-        stockActualForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: stockActual.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::stockActual
- * @see app/Http/Controllers/ReporteInventarioController.php:19
- * @route '/reportes/inventario/stock-actual'
- */
-        stockActualForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: stockActual.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    stockActual.form = stockActualForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::vencimientos
  * @see app/Http/Controllers/ReporteInventarioController.php:79
@@ -120,41 +85,6 @@ vencimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReporteInventarioController::vencimientos
- * @see app/Http/Controllers/ReporteInventarioController.php:79
- * @route '/reportes/inventario/vencimientos'
- */
-    const vencimientosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: vencimientos.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::vencimientos
- * @see app/Http/Controllers/ReporteInventarioController.php:79
- * @route '/reportes/inventario/vencimientos'
- */
-        vencimientosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: vencimientos.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::vencimientos
- * @see app/Http/Controllers/ReporteInventarioController.php:79
- * @route '/reportes/inventario/vencimientos'
- */
-        vencimientosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: vencimientos.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    vencimientos.form = vencimientosForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::rotacion
  * @see app/Http/Controllers/ReporteInventarioController.php:132
@@ -198,41 +128,6 @@ rotacion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReporteInventarioController::rotacion
- * @see app/Http/Controllers/ReporteInventarioController.php:132
- * @route '/reportes/inventario/rotacion'
- */
-    const rotacionForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: rotacion.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::rotacion
- * @see app/Http/Controllers/ReporteInventarioController.php:132
- * @route '/reportes/inventario/rotacion'
- */
-        rotacionForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: rotacion.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::rotacion
- * @see app/Http/Controllers/ReporteInventarioController.php:132
- * @route '/reportes/inventario/rotacion'
- */
-        rotacionForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: rotacion.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    rotacion.form = rotacionForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::movimientos
  * @see app/Http/Controllers/ReporteInventarioController.php:198
@@ -276,41 +171,6 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ReporteInventarioController::movimientos
- * @see app/Http/Controllers/ReporteInventarioController.php:198
- * @route '/reportes/inventario/movimientos'
- */
-    const movimientosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: movimientos.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::movimientos
- * @see app/Http/Controllers/ReporteInventarioController.php:198
- * @route '/reportes/inventario/movimientos'
- */
-        movimientosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: movimientos.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::movimientos
- * @see app/Http/Controllers/ReporteInventarioController.php:198
- * @route '/reportes/inventario/movimientos'
- */
-        movimientosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: movimientos.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    movimientos.form = movimientosForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
  * @see app/Http/Controllers/ReporteInventarioController.php:260
@@ -353,42 +213,6 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: exportMethod.url(options),
     method: 'head',
 })
-
-    /**
-* @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
- * @route '/reportes/inventario/export'
- */
-    const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: exportMethod.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
- * @route '/reportes/inventario/export'
- */
-        exportMethodForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: exportMethod.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
- * @route '/reportes/inventario/export'
- */
-        exportMethodForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: exportMethod.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    exportMethod.form = exportMethodForm
 const inventario = {
     stockActual,
 vencimientos,

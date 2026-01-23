@@ -13,6 +13,15 @@ export interface TipoOperacion {
     codigo: string;
 }
 
+export interface ComprobanteMovimiento {
+    id: number;
+    nombre_original: string;
+    ruta_archivo: string;
+    tipo_archivo: string;
+    tamaño: number;
+    created_at: string;
+}
+
 export interface Caja {
     id: number;
     nombre: string;
@@ -45,11 +54,34 @@ export interface MovimientoCaja {
     id: number;
     caja_id: number;
     numero_documento: string;
-    descripcion: string;
+    observaciones: string;
     monto: number;
     fecha: string;
     created_at: string;
     tipo_operacion: TipoOperacion;
+    comprobantes?: ComprobanteMovimiento[];
+}
+
+export interface AperturaHistorico {
+    id: number;
+    caja_id: number;
+    caja_nombre: string;
+    fecha_apertura: string;
+    monto_apertura: number | string;
+    observaciones_apertura: string;
+    fecha_cierre: string | null;
+    monto_esperado: number | string | null;
+    monto_real: number | string | null;
+    diferencia: number | string | null;
+    observaciones_cierre: string | null;
+    estado: 'Abierta' | 'Cerrada';
+    estado_cierre: string | null;
+}
+
+export interface Usuario {
+    id: number;
+    name: string;
+    email: string;
 }
 
 /**
@@ -60,4 +92,8 @@ export interface CajasIndexProps {
     cajaAbiertaHoy: AperturaCaja | null;
     movimientosHoy: MovimientoCaja[];
     totalMovimientos: number;
+    historicoAperturas?: AperturaHistorico[];
+    tiposOperacion?: TipoOperacion[];
+    esVistaAdmin?: boolean; // ✅ NUEVO: Identificar si es vista admin
+    usuarioDestino?: Usuario; // ✅ NUEVO: Usuario del cual se ve la caja
 }

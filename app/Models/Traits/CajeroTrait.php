@@ -87,6 +87,87 @@ trait CajeroTrait
     }
 
     /**
+     * ✅ NUEVA VALIDACIÓN: Verifica si tiene caja abierta O consolidada del día anterior
+     *
+     * Permite la conversión de proforma si:
+     * 1. Hay una apertura sin cierre (caja abierta HOY), O
+     * 2. Hay un cierre CONSOLIDADA del día anterior
+     *
+     * @return bool
+     */
+    public function tieneCajaAbiertaOConsolidadaDelDia(): bool
+    {
+        // ✅ Opción 1: Caja abierta hoy (apertura sin cierre)
+        $cajaAbiertaHoy = $this->aperturasCaja()
+            ->whereDoesntHave('cierre')
+            ->exists();
+
+        if ($cajaAbiertaHoy) {
+            return true;
+        }
+
+        // ✅ Opción 2: Cierre consolidado del día anterior o hoy
+        // Buscamos un CierreCaja con estado CONSOLIDADA de hoy o ayer
+        $cierreConsolidado = $this->cierresCaja()
+            ->whereHas('estadoCierre', function ($q) {
+                $q->where('codigo', 'CONSOLIDADA');
+            })
+            ->whereDate('fecha', '>=', now()->subDay())
+            ->whereDate('fecha', '<=', now())
+            ->exists();
+
+        return $cierreConsolidado;
+    }
+
+    /**
+     * Obtiene detalles sobre el estado de la caja para mensajes de error
+     *
+     * @return array
+     */
+    public function obtenerEstadoCaja(): array
+    {
+        // Caja abierta
+        $aperturaAbierta = $this->aperturasCaja()
+            ->whereDoesntHave('cierre')
+            ->latest()
+            ->first();
+
+        if ($aperturaAbierta) {
+            return [
+                'estado' => 'ABIERTA',
+                'apertura_id' => $aperturaAbierta->id,
+                'fecha' => $aperturaAbierta->fecha_apertura,
+                'caja_id' => $aperturaAbierta->caja_id,
+            ];
+        }
+
+        // Cierre consolidado del día anterior/hoy
+        $cierreConsolidado = $this->cierresCaja()
+            ->whereHas('estadoCierre', function ($q) {
+                $q->where('codigo', 'CONSOLIDADA');
+            })
+            ->whereDate('fecha', '>=', now()->subDay())
+            ->whereDate('fecha', '<=', now())
+            ->latest('fecha')
+            ->first();
+
+        if ($cierreConsolidado) {
+            return [
+                'estado' => 'CONSOLIDADA_ANTERIOR',
+                'cierre_id' => $cierreConsolidado->id,
+                'fecha' => $cierreConsolidado->fecha,
+                'caja_id' => $cierreConsolidado->caja_id,
+            ];
+        }
+
+        // Sin caja disponible
+        return [
+            'estado' => 'SIN_CAJA',
+            'ultimo_cierre' => $this->cierresCaja()->latest('fecha')->first()?->fecha,
+        ];
+    }
+
+    /**
      * Calcula el total de efectivo que debe tener en caja
      */
     public function calcularTotalCajaActual(): float
