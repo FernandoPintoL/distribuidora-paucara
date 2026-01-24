@@ -484,6 +484,14 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('{cliente}/pagos', [ClienteController::class, 'obtenerHistorialPagos'])->name('api.cliente.pagos');
         Route::post('{cliente}/registrar-pago', [ClienteController::class, 'registrarPagoApi'])->name('api.cliente.registrar-pago');
         Route::post('{cliente}/ajustar-limite', [ClienteController::class, 'ajustarLimiteCredito'])->name('api.cliente.ajustar-limite');
+
+        // ✅ FASE 4: Rutas para impresión de reportes de crédito
+        Route::get('{cliente}/credito/imprimir', [ClienteController::class, 'imprimirCredito'])->name('api.cliente.credito.imprimir');
+        Route::get('{cliente}/credito/preview', [ClienteController::class, 'previewCredito'])->name('api.cliente.credito.preview');
+
+        // ✅ FASE 4: Rutas para impresión de comprobantes de pago
+        Route::get('{cliente}/pagos/{pago}/imprimir', [ClienteController::class, 'imprimirPago'])->name('api.cliente.pago.imprimir');
+        Route::get('{cliente}/pagos/{pago}/preview', [ClienteController::class, 'previewPago'])->name('api.cliente.pago.preview');
     });
 
     // ✅ FASE 3: Grupo de rutas para gestión de créditos

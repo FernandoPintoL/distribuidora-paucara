@@ -273,7 +273,7 @@
             <div style="margin-top: 3px;">
                 {{ $fecha_impresion->format('d/m/Y H:i') }}
                 @if($usuario)
-                - {{ $usuario->name }}
+                - {{ $usuario }}
                 @endif
             </div>
         </div>

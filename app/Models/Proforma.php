@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Services\WebSocketNotificationService;
+use App\Services\Notifications\ProformaNotificationService;
 use Illuminate\Support\Facades\Log;
 
 class Proforma extends Model
@@ -335,16 +335,10 @@ class Proforma extends Model
 
         $this->update($updateData);
 
-        // Enviar notificación WebSocket en tiempo real
-        try {
-            app(WebSocketNotificationService::class)
-                ->notifyProformaApproved($this->fresh('usuarioAprobador'));
-        } catch (\Exception $e) {
-            Log::warning('Error enviando notificación WebSocket de aprobación', [
-                'proforma_id' => $this->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        // ✅ Disparar evento para notificaciones
+        // El evento ProformaAprobada dispara el listener SendProformaApprovedNotification
+        // que utiliza ProformaNotificationService para enviar notificaciones
+        event(new \App\Events\ProformaAprobada($this->fresh()));
 
         return true;
     }
@@ -363,16 +357,10 @@ class Proforma extends Model
             'observaciones_rechazo' => $motivo,
         ]);
 
-        // Enviar notificación WebSocket en tiempo real
-        try {
-            app(WebSocketNotificationService::class)
-                ->notifyProformaRejected($this->fresh('usuarioAprobador'), $motivo);
-        } catch (\Exception $e) {
-            Log::warning('Error enviando notificación WebSocket de rechazo', [
-                'proforma_id' => $this->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        // ✅ Disparar evento para notificaciones
+        // El evento ProformaRechazada dispara el listener SendProformaRejectedNotification
+        // que utiliza ProformaNotificationService para enviar notificaciones
+        event(new \App\Events\ProformaRechazada($this->fresh(), $motivo));
 
         return true;
     }

@@ -73,6 +73,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * ✅ Obtener estado de caja del usuario actual
      * Se proporciona en TODAS las páginas para que el NavHeader pueda mostrar si hay caja abierta
+     * ✅ MEJORADO: Busca CUALQUIER caja abierta, sin importar la fecha (incluyendo días anteriores)
      */
     private function getCajaStatus($user): array
     {
@@ -86,18 +87,20 @@ class HandleInertiaRequests extends Middleware
             ];
         }
 
-        // Buscar apertura de caja abierta hoy
-        $cajaAbiertaHoy = AperturaCaja::where('user_id', $user->id)
-            ->whereDate('fecha', today())
+        // ✅ NUEVO: Buscar la apertura abierta más reciente (sin cierre), sin filtro de fecha
+        // Esto permite mostrar cajas abiertas de días anteriores
+        $cajaAbierta = AperturaCaja::where('user_id', $user->id)
+            ->whereDoesntHave('cierre')  // No tiene cierre asociado = está abierta
             ->with(['caja'])
+            ->latest('fecha')  // La más reciente
             ->first();
 
         return [
-            'tiene_caja_abierta' => $cajaAbiertaHoy !== null,
-            'caja_id' => $cajaAbiertaHoy?->caja_id,
-            'numero_caja' => $cajaAbiertaHoy?->caja?->nombre,
-            'monto_actual' => $cajaAbiertaHoy?->monto_apertura,
-            'apertura_id' => $cajaAbiertaHoy?->id,
+            'tiene_caja_abierta' => $cajaAbierta !== null,
+            'caja_id' => $cajaAbierta?->caja_id,
+            'numero_caja' => $cajaAbierta?->caja?->nombre,
+            'monto_actual' => $cajaAbierta?->monto_apertura,
+            'apertura_id' => $cajaAbierta?->id,
         ];
     }
 }

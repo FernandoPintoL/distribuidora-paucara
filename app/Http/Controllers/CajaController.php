@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\AperturaCaja;
@@ -32,20 +31,42 @@ class CajaController extends Controller
     /**
      * Mostrar dashboard de cajas
      *
-     * ✅ MODIFICADO: Reutiliza tanto para usuario personal como para admin viendo caja de otro usuario
-     * - Si $aperturaCaja viene (vía route model binding): mostrar esa caja específica (admin)
-     * - Si no viene: mostrar caja abierta actual del usuario (personal)
+     * ✅ MODIFICADO: Soporta tres contextos:
+     * 1. $aperturaCaja viene (vía route model binding): mostrar esa apertura específica (admin)
+     * 2. $userId viene: mostrar caja actual del usuario (admin viendo cualquier usuario)
+     * 3. Ni aperturaCaja ni userId: mostrar caja del usuario autenticado (personal)
      */
-    public function index(AperturaCaja $aperturaCaja = null)
+    public function index(AperturaCaja $aperturaCaja = null, $userId = null)
     {
         $usuarioAutenticado = Auth::user();
 
-        // ✅ NUEVO: Determinar si es vista personal o admin
+        // ✅ NUEVO: Determinar el contexto y usuario destino
         if ($aperturaCaja) {
-            // Admin viendo caja de otro usuario
-            $this->authorize('view-cajas-admin');
+            // Admin viendo caja de otro usuario vía apertura específica
+            if ($aperturaCaja->user_id !== $usuarioAutenticado->id) {
+                abort_unless(
+                    $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin']),
+                    403,
+                    'No tienes permiso para ver las cajas de otros usuarios'
+                );
+            }
             $usuarioDestino = $aperturaCaja->usuario;
             $cajaAbiertaHoy = $aperturaCaja;
+        } elseif ($userId) {
+            // Admin viendo caja de otro usuario vía user_id (sin importar apertura)
+            if ($userId !== $usuarioAutenticado->id) {
+                abort_unless(
+                    $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin']),
+                    403,
+                    'No tienes permiso para ver las cajas de otros usuarios'
+                );
+            }
+            $usuarioDestino = \App\Models\User::findOrFail($userId);
+            $cajaAbiertaHoy = AperturaCaja::where('user_id', $usuarioDestino->id)
+                ->whereDoesntHave('cierre')
+                ->with(['caja', 'cierre'])
+                ->latest('fecha')
+                ->first();
         } else {
             // Usuario viendo su propia caja
             $usuarioDestino = $usuarioAutenticado;
@@ -80,19 +101,19 @@ class CajaController extends Controller
             ->get()
             ->map(function ($apertura) {
                 return [
-                    'id' => $apertura->id,
-                    'caja_id' => $apertura->caja_id,
-                    'caja_nombre' => $apertura->caja->nombre ?? 'Sin caja',
-                    'fecha_apertura' => $apertura->fecha,
-                    'monto_apertura' => $apertura->monto_apertura,
+                    'id'                     => $apertura->id,
+                    'caja_id'                => $apertura->caja_id,
+                    'caja_nombre'            => $apertura->caja->nombre ?? 'Sin caja',
+                    'fecha_apertura'         => $apertura->fecha,
+                    'monto_apertura'         => $apertura->monto_apertura,
                     'observaciones_apertura' => $apertura->observaciones,
-                    'fecha_cierre' => $apertura->cierre?->created_at,
-                    'monto_esperado' => $apertura->cierre?->monto_esperado,
-                    'monto_real' => $apertura->cierre?->monto_real,
-                    'diferencia' => $apertura->cierre?->diferencia,
-                    'observaciones_cierre' => $apertura->cierre?->observaciones,
-                    'estado' => $apertura->cierre ? 'Cerrada' : 'Abierta',
-                    'estado_cierre' => $apertura->cierre?->estado,
+                    'fecha_cierre'           => $apertura->cierre?->created_at,
+                    'monto_esperado'         => $apertura->cierre?->monto_esperado,
+                    'monto_real'             => $apertura->cierre?->monto_real,
+                    'diferencia'             => $apertura->cierre?->diferencia,
+                    'observaciones_cierre'   => $apertura->cierre?->observaciones,
+                    'estado'                 => $apertura->cierre ? 'Cerrada' : 'Abierta',
+                    'estado_cierre'          => $apertura->cierre?->estado,
                 ];
             });
 
@@ -100,14 +121,14 @@ class CajaController extends Controller
         $tiposOperacion = TipoOperacionCaja::all(['id', 'codigo', 'nombre']);
 
         return Inertia::render('Cajas/Index', [
-            'cajas' => $cajas,
-            'cajaAbiertaHoy' => $cajaAbiertaHoy,
-            'movimientosHoy' => $movimientosHoy,
-            'totalMovimientos' => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
+            'cajas'              => $cajas,
+            'cajaAbiertaHoy'     => $cajaAbiertaHoy,
+            'movimientosHoy'     => $movimientosHoy,
+            'totalMovimientos'   => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
             'historicoAperturas' => $historicoAperturas,
-            'tiposOperacion' => $tiposOperacion,
-            'esVistaAdmin' => $aperturaCaja !== null, // ✅ Identificar contexto
-            'usuarioDestino' => $usuarioDestino, // ✅ Pasar usuario destino
+            'tiposOperacion'     => $tiposOperacion,
+            'esVistaAdmin'       => ($aperturaCaja !== null || $userId !== null), // ✅ Identificar contexto (apertura específica o user_id)
+            'usuarioDestino'     => $usuarioDestino,                              // ✅ Pasar usuario destino
         ]);
     }
 
@@ -118,17 +139,21 @@ class CajaController extends Controller
     public function abrirCaja(Request $request, $userId = null)
     {
         $request->validate([
-            'caja_id' => 'required|exists:cajas,id',
+            'caja_id'        => 'required|exists:cajas,id',
             'monto_apertura' => 'required|numeric|min:0',
-            'observaciones' => 'nullable|string|max:500',
+            'observaciones'  => 'nullable|string|max:500',
         ]);
 
         $usuarioAutenticado = Auth::user();
-        $usuarioDestino = $userId ? \App\Models\User::findOrFail($userId) : $usuarioAutenticado;
+        $usuarioDestino     = $userId ? \App\Models\User::findOrFail($userId) : $usuarioAutenticado;
 
         // ✅ VALIDACIÓN: Si es otro usuario, debe ser admin
         if ($userId && $usuarioDestino->id !== $usuarioAutenticado->id) {
-            $this->authorize('view-cajas-admin');
+            abort_unless(
+                $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin']),
+                403,
+                'No tienes permiso para gestionar cajas de otros usuarios'
+            );
         }
 
         try {
@@ -157,11 +182,11 @@ class CajaController extends Controller
 
             // Crear apertura de caja
             $apertura = AperturaCaja::create([
-                'caja_id' => $request->caja_id,
-                'user_id' => $usuarioDestino->id,
-                'fecha' => now(),
+                'caja_id'        => $request->caja_id,
+                'user_id'        => $usuarioDestino->id,
+                'fecha'          => now(),
                 'monto_apertura' => $request->monto_apertura,
-                'observaciones' => $request->observaciones,
+                'observaciones'  => $request->observaciones,
             ]);
 
             // Crear movimiento inicial si hay monto de apertura
@@ -170,13 +195,13 @@ class CajaController extends Controller
 
                 if ($tipoOperacion) {
                     MovimientoCaja::create([
-                        'caja_id' => $request->caja_id,
+                        'caja_id'           => $request->caja_id,
                         'tipo_operacion_id' => $tipoOperacion->id,
-                        'numero_documento' => 'APERTURA-'.date('Ymd').'-'.$usuarioDestino->id,
-                        'descripcion' => 'Apertura de caja - '.$caja->nombre,
-                        'monto' => $request->monto_apertura,
-                        'fecha' => now(),
-                        'user_id' => $usuarioDestino->id,
+                        'numero_documento'  => 'APERTURA-' . date('Ymd') . '-' . $usuarioDestino->id,
+                        'descripcion'       => 'Apertura de caja - ' . $caja->nombre,
+                        'monto'             => $request->monto_apertura,
+                        'fecha'             => now(),
+                        'user_id'           => $usuarioDestino->id,
                     ]);
                 }
             }
@@ -184,17 +209,17 @@ class CajaController extends Controller
             DB::commit();
 
             Log::info('Caja abierta exitosamente', [
-                'user_id' => $usuarioDestino->id,
-                'caja_id' => $request->caja_id,
+                'user_id'        => $usuarioDestino->id,
+                'caja_id'        => $request->caja_id,
                 'monto_apertura' => $request->monto_apertura,
-                'abierta_por' => $usuarioAutenticado->id,
+                'abierta_por'    => $usuarioAutenticado->id,
             ]);
 
             return back()->with('success', 'Caja abierta exitosamente.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error abriendo caja: '.$e->getMessage());
+            Log::error('Error abriendo caja: ' . $e->getMessage());
 
             return back()->withErrors([
                 'caja' => 'Error al abrir la caja. Intenta nuevamente.',
@@ -209,17 +234,21 @@ class CajaController extends Controller
     public function cerrarCaja(Request $request, $userId = null)
     {
         $request->validate([
-            'monto_real' => 'required|numeric|min:0',
+            'monto_real'    => 'required|numeric|min:0',
             'observaciones' => 'nullable|string|max:500',
-            'fecha_cierre' => 'nullable|date',
+            'fecha_cierre'  => 'nullable|date',
         ]);
 
         $usuarioAutenticado = Auth::user();
-        $usuarioDestino = $userId ? \App\Models\User::findOrFail($userId) : $usuarioAutenticado;
+        $usuarioDestino     = $userId ? \App\Models\User::findOrFail($userId) : $usuarioAutenticado;
 
         // ✅ VALIDACIÓN: Si es otro usuario, debe ser admin
         if ($userId && $usuarioDestino->id !== $usuarioAutenticado->id) {
-            $this->authorize('view-cajas-admin');
+            abort_unless(
+                $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin']),
+                403,
+                'No tienes permiso para gestionar cajas de otros usuarios'
+            );
         }
 
         try {
@@ -240,8 +269,8 @@ class CajaController extends Controller
 
             // ✅ NUEVO: Permitir cerrar en fecha pasada (para cajas abiertas en días anteriores)
             $fechaCierre = $request->fecha_cierre ?
-                Carbon::createFromFormat('Y-m-d', $request->fecha_cierre)->endOfDay() :
-                now();
+            Carbon::createFromFormat('Y-m-d', $request->fecha_cierre)->endOfDay() :
+            now();
 
             // Calcular monto esperado hasta la fecha de cierre
             $montoEsperado = $this->calcularMontoEsperado($apertura, $fechaCierre);
@@ -254,14 +283,14 @@ class CajaController extends Controller
 
             // Crear cierre de caja en estado PENDIENTE
             $cierre = CierreCaja::create([
-                'caja_id' => $apertura->caja_id,
-                'user_id' => $usuarioDestino->id,
+                'caja_id'          => $apertura->caja_id,
+                'user_id'          => $usuarioDestino->id,
                 'apertura_caja_id' => $apertura->id,
-                'fecha' => $fechaCierre,
-                'monto_esperado' => $montoEsperado,
-                'monto_real' => $request->monto_real,
-                'diferencia' => $diferencia,
-                'observaciones' => $request->observaciones,
+                'fecha'            => $fechaCierre,
+                'monto_esperado'   => $montoEsperado,
+                'monto_real'       => $request->monto_real,
+                'diferencia'       => $diferencia,
+                'observaciones'    => $request->observaciones,
                 'estado_cierre_id' => $estadoPendiente,
             ]);
 
@@ -271,13 +300,13 @@ class CajaController extends Controller
 
                 if ($tipoOperacion) {
                     MovimientoCaja::create([
-                        'caja_id' => $apertura->caja_id,
+                        'caja_id'           => $apertura->caja_id,
                         'tipo_operacion_id' => $tipoOperacion->id,
-                        'numero_documento' => 'AJUSTE-'.date('Ymd').'-'.$usuarioDestino->id,
-                        'descripcion' => 'Ajuste por diferencia en cierre - '.($diferencia > 0 ? 'Sobrante' : 'Faltante'),
-                        'monto' => $diferencia,
-                        'fecha' => now(),
-                        'user_id' => $usuarioDestino->id,
+                        'numero_documento'  => 'AJUSTE-' . date('Ymd') . '-' . $usuarioDestino->id,
+                        'descripcion'       => 'Ajuste por diferencia en cierre - ' . ($diferencia > 0 ? 'Sobrante' : 'Faltante'),
+                        'monto'             => $diferencia,
+                        'fecha'             => now(),
+                        'user_id'           => $usuarioDestino->id,
                     ]);
                 }
             }
@@ -293,19 +322,19 @@ class CajaController extends Controller
             }
 
             Log::info('Caja cerrada exitosamente', [
-                'user_id' => $usuarioDestino->id,
-                'caja_id' => $apertura->caja_id,
+                'user_id'        => $usuarioDestino->id,
+                'caja_id'        => $apertura->caja_id,
                 'monto_esperado' => $montoEsperado,
-                'monto_real' => $request->monto_real,
-                'diferencia' => $diferencia,
-                'cerrada_por' => $usuarioAutenticado->id,
+                'monto_real'     => $request->monto_real,
+                'diferencia'     => $diferencia,
+                'cerrada_por'    => $usuarioAutenticado->id,
             ]);
 
-            return back()->with('success', 'Caja cerrada exitosamente. Pendiente de verificación. Diferencia: '.number_format($diferencia, 2).' Bs.');
+            return back()->with('success', 'Caja cerrada exitosamente. Pendiente de verificación. Diferencia: ' . number_format($diferencia, 2) . ' Bs.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error cerrando caja: '.$e->getMessage());
+            Log::error('Error cerrando caja: ' . $e->getMessage());
 
             return back()->withErrors([
                 'caja' => 'Error al cerrar la caja. Intenta nuevamente.',
@@ -328,14 +357,14 @@ class CajaController extends Controller
                 $aperturaHoy = $caja->aperturas->first();
 
                 return [
-                    'id' => $caja->id,
-                    'nombre' => $caja->nombre,
-                    'ubicacion' => $caja->ubicacion,
-                    'esta_abierta' => $aperturaHoy && ! $aperturaHoy->cierre,
+                    'id'             => $caja->id,
+                    'nombre'         => $caja->nombre,
+                    'ubicacion'      => $caja->ubicacion,
+                    'esta_abierta'   => $aperturaHoy && ! $aperturaHoy->cierre,
                     'usuario_actual' => $aperturaHoy?->usuario?->name,
                     'monto_apertura' => $aperturaHoy?->monto_apertura,
-                    'hora_apertura' => $aperturaHoy?->created_at?->format('H:i'),
-                    'hora_cierre' => $aperturaHoy?->cierre?->created_at?->format('H:i'),
+                    'hora_apertura'  => $aperturaHoy?->created_at?->format('H:i'),
+                    'hora_cierre'    => $aperturaHoy?->cierre?->created_at?->format('H:i'),
                 ];
             });
 
@@ -349,11 +378,15 @@ class CajaController extends Controller
     public function movimientosDia(Request $request, $userId = null)
     {
         $usuarioAutenticado = Auth::user();
-        $usuarioDestino = $userId ? \App\Models\User::findOrFail($userId) : $usuarioAutenticado;
+        $usuarioDestino     = $userId ? \App\Models\User::findOrFail($userId) : $usuarioAutenticado;
 
         // ✅ VALIDACIÓN: Si es otro usuario, debe ser admin
         if ($userId && $usuarioDestino->id !== $usuarioAutenticado->id) {
-            $this->authorize('view-cajas-admin');
+            abort_unless(
+                $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin']),
+                403,
+                'No tienes permiso para gestionar cajas de otros usuarios'
+            );
         }
 
         $fecha = $request->get('fecha', today());
@@ -365,8 +398,8 @@ class CajaController extends Controller
         if (! $apertura) {
             return response()->json([
                 'movimientos' => [],
-                'total' => 0,
-                'apertura' => null,
+                'total'       => 0,
+                'apertura'    => null,
             ]);
         }
 
@@ -379,8 +412,8 @@ class CajaController extends Controller
 
         return response()->json([
             'movimientos' => $movimientos,
-            'total' => $movimientos->sum('monto'),
-            'apertura' => $apertura,
+            'total'       => $movimientos->sum('monto'),
+            'apertura'    => $apertura,
         ]);
     }
 
@@ -415,9 +448,9 @@ class CajaController extends Controller
 
         return response()->json([
             'movimientos' => $movimientos,
-            'total' => $movimientos->sum('monto'),
-            'apertura' => $apertura,
-            'count' => $movimientos->count(),
+            'total'       => $movimientos->sum('monto'),
+            'apertura'    => $apertura,
+            'count'       => $movimientos->count(),
         ]);
     }
 
@@ -428,7 +461,7 @@ class CajaController extends Controller
     private function calcularMontoEsperado(AperturaCaja $apertura, $fechaCierre = null): float
     {
         // Si no se proporciona fecha de cierre, usar ahora
-        if (!$fechaCierre) {
+        if (! $fechaCierre) {
             $fechaCierre = now();
         }
 
@@ -452,28 +485,84 @@ class CajaController extends Controller
     {
         $cajas = Caja::with(['usuario'])->get();
 
-        $aperturas_hoy = AperturaCaja::whereDate('fecha', today())
-            ->with(['cierre'])
+        // ✅ MEJORADO: Obtener apertura más reciente de CADA CAJA (sin importar si es de hoy)
+        // Esto detecta cajas abiertas desde días anteriores que aún no han sido cerradas
+        $aperturasMasRecientes = AperturaCaja::with(['cierre.estadoCierre'])
+            ->whereDoesntHave('cierre') // Solo aperturas SIN cierre (abiertas)
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->groupBy('caja_id')
+            ->map(fn($grupo) => $grupo->first()); // Tomar la más reciente por caja
+
+        // ✅ NUEVO: Obtener aperturas de HOY para la tabla (pueden estar cerradas o abiertas)
+        $aperturasDiarias = AperturaCaja::whereDate('fecha', today())
+            ->with(['cierre.estadoCierre'])
             ->get();
 
+        // ✅ NUEVO: Fusionar aperturas - priorizar aperturas sin cerrar
+        $aperturasColleccion = $aperturasMasRecientes->union($aperturasDiarias)->unique('id');
+
+        // ✅ NUEVO: Calcular métricas ANTES de transformar a arrays
+        $cajas_abiertas = $aperturasColleccion->filter(fn($a) => ! $a->cierre)->count();
+
+        // ✅ NUEVO: Obtener información de cierres pendientes por usuario
+        $cierresPendientesPorUsuario = CierreCaja::where('estado_cierre_id', \App\Models\EstadoCierre::obtenerIdPendiente())
+            ->groupBy('user_id')
+            ->selectRaw('user_id, COUNT(*) as cantidad')
+            ->get()
+            ->keyBy('user_id');
+
+        // ✅ NUEVO: Enriquecer cajas con información de cierres pendientes
+        $cajasEnriquecidas = $cajas->map(function ($caja) use ($cierresPendientesPorUsuario) {
+            $cierresPendientes = $cierresPendientesPorUsuario->get($caja->user_id);
+            return [
+                'id'                 => $caja->id,
+                'user_id'            => $caja->user_id,
+                'nombre'             => $caja->nombre,
+                'ubicacion'          => $caja->ubicacion,
+                'usuario'            => $caja->usuario,
+                'cierres_pendientes' => $cierresPendientes ? $cierresPendientes->cantidad : 0,
+            ];
+        });
+
+        // ✅ NUEVO: Transformar aperturas para incluir estado del cierre (DESPUÉS de calcular métricas)
+        $aperturas_hoy = $aperturasColleccion->map(function ($apertura) {
+            return [
+                'id'               => $apertura->id,
+                'caja_id'          => $apertura->caja_id,
+                'user_id'          => $apertura->user_id,
+                'monto_apertura'   => $apertura->monto_apertura,
+                'fecha'            => $apertura->fecha,
+                'created_at'       => $apertura->created_at,
+                'cierre'           => $apertura->cierre ? [
+                    'id'         => $apertura->cierre->id,
+                    'monto_real' => $apertura->cierre->monto_real,
+                    'diferencia' => $apertura->cierre->diferencia,
+                    'fecha_cierre' => $apertura->cierre->fecha,
+                    'estado'     => $apertura->cierre->estadoCierre?->nombre,
+                    'created_at' => $apertura->cierre->created_at,
+                ] : null,
+            ];
+        });
+
         $metricas = [
-            'total_cajas' => $cajas->count(),
-            'cajas_abiertas' => $aperturas_hoy->filter(fn($a) => !$a->cierre)->count(),
-            'total_ingresos' => MovimientoCaja::whereDate('fecha', today())
+            'total_cajas'            => $cajas->count(),
+            'cajas_abiertas'         => $cajas_abiertas,
+            'total_ingresos'         => MovimientoCaja::whereDate('fecha', today())
                 ->where('monto', '>', 0)
                 ->sum('monto'),
-            'total_egresos' => abs(MovimientoCaja::whereDate('fecha', today())
-                ->where('monto', '<', 0)
-                ->sum('monto')),
+            'total_egresos'          => abs(MovimientoCaja::whereDate('fecha', today())
+                    ->where('monto', '<', 0)
+                    ->sum('monto')),
             'diferencias_detectadas' => CierreCaja::whereDate('fecha', today())
                 ->where('diferencia', '!=', 0)
                 ->count(),
         ];
 
         return Inertia::render('Cajas/Dashboard', [
-            'cajas' => $cajas,
-            'aperturas_hoy' => $aperturas_hoy,
-            'metricas' => $metricas,
+            'cajas'         => $cajasEnriquecidas->values(),
+            'aperturas_hoy' => $aperturas_hoy->values(), // ✅ Convertir Collection a array
+            'metricas'      => $metricas,
         ]);
     }
 
@@ -484,11 +573,15 @@ class CajaController extends Controller
     public function detalle($userId)
     {
         $usuarioAutenticado = Auth::user();
-        $usuarioDestino = \App\Models\User::findOrFail($userId);
+        $usuarioDestino     = \App\Models\User::findOrFail($userId);
 
         // ✅ VALIDACIÓN: Si es otro usuario, debe ser admin
         if ($usuarioDestino->id !== $usuarioAutenticado->id) {
-            $this->authorize('view-cajas-admin');
+            abort_unless(
+                $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin']),
+                403,
+                'No tienes permiso para ver cajas de otros usuarios'
+            );
         }
 
         // Obtener cajas del usuario
@@ -511,9 +604,9 @@ class CajaController extends Controller
             ->get();
 
         return Inertia::render('Cajas/Detalle', [
-            'usuario' => $usuarioDestino,
-            'cajas' => $cajas,
-            'aperturas' => $aperturas,
+            'usuario'        => $usuarioDestino,
+            'cajas'          => $cajas,
+            'aperturas'      => $aperturas,
             'movimientosHoy' => $movimientosHoy,
         ]);
     }
@@ -524,7 +617,7 @@ class CajaController extends Controller
     public function reportes(Request $request)
     {
         $fecha_inicio = $request->get('fecha_inicio', today()->subDays(30)->toDateString());
-        $fecha_fin = $request->get('fecha_fin', today()->toDateString());
+        $fecha_fin    = $request->get('fecha_fin', today()->toDateString());
 
         // Obtener discrepancias en el período
         $discrepancias = CierreCaja::whereBetween('fecha', [$fecha_inicio, $fecha_fin])
@@ -534,14 +627,14 @@ class CajaController extends Controller
             ->get()
             ->map(function ($cierre) {
                 return [
-                    'id' => $cierre->id,
-                    'caja_id' => $cierre->apertura->caja_id,
-                    'usuario' => $cierre->apertura->usuario->name,
-                    'fecha' => $cierre->fecha,
+                    'id'             => $cierre->id,
+                    'caja_id'        => $cierre->apertura->caja_id,
+                    'usuario'        => $cierre->apertura->usuario->name,
+                    'fecha'          => $cierre->fecha,
                     'monto_apertura' => $cierre->apertura->monto_apertura,
-                    'monto_cierre' => $cierre->monto_real,
-                    'diferencia' => $cierre->diferencia,
-                    'observaciones' => $cierre->observaciones,
+                    'monto_cierre'   => $cierre->monto_real,
+                    'diferencia'     => $cierre->diferencia,
+                    'observaciones'  => $cierre->observaciones,
                 ];
             });
 
@@ -555,34 +648,34 @@ class CajaController extends Controller
             ->map(function ($grupo) {
                 $primer = $grupo->first();
                 return [
-                    'fecha' => $primer->fecha->format('Y-m-d'),
-                    'usuario' => $primer->apertura->usuario->name,
-                    'total_apertura' => $grupo->sum('apertura.monto_apertura'),
-                    'total_ingresos' => $grupo->sum('monto_real'),
-                    'total_egresos' => 0,
+                    'fecha'            => $primer->fecha->format('Y-m-d'),
+                    'usuario'          => $primer->apertura->usuario->name,
+                    'total_apertura'   => $grupo->sum('apertura.monto_apertura'),
+                    'total_ingresos'   => $grupo->sum('monto_real'),
+                    'total_egresos'    => 0,
                     'diferencia_total' => $grupo->sum('diferencia'),
                 ];
             });
 
         $estadisticas = [
-            'total_discrepancias' => $discrepancias->count(),
-            'discrepancias_positivas' => $discrepancias->filter(fn($d) => $d['diferencia'] > 0)->count(),
-            'discrepancias_negativas' => $discrepancias->filter(fn($d) => $d['diferencia'] < 0)->count(),
-            'diferencia_total' => $discrepancias->sum('diferencia'),
-            'promedio_discrepancia' => $discrepancias->count() > 0 ? $discrepancias->sum('diferencia') / $discrepancias->count() : 0,
+            'total_discrepancias'           => $discrepancias->count(),
+            'discrepancias_positivas'       => $discrepancias->filter(fn($d) => $d['diferencia'] > 0)->count(),
+            'discrepancias_negativas'       => $discrepancias->filter(fn($d) => $d['diferencia'] < 0)->count(),
+            'diferencia_total'              => $discrepancias->sum('diferencia'),
+            'promedio_discrepancia'         => $discrepancias->count() > 0 ? $discrepancias->sum('diferencia') / $discrepancias->count() : 0,
             'usuario_con_mas_discrepancias' => $discrepancias->groupBy('usuario')
                 ->map(fn($g) => $g->count())
                 ->max() ? key($discrepancias->groupBy('usuario')
-                ->map(fn($g) => $g->count())
-                ->toArray()) : 'N/A',
+                    ->map(fn($g) => $g->count())
+                    ->toArray()) : 'N/A',
         ];
 
         return Inertia::render('Cajas/Reportes', [
-            'discrepancias' => $discrepancias,
+            'discrepancias'  => $discrepancias,
             'resumen_diario' => $resumen_diario->values(),
-            'estadisticas' => $estadisticas,
-            'fecha_inicio' => $fecha_inicio,
-            'fecha_fin' => $fecha_fin,
+            'estadisticas'   => $estadisticas,
+            'fecha_inicio'   => $fecha_inicio,
+            'fecha_fin'      => $fecha_fin,
         ]);
     }
 
@@ -592,11 +685,11 @@ class CajaController extends Controller
     public function corregirCierre(Request $request, $id)
     {
         $request->validate([
-            'monto_real' => 'required|numeric|min:0',
+            'monto_real'    => 'required|numeric|min:0',
             'observaciones' => 'nullable|string|max:500',
         ]);
 
-        $user = Auth::user();
+        $user   = Auth::user();
         $cierre = CierreCaja::findOrFail($id);
 
         // Verificar que el usuario sea el dueño del cierre
@@ -629,18 +722,22 @@ class CajaController extends Controller
     public function consolidarCaja(Request $request, $userId)
     {
         $usuarioAutenticado = Auth::user();
-        $usuarioDestino = \App\Models\User::findOrFail($userId);
+        $usuarioDestino     = \App\Models\User::findOrFail($userId);
 
-        // ✅ VALIDACIÓN: Solo admin puede consolidar cajas
-        $this->authorize('consolidate-cajas');
+        // ✅ VALIDACIÓN: Solo admin/super-admin puede consolidar cajas
+        abort_unless(
+            $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin']),
+            403,
+            'No tienes permiso para consolidar cajas'
+        );
 
         try {
             DB::beginTransaction();
 
-            // Obtener todos los cierres pendientes del usuario
+            // Obtener todos los cierres pendientes del usuario con todas las relaciones
             $cierresPendientes = CierreCaja::where('user_id', $usuarioDestino->id)
                 ->where('estado_cierre_id', \App\Models\EstadoCierre::obtenerIdPendiente())
-                ->with(['apertura', 'caja'])
+                ->with(['apertura', 'caja', 'estadoCierre', 'verificador'])
                 ->get();
 
             if ($cierresPendientes->isEmpty()) {
@@ -650,25 +747,25 @@ class CajaController extends Controller
             }
 
             $totalMontoEsperado = 0;
-            $totalMontoReal = 0;
-            $totalDiferencia = 0;
-            $estadoAprobado = \App\Models\EstadoCierre::obtenerIdAprobado();
+            $totalMontoReal     = 0;
+            $totalDiferencia    = 0;
+            $estadoConsolidada     = \App\Models\EstadoCierre::obtenerIdConsolidada();
 
             // Procesar cada cierre pendiente
             foreach ($cierresPendientes as $cierre) {
                 $totalMontoEsperado += $cierre->monto_esperado;
-                $totalMontoReal += $cierre->monto_real;
-                $totalDiferencia += $cierre->diferencia;
+                $totalMontoReal     += $cierre->monto_real;
+                $totalDiferencia    += $cierre->diferencia;
 
-                // Cambiar estado a APROBADO
+                // Cambiar estado a CONSOLIDADA
                 $cierre->update([
-                    'estado_cierre_id' => $estadoAprobado,
+                    'estado_cierre_id' => $estadoConsolidada,
                     'fecha_aprobacion' => now(),
                 ]);
 
                 Log::info('Cierre aprobado en consolidación', [
-                    'cierre_id' => $cierre->id,
-                    'usuario_id' => $usuarioDestino->id,
+                    'cierre_id'    => $cierre->id,
+                    'usuario_id'   => $usuarioDestino->id,
                     'aprobado_por' => $usuarioAutenticado->id,
                 ]);
             }
@@ -676,24 +773,26 @@ class CajaController extends Controller
             DB::commit();
 
             Log::info('Cajas consolidadas exitosamente', [
-                'usuario_id' => $usuarioDestino->id,
+                'usuario_id'         => $usuarioDestino->id,
                 'cierres_procesados' => $cierresPendientes->count(),
-                'monto_total' => $totalMontoReal,
-                'diferencia_total' => $totalDiferencia,
-                'consolidado_por' => $usuarioAutenticado->id,
+                'monto_total'        => $totalMontoReal,
+                'diferencia_total'   => $totalDiferencia,
+                'consolidado_por'    => $usuarioAutenticado->id,
             ]);
 
-            return back()->with('success',
-                "Cajas consolidadas exitosamente. {$cierresPendientes->count()} cierre(s) aprobado(s). " .
-                "Diferencia total: ".number_format($totalDiferencia, 2).' Bs.'
-            );
+            $mensaje = "✅ Cajas consolidadas exitosamente\n{$cierresPendientes->count()} cierre(s) consolidado(s)\nDiferencia total: " . number_format($totalDiferencia, 2) . ' Bs.';
+
+            return back()->with('success', $mensaje);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error consolidando cajas: '.$e->getMessage());
+            Log::error('Error consolidando cajas: ' . $e->getMessage(), [
+                'exception' => $e,
+                'user_id' => $usuarioDestino->id,
+            ]);
 
             return back()->withErrors([
-                'cierre' => 'Error al consolidar cajas. Intenta nuevamente.',
+                'cierre' => $e->getMessage() ?: 'Error al consolidar cajas. Intenta nuevamente.',
             ]);
         }
     }
@@ -706,11 +805,11 @@ class CajaController extends Controller
     {
         $request->validate([
             'tipo_operacion_id' => 'required|exists:tipo_operacion_caja,id',
-            'monto' => 'required|numeric|min:0.01',
-            'numero_documento' => 'nullable|string|max:50',
-            'categoria' => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,VARIOS',
-            'observaciones' => 'nullable|string|max:500',
-            'comprobante' => 'nullable|file|mimes:jpeg,png,webp,pdf|max:10240', // 10MB
+            'monto'             => 'required|numeric|min:0.01',
+            'numero_documento'  => 'nullable|string|max:50',
+            'categoria'         => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,VARIOS',
+            'observaciones'     => 'nullable|string|max:500',
+            'comprobante'       => 'nullable|file|mimes:jpeg,png,webp,pdf|max:10240', // 10MB
         ]);
 
         try {
@@ -724,7 +823,7 @@ class CajaController extends Controller
                 ->latest('fecha')
                 ->first();
 
-            if (!$cajaAbierta) {
+            if (! $cajaAbierta) {
                 return back()->withErrors([
                     'caja' => 'Debe tener una caja abierta para registrar movimientos',
                 ]);
@@ -748,23 +847,23 @@ class CajaController extends Controller
 
             // Crear movimiento
             $movimiento = MovimientoCaja::create([
-                'caja_id' => $cajaAbierta->caja_id,
+                'caja_id'           => $cajaAbierta->caja_id,
                 'tipo_operacion_id' => $request->tipo_operacion_id,
-                'numero_documento' => $request->numero_documento,
-                'descripcion' => $tipoOperacion->nombre,
-                'monto' => $monto,
-                'fecha' => now(),
-                'user_id' => $user->id,
-                'observaciones' => $observaciones,
+                'numero_documento'  => $request->numero_documento,
+                'descripcion'       => $tipoOperacion->nombre,
+                'monto'             => $monto,
+                'fecha'             => now(),
+                'user_id'           => $user->id,
+                'observaciones'     => $observaciones,
             ]);
 
             // Guardar comprobante si se proporcionó
             if ($request->hasFile('comprobante')) {
                 $archivo = $request->file('comprobante');
-                $hash = hash_file('sha256', $archivo->getRealPath());
+                $hash    = hash_file('sha256', $archivo->getRealPath());
 
                 // Crear ruta del archivo: comprobantes/YYYY/MM/DD/hash.extension
-                $directorio = 'comprobantes/' . now()->format('Y/m/d');
+                $directorio    = 'comprobantes/' . now()->format('Y/m/d');
                 $nombreArchivo = $hash . '.' . $archivo->getClientOriginalExtension();
 
                 // Guardar archivo
@@ -773,28 +872,28 @@ class CajaController extends Controller
                 // Crear registro de comprobante
                 ComprobanteMovimiento::create([
                     'movimiento_caja_id' => $movimiento->id,
-                    'user_id' => $user->id,
-                    'ruta_archivo' => $ruta,
-                    'nombre_original' => $archivo->getClientOriginalName(),
-                    'tipo_archivo' => $archivo->getClientMimeType(),
-                    'tamaño' => $archivo->getSize(),
-                    'hash' => $hash,
+                    'user_id'            => $user->id,
+                    'ruta_archivo'       => $ruta,
+                    'nombre_original'    => $archivo->getClientOriginalName(),
+                    'tipo_archivo'       => $archivo->getClientMimeType(),
+                    'tamaño'             => $archivo->getSize(),
+                    'hash'               => $hash,
                 ]);
 
                 Log::info("✅ Comprobante guardado", [
                     'movimiento_id' => $movimiento->id,
-                    'archivo' => $nombreArchivo,
-                    'tamaño' => $archivo->getSize(),
+                    'archivo'       => $nombreArchivo,
+                    'tamaño'        => $archivo->getSize(),
                 ]);
             }
 
             DB::commit();
 
             Log::info("✅ Movimiento registrado", [
-                'movimiento_id' => $movimiento->id,
-                'tipo' => $tipoOperacion->codigo,
-                'monto' => $monto,
-                'usuario' => $user->name,
+                'movimiento_id'   => $movimiento->id,
+                'tipo'            => $tipoOperacion->codigo,
+                'monto'           => $monto,
+                'usuario'         => $user->name,
                 'con_comprobante' => $request->hasFile('comprobante'),
             ]);
 
@@ -804,7 +903,7 @@ class CajaController extends Controller
             DB::rollBack();
             Log::error("❌ Error registrando movimiento: " . $e->getMessage());
             return back()->withErrors([
-                'error' => 'Error al registrar movimiento: ' . $e->getMessage()
+                'error' => 'Error al registrar movimiento: ' . $e->getMessage(),
             ])->withInput();
         }
     }
@@ -821,10 +920,10 @@ class CajaController extends Controller
         $this->authorize('cajas.cerrar');
 
         $formato = $request->query('formato', 'TICKET_80');
-        $accion = $request->query('accion', 'download');
+        $accion  = $request->query('accion', 'download');
 
         // Validar que la caja tenga cierre
-        if (!$aperturaCaja->cierre) {
+        if (! $aperturaCaja->cierre) {
             return back()->withErrors(['error' => 'Esta caja aún no ha sido cerrada']);
         }
 
@@ -832,46 +931,46 @@ class CajaController extends Controller
         $movimientos = MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
             ->whereBetween('fecha', [
                 $aperturaCaja->fecha,
-                $aperturaCaja->cierre->created_at
+                $aperturaCaja->cierre->created_at,
             ])
             ->get();
 
         $totalIngresos = $movimientos->where('monto', '>', 0)->sum('monto');
-        $totalEgresos = abs($movimientos->where('monto', '<', 0)->sum('monto'));
+        $totalEgresos  = abs($movimientos->where('monto', '<', 0)->sum('monto'));
 
         // Preparar datos
         $datos = [
-            'apertura' => $aperturaCaja,
-            'cierre' => $aperturaCaja->cierre,
-            'movimientos' => $movimientos,
-            'totalIngresos' => $totalIngresos,
-            'totalEgresos' => $totalEgresos,
-            'empresa' => auth()->user()->empresa ?? null,
-            'usuario' => auth()->user(),
+            'apertura'        => $aperturaCaja,
+            'cierre'          => $aperturaCaja->cierre,
+            'movimientos'     => $movimientos,
+            'totalIngresos'   => $totalIngresos,
+            'totalEgresos'    => $totalEgresos,
+            'empresa'         => auth()->user()->empresa ?? null,
+            'usuario'         => auth()->user(),
             'fecha_impresion' => now(),
         ];
 
         // Seleccionar vista según formato
-        $vista = match($formato) {
+        $vista = match ($formato) {
             'TICKET_58' => 'impresion.cajas.cierre-caja-ticket-58',
             'TICKET_80' => 'impresion.cajas.cierre-caja-ticket-80',
-            default => 'impresion.cajas.cierre-caja-ticket-80',
+            default     => 'impresion.cajas.cierre-caja-ticket-80',
         };
 
         // Configurar opciones de dompdf según formato
         $options = [];
         if ($formato === 'TICKET_58') {
-            $options['paper'] = [0, 0, 170, 5000]; // 58mm ancho
-            $options['margin_top'] = 0;
+            $options['paper']         = [0, 0, 170, 5000]; // 58mm ancho
+            $options['margin_top']    = 0;
             $options['margin_bottom'] = 0;
-            $options['margin_left'] = 0;
-            $options['margin_right'] = 0;
+            $options['margin_left']   = 0;
+            $options['margin_right']  = 0;
         } elseif ($formato === 'TICKET_80') {
-            $options['paper'] = [0, 0, 226, 5000]; // 80mm ancho
-            $options['margin_top'] = 0;
+            $options['paper']         = [0, 0, 226, 5000]; // 80mm ancho
+            $options['margin_top']    = 0;
             $options['margin_bottom'] = 0;
-            $options['margin_left'] = 0;
-            $options['margin_right'] = 0;
+            $options['margin_left']   = 0;
+            $options['margin_right']  = 0;
         }
 
         $pdf = Pdf::loadView($vista, $datos, $options);
@@ -896,12 +995,12 @@ class CajaController extends Controller
         $this->authorize('cajas.transacciones');
 
         $formato = $request->query('formato', 'A4');
-        $accion = $request->query('accion', 'download');
+        $accion  = $request->query('accion', 'download');
 
         // Obtener movimientos
         $movimientos = MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
             ->where('fecha', '>=', $aperturaCaja->fecha)
-            ->when($aperturaCaja->cierre, function($query) use ($aperturaCaja) {
+            ->when($aperturaCaja->cierre, function ($query) use ($aperturaCaja) {
                 return $query->where('fecha', '<=', $aperturaCaja->cierre->created_at);
             })
             ->with(['tipoOperacion', 'comprobantes'])
@@ -909,49 +1008,49 @@ class CajaController extends Controller
             ->get();
 
         // Agrupar por tipo
-        $movimientosAgrupados = $movimientos->groupBy(function($mov) {
+        $movimientosAgrupados = $movimientos->groupBy(function ($mov) {
             return $mov->tipoOperacion->nombre;
         });
 
         // Calcular totales
-        $totalDia = $movimientos->sum('monto');
+        $totalDia      = $movimientos->sum('monto');
         $totalIngresos = $movimientos->where('monto', '>', 0)->sum('monto');
-        $totalEgresos = abs($movimientos->where('monto', '<', 0)->sum('monto'));
+        $totalEgresos  = abs($movimientos->where('monto', '<', 0)->sum('monto'));
 
         // Preparar datos
         $datos = [
-            'apertura' => $aperturaCaja,
-            'movimientos' => $movimientos,
+            'apertura'             => $aperturaCaja,
+            'movimientos'          => $movimientos,
             'movimientosAgrupados' => $movimientosAgrupados,
-            'totalDia' => $totalDia,
-            'totalIngresos' => $totalIngresos,
-            'totalEgresos' => $totalEgresos,
-            'empresa' => auth()->user()->empresa ?? null,
-            'usuario' => auth()->user(),
-            'fecha_impresion' => now(),
+            'totalDia'             => $totalDia,
+            'totalIngresos'        => $totalIngresos,
+            'totalEgresos'         => $totalEgresos,
+            'empresa'              => auth()->user()->empresa ?? null,
+            'usuario'              => auth()->user(),
+            'fecha_impresion'      => now(),
         ];
 
         // Seleccionar vista según formato
-        $vista = match($formato) {
+        $vista = match ($formato) {
             'TICKET_58' => 'impresion.cajas.movimientos-caja-ticket-58',
             'TICKET_80' => 'impresion.cajas.movimientos-caja-ticket-80',
-            default => 'impresion.cajas.movimientos-dia-a4',
+            default     => 'impresion.cajas.movimientos-dia-a4',
         };
 
         // Configurar opciones de dompdf según formato
         $options = [];
         if ($formato === 'TICKET_58') {
-            $options['paper'] = [0, 0, 170, 5000]; // 58mm ancho
-            $options['margin_top'] = 0;
+            $options['paper']         = [0, 0, 170, 5000]; // 58mm ancho
+            $options['margin_top']    = 0;
             $options['margin_bottom'] = 0;
-            $options['margin_left'] = 0;
-            $options['margin_right'] = 0;
+            $options['margin_left']   = 0;
+            $options['margin_right']  = 0;
         } elseif ($formato === 'TICKET_80') {
-            $options['paper'] = [0, 0, 226, 5000]; // 80mm ancho
-            $options['margin_top'] = 0;
+            $options['paper']         = [0, 0, 226, 5000]; // 80mm ancho
+            $options['margin_top']    = 0;
             $options['margin_bottom'] = 0;
-            $options['margin_left'] = 0;
-            $options['margin_right'] = 0;
+            $options['margin_left']   = 0;
+            $options['margin_right']  = 0;
         }
 
         $pdf = Pdf::loadView($vista, $datos, $options);

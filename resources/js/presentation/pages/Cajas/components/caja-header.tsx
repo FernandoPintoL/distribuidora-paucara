@@ -6,16 +6,24 @@
  * ✅ Información general del módulo de cajas
  * ✅ Mostrar shortcuts a otras secciones
  * ✅ Indicar si hay caja abierta de días anteriores
+ * ✅ Mostrar nombre del usuario cuando es vista admin
  */
 
 import type { AperturaCaja } from '@/domain/entities/cajas';
 
+interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
 interface Props {
     cajaAbiertaHoy?: AperturaCaja | null;
     esVistaAdmin?: boolean;
+    usuarioDestino?: User | null;
 }
 
-export function CajaHeader({ cajaAbiertaHoy, esVistaAdmin = false }: Props = {}) {
+export function CajaHeader({ cajaAbiertaHoy, esVistaAdmin = false, usuarioDestino }: Props = {}) {
     const today = new Date();
     const formattedDate = today.toLocaleDateString('es-BO', {
         weekday: 'long',
@@ -31,7 +39,8 @@ export function CajaHeader({ cajaAbiertaHoy, esVistaAdmin = false }: Props = {})
     });
 
     // ✅ NUEVO: Detectar si caja es de un día anterior
-    let subtítulo = 'Mi caja personal';
+    let titulo = esVistaAdmin ? `👤 Caja de ${usuarioDestino?.name || 'Usuario'}` : '💰 Mi Caja';
+    let subtítulo = esVistaAdmin ? usuarioDestino?.email || '' : 'Mi caja personal';
     let badge = null;
 
     if (cajaAbiertaHoy) {
@@ -55,7 +64,7 @@ export function CajaHeader({ cajaAbiertaHoy, esVistaAdmin = false }: Props = {})
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                            💰 Mi Caja
+                            {titulo}
                         </h2>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {subtítulo}

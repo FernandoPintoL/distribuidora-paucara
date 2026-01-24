@@ -665,9 +665,6 @@ export default function ProformasShow({ item: proforma }: Props) {
 
         // ✅ CRÍTICO: Establecer flag para evitar que el componente se remonte
         setIsFlowAprobacionConversion(true);
-
-        console.log("proforma:", proforma);
-
         // Inicializar flujo
         if (approvalFlow) {
             approvalFlow.initFlow(proforma);
@@ -681,10 +678,10 @@ export default function ProformasShow({ item: proforma }: Props) {
             // ✅ NUEVO: Solo actualizar si la proforma está en estado "pendiente"
             console.log('%c🔍 PASO 0: Validando estado de proforma...', 'color: blue;', {
                 estado: proforma.estado,
-                esEditable: proforma.estado === 'pendiente',
+                esEditable: proforma.estado === 'PENDIENTE',
             });
 
-            const hayChangios = proforma.estado === 'pendiente' && (
+            const hayChangios = proforma.estado === 'PENDIENTE' && (
                 editableDetalles.length !== proforma.detalles.length ||
                 editableDetalles.some((d, i) => {
                     const original = proforma.detalles[i];
@@ -733,7 +730,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                 }
             } else {
                 // ✅ NUEVO: Log claro cuando no hay cambios o proforma no está en pendiente
-                if (proforma.estado !== 'pendiente') {
+                if (proforma.estado !== 'PENDIENTE') {
                     console.log('%c⏭️ PASO 0 omitido: Proforma no está en estado "pendiente"', 'color: orange;', {
                         estado: proforma.estado,
                         razon: 'Solo se actualizan detalles si la proforma está pendiente'

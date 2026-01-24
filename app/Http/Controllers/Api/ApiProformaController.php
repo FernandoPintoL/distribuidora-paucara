@@ -2267,25 +2267,30 @@ class ApiProformaController extends Controller
                 }
 
                 // ✅ NUEVO: Registrar movimiento de caja para pagos inmediatos (anticipados)
-                // Se registra para políticas: ANTICIPADO_100, MEDIO_MEDIO
-                $this->registrarMovimientoCajaParaPago(
-                    $venta,
-                    $proforma,
-                    $politica,
-                    $montoPagado,
-                    request()->user()
-                );
+                // Se registra SOLO para políticas: ANTICIPADO_100, MEDIO_MEDIO
+                if (in_array($politica, ['ANTICIPADO_100', 'MEDIO_MEDIO'])) {
+                    $this->registrarMovimientoCajaParaPago(
+                        $venta,
+                        $proforma,
+                        $politica,
+                        $montoPagado,
+                        request()->user()
+                    );
+                }
 
-                // ✅ NUEVO: Registrar pago en tabla pagos para TODAS las políticas
-                // Se registra para: ANTICIPADO_100, MEDIO_MEDIO, CREDITO, CONTRA_ENTREGA
-                $this->registrarPagoEnVenta(
-                    $venta,
-                    $proforma,
-                    $politica,
-                    $montoPagado,
-                    $request->input('tipo_pago_id'),
-                    request()->user()
-                );
+                // ✅ NUEVO: Registrar pago en tabla pagos SOLO para políticas de pago inmediato
+                // Se registra SOLO para: ANTICIPADO_100, MEDIO_MEDIO
+                // NO se registra para: CREDITO, CONTRA_ENTREGA (esas se crean en CrearCuentaPorCobrarListener)
+                if (in_array($politica, ['ANTICIPADO_100', 'MEDIO_MEDIO'])) {
+                    $this->registrarPagoEnVenta(
+                        $venta,
+                        $proforma,
+                        $politica,
+                        $montoPagado,
+                        $request->input('tipo_pago_id'),
+                        request()->user()
+                    );
+                }
 
                 // Cargar relaciones para la respuesta
                 $venta->load(['cliente', 'detalles.producto', 'moneda', 'estadoDocumento']);

@@ -276,15 +276,26 @@ export interface CuentaPorCobrarDetalle {
 }
 
 /**
+ * Detalle de cuenta por cobrar con pagos expandibles
+ */
+export interface CuentaPorCobrarExpandible extends CuentaPorCobrarDetalle {
+  pagos: PagoDetalle[];
+}
+
+/**
  * Detalle de pago registrado
  */
 export interface PagoDetalle {
   id: number;
-  fecha_pago: string;
+  venta_id: number;
+  numero_venta: string;     // ✅ NUEVO: número de venta relacionada
+  fecha_venta?: string;     // ✅ NUEVO: fecha de venta
   monto: number;
+  fecha_pago: string;
   tipo_pago: string;
   numero_recibo?: string;
   usuario?: string;
+  observaciones?: string;
 }
 
 /**

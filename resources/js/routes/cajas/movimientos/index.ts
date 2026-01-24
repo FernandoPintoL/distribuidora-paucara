@@ -1,7 +1,7 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\CajaController::imprimir
- * @see app/Http/Controllers/CajaController.php:894
+ * @see app/Http/Controllers/CajaController.php:993
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 export const imprimir = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ imprimir.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::imprimir
- * @see app/Http/Controllers/CajaController.php:894
+ * @see app/Http/Controllers/CajaController.php:993
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 imprimir.url = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ imprimir.url = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja:
 
 /**
 * @see \App\Http\Controllers\CajaController::imprimir
- * @see app/Http/Controllers/CajaController.php:894
+ * @see app/Http/Controllers/CajaController.php:993
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 imprimir.get = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -58,13 +58,49 @@ imprimir.get = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja:
 })
 /**
 * @see \App\Http\Controllers\CajaController::imprimir
- * @see app/Http/Controllers/CajaController.php:894
+ * @see app/Http/Controllers/CajaController.php:993
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 imprimir.head = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: imprimir.url(args, options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\CajaController::imprimir
+ * @see app/Http/Controllers/CajaController.php:993
+ * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
+ */
+    const imprimirForm = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimir.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::imprimir
+ * @see app/Http/Controllers/CajaController.php:993
+ * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
+ */
+        imprimirForm.get = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CajaController::imprimir
+ * @see app/Http/Controllers/CajaController.php:993
+ * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
+ */
+        imprimirForm.head = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    imprimir.form = imprimirForm
 const movimientos = {
     imprimir,
 }

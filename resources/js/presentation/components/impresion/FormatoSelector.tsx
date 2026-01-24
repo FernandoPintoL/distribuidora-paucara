@@ -18,7 +18,7 @@ interface FormatoImpresion {
 
 interface FormatoSelectorProps {
     documentoId: number | string;
-    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga' | 'entregas' | 'cajas' | 'cajas-cierre';
+    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga' | 'entregas' | 'cajas' | 'cajas-cierre' | 'credito';
     formatos?: FormatoImpresion[];
     onPreview?: (formato: string) => void;
     className?: string;
@@ -70,6 +70,8 @@ export function FormatoSelector({
             url = `/cajas/${documentoId}/movimientos/imprimir?formato=${formato}&accion=${accion}`;
         } else if (tipoDocumento === 'cajas-cierre') {
             url = `/cajas/${documentoId}/cierre/imprimir?formato=${formato}&accion=${accion}`;
+        } else if (tipoDocumento === 'credito') {
+            url = `/api/clientes/${documentoId}/credito/imprimir?formato=${formato}&accion=${accion}`;
         } else {
             url = `/${tipoDocumento}s/${documentoId}/imprimir?formato=${formato}&accion=${accion}`;
         }
@@ -102,6 +104,8 @@ export function FormatoSelector({
                 url = `/cajas/${documentoId}/movimientos/imprimir?formato=${formato}&accion=stream`;
             } else if (tipoDocumento === 'cajas-cierre') {
                 url = `/cajas/${documentoId}/cierre/imprimir?formato=${formato}&accion=stream`;
+            } else if (tipoDocumento === 'credito') {
+                url = `/api/clientes/${documentoId}/credito/preview?formato=${formato}`;
             } else {
                 url = `/${tipoDocumento}s/${documentoId}/preview?formato=${formato}`;
             }

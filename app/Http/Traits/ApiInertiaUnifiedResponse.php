@@ -245,22 +245,31 @@ trait ApiInertiaUnifiedResponse
 
     /**
      * ¿Es una petición API/JSON?
-     * ✅ MEJORADO: Detectar mejor peticiones JSON desde fetch()
+     * ✅ MEJORADO: Verificar primero si es Inertia (web) antes de detectar JSON
+     * Esto evita que requests de Inertia que envían Accept: application/json
+     * sean detectados como API requests.
      */
     protected function isApiRequest(?Request $request = null): bool
     {
         $req = $request ?? request();
 
-        // Checklist de condiciones para detectar petición JSON:
+        // ✅ IMPORTANTE: Si es un request de Inertia (web), NO es un API request
+        // Inertia envía X-Inertia: true en todos sus requests
+        if ($req->header('X-Inertia') === 'true') {
+            return false;
+        }
+
+        // Checklist de condiciones para detectar petición JSON/API:
         return
-            // 1. Header Accept: application/json (AJAX estándar)
-            $req->wantsJson()
+            // 1. URL /api/* (endpoints API)
+            $req->is('api/*')
             // 2. Header X-Requested-With: XMLHttpRequest (AJAX clásico)
             || $req->header('X-Requested-With') === 'XMLHttpRequest'
             // 3. Content-Type: application/json (para POST/PUT)
             || str_contains($req->header('Content-Type', ''), 'application/json')
-            // 4. URL /api/* (endpoints API)
-            || $req->is('api/*')
+            // 4. Header Accept: application/json (AJAX estándar)
+            // ⚠️ NOTA: Esta debe ir última porque Inertia también lo envía
+            || $req->wantsJson()
             // 5. Header X-Inertia: false (indicador explícito de que NO es Inertia)
             || $req->header('X-Inertia') === 'false';
     }

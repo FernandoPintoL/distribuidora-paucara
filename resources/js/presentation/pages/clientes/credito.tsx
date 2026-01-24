@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ChevronRight, ChevronDown } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
+import { FormatoSelector, ImprimirCuentaButton, ImprimirPagoButton } from '@/presentation/components/impresion';
 
 // Import services
 import { creditoService } from '@/infrastructure/services/credito.service';
@@ -16,7 +17,7 @@ import NotificationService from '@/infrastructure/services/notification.service'
 import { getCreditoColorByEstado, getCreditoEstadoLabel, type CreditoEstado } from '@/domain/entities/credito';
 
 // Import types
-import type { CuentaPorCobrarDetalle, PagoDetalle, AuditoriaCredito, CambioAuditoria } from '@/types/credito.types';
+import type { CuentaPorCobrarDetalle, PagoDetalle, AuditoriaCredito, CambioAuditoria, CuentaPorCobrarExpandible } from '@/types/credito.types';
 
 interface CreditoDetallesData {
     cliente: {
@@ -42,6 +43,7 @@ interface CreditoDetallesData {
         dias_maximo_vencido: number;
         detalles: CuentaPorCobrarDetalle[];
     };
+    todas_las_cuentas: CuentaPorCobrarExpandible[];
     historial_pagos: PagoDetalle[];
     auditoria: AuditoriaCredito[];
 }
@@ -52,6 +54,8 @@ export default function CreditoPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pendientes' | 'pagados'>('todos');
+    const [expandedCuentaId, setExpandedCuentaId] = useState<number | null>(null);
 
     useEffect(() => {
         cargarDetallesCredito();
@@ -89,6 +93,22 @@ export default function CreditoPage() {
         }).format(value);
     };
 
+    // Filtrar cuentas según el filtro seleccionado
+    const cuentasFiltradas = React.useMemo(() => {
+        if (!credito?.todas_las_cuentas) return [];
+
+        const cuentas = credito.todas_las_cuentas;
+
+        switch (filtroEstado) {
+            case 'pendientes':
+                return cuentas.filter(c => c.saldo_pendiente > 0);
+            case 'pagados':
+                return cuentas.filter(c => c.saldo_pendiente === 0);
+            default:
+                return cuentas;
+        }
+    }, [credito?.todas_las_cuentas, filtroEstado]);
+
     if (loading) {
         return (
             <AppLayout>
@@ -115,7 +135,7 @@ export default function CreditoPage() {
         );
     }
 
-    const { cliente, credito: creditoData, cuentas_pendientes, historial_pagos, auditoria } = credito;
+    const { cliente, credito: creditoData, cuentas_pendientes, todas_las_cuentas, historial_pagos, auditoria } = credito;
 
     return (
         <AppLayout>
@@ -141,9 +161,16 @@ export default function CreditoPage() {
                             Código: {cliente.codigo} | NIT: {cliente.nit}
                         </p>
                     </div>
-                    <Button onClick={() => setShowModal(true)} className="bg-blue-600 text-white hover:bg-blue-700">
-                        Registrar Pago
-                    </Button>
+                    <div className="flex gap-2">
+                        <FormatoSelector
+                            documentoId={Number(clienteId)}
+                            tipoDocumento="credito"
+                            className="bg-green-600 text-white hover:bg-green-700"
+                        />
+                        <Button onClick={() => setShowModal(true)} className="bg-blue-600 text-white hover:bg-blue-700">
+                            Registrar Pago
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Alertas de estado crítico */}
@@ -259,17 +286,44 @@ export default function CreditoPage() {
                     </Card>
                 </div>
 
-                {/* Cuentas Pendientes */}
+                {/* Tabla Unificada de Cuentas Por Cobrar con Pagos Expandibles */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Cuentas Por Cobrar Pendientes</CardTitle>
+                        <CardTitle>Cuentas Por Cobrar</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        {cuentas_pendientes.detalles.length > 0 ? (
+                    <CardContent className="space-y-4">
+                        {/* Filtros */}
+                        <div className="mb-6 flex flex-wrap gap-2">
+                            <Button
+                                variant={filtroEstado === 'todos' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setFiltroEstado('todos')}
+                            >
+                                Todos ({credito?.todas_las_cuentas.length || 0})
+                            </Button>
+                            <Button
+                                variant={filtroEstado === 'pendientes' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setFiltroEstado('pendientes')}
+                            >
+                                Pendientes ({credito?.cuentas_pendientes.total || 0})
+                            </Button>
+                            <Button
+                                variant={filtroEstado === 'pagados' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setFiltroEstado('pagados')}
+                            >
+                                Pagados ({(credito?.todas_las_cuentas.length || 0) - (credito?.cuentas_pendientes.total || 0)})
+                            </Button>
+                        </div>
+
+                        {/* Tabla */}
+                        {cuentasFiltradas.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
                                         <tr>
+                                            <th className="w-10"></th>
                                             <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
                                                 Venta
                                             </th>
@@ -280,6 +334,9 @@ export default function CreditoPage() {
                                                 Monto Original
                                             </th>
                                             <th className="px-4 py-2 text-right font-semibold text-gray-900 dark:text-white">
+                                                Pagado
+                                            </th>
+                                            <th className="px-4 py-2 text-right font-semibold text-gray-900 dark:text-white">
                                                 Saldo Pendiente
                                             </th>
                                             <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
@@ -288,109 +345,135 @@ export default function CreditoPage() {
                                             <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
                                                 Estado
                                             </th>
+                                            <th className="px-4 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                                                Acciones
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                        {cuentas_pendientes.detalles.map((cuenta) => (
-                                            <tr
-                                                key={cuenta.id}
-                                                className={
-                                                    cuenta.dias_vencido > 0
-                                                        ? 'bg-red-50 dark:bg-red-950'
-                                                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                                                }
-                                            >
-                                                <td className="px-4 py-3 text-gray-900 dark:text-white">#{cuenta.numero_venta}</td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                                    {new Date(cuenta.fecha_venta).toLocaleDateString('es-BO')}
-                                                </td>
-                                                <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
-                                                    {formatCurrency(cuenta.monto_original)}
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
-                                                    {formatCurrency(cuenta.saldo_pendiente)}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                                    {new Date(cuenta.fecha_vencimiento).toLocaleDateString('es-BO')}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {cuenta.dias_vencido > 0 ? (
-                                                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                                            {cuenta.dias_vencido} días vencido
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                            Al día
-                                                        </Badge>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="py-8 text-center text-gray-600 dark:text-gray-400">
-                                No hay cuentas pendientes
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                        {cuentasFiltradas.map((cuenta) => {
+                                            const montoPagado = cuenta.monto_original - cuenta.saldo_pendiente;
+                                            const isExpanded = expandedCuentaId === cuenta.id;
 
-                {/* Historial de Pagos */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Historial de Pagos</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {historial_pagos.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
-                                                Fecha de Pago
-                                            </th>
-                                            <th className="px-4 py-2 text-right font-semibold text-gray-900 dark:text-white">
-                                                Monto
-                                            </th>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
-                                                Tipo de Pago
-                                            </th>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
-                                                Recibo
-                                            </th>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">
-                                                Usuario
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                        {historial_pagos.map((pago) => (
-                                            <tr key={pago.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                                    {new Date(pago.fecha_pago).toLocaleDateString('es-BO')}
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-bold text-green-600 dark:text-green-400">
-                                                    {formatCurrency(pago.monto)}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-900 dark:text-white">
-                                                    {pago.tipo_pago || 'N/A'}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                                    {pago.numero_recibo || '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                                    {pago.usuario || '-'}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                            return (
+                                                <React.Fragment key={cuenta.id}>
+                                                    {/* Fila principal */}
+                                                    <tr className={cuenta.dias_vencido > 0 ? 'bg-red-50 dark:bg-red-950' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}>
+                                                        {/* Botón expandir */}
+                                                        <td className="w-10 px-3 py-4 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                            onClick={() => setExpandedCuentaId(isExpanded ? null : cuenta.id)}
+                                                            title={cuenta.pagos.length > 0 ? "Ver pagos de esta cuenta" : "No hay pagos registrados"}
+                                                        >
+                                                            {isExpanded ? (
+                                                                <ChevronDown className="w-4 h-4 text-indigo-600" />
+                                                            ) : (
+                                                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                            )}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-gray-900 dark:text-white">#{cuenta.numero_venta} | #{cuenta.venta_id}</td>
+                                                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                                            {new Date(cuenta.fecha_venta).toLocaleDateString('es-BO')}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                                            {formatCurrency(cuenta.monto_original)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">
+                                                            {formatCurrency(montoPagado)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
+                                                            {formatCurrency(cuenta.saldo_pendiente)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                                            {new Date(cuenta.fecha_vencimiento).toLocaleDateString('es-BO')}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {cuenta.dias_vencido > 0 ? (
+                                                                <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                                    {cuenta.dias_vencido} días vencido
+                                                                </Badge>
+                                                            ) : cuenta.saldo_pendiente === 0 ? (
+                                                                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                                    Pagado
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                                    Al día
+                                                                </Badge>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <ImprimirCuentaButton
+                                                                clienteId={Number(clienteId)}
+                                                                cuentaId={cuenta.id}
+                                                                numeroVenta={cuenta.numero_venta}
+                                                            />
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* Fila expandida con pagos */}
+                                                    {isExpanded && (
+                                                        <tr className="bg-indigo-50 dark:bg-indigo-900/10 border-l-4 border-l-indigo-600">
+                                                            <td colSpan={9} className="px-6 py-4">
+                                                                {cuenta.pagos.length > 0 ? (
+                                                                    <div className="space-y-3">
+                                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                            💰 Pagos registrados ({cuenta.pagos.length})
+                                                                        </h4>
+
+                                                                        <table className="min-w-full text-sm">
+                                                                            <thead className="bg-gray-100 dark:bg-gray-800">
+                                                                                <tr>
+                                                                                    <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Fecha</th>
+                                                                                    <th className="px-3 py-2 text-right text-gray-900 dark:text-white">Monto</th>
+                                                                                    <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Tipo Pago</th>
+                                                                                    <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Recibo</th>
+                                                                                    <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Registrado Por</th>
+                                                                                    <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Observaciones</th>
+                                                                                    <th className="px-3 py-2 text-center text-gray-900 dark:text-white">Acciones</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                                                                {cuenta.pagos.map((pago) => (
+                                                                                    <tr key={pago.id} className="text-gray-700 dark:text-gray-300">
+                                                                                        <td className="px-3 py-2">{new Date(pago.fecha_pago).toLocaleDateString('es-BO')}</td>
+                                                                                        <td className="px-3 py-2 text-right font-bold text-green-600 dark:text-green-400">{formatCurrency(pago.monto)}</td>
+                                                                                        <td className="px-3 py-2">
+                                                                                            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{pago.tipo_pago || 'N/A'}</Badge>
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 font-mono text-xs">{pago.numero_recibo || '-'}</td>
+                                                                                        <td className="px-3 py-2">{pago.usuario || 'Sistema'}</td>
+                                                                                        <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400">{pago.observaciones || '-'}</td>
+                                                                                        <td className="px-3 py-2 text-center">
+                                                                                            <ImprimirPagoButton
+                                                                                                clienteId={Number(clienteId)}
+                                                                                                pagoId={pago.id}
+                                                                                                montoFormato={formatCurrency(pago.monto)}
+                                                                                            />
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="py-6 text-center text-gray-500 dark:text-gray-400">
+                                                                        <p className="text-sm">📋 No hay pagos registrados para esta cuenta</p>
+                                                                        <p className="text-xs mt-2">Usa el botón "Registrar Pago" en la parte superior para registrar un pago</p>
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
                         ) : (
                             <div className="py-8 text-center text-gray-600 dark:text-gray-400">
-                                No hay pagos registrados
+                                No hay cuentas {filtroEstado === 'pendientes' ? 'pendientes' : filtroEstado === 'pagados' ? 'pagadas' : ''}
                             </div>
                         )}
                     </CardContent>
@@ -457,7 +540,7 @@ export default function CreditoPage() {
                 show={showModal}
                 onHide={() => setShowModal(false)}
                 clienteId={Number(clienteId)}
-                cuentasPendientes={cuentas_pendientes.detalles}
+                cuentasPendientes={cuentas_pendientes?.detalles || []}
                 onPagoRegistrado={() => {
                     setShowModal(false);
                     cargarDetallesCredito();

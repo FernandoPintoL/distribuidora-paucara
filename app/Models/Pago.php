@@ -10,6 +10,7 @@ class Pago extends Model
 
     protected $fillable = [
         'cuenta_por_pagar_id',
+        'cuenta_por_cobrar_id',
         'venta_id', // Mantener para compatibilidad con ventas
         'tipo_pago_id',
         'monto',
@@ -36,6 +37,11 @@ class Pago extends Model
     public function cuentaPorPagar()
     {
         return $this->belongsTo(CuentaPorPagar::class);
+    }
+
+    public function cuentaPorCobrar()
+    {
+        return $this->belongsTo(CuentaPorCobrar::class);
     }
 
     public function venta()

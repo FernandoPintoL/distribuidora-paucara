@@ -1,7 +1,7 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ClienteController::index
- * @see app/Http/Controllers/ClienteController.php:1295
+ * @see app/Http/Controllers/ClienteController.php:1338
  * @route '/api/creditos'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::index
- * @see app/Http/Controllers/ClienteController.php:1295
+ * @see app/Http/Controllers/ClienteController.php:1338
  * @route '/api/creditos'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::index
- * @see app/Http/Controllers/ClienteController.php:1295
+ * @see app/Http/Controllers/ClienteController.php:1338
  * @route '/api/creditos'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ClienteController::index
- * @see app/Http/Controllers/ClienteController.php:1295
+ * @see app/Http/Controllers/ClienteController.php:1338
  * @route '/api/creditos'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -42,9 +42,44 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ClienteController::index
+ * @see app/Http/Controllers/ClienteController.php:1338
+ * @route '/api/creditos'
+ */
+    const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: index.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::index
+ * @see app/Http/Controllers/ClienteController.php:1338
+ * @route '/api/creditos'
+ */
+        indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::index
+ * @see app/Http/Controllers/ClienteController.php:1338
+ * @route '/api/creditos'
+ */
+        indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: index.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    index.form = indexForm
 /**
 * @see \App\Http\Controllers\ClienteController::miCredito
- * @see app/Http/Controllers/ClienteController.php:1363
+ * @see app/Http/Controllers/ClienteController.php:1406
  * @route '/api/creditos/mi-credito'
  */
 export const miCredito = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -59,7 +94,7 @@ miCredito.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::miCredito
- * @see app/Http/Controllers/ClienteController.php:1363
+ * @see app/Http/Controllers/ClienteController.php:1406
  * @route '/api/creditos/mi-credito'
  */
 miCredito.url = (options?: RouteQueryOptions) => {
@@ -68,7 +103,7 @@ miCredito.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::miCredito
- * @see app/Http/Controllers/ClienteController.php:1363
+ * @see app/Http/Controllers/ClienteController.php:1406
  * @route '/api/creditos/mi-credito'
  */
 miCredito.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -77,7 +112,7 @@ miCredito.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ClienteController::miCredito
- * @see app/Http/Controllers/ClienteController.php:1363
+ * @see app/Http/Controllers/ClienteController.php:1406
  * @route '/api/creditos/mi-credito'
  */
 miCredito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -85,9 +120,44 @@ miCredito.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ClienteController::miCredito
+ * @see app/Http/Controllers/ClienteController.php:1406
+ * @route '/api/creditos/mi-credito'
+ */
+    const miCreditoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: miCredito.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::miCredito
+ * @see app/Http/Controllers/ClienteController.php:1406
+ * @route '/api/creditos/mi-credito'
+ */
+        miCreditoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: miCredito.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::miCredito
+ * @see app/Http/Controllers/ClienteController.php:1406
+ * @route '/api/creditos/mi-credito'
+ */
+        miCreditoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: miCredito.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    miCredito.form = miCreditoForm
 /**
 * @see \App\Http\Controllers\ClienteController::resumen
- * @see app/Http/Controllers/ClienteController.php:1413
+ * @see app/Http/Controllers/ClienteController.php:1456
  * @route '/api/creditos/cliente/{clienteId}/resumen'
  */
 export const resumen = (args: { clienteId: string | number } | [clienteId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -102,7 +172,7 @@ resumen.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::resumen
- * @see app/Http/Controllers/ClienteController.php:1413
+ * @see app/Http/Controllers/ClienteController.php:1456
  * @route '/api/creditos/cliente/{clienteId}/resumen'
  */
 resumen.url = (args: { clienteId: string | number } | [clienteId: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -130,7 +200,7 @@ resumen.url = (args: { clienteId: string | number } | [clienteId: string | numbe
 
 /**
 * @see \App\Http\Controllers\ClienteController::resumen
- * @see app/Http/Controllers/ClienteController.php:1413
+ * @see app/Http/Controllers/ClienteController.php:1456
  * @route '/api/creditos/cliente/{clienteId}/resumen'
  */
 resumen.get = (args: { clienteId: string | number } | [clienteId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -139,7 +209,7 @@ resumen.get = (args: { clienteId: string | number } | [clienteId: string | numbe
 })
 /**
 * @see \App\Http\Controllers\ClienteController::resumen
- * @see app/Http/Controllers/ClienteController.php:1413
+ * @see app/Http/Controllers/ClienteController.php:1456
  * @route '/api/creditos/cliente/{clienteId}/resumen'
  */
 resumen.head = (args: { clienteId: string | number } | [clienteId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -147,9 +217,44 @@ resumen.head = (args: { clienteId: string | number } | [clienteId: string | numb
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ClienteController::resumen
+ * @see app/Http/Controllers/ClienteController.php:1456
+ * @route '/api/creditos/cliente/{clienteId}/resumen'
+ */
+    const resumenForm = (args: { clienteId: string | number } | [clienteId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: resumen.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::resumen
+ * @see app/Http/Controllers/ClienteController.php:1456
+ * @route '/api/creditos/cliente/{clienteId}/resumen'
+ */
+        resumenForm.get = (args: { clienteId: string | number } | [clienteId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: resumen.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::resumen
+ * @see app/Http/Controllers/ClienteController.php:1456
+ * @route '/api/creditos/cliente/{clienteId}/resumen'
+ */
+        resumenForm.head = (args: { clienteId: string | number } | [clienteId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: resumen.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    resumen.form = resumenForm
 /**
 * @see \App\Http\Controllers\ClienteController::estadisticas
- * @see app/Http/Controllers/ClienteController.php:1446
+ * @see app/Http/Controllers/ClienteController.php:1489
  * @route '/api/creditos/estadisticas'
  */
 export const estadisticas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -164,7 +269,7 @@ estadisticas.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::estadisticas
- * @see app/Http/Controllers/ClienteController.php:1446
+ * @see app/Http/Controllers/ClienteController.php:1489
  * @route '/api/creditos/estadisticas'
  */
 estadisticas.url = (options?: RouteQueryOptions) => {
@@ -173,7 +278,7 @@ estadisticas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::estadisticas
- * @see app/Http/Controllers/ClienteController.php:1446
+ * @see app/Http/Controllers/ClienteController.php:1489
  * @route '/api/creditos/estadisticas'
  */
 estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -182,7 +287,7 @@ estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ClienteController::estadisticas
- * @see app/Http/Controllers/ClienteController.php:1446
+ * @see app/Http/Controllers/ClienteController.php:1489
  * @route '/api/creditos/estadisticas'
  */
 estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -190,9 +295,44 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ClienteController::estadisticas
+ * @see app/Http/Controllers/ClienteController.php:1489
+ * @route '/api/creditos/estadisticas'
+ */
+    const estadisticasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: estadisticas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::estadisticas
+ * @see app/Http/Controllers/ClienteController.php:1489
+ * @route '/api/creditos/estadisticas'
+ */
+        estadisticasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadisticas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::estadisticas
+ * @see app/Http/Controllers/ClienteController.php:1489
+ * @route '/api/creditos/estadisticas'
+ */
+        estadisticasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadisticas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    estadisticas.form = estadisticasForm
 /**
 * @see \App\Http\Controllers\ClienteController::exportar
- * @see app/Http/Controllers/ClienteController.php:1469
+ * @see app/Http/Controllers/ClienteController.php:1512
  * @route '/api/creditos/exportar'
  */
 export const exportar = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -207,7 +347,7 @@ exportar.definition = {
 
 /**
 * @see \App\Http\Controllers\ClienteController::exportar
- * @see app/Http/Controllers/ClienteController.php:1469
+ * @see app/Http/Controllers/ClienteController.php:1512
  * @route '/api/creditos/exportar'
  */
 exportar.url = (options?: RouteQueryOptions) => {
@@ -216,7 +356,7 @@ exportar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ClienteController::exportar
- * @see app/Http/Controllers/ClienteController.php:1469
+ * @see app/Http/Controllers/ClienteController.php:1512
  * @route '/api/creditos/exportar'
  */
 exportar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -225,13 +365,49 @@ exportar.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ClienteController::exportar
- * @see app/Http/Controllers/ClienteController.php:1469
+ * @see app/Http/Controllers/ClienteController.php:1512
  * @route '/api/creditos/exportar'
  */
 exportar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: exportar.url(options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\ClienteController::exportar
+ * @see app/Http/Controllers/ClienteController.php:1512
+ * @route '/api/creditos/exportar'
+ */
+    const exportarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportar.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::exportar
+ * @see app/Http/Controllers/ClienteController.php:1512
+ * @route '/api/creditos/exportar'
+ */
+        exportarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportar.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::exportar
+ * @see app/Http/Controllers/ClienteController.php:1512
+ * @route '/api/creditos/exportar'
+ */
+        exportarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportar.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportar.form = exportarForm
 const creditos = {
     index,
 miCredito,

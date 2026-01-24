@@ -27,6 +27,8 @@ interface MovimientosData {
 }
 
 export function HistorialAperturasTable({ historicoAperturas }: Props) {
+
+    console.log('Historico Aperturas:', historicoAperturas);
     const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
     const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
     const [filtroCaja, setFiltroCaja] = useState<string>('');
@@ -90,6 +92,38 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
         const diff = toNumber(diferencia);
         if (diff === 0) return 'text-green-600 dark:text-green-400 font-bold';
         return 'text-red-600 dark:text-red-400 font-bold';
+    };
+
+    // ✅ NUEVO: Badge para el estado del cierre
+    const getEstadoCierreBadge = (estadoCierre: string | null) => {
+        if (!estadoCierre) {
+            return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                ⚪ Sin estado
+            </span>;
+        }
+
+        switch (estadoCierre.toUpperCase()) {
+            case 'PENDIENTE':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                    ⏳ Pendiente
+                </span>;
+            case 'CONSOLIDADA':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                    ✅ Consolidada
+                </span>;
+            case 'RECHAZADA':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
+                    ❌ Rechazada
+                </span>;
+            case 'CORREGIDA':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                    🔧 Corregida
+                </span>;
+            default:
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                    {estadoCierre}
+                </span>;
+        }
     };
 
     const cargarMovimientos = async (aperturaId: number) => {
@@ -237,6 +271,9 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                     Estado
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Estado Cierre
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Fecha Cierre
                                 </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -272,7 +309,7 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {apertura.caja_nombre}
+                                            #{apertura.id} | {apertura.caja_nombre}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                                             {formatDateTime(apertura.fecha_apertura)}
@@ -282,6 +319,9 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             {getEstadoBadge(apertura.estado)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            {apertura.estado_cierre ? getEstadoCierreBadge(apertura.estado_cierre) : '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                                             {apertura.fecha_cierre != null ? formatDateTime(apertura.fecha_cierre) : '-'}
@@ -316,7 +356,7 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                     {/* Fila expandible con movimientos */}
                                     {expandedAperturaId === apertura.id && movimientosCached[apertura.id] && (
                                         <tr className="bg-indigo-50 dark:bg-indigo-900/10 border-l-4 border-l-indigo-600">
-                                            <td colSpan={10} className="px-6 py-4">
+                                            <td colSpan={11} className="px-6 py-4">
                                                 <div className="space-y-4">
                                                     <div>
                                                         <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadoGeneral
  * @see app/Http/Controllers/Api/AdminCajaApiController.php:35
@@ -42,6 +42,41 @@ estadoGeneral.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => (
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::estadoGeneral
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:35
+ * @route '/api/admin/cajas/estado-general'
+ */
+    const estadoGeneralForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: estadoGeneral.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::estadoGeneral
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:35
+ * @route '/api/admin/cajas/estado-general'
+ */
+        estadoGeneralForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadoGeneral.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::estadoGeneral
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:35
+ * @route '/api/admin/cajas/estado-general'
+ */
+        estadoGeneralForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadoGeneral.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    estadoGeneral.form = estadoGeneralForm
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::alertas
  * @see app/Http/Controllers/Api/AdminCajaApiController.php:69
@@ -85,6 +120,41 @@ alertas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::alertas
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:69
+ * @route '/api/admin/cajas/alertas'
+ */
+    const alertasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: alertas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::alertas
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:69
+ * @route '/api/admin/cajas/alertas'
+ */
+        alertasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: alertas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::alertas
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:69
+ * @route '/api/admin/cajas/alertas'
+ */
+        alertasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: alertas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    alertas.form = alertasForm
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
  * @see app/Http/Controllers/Api/AdminCajaApiController.php:127
@@ -128,6 +198,41 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:127
+ * @route '/api/admin/cajas/estadisticas'
+ */
+    const estadisticasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: estadisticas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:127
+ * @route '/api/admin/cajas/estadisticas'
+ */
+        estadisticasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadisticas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:127
+ * @route '/api/admin/cajas/estadisticas'
+ */
+        estadisticasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: estadisticas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    estadisticas.form = estadisticasForm
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::detalle
  * @see app/Http/Controllers/Api/AdminCajaApiController.php:196
@@ -189,6 +294,42 @@ detalle.head = (args: { id: string | number } | [id: string | number ] | string 
     url: detalle.url(args, options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::detalle
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:196
+ * @route '/api/admin/cajas/{id}/detalle'
+ */
+    const detalleForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: detalle.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::detalle
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:196
+ * @route '/api/admin/cajas/{id}/detalle'
+ */
+        detalleForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: detalle.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\AdminCajaApiController::detalle
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:196
+ * @route '/api/admin/cajas/{id}/detalle'
+ */
+        detalleForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: detalle.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    detalle.form = detalleForm
 const cajas = {
     estadoGeneral,
 alertas,

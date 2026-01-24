@@ -337,6 +337,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
     // ✅ RUTAS PARA USUARIO: Gestión de su propia caja
     Route::prefix('cajas')->name('cajas.')->middleware('permission:cajas.index')->group(function () {
+        // ✅ NUEVO: Dashboard de caja de usuario específico (admin viendo caja de otro usuario)
+        // Navega por user_id en lugar de apertura_id para ver la caja sin importar si está abierta
+        Route::get('user/{userId}', [\App\Http\Controllers\CajaController::class, 'index'])->name('user');
+
         // ✅ NUEVO: Dashboard de caja específica (admin viendo caja de usuario)
         // Usa route model binding - {aperturaCaja} se inyecta automáticamente
         Route::get('{aperturaCaja}', [\App\Http\Controllers\CajaController::class, 'index'])->name('show');
@@ -374,11 +378,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     });
 
     // ✅ RUTAS PARA ADMIN: Gestión de cajas de otros usuarios
-    Route::prefix('cajas/admin')->name('cajas.admin.')->middleware('permission:cajas.admin')->group(function () {
+    Route::prefix('cajas/admin')->name('cajas.admin.')->middleware('permission:cajas.index')->group(function () {
         // Dashboard admin (ver todas las cajas)
         Route::get('/dashboard', [\App\Http\Controllers\CajaController::class, 'dashboard'])->name('dashboard');
 
-        // Gestión de cajas por usuario
+        // Gestión de cajas por usuario - Validación de roles en el controlador
         Route::prefix('cajas/{userId}')->name('cajas.')->group(function () {
             Route::get('/', [\App\Http\Controllers\CajaController::class, 'detalle'])->name('detalle');
             Route::get('/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosDia'])->name('movimientos');

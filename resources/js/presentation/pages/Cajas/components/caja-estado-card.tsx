@@ -31,8 +31,11 @@ interface Props {
     onCerrarClick: () => void;
     onGastoClick?: () => void;
     onCorregirClick?: () => void;
+    onConsolidarClick?: () => void; // ✅ NUEVO: Para consolidar cajas
     cierreDatos?: Cierre | null;
     esVistaAdmin?: boolean; // ✅ NUEVO
+    cierresPendientes?: number; // ✅ NUEVO: Cantidad de cierres pendientes
+    isConsolidating?: boolean; // ✅ NUEVO: Estado de consolidación
 }
 
 export function CajaEstadoCard({
@@ -42,9 +45,29 @@ export function CajaEstadoCard({
     onCerrarClick,
     onGastoClick,
     onCorregirClick,
+    onConsolidarClick,
     cierreDatos,
-    esVistaAdmin = false
+    esVistaAdmin = false,
+    cierresPendientes = 0,
+    isConsolidating = false
 }: Props) {
+    // ✅ NUEVO: Detectar si la caja es del día anterior o anterior
+    const esDiaAnterior = () => {
+        if (!cajaAbiertaHoy) return false;
+        const fechaCaja = new Date(cajaAbiertaHoy.fecha);
+        const hoy = new Date();
+        const ayer = new Date(hoy);
+        ayer.setDate(ayer.getDate() - 1);
+
+        // Comparar solo las fechas (sin hora)
+        const fechaCajaDate = new Date(fechaCaja.getFullYear(), fechaCaja.getMonth(), fechaCaja.getDate());
+        const hoyDate = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+        const ayerDate = new Date(ayer.getFullYear(), ayer.getMonth(), ayer.getDate());
+
+        return fechaCajaDate < hoyDate;
+    };
+
+    const isDiaAnterior = esDiaAnterior();
     if (!cajaAbiertaHoy) {
         return (
             <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
@@ -61,10 +84,12 @@ export function CajaEstadoCard({
                     <div className="text-center py-8">
                         <div className="mx-auto h-12 w-12 text-gray-400 text-4xl">💰</div>
                         <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                            No tienes caja abierta
+                            No tienes caja abierta hoy
                         </h3>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Debes abrir una caja para comenzar a trabajar.
+                            {isDiaAnterior
+                                ? '💡 Tienes una caja abierta de días anteriores. Verifica el historial.'
+                                : 'Debes abrir una caja para comenzar a trabajar.'}
                         </p>
                         <div className="mt-6">
                             <button
@@ -84,17 +109,24 @@ export function CajaEstadoCard({
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        Mi Caja del Día
-                    </h3>
+                    <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                            Mi Caja {isDiaAnterior ? 'del Día Anterior' : 'del Día'}
+                        </h3>
+                        {isDiaAnterior && (
+                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                ⚠️ Esta caja fue abierta hace varios días
+                            </p>
+                        )}
+                    </div>
 
                     {cajaAbiertaHoy.cierre ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                             ❌ Cerrada
                         </span>
                     ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                            ✅ Abierta
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isDiaAnterior ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'}`}>
+                            {isDiaAnterior ? '⏳ Abierta (Antigua)' : '✅ Abierta'}
                         </span>
                     )}
                 </div>
@@ -159,7 +191,7 @@ export function CajaEstadoCard({
                         </div>
                     </div>
 
-                    {/* Acciones */}
+                    {/* Acciones - Usuario Normal */}
                     {!esVistaAdmin && (
                     <div className="flex flex-col justify-center space-y-3">
                         {!cajaAbiertaHoy.cierre ? (
@@ -250,6 +282,36 @@ export function CajaEstadoCard({
                             </div>
                         )}
                     </div>
+                    )}
+
+                    {/* Acciones - Admin */}
+                    {esVistaAdmin && (
+                        <div className="flex flex-col justify-center space-y-3">
+                            {cajaAbiertaHoy.cierre && (
+                                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                        Caja cerrada a las {formatTime(cajaAbiertaHoy.cierre.created_at)}
+                                    </p>
+                                    {cajaAbiertaHoy.cierre.diferencia !== 0 && (
+                                        <p className={`text-sm font-medium ${cajaAbiertaHoy.cierre.diferencia > 0 ? 'text-green-600' : 'text-red-600'
+                                            }`}>
+                                            Diferencia: {formatCurrency(cajaAbiertaHoy.cierre.diferencia)}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ✅ NUEVO: Botón de consolidación si hay pendientes */}
+                            {cierresPendientes > 0 && onConsolidarClick && (
+                                <button
+                                    onClick={onConsolidarClick}
+                                    disabled={isConsolidating}
+                                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                                >
+                                    {isConsolidating ? '⏳ Consolidando...' : `✅ Consolidar cajas (${cierresPendientes})`}
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

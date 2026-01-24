@@ -57,13 +57,13 @@ class VentaService
     public function crear(CrearVentaDTO $dto, ?int $cajaId = null): VentaResponseDTO
     {
         Log::info('🔄 [VentaService::crear] Iniciando creación de venta', [
-            'cliente_id'        => $dto->cliente_id,
-            'cantidad_detalles' => count($dto->detalles),
-            'total'             => $dto->total,
-            'almacen_id'        => $dto->almacen_id,
+            'cliente_id'                          => $dto->cliente_id,
+            'cantidad_detalles'                   => count($dto->detalles),
+            'total'                               => $dto->total,
+            'almacen_id'                          => $dto->almacen_id,
             'estado_documento_id_recibido_en_dto' => $dto->estado_documento_id,
-            'proforma_id'       => $dto->proforma_id,
-            'timestamp'         => now()->toIso8601String(),
+            'proforma_id'                         => $dto->proforma_id,
+            'timestamp'                           => now()->toIso8601String(),
         ]);
 
         // 1. Validar datos
@@ -118,7 +118,7 @@ class VentaService
             $estadoPago = 'PENDIENTE'; // Default
             if ($dto->monto_pagado_inicial && $dto->monto_pagado_inicial > 0) {
                 if ($dto->monto_pagado_inicial >= $dto->total) {
-                    $estadoPago = 'PAGADA'; // Pagado completamente
+                    $estadoPago = 'PAGADO'; // Pagado completamente
                     Log::info('💰 Estado pago: PAGADA (pago completo)', [
                         'monto_pagado' => $dto->monto_pagado_inicial,
                         'total'        => $dto->total,
@@ -224,8 +224,8 @@ class VentaService
             // 3.5 Generar token de acceso público
             Log::debug('🔐 [VentaService::crear] Generando token de acceso público');
             \App\Models\VentaAccessToken::create([
-                'venta_id' => $venta->id,
-                'token' => \App\Models\VentaAccessToken::generateToken(),
+                'venta_id'  => $venta->id,
+                'token'     => \App\Models\VentaAccessToken::generateToken(),
                 'is_active' => true,
             ]);
             Log::info('✅ [VentaService::crear] Token de acceso creado');
@@ -418,12 +418,12 @@ class VentaService
                         ? $q->where('requiere_envio', true)
                         : ($tipoVenta === 'presencial' ? $q->where('requiere_envio', false) : $q)
                 )
-                // ✅ NUEVO: Filtro de estado de pago (para Flutter app)
+            // ✅ NUEVO: Filtro de estado de pago (para Flutter app)
                 ->when($filtros['estado_pago'] ?? null, fn($q, $estadoPago) =>
                     $q->where('estado_pago', $estadoPago)
                 )
-                // ✅ NUEVO: Filtro de estado logístico (para Flutter app)
-                // Filtrar por código de estado_logistica a través de la relación
+            // ✅ NUEVO: Filtro de estado logístico (para Flutter app)
+            // Filtrar por código de estado_logistica a través de la relación
                 ->when($filtros['estado_logistico'] ?? null, fn($q, $estadoLogistico) =>
                     $q->whereHas('estadoLogistica', fn($subQ) =>
                         $subQ->where('codigo', $estadoLogistico)

@@ -38,7 +38,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement } from 'chart.js';
-import { Pie, Line, Bar } from 'react-chartjs-2';
+import { Pie, Bar } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement);
 
@@ -50,9 +50,10 @@ interface Caja {
     id: number;
     name: string;
   };
-  activa: boolean;
-  created_at: string;
-  updated_at: string;
+  activa?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  cierres_pendientes?: number; // ✅ NUEVO: Cantidad de cierres pendientes
 }
 
 interface Apertura {
@@ -64,9 +65,11 @@ interface Apertura {
   created_at: string;
   cierre?: {
     id: number;
-    montos_cierre: number;
+    monto_real: number;
     diferencia: number;
     fecha_cierre: string;
+    estado?: string; // Estado del cierre (PENDIENTE, CONSOLIDADA, RECHAZADA)
+    created_at?: string;
   } | null;
 }
 
@@ -147,10 +150,22 @@ export default function Dashboard({
       caja.usuario.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // ✅ MEJORADO: Determinar estado de la caja (abierta/cerrada)
+  // Nota: aperturas_hoy ahora incluye aperturas sin cierre de días anteriores
   const obtenerEstadoCaja = (cajaId: number) => {
     const apertura = aperturas_hoy.find((a) => a.caja_id === cajaId);
-    if (!apertura) return 'cerrada';
-    if (apertura.cierre) return 'cerrada';
+
+    // Si no hay apertura registrada -> cerrada
+    if (!apertura) {
+      return 'cerrada';
+    }
+
+    // Si hay apertura Y tiene cierre registrado -> cerrada
+    if (apertura.cierre) {
+      return 'cerrada';
+    }
+
+    // Si hay apertura SIN cierre -> abierta (sin importar si es de hoy o días anteriores)
     return 'abierta';
   };
 
@@ -159,6 +174,54 @@ export default function Dashboard({
     if (!apertura) return 0;
     if (apertura.cierre) return Number(apertura.cierre.monto_real) || 0;
     return Number(apertura.monto_apertura) || 0;
+  };
+
+  // ✅ NUEVO: Obtener información de última actividad
+  const obtenerUltimaActividad = (cajaId: number, cierresPendientes: number) => {
+    const apertura = aperturas_hoy.find((a) => a.caja_id === cajaId);
+
+    if (!apertura) {
+      return {
+        texto: 'Sin actividad',
+        tipo: 'vacia'
+      };
+    }
+
+    // Si hay caja abierta sin cerrar
+    if (!apertura.cierre) {
+      const horaApertura = new Date(apertura.fecha).toLocaleTimeString('es-BO', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      return {
+        texto: `⏱️ Abierta a las ${horaApertura}`,
+        tipo: 'abierta'
+      };
+    }
+
+    // Si hay cierre pero también cierres pendientes
+    if (cierresPendientes > 0) {
+      const horaCierre = new Date(apertura.cierre.created_at || apertura.fecha).toLocaleTimeString('es-BO', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const estado = apertura.cierre.estado ? `[${apertura.cierre.estado}]` : '';
+      return {
+        texto: `🕐 Cerrada ${horaCierre} ${estado}`,
+        tipo: 'cerrada-pendiente'
+      };
+    }
+
+    // Si hay cierre sin pendientes
+    const horaCierre = new Date(apertura.cierre.created_at || apertura.fecha).toLocaleTimeString('es-BO', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const estado = apertura.cierre.estado ? `[${apertura.cierre.estado}]` : '';
+    return {
+      texto: `✅ Cerrada ${horaCierre} ${estado}`,
+      tipo: 'cerrada'
+    };
   };
 
   return (
@@ -171,7 +234,7 @@ export default function Dashboard({
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Gestiónes de Cajas
+                Gestiónesss de Cajas
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-2">
                 Monitoreo en tiempo real de todas las cajas
@@ -409,6 +472,7 @@ export default function Dashboard({
                   <TableHead className="dark:text-gray-300">Caja</TableHead>
                   <TableHead className="dark:text-gray-300">Usuario</TableHead>
                   <TableHead className="dark:text-gray-300">Estado</TableHead>
+                  <TableHead className="dark:text-gray-300">Cierres/Pendientes</TableHead>
                   <TableHead className="dark:text-gray-300">Monto Actual</TableHead>
                   <TableHead className="dark:text-gray-300">Última Actividad</TableHead>
                   <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
@@ -426,7 +490,7 @@ export default function Dashboard({
                     return (
                       <TableRow key={caja.id} className="dark:border-slate-700 hover:dark:bg-slate-700">
                         <TableCell className="font-medium dark:text-white">
-                          {caja.nombre}
+                          #{caja.id} | {caja.nombre}
                         </TableCell>
                         <TableCell className="dark:text-gray-300">{caja.usuario.name}</TableCell>
                         <TableCell>
@@ -441,29 +505,45 @@ export default function Dashboard({
                               : '🔴 Cerrada'}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          {caja.cierres_pendientes && caja.cierres_pendientes > 0 ? (
+                            <Badge variant="destructive" className="dark:bg-red-900">
+                              ⏳ {caja.cierres_pendientes} pendiente{caja.cierres_pendientes !== 1 ? 's' : ''}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="dark:bg-slate-700">
+                              ✅ Sin pendientes
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="font-semibold dark:text-white">
                           ${monto.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                          {apertura
-                            ? format(
-                              parseISO(
-                                apertura.cierre?.fecha_cierre ||
-                                apertura.fecha
-                              ),
-                              'dd MMM HH:mm',
-                              { locale: es }
-                            )
-                            : 'Sin actividad'}
+                        <TableCell>
+                          {(() => {
+                            const actividad = obtenerUltimaActividad(caja.id, caja.cierres_pendientes || 0);
+                            const colorClasses = {
+                              vacia: 'text-gray-500 dark:text-gray-400',
+                              abierta: 'text-green-600 dark:text-green-400 font-medium',
+                              'cerrada-pendiente': 'text-yellow-600 dark:text-yellow-400 font-medium',
+                              cerrada: 'text-blue-600 dark:text-blue-400',
+                            };
+                            return (
+                              <span className={`text-sm ${colorClasses[actividad.tipo as keyof typeof colorClasses]}`}>
+                                {actividad.texto}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
                             size="sm"
                             variant="ghost"
                             className="dark:hover:bg-slate-600 dark:text-gray-300"
-                            onClick={() =>
-                              router.visit(`/cajas/${caja.apertura.id}`)
-                            }
+                            onClick={() => {
+                              console.log('Navegando a caja del usuario:', caja.user_id);
+                              router.visit(`/cajas/user/${caja.user_id}`);
+                            }}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -473,7 +553,7 @@ export default function Dashboard({
                   })
                 ) : (
                   <TableRow className="dark:border-slate-700">
-                    <TableCell colSpan={6} className="text-center py-4 text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={7} className="text-center py-4 text-gray-500 dark:text-gray-400">
                       No se encontraron cajas
                     </TableCell>
                   </TableRow>

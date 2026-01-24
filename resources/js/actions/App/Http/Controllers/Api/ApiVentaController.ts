@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\ApiVentaController::confirmarPickupCliente
  * @see app/Http/Controllers/Api/ApiVentaController.php:24
@@ -57,6 +57,27 @@ confirmarPickupCliente.post = (args: { venta: number | { id: number } } | [venta
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\Api\ApiVentaController::confirmarPickupCliente
+ * @see app/Http/Controllers/Api/ApiVentaController.php:24
+ * @route '/api/ventas/{venta}/confirmar-pickup-cliente'
+ */
+    const confirmarPickupClienteForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmarPickupCliente.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiVentaController::confirmarPickupCliente
+ * @see app/Http/Controllers/Api/ApiVentaController.php:24
+ * @route '/api/ventas/{venta}/confirmar-pickup-cliente'
+ */
+        confirmarPickupClienteForm.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmarPickupCliente.url(args, options),
+            method: 'post',
+        })
+    
+    confirmarPickupCliente.form = confirmarPickupClienteForm
 /**
 * @see \App\Http\Controllers\Api\ApiVentaController::confirmarPickupEmpleado
  * @see app/Http/Controllers/Api/ApiVentaController.php:121
@@ -114,6 +135,28 @@ confirmarPickupEmpleado.post = (args: { venta: number | { id: number } } | [vent
     url: confirmarPickupEmpleado.url(args, options),
     method: 'post',
 })
+
+    /**
+* @see \App\Http\Controllers\Api\ApiVentaController::confirmarPickupEmpleado
+ * @see app/Http/Controllers/Api/ApiVentaController.php:121
+ * @route '/api/ventas/{venta}/confirmar-pickup-empleado'
+ */
+    const confirmarPickupEmpleadoForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: confirmarPickupEmpleado.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiVentaController::confirmarPickupEmpleado
+ * @see app/Http/Controllers/Api/ApiVentaController.php:121
+ * @route '/api/ventas/{venta}/confirmar-pickup-empleado'
+ */
+        confirmarPickupEmpleadoForm.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: confirmarPickupEmpleado.url(args, options),
+            method: 'post',
+        })
+    
+    confirmarPickupEmpleado.form = confirmarPickupEmpleadoForm
 const ApiVentaController = { confirmarPickupCliente, confirmarPickupEmpleado }
 
 export default ApiVentaController

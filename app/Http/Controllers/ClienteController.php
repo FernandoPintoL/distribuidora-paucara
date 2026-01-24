@@ -44,7 +44,7 @@ class ClienteController extends Controller
     {
         try {
             $clientRole = $this->getClientRole();
-            if ($clientRole && !$user->hasRole('cliente')) {
+            if ($clientRole && ! $user->hasRole('cliente')) {
                 $user->roles()->attach($clientRole->id);
                 Log::info('✅ Rol cliente asignado', ['user_id' => $user->id]);
             }
@@ -873,23 +873,40 @@ class ClienteController extends Controller
         // ✅ Autorizar: Solo roles que pueden ver este cliente
         $this->authorize('view', $cliente);
 
-        // Obtener cuentas por cobrar pendientes
-        $cuentasPendientes = $cliente->cuentasPorCobrar()
-            ->where('saldo_pendiente', '>', 0)
-            ->with(['venta:id,numero,fecha,total,estado_pago'])
+        // Obtener TODAS las cuentas por cobrar (pendientes y pagadas)
+        $todasLasCuentas = $cliente->cuentasPorCobrar()
+            ->with([
+                'venta:id,numero,fecha,total,estado_pago',
+                'pagos' => function($q) {
+                    $q->with(['tipoPago:id,nombre', 'usuario:id,name'])
+                      ->orderBy('fecha_pago');
+                }
+            ])
             ->orderByDesc('fecha_vencimiento')
             ->get(['id', 'venta_id', 'monto_original', 'saldo_pendiente', 'fecha_vencimiento', 'dias_vencido', 'estado']);
+
+        // Obtener cuentas pendientes para stats
+        $cuentasPendientes = $todasLasCuentas->filter(fn($c) => $c->saldo_pendiente > 0);
 
         // Calcular totales
         $saldoUtilizado        = $cuentasPendientes->sum('saldo_pendiente');
         $saldoDisponible       = max(0, $cliente->limite_credito - $saldoUtilizado);
         $porcentajeUtilizacion = $cliente->limite_credito > 0 ? ($saldoUtilizado / $cliente->limite_credito) * 100 : 0;
 
-        // Obtener historial de pagos (últimos pagos realizados)
+        // Calcular cuentas vencidas
+        $cuentasVencidas = $cuentasPendientes->filter(fn($c) => $c->dias_vencido > 0);
+
+        // ✅ Obtener historial de pagos recientes SOLO de ventas a crédito (para compatibilidad)
+        // Un pago está relacionado con crédito si la venta tiene una cuenta por cobrar asociada
         $historialPagos = \App\Models\Pago::whereHas('venta', function ($q) use ($cliente) {
-            $q->where('cliente_id', $cliente->id);
+            $q->where('cliente_id', $cliente->id)
+                ->where('politica_pago', 'CREDITO'); // Solo ventas a crédito
         })
-            ->with(['tipoPago:id,nombre', 'usuario:id,name,email'])
+            ->with([
+                'venta:id,numero,fecha,politica_pago', // ✅ NUEVO: incluir datos de venta
+                'tipoPago:id,nombre',
+                'usuario:id,name,email',
+            ])
             ->orderByDesc('fecha_pago')
             ->limit(10)
             ->get(['id', 'venta_id', 'tipo_pago_id', 'monto', 'fecha_pago', 'numero_recibo', 'usuario_id', 'observaciones']);
@@ -911,7 +928,6 @@ class ClienteController extends Controller
         }
 
         // Verificar si hay cuentas vencidas
-        $cuentasVencidas = $cuentasPendientes->filter(fn($c) => $c->dias_vencido > 0);
         if ($cuentasVencidas->count() > 0) {
             $estado = 'vencido';
         }
@@ -950,8 +966,31 @@ class ClienteController extends Controller
                     'estado'            => $c->estado,
                 ]),
             ],
+            'todas_las_cuentas'  => $todasLasCuentas->map(fn($c) => [
+                'id'                => $c->id,
+                'venta_id'          => $c->venta_id,
+                'numero_venta'      => $c->venta?->numero,
+                'fecha_venta'       => $c->venta?->fecha,
+                'monto_original'    => (float) $c->monto_original,
+                'saldo_pendiente'   => (float) $c->saldo_pendiente,
+                'fecha_vencimiento' => $c->fecha_vencimiento->format('Y-m-d'),
+                'dias_vencido'      => $c->dias_vencido,
+                'estado'            => $c->estado,
+                'pagos'             => $c->pagos->map(fn($p) => [
+                    'id'            => $p->id,
+                    'monto'         => (float) $p->monto,
+                    'fecha_pago'    => $p->fecha_pago->format('Y-m-d H:i:s'),
+                    'tipo_pago'     => $p->tipoPago?->nombre,
+                    'numero_recibo' => $p->numero_recibo,
+                    'usuario'       => $p->usuario?->name,
+                    'observaciones' => $p->observaciones,
+                ]),
+            ]),
             'historial_pagos'    => $historialPagos->map(fn($p) => [
                 'id'            => $p->id,
+                'venta_id'      => $p->venta_id,
+                'numero_venta'  => $p->venta?->numero, // ✅ NUEVO: número de venta
+                'fecha_venta'   => $p->venta?->fecha,  // ✅ NUEVO: fecha de venta
                 'monto'         => (float) $p->monto,
                 'fecha_pago'    => $p->fecha_pago->format('Y-m-d H:i:s'),
                 'tipo_pago'     => $p->tipoPago?->nombre,
@@ -977,7 +1016,8 @@ class ClienteController extends Controller
     /**
      * API: Registrar un pago para una cuenta por cobrar
      * Endpoint: POST /api/clientes/{id}/pagos
-     * Body: { cuenta_por_cobrar_id, tipo_pago_id, monto, fecha_pago, numero_recibo?, numero_transferencia?, numero_cheque?, observaciones? }
+     * Body: { cuenta_por_cobrar_id, tipo_pago_id, monto, fecha_pago, numero_recibo?, numero_transferencia?, numero_cheque?, observaciones?, moneda_id? }
+     * ✅ moneda_id: opcional, por defecto 1 (BOB)
      */
     public function registrarPagoApi(ClienteModel $cliente, Request $request): JsonResponse
     {
@@ -994,6 +1034,7 @@ class ClienteController extends Controller
             'numero_transferencia' => 'nullable|string|max:100',
             'numero_cheque'        => 'nullable|string|max:100',
             'observaciones'        => 'nullable|string|max:500',
+            'moneda_id'            => 'nullable|integer|exists:monedas,id', // ✅ NUEVO
         ]);
 
         try {
@@ -1015,36 +1056,38 @@ class ClienteController extends Controller
                 return ApiResponse::error('El monto no puede exceder el saldo pendiente', 400);
             }
 
-            // Crear el pago
+            // ✅ Crear el pago con ambos campos de fecha y moneda
             $pago = \App\Models\Pago::create([
                 'cuenta_por_cobrar_id' => $validated['cuenta_por_cobrar_id'],
                 'venta_id'             => $cuenta->venta_id,
                 'tipo_pago_id'         => $validated['tipo_pago_id'],
                 'monto'                => $validated['monto'],
-                'fecha_pago'           => $validated['fecha_pago'],
+                'fecha'                => now(),                    // ✅ datetime completo
+                'fecha_pago'           => $validated['fecha_pago'], // ✅ date
                 'numero_recibo'        => $validated['numero_recibo'] ?? null,
                 'numero_transferencia' => $validated['numero_transferencia'] ?? null,
                 'numero_cheque'        => $validated['numero_cheque'] ?? null,
                 'observaciones'        => $validated['observaciones'] ?? null,
                 'usuario_id'           => Auth::id(),
+                'moneda_id'            => $validated['moneda_id'] ?? 1, // ✅ Por defecto: BOB (id=1)
             ]);
 
             // Actualizar el saldo pendiente de la cuenta
             $nuevoSaldo  = $cuenta->saldo_pendiente - $validated['monto'];
-            $nuevoEstado = $nuevoSaldo > 0 ? 'parcial' : 'pagado';
+            $nuevoEstado = $nuevoSaldo > 0 ? 'PARCIAL' : 'PAGADO';
 
             $cuenta->update([
                 'saldo_pendiente' => $nuevoSaldo,
                 'estado'          => $nuevoEstado,
             ]);
 
-            // Si la cuenta se pagó completamente, registrar en la venta también
-            if ($nuevoEstado === 'pagado') {
+            // ✅ Si la cuenta se pagó completamente, actualizar estado en la venta
+            if ($nuevoEstado === 'PAGADO') {
                 $venta = $cuenta->venta;
                 if ($venta) {
                     $venta->update([
-                        'estado_pago'     => 'pagado',
-                        'monto_pagado'    => $venta->monto_total,
+                        'estado_pago'     => 'PAGADO',
+                        'monto_pagado'    => $venta->total, // ✅ Campo correcto: 'total', no 'monto_total'
                         'monto_pendiente' => 0,
                     ]);
                 }
@@ -1564,5 +1607,399 @@ class ClienteController extends Controller
         if (in_array($orderBy, $allowedOrderBy)) {
             $query->orderBy($orderBy, in_array($orderDir, ['asc', 'desc']) ? $orderDir : 'desc');
         }
+    }
+
+    /**
+     * API: Imprimir/Descargar reporte de crédito
+     * Endpoint: GET /api/clientes/{id}/credito/imprimir?formato=A4&accion=download&cuenta_id=1
+     * Parámetros:
+     *   - formato: 'A4' | 'TICKET_80' | 'TICKET_58'
+     *   - accion: 'download' | 'stream'
+     *   - cuenta_id: (opcional) ID de cuenta específica para imprimir solo esa cuenta
+     */
+    public function imprimirCredito(ClienteModel $cliente, Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        try {
+            $this->authorize('view', $cliente);
+
+            $formato = (string) $request->string('formato', 'A4');
+            $accion = (string) $request->string('accion', 'stream');
+            $cuentaId = $request->integer('cuenta_id', 0);
+
+            // Validar formato
+            $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
+            if (!in_array($formato, $formatosValidos)) {
+                return response()->json(['error' => 'Formato inválido'], 400);
+            }
+
+            // Obtener detalles de crédito
+            $response = $this->obtenerDetallesCreditoApi($cliente);
+            $creditoData = json_decode($response->getContent(), true)['data'] ?? [];
+
+            // Filtrar cuenta específica si se especifica cuenta_id
+            $todasLasCuentas = collect($creditoData['todas_las_cuentas'] ?? []);
+            if ($cuentaId > 0) {
+                $todasLasCuentas = $todasLasCuentas->filter(fn($c) => $c['id'] == $cuentaId);
+            }
+
+            // Preparar datos para la plantilla
+            $datos = [
+                'cliente' => [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'codigo_cliente' => $cliente->codigo_cliente,
+                    'nit' => $cliente->nit,
+                    'email' => $cliente->email,
+                    'telefono' => $cliente->telefono,
+                ],
+                'credito' => $creditoData['credito'] ?? [],
+                'cuentas_pendientes' => $creditoData['cuentas_pendientes'] ?? [],
+                'todas_las_cuentas' => $todasLasCuentas,
+                'es_cuenta_individual' => $cuentaId > 0,
+                'fecha_impresion' => now(),
+                'usuario' => auth()->user()?->name ?? 'Sistema',
+                'empresa' => \App\Models\Empresa::first(),
+                'opciones' => ['porcentaje_impuesto' => '13'],
+            ];
+
+            // Obtener template
+            $template = match($formato) {
+                'A4' => 'impresion.creditos.hoja-completa',
+                'TICKET_80' => 'impresion.creditos.ticket-80',
+                'TICKET_58' => 'impresion.creditos.ticket-58',
+            };
+
+            // Generar PDF
+            $pdf = \PDF::loadView($template, $datos);
+
+            // Aplicar configuración de formato
+            $this->aplicarConfiguracionFormato($pdf, $formato);
+
+            // Nombre del archivo
+            $nombreArchivo = 'Credito_' . $cliente->codigo_cliente . '_' . now()->format('Ymd_His') . '.pdf';
+
+            // Retornar PDF
+            if ($accion === 'download') {
+                return $pdf->download($nombreArchivo);
+            } else {
+                return $pdf->stream($nombreArchivo);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al generar reporte de crédito',
+                'mensaje' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Vista previa HTML de reporte de crédito
+     * Endpoint: GET /api/clientes/{id}/credito/preview?formato=A4&cuenta_id=1
+     */
+    public function previewCredito(ClienteModel $cliente, Request $request)
+    {
+        try {
+            $this->authorize('view', $cliente);
+
+            $formato = (string) $request->string('formato', 'A4');
+            $cuentaId = $request->integer('cuenta_id', 0);
+
+            // Validar formato
+            $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
+            if (!in_array($formato, $formatosValidos)) {
+                abort(400, 'Formato inválido');
+            }
+
+            // Obtener detalles de crédito
+            $response = $this->obtenerDetallesCreditoApi($cliente);
+            $creditoData = json_decode($response->getContent(), true)['data'] ?? [];
+
+            // Filtrar cuenta específica si se especifica cuenta_id
+            $todasLasCuentas = collect($creditoData['todas_las_cuentas'] ?? []);
+            if ($cuentaId > 0) {
+                $todasLasCuentas = $todasLasCuentas->filter(fn($c) => $c['id'] == $cuentaId);
+            }
+
+            // Preparar datos para la plantilla
+            $datos = [
+                'cliente' => [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'codigo_cliente' => $cliente->codigo_cliente,
+                    'nit' => $cliente->nit,
+                    'email' => $cliente->email,
+                    'telefono' => $cliente->telefono,
+                ],
+                'credito' => $creditoData['credito'] ?? [],
+                'cuentas_pendientes' => $creditoData['cuentas_pendientes'] ?? [],
+                'todas_las_cuentas' => $todasLasCuentas,
+                'es_cuenta_individual' => $cuentaId > 0,
+                'fecha_impresion' => now(),
+                'usuario' => auth()->user()?->name ?? 'Sistema',
+                'empresa' => \App\Models\Empresa::first(),
+                'opciones' => ['porcentaje_impuesto' => '13'],
+            ];
+
+            // Obtener template
+            $template = match($formato) {
+                'A4' => 'impresion.creditos.hoja-completa',
+                'TICKET_80' => 'impresion.creditos.ticket-80',
+                'TICKET_58' => 'impresion.creditos.ticket-58',
+            };
+
+            return view($template, $datos);
+        } catch (\Exception $e) {
+            abort(500, 'Error al cargar vista previa: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * API: Generar PDF de comprobante de pago
+     * Endpoint: GET /api/clientes/{cliente}/pagos/{pago}/imprimir?formato=A4&accion=stream
+     */
+    public function imprimirPago(ClienteModel $cliente, \App\Models\Pago $pago, Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        try {
+            $this->authorize('view', $cliente);
+
+            // Validar que el pago pertenece al cliente
+            if ($pago->cuentaPorCobrar && $pago->cuentaPorCobrar->cliente_id !== $cliente->id) {
+                return response()->json(['error' => 'El pago no pertenece a este cliente'], 403);
+            }
+
+            $formato = (string) $request->string('formato', 'TICKET_80');
+            $accion = (string) $request->string('accion', 'stream');
+
+            // Validar formato
+            $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
+            if (!in_array($formato, $formatosValidos)) {
+                return response()->json(['error' => 'Formato inválido'], 400);
+            }
+
+            // Eager load relaciones
+            $pago->load(['cuentaPorCobrar.venta', 'venta.cliente', 'tipoPago', 'moneda', 'usuario']);
+
+            // Obtener datos de venta y cuenta
+            $venta = null;
+            $cuenta = null;
+
+            if ($pago->cuentaPorCobrar) {
+                $cpc = $pago->cuentaPorCobrar;
+                $venta = $cpc->venta ? [
+                    'id' => $cpc->venta->id,
+                    'numero' => $cpc->venta->numero,
+                    'fecha' => $cpc->venta->fecha,
+                    'total' => $cpc->venta->total,
+                ] : null;
+
+                $cuenta = [
+                    'id' => $cpc->id,
+                    'monto_original' => $cpc->monto_original,
+                    'saldo_anterior' => $cpc->saldo_pendiente + $pago->monto,
+                    'saldo_pendiente' => $cpc->saldo_pendiente,
+                    'estado' => $cpc->estado,
+                    'fecha_vencimiento' => $cpc->fecha_vencimiento,
+                ];
+            } elseif ($pago->venta) {
+                $venta = [
+                    'id' => $pago->venta->id,
+                    'numero' => $pago->venta->numero,
+                    'fecha' => $pago->venta->fecha,
+                    'total' => $pago->venta->total,
+                ];
+            }
+
+            // Preparar estructura de datos
+            $datos = [
+                'pago' => [
+                    'id' => $pago->id,
+                    'monto' => $pago->monto,
+                    'fecha' => $pago->fecha,
+                    'fecha_pago' => $pago->fecha_pago,
+                    'numero_recibo' => $pago->numero_recibo,
+                    'numero_transferencia' => $pago->numero_transferencia,
+                    'numero_cheque' => $pago->numero_cheque,
+                    'observaciones' => $pago->observaciones,
+                    'tipo_pago' => $pago->tipoPago?->nombre ?? 'No especificado',
+                    'moneda' => [
+                        'simbolo' => $pago->moneda?->simbolo ?? 'Bs.',
+                        'codigo' => $pago->moneda?->codigo ?? 'BOB',
+                    ],
+                    'usuario' => $pago->usuario?->name ?? 'Sistema',
+                ],
+                'cliente' => [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'codigo_cliente' => $cliente->codigo_cliente,
+                    'nit' => $cliente->nit,
+                    'email' => $cliente->email,
+                    'telefono' => $cliente->telefono,
+                ],
+                'venta' => $venta,
+                'cuenta' => $cuenta,
+                'fecha_impresion' => now(),
+                'usuario' => auth()->user()?->name ?? 'Sistema',
+                'empresa' => \App\Models\Empresa::first(),
+            ];
+
+            // Obtener template
+            $template = match($formato) {
+                'A4' => 'impresion.pagos.hoja-completa',
+                'TICKET_80' => 'impresion.pagos.ticket-80',
+                'TICKET_58' => 'impresion.pagos.ticket-58',
+            };
+
+            // Generar PDF
+            $pdf = \PDF::loadView($template, $datos);
+
+            // Aplicar configuración de formato
+            $this->aplicarConfiguracionFormato($pdf, $formato);
+
+            // Nombre del archivo
+            $nombreArchivo = 'Pago_' . $cliente->codigo_cliente . '_' . $pago->id . '_' . now()->format('Ymd_His') . '.pdf';
+
+            // Retornar PDF
+            if ($accion === 'download') {
+                return $pdf->download($nombreArchivo);
+            } else {
+                return $pdf->stream($nombreArchivo);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al generar comprobante de pago',
+                'mensaje' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Vista previa HTML de comprobante de pago
+     * Endpoint: GET /api/clientes/{cliente}/pagos/{pago}/preview?formato=A4
+     */
+    public function previewPago(ClienteModel $cliente, \App\Models\Pago $pago, Request $request)
+    {
+        try {
+            $this->authorize('view', $cliente);
+
+            // Validar que el pago pertenece al cliente
+            if ($pago->cuentaPorCobrar && $pago->cuentaPorCobrar->cliente_id !== $cliente->id) {
+                abort(403, 'El pago no pertenece a este cliente');
+            }
+
+            $formato = (string) $request->string('formato', 'TICKET_80');
+
+            // Validar formato
+            $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
+            if (!in_array($formato, $formatosValidos)) {
+                abort(400, 'Formato inválido');
+            }
+
+            // Eager load relaciones
+            $pago->load(['cuentaPorCobrar.venta', 'venta.cliente', 'tipoPago', 'moneda', 'usuario']);
+
+            // Obtener datos de venta y cuenta
+            $venta = null;
+            $cuenta = null;
+
+            if ($pago->cuentaPorCobrar) {
+                $cpc = $pago->cuentaPorCobrar;
+                $venta = $cpc->venta ? [
+                    'id' => $cpc->venta->id,
+                    'numero' => $cpc->venta->numero,
+                    'fecha' => $cpc->venta->fecha,
+                    'total' => $cpc->venta->total,
+                ] : null;
+
+                $cuenta = [
+                    'id' => $cpc->id,
+                    'monto_original' => $cpc->monto_original,
+                    'saldo_anterior' => $cpc->saldo_pendiente + $pago->monto,
+                    'saldo_pendiente' => $cpc->saldo_pendiente,
+                    'estado' => $cpc->estado,
+                    'fecha_vencimiento' => $cpc->fecha_vencimiento,
+                ];
+            } elseif ($pago->venta) {
+                $venta = [
+                    'id' => $pago->venta->id,
+                    'numero' => $pago->venta->numero,
+                    'fecha' => $pago->venta->fecha,
+                    'total' => $pago->venta->total,
+                ];
+            }
+
+            // Preparar estructura de datos
+            $datos = [
+                'pago' => [
+                    'id' => $pago->id,
+                    'monto' => $pago->monto,
+                    'fecha' => $pago->fecha,
+                    'fecha_pago' => $pago->fecha_pago,
+                    'numero_recibo' => $pago->numero_recibo,
+                    'numero_transferencia' => $pago->numero_transferencia,
+                    'numero_cheque' => $pago->numero_cheque,
+                    'observaciones' => $pago->observaciones,
+                    'tipo_pago' => $pago->tipoPago?->nombre ?? 'No especificado',
+                    'moneda' => [
+                        'simbolo' => $pago->moneda?->simbolo ?? 'Bs.',
+                        'codigo' => $pago->moneda?->codigo ?? 'BOB',
+                    ],
+                    'usuario' => $pago->usuario?->name ?? 'Sistema',
+                ],
+                'cliente' => [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'codigo_cliente' => $cliente->codigo_cliente,
+                    'nit' => $cliente->nit,
+                    'email' => $cliente->email,
+                    'telefono' => $cliente->telefono,
+                ],
+                'venta' => $venta,
+                'cuenta' => $cuenta,
+                'fecha_impresion' => now(),
+                'usuario' => auth()->user()?->name ?? 'Sistema',
+                'empresa' => \App\Models\Empresa::first(),
+            ];
+
+            // Obtener template
+            $template = match($formato) {
+                'A4' => 'impresion.pagos.hoja-completa',
+                'TICKET_80' => 'impresion.pagos.ticket-80',
+                'TICKET_58' => 'impresion.pagos.ticket-58',
+            };
+
+            return view($template, $datos);
+        } catch (\Exception $e) {
+            abort(500, 'Error al cargar vista previa: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Aplicar configuración de formato a DomPDF
+     */
+    private function aplicarConfiguracionFormato($pdf, $formato): void
+    {
+        $configuracion = match($formato) {
+            'A4' => [
+                'paper' => 'A4',
+                'orientation' => 'portrait',
+                'margins' => ['left' => 10, 'right' => 10, 'top' => 10, 'bottom' => 10],
+            ],
+            'TICKET_80' => [
+                'paper' => [0, 0, 226.77, 841.89], // 80mm ancho
+                'orientation' => 'portrait',
+                'margins' => ['left' => 5, 'right' => 5, 'top' => 5, 'bottom' => 5],
+            ],
+            'TICKET_58' => [
+                'paper' => [0, 0, 164.41, 841.89], // 58mm ancho
+                'orientation' => 'portrait',
+                'margins' => ['left' => 3, 'right' => 3, 'top' => 3, 'bottom' => 3],
+            ],
+        };
+
+        $pdf->setPaper($configuracion['paper'], $configuracion['orientation']);
+        $pdf->setOption('margin_left', $configuracion['margins']['left']);
+        $pdf->setOption('margin_right', $configuracion['margins']['right']);
+        $pdf->setOption('margin_top', $configuracion['margins']['top']);
+        $pdf->setOption('margin_bottom', $configuracion['margins']['bottom']);
     }
 }
