@@ -272,6 +272,19 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Keep nested details routes
     Route::resource('compras.detalles', \App\Http\Controllers\DetalleCompraController::class)->shallow();
 
+    // ==========================================
+    // RUTAS DE IMPRESIÓN - COMPRAS
+    // ==========================================
+    Route::prefix('compras')->name('compras.')->group(function () {
+        Route::get('{compra}/imprimir', [\App\Http\Controllers\CompraController::class, 'imprimirCompra'])->name('imprimir');
+        Route::get('{compra}/preview', [\App\Http\Controllers\CompraController::class, 'previewCompra'])->name('preview');
+    });
+
+    // ==========================================
+    // ✨ RUTAS PARA GESTIÓN DE PRECIOS
+    // ==========================================
+    Route::get('precios', [\App\Http\Controllers\PrecioController::class, 'index'])->middleware('permission:precios.index')->name('precios.management');
+
     // Rutas para gestión de ventas
     // ✅ NUEVO: Aplicar middleware CheckCajaAbierta para validar que hay caja abierta
     Route::resource('ventas', \App\Http\Controllers\VentaController::class)->middleware('caja.abierta');
@@ -343,7 +356,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
         // ✅ NUEVO: Dashboard de caja específica (admin viendo caja de usuario)
         // Usa route model binding - {aperturaCaja} se inyecta automáticamente
-        Route::get('{aperturaCaja}', [\App\Http\Controllers\CajaController::class, 'index'])->name('show');
+        // ✅ CONSTRAINT: Solo aceptar números enteros para evitar conflictos con otras rutas
+        Route::get('{aperturaCaja}', [\App\Http\Controllers\CajaController::class, 'index'])
+            ->where('aperturaCaja', '[0-9]+')
+            ->name('show');
 
         // Dashboard del usuario (su propia caja)
         Route::get('/', [\App\Http\Controllers\CajaController::class, 'index'])->name('index');
@@ -369,10 +385,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // ✅ RUTAS PARA IMPRESIONES DE CIERRE DE CAJA
     Route::prefix('cajas')->name('cajas.')->group(function () {
         Route::get('/{aperturaCaja}/cierre/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirCierre'])
+            ->where('aperturaCaja', '[0-9]+')
             ->name('cierre.imprimir')
             ->middleware('permission:cajas.cerrar');
 
         Route::get('/{aperturaCaja}/movimientos/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirMovimientos'])
+            ->where('aperturaCaja', '[0-9]+')
             ->name('movimientos.imprimir')
             ->middleware('permission:cajas.transacciones');
     });
@@ -706,6 +724,14 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::post('calcular-analisis', [\App\Http\Controllers\AnalisisAbcController::class, 'apiCalcularAnalisis'])->name('calcular-analisis');
             Route::get('recomendaciones', [\App\Http\Controllers\AnalisisAbcController::class, 'apiRecomendaciones'])->name('recomendaciones');
         });
+    });
+
+    // ==========================================
+    // 📦 STOCK - IMPRESIÓN
+    // ==========================================
+    Route::prefix('stock')->name('stock.')->group(function () {
+        Route::get('imprimir', [\App\Http\Controllers\ImpresionStockController::class, 'imprimir'])->name('imprimir');
+        Route::get('preview', [\App\Http\Controllers\ImpresionStockController::class, 'preview'])->name('preview');
     });
 });
 

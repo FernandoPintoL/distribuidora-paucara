@@ -3,6 +3,7 @@ import modulosSidebar from './modulos-sidebar'
 import proformas from './proformas'
 import ventas from './ventas'
 import compras from './compras'
+import precios from './precios'
 import productos from './productos'
 import cliente from './cliente'
 import creditos from './creditos'
@@ -176,6 +177,7 @@ dashboardRedirect,
 proformas,
 ventas,
 compras,
+precios,
 productos,
 cliente,
 creditos,

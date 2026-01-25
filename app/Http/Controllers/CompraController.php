@@ -11,6 +11,7 @@ use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\Proveedor;
 use App\Models\TipoPago;
+use App\Services\DetectarCambiosPrecioService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -199,6 +200,7 @@ class CompraController extends Controller
 
             'monedas'     => Moneda::where('activo', true)->orderBy('codigo')->get(['id', 'codigo', 'nombre', 'simbolo']),
             'estados'     => EstadoDocumento::orderBy('nombre')->get(['id', 'nombre']),
+            'almacenes'   => \App\Models\Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'activo']),
         ];
 
         Log::info('CompraController::create - datos finales', [
@@ -207,6 +209,7 @@ class CompraController extends Controller
             'monedas_count'     => $data['monedas']->count(),
             'estados_count'     => $data['estados']->count(),
             'tipos_pago_count'  => $data['tipos_pago']->count(),
+            'almacenes_count'   => $data['almacenes']->count(),
         ]);
 
         return Inertia::render('compras/create', $data);
@@ -224,10 +227,20 @@ class CompraController extends Controller
 
     public function edit($id)
     {
-        $compra = Compra::with(['detalles.producto'])->findOrFail($id);
+        $compra = Compra::with(['detalles.producto', 'estadoDocumento', 'tipoPago', 'moneda', 'proveedor', 'usuario', 'almacen'])->findOrFail($id);
+
+        Log::info('CompraController::edit() - Compra cargada', [
+            'compra_id'              => $compra->id,
+            'estado_documento_id'    => $compra->estado_documento_id,
+            'estadoDocumento loaded' => $compra->estadoDocumento !== null,
+            'estadoDocumento nombre' => $compra->estadoDocumento?->nombre ?? 'NULL',
+        ]);
 
         return Inertia::render('compras/create', [
-            'compra'      => $compra,
+            'compra'      => [
+                 ...$compra->toArray(),
+                'estadoDocumento' => $compra->estadoDocumento?->toArray(),
+            ],
             'tipos_pago'  => TipoPago::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'proveedores' => Proveedor::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'email']),
             'productos'   => Producto::with([
@@ -281,13 +294,25 @@ class CompraController extends Controller
                 }),
             'monedas'     => Moneda::where('activo', true)->orderBy('codigo')->get(['id', 'codigo', 'nombre', 'simbolo']),
             'estados'     => EstadoDocumento::orderBy('nombre')->get(['id', 'nombre']),
+            'almacenes'   => \App\Models\Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'activo']),
         ]);
     }
 
     public function store(StoreCompraRequest $request)
     {
-        $data = $request->validated();
-        $cajaId = $request->attributes->get('caja_id');  // ✅ Del middleware
+        Log::info('CompraController::store() - INICIO - Solicitud recibida', [
+            'proveedor_id'   => $request->input('proveedor_id'),
+            'fecha'          => $request->input('fecha'),
+            'total'          => $request->input('total'),
+            'detalles_count' => count($request->input('detalles', [])),
+        ]);
+
+        $data   = $request->validated();
+        $cajaId = $request->attributes->get('caja_id'); // ✅ Del middleware
+
+        Log::info('CompraController::store() - Validación exitosa, datos listos', [
+            'numero_detalles' => count($data['detalles'] ?? []),
+        ]);
 
         try {
             DB::beginTransaction();
@@ -299,18 +324,30 @@ class CompraController extends Controller
 
             $compra = Compra::create($data);
 
+            // Obtener estados para validación
+            $estadoAprobado = \App\Models\EstadoDocumento::where('codigo', 'APROBADO')->first();
+            $estadoRecibido = \App\Models\EstadoDocumento::where('codigo', 'FACTURADO')->first();
+
             foreach ($data['detalles'] as $detalle) {
                 $detalleCompra = $compra->detalles()->create($detalle);
 
-                // Solo registrar inventario si el estado es RECIBIDO
-                $estadoRecibido = \App\Models\EstadoDocumento::where('codigo', 'RECIBIDO')->first();
-                if ($compra->estado_documento_id == $estadoRecibido?->id) {
-                    $this->registrarEntradaInventario($detalleCompra, $compra);
+                // ✅ Registrar inventario SOLO si el estado es APROBADO o FACTURADO
+                if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
+                    $this->registrarEntradaInventario($detalleCompra, $compra, $data['almacen_id'] ?? null);
                 }
             }
 
-            // ✅ Registrar movimiento de caja si es CONTADO
-            $this->registrarMovimientoCaja($compra, $cajaId);
+            // ✅ Registrar movimiento de caja SOLO si el estado es APROBADO o FACTURADO (pago inmediato)
+            if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
+                $this->registrarMovimientoCaja($compra, $cajaId, $data['total']);
+
+                Log::info('CompraController::store() - Compra creada como APROBADO - Inventario y movimiento de caja registrados', [
+                    'compra_numero' => $compra->numero,
+                    'almacen_id' => $data['almacen_id'] ?? null,
+                    'caja_id' => $cajaId,
+                    'total' => $data['total'],
+                ]);
+            }
 
             DB::commit();
 
@@ -341,34 +378,164 @@ class CompraController extends Controller
             DB::beginTransaction();
 
             // Guardar estado anterior para detectar cambios
-            $estadoAnterior = $compra->estado_documento_id;
-            $estadoRecibido = \App\Models\EstadoDocumento::where('codigo', 'RECIBIDO')->first();
+            $estadoAnterior  = $compra->estado_documento_id;
+            $estadoActual    = $compra->estadoDocumento?->nombre;
+            $estadoAprobado  = \App\Models\EstadoDocumento::where('codigo', 'APROBADO')->first();
+            $estadoRecibido  = \App\Models\EstadoDocumento::where('codigo', 'FACTURADO')->first();
+            $estadoCancelado = \App\Models\EstadoDocumento::where('codigo', 'CANCELADO')->first();
 
-            // Si la compra está en estado RECIBIDO y se van a modificar detalles, revertir inventario
+            // ✅ Validación: Solo BORRADOR puede editar detalles y cambiar almacén
+            $estadoBorrador = \App\Models\EstadoDocumento::where('codigo', 'BORRADOR')->first();
+            if ($estadoAnterior != $estadoBorrador?->id && isset($data['detalles'])) {
+                throw new \Exception(
+                    "No se pueden modificar los detalles de una compra en estado {$estadoActual}. " .
+                    "Solo se pueden editar compras en estado BORRADOR."
+                );
+            }
+
+            // ✅ Validación: APROBADO+ no puede cambiar almacén (stock ya registrado)
+            if (in_array($estadoAnterior, [$estadoAprobado?->id, $estadoRecibido?->id, $estadoCancelado?->id]) &&
+                isset($data['almacen_id']) && $data['almacen_id'] != $compra->almacen_id) {
+                throw new \Exception(
+                    "No se puede cambiar el almacén de una compra en estado {$estadoActual}. " .
+                    "El almacén ya fue asignado cuando se aprobó la compra."
+                );
+            }
+
+            // ✅ Validación: FACTURADO+ no puede editar nada
+            if (in_array($estadoAnterior, [$estadoRecibido?->id, $estadoCancelado?->id])) {
+                throw new \Exception(
+                    "No se puede editar una compra en estado {$estadoActual}. " .
+                    "Solo se pueden editar compras en estado BORRADOR o APROBADO."
+                );
+            }
+
+            // Si la compra está en estado FACTURADO y se van a modificar detalles, revertir inventario
             if (isset($data['detalles']) && $estadoAnterior == $estadoRecibido?->id) {
                 $this->revertirInventarioDetalles($compra);
             }
 
+            // ✅ PRIMERO: Actualizar propiedades principales
             $compra->update($data);
+            $compra->refresh(); // Recargar propiedades principales
 
-            // Verificar si cambió a estado RECIBIDO
-            $cambioARecibido = $estadoAnterior != $estadoRecibido?->id &&
-                             $compra->estado_documento_id == $estadoRecibido?->id;
-
+            // ✅ SEGUNDO: Detectar si los detalles realmente cambiaron
+            $detallesChanged = false;
             if (isset($data['detalles'])) {
+                // Comparar cantidad de detalles primero
+                if ($compra->detalles()->count() !== count($data['detalles'])) {
+                    $detallesChanged = true;
+                } else {
+                    // Comparar cada detalle línea por línea
+                    $existingDetalles = $compra->detalles->toArray();
+                    foreach ($data['detalles'] as $index => $newDetalle) {
+                        $existingDetalle = $existingDetalles[$index] ?? null;
+                        if (!$existingDetalle ||
+                            $existingDetalle['producto_id'] !== $newDetalle['producto_id'] ||
+                            (float)$existingDetalle['cantidad'] != (float)$newDetalle['cantidad'] ||
+                            (float)$existingDetalle['precio_unitario'] != (float)$newDetalle['precio_unitario'] ||
+                            (float)($existingDetalle['descuento'] ?? 0) != (float)($newDetalle['descuento'] ?? 0)) {
+                            $detallesChanged = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // ✅ TERCERO: Actualizar/recrear detalles SOLO SI CAMBIARON
+            // Escenario 1: Usuario modifica detalles/header → Recrear detalles
+            // Escenario 2: Usuario solo cambia estado BORRADOR→APROBADO → Mantener detalles sin cambios
+            if ($detallesChanged) {
+                Log::info('CompraController::update() - Detalles han cambiado, recreando', [
+                    'compra_numero' => $compra->numero,
+                    'detalles_count' => count($data['detalles']),
+                ]);
+
                 // Eliminar detalles existentes
                 $compra->detalles()->delete();
 
-                // Crear nuevos detalles
+                // Crear nuevos detalles con valores del request
                 foreach ($data['detalles'] as $detalle) {
-                    $detalleCompra = $compra->detalles()->create($detalle);
+                    $compra->detalles()->create($detalle);
+                }
 
-                    // Registrar inventario si:
-                    // 1. Cambió a RECIBIDO (nueva recepción)
-                    // 2. Ya estaba RECIBIDO (re-registrar después de revertir)
-                    if ($cambioARecibido || $compra->estado_documento_id == $estadoRecibido?->id) {
-                        $this->registrarEntradaInventario($detalleCompra, $compra);
-                    }
+                $compra->load('detalles');
+            } else if (isset($data['detalles'])) {
+                Log::info('CompraController::update() - Detalles sin cambios, manteniéndose', [
+                    'compra_numero' => $compra->numero,
+                    'detalles_count' => $compra->detalles()->count(),
+                ]);
+                // Detalles no cambiaron, simplemente recargarlos
+                $compra->load('detalles');
+            }
+
+            // ✅ CUARTO: Detectar cambios de estado importantes
+            $cambioAAprobado = $estadoAnterior == $estadoBorrador?->id &&
+            $compra->estado_documento_id == $estadoAprobado?->id;
+            $cambioARecibido = $estadoAnterior != $estadoRecibido?->id &&
+            $compra->estado_documento_id == $estadoRecibido?->id;
+
+            Log::info('CompraController::update() - Detectados cambios de estado', [
+                'compra_numero' => $compra->numero,
+                'estadoAnterior_id' => $estadoAnterior,
+                'estadoNuevo_id' => $compra->estado_documento_id,
+                'cambioAAprobado' => $cambioAAprobado,
+                'cambioARecibido' => $cambioARecibido,
+                'detalles_count' => $compra->detalles->count(),
+            ]);
+
+            // ✅ QUINTO: Si BORRADOR → APROBADO, registrar inventario Y movimiento de caja
+            if ($cambioAAprobado && $compra->detalles()->exists()) {
+                // Determine which scenario:
+                // Escenario 1: Detalles fueron modificados (recreadas)
+                // Escenario 2: Estado-only change, detalles sin modificaciones
+                $escenario = $detallesChanged ? 'detalles-modificados' : 'estado-only-change';
+
+                Log::info("Registrando inventario para cambio a APROBADO", [
+                    'compra_numero' => $compra->numero,
+                    'detalles_count' => $compra->detalles->count(),
+                    'escenario' => $escenario,
+                ]);
+
+                // 1️⃣ Registrar inventario (CON DETALLES NUEVOS si fueron modificados, CON DETALLES EXISTENTES si no)
+                foreach ($compra->detalles as $detalle) {
+                    Log::info("Registrando inventario - Detalle", [
+                        'producto_id' => $detalle->producto_id,
+                        'cantidad' => $detalle->cantidad,
+                        'precio_unitario' => $detalle->precio_unitario,
+                    ]);
+                    $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
+                }
+
+                // 2️⃣ Registrar movimiento de caja (si es pago inmediato)
+                $cajaId = $request->attributes->get('caja_id');
+                $this->registrarMovimientoCaja($compra, $cajaId, $data['total']);
+
+                // 3️⃣ ✨ NUEVO: Detectar cambios de precio de costo
+                $servicioPrecios = new DetectarCambiosPrecioService();
+                $productosConCambio = $servicioPrecios->procesarCompraAprobada($compra);
+
+                if (!empty($productosConCambio)) {
+                    Log::info("Precios de costo actualizados, revisar precios de venta", [
+                        'compra_numero' => $compra->numero,
+                        'productos_con_cambio' => count($productosConCambio),
+                        'detalles' => $productosConCambio,
+                    ]);
+                }
+
+                Log::info("Compra {$compra->numero} cambió a APROBADO - Inventario y movimiento de caja registrados", [
+                    'compra_id'  => $compra->id,
+                    'almacen_id' => $data['almacen_id'] ?? $compra->almacen_id,
+                    'caja_id' => $cajaId,
+                    'escenario' => $escenario,
+                    'cambios_precio' => count($productosConCambio) ?? 0,
+                ]);
+            }
+
+            // ✅ SEXTO: Si FACTURADO, registrar inventario con detalles nuevos
+            if ($cambioARecibido && $compra->detalles()->exists()) {
+                foreach ($compra->detalles as $detalle) {
+                    $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
                 }
             }
 
@@ -422,7 +589,7 @@ class CompraController extends Controller
         // 1. Verificar si tiene pagos asociados
         if ($compra->pagos()->exists()) {
             $cantidadPagos = $compra->pagos()->count();
-            $errores[] = "La compra tiene {$cantidadPagos} pago(s) asociado(s)";
+            $errores[]     = "La compra tiene {$cantidadPagos} pago(s) asociado(s)";
         }
 
         // 2. Verificar si tiene cuenta por pagar con saldo pendiente
@@ -430,7 +597,7 @@ class CompraController extends Controller
             $cuenta = $compra->cuentaPorPagar;
             if ($cuenta->saldo_pendiente > 0) {
                 $errores[] = "La compra tiene una cuenta por pagar con saldo pendiente de " .
-                    number_format($cuenta->saldo_pendiente, 2);
+                number_format($cuenta->saldo_pendiente, 2);
             }
         }
 
@@ -453,20 +620,20 @@ class CompraController extends Controller
             $stockProducto = $movimiento->stockProducto;
             if ($stockProducto) {
                 $cantidadEntrada = abs($movimiento->cantidad);
-                $stockActual = $stockProducto->cantidad;
+                $stockActual     = $stockProducto->cantidad;
 
                 // Si el stock actual es menor que la cantidad original de la compra,
                 // significa que parte se vendió
                 if ($stockActual < $cantidadEntrada) {
-                    $producto = $stockProducto->producto;
+                    $producto        = $stockProducto->producto;
                     $cantidadVendida = $cantidadEntrada - $stockActual;
-                    $errores[] = "Producto '{$producto->nombre}': se compraron {$cantidadEntrada} unidades pero {$cantidadVendida} ya fueron vendidas";
+                    $errores[]       = "Producto '{$producto->nombre}': se compraron {$cantidadEntrada} unidades pero {$cantidadVendida} ya fueron vendidas";
                 }
             }
         }
 
         // Si hay errores, lanzar excepción
-        if (!empty($errores)) {
+        if (! empty($errores)) {
             throw new \Exception(
                 "No se puede eliminar la compra #{$compra->numero}:\n" .
                 implode("\n", array_map(fn($e) => "- {$e}", $errores))
@@ -477,14 +644,21 @@ class CompraController extends Controller
     /**
      * Registrar entrada de inventario por compra
      */
-    private function registrarEntradaInventario(DetalleCompra $detalle, Compra $compra): void
+    private function registrarEntradaInventario(DetalleCompra $detalle, Compra $compra, ?int $almacenId = null): void
     {
         $producto = $detalle->producto;
 
-        // Obtener el almacén principal o usar el primero disponible
-        $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
+        // Usar almacén especificado o buscar el primero disponible
+        $almacen = null;
+        if ($almacenId) {
+            $almacen = \App\Models\Almacen::find($almacenId);
+        }
 
-        if (! $almacenPrincipal) {
+        if (! $almacen) {
+            $almacen = \App\Models\Almacen::where('activo', true)->first();
+        }
+
+        if (! $almacen) {
             Log::warning('No hay almacén disponible para registrar entrada de inventario', [
                 'compra_id'   => $compra->id,
                 'producto_id' => $producto->id,
@@ -495,11 +669,11 @@ class CompraController extends Controller
 
         try {
             $producto->registrarMovimiento(
-                almacenId: $almacenPrincipal->id,
+                almacenId: $almacen->id,
                 cantidad: (int) $detalle->cantidad,
                 tipo: MovimientoInventario::TIPO_ENTRADA_COMPRA,
                 observacion: "Entrada por compra #{$compra->numero}",
-                numeroDocumento: $compra->numero_factura,
+                numeroDocumento: $compra->numero,
                 lote: $detalle->lote,
                 fechaVencimiento: $detalle->fecha_vencimiento ?
                 \Carbon\Carbon::parse($detalle->fecha_vencimiento) : null,
@@ -510,7 +684,7 @@ class CompraController extends Controller
                 'compra_id'   => $compra->id,
                 'producto_id' => $producto->id,
                 'cantidad'    => $detalle->cantidad,
-                'almacen_id'  => $almacenPrincipal->id,
+                'almacen_id'  => $almacen->id,
             ]);
 
         } catch (\Exception $e) {
@@ -530,12 +704,12 @@ class CompraController extends Controller
     private function revertirInventarioDetalles(Compra $compra): void
     {
         foreach ($compra->detalles as $detalle) {
-            $producto = $detalle->producto;
+            $producto         = $detalle->producto;
             $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
 
-            if (!$almacenPrincipal) {
+            if (! $almacenPrincipal) {
                 Log::warning('No hay almacén disponible para revertir inventario', [
-                    'compra_id' => $compra->id,
+                    'compra_id'  => $compra->id,
                     'detalle_id' => $detalle->id,
                 ]);
                 continue;
@@ -554,16 +728,16 @@ class CompraController extends Controller
                 );
 
                 Log::info('Inventario revertido por actualización de compra', [
-                    'compra_id' => $compra->id,
+                    'compra_id'   => $compra->id,
                     'producto_id' => $producto->id,
-                    'cantidad' => $detalle->cantidad,
+                    'cantidad'    => $detalle->cantidad,
                 ]);
 
             } catch (\Exception $e) {
                 Log::error('Error al revertir inventario en actualización', [
-                    'compra_id' => $compra->id,
+                    'compra_id'   => $compra->id,
                     'producto_id' => $producto->id,
-                    'error' => $e->getMessage(),
+                    'error'       => $e->getMessage(),
                 ]);
                 // Continuar con los demás detalles
             }
@@ -698,9 +872,9 @@ class CompraController extends Controller
      */
     private function generarNumeroCompra(): string
     {
-        $fecha = date('Ymd'); // Formato: 20240915
-        $maxIntentos = 5; // Máximo de intentos en caso de deadlock
-        $intento = 0;
+        $fecha       = date('Ymd'); // Formato: 20240915
+        $maxIntentos = 5;           // Máximo de intentos en caso de deadlock
+        $intento     = 0;
 
         while ($intento < $maxIntentos) {
             try {
@@ -765,19 +939,20 @@ class CompraController extends Controller
      *
      * @param Compra $compra
      * @param int $cajaId ID de caja del middleware
+     * @param float $total Monto total del request (para usar valores NUEVOS, no los guardados en BD)
      */
-    private function registrarMovimientoCaja(Compra $compra, ?int $cajaId = null): void
+    private function registrarMovimientoCaja(Compra $compra, ?int $cajaId = null, ?float $total = null): void
     {
         try {
-            // Solo registrar movimiento para compras al CONTADO
+            // Solo registrar movimiento para compras con pago inmediato (no CRÉDITO)
             $tipoPago = $compra->tipoPago;
-            if (!$tipoPago || strtoupper($tipoPago->codigo) !== 'CONTADO') {
+            if (! $tipoPago || strtoupper($tipoPago->codigo) === 'CRÉDITO') {
                 // Es a CRÉDITO - no crear movimiento ahora
                 Log::info("Compra {$compra->numero} a crédito - movimiento de caja se registrará al pagar");
                 return;
             }
 
-            if (!$cajaId) {
+            if (! $cajaId) {
                 Log::warning("No se especificó cajaId para registrar movimiento de compra {$compra->numero}");
                 return;
             }
@@ -785,25 +960,175 @@ class CompraController extends Controller
             // Obtener tipo de operación para compra
             $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'COMPRA')->first();
 
-            if (!$tipoOperacion) {
+            if (! $tipoOperacion) {
                 Log::warning('No existe tipo de operación COMPRA para movimiento de caja');
                 return;
             }
 
+            // ✅ Usar el total del request si viene, si no usar el de la compra
+            $montoRegistro = $total ?? $compra->total;
+
             // Crear movimiento de caja (EGRESO para compra)
             \App\Models\MovimientoCaja::create([
-                'caja_id' => $cajaId,
+                'caja_id'           => $cajaId,
                 'tipo_operacion_id' => $tipoOperacion->id,
-                'numero_documento' => $compra->numero,
-                'descripcion' => "Compra #{$compra->numero} - Proveedor: {$compra->proveedor?->nombre}",
-                'monto' => -$compra->total, // Negativo para egreso
+                'numero_documento'  => $compra->numero,
+                'observaciones'     => "Compra #{$compra->numero} - Proveedor: {$compra->proveedor?->nombre}",
+                'monto' => -$montoRegistro, // ✅ NUEVO: Usa el monto del request (valores NUEVOS)
                 'fecha' => $compra->fecha,
                 'user_id' => Auth::id(),
             ]);
 
-            Log::info("Movimiento de caja generado para compra {$compra->numero}");
+            Log::info("Movimiento de caja generado para compra {$compra->numero}", [
+                'monto' => $montoRegistro,
+                'total_request' => $total,
+                'total_compra_db' => $compra->total,
+            ]);
         } catch (\Exception $e) {
             Log::error("Error registrando movimiento de caja para compra {$compra->numero}: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Imprimir compra en PDF
+     * GET /compras/{compra}/imprimir?formato=A4&accion=stream
+     */
+    public function imprimirCompra(Compra $compra, Request $request)
+    {
+        // Validar permiso
+        $this->authorize('view', $compra);
+
+        // Validar y obtener parámetros
+        $validated = $request->validate([
+            'formato' => 'required|string|in:A4,TICKET_80,TICKET_58',
+            'accion' => 'required|string|in:stream,download',
+        ]);
+
+        // Convertir a string para evitar UnhandledMatchError con Stringable
+        $formato = (string) $validated['formato'];
+        $accion = (string) $validated['accion'];
+
+        // Eager load relaciones
+        $compra->load(['detalles.producto', 'proveedor', 'tipoPago', 'moneda', 'usuario', 'almacen', 'estadoDocumento']);
+
+        // Preparar datos para la vista
+        $datos = [
+            'compra' => $compra,
+            'empresa' => \App\Models\Empresa::first(),
+            'usuario' => auth()->user()->name ?? 'Sistema',
+        ];
+
+        // Seleccionar template según formato
+        $template = match ($formato) {
+            'A4' => 'impresion.compras.hoja-completa',
+            'TICKET_80' => 'impresion.compras.ticket-80',
+            'TICKET_58' => 'impresion.compras.ticket-58',
+            default => 'impresion.compras.hoja-completa',
+        };
+
+        Log::info("Generando PDF de compra", [
+            'compra_id' => $compra->id,
+            'formato' => $formato,
+            'accion' => $accion,
+            'template' => $template,
+        ]);
+
+        try {
+            // Generar PDF
+            $pdf = \PDF::loadView($template, $datos);
+
+            // Aplicar configuración del formato
+            $pdf = $this->aplicarConfiguracionFormato($pdf, $formato);
+
+            // Retornar según acción
+            $nombreArchivo = "Compra_{$compra->numero}_{$formato}.pdf";
+
+            if ($accion === 'download') {
+                return $pdf->download($nombreArchivo);
+            } else {
+                return $pdf->stream($nombreArchivo);
+            }
+        } catch (\Exception $e) {
+            Log::error("Error generando PDF de compra", [
+                'compra_id' => $compra->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['error' => 'Error al generar el PDF: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Preview de compra en HTML
+     * GET /compras/{compra}/preview?formato=A4
+     */
+    public function previewCompra(Compra $compra, Request $request)
+    {
+        // Validar permiso
+        $this->authorize('view', $compra);
+
+        // Validar formato
+        $formato = $request->validate([
+            'formato' => 'required|string|in:A4,TICKET_80,TICKET_58',
+        ])['formato'];
+
+        // Convertir a string
+        $formato = (string) $formato;
+
+        // Eager load relaciones
+        $compra->load(['detalles.producto', 'proveedor', 'tipoPago', 'moneda', 'usuario', 'almacen', 'estadoDocumento']);
+
+        // Preparar datos
+        $datos = [
+            'compra' => $compra,
+            'empresa' => \App\Models\Empresa::first(),
+            'usuario' => auth()->user()->name ?? 'Sistema',
+        ];
+
+        // Seleccionar template
+        $template = match ($formato) {
+            'A4' => 'impresion.compras.hoja-completa',
+            'TICKET_80' => 'impresion.compras.ticket-80',
+            'TICKET_58' => 'impresion.compras.ticket-58',
+            default => 'impresion.compras.hoja-completa',
+        };
+
+        Log::info("Preview de compra", [
+            'compra_id' => $compra->id,
+            'formato' => $formato,
+        ]);
+
+        // Retornar vista directamente
+        return view($template, $datos);
+    }
+
+    /**
+     * Aplicar configuración de márgenes y tamaño de papel según formato
+     */
+    private function aplicarConfiguracionFormato($pdf, $formato): void
+    {
+        $configuracion = match($formato) {
+            'A4' => [
+                'paper' => 'A4',
+                'orientation' => 'portrait',
+                'margins' => ['left' => 10, 'right' => 10, 'top' => 10, 'bottom' => 10],
+            ],
+            'TICKET_80' => [
+                'paper' => [0, 0, 226.77, 841.89], // 80mm ancho
+                'orientation' => 'portrait',
+                'margins' => ['left' => 5, 'right' => 5, 'top' => 5, 'bottom' => 5],
+            ],
+            'TICKET_58' => [
+                'paper' => [0, 0, 164.41, 841.89], // 58mm ancho
+                'orientation' => 'portrait',
+                'margins' => ['left' => 3, 'right' => 3, 'top' => 3, 'bottom' => 3],
+            ],
+        };
+
+        $pdf->setPaper($configuracion['paper'], $configuracion['orientation']);
+        $pdf->setOption('margin_left', $configuracion['margins']['left']);
+        $pdf->setOption('margin_right', $configuracion['margins']['right']);
+        $pdf->setOption('margin_top', $configuracion['margins']['top']);
+        $pdf->setOption('margin_bottom', $configuracion['margins']['bottom']);
     }
 }

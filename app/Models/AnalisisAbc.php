@@ -398,17 +398,23 @@ class AnalisisAbc extends Model
             $query->where('almacen_id', $almacenId);
         }
 
+        $totalProductos = $query->count();
+        $productosClaseA = $query->clone()->where('clasificacion_abc', 'A')->count();
+        $valorClaseA = $query->clone()->where('clasificacion_abc', 'A')->sum('ventas_valor') ?? 0;
+        $valorTotal = $query->clone()->sum('ventas_valor') ?? 0;
+        $porcentajeClaseA = $valorTotal > 0 ? ($valorClaseA / $valorTotal) * 100 : 0;
+
         return [
-            'total_productos' => $query->count(),
-            'clasificacion_a' => $query->clone()->where('clasificacion_abc', 'A')->count(),
-            'clasificacion_b' => $query->clone()->where('clasificacion_abc', 'B')->count(),
-            'clasificacion_c' => $query->clone()->where('clasificacion_abc', 'C')->count(),
+            'total_productos' => $totalProductos,
+            'productos_clase_a' => $productosClaseA,
+            'productos_clase_b' => $query->clone()->where('clasificacion_abc', 'B')->count(),
+            'productos_clase_c' => $query->clone()->where('clasificacion_abc', 'C')->count(),
+            'valor_total_ventas' => $valorTotal,
+            'valor_clase_a' => $valorClaseA,
+            'porcentaje_clase_a' => $porcentajeClaseA,
             'alta_rotacion' => $query->clone()->where('clasificacion_xyz', 'X')->count(),
             'media_rotacion' => $query->clone()->where('clasificacion_xyz', 'Y')->count(),
             'baja_rotacion' => $query->clone()->where('clasificacion_xyz', 'Z')->count(),
-            'productos_obsoletos' => $query->clone()->where('ultima_venta', '<', now()->subDays(180))->count(),
-            'rotacion_promedio' => $query->clone()->avg('rotacion_inventario'),
-            'valor_total' => $query->clone()->sum('ventas_valor'),
         ];
     }
 }

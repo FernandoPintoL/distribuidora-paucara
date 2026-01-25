@@ -8,6 +8,7 @@ class StoreCompraRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        \Log::info('StoreCompraRequest::authorize() - Solicitud de compra recibida');
         return true;
     }
 
@@ -27,6 +28,7 @@ class StoreCompraRequest extends FormRequest
             'estado_documento_id'          => 'required|exists:estados_documento,id',
             'moneda_id'                    => 'required|exists:monedas,id',
             'tipo_pago_id'                 => 'nullable|exists:tipos_pago,id',
+            'almacen_id'                   => 'required|exists:almacenes,id',
             'detalles'                     => 'required|array|min:1',
             'detalles.*.producto_id'       => 'required|exists:productos,id',
             'detalles.*.cantidad'          => 'required|integer|min:1|max:999999',
@@ -47,6 +49,15 @@ class StoreCompraRequest extends FormRequest
      */
     public function withValidator(Validator $validator): void
     {
+        \Log::info('StoreCompraRequest::withValidator() - Iniciando validaciones adicionales', [
+            'data_keys' => array_keys($this->all()),
+            'fecha' => $this->input('fecha'),
+            'proveedor_id' => $this->input('proveedor_id'),
+            'subtotal' => $this->input('subtotal'),
+            'total' => $this->input('total'),
+            'detalles_count' => count($this->input('detalles', [])),
+        ]);
+
         $validator->after(function (Validator $validator) {
             // 1. Validar coherencia de subtotal con detalles
             $this->validarCoherenciaSubtotal($validator);
@@ -77,8 +88,17 @@ class StoreCompraRequest extends FormRequest
         $subtotalCalculado = array_reduce($detalles, fn($sum, $det) => $sum + ($det['subtotal'] ?? 0), 0);
         $subtotalDeclarado = $this->input('subtotal', 0);
 
+        \Log::info('StoreCompraRequest::validarCoherenciaSubtotal()', [
+            'subtotalDeclarado' => $subtotalDeclarado,
+            'subtotalCalculado' => $subtotalCalculado,
+            'diferencia' => abs($subtotalCalculado - $subtotalDeclarado),
+        ]);
+
         // Permitir margen de error de 0.01 por redondeos
         if (abs($subtotalCalculado - $subtotalDeclarado) > 0.01) {
+            \Log::warning('StoreCompraRequest::validarCoherenciaSubtotal() - FALLA', [
+                'error' => "El subtotal ({$subtotalDeclarado}) no coincide con la suma de los detalles ({$subtotalCalculado})."
+            ]);
             $validator->errors()->add('subtotal',
                 "El subtotal ({$subtotalDeclarado}) no coincide con la suma de los detalles ({$subtotalCalculado})."
             );
@@ -94,8 +114,20 @@ class StoreCompraRequest extends FormRequest
 
         $totalCalculado = $subtotal - $descuento + $impuesto;
 
+        \Log::info('StoreCompraRequest::validarCoherenciaTotal()', [
+            'subtotal' => $subtotal,
+            'descuento' => $descuento,
+            'impuesto' => $impuesto,
+            'totalDeclarado' => $total,
+            'totalCalculado' => $totalCalculado,
+            'diferencia' => abs($totalCalculado - $total),
+        ]);
+
         // Permitir margen de error de 0.01 por redondeos
         if (abs($totalCalculado - $total) > 0.01) {
+            \Log::warning('StoreCompraRequest::validarCoherenciaTotal() - FALLA', [
+                'error' => "El total ({$total}) no coincide con el cálculo (subtotal: {$subtotal} - descuento: {$descuento} + impuesto: {$impuesto} = {$totalCalculado})."
+            ]);
             $validator->errors()->add('total',
                 "El total ({$total}) no coincide con el cálculo (subtotal: {$subtotal} - descuento: {$descuento} + impuesto: {$impuesto} = {$totalCalculado})."
             );

@@ -205,4 +205,24 @@ class PrecioProducto extends Model
             'tooltip'        => $this->tipoPrecio->getTooltip(),
         ];
     }
+
+    /**
+     * Verificar si este precio fue actualizado recientemente (últimos 7 días)
+     */
+    public function fueActualizadoRecientemente(int $dias = 7): bool
+    {
+        return $this->historialPrecios()
+            ->where('fecha_cambio', '>=', now()->subDays($dias))
+            ->exists();
+    }
+
+    /**
+     * Obtener último cambio registrado para este precio
+     */
+    public function obtenerUltimoCambio(): ?HistorialPrecio
+    {
+        return $this->historialPrecios()
+            ->latest('fecha_cambio')
+            ->first();
+    }
 }

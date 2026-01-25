@@ -163,6 +163,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'inventario.transferencias.enviar', 'inventario.transferencias.recibir', 'inventario.transferencias.cancelar',
                 'inventario.tipos-ajuste.manage', 'inventario.tipos-ajuste.index', 'inventario.tipos-ajuste.create', 'inventario.tipos-ajuste.store', 'inventario.tipos-ajuste.edit', 'inventario.tipos-ajuste.update', 'inventario.tipos-ajuste.destroy',
                 'inventario.vehiculos.manage', 'inventario.vehiculos.index', 'inventario.vehiculos.create', 'inventario.vehiculos.store', 'inventario.vehiculos.ver', 'inventario.vehiculos.edit', 'inventario.vehiculos.update', 'inventario.vehiculos.destroy',
+                'inventario.analisis.manage', // ✅ NUEVO: Análisis ABC del inventario
             ],
             'entregas'       => [
                 'entregas.index', 'entregas.create', 'entregas.store', 'entregas.show', 'entregas.view', 'entregas.edit', 'entregas.update', 'entregas.delete', 'entregas.destroy',

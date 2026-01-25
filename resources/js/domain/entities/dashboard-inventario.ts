@@ -16,11 +16,18 @@ export interface Estadisticas {
 }
 
 /**
- * Stock agregado por almacén
+ * Stock de productos por almacén (detalle de stock_productos)
  */
 export interface StockPorAlmacen {
-    nombre: string;
-    stock_total: number;
+    id: number;
+    producto_id: number;
+    almacen_id: number;
+    cantidad: number;
+    producto_nombre: string;
+    producto_codigo: string;
+    producto_codigo_barra: string;
+    producto_sku: string;
+    almacen_nombre: string;
 }
 
 /**

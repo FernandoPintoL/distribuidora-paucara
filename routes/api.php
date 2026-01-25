@@ -38,6 +38,7 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ReporteInventarioApiController;
 use App\Http\Controllers\VehiculoController;
 use App\Http\Controllers\VentaController;
+use App\Http\Controllers\PrecioController;
 use Illuminate\Support\Facades\Route;
 
 // ==========================================
@@ -325,6 +326,35 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // Rutas API básicas con nombres únicos para evitar conflictos con rutas web
     Route::apiResource('compras', CompraController::class)->names('api.compras');
+
+    // ==========================================
+    // 💰 RUTAS PARA GESTIÓN DE PRECIOS
+    // ==========================================
+    Route::prefix('precios')->group(function () {
+        // API: Listar precios con filtros
+        Route::get('/', [PrecioController::class, 'listadoApi'])->name('api.precios.listado');
+
+        // API: Obtener detalles de un producto con precios
+        Route::get('/producto/{producto}', [PrecioController::class, 'mostrarProducto'])->name('api.precios.mostrar-producto');
+
+        // API: Obtener compras donde el precio de COSTO es diferente
+        Route::get('/producto/{productoId}/compras-diferencia-costo', [PrecioController::class, 'obtenerComprasConDiferenciaCosto'])->name('api.precios.compras-diferencia-costo');
+
+        // API: Actualizar un precio específico
+        Route::put('/{precio}', [PrecioController::class, 'update'])->name('api.precios.update');
+
+        // API: Obtener historial completo de un precio
+        Route::get('/{precio}/historial', [PrecioController::class, 'historial'])->name('api.precios.historial');
+
+        // API: Cambios de precios recientes
+        Route::get('/resumen/cambios-recientes', [PrecioController::class, 'cambiosRecientes'])->name('api.precios.cambios-recientes');
+
+        // API: Resumen general
+        Route::get('/resumen', [PrecioController::class, 'resumen'])->name('api.precios.resumen');
+
+        // API: Actualizar múltiples precios en lote
+        Route::post('/actualizar-lote', [PrecioController::class, 'actualizarLote'])->name('api.precios.actualizar-lote');
+    });
 
     // ✅ VENTAS: PDF Download (Impresión de tickets y facturas) - ANTES de apiResource
     // Esto asegura que se procesen ANTES que las rutas genéricas de apiResource
@@ -1014,4 +1044,11 @@ Route::middleware(['auth:sanctum'])->prefix('visitas')->group(function () {
     Route::get('/estadisticas', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'estadisticas']);
     Route::get('/validar-horario', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'validarHorario']);
     Route::get('/{visita}', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'show']);
+});
+
+// ==========================================
+// 📦 STOCK - IMPRESIÓN
+// ==========================================
+Route::middleware(['auth:sanctum'])->prefix('stock')->group(function () {
+    Route::post('preparar-impresion', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresion']);
 });

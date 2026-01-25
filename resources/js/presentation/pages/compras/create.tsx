@@ -30,6 +30,8 @@ interface DetalleForm {
   subtotal: number;
   lote: string;
   fecha_vencimiento: string;
+  precio_costo?: number; // ✅ NUEVO: Precio de costo registrado
+  producto?: any; // ✅ NUEVO: Información completa del producto
 }
 
 interface CompraFormData {
@@ -46,7 +48,14 @@ interface CompraFormData {
   estado_documento_id: number | string;
   moneda_id: number | string;
   tipo_pago_id: number | string;
+  almacen_id: number | string;
   detalles: DetalleForm[];
+}
+
+interface Almacen {
+  id: number;
+  nombre: string;
+  activo: boolean;
 }
 
 interface PageProps extends InertiaPageProps {
@@ -56,6 +65,7 @@ interface PageProps extends InertiaPageProps {
   estados: EstadoDocumento[];
   productos: Producto[];
   tipos_pago: TipoPago[];
+  almacenes: Almacen[];
 }
 
 export default function CompraForm() {
@@ -71,12 +81,10 @@ export default function CompraForm() {
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
       case 'APROBADO':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'RECIBIDO':
+      case 'FACTURADO':
         return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
-      case 'PAGADO':
+      case 'CANCELADO':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'RECHAZADO':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
       case 'ANULADO':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       default:
@@ -95,16 +103,23 @@ export default function CompraForm() {
   });
 
   const isEditing = Boolean(props.compra);
-  const title = isEditing ? 'Editar Compra' : 'Nueva Compra';
+  const title = isEditing ? `Editar Compra: ${props.compra?.numero}` : 'Nueva Compra';
 
   // Hooks para búsqueda con autocompletado
   const proveedorSearch = useProveedorSearch();
 
   // Estados según el flujo documentado
   const estadoActual = props.compra?.estadoDocumento?.nombre;
-  const puedeEditarBasico = !estadoActual || ['BORRADOR', 'RECHAZADO'].includes(estadoActual);
-  const puedeEditarSupervisor = ['PENDIENTE'].includes(estadoActual || '');
-  const soloLectura = ['PAGADO', 'ANULADO'].includes(estadoActual || '');
+  console.log('🔍 Estado actual:', {
+    isEditing,
+    estadoActual,
+    estadoDocumento: props.compra?.estadoDocumento,
+    estadoDocumentoId: props.compra?.estado_documento_id,
+  });
+  // BORRADOR: Editable todo | APROBADO: Solo observaciones | FACTURADO+: Solo lectura
+  const editableBorrador = !estadoActual || estadoActual === 'BORRADOR'; // Crear o editar en BORRADOR
+  const editableAprobado = estadoActual === 'APROBADO'; // En APROBADO solo observaciones
+  const soloLectura = ['FACTURADO', 'CANCELADO', 'ANULADO'].includes(estadoActual || '');
 
   const { data, setData, post, put, processing, errors } = useForm<CompraFormData>({
     numero: props.compra?.numero || undefined, // Solo para edición
@@ -124,6 +139,9 @@ export default function CompraForm() {
     tipo_pago_id: props.compra?.tipo_pago_id ??
       props.tipos_pago?.find(t => t.codigo === 'EFECTIVO')?.id ??
       props.tipos_pago?.[0]?.id ?? '',
+    almacen_id: props.compra?.almacen_id ??
+      props.almacenes?.find(a => a.activo)?.id ??
+      props.almacenes?.[0]?.id ?? '',
     detalles: props.compra?.detalles?.map(d => ({
       id: d.id,
       producto_id: d.producto?.id ?? '',
@@ -158,6 +176,17 @@ export default function CompraForm() {
       setProveedorValue(data.proveedor_id);
     }
   }, [data.proveedor_id, proveedorValue]);
+
+  // Cargar el nombre del proveedor cuando se edita una compra
+  useEffect(() => {
+    if (isEditing && data.proveedor_id) {
+      const proveedor = props.proveedores?.find(p => p.id === Number(data.proveedor_id));
+      if (proveedor) {
+        setProveedorDisplay(proveedor.nombre);
+        console.log('✅ Proveedor cargado:', proveedor.nombre);
+      }
+    }
+  }, [isEditing, data.proveedor_id, props.proveedores]);
 
   // Función para manejar la creación de proveedor
   const handleCreateProveedor = (searchQuery: string) => {
@@ -232,6 +261,7 @@ export default function CompraForm() {
           : parseInt(String(data.estado_documento_id)),
         moneda_id: parseInt(String(data.moneda_id)),
         tipo_pago_id: data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null,
+        almacen_id: data.almacen_id ? parseInt(String(data.almacen_id)) : null,
         // Filtrar detalles válidos y convertir tipos
         detalles: data.detalles
           .filter(d => d.producto_id !== '')
@@ -345,40 +375,49 @@ export default function CompraForm() {
     description: `Código: ${tipo.codigo}`,
   })) ?? [];
 
+  // Convertir almacenes a opciones para SearchSelect
+  const almacenOptions: SelectOption[] = props.almacenes?.map(almacen => ({
+    value: almacen.id,
+    label: almacen.nombre,
+    description: almacen.activo ? 'Activo' : 'Inactivo',
+  })) ?? [];
+
   // Convertir estados a opciones para SearchSelect
   const getEstadosPermitidos = () => {
     if (!isEditing) {
-      // Para nuevas compras, solo BORRADOR es permitido inicialmente
-      return props.estados?.filter(estado => estado.nombre === 'Borrador') ?? [];
+      // Para nuevas compras, permitir BORRADOR o APROBADO
+      return props.estados?.filter(estado =>
+        ['Borrador', 'Aprobado'].includes(estado.nombre)
+      ) ?? [];
     }
 
     const estadoActual = props.compra?.estadoDocumento?.nombre;
+    console.log('🔍 getEstadosPermitidos - estadoActual:', estadoActual, 'all estados:', props.estados);
 
     // Filtrar estados según el flujo de negocio
     switch (estadoActual) {
       case 'Borrador':
         return props.estados?.filter(estado =>
-          ['Borrador', 'Pendiente'].includes(estado.nombre)
+          ['Borrador', 'Aprobado', 'Pendiente'].includes(estado.nombre)
         ) ?? [];
       case 'Pendiente':
         return props.estados?.filter(estado =>
-          ['Pendiente', 'Aprobado', 'Rechazado'].includes(estado.nombre)
+          ['Pendiente', 'Aprobado', 'Anulado'].includes(estado.nombre)
         ) ?? [];
       case 'Aprobado':
         return props.estados?.filter(estado =>
-          ['Aprobado', 'Recibido', 'Anulado'].includes(estado.nombre)
+          ['Aprobado', 'Facturado', 'Anulado'].includes(estado.nombre)
         ) ?? [];
-      case 'Recibido':
+      case 'Facturado':
         return props.estados?.filter(estado =>
-          ['Recibido', 'Pagado', 'Anulado'].includes(estado.nombre)
-        ) ?? [];
-      case 'Rechazado':
-        return props.estados?.filter(estado =>
-          ['Rechazado', 'Pendiente'].includes(estado.nombre)
+          ['Facturado', 'Cancelado', 'Anulado'].includes(estado.nombre)
         ) ?? [];
       default:
-        // Estados finales (Pagado, Anulado) no permiten cambios
-        return props.estados?.filter(estado => estado.nombre === estadoActual) ?? [];
+        // Estados finales (Anulado, Cancelado) no permiten cambios
+        console.log('🔍 getEstadosPermitidos - Usando DEFAULT case, estadoActual:', estadoActual);
+        const result = props.estados?.filter(estado => estado.nombre === estadoActual) ?? [];
+        console.log('🔍 resultado del default:', result);
+        return result;
     }
   };
 
@@ -386,6 +425,7 @@ export default function CompraForm() {
     value: estado.id,
     label: estado.nombre,
   }));
+  console.log('📦 estadoOptions final:', estadoOptions);
 
   // Mostrar mensajes flash del backend
   useEffect(() => {
@@ -433,15 +473,69 @@ export default function CompraForm() {
     setData('detalles', newDetalles);
   };
 
+  // Detectar si los campos del header han cambiado
+  const hasHeaderChanges = (): boolean => {
+    if (!isEditing || !props.compra) return false;
+
+    return (
+      data.numero !== String(props.compra.numero) ||
+      data.fecha !== props.compra.fecha ||
+      data.numero_factura !== (props.compra.numero_factura || '') ||
+      parseFloat(String(data.subtotal)) !== parseFloat(String(props.compra.subtotal)) ||
+      parseFloat(String(data.descuento || 0)) !== parseFloat(String(props.compra.descuento || 0)) ||
+      parseFloat(String(data.impuesto || 0)) !== parseFloat(String(props.compra.impuesto || 0)) ||
+      parseFloat(String(data.total)) !== parseFloat(String(props.compra.total)) ||
+      data.observaciones !== (props.compra.observaciones || '') ||
+      parseInt(String(data.proveedor_id)) !== props.compra.proveedor_id ||
+      parseInt(String(data.usuario_id)) !== props.compra.usuario_id ||
+      parseInt(String(data.moneda_id)) !== props.compra.moneda_id ||
+      (data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null) !== (props.compra.tipo_pago_id || null) ||
+      (data.almacen_id ? parseInt(String(data.almacen_id)) : null) !== (props.compra.almacen_id || null)
+    );
+  };
+
+  // Detectar si los detalles han cambiado
+  const hasDetallesChanges = (): boolean => {
+    if (!isEditing || !props.compra || !props.compra.detalles) return false;
+
+    const originalDetalles = props.compra.detalles;
+    const currentDetalles = data.detalles.filter(d => d.producto_id !== '');
+
+    // Comparar cantidad de detalles
+    if (originalDetalles.length !== currentDetalles.length) {
+      return true;
+    }
+
+    // Comparar cada detalle línea por línea
+    for (let i = 0; i < originalDetalles.length; i++) {
+      const original = originalDetalles[i];
+      const current = currentDetalles[i];
+
+      if (!current ||
+        parseInt(String(current.producto_id)) !== original.producto_id ||
+        parseInt(String(current.cantidad)) !== original.cantidad ||
+        parseFloat(String(current.precio_unitario)) !== parseFloat(String(original.precio_unitario)) ||
+        parseFloat(String(current.descuento || 0)) !== parseFloat(String(original.descuento || 0))
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const submit = (e: React.FormEvent) => {
+    console.log('🔵 CompraForm::submit() - INICIADO');
     e.preventDefault();
 
     if (!canCreate && !isEditing) {
+      console.warn('❌ CompraForm::submit() - Permisos insuficientes para crear');
       NotificationService.error('No tiene permisos para crear compras');
       return;
     }
 
     if (!canUpdate && isEditing) {
+      console.warn('❌ CompraForm::submit() - Permisos insuficientes para editar');
       NotificationService.error('No tiene permisos para editar compras');
       return;
     }
@@ -449,16 +543,40 @@ export default function CompraForm() {
     // Filtrar detalles válidos
     const detallesValidos = data.detalles.filter(d => d.producto_id !== '');
 
+    console.log('📦 CompraForm::submit() - Validación de detalles', {
+      totalDetalles: data.detalles.length,
+      detallesValidos: detallesValidos.length,
+    });
+
     if (detallesValidos.length === 0) {
+      console.warn('❌ CompraForm::submit() - Sin detalles válidos');
       NotificationService.error('Debe agregar al menos un producto');
       return;
     }
+
+    console.log('✅ CompraForm::submit() - Todas las validaciones pasaron');
+
+    // Detectar si estamos en Escenario 2: Solo cambio de estado (sin modificaciones en detalles/header)
+    const esEscenarioEstadoOnly = isEditing && props.compra &&
+      data.estado_documento_id !== String(props.compra.estado_documento_id) &&
+      !hasHeaderChanges() &&
+      !hasDetallesChanges();
+
+    console.log('🔍 CompraForm::submit() - Detectando escenario', {
+      isEditing,
+      esEscenarioEstadoOnly,
+      estadoAnterior: props.compra?.estado_documento_id,
+      estadoNuevo: data.estado_documento_id,
+      hasHeaderChanges: hasHeaderChanges(),
+      hasDetallesChanges: hasDetallesChanges(),
+    });
 
     // Mostrar modal de loading
     let loadingToast: string;
 
     const options = {
       onStart: () => {
+        console.log('🚀 CompraForm::submit() - onStart: Iniciando envío');
         loadingToast = NotificationService.loading(
           isEditing
             ? 'Actualizando compra...'
@@ -466,6 +584,7 @@ export default function CompraForm() {
         );
       },
       onSuccess: () => {
+        console.log('✅ CompraForm::submit() - onSuccess: Solicitud exitosa');
         if (loadingToast) {
           NotificationService.dismiss(loadingToast);
         }
@@ -476,6 +595,7 @@ export default function CompraForm() {
         );
       },
       onError: (errors: Record<string, string>) => {
+        console.error('❌ CompraForm::submit() - onError: Error en respuesta', errors);
         if (loadingToast) {
           NotificationService.dismiss(loadingToast);
         }
@@ -491,43 +611,66 @@ export default function CompraForm() {
         console.error('Form errors:', errors);
       },
       onFinish: () => {
+        console.log('🏁 CompraForm::submit() - onFinish: Completado');
         if (loadingToast) {
           NotificationService.dismiss(loadingToast);
         }
       },
       // Transformar datos antes de enviar
-      transform: (data: CompraFormData) => ({
-        numero: data.numero || undefined,
-        fecha: data.fecha,
-        numero_factura: data.numero_factura || '',
-        subtotal: parseFloat(String(data.subtotal)),
-        descuento: parseFloat(String(data.descuento || 0)),
-        impuesto: parseFloat(String(data.impuesto || 0)),
-        total: parseFloat(String(data.total)),
-        observaciones: data.observaciones || '',
-        proveedor_id: parseInt(String(data.proveedor_id)),
-        usuario_id: parseInt(String(data.usuario_id)),
-        estado_documento_id: parseInt(String(data.estado_documento_id)),
-        moneda_id: parseInt(String(data.moneda_id)),
-        tipo_pago_id: data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null,
-        detalles: detallesValidos.map(detalle => ({
-          id: detalle.id || undefined,
-          producto_id: parseInt(String(detalle.producto_id)),
-          cantidad: parseInt(String(detalle.cantidad)),
-          precio_unitario: parseFloat(String(detalle.precio_unitario)),
-          descuento: parseFloat(String(detalle.descuento || 0)),
-          subtotal: parseFloat(String(detalle.subtotal)),
-          lote: detalle.lote || '',
-          fecha_vencimiento: detalle.fecha_vencimiento || null,
-        })),
-      }),
+      transform: (data: CompraFormData) => {
+        const transformedData: any = {
+          numero: data.numero || undefined,
+          fecha: data.fecha,
+          numero_factura: data.numero_factura || '',
+          subtotal: parseFloat(String(data.subtotal)),
+          descuento: parseFloat(String(data.descuento || 0)),
+          impuesto: parseFloat(String(data.impuesto || 0)),
+          total: parseFloat(String(data.total)),
+          observaciones: data.observaciones || '',
+          proveedor_id: parseInt(String(data.proveedor_id)),
+          usuario_id: parseInt(String(data.usuario_id)),
+          estado_documento_id: parseInt(String(data.estado_documento_id)),
+          moneda_id: parseInt(String(data.moneda_id)),
+          tipo_pago_id: data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null,
+          almacen_id: data.almacen_id ? parseInt(String(data.almacen_id)) : null,
+        };
+
+        // Escenario 1: Usuario modifica detalles/header → Enviar detalles
+        // Escenario 2: Solo cambio de estado → NO enviar detalles
+        if (!esEscenarioEstadoOnly) {
+          transformedData.detalles = detallesValidos.map(detalle => ({
+            id: detalle.id || undefined,
+            producto_id: parseInt(String(detalle.producto_id)),
+            cantidad: parseInt(String(detalle.cantidad)),
+            precio_unitario: parseFloat(String(detalle.precio_unitario)),
+            descuento: parseFloat(String(detalle.descuento || 0)),
+            subtotal: parseFloat(String(detalle.subtotal)),
+            lote: detalle.lote || '',
+            fecha_vencimiento: detalle.fecha_vencimiento || null,
+          }));
+        } else {
+          console.log('⚠️  CompraForm::submit() - Escenario estado-only: NO enviando detalles');
+        }
+
+        return transformedData;
+      },
     };
 
+    console.log('📤 CompraForm::submit() - Preparando envío de datos', {
+      endpoint: isEditing ? `/compras/${props.compra?.id}` : '/compras',
+      metodo: isEditing ? 'PUT' : 'POST',
+      dataKeys: Object.keys(options.transform ? options.transform({} as CompraFormData) : {}),
+    });
+
     if (isEditing && props.compra) {
+      console.log(`📤 CompraForm::submit() - Enviando PUT a /compras/${props.compra.id}`);
       put(`/compras/${props.compra.id}`, options);
     } else {
+      console.log('📤 CompraForm::submit() - Enviando POST a /compras');
       post('/compras', options);
     }
+
+    console.log('⏳ CompraForm::submit() - Solicitud enviada, esperando respuesta...');
   };
 
   const selectedMoneda = props.monedas.find(m => m.id === Number(data.moneda_id));
@@ -580,13 +723,12 @@ export default function CompraForm() {
                   Estado: {props.compra.estadoDocumento.nombre}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {estadoActual === 'BORRADOR' && 'Compra en desarrollo. Puede editar todos los campos.'}
-                  {estadoActual === 'PENDIENTE' && 'Esperando aprobación. Solo supervisores pueden editar.'}
-                  {estadoActual === 'APROBADO' && 'Compra aprobada. Esperando recepción de mercancía.'}
-                  {estadoActual === 'RECIBIDO' && 'Mercancía recibida. Puede proceder al pago.'}
-                  {estadoActual === 'PAGADO' && 'Compra completada. Solo lectura.'}
-                  {estadoActual === 'ANULADO' && 'Compra anulada. Solo lectura.'}
-                  {estadoActual === 'RECHAZADO' && 'Compra rechazada. Puede editar y reenviar.'}
+                  {estadoActual === 'Borrador' && 'Compra en desarrollo. Puede editar todos los campos.'}
+                  {estadoActual === 'Pendiente' && 'Esperando aprobación. Puede cambiar a Aprobado.'}
+                  {estadoActual === 'Aprobado' && 'Compra aprobada. Stock registrado. Solo puede editar observaciones.'}
+                  {estadoActual === 'Facturado' && 'Compra facturada. Solo lectura.'}
+                  {estadoActual === 'Cancelado' && 'Compra cancelada. Solo lectura.'}
+                  {estadoActual === 'Anulado' && 'Compra anulada. Solo lectura.'}
                 </p>
               </div>
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${getEstadoColor(props.compra.estadoDocumento)}`}>
@@ -626,7 +768,7 @@ export default function CompraForm() {
               <input
                 id="fecha"
                 type="date"
-                disabled={soloLectura}
+                disabled={soloLectura || editableAprobado}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400"
                 value={data.fecha}
                 onChange={e => setData('fecha', e.target.value)}
@@ -653,7 +795,7 @@ export default function CompraForm() {
                 placeholder="Escribir nombre del proveedor..."
                 emptyText="No se encontraron proveedores"
                 error={errors.proveedor_id}
-                disabled={soloLectura || (puedeEditarSupervisor && !puedeEditarBasico)}
+                disabled={soloLectura || editableAprobado}
                 required={true}
                 allowScanner={false}
                 showCreateButton={true}
@@ -669,7 +811,7 @@ export default function CompraForm() {
               <SearchSelect
                 id="tipo_pago_id"
                 label="Tipo de Pago"
-                disabled={soloLectura}
+                disabled={soloLectura || editableAprobado}
                 value={data.tipo_pago_id}
                 options={tipoPagoOptions}
                 onChange={(value) => setData('tipo_pago_id', value || '')}
@@ -693,6 +835,22 @@ export default function CompraForm() {
                 emptyText="No se encontraron estados"
                 searchPlaceholder="Buscar estado..."
                 error={errors.estado_documento_id}
+              />
+            </div>
+
+            <div>
+              <SearchSelect
+                id="almacen_id"
+                label="Almacén"
+                required
+                disabled={soloLectura || editableAprobado}
+                value={data.almacen_id}
+                options={almacenOptions}
+                onChange={(value) => setData('almacen_id', value || '')}
+                placeholder="Seleccionar almacén"
+                emptyText="No se encontraron almacenes"
+                searchPlaceholder="Buscar almacén..."
+                error={errors.almacen_id}
               />
             </div>
           </div>
@@ -744,6 +902,7 @@ export default function CompraForm() {
               precio_compra: p.precio_compra
             }))}
             detalles={data.detalles}
+            readOnly={soloLectura || editableAprobado}
             onAddProduct={(producto) => {
               // Adaptar la función para agregar producto
               const newDetalle: DetalleForm = {
@@ -753,7 +912,15 @@ export default function CompraForm() {
                 descuento: 0,
                 subtotal: producto.precio_compra || 0,
                 lote: '',
-                fecha_vencimiento: ''
+                fecha_vencimiento: '',
+                precio_costo: producto.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
+                producto: { // ✅ NUEVO: Guardar objeto completo del producto
+                  id: producto.id,
+                  nombre: producto.nombre,
+                  codigo: producto.codigo,
+                  codigo_barras: producto.codigo_barras,
+                  precio_costo: producto.precio_costo || 0
+                }
               };
               const newDetalles = [...data.detalles, newDetalle];
               setData('detalles', newDetalles);

@@ -35,6 +35,7 @@ class CapabilityToRolePermissionsSeeder extends Seeder
                 'inventario.mermas.index',
                 'inventario.ajuste.form',
                 'inventario.tipos-ajuste.index',
+                'inventario.analisis.manage', // ✅ NUEVO: Análisis ABC
             ],
             'ventas' => [
                 'ventas.index',

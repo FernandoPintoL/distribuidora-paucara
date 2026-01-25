@@ -24,6 +24,7 @@ import ChoferGastoController from './ChoferGastoController'
 import AdminCajaApiController from './AdminCajaApiController'
 import EstadoLogisticoController from './EstadoLogisticoController'
 import VisitaPreventistaController from './VisitaPreventistaController'
+import StockApiController from './StockApiController'
 const Api = {
     AuthController,
 EmpleadoApiController,
@@ -51,6 +52,7 @@ ChoferGastoController,
 AdminCajaApiController,
 EstadoLogisticoController,
 VisitaPreventistaController,
+StockApiController,
 }
 
 export default Api

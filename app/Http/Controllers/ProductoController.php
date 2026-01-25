@@ -1532,6 +1532,10 @@ class ProductoController extends Controller
                 // Fallback: Obtener precio base si no existe precio de venta
                 $precioBase = $precioVenta ?? $producto->precios->firstWhere('es_precio_base', true)?->precio ?? $producto->precios->first()?->precio ?? 0;
 
+                // ✅ NUEVO: Obtener precio de COSTO
+                $precioCosto = $producto->precios
+                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'COSTO')?->precio ?? 0;
+
                 // Obtener nombre del almacén
                 $almacenNombre = $stockAlmacen?->almacen?->nombre ?? 'Almacén Principal';
 
@@ -1548,6 +1552,7 @@ class ProductoController extends Controller
                     'codigos_barra'    => $segundoCodigoBarra, // String simple del segundo código
                     'precio_base'      => (float) $precioBase, // ✅ Ahora retorna precio de VENTA
                     'precio_venta'     => (float) $precioBase, // ✅ NUEVO: Alias para compatibilidad
+                    'precio_costo'     => (float) $precioCosto, // ✅ NUEVO: Precio de costo registrado
                     'precios'          => $producto->precios,
 
                     // Stock del almacén seleccionado

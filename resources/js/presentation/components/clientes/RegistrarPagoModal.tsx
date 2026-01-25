@@ -26,6 +26,7 @@ interface RegistrarPagoModalProps {
     clienteId: number;
     cuentasPendientes: CuentaPendiente[];
     onPagoRegistrado: () => void;
+    cuentaIdPreseleccionada?: number;
 }
 
 export default function RegistrarPagoModal({
@@ -34,6 +35,7 @@ export default function RegistrarPagoModal({
     clienteId,
     cuentasPendientes,
     onPagoRegistrado,
+    cuentaIdPreseleccionada,
 }: RegistrarPagoModalProps) {
     const [formData, setFormData] = useState({
         cuenta_id: '',
@@ -49,11 +51,13 @@ export default function RegistrarPagoModal({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // ✅ Resetear formulario cuando se abre el modal
     useEffect(() => {
         if (show) {
-            // Reset form
+            // Convertir ID a string para sincronización con select
+            const defaultCuentaId = cuentaIdPreseleccionada ? String(cuentaIdPreseleccionada) : '';
             setFormData({
-                cuenta_id: '',
+                cuenta_id: defaultCuentaId,
                 tipo_pago_id: '1',  // ✅ Por defecto: Efectivo
                 monto: '',
                 fecha_pago: new Date().toISOString().split('T')[0],
@@ -65,6 +69,27 @@ export default function RegistrarPagoModal({
             setError('');
         }
     }, [show]);
+
+    // ✅ NUEVO: Actualizar cuenta preseleccionada si cambia
+    useEffect(() => {
+        if (show && cuentaIdPreseleccionada) {
+            setFormData((prev) => ({
+                ...prev,
+                cuenta_id: String(cuentaIdPreseleccionada),
+            }));
+        }
+    }, [cuentaIdPreseleccionada, show]);
+
+    // 🔍 Debug: Log de cuentas disponibles
+    useEffect(() => {
+        if (show) {
+            console.log('RegistrarPagoModal - Cuentas disponibles:', {
+                isArray: Array.isArray(cuentasPendientes),
+                length: Array.isArray(cuentasPendientes) ? cuentasPendientes.length : 0,
+                cuentas: cuentasPendientes,
+            });
+        }
+    }, [show, cuentasPendientes]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -90,6 +115,11 @@ export default function RegistrarPagoModal({
         }
 
         // Get the selected account
+        if (!Array.isArray(cuentasPendientes) || cuentasPendientes.length === 0) {
+            setError('No hay cuentas pendientes disponibles');
+            return false;
+        }
+
         const cuenta = cuentasPendientes.find((c) => c.id === parseInt(formData.cuenta_id));
         if (!cuenta) {
             setError('Cuenta inválida');
@@ -116,8 +146,8 @@ export default function RegistrarPagoModal({
             setError('');
 
             const response = await axios.post(`/api/clientes/${clienteId}/pagos`, {
-                cuenta_por_cobrar_id: formData.cuenta_id,
-                tipo_pago_id: formData.tipo_pago_id,
+                cuenta_por_cobrar_id: Number(formData.cuenta_id),
+                tipo_pago_id: Number(formData.tipo_pago_id),
                 monto: parseFloat(formData.monto),
                 fecha_pago: formData.fecha_pago,
                 numero_recibo: formData.numero_recibo || null,
@@ -183,7 +213,7 @@ export default function RegistrarPagoModal({
     };
 
     const selectedCuenta =
-        formData.cuenta_id && cuentasPendientes
+        formData.cuenta_id && Array.isArray(cuentasPendientes) && cuentasPendientes.length > 0
             ? cuentasPendientes.find((c) => c.id === parseInt(formData.cuenta_id))
             : null;
 
@@ -225,7 +255,7 @@ export default function RegistrarPagoModal({
                             >
                                 <option value="">-- Seleccionar --</option>
                                 {Array.isArray(cuentasPendientes) && cuentasPendientes.map((cuenta) => (
-                                    <option key={cuenta.id} value={cuenta.id}>
+                                    <option key={cuenta.id} value={String(cuenta.id)}>
                                         Venta #{cuenta.numero_venta} - {formatCurrency(cuenta.saldo_pendiente)} - Vence:{' '}
                                         {new Date(cuenta.fecha_vencimiento).toLocaleDateString('es-BO')}
                                     </option>

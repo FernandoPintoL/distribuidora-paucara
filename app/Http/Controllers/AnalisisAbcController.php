@@ -73,7 +73,7 @@ class AnalisisAbcController extends Controller
             ->get();
 
         // Recomendaciones automáticas
-        $recomendaciones = $analisisAbc->recomendaciones_automaticas;
+        $recomendaciones = $analisisAbc->recomendaciones;
 
         return Inertia::render('Inventario/AnalisisABC/Show', [
             'analisis'        => $analisisAbc,
@@ -363,7 +363,7 @@ class AnalisisAbcController extends Controller
             $nombreArchivo .= "_{$request->mes}";
         }
         if ($request->almacen_id) {
-            $almacen = Almacen::find($request->almacen_id);
+            $almacen        = Almacen::find($request->almacen_id);
             $nombreArchivo .= "_" . Str::slug($almacen->nombre);
         }
 

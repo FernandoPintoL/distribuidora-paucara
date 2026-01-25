@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
-import { ArrowLeft, AlertTriangle, ChevronRight, ChevronDown } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ChevronRight, ChevronDown, DollarSign } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
 import { FormatoSelector, ImprimirCuentaButton, ImprimirPagoButton } from '@/presentation/components/impresion';
 
@@ -54,8 +54,17 @@ export default function CreditoPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
-    const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pendientes' | 'pagados'>('todos');
+    const [selectedCuentaId, setSelectedCuentaId] = useState<number | undefined>(undefined);
+    const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pendientes' | 'pagados'>('pendientes');
     const [expandedCuentaId, setExpandedCuentaId] = useState<number | null>(null);
+
+    // ✅ Nuevos filtros FASE 1
+    const [filtroVencimiento, setFiltroVencimiento] = useState<'todos' | 'vencidas' | 'proximas' | 'aldia'>('todos');
+    const [fechaVencimientoDesde, setFechaVencimientoDesde] = useState<string>('');
+    const [fechaVencimientoHasta, setFechaVencimientoHasta] = useState<string>('');
+    const [ordenarPor, setOrdenarPor] = useState<'vencimiento' | 'monto' | 'dias_vencido'>('vencimiento');
+    const [buscarActivado, setBuscarActivado] = useState(true);
+    const [filtrosVisibles, setFiltrosVisibles] = useState(false);
 
     useEffect(() => {
         cargarDetallesCredito();
@@ -93,21 +102,80 @@ export default function CreditoPage() {
         }).format(value);
     };
 
-    // Filtrar cuentas según el filtro seleccionado
+    // ✅ Filtrar y ordenar cuentas con FASE 1 completa
     const cuentasFiltradas = React.useMemo(() => {
         if (!credito?.todas_las_cuentas) return [];
 
-        const cuentas = credito.todas_las_cuentas;
+        // Si la búsqueda no está activada, mostrar cuentas pendientes por defecto
+        if (!buscarActivado) {
+            return credito.todas_las_cuentas.filter(c => c.saldo_pendiente > 0);
+        }
 
+        let cuentas = credito.todas_las_cuentas;
+        const hoy = new Date();
+
+        // 1️⃣ Filtro por estado (pendientes/pagados/todos)
         switch (filtroEstado) {
             case 'pendientes':
-                return cuentas.filter(c => c.saldo_pendiente > 0);
+                cuentas = cuentas.filter(c => c.saldo_pendiente > 0);
+                break;
             case 'pagados':
-                return cuentas.filter(c => c.saldo_pendiente === 0);
+                cuentas = cuentas.filter(c => c.saldo_pendiente === 0);
+                break;
             default:
-                return cuentas;
+                break;
         }
-    }, [credito?.todas_las_cuentas, filtroEstado]);
+
+        // 2️⃣ Filtro por estado de vencimiento
+        switch (filtroVencimiento) {
+            case 'vencidas':
+                cuentas = cuentas.filter(c => c.dias_vencido > 0);
+                break;
+            case 'proximas':
+                // Próximas a vencer: entre hoy y 3 días
+                cuentas = cuentas.filter(c => {
+                    const fechaVenc = new Date(c.fecha_vencimiento);
+                    const diasHastaVencimiento = Math.ceil((fechaVenc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+                    return diasHastaVencimiento >= 0 && diasHastaVencimiento <= 3 && c.dias_vencido <= 0;
+                });
+                break;
+            case 'aldia':
+                cuentas = cuentas.filter(c => c.dias_vencido <= 0);
+                break;
+            default:
+                break;
+        }
+
+        // 3️⃣ Filtro por rango de fechas de vencimiento
+        if (fechaVencimientoDesde || fechaVencimientoHasta) {
+            cuentas = cuentas.filter(c => {
+                const fechaVenc = new Date(c.fecha_vencimiento).toISOString().split('T')[0];
+                const desde = fechaVencimientoDesde ? fechaVencimientoDesde : '1900-01-01';
+                const hasta = fechaVencimientoHasta ? fechaVencimientoHasta : '2100-12-31';
+                return fechaVenc >= desde && fechaVenc <= hasta;
+            });
+        }
+
+        // 4️⃣ Ordenamiento
+        const cuentasOrdenadas = [...cuentas];
+        switch (ordenarPor) {
+            case 'vencimiento':
+                cuentasOrdenadas.sort((a, b) =>
+                    new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime()
+                );
+                break;
+            case 'monto':
+                cuentasOrdenadas.sort((a, b) => b.saldo_pendiente - a.saldo_pendiente);
+                break;
+            case 'dias_vencido':
+                cuentasOrdenadas.sort((a, b) => b.dias_vencido - a.dias_vencido);
+                break;
+            default:
+                break;
+        }
+
+        return cuentasOrdenadas;
+    }, [credito?.todas_las_cuentas, filtroEstado, filtroVencimiento, fechaVencimientoDesde, fechaVencimientoHasta, ordenarPor, buscarActivado]);
 
     if (loading) {
         return (
@@ -135,7 +203,7 @@ export default function CreditoPage() {
         );
     }
 
-    const { cliente, credito: creditoData, cuentas_pendientes, todas_las_cuentas, historial_pagos, auditoria } = credito;
+    const { cliente, credito: creditoData, cuentas_pendientes, auditoria } = credito;
 
     return (
         <AppLayout>
@@ -289,7 +357,17 @@ export default function CreditoPage() {
                 {/* Tabla Unificada de Cuentas Por Cobrar con Pagos Expandibles */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Cuentas Por Cobrar</CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Cuentas Por Cobrar</CardTitle>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setFiltrosVisibles(!filtrosVisibles)}
+                                className="text-xs"
+                            >
+                                {filtrosVisibles ? '🔼 Ocultar Filtros' : '🔽 Mostrar Filtros'}
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {/* Filtros */}
@@ -316,6 +394,138 @@ export default function CreditoPage() {
                                 Pagados ({(credito?.todas_las_cuentas.length || 0) - (credito?.cuentas_pendientes.total || 0)})
                             </Button>
                         </div>
+
+                        {/* ✅ FASE 1: Filtros Avanzados */}
+                        {filtrosVisibles && (
+                            <div className="w-full space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+                                {/* Filtro por Vencimiento */}
+                                <div className="w-full">
+                                    <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        Estado de Vencimiento
+                                    </p>
+                                    <div className="flex w-full flex-wrap gap-2">
+                                        <Button
+                                            variant={filtroVencimiento === 'todos' ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setFiltroVencimiento('todos')}
+                                        >
+                                            Todo
+                                        </Button>
+                                        <Button
+                                            variant={filtroVencimiento === 'vencidas' ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setFiltroVencimiento('vencidas')}
+                                            className={filtroVencimiento === 'vencidas' ? 'bg-red-600 hover:bg-red-700' : ''}
+                                        >
+                                            ⚠️ Vencidas
+                                        </Button>
+                                        <Button
+                                            variant={filtroVencimiento === 'proximas' ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setFiltroVencimiento('proximas')}
+                                            className={filtroVencimiento === 'proximas' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
+                                        >
+                                            ⏳ Próximas a Vencer
+                                        </Button>
+                                        <Button
+                                            variant={filtroVencimiento === 'aldia' ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setFiltroVencimiento('aldia')}
+                                            className={filtroVencimiento === 'aldia' ? 'bg-green-600 hover:bg-green-700' : ''}
+                                        >
+                                            ✅ Al Día
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Rango de Fechas de Vencimiento */}
+                                <div className="w-full">
+                                    <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        Rango de Vencimiento
+                                    </p>
+                                    <div className="flex w-full flex-wrap gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-sm text-gray-600 dark:text-gray-400">Desde:</label>
+                                            <input
+                                                type="date"
+                                                value={fechaVencimientoDesde}
+                                                onChange={(e) => setFechaVencimientoDesde(e.target.value)}
+                                                className="rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-sm text-gray-600 dark:text-gray-400">Hasta:</label>
+                                            <input
+                                                type="date"
+                                                value={fechaVencimientoHasta}
+                                                onChange={(e) => setFechaVencimientoHasta(e.target.value)}
+                                                className="rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                            />
+                                        </div>
+                                        {(fechaVencimientoDesde || fechaVencimientoHasta) && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setFechaVencimientoDesde('');
+                                                    setFechaVencimientoHasta('');
+                                                }}
+                                                className="text-xs"
+                                            >
+                                                Limpiar fechas
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Ordenamiento */}
+                                <div className="w-full">
+                                    <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        Ordenar por
+                                    </p>
+                                    <select
+                                        value={ordenarPor}
+                                        onChange={(e) => setOrdenarPor(e.target.value as 'vencimiento' | 'monto' | 'dias_vencido')}
+                                        className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                    >
+                                        <option value="vencimiento">📅 Por Vencimiento (próximas primero)</option>
+                                        <option value="monto">💰 Por Monto (mayor primero)</option>
+                                        <option value="dias_vencido">⚠️ Por Días Vencido (más vencidas primero)</option>
+                                    </select>
+                                </div>
+
+                                {/* Botón de Búsqueda */}
+                                <div className="flex w-full gap-2">
+                                    <Button
+                                        onClick={() => setBuscarActivado(true)}
+                                        className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                                    >
+                                        🔍 Buscar
+                                    </Button>
+                                    <Button
+                                        onClick={() => {
+                                            setFiltroEstado('pendientes');
+                                            setFiltroVencimiento('todos');
+                                            setFechaVencimientoDesde('');
+                                            setFechaVencimientoHasta('');
+                                            setOrdenarPor('vencimiento');
+                                            setBuscarActivado(false);
+                                        }}
+                                        variant="outline"
+                                        className="flex-1"
+                                    >
+                                        ↺ Limpiar
+                                    </Button>
+                                </div>
+
+                                {/* Resumen de Resultados */}
+                                <div className="w-full border-t border-gray-200 pt-3 dark:border-gray-700">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        <strong>{cuentasFiltradas.length}</strong> cuenta(s) encontrada(s)
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Tabla */}
                         {cuentasFiltradas.length > 0 ? (
@@ -402,7 +612,19 @@ export default function CreditoPage() {
                                                                 </Badge>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 text-center">
+                                                        <td className="px-4 py-3 text-center space-x-2 flex justify-center">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0"
+                                                                onClick={() => {
+                                                                    setSelectedCuentaId(cuenta.id);
+                                                                    setShowModal(true);
+                                                                }}
+                                                                title={`Registrar pago para ${cuenta.numero_venta}`}
+                                                            >
+                                                                <DollarSign className="h-4 w-4 text-green-600" />
+                                                            </Button>
                                                             <ImprimirCuentaButton
                                                                 clienteId={Number(clienteId)}
                                                                 cuentaId={cuenta.id}
@@ -480,7 +702,7 @@ export default function CreditoPage() {
                 </Card>
 
                 {/* Auditoría de Crédito */}
-                <Card>
+                {/* <Card>
                     <CardHeader>
                         <CardTitle>Auditoría de Crédito</CardTitle>
                     </CardHeader>
@@ -532,20 +754,42 @@ export default function CreditoPage() {
                             </div>
                         )}
                     </CardContent>
-                </Card>
+                </Card> */}
             </div>
 
             {/* Modal para registrar pago */}
-            <RegistrarPagoModal
-                show={showModal}
-                onHide={() => setShowModal(false)}
-                clienteId={Number(clienteId)}
-                cuentasPendientes={cuentas_pendientes?.detalles || []}
-                onPagoRegistrado={() => {
-                    setShowModal(false);
-                    cargarDetallesCredito();
-                }}
-            />
+            {(() => {
+                const cuentasFiltradas = Array.isArray(credito?.todas_las_cuentas)
+                    ? credito.todas_las_cuentas.filter((c) => (c.saldo_pendiente ?? 0) > 0)
+                    : [];
+
+                // 🔍 Debug: Log de cuentas a pasar al modal
+                if (showModal) {
+                    console.log('credito.tsx - Cuentas filtradas para modal:', {
+                        totalCuentas: credito?.todas_las_cuentas?.length ?? 0,
+                        cuentasConSaldo: cuentasFiltradas.length,
+                        cuentas: cuentasFiltradas,
+                    });
+                }
+
+                return (
+                    <RegistrarPagoModal
+                        show={showModal}
+                        onHide={() => {
+                            setShowModal(false);
+                            setSelectedCuentaId(undefined);
+                        }}
+                        clienteId={Number(clienteId)}
+                        cuentasPendientes={cuentasFiltradas}
+                        cuentaIdPreseleccionada={selectedCuentaId}
+                        onPagoRegistrado={() => {
+                            setShowModal(false);
+                            setSelectedCuentaId(undefined);
+                            cargarDetallesCredito();
+                        }}
+                    />
+                );
+            })()}
         </AppLayout>
     );
 }

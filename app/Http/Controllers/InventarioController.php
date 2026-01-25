@@ -85,14 +85,23 @@ class InventarioController extends Controller
         $productosProximosVencer = Producto::where('activo', true)->proximosVencer(30)->count();
         $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
 
-        // Stock total por almacén
-        $stockPorAlmacen = Almacen::withSum('stockProductos', 'cantidad')
-            ->where('activo', true)
+        // Stock por almacén - tabla completa de stock_productos
+        $stockPorAlmacen = StockProducto::with(['producto', 'producto.codigoPrincipal', 'almacen'])
+            ->where('cantidad', '>', 0)
+            ->orderBy('almacen_id')
+            ->orderBy('producto_id')
             ->get()
-            ->map(function ($almacen) {
+            ->map(function ($stock) {
                 return [
-                    'nombre'      => $almacen->nombre,
-                    'stock_total' => $almacen->stock_productos_sum_cantidad ?? 0,
+                    'id'                    => $stock->id,
+                    'producto_id'           => $stock->producto_id,
+                    'almacen_id'            => $stock->almacen_id,
+                    'cantidad'              => $stock->cantidad,
+                    'producto_nombre'       => $stock->producto?->nombre ?? 'Desconocido',
+                    'producto_codigo'       => $stock->producto?->codigo ?? '',
+                    'producto_codigo_barra' => $stock->producto?->codigoPrincipal?->codigo ?? '',
+                    'producto_sku'          => $stock->producto?->sku ?? '',
+                    'almacen_nombre'        => $stock->almacen?->nombre ?? 'Desconocido',
                 ];
             });
 
@@ -135,6 +144,12 @@ class InventarioController extends Controller
             ];
         });
 
+        // Obtener lista de almacenes para los filtros
+        $almacenesLista = Almacen::select('id', 'nombre')
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
+
         return Inertia::render('inventario/index', [
             'estadisticas'          => [
                 'total_productos'           => $totalProductos,
@@ -145,6 +160,7 @@ class InventarioController extends Controller
             'stock_por_almacen'     => $stockPorAlmacen,
             'movimientos_recientes' => $movimientosRecientes,
             'productos_mas_movidos' => $productosMasMovidos,
+            'almacenes'             => $almacenesLista,
         ]);
     }
 

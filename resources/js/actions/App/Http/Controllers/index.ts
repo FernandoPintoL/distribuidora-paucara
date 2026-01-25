@@ -6,6 +6,7 @@ import PermissionController from './PermissionController'
 import ProductoController from './ProductoController'
 import VentaController from './VentaController'
 import CompraController from './CompraController'
+import PrecioController from './PrecioController'
 import AsientoContableController from './AsientoContableController'
 import ReporteInventarioApiController from './ReporteInventarioApiController'
 import VehiculoController from './VehiculoController'
@@ -64,6 +65,7 @@ import ReporteVentasController from './ReporteVentasController'
 import ReservaStockController from './ReservaStockController'
 import ConteoFisicoController from './ConteoFisicoController'
 import AnalisisAbcController from './AnalisisAbcController'
+import ImpresionStockController from './ImpresionStockController'
 import Settings from './Settings'
 const Controllers = {
     Api,
@@ -74,6 +76,7 @@ PermissionController,
 ProductoController,
 VentaController,
 CompraController,
+PrecioController,
 AsientoContableController,
 ReporteInventarioApiController,
 VehiculoController,
@@ -132,6 +135,7 @@ ReporteVentasController,
 ReservaStockController,
 ConteoFisicoController,
 AnalisisAbcController,
+ImpresionStockController,
 Settings,
 }
 

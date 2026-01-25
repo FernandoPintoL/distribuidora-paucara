@@ -1,0 +1,147 @@
+/**
+ * Componente: Filtros de Stock
+ *
+ * Permite filtrar la tabla de stock por producto, almacén, rango de cantidad y ordenamiento
+ */
+
+import { useState } from 'react';
+
+interface Almacen {
+    id: number;
+    nombre: string;
+}
+
+interface FiltrosStockProps {
+    almacenes: Almacen[];
+    onFiltrosChange: (filtros: FiltrosState) => void;
+}
+
+export interface FiltrosState {
+    busqueda: string;
+    almacenId: string;
+    rangoStock: string; // 'todos', 'bajo', 'normal', 'alto'
+    ordenamiento: string; // 'cantidad-asc', 'cantidad-desc', 'producto', 'almacen'
+}
+
+const RANGOS_STOCK = {
+    todos: { label: 'Todos', min: 0, max: Infinity },
+    bajo: { label: 'Stock Bajo (< 10)', min: 0, max: 10 },
+    normal: { label: 'Stock Normal (10-100)', min: 10, max: 100 },
+    alto: { label: 'Stock Alto (> 100)', min: 100, max: Infinity },
+};
+
+export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStockProps) {
+    const [filtros, setFiltros] = useState<FiltrosState>({
+        busqueda: '',
+        almacenId: '',
+        rangoStock: 'todos',
+        ordenamiento: 'cantidad-desc',
+    });
+
+    const handleFiltroChange = (nuevos: Partial<FiltrosState>) => {
+        const filtrosActualizados = { ...filtros, ...nuevos };
+        setFiltros(filtrosActualizados);
+        onFiltrosChange(filtrosActualizados);
+    };
+
+    const limpiarFiltros = () => {
+        const filtrosLimpios: FiltrosState = {
+            busqueda: '',
+            almacenId: '',
+            rangoStock: 'todos',
+            ordenamiento: 'cantidad-desc',
+        };
+        setFiltros(filtrosLimpios);
+        onFiltrosChange(filtrosLimpios);
+    };
+
+    return (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-6 rounded-lg mb-6 border border-blue-200 dark:border-gray-600">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Filtros
+                </h3>
+                {(filtros.busqueda || filtros.almacenId || filtros.rangoStock !== 'todos' || filtros.ordenamiento !== 'cantidad-desc') && (
+                    <button
+                        onClick={limpiarFiltros}
+                        className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800 transition"
+                    >
+                        Limpiar filtros
+                    </button>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Búsqueda por Producto */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Buscar Producto
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Nombre, código o SKU..."
+                        value={filtros.busqueda}
+                        onChange={(e) => handleFiltroChange({ busqueda: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    />
+                </div>
+
+                {/* Filtro por Almacén */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Almacén
+                    </label>
+                    <select
+                        value={filtros.almacenId}
+                        onChange={(e) => handleFiltroChange({ almacenId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    >
+                        <option value="">Todos los almacenes</option>
+                        {almacenes.map((almacen) => (
+                            <option key={almacen.id} value={String(almacen.id)}>
+                                {almacen.nombre}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Rango de Stock */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Rango de Stock
+                    </label>
+                    <select
+                        value={filtros.rangoStock}
+                        onChange={(e) => handleFiltroChange({ rangoStock: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    >
+                        {Object.entries(RANGOS_STOCK).map(([key, value]) => (
+                            <option key={key} value={key}>
+                                {value.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Ordenamiento */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Ordenar por
+                    </label>
+                    <select
+                        value={filtros.ordenamiento}
+                        onChange={(e) => handleFiltroChange({ ordenamiento: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    >
+                        <option value="cantidad-desc">Cantidad (Mayor a Menor)</option>
+                        <option value="cantidad-asc">Cantidad (Menor a Mayor)</option>
+                        <option value="producto">Producto (A-Z)</option>
+                        <option value="almacen">Almacén (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export { RANGOS_STOCK };

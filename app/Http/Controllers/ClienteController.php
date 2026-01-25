@@ -1038,6 +1038,53 @@ class ClienteController extends Controller
         ]);
 
         try {
+            // ✅ MEJORADO: Validar que existe caja abierta
+            // 1️⃣ Buscar caja abierta del día actual
+            $aperturaCaja = \App\Models\AperturaCaja::where('user_id', Auth::id())
+                ->whereDate('fecha', today())
+                ->whereDoesntHave('cierre')
+                ->first();
+
+            // 2️⃣ Si no hay caja hoy, buscar la más reciente (posiblemente de ayer)
+            if (!$aperturaCaja) {
+                $aperturaCaja = \App\Models\AperturaCaja::where('user_id', Auth::id())
+                    ->whereDoesntHave('cierre')
+                    ->latest('fecha')
+                    ->first();
+
+                // 3️⃣ Si hay una caja anterior sin cerrar, avisar pero permitir el pago
+                if ($aperturaCaja) {
+                    $fechaApertura = \Carbon\Carbon::parse($aperturaCaja->fecha);
+                    $esDeOtroDia = !$fechaApertura->isToday();
+
+                    if ($esDeOtroDia) {
+                        Log::warning('Usando caja de día anterior para registrar pago', [
+                            'user_id' => Auth::id(),
+                            'apertura_fecha' => $aperturaCaja->fecha,
+                            'caja_id' => $aperturaCaja->caja_id,
+                            'cliente_id' => $cliente->id,
+                        ]);
+                    }
+                } else {
+                    // 4️⃣ Si no hay ninguna caja abierta, bloquear
+                    return ApiResponse::error(
+                        'Debe abrir una caja antes de registrar pagos. Por favor, abra la caja primero.',
+                        400
+                    );
+                }
+            }
+
+            // ✅ NUEVO: Obtener tipo de operación PAGO
+            $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'PAGO')->first();
+
+            if (!$tipoOperacion) {
+                Log::error('Tipo de operación PAGO no encontrado en la base de datos');
+                return ApiResponse::error(
+                    'Tipo de operación PAGO no configurado en el sistema. Contacte al administrador.',
+                    500
+                );
+            }
+
             // Obtener la cuenta por cobrar
             $cuenta = \App\Models\CuentaPorCobrar::findOrFail($validated['cuenta_por_cobrar_id']);
 
@@ -1093,6 +1140,20 @@ class ClienteController extends Controller
                 }
             }
 
+            // ✅ NUEVO: Registrar movimiento en caja
+            $observacionesCaja = $validated['observaciones'] ?? 'Pago de cuota - Venta #' . $cuenta->numero_venta;
+            $numeroCaja = $validated['numero_recibo'] ?? 'PAGO-' . $pago->id;
+
+            \App\Models\MovimientoCaja::create([
+                'caja_id'           => $aperturaCaja->caja_id,
+                'user_id'           => Auth::id(),
+                'fecha'             => now(),
+                'monto'             => $validated['monto'],
+                'observaciones'     => $observacionesCaja,
+                'numero_documento'  => $numeroCaja,
+                'tipo_operacion_id' => $tipoOperacion->id,
+            ]);
+
             // ✅ NUEVO: Disparar evento para notificación WebSocket
             event(new CreditoPagoRegistrado($pago, $cuenta->fresh()));
 
@@ -1104,12 +1165,13 @@ class ClienteController extends Controller
                     'saldo_pendiente' => $nuevoSaldo,
                     'estado'          => $nuevoEstado,
                 ],
-            ], 'Pago registrado exitosamente', 201);
+            ], 'Pago registrado exitosamente y movimiento de caja creado', 201);
 
         } catch (\Exception $e) {
             Log::error('Error al registrar pago:', [
                 'cliente_id' => $cliente->id,
                 'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
             ]);
             return ApiResponse::error('Error al registrar el pago: ' . $e->getMessage(), 500);
         }

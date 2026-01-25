@@ -15,6 +15,7 @@ export interface DetalleProducto {
     subtotal: number;
     lote?: string;
     fecha_vencimiento?: string;
+    precio_costo?: number; // ✅ NUEVO: Precio de costo registrado
     producto?: {
         id: number | string;
         nombre: string;
@@ -22,6 +23,7 @@ export interface DetalleProducto {
         codigo_barras?: string;
         precio_venta?: number;
         precio_compra?: number;
+        precio_costo?: number; // ✅ NUEVO: Precio de costo
         peso?: number; // ✅ NUEVO: Peso del producto en kg
     };
 }
@@ -38,6 +40,7 @@ interface ProductosTableProps {
     showLoteFields?: boolean; // Para mostrar campos de lote y fecha de vencimiento en compras
     almacen_id?: number; // ✅ NUEVO: Almacén para búsqueda API
     isCalculatingPrices?: boolean; // ✅ NUEVO: Mostrar indicador de carga al calcular precios
+    readOnly?: boolean; // ✅ NUEVO: Deshabilitar edición de detalles (para APROBADO+)
 }
 
 export default function ProductosTable({
@@ -47,7 +50,8 @@ export default function ProductosTable({
     onUpdateDetail,
     onRemoveDetail,
     almacen_id,
-    isCalculatingPrices = false // ✅ NUEVO: Indicador de carga
+    isCalculatingPrices = false, // ✅ NUEVO: Indicador de carga
+    readOnly = false // ✅ NUEVO: Modo solo lectura
 }: ProductosTableProps) {
     // ✅ DEBUG: Loguear props recibidos
     /* console.log('📋 ProductosTable - Props recibidos:', {
@@ -117,6 +121,7 @@ export default function ProductosTable({
                     codigo: p.sku || p.codigo_barras,
                     codigo_barras: p.codigo_barras,
                     precio_venta: p.precio_base || 0,
+                    precio_costo: p.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
                     stock: p.stock_disponible || 0,
                     peso: p.peso,
                     codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || []
@@ -171,6 +176,7 @@ export default function ProductosTable({
                         codigo: productoAPI.sku || productoAPI.codigo_barras,
                         codigo_barras: productoAPI.codigo_barras,
                         precio_venta: productoAPI.precio_base || 0,
+                        precio_costo: productoAPI.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
                         stock: productoAPI.stock_disponible || 0,
                         peso: productoAPI.peso,
                         codigos_barras: productoAPI.codigosBarra?.map((cb: any) => cb.codigo) || []
@@ -243,8 +249,9 @@ export default function ProductosTable({
                     />
                     <button
                         type="button"
+                        disabled={readOnly}
                         onClick={openScannerModal}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors"
+                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Escanear código de barras"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,8 +282,9 @@ export default function ProductosTable({
                                 <button
                                     key={producto.id}
                                     type="button"
+                                    disabled={readOnly}
                                     onClick={() => handleAddProduct(producto)}
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
+                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <div className="font-medium text-gray-900 dark:text-white">
                                         {producto.nombre}
@@ -319,6 +327,9 @@ export default function ProductosTable({
                                     Cantidad
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    Precio Costo
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Precio Unit.
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -344,8 +355,19 @@ export default function ProductosTable({
                                     buscandoEnArray: !detalle.producto
                                 });
 
+                                // ✅ NUEVO: Calcular diferencia entre precio ingresado y costo registrado
+                                const precioCosto = detalle.precio_costo || productoInfo?.precio_costo || 0;
+                                const tieneDiferencia = precioCosto > 0 && Math.abs(detalle.precio_unitario - precioCosto) > 0.01;
+                                const esAumento = precioCosto > 0 && detalle.precio_unitario > precioCosto;
+
                                 return (
-                                    <tr key={detalle.producto_id} className="hover:bg-gray-50 dark:hover:bg-zinc-800">
+                                    <tr key={detalle.producto_id} className={`hover:bg-gray-50 dark:hover:bg-zinc-800 ${
+                                        tieneDiferencia && esAumento
+                                            ? 'bg-amber-50 dark:bg-amber-950/10'
+                                            : tieneDiferencia && !esAumento
+                                            ? 'bg-green-50 dark:bg-green-950/10'
+                                            : ''
+                                    }`}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                 {productoInfo?.nombre || 'Producto no encontrado'}
@@ -364,19 +386,41 @@ export default function ProductosTable({
                                                 type="number"
                                                 min="1"
                                                 step="1"
+                                                disabled={readOnly}
                                                 value={detalle.cantidad}
                                                 onChange={(e) => handleUpdateDetail(index, 'cantidad', Number(e.target.value))}
-                                                className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                                className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                {precioCosto > 0 ? formatCurrency(precioCosto) : 'N/A'}
+                                            </div>
+                                            {tieneDiferencia && (
+                                                <div className={`text-xs font-semibold mt-1 ${
+                                                    esAumento
+                                                        ? 'text-amber-600 dark:text-amber-400'
+                                                        : 'text-green-600 dark:text-green-400'
+                                                }`}>
+                                                    {esAumento ? '↑ Aumento' : '↓ Disminución'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <input
                                                 type="number"
                                                 min="0"
                                                 step="0.01"
+                                                disabled={readOnly}
                                                 value={detalle.precio_unitario}
                                                 onChange={(e) => handleUpdateDetail(index, 'precio_unitario', Number(e.target.value))}
-                                                className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                                className={`w-24 px-2 py-1 text-sm border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                    tieneDiferencia
+                                                        ? esAumento
+                                                            ? 'border-amber-300 dark:border-amber-700'
+                                                            : 'border-green-300 dark:border-green-700'
+                                                        : 'border-gray-300 dark:border-zinc-600'
+                                                }`}
                                             />
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
@@ -385,8 +429,9 @@ export default function ProductosTable({
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <button
                                                 type="button"
+                                                disabled={readOnly}
                                                 onClick={() => handleRemoveDetail(index)}
-                                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 Eliminar
                                             </button>

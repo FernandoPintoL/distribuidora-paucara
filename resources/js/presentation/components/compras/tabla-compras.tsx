@@ -3,6 +3,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/application/hooks/use-auth';
 import { Eye, Edit, ChevronUp, ChevronDown } from 'lucide-react';
 import EliminarCompraDialog from './eliminar-compra-dialog';
+import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
 import { ComprasService } from '@/infrastructure/services/compras.service';
 
 // Importar tipos del domain
@@ -49,6 +50,7 @@ const getEstadoColor = (estado?: EstadoDocumento) => {
 };
 
 export default function TablaCompras({ compras, sortBy = 'created_at', sortDir = 'desc', className = '' }: Props) {
+    console.log('Renderizando TablaCompras con compras:', compras);
     const { can } = useAuth();
 
     // Valor por defecto para evitar errores de undefined
@@ -242,7 +244,18 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                                 <Eye className="h-4 w-4" />
                                             </Link>
                                         )}
-                                        {can('compras.update') && (
+
+                                        {/* Botón Imprimir - Solo si está APROBADO */}
+                                        {compra.estado_documento?.codigo === 'APROBADO' && can('compras.show') && (
+                                            <FormatoSelector
+                                                documentoId={compra.id}
+                                                tipoDocumento="compra"
+                                                iconOnly={true}
+                                            />
+                                        )}
+
+                                        {/* Botón Editar - Solo si está APROBADO */}
+                                        {can('compras.update') && compra.estado_documento?.codigo === 'APROBADO' && (
                                             <Link
                                                 href={`/compras/${compra.id}/edit`}
                                                 className="inline-flex items-center p-2 text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"
@@ -251,6 +264,7 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                                 <Edit className="h-4 w-4" />
                                             </Link>
                                         )}
+
                                         {can('compras.delete') && (
                                             <EliminarCompraDialog
                                                 compra={compra}

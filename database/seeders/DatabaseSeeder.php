@@ -20,6 +20,9 @@ class DatabaseSeeder extends Seeder
         // NUEVO: Permisos específicos del Sidebar
         $this->call(SidebarPermissionsSeeder::class);
 
+        // ✅ NUEVO: Crear permiso de Análisis ABC
+        $this->call(CreateAnalisisAbcPermissionSeeder::class);
+
         // Asignar permisos de reportes
         $this->call(AssignReportesPermissionsSeeder::class);
 

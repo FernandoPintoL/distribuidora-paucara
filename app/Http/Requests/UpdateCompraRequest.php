@@ -14,8 +14,7 @@ class UpdateCompraRequest extends FormRequest
     public function rules(): array
     {
         $compraId = $this->route('compra');
-
-        return [
+        $rules = [
             'numero'                       => 'sometimes|string|unique:compras,numero,' . $compraId,
             'fecha'                        => 'sometimes|date|before_or_equal:today',
             'numero_factura'               => 'nullable|string',
@@ -29,16 +28,56 @@ class UpdateCompraRequest extends FormRequest
             'estado_documento_id'          => 'sometimes|exists:estados_documento,id',
             'moneda_id'                    => 'sometimes|exists:monedas,id',
             'tipo_pago_id'                 => 'nullable|exists:tipos_pago,id',
-            'detalles'                     => 'sometimes|array|min:1',
-            'detalles.*.id'                => 'nullable|exists:detalle_compras,id',
-            'detalles.*.producto_id'       => 'required|exists:productos,id',
-            'detalles.*.cantidad'          => 'required|integer|min:1|max:999999',
-            'detalles.*.precio_unitario'   => 'required|numeric|min:0.01|max:9999999', // Problema #10: > 0
-            'detalles.*.descuento'         => 'nullable|numeric|min:0',
-            'detalles.*.subtotal'          => 'required|numeric|min:0.01',
-            'detalles.*.lote'              => 'nullable|string|max:50',
-            'detalles.*.fecha_vencimiento' => 'nullable|date|after:today',
         ];
+
+        // Solo validar detalles si están siendo modificados (Escenario 1)
+        // En Escenario 2 (solo cambio de estado), los detalles pueden venir como strings
+        // y no necesitan ser validados estrictamente
+        if ($this->has('detalles') && is_array($this->input('detalles'))) {
+            $firstDetalle = $this->input('detalles.0', null);
+
+            // Detectar si es Escenario 2: Solo cambio de estado sin modificación real de detalles
+            // En este caso, los detalles vienen como strings y no deben validarse como nuevos
+            $esEscenarioEstadoOnly = !$this->hasDetallesModificados();
+
+            if (!$esEscenarioEstadoOnly) {
+                $rules['detalles'] = 'sometimes|array|min:1';
+                $rules['detalles.*.id'] = 'nullable|exists:detalle_compras,id';
+                $rules['detalles.*.producto_id'] = 'required|exists:productos,id';
+                $rules['detalles.*.cantidad'] = 'required|integer|min:1|max:999999';
+                $rules['detalles.*.precio_unitario'] = 'required|numeric|min:0.01|max:9999999';
+                $rules['detalles.*.descuento'] = 'nullable|numeric|min:0';
+                $rules['detalles.*.subtotal'] = 'required|numeric|min:0.01';
+                $rules['detalles.*.lote'] = 'nullable|string|max:50';
+                $rules['detalles.*.fecha_vencimiento'] = 'nullable|date|after:today';
+            }
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Detectar si los detalles fueron realmente modificados
+     * Retorna false si parece ser un cambio de estado-only (Escenario 2)
+     */
+    private function hasDetallesModificados(): bool
+    {
+        $detalles = $this->input('detalles', []);
+
+        if (empty($detalles)) {
+            return false;
+        }
+
+        // Si los valores están llegando como strings en cantidad/precio_unitario,
+        // probablemente son datos existentes siendo reenviados sin cambios
+        foreach ($detalles as $detalle) {
+            // Si hay un ID existente y los valores son strings, es escenario-only
+            if (isset($detalle['id']) && is_string($detalle['cantidad']) && is_string($detalle['precio_unitario'])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -51,22 +90,27 @@ class UpdateCompraRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            // Solo validar coherencia si se están actualizando estos campos
-            if ($this->has('subtotal') || $this->has('detalles')) {
-                $this->validarCoherenciaSubtotal($validator);
-            }
+            // Detectar si es Escenario 2: solo cambio de estado
+            $esEscenarioEstadoOnly = !$this->hasDetallesModificados();
 
-            if ($this->has('total') || $this->has('subtotal') || $this->has('descuento') || $this->has('impuesto')) {
-                $this->validarCoherenciaTotal($validator);
-            }
+            // Solo validar coherencia si se están actualizando detalles (Escenario 1)
+            if (!$esEscenarioEstadoOnly) {
+                if ($this->has('subtotal') || $this->has('detalles')) {
+                    $this->validarCoherenciaSubtotal($validator);
+                }
 
-            if ($this->has('descuento')) {
-                $this->validarDescuento($validator);
-            }
+                if ($this->has('total') || $this->has('subtotal') || $this->has('descuento') || $this->has('impuesto')) {
+                    $this->validarCoherenciaTotal($validator);
+                }
 
-            if ($this->has('detalles')) {
-                $this->validarDetallesSubtotal($validator);
-                $this->validarProductosActivos($validator);
+                if ($this->has('descuento')) {
+                    $this->validarDescuento($validator);
+                }
+
+                if ($this->has('detalles')) {
+                    $this->validarDetallesSubtotal($validator);
+                    $this->validarProductosActivos($validator);
+                }
             }
 
             // Problema #12: Validar proveedor activo

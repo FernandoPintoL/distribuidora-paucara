@@ -22,6 +22,7 @@ class Compra extends Model
         'estado_documento_id',
         'moneda_id',
         'tipo_pago_id',
+        'almacen_id',
     ];
 
     // Relaciones
@@ -48,6 +49,11 @@ class Compra extends Model
     public function tipoPago()
     {
         return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+    }
+
+    public function almacen()
+    {
+        return $this->belongsTo(Almacen::class, 'almacen_id');
     }
 
     public function detalles()

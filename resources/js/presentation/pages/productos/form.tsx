@@ -433,16 +433,16 @@ export default function ProductoForm({
     <AppLayout breadcrumbs={[
       { title: 'Dashboard', href: productosService.indexUrl() },
       { title: 'Productos', href: productosService.indexUrl() },
-      { title: isEditing ? 'Editar' : 'Nuevo', href: '#' }
+      { title: isEditing ? `Editar: ${producto.nombre}` : 'Nuevo', href: '#' }
     ]}>
-      <Head title={isEditing ? 'Editar producto' : 'Nuevo producto'} />
+      <Head title={isEditing ? `Editar: ${producto.nombre}` : 'Nuevo producto'} />
 
       <div className="flex justify-center items-center min-h-screen">
         <Card className="max-w-5xl w-full">
           <CardHeader className="flex-row items-center justify-between">
             <div>
               <CardTitle className="text-xl">
-                {isEditing ? 'Editar' : 'Nuevo'} producto
+                {isEditing ? `Editar: ${producto.nombre}` : 'Nuevo'}
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 {isEditing ? 'Modifica los datos del producto' : 'Agrega un nuevo producto al inventario'}

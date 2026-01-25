@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\TipoPrecio;
@@ -12,7 +11,7 @@ class TipoPrecioController extends Controller
 {
     public function index(Request $request): Response
     {
-        $q = (string) $request->string('q');
+        $q      = (string) $request->string('q');
         $activo = $request->boolean('activo');
 
         $tipos = TipoPrecio::query()
@@ -22,7 +21,7 @@ class TipoPrecioController extends Controller
                     ->orWhereRaw('LOWER(codigo) like ?', ["%$searchLower%"])
                     ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"]);
             })
-            ->when($request->has('activo'), fn ($query) => $query->where('activo', $activo))
+            ->when($request->has('activo'), fn($query) => $query->where('activo', $activo))
             ->withCount('precios')
             ->ordenados()
             ->paginate(15)
@@ -30,8 +29,8 @@ class TipoPrecioController extends Controller
 
         return Inertia::render('tipos-precio/index', [
             'tipos_precio' => $tipos,
-            'filters' => [
-                'q' => $q,
+            'filters'      => [
+                'q'      => $q,
                 'activo' => $request->has('activo') ? $activo : null,
             ],
         ]);
@@ -40,7 +39,7 @@ class TipoPrecioController extends Controller
     public function create(): Response
     {
         return Inertia::render('tipos-precio/form', [
-            'tipo_precio' => null,
+            'tipo_precio'         => null,
             'colores_disponibles' => $this->getColoresDisponibles(),
         ]);
     }
@@ -48,15 +47,15 @@ class TipoPrecioController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'codigo' => ['required', 'string', 'max:20', 'unique:tipos_precio,codigo'],
-            'nombre' => ['required', 'string', 'max:100'],
-            'descripcion' => ['nullable', 'string', 'max:255'],
-            'color' => ['required', 'string', 'max:20'],
-            'es_ganancia' => ['required', 'boolean'],
+            'codigo'         => ['required', 'string', 'max:20', 'unique:tipos_precio,codigo'],
+            'nombre'         => ['required', 'string', 'max:100'],
+            'descripcion'    => ['nullable', 'string', 'max:255'],
+            'color'          => ['required', 'string', 'max:20'],
+            'es_ganancia'    => ['required', 'boolean'],
             'es_precio_base' => ['nullable', 'boolean'],
-            'orden' => ['required', 'integer', 'min:0'],
-            'activo' => ['nullable', 'boolean'],
-            'configuracion' => ['nullable', 'array'],
+            'orden'          => ['required', 'integer', 'min:0'],
+            'activo'         => ['nullable', 'boolean'],
+            'configuracion'  => ['nullable', 'array'],
         ]);
 
         // Solo puede haber un precio base activo
@@ -65,22 +64,22 @@ class TipoPrecioController extends Controller
         }
 
         // Configuración por defecto
-        $configuracion = $data['configuracion'] ?? [];
-        $configuracion['icono'] = $configuracion['icono'] ?? ($data['es_ganancia'] ? '💰' : '📦');
+        $configuracion            = $data['configuracion'] ?? [];
+        $configuracion['icono']   = $configuracion['icono'] ?? ($data['es_ganancia'] ? '💰' : '📦');
         $configuracion['tooltip'] = $configuracion['tooltip'] ?? $data['descripcion'];
 
         TipoPrecio::create([
-            'codigo' => strtoupper($data['codigo']),
-            'nombre' => $data['nombre'],
-            'descripcion' => $data['descripcion'],
-            'color' => $data['color'],
-            'es_ganancia' => $data['es_ganancia'],
-            'es_precio_base' => $data['es_precio_base'] ?? false,
+            'codigo'              => strtoupper($data['codigo']),
+            'nombre'              => $data['nombre'],
+            'descripcion'         => $data['descripcion'],
+            'color'               => $data['color'],
+            'es_ganancia'         => $data['es_ganancia'],
+            'es_precio_base'      => $data['es_precio_base'] ?? false,
             'porcentaje_ganancia' => isset($configuracion['porcentaje_ganancia']) ? (float) $configuracion['porcentaje_ganancia'] : null,
-            'orden' => $data['orden'],
-            'activo' => $data['activo'] ?? true,
-            'es_sistema' => false, // Los creados por usuarios no son del sistema
-            'configuracion' => $configuracion,
+            'orden'               => $data['orden'],
+            'activo'              => $data['activo'] ?? true,
+            'es_sistema'          => false, // Los creados por usuarios no son del sistema
+            'configuracion'       => $configuracion,
         ]);
 
         return redirect()->route('tipos-precio.index')
@@ -98,12 +97,12 @@ class TipoPrecioController extends Controller
             ->get();
 
         return Inertia::render('tipos-precio/show', [
-            'tipo_precio' => $tipoPrecio,
+            'tipo_precio'       => $tipoPrecio,
             'precios_recientes' => $preciosRecientes,
-            'estadisticas' => [
-                'total_precios' => $tipoPrecio->precios_count,
+            'estadisticas'      => [
+                'total_precios'         => $tipoPrecio->precios_count,
                 'total_configuraciones' => $tipoPrecio->configuraciones_ganancias_count,
-                'productos_con_precio' => $tipoPrecio->precios()->distinct('producto_id')->count(),
+                'productos_con_precio'  => $tipoPrecio->precios()->distinct('producto_id')->count(),
             ],
         ]);
     }
@@ -111,25 +110,25 @@ class TipoPrecioController extends Controller
     public function edit(TipoPrecio $tipoPrecio): Response
     {
         return Inertia::render('tipos-precio/form', [
-            'tipo_precio' => $tipoPrecio,
+            'tipo_precio'         => $tipoPrecio,
             'colores_disponibles' => $this->getColoresDisponibles(),
-            'puede_eliminar' => $tipoPrecio->puedeEliminarse(),
+            'puede_eliminar'      => $tipoPrecio->puedeEliminarse(),
         ]);
     }
 
     public function update(Request $request, TipoPrecio $tipoPrecio): RedirectResponse
     {
         $data = $request->validate([
-            'codigo' => ['required', 'string', 'max:20', 'unique:tipos_precio,codigo,'.$tipoPrecio->id],
-            'nombre' => ['required', 'string', 'max:100'],
-            'descripcion' => ['nullable', 'string', 'max:255'],
-            'color' => ['required', 'string', 'max:20'],
-            'es_ganancia' => ['required', 'boolean'],
-            'es_precio_base' => ['nullable', 'boolean'],
-            'orden' => ['required', 'integer', 'min:0'],
+            'codigo'              => ['required', 'string', 'max:20', 'unique:tipos_precio,codigo,' . $tipoPrecio->id],
+            'nombre'              => ['required', 'string', 'max:100'],
+            'descripcion'         => ['nullable', 'string', 'max:255'],
+            'color'               => ['required', 'string', 'max:20'],
+            'es_ganancia'         => ['required', 'boolean'],
+            'es_precio_base'      => ['nullable', 'boolean'],
+            'orden'               => ['required', 'integer', 'min:0'],
             'porcentaje_ganancia' => ['nullable', 'numeric', 'min:0'],
-            'activo' => ['nullable', 'boolean'],
-            'configuracion' => ['nullable', 'array'],
+            'activo'              => ['nullable', 'boolean'],
+            'configuracion'       => ['nullable', 'array'],
         ]);
 
         // No permitir editar ciertos campos en tipos de sistema
@@ -144,19 +143,18 @@ class TipoPrecioController extends Controller
 
         // Actualizar configuración manteniendo valores existentes
         $configuracionActual = $tipoPrecio->configuracion ?? [];
-        $configuracionNueva = array_merge($configuracionActual, $data['configuracion'] ?? []);
+        $configuracionNueva  = array_merge($configuracionActual, $data['configuracion'] ?? []);
 
         $tipoPrecio->update([
-            'codigo' => strtoupper($data['codigo'] ?? $tipoPrecio->codigo),
-            'nombre' => $data['nombre'],
-            'descripcion' => $data['descripcion'],
-            'color' => $data['color'],
-            'es_ganancia' => $data['es_ganancia'] ?? $tipoPrecio->es_ganancia,
-            'es_precio_base' => $data['es_precio_base'] ?? $tipoPrecio->es_precio_base,
+            'codigo'              => strtoupper($data['codigo'] ?? $tipoPrecio->codigo),
+            'nombre'              => $data['nombre'],
+            'descripcion'         => $data['descripcion'],
+            'color'               => $data['color'],
+            'es_ganancia'         => $data['es_ganancia'] ?? $tipoPrecio->es_ganancia,
+            'es_precio_base'      => $data['es_precio_base'] ?? $tipoPrecio->es_precio_base,
             'porcentaje_ganancia' => isset($configuracionNueva['porcentaje_ganancia']) ? (float) $configuracionNueva['porcentaje_ganancia'] : $tipoPrecio->porcentaje_ganancia,
-            'porcentaje_ganancia' => $data['porcentaje_ganancia'] ?? $tipoPrecio->porcentaje_ganancia,
-            'activo' => $data['activo'] ?? $tipoPrecio->activo,
-            'configuracion' => $configuracionNueva,
+            'activo'              => $data['activo'] ?? $tipoPrecio->activo,
+            'configuracion'       => $configuracionNueva,
         ]);
 
         return redirect()->route('tipos-precio.index')

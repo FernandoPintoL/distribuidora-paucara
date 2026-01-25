@@ -58,13 +58,37 @@ class CheckCajaAbierta
             $cajaAbierta = $user->empleado->cajaAbierta();
         } else {
             // Para administradores, obtener caja abierta del día (de cualquier usuario o una genérica del admin)
-            // ✅ NUEVO: Los administradores pueden crear ventas si hay una caja abierta cualquiera del día
+            // ✅ MEJORADO: Los administradores pueden crear ventas si hay una caja abierta cualquiera del día
             // Una apertura está abierta si NO tiene un cierre (usa scope Abiertas)
+
+            // 1️⃣ Buscar caja abierta de HOY
             $cajaAbierta = \App\Models\AperturaCaja::delDia()
                 ->abiertas()
                 ->with('caja')
                 ->latest()
                 ->first();
+
+            // 2️⃣ Si no hay caja de hoy, buscar la más reciente (posiblemente de ayer)
+            if (!$cajaAbierta) {
+                $cajaAbierta = \App\Models\AperturaCaja::abiertas()
+                    ->with('caja')
+                    ->latest('fecha')
+                    ->first();
+
+                // 3️⃣ Si hay caja anterior sin cerrar, registrar advertencia pero permitir
+                if ($cajaAbierta) {
+                    $fechaApertura = $cajaAbierta->fecha;
+                    $hoy = today();
+
+                    if ($fechaApertura < $hoy) {
+                        Log::warning('CheckCajaAbierta: Usando caja de día anterior', [
+                            'user_id' => $user->id,
+                            'apertura_fecha' => $fechaApertura,
+                            'caja_id' => $cajaAbierta->caja_id,
+                        ]);
+                    }
+                }
+            }
         }
 
         if ($cajaAbierta) {
@@ -130,6 +154,15 @@ class CheckCajaAbierta
         $user      = Auth::user();
         $operacion = $request->method() . ' ' . $request->path();
 
+        // ✅ LOG CRÍTICO: BLOQUEANDO OPERACIÓN SIN CAJA
+        Log::error('🚫 CheckCajaAbierta::respondCajaNoAbierta() - BLOQUEANDO operación sin caja', [
+            'user_id' => $user->id,
+            'operacion' => $operacion,
+            'ip' => $request->ip(),
+            'ruta' => $request->path(),
+            'metodo' => $request->method(),
+        ]);
+
         // ✅ REGISTRAR INTENTO EN AUDITORÍA
         try {
             AuditoriaCaja::registrarIntentoSinCaja(
@@ -174,6 +207,10 @@ class CheckCajaAbierta
         }
 
         // Web: Redirigir a página de cajas con mensaje
+        Log::info('🔄 CheckCajaAbierta - Redirigiendo a /cajas con error', [
+            'error_message' => $exception->getMessage(),
+        ]);
+
         return redirect()
             ->route('cajas.index')
             ->with('error', $exception->getMessage())

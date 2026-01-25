@@ -18,10 +18,11 @@ interface FormatoImpresion {
 
 interface FormatoSelectorProps {
     documentoId: number | string;
-    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga' | 'entregas' | 'cajas' | 'cajas-cierre' | 'credito';
+    tipoDocumento: 'venta' | 'proforma' | 'envio' | 'reportes-carga' | 'entregas' | 'cajas' | 'cajas-cierre' | 'credito' | 'compra';
     formatos?: FormatoImpresion[];
     onPreview?: (formato: string) => void;
     className?: string;
+    iconOnly?: boolean;
 }
 
 const iconosPorFormato: Record<string, typeof FileText> = {
@@ -36,6 +37,7 @@ export function FormatoSelector({
     formatos,
     onPreview,
     className = '',
+    iconOnly = false,
 }: FormatoSelectorProps) {
     const [loading, setLoading] = useState(false);
 
@@ -121,10 +123,20 @@ export function FormatoSelector({
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={loading} className={className}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    {loading ? 'Generando...' : 'Imprimir'}
-                </Button>
+                {iconOnly ? (
+                    <button
+                        disabled={loading}
+                        className={`inline-flex items-center p-2 text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+                        title="Imprimir"
+                    >
+                        <Printer className="h-4 w-4" />
+                    </button>
+                ) : (
+                    <Button variant="outline" disabled={loading} className={className}>
+                        <Printer className="mr-2 h-4 w-4" />
+                        {loading ? 'Generando...' : 'Imprimir'}
+                    </Button>
+                )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Seleccionar formato</DropdownMenuLabel>
