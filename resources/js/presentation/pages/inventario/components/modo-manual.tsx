@@ -20,21 +20,21 @@ interface ModoManualProps {
 
 export default function ModoManual({
     items,
-    productos,
-    almacenes,
+    productos = [],
+    almacenes = [],
     onAgregarItem,
     onEliminarItem,
     onActualizarItem,
     onGuardar,
     processing,
 }: ModoManualProps) {
-    const productosOptions = productos.map(p => ({
+    const productosOptions = (productos || []).map(p => ({
         value: p.id,
         label: `${p.nombre}${p.sku ? ` (${p.sku})` : ''}`,
         description: [p.categoria, p.marca].filter(Boolean).join(' • ')
     }));
 
-    const almacenesOptions = almacenes.map(a => ({
+    const almacenesOptions = (almacenes || []).map(a => ({
         value: a.id,
         label: a.nombre,
         description: a.ubicacion_fisica
@@ -42,8 +42,8 @@ export default function ModoManual({
 
     const productoSeleccionado = (index: number) => {
         const item = items[index];
-        if (!item.producto_id) return null;
-        return productos.find(p => p.id === item.producto_id);
+        if (!item?.producto_id || !productos) return null;
+        return (productos || []).find(p => p.id === item.producto_id);
     };
 
     return (

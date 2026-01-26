@@ -83,8 +83,8 @@ const parseCSV = (content: string): string[][] => {
 };
 
 export default function ModoImportacion({
-    productos,
-    almacenes,
+    productos = [],
+    almacenes = [],
     onCargarItems,
 }: ModoImportacionProps) {
     const [preview, setPreview] = useState<string[][]>([]);
@@ -93,10 +93,10 @@ export default function ModoImportacion({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Crear mapeos normalizados para búsqueda flexible
-    const productoMapNombre = new Map(productos.map(p => [normalizarTexto(p.nombre), p.id]));
-    const productoMapSKU = new Map(productos.map(p => p.sku ? [normalizarTexto(p.sku), p.id] : null).filter(Boolean) as Array<[string, number]>);
+    const productoMapNombre = new Map((productos || []).map(p => [normalizarTexto(p.nombre), p.id]));
+    const productoMapSKU = new Map((productos || []).map(p => p.sku ? [normalizarTexto(p.sku), p.id] : null).filter(Boolean) as Array<[string, number]>);
 
-    const almacenMapNormalizado = new Map(almacenes.map(a => [normalizarTexto(a.nombre), a.id]));
+    const almacenMapNormalizado = new Map((almacenes || []).map(a => [normalizarTexto(a.nombre), a.id]));
 
     const buscarProducto = (texto: string): number | undefined => {
         const normalizado = normalizarTexto(texto);
@@ -216,7 +216,7 @@ export default function ModoImportacion({
             } else {
                 const productoId = buscarProducto(row[indiceProd]);
                 if (!productoId) {
-                    const productosDisponibles = productos.slice(0, 3).map(p => `"${p.nombre}"`).join(', ');
+                    const productosDisponibles = (productos || []).slice(0, 3).map(p => `"${p.nombre}"`).join(', ');
                     errores.push(`❌ Producto: "${row[indiceProd]}" no encontrado. Usa el nombre exacto o SKU. Ejemplos: ${productosDisponibles}...`);
                 }
             }
@@ -227,7 +227,7 @@ export default function ModoImportacion({
             } else {
                 const almacenId = buscarAlmacen(row[indiceAlm]);
                 if (!almacenId) {
-                    const almacenesDisponibles = almacenes.map(a => `"${a.nombre}"`).join(', ');
+                    const almacenesDisponibles = (almacenes || []).map(a => `"${a.nombre}"`).join(', ');
                     errores.push(`❌ Almacén: "${row[indiceAlm]}" no encontrado. Almacenes disponibles: ${almacenesDisponibles}`);
                 }
             }

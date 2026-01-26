@@ -10,12 +10,12 @@ import { Almacen } from '@/domain/entities/almacenes';
 import { Producto } from '@/domain/entities/productos';
 import type { Id } from '@/domain/entities/shared';
 // import type { InventarioInicialBorradorItem } from '@/domain/entities/inventario-inicial';
-import ProductoRowExpandible from './producto-row-expandible';
-import CargarProductosModal from './cargar-productos-modal';
-import EstadoBorrador from './estado-borrador';
-import ScannerCodigoBarras from './scanner-codigo-barras';
-import ScannerCamaraModal from './scanner-camara-modal';
-import ProductoEncontradoModal from './producto-encontrado-modal';
+import ProductoRowExpandible from './components/producto-row-expandible';
+import CargarProductosModal from './components/cargar-productos-modal';
+import EstadoBorrador from './components/estado-borrador';
+import ScannerCodigoBarras from './components/scanner-codigo-barras';
+import ScannerCamaraModal from './components/scanner-camara-modal';
+import ProductoEncontradoModal from './components/producto-encontrado-modal';
 
 // Declarar la función global route de Ziggy
 declare function route(name: string, params?: { [key: string]: Id | string | number }): string;
@@ -31,8 +31,11 @@ const getRoute = (name: string, params?: { [key: string]: Id | string }) => {
         'inicial.draft.get': '/inventario/inventario-inicial/draft/{borrador}',
         'inicial.draft.item.store': '/inventario/inventario-inicial/draft/{borrador}/items',
         'inicial.draft.productos.add': '/inventario/inventario-inicial/draft/{borrador}/productos',
+        'inicial.draft.productos.load-paginated': '/inventario/inventario-inicial/draft/{borrador}/productos/load-paginated',
+        'inicial.draft.productos.suggestions': '/inventario/inventario-inicial/draft/{borrador}/productos/suggestions',
+        'inicial.draft.productos.search': '/inventario/inventario-inicial/draft/{borrador}/productos/search',
+        'inicial.draft.item.delete': '/inventario/inventario-inicial/draft/{borrador}/items/{item}',
         'inicial.draft.complete': '/inventario/inventario-inicial/draft/{borrador}/complete',
-        'draft.productos.load-paginated': '/inventario/inventario-inicial/draft/{borrador}/productos/load-paginated',
         'productos.paginados': '/productos/paginados/listar',
         'inicial.index': '/inventario/inventario-inicial',
     };
@@ -133,7 +136,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 items: [],
             });
 
-            // Cargar borrador existente si lo hay
+            // Cargar items del borrador (vacío si es nuevo, con items si ya existía)
             cargarBorrador(data.id);
         } catch (error) {
             NotificationService.error('Error al inicializar borrador');
@@ -180,7 +183,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
             const data = await response.json();
             await cargarBorrador(borrador.id);
-            NotificationService.success(`Se agregaron ${data.itemsCount} items`);
+            // NotificationService.success(`Se agregaron ${data.itemsCount} items`);
         } catch (error) {
             NotificationService.error('Error al agregar productos');
             console.error(error);
@@ -195,7 +198,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
         try {
             setCargandoProductos(true);
             const response = await fetch(
-                getRoute('draft.productos.load-paginated', { borrador: borrador.id }),
+                getRoute('inicial.draft.productos.load-paginated', { borrador: borrador.id }),
                 {
                     method: 'POST',
                     headers: {
@@ -352,17 +355,18 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
         }
     };
 
-    const seleccionarSugerencia = (item: BorradorItem) => {
-        // Actualizar búsqueda con el nombre del producto seleccionado
-        setBusqueda(item.producto?.nombre || '');
-        setSugerencias([]);
-        setMostrarSugerencias(false);
+    const seleccionarSugerencia = async (item: BorradorItem) => {
+        // Agregar el producto directamente a la BD sin mostrar modal
+        try {
+            await agregarProductos([item.producto_id]);
 
-        // Expandir el producto seleccionado
-        setExpandidos(prev => new Set([...prev, item.producto_id]));
-
-        // Llevar a la primera página donde está el producto
-        setPaginaActual(1);
+            // Cerrar dropdown de sugerencias
+            setSugerencias([]);
+            setMostrarSugerencias(false);
+            setBusqueda('');
+        } catch (error) {
+            console.error('Error al agregar producto:', error);
+        }
     };
 
     const handleConfirmarProductoEncontrado = useCallback(() => {
@@ -460,7 +464,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             console.log('2️⃣ Buscando en tabla de productos y codigos_barra (API)...');
 
             const responseProductos = await fetch(
-                getRoute('draft.productos.load-paginated', { borrador: borrador.id }),
+                getRoute('inicial.draft.productos.load-paginated', { borrador: borrador.id }),
                 {
                     method: 'POST',
                     headers: {
@@ -592,9 +596,9 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             setBuscandoEnDB(true);
             console.log(`🔍 Buscando en DB: "${termino}"`);
 
-            // Usar el endpoint loadProductsPaginated que ahora busca en codigos_barra también
+            // Usar el endpoint de sugerencias que SOLO busca sin agregar nada
             const response = await fetch(
-                getRoute('draft.productos.load-paginated', { borrador: borrador.id }),
+                getRoute('inicial.draft.productos.suggestions', { borrador: borrador.id }),
                 {
                     method: 'POST',
                     headers: {
@@ -603,9 +607,8 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                         'X-CSRF-Token': getCsrfToken(),
                     },
                     body: JSON.stringify({
-                        page: 1,
-                        per_page: 50,
                         search: termino,
+                        per_page: 10,
                     }),
                 }
             );
@@ -628,16 +631,31 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
             console.log(`✅ Encontrados ${productos.length} producto(s)`);
 
-            // Cargar borrador para obtener items actualizados
-            await cargarBorrador(borrador.id);
+            // Actualizar sugerencias con los productos encontrados en BD
+            const sugerenciasDelDB = productos.map((p: any) => ({
+                producto_id: p.id,
+                almacen_id: '',
+                cantidad: '',
+                lote: '',
+                fecha_vencimiento: '',
+                precio_costo: '',
+                producto: p,
+                almacen: null,
+            }));
+
+            setSugerencias(sugerenciasDelDB.slice(0, 10)); // Mostrar hasta 10 sugerencias
+            setMostrarSugerencias(true); // ✅ Mostrar el dropdown
+
+            // NO cargar borrador automáticamente - Solo mostrar sugerencias
+            // await cargarBorrador(borrador.id);
 
             // Resetear paginación a página 1 para mostrar resultados
             setPaginaActual(1);
 
-            NotificationService.success(
+            /* NotificationService.success(
                 // `✓ Se encontraron ${productos.length} producto(s)\n\n${productos.map((p: any) => p.nombre).join(', ')}`
                 `✓ Se encontraron ${productos.length} producto(s)`
-            );
+            ); */
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
             console.error('❌ Error en búsqueda en DB:', error);
@@ -703,12 +721,12 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
     if (!borrador) {
         return (
-            <AppLayout>
+            <div>
                 <Head title="Inventario Inicial - Cargando" />
                 <div className="flex items-center justify-center h-96">
                     <p>Cargando Productos...</p>
                 </div>
-            </AppLayout>
+            </div>
         );
     }
 
@@ -740,17 +758,26 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
     const productosPaginados = productosFiltrados.slice(inicio, inicio + productosPorPagina);
 
     return (
-        <AppLayout>
+        <div>
             <Head title="Inventario Inicial Avanzado" />
 
             <div className="py-4 sm:py-2 px-3 sm:px-4 space-y-4 sm:space-y-6">
                 {/* Encabezado responsivo */}
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100">Inventario Inicial Avanzado</h1>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 hidden sm:block">
-                        Sistema de carga inicial de inventario con guardado automático como borrador
-                    </p>
-                </div>
+                {/* <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100">Inventario Inicial Avanzado</h1>
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 hidden sm:block">
+                            Sistema de carga inicial de inventario con guardado automático como borrador
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => router.visit('/inventario/inventario-inicial')}
+                        title="Volver al módulo manual simple"
+                    >
+                        Modo Manual
+                    </Button>
+                </div> */}
                 {/* Estado del borrador */}
                 <EstadoBorrador borrador={borrador} />
                 {/* Barra de herramientas responsiva */}
@@ -1087,6 +1114,6 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 onBarcodeDetected={buscarPorCodigoBarras}
                 enabled={true}
             />
-        </AppLayout>
+        </div>
     );
 }

@@ -148,8 +148,82 @@ loadPaginated.post = (args: { borrador: string | number } | [borrador: string | 
     
     loadPaginated.form = loadPaginatedForm
 /**
+* @see \App\Http\Controllers\InventarioInicialController::suggestions
+ * @see app/Http/Controllers/InventarioInicialController.php:632
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/suggestions'
+ */
+export const suggestions = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: suggestions.url(args, options),
+    method: 'post',
+})
+
+suggestions.definition = {
+    methods: ["post"],
+    url: '/inventario/inventario-inicial/draft/{borrador}/productos/suggestions',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\InventarioInicialController::suggestions
+ * @see app/Http/Controllers/InventarioInicialController.php:632
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/suggestions'
+ */
+suggestions.url = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { borrador: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    borrador: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        borrador: args.borrador,
+                }
+
+    return suggestions.definition.url
+            .replace('{borrador}', parsedArgs.borrador.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\InventarioInicialController::suggestions
+ * @see app/Http/Controllers/InventarioInicialController.php:632
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/suggestions'
+ */
+suggestions.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: suggestions.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\InventarioInicialController::suggestions
+ * @see app/Http/Controllers/InventarioInicialController.php:632
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/suggestions'
+ */
+    const suggestionsForm = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: suggestions.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\InventarioInicialController::suggestions
+ * @see app/Http/Controllers/InventarioInicialController.php:632
+ * @route '/inventario/inventario-inicial/draft/{borrador}/productos/suggestions'
+ */
+        suggestionsForm.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: suggestions.url(args, options),
+            method: 'post',
+        })
+    
+    suggestions.form = suggestionsForm
+/**
 * @see \App\Http\Controllers\InventarioInicialController::search
- * @see app/Http/Controllers/InventarioInicialController.php:629
+ * @see app/Http/Controllers/InventarioInicialController.php:676
  * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
  */
 export const search = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -164,7 +238,7 @@ search.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::search
- * @see app/Http/Controllers/InventarioInicialController.php:629
+ * @see app/Http/Controllers/InventarioInicialController.php:676
  * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
  */
 search.url = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -192,7 +266,7 @@ search.url = (args: { borrador: string | number } | [borrador: string | number ]
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::search
- * @see app/Http/Controllers/InventarioInicialController.php:629
+ * @see app/Http/Controllers/InventarioInicialController.php:676
  * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
  */
 search.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -202,7 +276,7 @@ search.post = (args: { borrador: string | number } | [borrador: string | number 
 
     /**
 * @see \App\Http\Controllers\InventarioInicialController::search
- * @see app/Http/Controllers/InventarioInicialController.php:629
+ * @see app/Http/Controllers/InventarioInicialController.php:676
  * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
  */
     const searchForm = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +286,7 @@ search.post = (args: { borrador: string | number } | [borrador: string | number 
 
             /**
 * @see \App\Http\Controllers\InventarioInicialController::search
- * @see app/Http/Controllers/InventarioInicialController.php:629
+ * @see app/Http/Controllers/InventarioInicialController.php:676
  * @route '/inventario/inventario-inicial/draft/{borrador}/productos/search'
  */
         searchForm.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -224,6 +298,7 @@ search.post = (args: { borrador: string | number } | [borrador: string | number 
 const productos = {
     add,
 loadPaginated,
+suggestions,
 search,
 }
 

@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/presentation/compone
 import ModoManual from './components/modo-manual';
 import ModoTabla from './components/modo-tabla';
 import ModoImportacion from './components/modo-importacion';
+import InventarioInicialAvanzado from './inventario-inicial-avanzado';
 import { store as storeInventarioInicial } from '@/routes/inventario/inicial';
 import { Producto } from '@/domain/entities/productos';
 import { TipoAjusteInventario } from '@/domain/entities/tipos-ajuste-inventario';
@@ -19,7 +20,7 @@ import { Almacen } from '@/domain/entities/almacenes';
 interface Props {
     productos: Producto[];
     almacenes: Almacen[];
-    tipoInventarioInicial: TipoAjusteInventario;
+    tipoInventarioInicial?: TipoAjusteInventario;
 }
 
 export default function InventarioInicial({ productos, almacenes, tipoInventarioInicial }: Props) {
@@ -28,6 +29,7 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
     });
 
     const [showHelp, setShowHelp] = useState(false);
+    const [tabActivo, setTabActivo] = useState('avanzado');
 
     const agregarItem = () => {
         setData('items', [
@@ -150,21 +152,44 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                             {data.items.length} item{data.items.length !== 1 ? 's' : ''} agregado{data.items.length !== 1 ? 's' : ''}
                         </p>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowHelp(!showHelp)}
-                        className="rounded-full"
-                        title="Ver información y ayuda"
-                    >
-                        <HelpCircle className="h-6 w-6 text-purple-600" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {tabActivo !== 'avanzado' && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setTabActivo('avanzado')}
+                                title="Ir al módulo avanzado con escáner de códigos de barras"
+                            >
+                                Modo Avanzado
+                            </Button>
+                        )}
+                        {/* {tabActivo === 'avanzado' && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setTabActivo('manual')}
+                                title="Volver al módulo manual simple"
+                            >
+                                Modo Manual
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowHelp(!showHelp)}
+                            className="rounded-full"
+                            title="Ver información y ayuda"
+                        >
+                            <HelpCircle className="h-6 w-6 text-purple-600" />
+                        </Button> */}
+                    </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="px-6 flex-1 flex flex-col overflow-hidden">
-                    <Tabs defaultValue="manual" className="h-full flex flex-col">
+                    <Tabs value={tabActivo} onValueChange={setTabActivo} className="h-full flex flex-col">
                         <TabsList className="w-full justify-start mb-4">
+                            <TabsTrigger value="avanzado" className="gap-2">
+                                Modo Avanzado
+                            </TabsTrigger>
                             <TabsTrigger value="manual" className="gap-2">
                                 Formulario Manual
                             </TabsTrigger>
@@ -207,6 +232,12 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                                 productos={productos}
                                 almacenes={almacenes}
                                 onCargarItems={cargarItemsImportados}
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="avanzado" className="flex-1 overflow-hidden flex flex-col">
+                            <InventarioInicialAvanzado
+                                almacenes={almacenes}
                             />
                         </TabsContent>
                     </Tabs>
@@ -267,12 +298,16 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                                 <div className="flex items-start gap-2">
                                     <AlertCircle className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
                                     <div className="space-y-2">
-                                        <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                                            Tipo de ajuste: {tipoInventarioInicial.label}
-                                        </p>
-                                        <p className="text-xs text-purple-700 dark:text-purple-300">
-                                            {tipoInventarioInicial.descripcion}
-                                        </p>
+                                        {tipoInventarioInicial && (
+                                            <>
+                                                <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                                                    Tipo de ajuste: {tipoInventarioInicial.label}
+                                                </p>
+                                                <p className="text-xs text-purple-700 dark:text-purple-300">
+                                                    {tipoInventarioInicial.descripcion}
+                                                </p>
+                                            </>
+                                        )}
                                         <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1 list-disc list-inside">
                                             <li>Usa este módulo solo UNA VEZ al implementar el sistema</li>
                                             <li>Registra el stock real que tienes actualmente en cada almacén</li>

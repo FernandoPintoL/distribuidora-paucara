@@ -51,7 +51,7 @@ class InventarioInicialController extends Controller
         $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
 
         // Renderizar el nuevo componente avanzado
-        return Inertia::render('inventario/components/inventario-inicial-avanzado', [
+        return Inertia::render('inventario/inventario-inicial', [
             'almacenes' => $almacenes,
         ]);
     }
@@ -107,11 +107,11 @@ class InventarioInicialController extends Controller
                             'lote'        => $item['lote'] ?? null,
                         ],
                         [
-                            'cantidad'              => 0,
-                            'cantidad_disponible'   => 0,  // Stock disponible (sin reservas)
-                            'cantidad_reservada'    => 0,  // Stock reservado
-                            'fecha_actualizacion'   => now(),
-                            'fecha_vencimiento'     => $item['fecha_vencimiento'] ?? null,
+                            'cantidad'            => 0,
+                            'cantidad_disponible' => 0, // Stock disponible (sin reservas)
+                            'cantidad_reservada'  => 0, // Stock reservado
+                            'fecha_actualizacion' => now(),
+                            'fecha_vencimiento'   => $item['fecha_vencimiento'] ?? null,
                         ]
                     );
 
@@ -124,10 +124,10 @@ class InventarioInicialController extends Controller
 
                     // Actualizar cantidad y mantener el invariante: cantidad = cantidad_disponible + cantidad_reservada
                     // Como es carga inicial, TODO el stock es disponible (sin reservas)
-                    $stockProducto->cantidad += $item['cantidad'];
-                    $stockProducto->cantidad_disponible += $item['cantidad'];  // Todo es disponible en carga inicial
-                    // cantidad_reservada se mantiene igual (sigue siendo 0 en carga inicial)
-                    $stockProducto->fecha_actualizacion = now();
+                    $stockProducto->cantidad            += $item['cantidad'];
+                    $stockProducto->cantidad_disponible += $item['cantidad']; // Todo es disponible en carga inicial
+                                                                              // cantidad_reservada se mantiene igual (sigue siendo 0 en carga inicial)
+                    $stockProducto->fecha_actualizacion  = now();
                     $stockProducto->save();
 
                     // Validar que el invariante se mantiene
@@ -229,18 +229,18 @@ class InventarioInicialController extends Controller
         // IMPORTANTE: Incluir 'lote' en los criterios de búsqueda para evitar duplicados
         $item = InventarioInicialBorradorItem::updateOrCreate(
             [
-                'borrador_id'  => $borradorId,
-                'producto_id'  => $validated['producto_id'],
-                'almacen_id'   => $validated['almacen_id'],
-                'lote'         => $validated['lote'] ?? null,
+                'borrador_id' => $borradorId,
+                'producto_id' => $validated['producto_id'],
+                'almacen_id'  => $validated['almacen_id'],
+                'lote'        => $validated['lote'] ?? null,
             ],
             $validated
         );
 
         return response()->json([
-            'success'         => true,
-            'item'            => $item,
-            'lastUpdated'     => now(),
+            'success'     => true,
+            'item'        => $item,
+            'lastUpdated' => now(),
         ]);
     }
 
@@ -250,9 +250,9 @@ class InventarioInicialController extends Controller
     public function getDraft($borradorId)
     {
         $borrador = InventarioInicialBorrador::with([
-            'items.producto.codigosBarra',  // ✅ Cargar códigos de barra con el producto
+            'items.producto.codigosBarra', // ✅ Cargar códigos de barra con el producto
             'items.almacen',
-            'items.stockProducto'
+            'items.stockProducto',
         ])->findOrFail($borradorId);
 
         // Verificar autorización
@@ -261,9 +261,9 @@ class InventarioInicialController extends Controller
         }
 
         return response()->json([
-            'id'       => $borrador->id,
-            'estado'   => $borrador->estado,
-            'items'    => $borrador->items->map(fn($item) => [
+            'id'      => $borrador->id,
+            'estado'  => $borrador->estado,
+            'items'   => $borrador->items->map(fn($item) => [
                 'id'                 => $item->id,
                 'producto_id'        => $item->producto_id,
                 'almacen_id'         => $item->almacen_id,
@@ -276,8 +276,8 @@ class InventarioInicialController extends Controller
                 'stock_existente_id' => $item->stock_producto_id,
                 'es_actualizacion'   => $item->stock_producto_id !== null,
             ]),
-            'created'  => $borrador->created_at,
-            'updated'  => $borrador->updated_at,
+            'created' => $borrador->created_at,
+            'updated' => $borrador->updated_at,
         ]);
     }
 
@@ -287,7 +287,7 @@ class InventarioInicialController extends Controller
     public function addProductosToDraft(Request $request, $borradorId)
     {
         $validated = $request->validate([
-            'producto_ids' => 'required|array|min:1',
+            'producto_ids'   => 'required|array|min:1',
             'producto_ids.*' => 'exists:productos,id',
         ]);
 
@@ -351,9 +351,9 @@ class InventarioInicialController extends Controller
         }
 
         return response()->json([
-            'success' => true,
+            'success'    => true,
             'itemsCount' => count($items),
-            'items' => $items,
+            'items'      => $items,
         ]);
     }
 
@@ -400,7 +400,7 @@ class InventarioInicialController extends Controller
         DB::beginTransaction();
         try {
             $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
-            $resultados = [
+            $resultados            = [
                 'exitosos'     => 0,
                 'fallidos'     => 0,
                 'advertencias' => [],
@@ -409,21 +409,21 @@ class InventarioInicialController extends Controller
 
             foreach ($borrador->items as $index => $item) {
                 if ($item->cantidad === null || $item->cantidad <= 0) {
-                    continue;  // Saltar items sin cantidad
+                    continue; // Saltar items sin cantidad
                 }
 
                 try {
                     if ($item->stock_producto_id) {
                         // Actualizar stock existente
-                        $stockProducto = StockProducto::findOrFail($item->stock_producto_id);
+                        $stockProducto    = StockProducto::findOrFail($item->stock_producto_id);
                         $cantidadAnterior = $stockProducto->cantidad;
-                        $diferencia = $item->cantidad - $cantidadAnterior;
+                        $diferencia       = $item->cantidad - $cantidadAnterior;
 
                         // Actualizar cantidad y mantener invariante
-                        $stockProducto->cantidad = $item->cantidad;
+                        $stockProducto->cantidad            = $item->cantidad;
                         $stockProducto->cantidad_disponible = $item->cantidad - $stockProducto->cantidad_reservada;
-                        $stockProducto->lote = $item->lote;
-                        $stockProducto->fecha_vencimiento = $item->fecha_vencimiento;
+                        $stockProducto->lote                = $item->lote;
+                        $stockProducto->fecha_vencimiento   = $item->fecha_vencimiento;
                         if ($item->precio_costo) {
                             $stockProducto->precio_costo = $item->precio_costo;
                         }
@@ -456,15 +456,15 @@ class InventarioInicialController extends Controller
                     } else {
                         // Crear nuevo registro de stock
                         $stockProducto = StockProducto::create([
-                            'producto_id'           => $item->producto_id,
-                            'almacen_id'            => $item->almacen_id,
-                            'cantidad'              => $item->cantidad,
-                            'cantidad_disponible'   => $item->cantidad,
-                            'cantidad_reservada'    => 0,
-                            'lote'                  => $item->lote,
-                            'fecha_vencimiento'     => $item->fecha_vencimiento,
-                            'precio_costo'          => $item->precio_costo,
-                            'fecha_actualizacion'   => now(),
+                            'producto_id'         => $item->producto_id,
+                            'almacen_id'          => $item->almacen_id,
+                            'cantidad'            => $item->cantidad,
+                            'cantidad_disponible' => $item->cantidad,
+                            'cantidad_reservada'  => 0,
+                            'lote'                => $item->lote,
+                            'fecha_vencimiento'   => $item->fecha_vencimiento,
+                            'precio_costo'        => $item->precio_costo,
+                            'fecha_actualizacion' => now(),
                         ]);
 
                         // Registrar movimiento de creación
@@ -500,14 +500,14 @@ class InventarioInicialController extends Controller
             DB::commit();
 
             return response()->json([
-                'success' => true,
+                'success'    => true,
                 'resultados' => $resultados,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error completando inventario inicial borrador', [
                 'borrador_id' => $borradorId,
-                'error' => $e->getMessage(),
+                'error'       => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -522,9 +522,9 @@ class InventarioInicialController extends Controller
     public function loadProductsPaginated(Request $request, $borradorId)
     {
         $validated = $request->validate([
-            'page' => 'integer|min:1',
+            'page'     => 'integer|min:1',
             'per_page' => 'integer|min:1|max:100',
-            'search' => 'nullable|string|max:255',
+            'search'   => 'nullable|string|max:255',
         ]);
 
         $borrador = InventarioInicialBorrador::findOrFail($borradorId);
@@ -534,25 +534,25 @@ class InventarioInicialController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $page = $validated['page'] ?? 1;
+        $page    = $validated['page'] ?? 1;
         $perPage = $validated['per_page'] ?? 30;
-        $search = $validated['search'] ?? '';
+        $search  = $validated['search'] ?? '';
 
         // Obtener productos activos con paginación
         $productosQuery = Producto::with(['categoria', 'marca', 'unidad', 'codigosBarra'])
             ->where('activo', true);
 
         // Aplicar búsqueda
-        if (!empty($search)) {
+        if (! empty($search)) {
             $searchLower = strtolower($search);
-            $productosQuery->where(function($q) use ($search, $searchLower) {
+            $productosQuery->where(function ($q) use ($search, $searchLower) {
                 $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
-                  ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
-                  // Buscar en la tabla codigos_barra
-                  ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
-                      $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
-                          ->where('activo', true);
-                  });
+                    ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
+                // Buscar en la tabla codigos_barra
+                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                        $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
+                            ->where('activo', true);
+                    });
             });
         }
 
@@ -581,10 +581,10 @@ class InventarioInicialController extends Controller
                             'almacen_id'  => $almacen->id,
                         ],
                         [
-                            'cantidad' => null,
-                            'lote' => null,
+                            'cantidad'          => null,
+                            'lote'              => null,
                             'fecha_vencimiento' => null,
-                            'precio_costo' => null,
+                            'precio_costo'      => null,
                             'stock_producto_id' => null,
                         ]
                     );
@@ -596,12 +596,12 @@ class InventarioInicialController extends Controller
                                 'borrador_id' => $borradorId,
                                 'producto_id' => $productoId,
                                 'almacen_id'  => $almacen->id,
-                                'lote' => $stock->lote,
+                                'lote'        => $stock->lote,
                             ],
                             [
-                                'cantidad' => $stock->cantidad,
+                                'cantidad'          => $stock->cantidad,
                                 'fecha_vencimiento' => $stock->fecha_vencimiento,
-                                'precio_costo' => $stock->precio_costo,
+                                'precio_costo'      => $stock->precio_costo,
                                 'stock_producto_id' => $stock->id,
                             ]
                         );
@@ -612,13 +612,13 @@ class InventarioInicialController extends Controller
         }
 
         return response()->json([
-            'success' => true,
-            'productos' => $productos->items(),
+            'success'      => true,
+            'productos'    => $productos->items(),
             'current_page' => $productos->currentPage(),
-            'last_page' => $productos->lastPage(),
-            'per_page' => $productos->perPage(),
-            'total' => $productos->total(),
-            'itemsAdded' => count($items),
+            'last_page'    => $productos->lastPage(),
+            'per_page'     => $productos->perPage(),
+            'total'        => $productos->total(),
+            'itemsAdded'   => count($items),
         ]);
     }
 
@@ -626,6 +626,53 @@ class InventarioInicialController extends Controller
      * Buscar producto en el borrador por múltiples criterios
      * Busca por: id, nombre, sku, código de barras, marca, categoría (case insensitive)
      */
+    /**
+     * Buscar productos sin agregarlos al borrador (SOLO para sugerencias)
+     */
+    public function searchProductosForSuggestions(Request $request, $borradorId)
+    {
+        $validated = $request->validate([
+            'search'   => 'nullable|string|max:255',
+            'per_page' => 'integer|min:1|max:100',
+        ]);
+
+        $borrador = InventarioInicialBorrador::findOrFail($borradorId);
+
+        // Verificar autorización
+        if ($borrador->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $search   = $validated['search'] ?? '';
+        $perPage  = $validated['per_page'] ?? 10;
+
+        // Obtener productos activos SIN agregarlos al borrador
+        $productosQuery = Producto::with(['categoria', 'marca', 'unidad', 'codigosBarra', 'proveedor'])
+            ->where('activo', true);
+
+        // Aplicar búsqueda
+        if (! empty($search)) {
+            $searchLower = strtolower($search);
+            $productosQuery->where(function ($q) use ($search, $searchLower) {
+                $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
+                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                        $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
+                            ->where('activo', true);
+                    })
+                    ->orWhereHas('proveedor', function ($proveedorQuery) use ($searchLower) {
+                        $proveedorQuery->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"]);
+                    });
+            });
+        }
+
+        $productos = $productosQuery->limit($perPage)->get();
+
+        return response()->json([
+            'productos' => $productos,
+        ]);
+    }
+
     public function searchProductoInDraft(Request $request, $borradorId)
     {
         $validated = $request->validate([
@@ -639,7 +686,7 @@ class InventarioInicialController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $search = trim($validated['search']);
+        $search      = trim($validated['search']);
         $searchLower = strtolower($search);
 
         // Buscar en los items del borrador con relaciones
@@ -647,7 +694,7 @@ class InventarioInicialController extends Controller
             'producto' => function ($query) {
                 $query->with(['categoria:id,nombre', 'marca:id,nombre', 'unidad:id,nombre', 'codigosBarra']);
             },
-            'almacen:id,nombre'
+            'almacen:id,nombre',
         ])
             ->where('borrador_id', $borradorId)
             ->whereHas('producto', function ($query) use ($searchLower, $search) {
@@ -655,58 +702,58 @@ class InventarioInicialController extends Controller
                 $query->where(function ($q) use ($searchLower, $search) {
                     // Búsqueda exacta por ID (si es número)
                     if (is_numeric($search)) {
-                        $q->orWhere('id', (int)$search);
+                        $q->orWhere('id', (int) $search);
                     }
 
                     // Búsqueda case insensitive en nombre
                     $q->orWhereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"])
-                      // Búsqueda case insensitive en SKU
-                      ->orWhereRaw('LOWER(sku) LIKE ?', ["%{$searchLower}%"])
-                      // Búsqueda case insensitive en código de barras legacy
-                      ->orWhereRaw('LOWER(codigo_barras) LIKE ?', ["%{$searchLower}%"])
-                      // Búsqueda en tabla codigos_barra (actual)
-                      ->orWhereHas('codigosBarra', function ($q) use ($searchLower) {
-                          $q->whereRaw('LOWER(codigo) LIKE ?', ["%{$searchLower}%"])
-                            ->where('activo', true);
-                      })
-                      // Búsqueda en marca (relacional)
-                      ->orWhereHas('marca', function ($q) use ($searchLower) {
-                          $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"]);
-                      })
-                      // Búsqueda en categoría (relacional)
-                      ->orWhereHas('categoria', function ($q) use ($searchLower) {
-                          $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"]);
-                      });
+                    // Búsqueda case insensitive en SKU
+                        ->orWhereRaw('LOWER(sku) LIKE ?', ["%{$searchLower}%"])
+                    // Búsqueda case insensitive en código de barras legacy
+                        ->orWhereRaw('LOWER(codigo_barras) LIKE ?', ["%{$searchLower}%"])
+                    // Búsqueda en tabla codigos_barra (actual)
+                        ->orWhereHas('codigosBarra', function ($q) use ($searchLower) {
+                            $q->whereRaw('LOWER(codigo) LIKE ?', ["%{$searchLower}%"])
+                                ->where('activo', true);
+                        })
+                    // Búsqueda en marca (relacional)
+                        ->orWhereHas('marca', function ($q) use ($searchLower) {
+                            $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"]);
+                        })
+                    // Búsqueda en categoría (relacional)
+                        ->orWhereHas('categoria', function ($q) use ($searchLower) {
+                            $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"]);
+                        });
                 });
             })
             ->first();
 
         if ($item) {
             return response()->json([
-                'success' => true,
-                'found' => true,
+                'success'  => true,
+                'found'    => true,
                 'producto' => [
-                    'id' => $item->producto->id,
-                    'nombre' => $item->producto->nombre,
-                    'sku' => $item->producto->sku,
+                    'id'            => $item->producto->id,
+                    'nombre'        => $item->producto->nombre,
+                    'sku'           => $item->producto->sku,
                     'codigo_barras' => $item->producto->codigo_barras,
-                    'categoria' => $item->producto->categoria?->nombre,
-                    'marca' => $item->producto->marca?->nombre,
+                    'categoria'     => $item->producto->categoria?->nombre,
+                    'marca'         => $item->producto->marca?->nombre,
                 ],
-                'item' => [
-                    'cantidad' => $item->cantidad,
-                    'lote' => $item->lote,
+                'item'     => [
+                    'cantidad'          => $item->cantidad,
+                    'lote'              => $item->lote,
                     'fecha_vencimiento' => $item->fecha_vencimiento,
-                    'almacen' => $item->almacen?->nombre,
+                    'almacen'           => $item->almacen?->nombre,
                 ],
-                'message' => "Producto ya registrado en borrador"
+                'message'  => "Producto ya registrado en borrador",
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'found' => false,
-            'message' => 'Producto no encontrado en borrador'
+            'found'   => false,
+            'message' => 'Producto no encontrado en borrador',
         ]);
     }
 

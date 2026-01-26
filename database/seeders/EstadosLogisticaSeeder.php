@@ -19,58 +19,59 @@ class EstadosLogisticaSeeder extends Seeder
 
         // PROFORMA STATES
         $proformaStates = [
-            ['codigo' => 'PENDIENTE', 'nombre' => 'Pendiente de Aprobación', 'color' => '#FFC107', 'icono' => 'clock', 'orden' => 1],
-            ['codigo' => 'APROBADA', 'nombre' => 'Aprobada', 'color' => '#28A745', 'icono' => 'check-circle', 'orden' => 2, 'requiere_aprobacion' => true],
-            ['codigo' => 'RECHAZADA', 'nombre' => 'Rechazada', 'color' => '#DC3545', 'icono' => 'times-circle', 'orden' => 3, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'CONVERTIDA', 'nombre' => 'Convertida a Venta', 'color' => '#17A2B8', 'icono' => 'exchange-alt', 'orden' => 4, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'EN_RUTA', 'nombre' => 'En Ruta', 'color' => '#2196F3', 'icono' => 'local-shipping', 'orden' => 5],
-            ['codigo' => 'VENCIDA', 'nombre' => 'Vencida', 'color' => '#6C757D', 'icono' => 'calendar-times', 'orden' => 6, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'PENDIENTE', 'nombre' => 'Pendiente de Aprobación', 'color' => '#FFC107', 'icono' => '⌛', 'orden' => 1],
+            ['codigo' => 'APROBADA', 'nombre' => 'Aprobada', 'color' => '#28A745', 'icono' => '✅', 'orden' => 2, 'requiere_aprobacion' => true],
+            ['codigo' => 'RECHAZADA', 'nombre' => 'Rechazada', 'color' => '#DC3545', 'icono' => '✖️', 'orden' => 3, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'CONVERTIDA', 'nombre' => 'Convertida a Venta', 'color' => '#17A2B8', 'icono' => '🔃', 'orden' => 4, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'EN_RUTA', 'nombre' => 'En Ruta', 'color' => '#2196F3', 'icono' => '🚚', 'orden' => 5],
+            ['codigo' => 'VENCIDA', 'nombre' => 'Vencida', 'color' => '#6C757D', 'icono' => '✖️', 'orden' => 6, 'es_estado_final' => true, 'permite_edicion' => false],
         ];
 
         // VENTA LOGISTIC STATES
         $ventaStates = [
-            ['codigo' => 'PENDIENTE_RETIRO', 'nombre' => 'Pendiente de Retiro', 'color' => '#FFC107', 'icono' => 'local-shipping', 'orden' => 0],
-            ['codigo' => 'PENDIENTE_ENVIO', 'nombre' => 'Pendiente de Envío', 'color' => '#FF9800', 'icono' => 'schedule', 'orden' => 1],
-            ['codigo' => 'SIN_ENTREGA', 'nombre' => 'Sin Entrega Asignada', 'color' => '#E0E0E0', 'icono' => 'inbox', 'orden' => 2],
-            ['codigo' => 'PROGRAMADO', 'nombre' => 'Entrega Programada', 'color' => '#FFC107', 'icono' => 'calendar', 'orden' => 3],
-            ['codigo' => 'EN_PREPARACION', 'nombre' => 'En Preparación', 'color' => '#9C27B0', 'icono' => 'inventory', 'orden' => 4],
-            ['codigo' => 'EN_TRANSITO', 'nombre' => 'En Tránsito', 'color' => '#2196F3', 'icono' => 'local-shipping', 'orden' => 5],
-            ['codigo' => 'ENTREGADA', 'nombre' => 'Entregada', 'color' => '#28A745', 'icono' => 'check-circle', 'orden' => 6, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'PROBLEMAS', 'nombre' => 'Con Problemas', 'color' => '#FF5722', 'icono' => 'warning', 'orden' => 7],
-            ['codigo' => 'CANCELADA', 'nombre' => 'Cancelada', 'color' => '#6C757D', 'icono' => 'ban', 'orden' => 8, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'PENDIENTE_RETIRO', 'nombre' => 'Pendiente de Retiro', 'color' => '#FFC107', 'icono' => '⌛', 'orden' => 0],
+            ['codigo' => 'PENDIENTE_ENVIO', 'nombre' => 'Pendiente de Envío', 'color' => '#FF9800', 'icono' => '⏰', 'orden' => 1],
+            ['codigo' => 'SIN_ENTREGA', 'nombre' => 'Sin Entrega Asignada', 'color' => '#E0E0E0', 'icono' => '✖️🚚', 'orden' => 2],
+            ['codigo' => 'PROGRAMADO', 'nombre' => 'Entrega Programada', 'color' => '#FFC107', 'icono' => '📆', 'orden' => 3],
+            ['codigo' => 'EN_PREPARACION', 'nombre' => 'En Preparación', 'color' => '#9C27B0', 'icono' => '📦', 'orden' => 4],
+            ['codigo' => 'EN_TRANSITO', 'nombre' => 'En Tránsito', 'color' => '#2196F3', 'icono' => '🚚', 'orden' => 5],
+            ['codigo' => 'ENTREGADA', 'nombre' => 'Entregada', 'color' => '#28A745', 'icono' => '✅', 'orden' => 6, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'PROBLEMAS', 'nombre' => 'Con Problemas', 'color' => '#FF5722', 'icono' => '☢️', 'orden' => 7],
+            ['codigo' => 'CANCELADA', 'nombre' => 'Cancelada', 'color' => '#6C757D', 'icono' => '✖️', 'orden' => 8, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'RETIRADO', 'nombre' => 'Retirado', 'color' => '#28A745', 'icono' => '✅🚚', 'orden' => 9, 'es_estado_final' => true, 'permite_edicion' => false],
         ];
 
         // ENTREGA (DELIVERY) STATES
         $entregaStates = [
-            ['codigo' => 'PROGRAMADO', 'nombre' => 'Programado', 'color' => '#FFC107', 'icono' => 'hourglass', 'orden' => 1],
-            ['codigo' => 'ASIGNADA', 'nombre' => 'Asignada a Chofer', 'color' => '#0275D8', 'icono' => 'assignment', 'orden' => 2],
-            ['codigo' => 'PREPARACION_CARGA', 'nombre' => 'Preparación de Carga', 'color' => '#9C27B0', 'icono' => 'inventory', 'orden' => 3],
-            ['codigo' => 'EN_CARGA', 'nombre' => 'En Carga', 'color' => '#673AB7', 'icono' => 'local-shipping', 'orden' => 4],
-            ['codigo' => 'LISTO_PARA_ENTREGA', 'nombre' => 'Listo para Entrega', 'color' => '#3F51B5', 'icono' => 'check-circle', 'orden' => 5],
-            ['codigo' => 'EN_CAMINO', 'nombre' => 'En Camino', 'color' => '#2196F3', 'icono' => 'directions-car', 'orden' => 6],
-            ['codigo' => 'EN_TRANSITO', 'nombre' => 'En Tránsito', 'color' => '#03A9F4', 'icono' => 'near-me', 'orden' => 7],
-            ['codigo' => 'LLEGO', 'nombre' => 'Llegó a Destino', 'color' => '#00BCD4', 'icono' => 'location-on', 'orden' => 8],
-            ['codigo' => 'ENTREGADO', 'nombre' => 'Entregado', 'color' => '#28A745', 'icono' => 'check-circle', 'orden' => 9, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'NOVEDAD', 'nombre' => 'Con Novedad', 'color' => '#FF9800', 'icono' => 'error', 'orden' => 10],
-            ['codigo' => 'RECHAZADO', 'nombre' => 'Rechazado', 'color' => '#F44336', 'icono' => 'cancel', 'orden' => 11, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'CANCELADA', 'nombre' => 'Cancelada', 'color' => '#6C757D', 'icono' => 'ban', 'orden' => 12, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'PROGRAMADO', 'nombre' => 'Programado', 'color' => '#FFC107', 'icono' => '⌚', 'orden' => 1],
+            ['codigo' => 'ASIGNADA', 'nombre' => 'Asignada a Chofer', 'color' => '#0275D8', 'icono' => '✅', 'orden' => 2],
+            ['codigo' => 'PREPARACION_CARGA', 'nombre' => 'Preparación de Carga', 'color' => '#9C27B0', 'icono' => '📦', 'orden' => 3],
+            ['codigo' => 'EN_CARGA', 'nombre' => 'En Carga', 'color' => '#673AB7', 'icono' => '📦', 'orden' => 4],
+            ['codigo' => 'LISTO_PARA_ENTREGA', 'nombre' => 'Listo para Entrega', 'color' => '#3F51B5', 'icono' => '✅', 'orden' => 5],
+            ['codigo' => 'EN_CAMINO', 'nombre' => 'En Camino', 'color' => '#2196F3', 'icono' => '🛤️🚚', 'orden' => 6],
+            ['codigo' => 'EN_TRANSITO', 'nombre' => 'En Tránsito', 'color' => '#03A9F4', 'icono' => '🛤️🚚', 'orden' => 7],
+            ['codigo' => 'LLEGO', 'nombre' => 'Llegó a Destino', 'color' => '#00BCD4', 'icono' => '📍', 'orden' => 8],
+            ['codigo' => 'ENTREGADO', 'nombre' => 'Entregado', 'color' => '#28A745', 'icono' => '✅', 'orden' => 9, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'NOVEDAD', 'nombre' => 'Con Novedad', 'color' => '#FF9800', 'icono' => '⚠️', 'orden' => 10],
+            ['codigo' => 'RECHAZADO', 'nombre' => 'Rechazado', 'color' => '#F44336', 'icono' => '✖️', 'orden' => 11, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'CANCELADA', 'nombre' => 'Cancelada', 'color' => '#6C757D', 'icono' => '✖️', 'orden' => 12, 'es_estado_final' => true, 'permite_edicion' => false],
         ];
 
         // VEHICLE STATES
         $vehiculoStates = [
-            ['codigo' => 'DISPONIBLE', 'nombre' => 'Disponible', 'color' => '#28A745', 'icono' => 'check', 'orden' => 1],
-            ['codigo' => 'EN_RUTA', 'nombre' => 'En Ruta', 'color' => '#2196F3', 'icono' => 'directions-car', 'orden' => 2],
-            ['codigo' => 'MANTENIMIENTO', 'nombre' => 'En Mantenimiento', 'color' => '#FFC107', 'icono' => 'build', 'orden' => 3],
-            ['codigo' => 'FUERA_SERVICIO', 'nombre' => 'Fuera de Servicio', 'color' => '#DC3545', 'icono' => 'cancel', 'orden' => 4],
+            ['codigo' => 'DISPONIBLE', 'nombre' => 'Disponible', 'color' => '#28A745', 'icono' => '✅', 'orden' => 1],
+            ['codigo' => 'EN_RUTA', 'nombre' => 'En Ruta', 'color' => '#2196F3', 'icono' => '🛤️🚚', 'orden' => 2],
+            ['codigo' => 'MANTENIMIENTO', 'nombre' => 'En Mantenimiento', 'color' => '#FFC107', 'icono' => '⚙️', 'orden' => 3],
+            ['codigo' => 'FUERA_SERVICIO', 'nombre' => 'Fuera de Servicio', 'color' => '#DC3545', 'icono' => '🚧', 'orden' => 4],
         ];
 
         // PAYMENT STATES
         $pagoStates = [
-            ['codigo' => 'PENDIENTE', 'nombre' => 'Pendiente', 'color' => '#FFC107', 'icono' => 'schedule', 'orden' => 1],
-            ['codigo' => 'PARCIAL', 'nombre' => 'Pago Parcial', 'color' => '#FF9800', 'icono' => 'hourglass-half', 'orden' => 2],
-            ['codigo' => 'PAGADO', 'nombre' => 'Pagado Completo', 'color' => '#28A745', 'icono' => 'check-circle', 'orden' => 3, 'es_estado_final' => true, 'permite_edicion' => false],
-            ['codigo' => 'VENCIDO', 'nombre' => 'Vencido', 'color' => '#DC3545', 'icono' => 'error', 'orden' => 4],
-            ['codigo' => 'ANULADO', 'nombre' => 'Anulado', 'color' => '#6C757D', 'icono' => 'ban', 'orden' => 5, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'PENDIENTE', 'nombre' => 'Pendiente', 'color' => '#FFC107', 'icono' => '⏳', 'orden' => 1],
+            ['codigo' => 'PARCIAL', 'nombre' => 'Pago Parcial', 'color' => '#FF9800', 'icono' => '🌓', 'orden' => 2],
+            ['codigo' => 'PAGADO', 'nombre' => 'Pagado Completo', 'color' => '#28A745', 'icono' => '✅', 'orden' => 3, 'es_estado_final' => true, 'permite_edicion' => false],
+            ['codigo' => 'VENCIDO', 'nombre' => 'Vencido', 'color' => '#DC3545', 'icono' => '✖️', 'orden' => 4],
+            ['codigo' => 'ANULADO', 'nombre' => 'Anulado', 'color' => '#6C757D', 'icono' => '✖️', 'orden' => 5, 'es_estado_final' => true, 'permite_edicion' => false],
         ];
 
         // Insert all states

@@ -207,28 +207,9 @@ export default function ScannerCodigoBarras({ onBarcodeDetected, enabled = true 
         await procesarCodigo(codigo);
     };
 
-    // Renderizar nada si no hay código detectado ni error
+    // No mostrar el botón flotante (deshabilitado)
     if (!codigoDetectado && !procesando && !error && !mostrarCamara) {
-        return (
-            <div className="fixed bottom-4 right-4 z-40">
-                <div
-                    className={`
-                        flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg border
-                        transition-all duration-300 cursor-pointer
-                        ${activo
-                            ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
-                            : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }
-                    `}
-                    onClick={() => setActivo(!activo)}
-                    title={activo ? 'Scanner activo - Click para desactivar' : 'Scanner inactivo - Click para activar'}
-                >
-                    <Barcode className="h-4 w-4" />
-                    <span className="text-xs font-medium">{activo ? 'Scanner ON' : 'Scanner OFF'}</span>
-                    {activo && <Check className="h-3 w-3" />}
-                </div>
-            </div>
-        );
+        return null;
     }
 
     return (

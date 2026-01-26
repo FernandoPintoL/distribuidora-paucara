@@ -2,10 +2,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\EmpleadoRequest;
+use App\Models\Caja;
 use App\Models\Empleado;
 use App\Models\User;
 use App\Services\RoleCompatibilityValidator;
 use Exception;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -187,57 +189,92 @@ class EmpleadoController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($request, $rolesAsignados) {
-            $user = null;
+        try {
+            DB::transaction(function () use ($request, $rolesAsignados) {
+                $user = null;
 
-            // Crear usuario solo si se solicita o puede acceder al sistema
-            if ($request->crear_usuario || $request->puede_acceder_sistema) {
-                // Generar usernick si no se proporciona
-                $usernick = $request->usernick ?: $this->generarUsernickUnico($request->nombre);
+                // Crear usuario solo si se solicita o puede acceder al sistema
+                if ($request->crear_usuario || $request->puede_acceder_sistema) {
+                    // Generar usernick si no se proporciona
+                    $usernick = $request->usernick ?: $this->generarUsernickUnico($request->nombre);
 
-                $user = User::create([
-                    'name'              => $request->nombre,
-                    'usernick'          => $usernick,
-                    'email'             => $request->email ?: null,        // Email es opcional - puede ser null si no se proporciona
-                    'password'          => Hash::make($request->password), // Usar password del request
-                    'email_verified_at' => $request->email ? now() : null, // Solo verificar si se proporciona email
-                    'activo'            => $request->puede_acceder_sistema ?? false,
+                    $user = User::create([
+                        'name'              => $request->nombre,
+                        'usernick'          => $usernick,
+                        'email'             => $request->email ?: null,        // Email es opcional - puede ser null si no se proporciona
+                        'password'          => Hash::make($request->password), // Usar password del request
+                        'email_verified_at' => $request->email ? now() : null, // Solo verificar si se proporciona email
+                        'activo'            => $request->puede_acceder_sistema ?? false,
+                        // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
+                        'empresa_id'        => Auth::user()?->empresa_id,
+                    ]);
+
+                    // Asignar múltiples roles
+                    if (! empty($rolesAsignados)) {
+                        $user->syncRoles($rolesAsignados);
+                    }
+                }
+
+                // Preparar datos para el empleado con valores por defecto
+                $empleadoData = [
+                    'user_id'               => $user ? $user->id : null,
                     // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
-                    'empresa_id'        => Auth::user()?->empresa_id,
+                    'empresa_id'            => Auth::user()?->empresa_id,
+                    'ci'                    => $request->ci,
+                    'telefono'              => $request->telefono,
+                    'direccion'             => $request->direccion,
+                    'fecha_ingreso'         => $request->fecha_ingreso,
+                    'estado'                => $request->estado ?? 'activo',
+                    'puede_acceder_sistema' => $request->puede_acceder_sistema ?? false,
+                ];
+
+                // Crear empleado sin código inicialmente
+                $empleado = Empleado::create($empleadoData);
+
+                // Generar código de empleado automáticamente
+                $codigoGenerado = $this->generarCodigoEmpleado($empleado->id);
+                $empleado->update([
+                    'codigo_empleado' => $codigoGenerado,
+                    'numero_empleado' => $codigoGenerado,
                 ]);
 
-                // Asignar múltiples roles
-                if (! empty($rolesAsignados)) {
-                    $user->syncRoles($rolesAsignados);
+                // Crear caja automáticamente si el empleado puede acceder al sistema
+                if ($user && $request->puede_acceder_sistema) {
+                    Caja::create([
+                        'user_id'          => $user->id,
+                        'nombre'           => $request->nombre,
+                        'ubicacion'        => $request->direccion ?? 'Por definir',
+                        'monto_inicial_dia' => 0,
+                        'activa'           => true,
+                    ]);
+                }
+            });
+
+            return redirect()->route('empleados.index')
+                ->with('success', 'Empleado creado exitosamente.');
+        } catch (UniqueConstraintViolationException $e) {
+            // Mapear errores de restricción única a campos legibles
+            $errorMessages = [
+                'empleados_ci_unique'              => 'El CI ya existe en el sistema.',
+                'users_usernick_unique'            => 'El nombre de usuario (nick) ya está en uso.',
+                'users_email_unique'               => 'El email ya está registrado.',
+                'empleados_codigo_empleado_unique' => 'El código de empleado ya existe.',
+            ];
+
+            $field = 'empleado';
+            foreach ($errorMessages as $constraint => $message) {
+                if (str_contains($e->getMessage(), $constraint)) {
+                    return back()->withErrors([
+                        'ci' => $message,
+                    ])->withInput();
                 }
             }
 
-            // Preparar datos para el empleado con valores por defecto
-            $empleadoData = [
-                'user_id'               => $user ? $user->id : null,
-                // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
-                'empresa_id'            => Auth::user()?->empresa_id,
-                'ci'                    => $request->ci,
-                'telefono'              => $request->telefono,
-                'direccion'             => $request->direccion,
-                'fecha_ingreso'         => $request->fecha_ingreso,
-                'estado'                => $request->estado ?? 'activo',
-                'puede_acceder_sistema' => $request->puede_acceder_sistema ?? false,
-            ];
-
-            // Crear empleado sin código inicialmente
-            $empleado = Empleado::create($empleadoData);
-
-            // Generar código de empleado automáticamente
-            $codigoGenerado = $this->generarCodigoEmpleado($empleado->id);
-            $empleado->update([
-                'codigo_empleado' => $codigoGenerado,
-                'numero_empleado' => $codigoGenerado,
-            ]);
-        });
-
-        return redirect()->route('empleados.index')
-            ->with('success', 'Empleado creado exitosamente.');
+            // Si no se identifica el campo, retornar error genérico
+            return back()->withErrors([
+                'empleado' => 'El empleado ya existe en el sistema. Verifica los datos ingresados.',
+            ])->withInput();
+        }
     }
 
     /**
@@ -436,6 +473,12 @@ class EmpleadoController extends Controller
                 }
 
                 $user->save();
+
+                // Actualizar nombre en cajas asociadas al usuario
+                if ($request->has('nombre')) {
+                    Caja::where('user_id', $user->id)
+                        ->update(['nombre' => $request->nombre]);
+                }
 
                 // Actualizar roles si se especifican
                 if ($request->has('roles') && is_array($request->roles)) {

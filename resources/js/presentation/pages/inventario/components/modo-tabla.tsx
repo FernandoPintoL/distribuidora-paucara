@@ -18,8 +18,8 @@ interface ModoTablaProps {
 
 export default function ModoTabla({
     items,
-    productos,
-    almacenes,
+    productos = [],
+    almacenes = [],
     onAgregarItem,
     onActualizarItem,
     onEliminarItem,
@@ -56,16 +56,16 @@ export default function ModoTabla({
         );
     }
 
-    const productoMap = new Map(productos.map(p => [p.id, p]));
-    const almacenMap = new Map(almacenes.map(a => [a.id, a]));
+    const productoMap = new Map((productos || []).map(p => [p.id, p]));
+    const almacenMap = new Map((almacenes || []).map(a => [a.id, a]));
 
-    const productosOptions = productos.map(p => ({
+    const productosOptions = (productos || []).map(p => ({
         value: p.id,
         label: `${p.nombre}${p.sku ? ` (${p.sku})` : ''}`,
         description: [p.categoria, p.marca].filter(Boolean).join(' • ')
     }));
 
-    const almacenesOptions = almacenes.map(a => ({
+    const almacenesOptions = (almacenes || []).map(a => ({
         value: a.id,
         label: a.nombre,
     }));
