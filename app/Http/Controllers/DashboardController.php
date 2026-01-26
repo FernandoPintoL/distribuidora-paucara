@@ -48,7 +48,7 @@ class DashboardController extends Controller
             : $allMetrics;
 
         $graficoVentas = $datosGenerales['grafico_ventas'] ?? $this->dashboardService->getGraficoVentas($periodo);
-        $productosMasVendidos = $datosGenerales['productos_mas_vendidos'] ?? $this->dashboardService->getProductosMasVendidos(10);
+        $productosMasVendidos = $datosGenerales['productos_mas_vendidos'] ?? $this->dashboardService->getProductosMasVendidos(10, $periodo);
         $alertasStock = $datosGenerales['alertas_stock'] ?? $this->dashboardService->getAlertasStock();
         $ventasPorCanal = $datosGenerales['ventas_por_canal'] ?? $this->dashboardService->getVentasPorCanal($periodo);
 
@@ -91,7 +91,7 @@ class DashboardController extends Controller
         $dias = $request->get('dias', 30);
 
         $data = match ($tipo) {
-            'ventas' => $this->dashboardService->getGraficoVentas('diario', $dias),
+            'ventas' => $this->dashboardService->getGraficoVentas((string)$dias),
             default => []
         };
 
@@ -107,10 +107,11 @@ class DashboardController extends Controller
     public function productosMasVendidos(Request $request)
     {
         $limite = $request->get('limite', 10);
+        $periodo = $request->get('periodo', 'mes_actual');
 
         return response()->json([
             'success' => true,
-            'data' => $this->dashboardService->getProductosMasVendidos($limite),
+            'data' => $this->dashboardService->getProductosMasVendidos($limite, $periodo),
         ]);
     }
 

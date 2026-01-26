@@ -313,7 +313,7 @@ productosMasVendidos.head = (options?: RouteQueryOptions): RouteDefinition<'head
     productosMasVendidos.form = productosMasVendidosForm
 /**
 * @see \App\Http\Controllers\DashboardController::alertasStock
- * @see app/Http/Controllers/DashboardController.php:120
+ * @see app/Http/Controllers/DashboardController.php:121
  * @route '/api/dashboard/alertas-stock'
  */
 export const alertasStock = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -328,7 +328,7 @@ alertasStock.definition = {
 
 /**
 * @see \App\Http\Controllers\DashboardController::alertasStock
- * @see app/Http/Controllers/DashboardController.php:120
+ * @see app/Http/Controllers/DashboardController.php:121
  * @route '/api/dashboard/alertas-stock'
  */
 alertasStock.url = (options?: RouteQueryOptions) => {
@@ -337,7 +337,7 @@ alertasStock.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\DashboardController::alertasStock
- * @see app/Http/Controllers/DashboardController.php:120
+ * @see app/Http/Controllers/DashboardController.php:121
  * @route '/api/dashboard/alertas-stock'
  */
 alertasStock.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -346,7 +346,7 @@ alertasStock.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\DashboardController::alertasStock
- * @see app/Http/Controllers/DashboardController.php:120
+ * @see app/Http/Controllers/DashboardController.php:121
  * @route '/api/dashboard/alertas-stock'
  */
 alertasStock.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -356,7 +356,7 @@ alertasStock.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\DashboardController::alertasStock
- * @see app/Http/Controllers/DashboardController.php:120
+ * @see app/Http/Controllers/DashboardController.php:121
  * @route '/api/dashboard/alertas-stock'
  */
     const alertasStockForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -366,7 +366,7 @@ alertasStock.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\DashboardController::alertasStock
- * @see app/Http/Controllers/DashboardController.php:120
+ * @see app/Http/Controllers/DashboardController.php:121
  * @route '/api/dashboard/alertas-stock'
  */
         alertasStockForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -375,7 +375,7 @@ alertasStock.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\DashboardController::alertasStock
- * @see app/Http/Controllers/DashboardController.php:120
+ * @see app/Http/Controllers/DashboardController.php:121
  * @route '/api/dashboard/alertas-stock'
  */
         alertasStockForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -391,7 +391,7 @@ alertasStock.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     alertasStock.form = alertasStockForm
 /**
 * @see \App\Http\Controllers\DashboardController::ventasPorCanal
- * @see app/Http/Controllers/DashboardController.php:131
+ * @see app/Http/Controllers/DashboardController.php:132
  * @route '/api/dashboard/ventas-por-canal'
  */
 export const ventasPorCanal = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -406,7 +406,7 @@ ventasPorCanal.definition = {
 
 /**
 * @see \App\Http\Controllers\DashboardController::ventasPorCanal
- * @see app/Http/Controllers/DashboardController.php:131
+ * @see app/Http/Controllers/DashboardController.php:132
  * @route '/api/dashboard/ventas-por-canal'
  */
 ventasPorCanal.url = (options?: RouteQueryOptions) => {
@@ -415,7 +415,7 @@ ventasPorCanal.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\DashboardController::ventasPorCanal
- * @see app/Http/Controllers/DashboardController.php:131
+ * @see app/Http/Controllers/DashboardController.php:132
  * @route '/api/dashboard/ventas-por-canal'
  */
 ventasPorCanal.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -424,7 +424,7 @@ ventasPorCanal.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\DashboardController::ventasPorCanal
- * @see app/Http/Controllers/DashboardController.php:131
+ * @see app/Http/Controllers/DashboardController.php:132
  * @route '/api/dashboard/ventas-por-canal'
  */
 ventasPorCanal.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -434,7 +434,7 @@ ventasPorCanal.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\DashboardController::ventasPorCanal
- * @see app/Http/Controllers/DashboardController.php:131
+ * @see app/Http/Controllers/DashboardController.php:132
  * @route '/api/dashboard/ventas-por-canal'
  */
     const ventasPorCanalForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -444,7 +444,7 @@ ventasPorCanal.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\DashboardController::ventasPorCanal
- * @see app/Http/Controllers/DashboardController.php:131
+ * @see app/Http/Controllers/DashboardController.php:132
  * @route '/api/dashboard/ventas-por-canal'
  */
         ventasPorCanalForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -453,7 +453,7 @@ ventasPorCanal.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\DashboardController::ventasPorCanal
- * @see app/Http/Controllers/DashboardController.php:131
+ * @see app/Http/Controllers/DashboardController.php:132
  * @route '/api/dashboard/ventas-por-canal'
  */
         ventasPorCanalForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
