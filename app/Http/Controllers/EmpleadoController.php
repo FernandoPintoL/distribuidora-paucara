@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\RoleCompatibilityValidator;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -122,7 +123,7 @@ class EmpleadoController extends Controller
                 $description = 'Rol del sistema: ' . $role->name;
 
                 // Agregar indicador visual para roles privilegiados
-                if (in_array($role->name, ['Super Admin', 'Admin'])) {
+                if (in_array($role->name, ['Super Admin', 'Admin', 'admin'])) {
                     $description .= ' 🔒';
                 }
 
@@ -181,8 +182,8 @@ class EmpleadoController extends Controller
         if ($request->crear_usuario || $request->puede_acceder_sistema) {
             $request->validate([
                 'email'    => 'nullable|string|email|max:255|unique:users', // Email es completamente opcional
-                'usernick' => 'required|string|max:255|unique:users', // Usernick es requerido si puede acceder al sistema
-                'password' => 'required|string|min:8|confirmed', // Password requerido al crear usuario
+                'usernick' => 'required|string|max:255|unique:users',       // Usernick es requerido si puede acceder al sistema
+                'password' => 'required|string|min:8|confirmed',            // Password requerido al crear usuario
             ]);
         }
 
@@ -197,7 +198,7 @@ class EmpleadoController extends Controller
                 $user = User::create([
                     'name'              => $request->nombre,
                     'usernick'          => $usernick,
-                    'email'             => $request->email ?: null, // Email es opcional - puede ser null si no se proporciona
+                    'email'             => $request->email ?: null,        // Email es opcional - puede ser null si no se proporciona
                     'password'          => Hash::make($request->password), // Usar password del request
                     'email_verified_at' => $request->email ? now() : null, // Solo verificar si se proporciona email
                     'activo'            => $request->puede_acceder_sistema ?? false,
@@ -213,15 +214,15 @@ class EmpleadoController extends Controller
 
             // Preparar datos para el empleado con valores por defecto
             $empleadoData = [
-                'user_id'                      => $user ? $user->id : null,
+                'user_id'               => $user ? $user->id : null,
                 // ✅ NUEVO: Asignar la empresa_id del usuario autenticado
-                'empresa_id'                   => Auth::user()?->empresa_id,
-                'ci'                           => $request->ci,
-                'telefono'                     => $request->telefono,
-                'direccion'                    => $request->direccion,
-                'fecha_ingreso'                => $request->fecha_ingreso,
-                'estado'                       => $request->estado ?? 'activo',
-                'puede_acceder_sistema'        => $request->puede_acceder_sistema ?? false,
+                'empresa_id'            => Auth::user()?->empresa_id,
+                'ci'                    => $request->ci,
+                'telefono'              => $request->telefono,
+                'direccion'             => $request->direccion,
+                'fecha_ingreso'         => $request->fecha_ingreso,
+                'estado'                => $request->estado ?? 'activo',
+                'puede_acceder_sistema' => $request->puede_acceder_sistema ?? false,
             ];
 
             // Crear empleado sin código inicialmente
@@ -282,7 +283,7 @@ class EmpleadoController extends Controller
                 $description = 'Rol del sistema: ' . $role->name;
 
                 // Agregar indicador visual para roles privilegiados
-                if (in_array($role->name, ['Super Admin', 'Admin'])) {
+                if (in_array($role->name, ['Super Admin', 'Admin', 'admin'])) {
                     $description .= ' 🔒';
                 }
 
@@ -394,7 +395,7 @@ class EmpleadoController extends Controller
         // VALIDACIÓN: Verificar compatibilidad de roles
         if ($request->has('roles') && is_array($request->roles) && ! empty($request->roles)) {
             try {
-                $rolesActuales = $empleado->user?->roles->pluck('name')->toArray() ?? [];
+                $rolesActuales      = $empleado->user?->roles->pluck('name')->toArray() ?? [];
                 $rolActualPrincipal = count($rolesActuales) > 0 ? $rolesActuales[0] : null;
 
                 $validador = new RoleCompatibilityValidator();
@@ -421,7 +422,7 @@ class EmpleadoController extends Controller
 
                 if ($request->has('email')) {
                     $user->email = $request->email ?: null; // Email es opcional
-                    // Actualizar email_verified_at solo si se proporciona email
+                                                            // Actualizar email_verified_at solo si se proporciona email
                     if ($request->email && ! $user->email_verified_at) {
                         $user->email_verified_at = now();
                     } elseif (! $request->email) {
@@ -509,80 +510,30 @@ class EmpleadoController extends Controller
             return [];
         }
 
-        // Definir jerarquía de roles
-        $roleHierarchy = [
-            'Super Admin' => [ // Puede asignar TODOS los roles
-                'Super Admin',
-                'Admin',
-                'Manager',
-                'Gerente',
-                'Vendedor',
-                'Preventista',
-                'Gestor de Clientes',
-                'Compras',
-                'Comprador',
-                'Inventario',
-                'Gestor de Almacén',
-                'Logística',
-                'Chofer',
-                'Cajero',
-                'Contabilidad',
-                'Reportes',
-                'Empleado',
-                'Cliente',
-            ],
-            'Admin'       => [ // NO puede asignar Super Admin
-                'Admin',
-                'Manager',
-                'Gerente',
-                'Vendedor',
-                'Preventista',
-                'Gestor de Clientes',
-                'Compras',
-                'Comprador',
-                'Inventario',
-                'Gestor de Almacén',
-                'Logística',
-                'Chofer',
-                'Cajero',
-                'Contabilidad',
-                'Reportes',
-                'Empleado',
-                'Cliente',
-            ],
-            'Manager'     => [ // Solo roles operativos (Nivel 3 y 4)
-                'Gerente',
-                'Vendedor',
-                'Preventista',
-                'Gestor de Clientes',
-                'Compras',
-                'Comprador',
-                'Inventario',
-                'Gestor de Almacén',
-                'Logística',
-                'Chofer',
-                'Cajero',
-                'Contabilidad',
-                'Reportes',
-                'Empleado',
-                'Cliente',
-            ],
+        // ✅ ROLES DISPONIBLES: SOLO los 5 roles principales (minúsculas para consistencia con frontend)
+        $rolesDisponibles = [
+            'admin',
+            'manager',
+            'preventista',
+            'chofer',
+            'cajero',
         ];
 
+        // 🔍 DEBUG: Log de roles del usuario
+        $rolesDelUsuario = $user->getRoleNames()->toArray();
+        Log::info('🔍 DEBUG getRolesAsignablesPorUsuario', [
+            'usuario_id' => $user->id,
+            'usuario_name' => $user->name,
+            'roles_usuario' => $rolesDelUsuario,
+        ]);
+
         // Verificar qué roles puede asignar el usuario actual
-        if ($user->hasRole('Super Admin')) {
-            return $roleHierarchy['Super Admin'];
+        // ✅ Cualquier usuario autenticado puede asignar estos 5 roles
+        if ($user->exists) {
+            return $rolesDisponibles;
         }
 
-        if ($user->hasRole('Admin')) {
-            return $roleHierarchy['Admin'];
-        }
-
-        if ($user->hasRole('Manager')) {
-            return $roleHierarchy['Manager'];
-        }
-
-        // Si no tiene un rol con permisos de asignación, no puede asignar ningún rol
+        // Si no existe, no puede asignar ningún rol
         return [];
     }
 
@@ -784,19 +735,29 @@ class EmpleadoController extends Controller
         try {
             $rolesPermitidos = $this->getRolesAsignablesPorUsuario();
 
+            // ✅ Convertir roles permitidos a minúsculas para comparación case-insensitive
+            $rolesPermitidosLower = array_map('strtolower', $rolesPermitidos);
+
             $roles = Role::orderBy('name')
                 ->get()
-                ->filter(function ($role) use ($rolesPermitidos) {
-                    return in_array($role->name, $rolesPermitidos);
+                ->filter(function ($role) use ($rolesPermitidosLower) {
+                    // Comparación case-insensitive: convertir el nombre del rol a minúsculas
+                    return in_array(strtolower($role->name), $rolesPermitidosLower);
                 })
-                ->map(function ($role) {
+                ->groupBy(function ($role) {
+                    // Agrupar por nombre en minúsculas para eliminar duplicados case-insensitive
+                    return strtolower($role->name);
+                })
+                ->map(function ($group) {
+                    // Tomar el primer rol de cada grupo (elimina duplicados)
+                    $role = $group->first();
                     return [
-                        'value'       => $role->name,
-                        'label'       => $role->name,
-                        'description' => $this->obtenerDescripcionRol($role->name),
+                        'value'         => strtolower($role->name), // ✅ Usar minúsculas como valor
+                        'label'         => strtolower($role->name), // ✅ Usar minúsculas como label
+                        'description'   => $this->obtenerDescripcionRol($role->name),
                         'permisosCount' => $role->permissions->count(),
-                        'permisos' => $this->obtenerPermisosResumenRol($role->name),
-                        'capabilities' => $this->obtenerCapacidadesRol($role->name),
+                        'permisos'      => $this->obtenerPermisosResumenRol($role->name),
+                        'capabilities'  => $this->obtenerCapacidadesRol($role->name),
                     ];
                 })
                 ->values()
@@ -818,28 +779,16 @@ class EmpleadoController extends Controller
      */
     private function obtenerDescripcionRol(string $rolName): string
     {
+        // ✅ Usar minúsculas para las claves
         $descripciones = [
-            'Super Admin' => 'Acceso total al sistema, gestión de administradores y configuración crítica',
-            'Admin' => 'Casi acceso total, excepto funciones críticas de sistema',
-            'Manager' => 'Gestión de operaciones y personal operativo',
-            'Gerente' => 'Supervisión de departamento y reportes',
-            'Vendedor' => 'Gestión de clientes, creación de ventas y proformas',
-            'Preventista' => 'Gestión de cartera de clientes, ventas, proformas y cajas',
-            'Gestor de Clientes' => 'Gestión completa de base de clientes',
-            'Comprador' => 'Gestión de compras y proveedores',
-            'Compras' => 'Supervisión de procesos de compra',
-            'Gestor de Inventario' => 'Control de stock y movimientos de inventario',
-            'Gestor de Almacén' => 'Gestión de almacenes y transferencias',
-            'Gestor de Logística' => 'Coordinación de envíos y entregas',
-            'Chofer' => 'Gestión de entregas y viajes asignados',
-            'Cajero' => 'Apertura, cierre y movimientos de cajas',
-            'Contabilidad' => 'Registro de asientos contables y reportes',
-            'Reportes' => 'Acceso a reportes y análisis del sistema',
-            'Empleado' => 'Acceso básico al sistema',
-            'Cliente' => 'Acceso portal de clientes (solo lectura)',
+            'admin'       => 'Acceso casi total al sistema, gestión de usuarios y configuración',
+            'manager'     => 'Gestión de operaciones y supervisión de personal',
+            'preventista' => 'Gestión de cartera de clientes, ventas, proformas y cajas',
+            'chofer'      => 'Gestión de entregas y viajes asignados',
+            'cajero'      => 'Apertura, cierre y movimientos de cajas',
         ];
 
-        return $descripciones[$rolName] ?? 'Rol del sistema: ' . $rolName;
+        return $descripciones[strtolower($rolName)] ?? 'Rol del sistema: ' . $rolName;
     }
 
     /**
@@ -847,60 +796,37 @@ class EmpleadoController extends Controller
      */
     private function obtenerPermisosResumenRol(string $rolName): array
     {
+        // ✅ Usar minúsculas para las claves
         $permisosResumen = [
-            'Super Admin' => [
-                '✓ Todos los permisos del sistema',
-                '✓ Gestión de administradores',
-                '✓ Configuración crítica del sistema',
-            ],
-            'Admin' => [
-                '✓ Casi todos los permisos',
+            'admin'       => [
+                '✓ Acceso casi total del sistema',
                 '✓ Gestión de usuarios y roles',
-                '✗ Configuración crítica del sistema',
+                '✓ Asignar empleados',
             ],
-            'Vendedor' => [
-                '✓ CRUD de clientes',
-                '✓ Crear y editar ventas',
-                '✓ Ver proformas y aprobar',
-                '✗ Gestionar cajas',
-                '✗ Compras',
+            'manager'     => [
+                '✓ Gestión de operaciones',
+                '✓ Supervisión de personal',
+                '✓ Acceso a reportes y análisis',
             ],
-            'Preventista' => [
+            'preventista' => [
                 '✓ CRUD de clientes',
-                '✓ CRUD de ventas',
-                '✓ CRUD de proformas + Aprobar/Convertir',
-                '✓ Gestión de cajas (Abrir/Cerrar)',
+                '✓ CRUD de ventas y proformas',
+                '✓ Gestión de cajas',
                 '✓ Ver inventario y logística',
-                '✗ Compras',
-                '✗ Administración',
             ],
-            'Gestor de Clientes' => [
-                '✓ CRUD completo de clientes',
-                '✓ Gestión de direcciones',
-                '✓ Ventanas de entrega',
-                '✓ Fotos y documentos',
+            'chofer'      => [
+                '✓ Ver entregas asignadas',
+                '✓ Confirmar entregas',
+                '✓ Seguimiento de ruta',
             ],
-            'Cajero' => [
+            'cajero'      => [
                 '✓ Abrir y cerrar cajas',
                 '✓ Registrar transacciones',
                 '✓ Ver movimientos del día',
-                '✗ Crear ventas',
-            ],
-            'Chofer' => [
-                '✓ Ver entregas asignadas',
-                '✓ Confirmar entrega',
-                '✓ Seguimiento de ruta',
-                '✗ Crear documentos',
-            ],
-            'Gestor de Almacén' => [
-                '✓ Ver stock disponible',
-                '✓ Realizar transferencias',
-                '✓ Registro de mermas',
-                '✓ Ajustes de inventario',
             ],
         ];
 
-        return $permisosResumen[$rolName] ?? [
+        return $permisosResumen[strtolower($rolName)] ?? [
             '✓ Acceso específico a funciones del rol',
         ];
     }
@@ -910,28 +836,70 @@ class EmpleadoController extends Controller
      */
     private function obtenerCapacidadesRol(string $rolName): array
     {
+        // ✅ ROLES DISPONIBLES: Solo los 5 roles principales - Usar minúsculas para las claves
         $capacidades = [
-            'Super Admin' => ['admin' => true, 'usuarios' => true, 'ventas' => true, 'compras' => true, 'inventario' => true],
-            'Admin' => ['admin' => false, 'usuarios' => true, 'ventas' => true, 'compras' => true, 'inventario' => true],
-            'Vendedor' => ['admin' => false, 'usuarios' => false, 'ventas' => true, 'compras' => false, 'inventario' => false],
-            'Preventista' => ['admin' => false, 'usuarios' => false, 'ventas' => true, 'compras' => false, 'inventario' => false, 'cajas' => true],
-            'Cajero' => ['admin' => false, 'usuarios' => false, 'ventas' => false, 'compras' => false, 'inventario' => false, 'cajas' => true],
-            'Gestor de Almacén' => ['admin' => false, 'usuarios' => false, 'ventas' => false, 'compras' => false, 'inventario' => true],
+            'admin'       => ['admin' => true, 'usuarios' => true, 'ventas' => true, 'cajas' => true],
+            'manager'     => ['admin' => false, 'usuarios' => true, 'ventas' => true, 'cajas' => false],
+            'preventista' => ['admin' => false, 'usuarios' => false, 'ventas' => true, 'cajas' => true],
+            'cajero'      => ['admin' => false, 'usuarios' => false, 'ventas' => false, 'cajas' => true],
+            'chofer'      => ['admin' => false, 'usuarios' => false, 'ventas' => false, 'cajas' => false],
         ];
 
-        return $capacidades[$rolName] ?? [];
+        return $capacidades[strtolower($rolName)] ?? [];
     }
 
     /**
      * Obtiene el rol sugerido automáticamente basado en el cargo del empleado
      * DEPRECATED: La columna 'cargo' fue eliminada de la tabla empleados
      */
+    /**
+     * Obtiene rol sugerido basado en el ID del empleado o campos específicos
+     * Usa lógica de mapeo: preventista_id → Preventista, etc.
+     */
     public function getRolSugeridoPorCargo(Request $request)
     {
-        // Funcionalidad deprecada - la columna 'cargo' ya no existe
-        return response()->json([
-            'rolSugerido' => null,
-            'mensaje' => 'No hay rol sugerido automáticamente. Selecciona uno manualmente.',
-        ]);
+        try {
+            $empleadoId = $request->input('empleado_id');
+            $preventista = $request->input('preventista'); // Booleano
+            $esCajero = $request->input('es_cajero'); // Booleano
+            $cargo = $request->input('cargo'); // Para compatibilidad futura
+
+            $rolSugerido = null;
+            $mensaje = 'No hay rol sugerido automáticamente.';
+
+            // Lógica de mapeo: Si tiene preventista_id activado → Preventista
+            if ($preventista) {
+                $rolSugerido = 'Preventista';
+                $mensaje = 'Se sugiere asignar el rol Preventista por su perfil.';
+            }
+
+            // Si es cajero → Cajero
+            if ($esCajero) {
+                $rolSugerido = 'Cajero';
+                $mensaje = 'Se sugiere asignar el rol Cajero por su perfil.';
+            }
+
+            // Por defecto para empleado con acceso al sistema
+            if (!$rolSugerido && $empleadoId) {
+                $empleado = Empleado::find($empleadoId);
+                if ($empleado) {
+                    // Puedes agregar más lógica aquí basada en propiedades del empleado
+                    $rolSugerido = 'Empleado';
+                    $mensaje = 'Se sugiere un acceso básico al sistema.';
+                }
+            }
+
+            return response()->json([
+                'rolSugerido' => $rolSugerido,
+                'mensaje'     => $mensaje ?: 'Selecciona uno o más roles manualmente.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en getRolSugeridoPorCargo: ' . $e->getMessage());
+
+            return response()->json([
+                'rolSugerido' => null,
+                'mensaje'     => 'No hay rol sugerido. Selecciona manualmente.',
+            ]);
+        }
     }
 }

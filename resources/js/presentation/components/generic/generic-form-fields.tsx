@@ -354,6 +354,7 @@ export default function GenericFormFields<F extends BaseFormData>({
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field.key, e.target.value)}
               placeholder={placeholderValue}
               disabled={fieldDisabled}
+              autoComplete="new-password"
               className={`pr-10 transition-all duration-200 ${error ? 'border-2 border-red-500 focus-visible:ring-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950/30' : ''}`}
               minLength={field.validation?.minLength}
               maxLength={field.validation?.maxLength}
