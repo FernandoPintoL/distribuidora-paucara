@@ -1,10 +1,9 @@
 <?php
-
 namespace App\Services\Notifications;
 
 use App\Models\Proforma;
-use App\Models\Venta;
 use App\Models\User;
+use App\Models\Venta;
 use App\Services\WebSocket\ProformaWebSocketService;
 use Illuminate\Support\Collection;
 
@@ -27,7 +26,7 @@ class ProformaNotificationService
         ProformaWebSocketService $wsService
     ) {
         $this->dbNotificationService = $dbNotificationService;
-        $this->wsService = $wsService;
+        $this->wsService             = $wsService;
     }
 
     /**
@@ -38,17 +37,17 @@ class ProformaNotificationService
     public function notifyCreated(Proforma $proforma): bool
     {
         // 1. Obtener usuarios a notificar
-        $users = $this->getUsersForCreated($proforma);
+        $users   = $this->getUsersForCreated($proforma);
         $userIds = $users->pluck('id')->toArray();
 
         // 2. Guardar en BD (persistente)
         $this->dbNotificationService->create($userIds, 'proforma.creada', [
             'proforma_numero' => $proforma->numero,
-            'cliente_nombre' => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id' => $proforma->cliente_id,
-            'total' => (float) $proforma->total,
-            'items_count' => $proforma->detalles->count(),
-            'estado' => $proforma->estado,
+            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'      => $proforma->cliente_id,
+            'total'           => (float) $proforma->total,
+            'items_count'     => $proforma->detalles->count(),
+            'estado'          => $proforma->estado,
         ], [
             'proforma_id' => $proforma->id,
         ]);
@@ -63,17 +62,17 @@ class ProformaNotificationService
     public function notifyApproved(Proforma $proforma): bool
     {
         // 1. Obtener usuarios a notificar
-        $users = $this->getUsersForApproved($proforma);
+        $users   = $this->getUsersForApproved($proforma);
         $userIds = $users->pluck('id')->toArray();
 
         // 2. Guardar en BD
         $this->dbNotificationService->create($userIds, 'proforma.aprobada', [
             'proforma_numero' => $proforma->numero,
-            'cliente_nombre' => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id' => $proforma->cliente_id,
-            'total' => (float) $proforma->total,
-            'aprobador' => $proforma->usuarioAprobador->name ?? 'Sistema',
-            'estado' => $proforma->estado,
+            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'      => $proforma->cliente_id,
+            'total'           => (float) $proforma->total,
+            'aprobador'       => $proforma->usuarioAprobador->name ?? 'Sistema',
+            'estado'          => $proforma->estado,
         ], [
             'proforma_id' => $proforma->id,
         ]);
@@ -88,18 +87,18 @@ class ProformaNotificationService
     public function notifyRejected(Proforma $proforma, string $reason = ''): bool
     {
         // 1. Obtener usuarios a notificar
-        $users = $this->getUsersForRejected($proforma);
+        $users   = $this->getUsersForRejected($proforma);
         $userIds = $users->pluck('id')->toArray();
 
         // 2. Guardar en BD
         $this->dbNotificationService->create($userIds, 'proforma.rechazada', [
             'proforma_numero' => $proforma->numero,
-            'cliente_nombre' => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id' => $proforma->cliente_id,
-            'total' => (float) $proforma->total,
-            'motivo_rechazo' => $reason,
-            'rechazador' => auth()->user()->name ?? 'Sistema',
-            'estado' => $proforma->estado,
+            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'      => $proforma->cliente_id,
+            'total'           => (float) $proforma->total,
+            'motivo_rechazo'  => $reason,
+            'rechazador'      => auth()->user()->name ?? 'Sistema',
+            'estado'          => $proforma->estado,
         ], [
             'proforma_id' => $proforma->id,
         ]);
@@ -114,20 +113,20 @@ class ProformaNotificationService
     public function notifyConverted(Proforma $proforma, Venta $venta): bool
     {
         // 1. Obtener usuarios internos a notificar
-        $users = $this->getUsersForConverted($proforma);
+        $users   = $this->getUsersForConverted($proforma);
         $userIds = $users->pluck('id')->toArray();
 
         // 2. Guardar en BD
         $this->dbNotificationService->create($userIds, 'proforma.convertida', [
             'proforma_numero' => $proforma->numero,
-            'venta_numero' => $venta->numero ?? null,
-            'cliente_nombre' => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id' => $proforma->cliente_id,
-            'total' => (float) $venta->total ?? (float) $proforma->total,
-            'estado' => $proforma->estado,
+            'venta_numero'    => $venta->numero ?? null,
+            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'      => $proforma->cliente_id,
+            'total'           => (float) $venta->total ?? (float) $proforma->total,
+            'estado'          => $proforma->estado,
         ], [
             'proforma_id' => $proforma->id,
-            'venta_id' => $venta->id,
+            'venta_id'    => $venta->id,
         ]);
 
         // 3. ✅ NUEVO: Enviar notificación DIRECTA al cliente (incluso sin user_id)
@@ -145,20 +144,20 @@ class ProformaNotificationService
     public function notifyCoordination(Proforma $proforma, int $usuarioId): bool
     {
         // 1. Obtener usuarios a notificar
-        $users = $this->getUsersForCoordination($proforma);
+        $users   = $this->getUsersForCoordination($proforma);
         $userIds = $users->pluck('id')->toArray();
 
         // 2. Guardar en BD
         $this->dbNotificationService->create($userIds, 'proforma.coordinacion.actualizada', [
-            'proforma_numero' => $proforma->numero,
-            'cliente_nombre' => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id' => $proforma->cliente_id,
-            'usuario_actualizo' => User::find($usuarioId)->name ?? 'Sistema',
+            'proforma_numero'          => $proforma->numero,
+            'cliente_nombre'           => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'               => $proforma->cliente_id,
+            'usuario_actualizo'        => User::find($usuarioId)->name ?? 'Sistema',
             'fecha_entrega_confirmada' => $proforma->fecha_entrega_confirmada?->format('d/m/Y'),
-            'hora_entrega_confirmada' => $proforma->hora_entrega_confirmada,
-            'entregado_en' => $proforma->entregado_en?->format('d/m/Y H:i'),
-            'entregado_a' => $proforma->entregado_a,
-            'numero_intentos' => $proforma->numero_intentos_contacto,
+            'hora_entrega_confirmada'  => $proforma->hora_entrega_confirmada,
+            'entregado_en'             => $proforma->entregado_en?->format('d/m/Y H:i'),
+            'entregado_a'              => $proforma->entregado_a,
+            'numero_intentos'          => $proforma->numero_intentos_contacto,
         ], [
             'proforma_id' => $proforma->id,
         ]);
@@ -215,7 +214,7 @@ class ProformaNotificationService
     private function getUsersForCreated(Proforma $proforma): Collection
     {
         return User::whereHas('roles', function ($q) {
-            $q->whereIn('name', ['preventista', 'cajero', 'admin', 'manager']);
+            $q->whereIn('name', ['preventista', 'cajero', 'admin', 'manager', 'Preventista', 'Cajero', 'Admin', 'Manager']);
         })->where('activo', true)->get();
     }
 

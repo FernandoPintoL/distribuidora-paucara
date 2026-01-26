@@ -973,6 +973,10 @@ Route::middleware(['auth', 'permission:cajas.index'])->prefix('admin/cajas')->gr
     // Detalle en tiempo real de una caja
     Route::get('/{id}/detalle', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'detalleCaja'])
         ->name('api.admin.cajas.detalle');
+
+    // ✅ NUEVO: Cierre Diario General Manual - Consolida todas las cajas activas
+    Route::post('/cierre-diario', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'cierreDiarioGeneral'])
+        ->name('api.admin.cajas.cierre-diario');
 });
 
 // ✅ Rutas API para gestión de cierres de caja (Workflow de Aprobación) - Sprint 7

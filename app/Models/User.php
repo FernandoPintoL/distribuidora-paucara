@@ -108,6 +108,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Relación con cajas asignadas al usuario
+     */
+    public function cajas(): HasMany
+    {
+        return $this->hasMany(Caja::class);
+    }
+
+    /**
      * Verificar si el usuario es un empleado
      */
     public function esEmpleado(): bool

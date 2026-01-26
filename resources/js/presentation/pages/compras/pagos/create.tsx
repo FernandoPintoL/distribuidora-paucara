@@ -33,6 +33,39 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
     const [cuentaSeleccionadaLocal, setCuentaSeleccionadaLocal] = useState<CuentaPorPagar | null>(cuentaSeleccionada || null);
     const [montoMaximo, setMontoMaximo] = useState<number>(0);
 
+    // Estados para validación de caja abierta
+    interface CajaInfo {
+        tiene_caja_abierta: boolean;
+        es_de_hoy?: boolean;
+        dias_atras?: number;
+        caja_nombre?: string;
+        usuario_caja?: string;
+        mensaje?: string;
+    }
+
+    const [cajaInfo, setCajaInfo] = useState<CajaInfo | null>(null);
+    const [cargandoCaja, setCargandoCaja] = useState(true);
+
+    // Verificar si hay caja abierta (de cualquier día)
+    useEffect(() => {
+        const verificarCaja = async () => {
+            try {
+                const response = await fetch('/compras/pagos/check-caja-abierta');
+                const data = await response.json();
+                setCajaInfo(data);
+                console.log('✅ Estado de caja (Pagos):', data);
+            } catch (error) {
+                console.error('❌ Error verificando caja (Pagos):', error);
+                // Si hay error, permitir acceso (mejor UX que bloquear)
+                setCajaInfo({ tiene_caja_abierta: true });
+            } finally {
+                setCargandoCaja(false);
+            }
+        };
+
+        verificarCaja();
+    }, []);
+
     const { data, setData, post, processing, errors, reset } = useForm({
         cuenta_por_pagar_id: cuentaSeleccionada?.id || '',
         monto: '',
@@ -132,6 +165,33 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
         return null;
     };
 
+    // Mostrar alert si no hay caja abierta
+    if (!cargandoCaja && !cajaInfo?.tiene_caja_abierta) {
+        return (
+            <AppLayout breadcrumbs={[
+                { title: 'Compras', href: '/compras' },
+                { title: 'Pagos', href: '/compras/pagos' },
+                { title: 'Registrar Pago', href: '#' }
+            ]}>
+                <Head title="Registrar Pago" />
+                <div className="p-6 space-y-4">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-500 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">🚫 Caja Cerrada</h3>
+                        <p className="text-red-600 dark:text-red-300 mt-2">
+                            No puedes registrar un pago sin una caja abierta. Por favor, abre una caja primero desde el módulo de Cajas.
+                        </p>
+                    </div>
+                    <Button
+                        onClick={() => router.visit('/cajas')}
+                        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    >
+                        Ir a Cajas
+                    </Button>
+                </div>
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout breadcrumbs={[
             { title: 'Compras', href: '/compras' },
@@ -141,6 +201,46 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
             <Head title="Registrar Pago" />
 
             <div className="space-y-6 p-6">
+                {/* Indicador de verificación de caja */}
+                {cargandoCaja && (
+                    <Card>
+                        <CardContent className="pt-4">
+                            <div className="text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                                <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+                                Verificando estado de caja...
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Indicador de caja abierta */}
+                {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
+                    <Card className={cajaInfo.es_de_hoy ? '' : ''}>
+                        <CardContent className={`pt-4 ${
+                            cajaInfo.es_de_hoy
+                                ? 'bg-green-50 dark:bg-green-900/20'
+                                : 'bg-yellow-50 dark:bg-yellow-900/20'
+                        }`}>
+                            <div className={`flex items-center gap-2 ${
+                                cajaInfo.es_de_hoy
+                                    ? 'text-green-700 dark:text-green-300'
+                                    : 'text-yellow-700 dark:text-yellow-300'
+                            }`}>
+                                <span className={`text-lg ${cajaInfo.es_de_hoy ? '✅' : '⚠️'}`}></span>
+                                <div>
+                                    <strong>{cajaInfo.mensaje}</strong>
+                                    {cajaInfo.caja_nombre && (
+                                        <div className="text-sm mt-1">
+                                            Caja: <strong>{cajaInfo.caja_nombre}</strong>
+                                            {cajaInfo.usuario_caja && ` • Operador: ${cajaInfo.usuario_caja}`}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>

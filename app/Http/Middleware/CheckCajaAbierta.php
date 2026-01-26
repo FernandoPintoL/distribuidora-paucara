@@ -206,18 +206,21 @@ class CheckCajaAbierta
             );
         }
 
-        // Web: Redirigir a página de cajas con mensaje
+        // Web: Redirigir con mensaje de error claro
         Log::info('🔄 CheckCajaAbierta - Redirigiendo a /cajas con error', [
             'error_message' => $exception->getMessage(),
         ]);
 
+        // Obtener mensaje específico según la operación
+        $tipoOperacion = $this->obtenerTipoOperacion($request);
+        $mensajeEspecifico = "No se puede crear {$this->obtenerArticuloOperacion($tipoOperacion)} {$tipoOperacion} sin una caja abierta. Por favor, abre una caja primero.";
+
         return redirect()
-            ->route('cajas.index')
-            ->with('error', $exception->getMessage())
-            ->with('caja_info', [
-                'operacion' => $operacion,
-                'hora'      => now()->format('H:i:s'),
-            ]);
+            ->back()
+            ->with('error', $mensajeEspecifico)
+            ->with('caja_bloqueada', true)
+            ->with('operacion_bloqueada', $tipoOperacion)
+            ->withInput();
     }
 
     /**
@@ -236,5 +239,18 @@ class CheckCajaAbierta
         }
 
         return 'DESCONOCIDO';
+    }
+
+    /**
+     * Obtener artículo gramatical (una/un) según tipo de operación
+     */
+    private function obtenerArticuloOperacion(string $tipo): string
+    {
+        return match($tipo) {
+            'VENTA' => 'una',
+            'COMPRA' => 'una',
+            'PAGO' => 'un',
+            default => 'una',
+        };
     }
 }

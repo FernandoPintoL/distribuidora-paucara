@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::pendientes
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:323
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:326
  * @route '/api/admin/cierres/pendientes'
  */
 export const pendientes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ pendientes.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::pendientes
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:323
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:326
  * @route '/api/admin/cierres/pendientes'
  */
 pendientes.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ pendientes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::pendientes
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:323
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:326
  * @route '/api/admin/cierres/pendientes'
  */
 pendientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ pendientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::pendientes
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:323
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:326
  * @route '/api/admin/cierres/pendientes'
  */
 pendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ pendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::pendientes
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:323
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:326
  * @route '/api/admin/cierres/pendientes'
  */
     const pendientesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ pendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::pendientes
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:323
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:326
  * @route '/api/admin/cierres/pendientes'
  */
         pendientesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ pendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::pendientes
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:323
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:326
  * @route '/api/admin/cierres/pendientes'
  */
         pendientesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ pendientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     pendientes.form = pendientesForm
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:436
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:439
  * @route '/api/admin/cierres/estadisticas'
  */
 export const estadisticas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ estadisticas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:436
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:439
  * @route '/api/admin/cierres/estadisticas'
  */
 estadisticas.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ estadisticas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:436
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:439
  * @route '/api/admin/cierres/estadisticas'
  */
 estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:436
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:439
  * @route '/api/admin/cierres/estadisticas'
  */
 estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:436
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:439
  * @route '/api/admin/cierres/estadisticas'
  */
     const estadisticasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:436
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:439
  * @route '/api/admin/cierres/estadisticas'
  */
         estadisticasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::estadisticas
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:436
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:439
  * @route '/api/admin/cierres/estadisticas'
  */
         estadisticasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     estadisticas.form = estadisticasForm
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::consolidar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:358
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:361
  * @route '/api/admin/cierres/{id}/consolidar'
  */
 export const consolidar = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ consolidar.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::consolidar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:358
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:361
  * @route '/api/admin/cierres/{id}/consolidar'
  */
 consolidar.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -200,7 +200,7 @@ consolidar.url = (args: { id: string | number } | [id: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::consolidar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:358
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:361
  * @route '/api/admin/cierres/{id}/consolidar'
  */
 consolidar.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -210,7 +210,7 @@ consolidar.post = (args: { id: string | number } | [id: string | number ] | stri
 
     /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::consolidar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:358
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:361
  * @route '/api/admin/cierres/{id}/consolidar'
  */
     const consolidarForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -220,7 +220,7 @@ consolidar.post = (args: { id: string | number } | [id: string | number ] | stri
 
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::consolidar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:358
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:361
  * @route '/api/admin/cierres/{id}/consolidar'
  */
         consolidarForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -231,7 +231,7 @@ consolidar.post = (args: { id: string | number } | [id: string | number ] | stri
     consolidar.form = consolidarForm
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::rechazar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:396
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:399
  * @route '/api/admin/cierres/{id}/rechazar'
  */
 export const rechazar = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -246,7 +246,7 @@ rechazar.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::rechazar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:396
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:399
  * @route '/api/admin/cierres/{id}/rechazar'
  */
 rechazar.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -274,7 +274,7 @@ rechazar.url = (args: { id: string | number } | [id: string | number ] | string 
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::rechazar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:396
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:399
  * @route '/api/admin/cierres/{id}/rechazar'
  */
 rechazar.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -284,7 +284,7 @@ rechazar.post = (args: { id: string | number } | [id: string | number ] | string
 
     /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::rechazar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:396
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:399
  * @route '/api/admin/cierres/{id}/rechazar'
  */
     const rechazarForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -294,7 +294,7 @@ rechazar.post = (args: { id: string | number } | [id: string | number ] | string
 
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::rechazar
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:396
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:399
  * @route '/api/admin/cierres/{id}/rechazar'
  */
         rechazarForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

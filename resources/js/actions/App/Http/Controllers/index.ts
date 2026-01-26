@@ -49,6 +49,7 @@ import DetalleVentaController from './DetalleVentaController'
 import ProformaController from './ProformaController'
 import CajaController from './CajaController'
 import GastoController from './GastoController'
+import CierreDiarioGeneralController from './CierreDiarioGeneralController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import InventarioInicialController from './InventarioInicialController'
 import Web from './Web'
@@ -119,6 +120,7 @@ DetalleVentaController,
 ProformaController,
 CajaController,
 GastoController,
+CierreDiarioGeneralController,
 TipoAjusteInventarioController,
 InventarioInicialController,
 Web,

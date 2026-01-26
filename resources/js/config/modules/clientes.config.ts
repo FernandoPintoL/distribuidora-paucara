@@ -126,10 +126,54 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
                 if (!value) return createElement('span', { className: 'text-gray-400 text-sm' }, '❌ Deshabilitado');
                 return createElement('div', { className: 'flex items-center space-x-1' },
                     createElement('span', { className: 'text-green-600 text-sm' }, '✅ Habilitado'),
-                    row.limite_credito ? createElement('span', { className: 'text-blue-600 text-xs' }, `(${row.limite_credito})`) : null
+                    row.limite_credito ? createElement('span', { className: 'text-blue-600 text-xs' }, `(Límite: Bs. ${parseFloat(row.limite_credito).toFixed(2)})`) : null
                 );
             }
         },
+        /* {
+            key: 'credito_utilizado',
+            label: 'Crédito Utilizado',
+            type: 'number',
+            render: (value: unknown, row: any) => {
+                // Solo mostrar si el cliente tiene crédito habilitado
+                if (!row.puede_tener_credito) {
+                    return createElement('span', { className: 'text-gray-400 text-sm' }, '-');
+                }
+
+                const creditoUtilizado = parseFloat(value as string) || 0;
+                const limiteCredito = parseFloat(row.limite_credito || '0') || 0;
+                const saldoDisponible = limiteCredito - creditoUtilizado;
+                const porcentajeUsado = limiteCredito > 0 ? (creditoUtilizado / limiteCredito) * 100 : 0;
+
+                // Determinar color según el porcentaje de uso
+                let colorText = 'text-green-600';
+                let colorBg = 'bg-green-50 dark:bg-green-950';
+                if (porcentajeUsado > 75) {
+                    colorText = 'text-red-600 dark:text-red-400';
+                    colorBg = 'bg-red-50 dark:bg-red-950';
+                } else if (porcentajeUsado > 50) {
+                    colorText = 'text-orange-600 dark:text-orange-400';
+                    colorBg = 'bg-orange-50 dark:bg-orange-950';
+                } else if (porcentajeUsado > 25) {
+                    colorText = 'text-yellow-600 dark:text-yellow-400';
+                    colorBg = 'bg-yellow-50 dark:bg-yellow-950';
+                }
+
+                return createElement('div', { className: `${colorBg} rounded px-2 py-1` },
+                    createElement('div', { className: `${colorText} text-sm font-semibold` },
+                        `Bs. ${creditoUtilizado.toFixed(2)}`
+                    ),
+                    createElement('div', { className: 'text-xs text-gray-600 dark:text-gray-400' },
+                        `${porcentajeUsado.toFixed(0)}% de Bs. ${limiteCredito.toFixed(2)}`
+                    ),
+                    saldoDisponible > 0 ? createElement('div', { className: 'text-xs text-green-600 dark:text-green-400 mt-1' },
+                        `Disponible: Bs. ${saldoDisponible.toFixed(2)}`
+                    ) : createElement('div', { className: 'text-xs text-red-600 dark:text-red-400 mt-1 font-semibold' },
+                        `⚠️ Sin crédito disponible`
+                    )
+                );
+            }
+        }, */
         { key: 'activo', label: 'Estado', type: 'boolean' },
     ],
 

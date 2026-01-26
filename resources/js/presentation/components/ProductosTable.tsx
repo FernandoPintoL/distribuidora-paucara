@@ -327,10 +327,10 @@ export default function ProductosTable({
                                     Cantidad
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Precio Costo
+                                    Costo Registrado
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Precio Unit.
+                                    Precio Compra
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Subtotal
@@ -361,13 +361,12 @@ export default function ProductosTable({
                                 const esAumento = precioCosto > 0 && detalle.precio_unitario > precioCosto;
 
                                 return (
-                                    <tr key={detalle.producto_id} className={`hover:bg-gray-50 dark:hover:bg-zinc-800 ${
-                                        tieneDiferencia && esAumento
-                                            ? 'bg-amber-50 dark:bg-amber-950/10'
-                                            : tieneDiferencia && !esAumento
+                                    <tr key={detalle.producto_id} className={`hover:bg-gray-50 dark:hover:bg-zinc-800 ${tieneDiferencia && esAumento
+                                        ? 'bg-amber-50 dark:bg-amber-950/10'
+                                        : tieneDiferencia && !esAumento
                                             ? 'bg-green-50 dark:bg-green-950/10'
                                             : ''
-                                    }`}>
+                                        }`}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                 {productoInfo?.nombre || 'Producto no encontrado'}
@@ -397,11 +396,10 @@ export default function ProductosTable({
                                                 {precioCosto > 0 ? formatCurrency(precioCosto) : 'N/A'}
                                             </div>
                                             {tieneDiferencia && (
-                                                <div className={`text-xs font-semibold mt-1 ${
-                                                    esAumento
-                                                        ? 'text-amber-600 dark:text-amber-400'
-                                                        : 'text-green-600 dark:text-green-400'
-                                                }`}>
+                                                <div className={`text-xs font-semibold mt-1 ${esAumento
+                                                    ? 'text-amber-600 dark:text-amber-400'
+                                                    : 'text-green-600 dark:text-green-400'
+                                                    }`}>
                                                     {esAumento ? '↑ Aumento' : '↓ Disminución'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
                                                 </div>
                                             )}
@@ -414,13 +412,12 @@ export default function ProductosTable({
                                                 disabled={readOnly}
                                                 value={detalle.precio_unitario}
                                                 onChange={(e) => handleUpdateDetail(index, 'precio_unitario', Number(e.target.value))}
-                                                className={`w-24 px-2 py-1 text-sm border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${
-                                                    tieneDiferencia
-                                                        ? esAumento
-                                                            ? 'border-amber-300 dark:border-amber-700'
-                                                            : 'border-green-300 dark:border-green-700'
-                                                        : 'border-gray-300 dark:border-zinc-600'
-                                                }`}
+                                                className={`w-24 px-2 py-1 text-sm border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${tieneDiferencia
+                                                    ? esAumento
+                                                        ? 'border-amber-300 dark:border-amber-700'
+                                                        : 'border-green-300 dark:border-green-700'
+                                                    : 'border-gray-300 dark:border-zinc-600'
+                                                    }`}
                                             />
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">

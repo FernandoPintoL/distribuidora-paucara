@@ -22,6 +22,12 @@ import {
   DollarSign,
   TrendingUp,
   Users,
+  Lock,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Download,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
@@ -35,6 +41,14 @@ import {
   TableRow,
 } from '@/presentation/components/ui/table';
 import { Badge } from '@/presentation/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/presentation/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement } from 'chart.js';
@@ -112,6 +126,53 @@ export default function Dashboard({
   const [fechaHasta, setFechaHasta] = useState<string>('');
   const [ordenarPor, setOrdenarPor] = useState<'monto' | 'fecha' | 'usuario' | 'estado'>('fecha');
   const [filtrosVisibles, setFiltrosVisibles] = useState(false);
+
+  // ✅ NUEVO: Estados para Cierre Diario General
+  const [mostrarModalCierre, setMostrarModalCierre] = useState(false);
+  const [cargandoCierre, setCargandoCierre] = useState(false);
+  const [resultadoCierre, setResultadoCierre] = useState<any>(null);
+  const [errorCierre, setErrorCierre] = useState<string | null>(null);
+  const [mostrarReporte, setMostrarReporte] = useState(false);
+
+  // ✅ NUEVO: Función para ejecutar cierre diario general (usando Inertia)
+  const ejecutarCierreDiario = () => {
+    setCargandoCierre(true);
+    setErrorCierre(null);
+
+    // Usar router.post que maneja CSRF automáticamente
+    // Está configurado para que retorne JSON en lugar de redirigir
+    router.post(
+      '/cajas/admin/cierre-diario-json',
+      {},
+      {
+        onSuccess: (page: any) => {
+          // Extraer el reporte de la respuesta
+          const props = (page as any)?.props;
+
+          if (props?.reporte_cierre) {
+            setResultadoCierre(props.reporte_cierre);
+          } else if (props?.cierre_reporte) {
+            setResultadoCierre(props.cierre_reporte);
+          }
+
+          setMostrarReporte(true);
+          setMostrarModalCierre(false);
+
+          // Recargar la página después de 3 segundos
+          setTimeout(() => {
+            router.reload();
+          }, 3000);
+        },
+        onError: (errors: any) => {
+          const errorMessage = errors?.cierre?.[0] || errors?.message || 'Error al ejecutar cierre diario';
+          setErrorCierre(errorMessage);
+        },
+        onFinish: () => {
+          setCargandoCierre(false);
+        },
+      }
+    );
+  };
 
   // ✅ NUEVO: Detectar cambios de tema en tiempo real
   useEffect(() => {
@@ -310,7 +371,7 @@ export default function Dashboard({
       <div className="py-12">
         <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
           {/* Header */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Gestión de Cajas
@@ -318,6 +379,24 @@ export default function Dashboard({
               <p className="text-gray-600 dark:text-gray-400 mt-2">
                 Monitoreo en tiempo real de todas las cajas
               </p>
+            </div>
+            {/* ✅ NUEVO: Botón de Cierre Diario General */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => router.visit('/cajas/admin/reportes-diarios')}
+                variant="outline"
+                className="dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Reportes Diarios
+              </Button>
+              <Button
+                onClick={() => setMostrarModalCierre(true)}
+                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white"
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Cierre Diario General
+              </Button>
             </div>
           </div>
 
@@ -521,7 +600,7 @@ export default function Dashboard({
           </div>
 
           {/* Búsqueda y filtros */}
-          <Card className="p-4 dark:bg-slate-800">
+          <Card className="p-4 dark:bg-slate-800 border dark:border-slate-700">
             <div className="space-y-4">
               {/* Búsqueda */}
               <div className="flex gap-4">
@@ -531,21 +610,13 @@ export default function Dashboard({
                     placeholder="Buscar por nombre, usuario o ID..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                   />
                 </div>
                 <Button
-                  onClick={() => router.visit('/cajas/reportes')}
-                  variant="outline"
-                  className="dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Reportes
-                </Button>
-                <Button
                   onClick={() => setFiltrosVisibles(!filtrosVisibles)}
                   variant="outline"
-                  className="dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
+                  className="dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors"
                 >
                   {filtrosVisibles ? '🔼 Ocultar Filtros' : '🔽 Mostrar Filtros'}
                 </Button>
@@ -553,215 +624,215 @@ export default function Dashboard({
 
               {/* Filtros Avanzados */}
               {filtrosVisibles && (
-              <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg space-y-4">
-                {/* Fila 1: Estado de Caja */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Estado de Caja
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={filtroEstado === 'todos' ? 'default' : 'outline'}
-                      onClick={() => setFiltroEstado('todos')}
-                      className="dark:text-white"
-                    >
-                      Todos
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={filtroEstado === 'abierta' ? 'default' : 'outline'}
-                      onClick={() => setFiltroEstado('abierta')}
-                      className="dark:text-white"
-                    >
-                      🟢 Abierta
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={filtroEstado === 'cerrada' ? 'default' : 'outline'}
-                      onClick={() => setFiltroEstado('cerrada')}
-                      className="dark:text-white"
-                    >
-                      🔴 Cerrada
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Fila 2: Estado del Cierre */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Estado del Cierre
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    <Button
-                      size="sm"
-                      variant={filtroEstadoCierre === 'todos' ? 'default' : 'outline'}
-                      onClick={() => setFiltroEstadoCierre('todos')}
-                      className="dark:text-white"
-                    >
-                      Todos
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={filtroEstadoCierre === 'pendiente' ? 'default' : 'outline'}
-                      onClick={() => setFiltroEstadoCierre('pendiente')}
-                      className="dark:text-white"
-                    >
-                      ⏳ Pendiente
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={filtroEstadoCierre === 'consolidada' ? 'default' : 'outline'}
-                      onClick={() => setFiltroEstadoCierre('consolidada')}
-                      className="dark:text-white"
-                    >
-                      ✅ Consolidada
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={filtroEstadoCierre === 'rechazada' ? 'default' : 'outline'}
-                      onClick={() => setFiltroEstadoCierre('rechazada')}
-                      className="dark:text-white"
-                    >
-                      ❌ Rechazada
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Fila 3: Rango de Montos */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Rango de Montos
-                  </p>
-                  <div className="flex gap-2 flex-wrap items-center">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-600 dark:text-gray-400">Min:</label>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={montoMin}
-                        onChange={(e) => setMontoMin(e.target.value)}
-                        className="w-24 px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-white text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-600 dark:text-gray-400">Max:</label>
-                      <input
-                        type="number"
-                        placeholder="∞"
-                        value={montoMax}
-                        onChange={(e) => setMontoMax(e.target.value)}
-                        className="w-24 px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-white text-sm"
-                      />
-                    </div>
-                    {(montoMin || montoMax) && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setMontoMin('');
-                          setMontoMax('');
-                        }}
-                        className="text-xs dark:text-white"
-                      >
-                        Limpiar
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Fila 4: Rango de Fechas */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Rango de Fechas
-                  </p>
-                  <div className="flex gap-2 flex-wrap items-center">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-600 dark:text-gray-400">Desde:</label>
-                      <input
-                        type="date"
-                        value={fechaDesde}
-                        onChange={(e) => setFechaDesde(e.target.value)}
-                        className="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-white text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-600 dark:text-gray-400">Hasta:</label>
-                      <input
-                        type="date"
-                        value={fechaHasta}
-                        onChange={(e) => setFechaHasta(e.target.value)}
-                        className="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-white text-sm"
-                      />
-                    </div>
-                    {(fechaDesde || fechaHasta) && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setFechaDesde('');
-                          setFechaHasta('');
-                        }}
-                        className="text-xs dark:text-white"
-                      >
-                        Limpiar
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Fila 5: Ordenamiento y Discrepancias */}
-                <div className="flex gap-4 flex-wrap items-end">
-                  <div className="flex-1 min-w-[200px]">
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Ordenar por
+                <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg space-y-4 border border-gray-200 dark:border-slate-700">
+                  {/* Fila 1: Estado de Caja */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      Estado de Caja
                     </p>
-                    <select
-                      value={ordenarPor}
-                      onChange={(e) => setOrdenarPor(e.target.value as 'monto' | 'fecha' | 'usuario' | 'estado')}
-                      className="w-full px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-white text-sm"
-                    >
-                      <option value="fecha">📅 Por Fecha (más reciente)</option>
-                      <option value="monto">💰 Por Monto (mayor primero)</option>
-                      <option value="usuario">👤 Por Usuario</option>
-                      <option value="estado">📊 Por Estado</option>
-                    </select>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={filtroEstado === 'todos' ? 'default' : 'outline'}
+                        onClick={() => setFiltroEstado('todos')}
+                        className={filtroEstado === 'todos' ? 'dark:bg-blue-700 dark:hover:bg-blue-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                      >
+                        Todos
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={filtroEstado === 'abierta' ? 'default' : 'outline'}
+                        onClick={() => setFiltroEstado('abierta')}
+                        className={filtroEstado === 'abierta' ? 'dark:bg-green-700 dark:hover:bg-green-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                      >
+                        🟢 Abierta
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={filtroEstado === 'cerrada' ? 'default' : 'outline'}
+                        onClick={() => setFiltroEstado('cerrada')}
+                        className={filtroEstado === 'cerrada' ? 'dark:bg-red-700 dark:hover:bg-red-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                      >
+                        🔴 Cerrada
+                      </Button>
+                    </div>
                   </div>
 
-                  <Button
-                    size="sm"
-                    variant={soloConDiscrepancias ? 'default' : 'outline'}
-                    onClick={() => setSoloConDiscrepancias(!soloConDiscrepancias)}
-                    className="dark:text-white"
-                  >
-                    ⚠️ Con Discrepancias
-                  </Button>
+                  {/* Fila 2: Estado del Cierre */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      Estado del Cierre
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant={filtroEstadoCierre === 'todos' ? 'default' : 'outline'}
+                        onClick={() => setFiltroEstadoCierre('todos')}
+                        className={filtroEstadoCierre === 'todos' ? 'dark:bg-blue-700 dark:hover:bg-blue-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                      >
+                        Todos
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={filtroEstadoCierre === 'pendiente' ? 'default' : 'outline'}
+                        onClick={() => setFiltroEstadoCierre('pendiente')}
+                        className={filtroEstadoCierre === 'pendiente' ? 'dark:bg-yellow-700 dark:hover:bg-yellow-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                      >
+                        ⏳ Pendiente
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={filtroEstadoCierre === 'consolidada' ? 'default' : 'outline'}
+                        onClick={() => setFiltroEstadoCierre('consolidada')}
+                        className={filtroEstadoCierre === 'consolidada' ? 'dark:bg-green-700 dark:hover:bg-green-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                      >
+                        ✅ Consolidada
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={filtroEstadoCierre === 'rechazada' ? 'default' : 'outline'}
+                        onClick={() => setFiltroEstadoCierre('rechazada')}
+                        className={filtroEstadoCierre === 'rechazada' ? 'dark:bg-red-700 dark:hover:bg-red-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                      >
+                        ❌ Rechazada
+                      </Button>
+                    </div>
+                  </div>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setFiltroEstado('todos');
-                      setFiltroEstadoCierre('todos');
-                      setMontoMin('');
-                      setMontoMax('');
-                      setFechaDesde('');
-                      setFechaHasta('');
-                      setOrdenarPor('fecha');
-                      setSoloConDiscrepancias(false);
-                      setSearch('');
-                    }}
-                    className="dark:text-white"
-                  >
-                    ↺ Limpiar Filtros
-                  </Button>
-                </div>
+                  {/* Fila 3: Rango de Montos */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      Rango de Montos
+                    </p>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-600 dark:text-gray-400">Min:</label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={montoMin}
+                          onChange={(e) => setMontoMin(e.target.value)}
+                          className="w-24 px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-600 dark:text-gray-400">Max:</label>
+                        <input
+                          type="number"
+                          placeholder="∞"
+                          value={montoMax}
+                          onChange={(e) => setMontoMax(e.target.value)}
+                          className="w-24 px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        />
+                      </div>
+                      {(montoMin || montoMax) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setMontoMin('');
+                            setMontoMax('');
+                          }}
+                          className="text-xs dark:text-gray-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                        >
+                          Limpiar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
 
-                {/* Resumen de Filtros */}
-                <div className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-300 dark:border-slate-600">
-                  ✅ Mostrando <strong>{cajasFiltradas.length}</strong> de <strong>{cajas.length}</strong> cajas
+                  {/* Fila 4: Rango de Fechas */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      Rango de Fechas
+                    </p>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-600 dark:text-gray-400">Desde:</label>
+                        <input
+                          type="date"
+                          value={fechaDesde}
+                          onChange={(e) => setFechaDesde(e.target.value)}
+                          className="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-600 dark:text-gray-400">Hasta:</label>
+                        <input
+                          type="date"
+                          value={fechaHasta}
+                          onChange={(e) => setFechaHasta(e.target.value)}
+                          className="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        />
+                      </div>
+                      {(fechaDesde || fechaHasta) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setFechaDesde('');
+                            setFechaHasta('');
+                          }}
+                          className="text-xs dark:text-gray-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                        >
+                          Limpiar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Fila 5: Ordenamiento y Discrepancias */}
+                  <div className="flex gap-4 flex-wrap items-end">
+                    <div className="flex-1 min-w-[200px]">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                        Ordenar por
+                      </p>
+                      <select
+                        value={ordenarPor}
+                        onChange={(e) => setOrdenarPor(e.target.value as 'monto' | 'fecha' | 'usuario' | 'estado')}
+                        className="w-full px-2 py-1 rounded border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      >
+                        <option value="fecha">📅 Por Fecha (más reciente)</option>
+                        <option value="monto">💰 Por Monto (mayor primero)</option>
+                        <option value="usuario">👤 Por Usuario</option>
+                        <option value="estado">📊 Por Estado</option>
+                      </select>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant={soloConDiscrepancias ? 'default' : 'outline'}
+                      onClick={() => setSoloConDiscrepancias(!soloConDiscrepancias)}
+                      className={soloConDiscrepancias ? 'dark:bg-orange-700 dark:hover:bg-orange-800' : 'dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800'}
+                    >
+                      ⚠️ Con Discrepancias
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setFiltroEstado('todos');
+                        setFiltroEstadoCierre('todos');
+                        setMontoMin('');
+                        setMontoMax('');
+                        setFechaDesde('');
+                        setFechaHasta('');
+                        setOrdenarPor('fecha');
+                        setSoloConDiscrepancias(false);
+                        setSearch('');
+                      }}
+                      className="dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800"
+                    >
+                      ↺ Limpiar Filtros
+                    </Button>
+                  </div>
+
+                  {/* Resumen de Filtros */}
+                  <div className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-300 dark:border-slate-700">
+                    ✅ Mostrando <strong className="dark:text-gray-300">{cajasFiltradas.length}</strong> de <strong className="dark:text-gray-300">{cajas.length}</strong> cajas
+                  </div>
                 </div>
-              </div>
               )}
             </div>
           </Card>
@@ -863,6 +934,272 @@ export default function Dashboard({
               </TableBody>
             </Table>
           </Card>
+
+          {/* ✅ NUEVO: Modal de Confirmación - Cierre Diario General */}
+          <Dialog open={mostrarModalCierre} onOpenChange={setMostrarModalCierre}>
+            <DialogContent className="dark:bg-slate-800 dark:border-slate-700">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                  🔒 Cierre Diario General
+                </DialogTitle>
+                <DialogDescription className="text-gray-600 dark:text-gray-400">
+                  Esta operación cerrará y consolidará TODAS las cajas activas que tengan aperturas sin cierre.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Advertencia Importante
+                  </p>
+                  <ul className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 space-y-1 ml-6 list-disc">
+                    <li>Se cerrarán <strong>TODAS</strong> las cajas activas con aperturas sin cierre</li>
+                    <li>Incluye cajas abiertas desde días anteriores</li>
+                    <li>Los cierres se consolidarán automáticamente sin intervención manual</li>
+                    <li>Se registrará auditoría completa de esta operación</li>
+                    <li>Esta acción es <strong>IRREVERSIBLE</strong></li>
+                  </ul>
+                </div>
+
+                {errorCierre && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-red-800 dark:text-red-200 flex items-center gap-2">
+                      <XCircle className="h-4 w-4" />
+                      Error
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-2">{errorCierre}</p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setMostrarModalCierre(false);
+                    setErrorCierre(null);
+                  }}
+                  disabled={cargandoCierre}
+                  className="dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={ejecutarCierreDiario}
+                  disabled={cargandoCierre}
+                  className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white"
+                >
+                  {cargandoCierre ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="mr-2 h-4 w-4" />
+                      Confirmar Cierre
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* ✅ NUEVO: Modal de Reporte - Resultados del Cierre */}
+          {resultadoCierre && (
+            <Dialog open={mostrarReporte} onOpenChange={setMostrarReporte}>
+              <DialogContent className="dark:bg-slate-800 dark:border-slate-700 max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    Cierre Diario General - Reporte
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-600 dark:text-gray-400">
+                    Operación completada exitosamente
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-6 py-4">
+                  {/* Información General */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                      <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                        Ejecutado Por
+                      </p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">
+                        {resultadoCierre.ejecutado_por}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                      <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">
+                        Fecha/Hora
+                      </p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">
+                        {new Date(resultadoCierre.fecha_ejecucion).toLocaleString('es-BO')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Métricas Principales */}
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                      <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase">Cajas Cerradas</p>
+                      <p className="text-3xl font-bold text-green-700 dark:text-green-300 mt-2">
+                        {resultadoCierre.total_cajas_cerradas}
+                      </p>
+                    </div>
+                    <div className={`rounded-lg p-4 ${resultadoCierre.total_cajas_con_discrepancia > 0 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-700'}`}>
+                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Con Discrepancias</p>
+                      <p className={`text-3xl font-bold mt-2 ${resultadoCierre.total_cajas_con_discrepancia > 0 ? 'text-yellow-700 dark:text-yellow-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {resultadoCierre.total_cajas_con_discrepancia}
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">Total Esperado</p>
+                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-2">
+                        ${resultadoCierre.total_monto_esperado.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+                      <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Diferencia Total</p>
+                      <p className={`text-2xl font-bold mt-2 ${resultadoCierre.total_diferencias === 0 ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300'}`}>
+                        ${resultadoCierre.total_diferencias.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Cajas Procesadas */}
+                  {resultadoCierre.cajas_procesadas.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">✅ Cajas Cerradas</h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {resultadoCierre.cajas_procesadas.map((caja: any, idx: number) => (
+                          <div key={idx} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold text-gray-900 dark:text-white">
+                                  Caja #{caja.caja_id} - {caja.caja_nombre}
+                                </p>
+                                <p className="text-gray-600 dark:text-gray-400 text-xs">
+                                  Usuario: {caja.usuario}
+                                </p>
+                              </div>
+                              <Badge className="bg-green-600 dark:bg-green-700">
+                                {caja.estado}
+                              </Badge>
+                            </div>
+                            <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                              <div>
+                                <p className="text-gray-600 dark:text-gray-400">Esperado</p>
+                                <p className="font-semibold text-gray-900 dark:text-white">
+                                  ${caja.monto_esperado.toFixed(2)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600 dark:text-gray-400">Real</p>
+                                <p className="font-semibold text-gray-900 dark:text-white">
+                                  ${caja.monto_real.toFixed(2)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600 dark:text-gray-400">Diferencia</p>
+                                <p className={`font-semibold ${caja.diferencia === 0 ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300'}`}>
+                                  ${caja.diferencia.toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cajas Sin Apertura */}
+                  {resultadoCierre.cajas_sin_apertura_abierta.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">📭 Cajas Sin Apertura Abierta</h4>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {resultadoCierre.cajas_sin_apertura_abierta.map((caja: any, idx: number) => (
+                          <div key={idx} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-semibold text-gray-900 dark:text-white">
+                                  Caja #{caja.caja_id} - {caja.caja_nombre}
+                                </p>
+                                <p className="text-gray-600 dark:text-gray-400 text-xs">
+                                  Usuario: {caja.usuario}
+                                </p>
+                              </div>
+                              <Badge variant="secondary" className="dark:bg-slate-600">
+                                Sin apertura
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Errores */}
+                  {resultadoCierre.errores.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">❌ Errores</h4>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {resultadoCierre.errores.map((error: any, idx: number) => (
+                          <div key={idx} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                            <p className="font-semibold text-red-700 dark:text-red-300">
+                              Caja #{error.caja_id} - {error.caja_nombre}
+                            </p>
+                            <p className="text-red-600 dark:text-red-400 text-xs mt-1">
+                              {error.error}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
+                  <Button
+                    onClick={() => {
+                      // Descarga PDF en formato A4
+                      const cajaId = resultadoCierre.cajas_procesadas[0]?.caja_id || 1;
+                      window.location.href = `/cajas/admin/reportes-diarios/${cajaId}/descargar?formato=A4`;
+                    }}
+                    variant="outline"
+                    className="dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Descargar PDF
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setMostrarReporte(false);
+                      setResultadoCierre(null);
+                      // Navegar a la página de reportes diarios
+                      router.visit('/cajas/admin/reportes-diarios');
+                    }}
+                    variant="outline"
+                    className="dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
+                  >
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Ver Histórico
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setMostrarReporte(false);
+                      setResultadoCierre(null);
+                    }}
+                    className="dark:text-white"
+                  >
+                    Cerrar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
     </AppLayout>

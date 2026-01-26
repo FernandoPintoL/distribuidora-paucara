@@ -20,7 +20,7 @@ interface ClientesIndexProps {
 
 export default function ClientesIndex({ clientes, filters, localidades }: ClientesIndexProps) {
   // Debug: Ver qué datos llegan del backend
-  // console.log('🔍 Datos de clientes del backend:', clientes.data);
+  console.log('🔍 Datos de clientes del backend:', clientes.data);
   // console.log('🔍 Primer cliente:', clientes.data[0]);
 
   return (

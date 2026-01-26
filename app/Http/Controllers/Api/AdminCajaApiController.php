@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AperturaCaja;
+use App\Models\AuditoriaCaja;
 use App\Models\Caja;
 use App\Models\CierreCaja;
+use App\Models\CierreDiarioGeneral;
+use App\Models\EstadoCierre;
 use App\Models\MovimientoCaja;
 use App\Models\TipoOperacionCaja;
 use Illuminate\Http\Request;
@@ -453,5 +456,174 @@ class AdminCajaApiController extends Controller
             'data' => $stats,
             'timestamp' => now()->toIso8601String(),
         ]);
+    }
+
+    /**
+     * POST /api/admin/cajas/cierre-diario
+     *
+     * ✅ NUEVO: Cierre Diario General Manual - API Version
+     *
+     * Ejecuta el cierre diario general para todas las cajas activas
+     * que tengan aperturas sin cierre (incluyendo días anteriores)
+     * y las consolida automáticamente.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cierreDiarioGeneral(Request $request)
+    {
+        $usuarioAutenticado = auth()->user();
+
+        // Validación: Solo admin
+        if (!$usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para realizar el cierre diario general',
+            ], 403);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $reporte = [
+                'fecha_ejecucion' => now()->toIso8601String(),
+                'ejecutado_por' => $usuarioAutenticado->name,
+                'ejecutado_por_id' => $usuarioAutenticado->id,
+                'cajas_procesadas' => [],
+                'cajas_sin_apertura_abierta' => [],
+                'total_cajas_cerradas' => 0,
+                'total_cajas_con_discrepancia' => 0,
+                'total_diferencias' => 0,
+                'total_monto_esperado' => 0,
+                'total_monto_real' => 0,
+                'errores' => [],
+            ];
+
+            // Obtener todas las cajas activas
+            $cajasActivas = Caja::where('activa', true)
+                ->with(['usuario', 'aperturas'])
+                ->get();
+
+            // Procesar cada caja
+            foreach ($cajasActivas as $caja) {
+                try {
+                    // Buscar aperturas sin cierre
+                    $aperturasAbiertas = AperturaCaja::where('caja_id', $caja->id)
+                        ->whereDoesntHave('cierre')
+                        ->orderBy('fecha', 'asc')
+                        ->get();
+
+                    if ($aperturasAbiertas->isEmpty()) {
+                        $reporte['cajas_sin_apertura_abierta'][] = [
+                            'caja_id' => $caja->id,
+                            'caja_nombre' => $caja->nombre,
+                            'usuario_id' => $caja->usuario_id,
+                            'usuario' => $caja->usuario->name ?? 'Sin asignar',
+                        ];
+                        continue;
+                    }
+
+                    // Procesar cada apertura
+                    foreach ($aperturasAbiertas as $apertura) {
+                        // Calcular monto esperado (usando la misma lógica que el controlador web)
+                        $montoEsperado = $apertura->monto_apertura +
+                            MovimientoCaja::where('caja_id', $apertura->caja_id)
+                                ->where('user_id', $apertura->user_id)
+                                ->whereBetween('fecha', [$apertura->fecha, now()])
+                                ->sum('monto');
+
+                        $montoReal = $montoEsperado;
+                        $diferencia = 0;
+
+                        $estadoPendiente = \App\Models\EstadoCierre::obtenerIdPendiente();
+
+                        // Crear cierre
+                        $cierre = CierreCaja::create([
+                            'caja_id' => $caja->id,
+                            'user_id' => $apertura->user_id,
+                            'apertura_caja_id' => $apertura->id,
+                            'fecha' => now(),
+                            'monto_esperado' => $montoEsperado,
+                            'monto_real' => $montoReal,
+                            'diferencia' => $diferencia,
+                            'observaciones' => 'Cierre automático diario general (API)',
+                            'estado_cierre_id' => $estadoPendiente,
+                        ]);
+
+                        // Consolidar inmediatamente
+                        $cierre->consolidar($usuarioAutenticado, 'Consolidado automáticamente en cierre diario general (API)');
+
+                        // Registrar auditoría
+                        \App\Models\AuditoriaCaja::create([
+                            'user_id' => $usuarioAutenticado->id,
+                            'caja_id' => $caja->id,
+                            'apertura_caja_id' => $apertura->id,
+                            'accion' => 'CIERRE_DIARIO_GENERAL',
+                            'operacion_intentada' => 'POST /api/admin/cajas/cierre-diario',
+                            'exitosa' => true,
+                            'detalle_operacion' => [
+                                'monto_esperado' => (float)$montoEsperado,
+                                'monto_real' => (float)$montoReal,
+                                'diferencia' => (float)$diferencia,
+                                'tipo_cierre' => 'AUTOMÁTICO_CONSOLIDADO',
+                                'canal' => 'API',
+                            ],
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                        ]);
+
+                        // Agregar al reporte
+                        $reporte['cajas_procesadas'][] = [
+                            'caja_id' => $caja->id,
+                            'caja_nombre' => $caja->nombre,
+                            'usuario_id' => $apertura->user_id,
+                            'usuario' => $apertura->usuario->name ?? 'Sin asignar',
+                            'apertura_fecha' => $apertura->fecha->toIso8601String(),
+                            'monto_esperado' => (float)$montoEsperado,
+                            'monto_real' => (float)$montoReal,
+                            'diferencia' => (float)$diferencia,
+                            'estado' => 'CONSOLIDADA',
+                        ];
+
+                        $reporte['total_cajas_cerradas']++;
+                        $reporte['total_monto_esperado'] += $montoEsperado;
+                        $reporte['total_monto_real'] += $montoReal;
+                        $reporte['total_diferencias'] += $diferencia;
+
+                        if ($diferencia != 0) {
+                            $reporte['total_cajas_con_discrepancia']++;
+                        }
+                    }
+
+                } catch (\Exception $e) {
+                    $reporte['errores'][] = [
+                        'caja_id' => $caja->id,
+                        'caja_nombre' => $caja->nombre,
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            DB::commit();
+
+            // ✅ Guardar historial del cierre diario general
+            \App\Models\CierreDiarioGeneral::crearDelReporte(auth()->user(), $reporte, $request);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cierre diario general completado exitosamente',
+                'data' => $reporte,
+                'timestamp' => now()->toIso8601String(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al ejecutar cierre diario general',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

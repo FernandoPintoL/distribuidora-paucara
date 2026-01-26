@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::resumen
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:280
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:283
  * @route '/api/admin/gastos/resumen'
  */
 export const resumen = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ resumen.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::resumen
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:280
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:283
  * @route '/api/admin/gastos/resumen'
  */
 resumen.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ resumen.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::resumen
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:280
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:283
  * @route '/api/admin/gastos/resumen'
  */
 resumen.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ resumen.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::resumen
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:280
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:283
  * @route '/api/admin/gastos/resumen'
  */
 resumen.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ resumen.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::resumen
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:280
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:283
  * @route '/api/admin/gastos/resumen'
  */
     const resumenForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ resumen.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::resumen
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:280
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:283
  * @route '/api/admin/gastos/resumen'
  */
         resumenForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ resumen.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\AdminCajaApiController::resumen
- * @see app/Http/Controllers/Api/AdminCajaApiController.php:280
+ * @see app/Http/Controllers/Api/AdminCajaApiController.php:283
  * @route '/api/admin/gastos/resumen'
  */
         resumenForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

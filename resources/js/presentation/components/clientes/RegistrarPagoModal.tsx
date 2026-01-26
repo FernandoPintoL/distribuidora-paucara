@@ -51,6 +51,19 @@ export default function RegistrarPagoModal({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Estados para validación de caja abierta
+    interface CajaInfo {
+        tiene_caja_abierta: boolean;
+        es_de_hoy?: boolean;
+        dias_atras?: number;
+        caja_nombre?: string;
+        usuario_caja?: string;
+        mensaje?: string;
+    }
+
+    const [cajaInfo, setCajaInfo] = useState<CajaInfo | null>(null);
+    const [cargandoCaja, setCargandoCaja] = useState(false);
+
     // ✅ Resetear formulario cuando se abre el modal
     useEffect(() => {
         if (show) {
@@ -79,6 +92,29 @@ export default function RegistrarPagoModal({
             }));
         }
     }, [cuentaIdPreseleccionada, show]);
+
+    // ✅ NUEVO: Verificar si hay caja abierta cuando se abre el modal
+    useEffect(() => {
+        if (show) {
+            verificarCajaAbierta();
+        }
+    }, [show]);
+
+    const verificarCajaAbierta = async () => {
+        try {
+            setCargandoCaja(true);
+            const response = await fetch('/compras/pagos/check-caja-abierta');
+            const data = await response.json();
+            setCajaInfo(data);
+            console.log('✅ Estado de caja (Modal Pagos):', data);
+        } catch (error) {
+            console.error('❌ Error verificando caja (Modal Pagos):', error);
+            // Si hay error, permitir acceso (mejor UX que bloquear)
+            setCajaInfo({ tiene_caja_abierta: true });
+        } finally {
+            setCargandoCaja(false);
+        }
+    };
 
     // 🔍 Debug: Log de cuentas disponibles
     useEffect(() => {
@@ -234,6 +270,48 @@ export default function RegistrarPagoModal({
                 </DialogHeader>
 
                 <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+                    {/* Indicador de verificación de caja */}
+                    {cargandoCaja && (
+                        <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200">
+                            <AlertDescription className="text-xs flex items-center gap-2">
+                                <span className="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+                                Verificando estado de caja...
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {/* Indicador de caja no abierta */}
+                    {!cargandoCaja && cajaInfo && !cajaInfo.tiene_caja_abierta && (
+                        <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription className="text-xs">
+                                🚫 No hay caja abierta. Abre una caja antes de registrar pagos.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {/* Indicador de caja abierta (hoy o días anteriores) */}
+                    {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
+                        <Alert className={`border text-xs ${
+                            cajaInfo.es_de_hoy
+                                ? 'border-green-300 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200'
+                                : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200'
+                        }`}>
+                            <AlertDescription className="flex items-center gap-2">
+                                <span>{cajaInfo.es_de_hoy ? '✅' : '⚠️'}</span>
+                                <span>
+                                    {cajaInfo.mensaje}
+                                    {cajaInfo.caja_nombre && (
+                                        <span className="block text-xs mt-1">
+                                            {cajaInfo.caja_nombre}
+                                            {cajaInfo.usuario_caja && ` • ${cajaInfo.usuario_caja}`}
+                                        </span>
+                                    )}
+                                </span>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
                     {error && (
                         <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200">
                             <AlertTriangle className="h-4 w-4" />
@@ -406,8 +484,16 @@ export default function RegistrarPagoModal({
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={loading || !formData.cuenta_id || !formData.tipo_pago_id || !formData.monto}
-                        className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        disabled={
+                            loading ||
+                            !formData.cuenta_id ||
+                            !formData.tipo_pago_id ||
+                            !formData.monto ||
+                            cargandoCaja ||
+                            !cajaInfo?.tiene_caja_abierta
+                        }
+                        className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
+                        title={!cajaInfo?.tiene_caja_abierta ? 'Abre una caja para registrar pagos' : ''}
                     >
                         {loading ? (
                             <>

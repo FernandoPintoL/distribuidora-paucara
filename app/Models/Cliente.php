@@ -37,6 +37,8 @@ class Cliente extends Model
         'fecha_actualizacion',      // ← NUEVO
     ];
 
+    protected $appends = ['credito_utilizado'];
+
     protected function casts(): array
     {
         return [
@@ -292,5 +294,38 @@ class Cliente extends Model
             'errores' => $errores,
             'saldo_disponible' => $saldoDisponible,
         ];
+    }
+
+    /**
+     * ✅ CRÉDITO: Calcular crédito utilizado = sum(saldo_pendiente de cuentas pendientes)
+     *
+     * @return float Crédito actualmente utilizado
+     */
+    public function calcularCreditoUtilizado(): float
+    {
+        // Si el cliente no está habilitado para crédito, retorna 0
+        if (!$this->puede_tener_credito) {
+            return 0.0;
+        }
+
+        // Si la relación cuentasPorCobrar está precargada, usar esos datos en memoria
+        if ($this->relationLoaded('cuentasPorCobrar')) {
+            return (float)$this->cuentasPorCobrar
+                ->where('estado', 'pendiente')
+                ->sum('saldo_pendiente');
+        }
+
+        // Si no está precargada, hacer el query a la base de datos
+        return (float)$this->cuentasPorCobrar()
+            ->where('estado', 'pendiente')
+            ->sum('saldo_pendiente');
+    }
+
+    /**
+     * ✅ CRÉDITO: Accessor para obtener crédito utilizado
+     */
+    public function getCreditoUtilizadoAttribute(): float
+    {
+        return $this->calcularCreditoUtilizado();
     }
 }

@@ -248,6 +248,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
         // Sistema de Pagos
         Route::get('pagos', [\App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');
+        // ✅ Ruta específica para verificar caja abierta (ANTES de create para evitar conflictos)
+        Route::get('pagos/check-caja-abierta', [\App\Http\Controllers\PagoController::class, 'checkCajaAbierta'])->name('pagos.check-caja-abierta');
         Route::get('pagos/create', [\App\Http\Controllers\PagoController::class, 'create'])->name('pagos.create');
         Route::post('pagos', [\App\Http\Controllers\PagoController::class, 'store'])->name('pagos.store');
         Route::get('pagos/{pago}', [\App\Http\Controllers\PagoController::class, 'show'])->name('pagos.show');
@@ -267,6 +269,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     });
 
     // Rutas para gestión de compras (después de rutas específicas para evitar conflictos)
+    // ✅ Ruta específica para verificar caja abierta (ANTES del resource para evitar conflictos)
+    Route::get('compras/check-caja-abierta', [\App\Http\Controllers\CompraController::class, 'checkCajaAbierta'])->name('compras.check-caja-abierta');
+
     Route::resource('compras', \App\Http\Controllers\CompraController::class)->except(['destroy']);
 
     // Keep nested details routes
@@ -286,6 +291,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('precios', [\App\Http\Controllers\PrecioController::class, 'index'])->middleware('permission:precios.index')->name('precios.management');
 
     // Rutas para gestión de ventas
+    // ✅ Ruta específica para verificar caja abierta (ANTES del resource para evitar conflictos)
+    Route::get('ventas/check-caja-abierta', [\App\Http\Controllers\VentaController::class, 'checkCajaAbierta'])->name('ventas.check-caja-abierta');
+
     // ✅ NUEVO: Aplicar middleware CheckCajaAbierta para validar que hay caja abierta
     Route::resource('ventas', \App\Http\Controllers\VentaController::class)->middleware('caja.abierta');
 
@@ -399,6 +407,19 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::prefix('cajas/admin')->name('cajas.admin.')->middleware('permission:cajas.index')->group(function () {
         // Dashboard admin (ver todas las cajas)
         Route::get('/dashboard', [\App\Http\Controllers\CajaController::class, 'dashboard'])->name('dashboard');
+
+        // ✅ NUEVO: Cierre Diario General Manual - Consolida todas las cajas activas
+        Route::post('/cierre-diario', [\App\Http\Controllers\CajaController::class, 'cierreDiarioGeneral'])->name('cierre-diario');
+
+        // ✅ NUEVO: Cierre Diario General - Versión JSON para Inertia
+        Route::post('/cierre-diario-json', [\App\Http\Controllers\CajaController::class, 'cierreDiarioGeneralJson'])->name('cierre-diario-json');
+
+        // ✅ NUEVO: Reportes de Cierres Diarios - Historial y detalles
+        Route::prefix('reportes-diarios')->name('reportes-diarios.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'index'])->name('index');
+            Route::get('/{cierreDiarioGeneral}', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'show'])->name('show');
+            Route::get('/{cierreDiarioGeneral}/descargar', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'descargar'])->name('descargar');
+        });
 
         // Gestión de cajas por usuario - Validación de roles en el controlador
         Route::prefix('cajas/{userId}')->name('cajas.')->group(function () {

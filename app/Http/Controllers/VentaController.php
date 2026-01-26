@@ -278,6 +278,84 @@ class VentaController extends Controller
     }
 
     /**
+     * Verificar si hay caja abierta (para validación frontend)
+     * GET /ventas/check-caja-abierta
+     *
+     * Busca cajas abiertas de CUALQUIER DÍA, no solo del día actual
+     */
+    public function checkCajaAbierta(Request $request)
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'tiene_caja_abierta' => false,
+                'mensaje' => 'Usuario no autenticado',
+            ]);
+        }
+
+        // Verificar si es cajero
+        $esCajero = $user->empleado && $user->empleado->esCajero();
+        $esAdmin = $user->hasRole(['admin', 'administrador', 'super-admin', 'Super Admin', 'Admin']);
+
+        if (!$esCajero && !$esAdmin) {
+            // No requiere caja
+            return response()->json([
+                'tiene_caja_abierta' => true,
+                'es_cajero' => false,
+                'mensaje' => 'Usuario no requiere caja',
+            ]);
+        }
+
+        // Obtener caja abierta (de CUALQUIER DÍA)
+        $apertura = null;
+
+        if ($esCajero) {
+            $apertura = $user->empleado->aperturasCaja()
+                ->whereDoesntHave('cierre')
+                ->latest()
+                ->with('caja')
+                ->first();
+        } else {
+            $apertura = \App\Models\AperturaCaja::whereDoesntHave('cierre')
+                ->with('caja', 'user')
+                ->latest('fecha')
+                ->first();
+        }
+
+        if ($apertura) {
+            $hoy = today();
+            $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
+                ? $apertura->fecha
+                : \Carbon\Carbon::parse($apertura->fecha);
+
+            $esDeHoy = $fechaApertura->isSameDay($hoy);
+            $diasAtras = $hoy->diffInDays($fechaApertura);
+
+            return response()->json([
+                'tiene_caja_abierta' => true,
+                'es_cajero' => $esCajero,
+                'caja_id' => $apertura->caja_id,
+                'caja_nombre' => $apertura->caja?->nombre,
+                'apertura_id' => $apertura->id,
+                'apertura_fecha' => $apertura->fecha,
+                'es_de_hoy' => $esDeHoy,
+                'dias_atras' => $diasAtras,
+                'usuario_caja' => $apertura->user?->name ?? 'Desconocido',
+                'mensaje' => $esDeHoy
+                    ? '✅ Caja abierta hoy'
+                    : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
+            ]);
+        }
+
+        return response()->json([
+            'tiene_caja_abierta' => false,
+            'es_cajero' => $esCajero,
+            'mensaje' => 'No hay caja abierta en el sistema',
+        ]);
+    }
+
+    /**
      * Crear una venta
      *
      * Flujo:

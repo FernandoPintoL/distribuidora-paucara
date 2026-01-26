@@ -160,9 +160,9 @@ class ClienteController extends Controller
 
             // Cargar relaciones según el tipo de request
             if ($this->isApiRequest()) {
-                $clientes->getCollection()->load('localidad', 'categorias', 'direcciones', 'user', 'ventanasEntrega');
+                $clientes->getCollection()->load('localidad', 'categorias', 'direcciones', 'user', 'ventanasEntrega', 'cuentasPorCobrar');
             } else {
-                $clientes->getCollection()->load('localidad');
+                $clientes->getCollection()->load('localidad', 'cuentasPorCobrar');
             }
 
             // Agregar URLs de fotos de perfil para el listado
@@ -172,20 +172,28 @@ class ClienteController extends Controller
             });
 
             // 🔍 DEBUG: Log para ver qué datos se están enviando
+            $cliente27 = $clientes->getCollection()->firstWhere('id', 27);
             Log::info('🔍 DEBUG CLIENTES INDEX', [
                 'is_api_request' => $this->isApiRequest(),
                 'total_clientes' => $clientes->total(),
-                'primer_cliente' => $clientes->first() ? [
-                    'id'                => $clientes->first()->id,
-                    'nombre'            => $clientes->first()->nombre,
-                    'localidad_id'      => $clientes->first()->localidad_id,
-                    'localidad_cargada' => $clientes->first()->relationLoaded('localidad'),
-                    'localidad_data'    => $clientes->first()->localidad ? [
-                        'id'     => $clientes->first()->localidad->id,
-                        'nombre' => $clientes->first()->localidad->nombre,
-                        'codigo' => $clientes->first()->localidad->codigo,
-                    ] : null,
-                    'toArray'           => $clientes->first()->toArray(),
+                'cliente_27' => $cliente27 ? [
+                    'id'                    => $cliente27->id,
+                    'nombre'                => $cliente27->nombre,
+                    'puede_tener_credito'   => $cliente27->puede_tener_credito,
+                    'limite_credito'        => $cliente27->limite_credito,
+                    'cuentasPorCobrar_count' => $cliente27->cuentasPorCobrar->count(),
+                    'cuentasPorCobrar_pendientes' => $cliente27->cuentasPorCobrar->where('estado', 'pendiente')->count(),
+                    'saldo_pendientes' => $cliente27->cuentasPorCobrar->where('estado', 'pendiente')->sum('saldo_pendiente'),
+                    'cuentasPorCobrar_parciales' => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->count(),
+                    'saldo_parciales' => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->sum('saldo_pendiente'),
+                    'cuentasPorCobrar_todos' => $cliente27->cuentasPorCobrar->map(function($c) {
+                        return [
+                            'id' => $c->id,
+                            'estado' => $c->estado,
+                            'saldo_pendiente' => $c->saldo_pendiente,
+                        ];
+                    })->toArray(),
+                    'credito_utilizado_accessor' => $cliente27->credito_utilizado,
                 ] : null,
             ]);
 

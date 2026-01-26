@@ -113,6 +113,39 @@ export default function VentaForm() {
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [stockValido, setStockValido] = useState(true);
 
+    // Estados para validación de caja abierta
+    interface CajaInfo {
+        tiene_caja_abierta: boolean;
+        es_de_hoy?: boolean;
+        dias_atras?: number;
+        caja_nombre?: string;
+        usuario_caja?: string;
+        mensaje?: string;
+    }
+
+    const [cajaInfo, setCajaInfo] = useState<CajaInfo | null>(null);
+    const [cargandoCaja, setCargandoCaja] = useState(true);
+
+    // Verificar si hay caja abierta (de cualquier día)
+    useEffect(() => {
+        const verificarCaja = async () => {
+            try {
+                const response = await fetch('/ventas/check-caja-abierta');
+                const data = await response.json();
+                setCajaInfo(data);
+                console.log('✅ Estado de caja (Ventas):', data);
+            } catch (error) {
+                console.error('❌ Error verificando caja (Ventas):', error);
+                // Si hay error, permitir acceso (mejor UX que bloquear)
+                setCajaInfo({ tiene_caja_abierta: true });
+            } finally {
+                setCargandoCaja(false);
+            }
+        };
+
+        verificarCaja();
+    }, []);
+
     // Hook para calcular carrito con precios por rango
     const precioRango = usePrecioRangoCarrito(500); // Debounce de 500ms
 
@@ -577,6 +610,32 @@ export default function VentaForm() {
     const selectedMoneda = monedasSeguro.find(m => m.id === data.moneda_id);
     const selectedEstado = estadosSeguro.find(e => e.id === data.estado_documento_id);
 
+    // Mostrar alert si no hay caja abierta
+    if (!cargandoCaja && !cajaInfo?.tiene_caja_abierta) {
+        return (
+            <AppLayout breadcrumbs={[
+                { title: 'Ventas', href: '/ventas' },
+                { title: 'Nueva venta', href: '#' }
+            ]}>
+                <Head title="Nueva venta" />
+                <div className="p-6 space-y-4">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-500 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">🚫 Caja Cerrada</h3>
+                        <p className="text-red-600 dark:text-red-300 mt-2">
+                            No puedes crear una venta sin una caja abierta. Por favor, abre una caja primero desde el módulo de Cajas.
+                        </p>
+                    </div>
+                    <Link
+                        href="/cajas"
+                        className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    >
+                        Ir a Cajas
+                    </Link>
+                </div>
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout breadcrumbs={[
             { title: 'Ventas', href: '/ventas' },
@@ -585,6 +644,42 @@ export default function VentaForm() {
             <Head title={isEditing ? 'Editar venta' : 'Nueva venta'} />
 
             <form onSubmit={handleSubmit} className="space-y-6 p-4">
+                {/* Indicador de verificación de caja */}
+                {cargandoCaja && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-300 rounded-lg p-4">
+                        <div className="text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                            <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+                            Verificando estado de caja...
+                        </div>
+                    </div>
+                )}
+
+                {/* Indicador de caja abierta */}
+                {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
+                    <div className={`border rounded-lg p-4 ${
+                        cajaInfo.es_de_hoy
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-300'
+                            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300'
+                    }`}>
+                        <div className={`${
+                            cajaInfo.es_de_hoy
+                                ? 'text-green-700 dark:text-green-300'
+                                : 'text-yellow-700 dark:text-yellow-300'
+                        } flex items-center gap-2`}>
+                            <span className={`text-lg ${cajaInfo.es_de_hoy ? '✅' : '⚠️'}`}></span>
+                            <div>
+                                <strong>{cajaInfo.mensaje}</strong>
+                                {cajaInfo.caja_nombre && (
+                                    <div className="text-sm mt-1">
+                                        Caja: <strong>{cajaInfo.caja_nombre}</strong>
+                                        {cajaInfo.usuario_caja && ` • Operador: ${cajaInfo.usuario_caja}`}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Banner de advertencia - caja sin abrir */}
                 {shouldShowBanner && (
                     <div className="mb-4">

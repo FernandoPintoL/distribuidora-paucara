@@ -2,13 +2,14 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Validator;
 
 class StoreCompraRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        \Log::info('StoreCompraRequest::authorize() - Solicitud de compra recibida');
+        Log::info('StoreCompraRequest::authorize() - Solicitud de compra recibida');
         return true;
     }
 
@@ -49,12 +50,12 @@ class StoreCompraRequest extends FormRequest
      */
     public function withValidator(Validator $validator): void
     {
-        \Log::info('StoreCompraRequest::withValidator() - Iniciando validaciones adicionales', [
-            'data_keys' => array_keys($this->all()),
-            'fecha' => $this->input('fecha'),
-            'proveedor_id' => $this->input('proveedor_id'),
-            'subtotal' => $this->input('subtotal'),
-            'total' => $this->input('total'),
+        Log::info('StoreCompraRequest::withValidator() - Iniciando validaciones adicionales', [
+            'data_keys'      => array_keys($this->all()),
+            'fecha'          => $this->input('fecha'),
+            'proveedor_id'   => $this->input('proveedor_id'),
+            'subtotal'       => $this->input('subtotal'),
+            'total'          => $this->input('total'),
             'detalles_count' => count($this->input('detalles', [])),
         ]);
 
@@ -88,16 +89,16 @@ class StoreCompraRequest extends FormRequest
         $subtotalCalculado = array_reduce($detalles, fn($sum, $det) => $sum + ($det['subtotal'] ?? 0), 0);
         $subtotalDeclarado = $this->input('subtotal', 0);
 
-        \Log::info('StoreCompraRequest::validarCoherenciaSubtotal()', [
+        Log::info('StoreCompraRequest::validarCoherenciaSubtotal()', [
             'subtotalDeclarado' => $subtotalDeclarado,
             'subtotalCalculado' => $subtotalCalculado,
-            'diferencia' => abs($subtotalCalculado - $subtotalDeclarado),
+            'diferencia'        => abs($subtotalCalculado - $subtotalDeclarado),
         ]);
 
         // Permitir margen de error de 0.01 por redondeos
         if (abs($subtotalCalculado - $subtotalDeclarado) > 0.01) {
-            \Log::warning('StoreCompraRequest::validarCoherenciaSubtotal() - FALLA', [
-                'error' => "El subtotal ({$subtotalDeclarado}) no coincide con la suma de los detalles ({$subtotalCalculado})."
+            Log::warning('StoreCompraRequest::validarCoherenciaSubtotal() - FALLA', [
+                'error' => "El subtotal ({$subtotalDeclarado}) no coincide con la suma de los detalles ({$subtotalCalculado}).",
             ]);
             $validator->errors()->add('subtotal',
                 "El subtotal ({$subtotalDeclarado}) no coincide con la suma de los detalles ({$subtotalCalculado})."
@@ -114,19 +115,19 @@ class StoreCompraRequest extends FormRequest
 
         $totalCalculado = $subtotal - $descuento + $impuesto;
 
-        \Log::info('StoreCompraRequest::validarCoherenciaTotal()', [
-            'subtotal' => $subtotal,
-            'descuento' => $descuento,
-            'impuesto' => $impuesto,
+        Log::info('StoreCompraRequest::validarCoherenciaTotal()', [
+            'subtotal'       => $subtotal,
+            'descuento'      => $descuento,
+            'impuesto'       => $impuesto,
             'totalDeclarado' => $total,
             'totalCalculado' => $totalCalculado,
-            'diferencia' => abs($totalCalculado - $total),
+            'diferencia'     => abs($totalCalculado - $total),
         ]);
 
         // Permitir margen de error de 0.01 por redondeos
         if (abs($totalCalculado - $total) > 0.01) {
-            \Log::warning('StoreCompraRequest::validarCoherenciaTotal() - FALLA', [
-                'error' => "El total ({$total}) no coincide con el cálculo (subtotal: {$subtotal} - descuento: {$descuento} + impuesto: {$impuesto} = {$totalCalculado})."
+            Log::warning('StoreCompraRequest::validarCoherenciaTotal() - FALLA', [
+                'error' => "El total ({$total}) no coincide con el cálculo (subtotal: {$subtotal} - descuento: {$descuento} + impuesto: {$impuesto} = {$totalCalculado}).",
             ]);
             $validator->errors()->add('total',
                 "El total ({$total}) no coincide con el cálculo (subtotal: {$subtotal} - descuento: {$descuento} + impuesto: {$impuesto} = {$totalCalculado})."
