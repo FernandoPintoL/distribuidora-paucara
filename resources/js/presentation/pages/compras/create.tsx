@@ -1,7 +1,7 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/application/hooks/use-auth';
 import { Alert, AlertTitle, AlertDescription } from '@/presentation/components/ui/alert';
 import { formatCurrency } from '@/lib/utils';
@@ -175,7 +175,7 @@ export default function CompraForm() {
     if (data.proveedor_id !== proveedorValue) {
       setProveedorValue(data.proveedor_id);
     }
-  }, [data.proveedor_id, proveedorValue]);
+  }, [data.proveedor_id]); // ✅ Solo depende de data.proveedor_id, no de proveedorValue
 
   // Cargar el nombre del proveedor cuando se edita una compra
   useEffect(() => {
@@ -368,64 +368,73 @@ export default function CompraForm() {
     };
   }, [hasUnsavedChanges, hasMinimumContent, autoSave]);
 
-  // Convertir tipos de pago a opciones para SearchSelect
-  const tipoPagoOptions: SelectOption[] = props.tipos_pago?.map(tipo => ({
-    value: tipo.id,
-    label: tipo.nombre,
-    description: `Código: ${tipo.codigo}`,
-  })) ?? [];
+  // ✅ MEMOIZED: Convertir tipos de pago a opciones para SearchSelect
+  const tipoPagoOptions: SelectOption[] = useMemo(() =>
+    props.tipos_pago?.map(tipo => ({
+      value: tipo.id,
+      label: tipo.nombre,
+      description: `Código: ${tipo.codigo}`,
+    })) ?? [],
+    [props.tipos_pago]
+  );
 
-  // Convertir almacenes a opciones para SearchSelect
-  const almacenOptions: SelectOption[] = props.almacenes?.map(almacen => ({
-    value: almacen.id,
-    label: almacen.nombre,
-    description: almacen.activo ? 'Activo' : 'Inactivo',
-  })) ?? [];
+  // ✅ MEMOIZED: Convertir almacenes a opciones para SearchSelect
+  const almacenOptions: SelectOption[] = useMemo(() =>
+    props.almacenes?.map(almacen => ({
+      value: almacen.id,
+      label: almacen.nombre,
+      description: almacen.activo ? 'Activo' : 'Inactivo',
+    })) ?? [],
+    [props.almacenes]
+  );
 
-  // Convertir estados a opciones para SearchSelect
-  const getEstadosPermitidos = () => {
-    if (!isEditing) {
-      // Para nuevas compras, permitir BORRADOR o APROBADO
-      return props.estados?.filter(estado =>
-        ['Borrador', 'Aprobado'].includes(estado.nombre)
-      ) ?? [];
-    }
-
-    const estadoActual = props.compra?.estadoDocumento?.nombre;
-    console.log('🔍 getEstadosPermitidos - estadoActual:', estadoActual, 'all estados:', props.estados);
-
-    // Filtrar estados según el flujo de negocio
-    switch (estadoActual) {
-      case 'Borrador':
+  // ✅ MEMOIZED: Convertir estados a opciones para SearchSelect
+  const estadoOptions: SelectOption[] = useMemo(() => {
+    const getEstadosPermitidos = () => {
+      if (!isEditing) {
+        // Para nuevas compras, permitir BORRADOR o APROBADO
         return props.estados?.filter(estado =>
-          ['Borrador', 'Aprobado', 'Pendiente'].includes(estado.nombre)
+          ['Borrador', 'Aprobado'].includes(estado.nombre)
         ) ?? [];
-      case 'Pendiente':
-        return props.estados?.filter(estado =>
-          ['Pendiente', 'Aprobado', 'Anulado'].includes(estado.nombre)
-        ) ?? [];
-      case 'Aprobado':
-        return props.estados?.filter(estado =>
-          ['Aprobado', 'Facturado', 'Anulado'].includes(estado.nombre)
-        ) ?? [];
-      case 'Facturado':
-        return props.estados?.filter(estado =>
-          ['Facturado', 'Cancelado', 'Anulado'].includes(estado.nombre)
-        ) ?? [];
-      default:
-        // Estados finales (Anulado, Cancelado) no permiten cambios
-        console.log('🔍 getEstadosPermitidos - Usando DEFAULT case, estadoActual:', estadoActual);
-        const result = props.estados?.filter(estado => estado.nombre === estadoActual) ?? [];
-        console.log('🔍 resultado del default:', result);
-        return result;
-    }
-  };
+      }
 
-  const estadoOptions: SelectOption[] = getEstadosPermitidos().map(estado => ({
-    value: estado.id,
-    label: estado.nombre,
-  }));
-  console.log('📦 estadoOptions final:', estadoOptions);
+      const estadoActual = props.compra?.estadoDocumento?.nombre;
+      console.log('🔍 getEstadosPermitidos - estadoActual:', estadoActual, 'all estados:', props.estados);
+
+      // Filtrar estados según el flujo de negocio
+      switch (estadoActual) {
+        case 'Borrador':
+          return props.estados?.filter(estado =>
+            ['Borrador', 'Aprobado', 'Pendiente'].includes(estado.nombre)
+          ) ?? [];
+        case 'Pendiente':
+          return props.estados?.filter(estado =>
+            ['Pendiente', 'Aprobado', 'Anulado'].includes(estado.nombre)
+          ) ?? [];
+        case 'Aprobado':
+          return props.estados?.filter(estado =>
+            ['Aprobado', 'Facturado', 'Anulado'].includes(estado.nombre)
+          ) ?? [];
+        case 'Facturado':
+          return props.estados?.filter(estado =>
+            ['Facturado', 'Cancelado', 'Anulado'].includes(estado.nombre)
+          ) ?? [];
+        default:
+          // Estados finales (Anulado, Cancelado) no permiten cambios
+          console.log('🔍 getEstadosPermitidos - Usando DEFAULT case, estadoActual:', estadoActual);
+          const result = props.estados?.filter(estado => estado.nombre === estadoActual) ?? [];
+          console.log('🔍 resultado del default:', result);
+          return result;
+      }
+    };
+
+    const opciones = getEstadosPermitidos().map(estado => ({
+      value: estado.id,
+      label: estado.nombre,
+    }));
+    console.log('📦 estadoOptions final:', opciones);
+    return opciones;
+  }, [isEditing, props.compra?.estadoDocumento?.nombre, props.estados]);
 
   // Mostrar mensajes flash del backend
   useEffect(() => {
@@ -436,7 +445,7 @@ export default function CompraForm() {
     if (flash?.error) {
       NotificationService.error(flash.error);
     }
-  }, [props]);
+  }, []); // ✅ Solo ejecutar una vez al montar el componente
 
   // Recalcular totales cuando cambian detalles
   useEffect(() => {
@@ -756,17 +765,15 @@ export default function CompraForm() {
         )}
 
         {/* Indicador de caja abierta */}
-        {!cargandoCaja && cajaInfo && cajaInfo.tiene_caja_abierta && (
-          <Alert className={`${
-            cajaInfo.es_de_hoy
-              ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
-              : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20'
-          }`}>
-            <AlertDescription className={`${
-              cajaInfo.es_de_hoy
-                ? 'text-green-700 dark:text-green-300'
-                : 'text-yellow-700 dark:text-yellow-300'
-            } flex items-center gap-2`}>
+        {/* {!cargandoCaja && cajaInfo && cajaInfo.tiene_caja_abierta ? (
+          <Alert className={`${cajaInfo.es_de_hoy
+            ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
+            : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20'
+            }`}>
+            <AlertDescription className={`${cajaInfo.es_de_hoy
+              ? 'text-green-700 dark:text-green-300'
+              : 'text-yellow-700 dark:text-yellow-300'
+              } flex items-center gap-2`}>
               <span className={`text-lg ${cajaInfo.es_de_hoy ? '✅' : '⚠️'}`}></span>
               <div>
                 <strong>{cajaInfo.mensaje}</strong>
@@ -779,7 +786,7 @@ export default function CompraForm() {
               </div>
             </AlertDescription>
           </Alert>
-        )}
+        ) : null} */}
 
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">{title}</h1>
@@ -810,28 +817,31 @@ export default function CompraForm() {
         )}
 
         {/* Indicador de estado actual para compras existentes */}
-        {isEditing && props.compra?.estadoDocumento && (
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Estado: {props.compra.estadoDocumento.nombre}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {estadoActual === 'Borrador' && 'Compra en desarrollo. Puede editar todos los campos.'}
-                  {estadoActual === 'Pendiente' && 'Esperando aprobación. Puede cambiar a Aprobado.'}
-                  {estadoActual === 'Aprobado' && 'Compra aprobada. Stock registrado. Solo puede editar observaciones.'}
-                  {estadoActual === 'Facturado' && 'Compra facturada. Solo lectura.'}
-                  {estadoActual === 'Cancelado' && 'Compra cancelada. Solo lectura.'}
-                  {estadoActual === 'Anulado' && 'Compra anulada. Solo lectura.'}
-                </p>
-              </div>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${getEstadoColor(props.compra.estadoDocumento)}`}>
-                {props.compra.estadoDocumento.nombre}
+        {isEditing && props.compra?.estadoDocumento ? (() => {
+          const estadoDoc = props.compra.estadoDocumento;
+          return (
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    Estado: {estadoDoc.nombre}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {estadoActual === 'Borrador' && 'Compra en desarrollo. Puede editar todos los campos.'}
+                    {estadoActual === 'Pendiente' && 'Esperando aprobación. Puede cambiar a Aprobado.'}
+                    {estadoActual === 'Aprobado' && 'Compra aprobada. Stock registrado. Solo puede editar observaciones.'}
+                    {estadoActual === 'Facturado' && 'Compra facturada. Solo lectura.'}
+                    {estadoActual === 'Cancelado' && 'Compra cancelada. Solo lectura.'}
+                    {estadoActual === 'Anulado' && 'Compra anulada. Solo lectura.'}
+                  </p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${getEstadoColor(estadoDoc)}`}>
+                  {estadoDoc.nombre}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })() : null}
 
         {/* Información general */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
@@ -849,7 +859,7 @@ export default function CompraForm() {
                   type="text"
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                   value={data.numero || ''}
-                  onChange={e => setData('numero', e.target.value)}
+                  onChange={e => setData('numero', (e.target as HTMLInputElement).value)}
                   placeholder="Ej: COMP-001"
                 />
                 {errors.numero && <p className="text-red-600 text-xs mt-1">{errors.numero}</p>}
@@ -900,6 +910,15 @@ export default function CompraForm() {
                 createIconButtonTitle="Crear nuevo proveedor"
                 className="w-full"
               />
+              {/* ✅ Indicador de proveedor seleccionado */}
+              {proveedorDisplay && (
+                <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md flex items-center gap-2">
+                  <span className="text-green-600 dark:text-green-400">✅</span>
+                  <span className="text-sm text-green-700 dark:text-green-300">
+                    Proveedor: <strong>{proveedorDisplay}</strong>
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -909,7 +928,7 @@ export default function CompraForm() {
                 disabled={soloLectura || editableAprobado}
                 value={data.tipo_pago_id}
                 options={tipoPagoOptions}
-                onChange={(value) => setData('tipo_pago_id', value || '')}
+                onChange={(value: any) => setData('tipo_pago_id', value || '')}
                 placeholder="Seleccionar tipo de pago"
                 emptyText="No se encontraron tipos de pago"
                 searchPlaceholder="Buscar tipo de pago..."
@@ -925,7 +944,7 @@ export default function CompraForm() {
                 disabled={soloLectura}
                 value={data.estado_documento_id}
                 options={estadoOptions}
-                onChange={(value) => setData('estado_documento_id', value || '')}
+                onChange={(value: any) => setData('estado_documento_id', value || '')}
                 placeholder="Seleccionar estado"
                 emptyText="No se encontraron estados"
                 searchPlaceholder="Buscar estado..."
@@ -941,7 +960,7 @@ export default function CompraForm() {
                 disabled={soloLectura || editableAprobado}
                 value={data.almacen_id}
                 options={almacenOptions}
-                onChange={(value) => setData('almacen_id', value || '')}
+                onChange={(value: any) => setData('almacen_id', value || '')}
                 placeholder="Seleccionar almacén"
                 emptyText="No se encontraron almacenes"
                 searchPlaceholder="Buscar almacén..."
@@ -992,30 +1011,32 @@ export default function CompraForm() {
             productos={props.productos.map(p => ({
               id: p.id,
               nombre: p.nombre,
-              codigo: p.codigo,
-              codigo_barras: p.codigo_barras || undefined,
-              precio_venta: p.precio_venta,
-              precio_compra: p.precio_compra
+              codigo: p.codigo ?? undefined, // ✅ Convertir null a undefined
+              codigo_barras: p.codigo_barras ?? undefined,
+              precio_venta: p.precio_venta as number | undefined,
+              precio_compra: p.precio_compra as number | undefined
             }))}
             detalles={data.detalles}
             readOnly={soloLectura || editableAprobado}
             onAddProduct={(producto) => {
               // Adaptar la función para agregar producto
+              const precioCompra = Number(producto.precio_compra) || 0; // ✅ Cast a number
+              const precioCosto = Number(producto.precio_costo) || 0; // ✅ Cast a number
               const newDetalle: DetalleForm = {
                 producto_id: producto.id,
                 cantidad: 1,
-                precio_unitario: producto.precio_compra || 0,
+                precio_unitario: precioCompra,
                 descuento: 0,
-                subtotal: producto.precio_compra || 0,
+                subtotal: precioCompra,
                 lote: '',
                 fecha_vencimiento: '',
-                precio_costo: producto.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
+                precio_costo: precioCosto, // ✅ NUEVO: Precio de costo desde API
                 producto: { // ✅ NUEVO: Guardar objeto completo del producto
                   id: producto.id,
                   nombre: producto.nombre,
                   codigo: producto.codigo,
                   codigo_barras: producto.codigo_barras,
-                  precio_costo: producto.precio_costo || 0
+                  precio_costo: precioCosto
                 }
               };
               const newDetalles = [...data.detalles, newDetalle];
@@ -1030,7 +1051,6 @@ export default function CompraForm() {
             onTotalsChange={() => {
               // Los totales se recalculan automáticamente por el useEffect
             }}
-            tipo="compra"
             errors={errors}
             showLoteFields={true}
           />
@@ -1050,12 +1070,20 @@ export default function CompraForm() {
                 <span className="text-gray-600 dark:text-gray-400">Descuento:</span>
                 <div className="flex items-center space-x-2">
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal" // ✅ Mostrar teclado decimal en móvil
                     className="w-20 px-2 py-1 text-right text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     value={data.descuento}
-                    onChange={e => setData('descuento', Number(e.target.value))}
+                    onChange={e => {
+                      // ✅ Solo permitir números decimales positivos
+                      const valor = e.target.value;
+                      if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
+                        const num = valor === '' ? 0 : parseFloat(valor);
+                        if (num >= 0) {
+                          setData('descuento', num);
+                        }
+                      }
+                    }}
                   />
                   <span className="font-mono">{formatCurrency(data.descuento, selectedMoneda?.simbolo)}</span>
                 </div>

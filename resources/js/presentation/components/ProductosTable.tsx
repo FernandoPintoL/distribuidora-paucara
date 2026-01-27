@@ -90,82 +90,80 @@ export default function ProductosTable({
     const [showScannerModal, setShowScannerModal] = useState(false);
     const [scannerError, setScannerError] = useState<string | null>(null);
 
-    // ✅ NUEVO: Búsqueda via API cuando cambia productSearch
-    useEffect(() => {
-        const searchTerm = productSearch.trim();
+    // ✅ NUEVO: Función para buscar productos manualmente (botón o Enter)
+    const buscarProductos = async (searchTerm?: string) => {
+        const term = (searchTerm || productSearch).trim();
 
         // Si no hay búsqueda, limpiar resultados
-        if (searchTerm === '') {
+        if (term === '') {
             setProductosDisponibles([]);
             setSearchError(null);
             return;
         }
 
         // Si búsqueda muy corta, no hacer request
-        if (searchTerm.length < 2) {
-            setProductosDisponibles([]);
-            setSearchError(null);
+        if (term.length < 2) {
+            setSearchError('Ingresa al menos 2 caracteres para buscar');
             return;
         }
 
         // Llamar a API de búsqueda
-        const buscarProductos = async () => {
-            setIsLoading(true);
-            setSearchError(null);
+        setIsLoading(true);
+        setSearchError(null);
 
-            try {
-                const params = new URLSearchParams({
-                    q: searchTerm,
-                    limite: '10',
-                    tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
-                });
+        try {
+            const params = new URLSearchParams({
+                q: term,
+                limite: '10',
+                tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
+            });
 
-                // ✅ Pasar almacen_id si está disponible
-                if (almacen_id) {
-                    params.append('almacen_id', almacen_id.toString());
-                }
-
-                const response = await fetch(`/api/productos/buscar?${params.toString()}`);
-
-                if (!response.ok) {
-                    throw new Error('Error en búsqueda de productos');
-                }
-
-                const data = await response.json();
-
-                // Transformar respuesta de API a formato Producto
-                const productosAPI = data.data.map((p: any) => ({
-                    id: p.id,
-                    nombre: p.nombre,
-                    codigo: p.sku || p.codigo_barras,
-                    codigo_barras: p.codigo_barras,
-                    precio_venta: p.precio_base || 0,
-                    precio_costo: p.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
-                    stock: p.stock_disponible || 0,
-                    peso: p.peso,
-                    codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || [],
-                    // ✅ NUEVO: Campos para productos fraccionados
-                    es_fraccionado: p.es_fraccionado || false,
-                    unidad_medida_id: p.unidad_medida_id,
-                    unidad_medida_nombre: p.unidad_medida_nombre,
-                    conversiones: p.conversiones || []
-                }));
-
-                setProductosDisponibles(productosAPI);
-            } catch (error) {
-                console.error('Error buscando productos:', error);
-                setSearchError('Error al buscar productos');
-                setProductosDisponibles([]);
-            } finally {
-                setIsLoading(false);
+            // ✅ Pasar almacen_id si está disponible
+            if (almacen_id) {
+                params.append('almacen_id', almacen_id.toString());
             }
-        };
 
-        // Debounce: esperar 300ms antes de hacer request
-        const timeoutId = setTimeout(buscarProductos, 300);
+            const response = await fetch(`/api/productos/buscar?${params.toString()}`);
 
-        return () => clearTimeout(timeoutId);
-    }, [productSearch, almacen_id, tipo]); // ✅ AGREGADO: tipo como dependencia
+            if (!response.ok) {
+                throw new Error('Error en búsqueda de productos');
+            }
+
+            const data = await response.json();
+
+            // Transformar respuesta de API a formato Producto
+            const productosAPI = data.data.map((p: any) => ({
+                id: p.id,
+                nombre: p.nombre,
+                codigo: p.sku || p.codigo_barras,
+                codigo_barras: p.codigo_barras,
+                precio_venta: p.precio_base || 0,
+                precio_costo: p.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
+                precio_compra: p.precio_costo || 0, // ✅ NUEVO: Precio de compra (igual al costo)
+                stock: p.stock_disponible || 0,
+                peso: p.peso,
+                codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || [],
+                // ✅ NUEVO: Campos para productos fraccionados
+                es_fraccionado: p.es_fraccionado || false,
+                unidad_medida_id: p.unidad_medida_id,
+                unidad_medida_nombre: p.unidad_medida_nombre,
+                conversiones: p.conversiones || []
+            }));
+
+            setProductosDisponibles(productosAPI);
+
+            // ✅ NUEVO: Si hay exactamente 1 resultado exacto, agregarlo automáticamente
+            if (productosAPI.length === 1 && productosAPI[0].codigo === term) {
+                handleAddProduct(productosAPI[0]);
+            }
+        } catch (error) {
+            console.error('Error buscando productos:', error);
+            setSearchError('Error al buscar productos');
+            setProductosDisponibles([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // ✅ MODIFICADO: Manejar resultado del escáner via API (búsqueda EXACTA)
     const handleScannerResult = async (result: string) => {
@@ -202,6 +200,7 @@ export default function ProductosTable({
                         codigo_barras: productoAPI.codigo_barras,
                         precio_venta: productoAPI.precio_base || 0,
                         precio_costo: productoAPI.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
+                        precio_compra: productoAPI.precio_costo || 0, // ✅ NUEVO: Precio de compra (igual al costo)
                         stock: productoAPI.stock_disponible || 0,
                         peso: productoAPI.peso,
                         codigos_barras: productoAPI.codigosBarra?.map((cb: any) => cb.codigo) || [],
@@ -259,7 +258,10 @@ export default function ProductosTable({
     // Función para agregar producto desde la búsqueda
     const handleAddProduct = (producto: Producto) => {
         onAddProduct(producto);
-        setProductSearch(''); // Limpiar búsqueda después de agregar
+        // ✅ Limpiar búsqueda y sugerencias completamente después de agregar
+        setProductSearch('');
+        setProductosDisponibles([]);
+        setSearchError(null);
     };
 
     // ✅ NUEVO: Calcular precio según unidad seleccionada
@@ -288,9 +290,28 @@ export default function ProductosTable({
                         type="text"
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                        placeholder="Buscar por nombre o código..."
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                buscarProductos();
+                            }
+                        }}
+                        autoComplete="off" // ✅ Deshabilitar autocompletado
+                        disabled={readOnly}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        placeholder="Buscar por nombre o código... (Enter para buscar)"
                     />
+                    <button
+                        type="button"
+                        disabled={readOnly || isLoading}
+                        onClick={() => buscarProductos()}
+                        className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Buscar producto"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
                     <button
                         type="button"
                         disabled={readOnly}
@@ -304,7 +325,8 @@ export default function ProductosTable({
                     </button>
                 </div>
 
-                {productSearch && (
+                {/* ✅ Mostrar resultados solo si hay búsqueda realizada */}
+                {(productosDisponibles.length > 0 || searchError || (productSearch && !isLoading && productosDisponibles.length === 0)) && (
                     <div className="mt-2 max-h-32 overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
                         {/* ✅ ESTADO: Cargando */}
                         {isLoading && (
@@ -316,7 +338,7 @@ export default function ProductosTable({
                         {/* ✅ ESTADO: Error */}
                         {searchError && !isLoading && (
                             <div className="px-3 py-2 text-sm text-red-600 dark:text-red-400 text-center">
-                                {searchError}
+                                ❌ {searchError}
                             </div>
                         )}
 
@@ -328,7 +350,7 @@ export default function ProductosTable({
                                     type="button"
                                     disabled={readOnly}
                                     onClick={() => handleAddProduct(producto)}
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full text-left px-3 py-2 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <div className="font-medium text-gray-900 dark:text-white">
                                         {producto.nombre}
@@ -342,7 +364,7 @@ export default function ProductosTable({
                         )}
 
                         {/* ✅ ESTADO: Sin resultados */}
-                        {!isLoading && productSearch && productosDisponibles.length === 0 && !searchError && (
+                        {!isLoading && productosDisponibles.length === 0 && !searchError && (
                             <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                                 No se encontraron productos con ese criterio
                             </div>
@@ -440,12 +462,20 @@ export default function ProductosTable({
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <input
-                                                type="number"
-                                                min="1"
-                                                step="1"
+                                                type="text"
+                                                inputMode="numeric" // ✅ Mostrar teclado numérico en móvil
                                                 disabled={readOnly}
                                                 value={detalle.cantidad}
-                                                onChange={(e) => handleUpdateDetail(index, 'cantidad', Number(e.target.value))}
+                                                onChange={(e) => {
+                                                    // ✅ Solo permitir números enteros positivos
+                                                    const valor = e.target.value;
+                                                    if (valor === '' || /^\d+$/.test(valor)) {
+                                                        const num = valor === '' ? 0 : parseInt(valor, 10);
+                                                        if (num >= 0) {
+                                                            handleUpdateDetail(index, 'cantidad', num);
+                                                        }
+                                                    }
+                                                }}
                                                 className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
                                         </td>
@@ -532,12 +562,20 @@ export default function ProductosTable({
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
+                                                        type="text"
+                                                        inputMode="decimal" // ✅ Mostrar teclado decimal en móvil
                                                         disabled={readOnly}
                                                         value={detalle.precio_unitario}
-                                                        onChange={(e) => handleUpdateDetail(index, 'precio_unitario', Number(e.target.value))}
+                                                        onChange={(e) => {
+                                                            // ✅ Solo permitir números decimales positivos
+                                                            const valor = e.target.value;
+                                                            if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
+                                                                const num = valor === '' ? 0 : parseFloat(valor);
+                                                                if (num >= 0) {
+                                                                    handleUpdateDetail(index, 'precio_unitario', num);
+                                                                }
+                                                            }
+                                                        }}
                                                         className={`w-24 px-2 py-1 text-sm border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${tieneDiferencia
                                                             ? esAumento
                                                                 ? 'border-amber-300 dark:border-amber-700'

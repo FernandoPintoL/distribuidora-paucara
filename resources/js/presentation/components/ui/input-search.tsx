@@ -333,6 +333,7 @@ export default function InputSearch({
                         onFocus={() => query.length >= 2 && (options.length > 0 || (showCreateButton && !!onCreateClick)) && setIsOpen(true)}
                         placeholder={placeholder}
                         disabled={disabled}
+                        autoComplete="off" // ✅ Desabilita autocompletado del navegador
                         aria-invalid={!!error}
                         className={`
                             border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground
@@ -615,6 +616,7 @@ export default function InputSearch({
                                             type="text"
                                             placeholder="O ingresa el código manualmente"
                                             className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                                            autoComplete="off" // ✅ Desabilita autocompletado del navegador
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
                                                     const target = e.target as HTMLInputElement;

@@ -49,6 +49,7 @@ export interface Producto extends BaseEntity {
     descripcion?: string;
     precio_venta?: number;
     precio_costo?: number; // ✅ NUEVO: Precio de costo registrado
+    precio_compra?: number; // ✅ NUEVO: Precio de compra (usado en compras)
     stock?: number;
     peso?: number; // ✅ NUEVO: Peso del producto en kg
     codigos_barras?: string[]; // ✅ NUEVO: Array de códigos de barras

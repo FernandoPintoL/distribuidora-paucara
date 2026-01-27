@@ -31,6 +31,7 @@ const initialProductoData: ProductoFormData = {
   categoria_id: '',
   marca_id: '',
   proveedor_id: '',
+  proveedor: null, // ✅ NUEVO: Campo para almacenar el objeto del proveedor
   activo: true,
   es_fraccionado: false, // ✨ NUEVO
   stock_minimo: 0,
@@ -94,6 +95,7 @@ export default function ProductoForm({
       categoria_id: producto.categoria_id ? Number(producto.categoria_id) : '',
       marca_id: producto.marca_id ? Number(producto.marca_id) : '',
       proveedor_id: producto.proveedor_id ? Number(producto.proveedor_id) : '',
+      proveedor: producto.proveedor || null, // ✅ NUEVO: Incluir objeto del proveedor para el displayValue
       activo: producto.activo ?? true,
       es_fraccionado: producto.es_fraccionado ?? false, // ✨ NUEVO
       stock_minimo: producto.stock_minimo ?? 0,

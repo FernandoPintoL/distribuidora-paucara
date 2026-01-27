@@ -105,74 +105,67 @@ class PagoController extends Controller
      */
     public function checkCajaAbierta(Request $request)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        if (!$user) {
-            return response()->json([
-                'tiene_caja_abierta' => false,
-                'mensaje' => 'Usuario no autenticado',
-            ]);
-        }
+            if (!$user) {
+                return response()->json([
+                    'tiene_caja_abierta' => false,
+                    'mensaje' => 'Usuario no autenticado',
+                ]);
+            }
 
-        // Verificar si es cajero
-        $esCajero = $user->empleado && $user->empleado->esCajero();
-        $esAdmin = $user->hasRole(['admin', 'administrador', 'super-admin', 'Super Admin', 'Admin']);
-
-        if (!$esCajero && !$esAdmin) {
-            // No requiere caja
-            return response()->json([
-                'tiene_caja_abierta' => true,
-                'es_cajero' => false,
-                'mensaje' => 'Usuario no requiere caja',
-            ]);
-        }
-
-        // Obtener caja abierta (de CUALQUIER DÍA)
-        $apertura = null;
-
-        if ($esCajero) {
-            $apertura = $user->empleado->aperturasCaja()
+            // ✅ SIMPLIFICADO: Buscar directamente caja abierta del usuario por user_id
+            $apertura = \App\Models\AperturaCaja::where('user_id', $user->id)
                 ->whereDoesntHave('cierre')
-                ->latest()
-                ->with('caja')
-                ->first();
-        } else {
-            $apertura = \App\Models\AperturaCaja::whereDoesntHave('cierre')
-                ->with('caja', 'user')
+                ->with('caja', 'usuario') // ✅ CORREGIDO: La relación se llama 'usuario', no 'user'
                 ->latest('fecha')
                 ->first();
-        }
 
-        if ($apertura) {
-            $hoy = today();
-            $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
-                ? $apertura->fecha
-                : \Carbon\Carbon::parse($apertura->fecha);
+            // Si el usuario tiene caja abierta
+            if ($apertura) {
+                $hoy = today();
+                $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
+                    ? $apertura->fecha
+                    : \Carbon\Carbon::parse($apertura->fecha);
 
-            $esDeHoy = $fechaApertura->isSameDay($hoy);
-            $diasAtras = $hoy->diffInDays($fechaApertura);
+                $esDeHoy = $fechaApertura->isSameDay($hoy);
+                // ✅ CORREGIDO: Calcular días correctamente
+                $diasAtras = $esDeHoy ? 0 : abs($fechaApertura->diffInDays($hoy));
+
+                return response()->json([
+                    'tiene_caja_abierta' => true,
+                    'caja_id' => $apertura->caja_id,
+                    'caja_nombre' => $apertura->caja?->nombre,
+                    'apertura_id' => $apertura->id,
+                    'apertura_fecha' => $apertura->fecha,
+                    'es_de_hoy' => $esDeHoy,
+                    'dias_atras' => $diasAtras,
+                    'usuario_caja' => $apertura->usuario?->name ?? 'Desconocido', // ✅ CORREGIDO: usuario, no user
+                    'mensaje' => $esDeHoy
+                        ? '✅ Caja abierta hoy'
+                        : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
+                ]);
+            }
 
             return response()->json([
-                'tiene_caja_abierta' => true,
-                'es_cajero' => $esCajero,
-                'caja_id' => $apertura->caja_id,
-                'caja_nombre' => $apertura->caja?->nombre,
-                'apertura_id' => $apertura->id,
-                'apertura_fecha' => $apertura->fecha,
-                'es_de_hoy' => $esDeHoy,
-                'dias_atras' => $diasAtras,
-                'usuario_caja' => $apertura->user?->name ?? 'Desconocido',
-                'mensaje' => $esDeHoy
-                    ? '✅ Caja abierta hoy'
-                    : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
+                'tiene_caja_abierta' => false,
+                'mensaje' => 'No hay caja abierta para este usuario',
             ]);
-        }
+        } catch (\Exception $e) {
+            \Log::error('Error en checkCajaAbierta:', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
 
-        return response()->json([
-            'tiene_caja_abierta' => false,
-            'es_cajero' => $esCajero,
-            'mensaje' => 'No hay caja abierta en el sistema',
-        ]);
+            return response()->json([
+                'tiene_caja_abierta' => false,
+                'error' => true,
+                'mensaje' => 'Error al verificar el estado de la caja',
+                'debug' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
     }
 
     public function store(Request $request)

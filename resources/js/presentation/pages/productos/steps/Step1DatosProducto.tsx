@@ -236,6 +236,7 @@ export default function Step1DatosProducto({
             id="proveedor"
             label="Proveedor (opcional)"
             value={data.proveedor_id ?? ''}
+            displayValue={data.proveedor?.nombre} // ✅ NUEVO: Mostrar nombre del proveedor actual
             onChange={(value) => setData('proveedor_id', value ? Number(value) : '')}
             onSearch={searchProveedores}
             placeholder="busca o crea tu proveedor"
