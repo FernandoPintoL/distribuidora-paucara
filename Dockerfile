@@ -88,7 +88,8 @@ RUN rm -f /app/.env
 # Clear any prebuilt caches (env will be provided at runtime on Railway)
 RUN php artisan package:discover --ansi || true && \
     php artisan optimize:clear || true && \
-    chmod -R 777 storage/ public/ bootstrap/cache
+    chmod -R 777 storage/ public/ bootstrap/cache && \
+    php artisan storage:link || true
 
 # Expose HTTP port (Railway defaults to 8080)
 EXPOSE 8080
