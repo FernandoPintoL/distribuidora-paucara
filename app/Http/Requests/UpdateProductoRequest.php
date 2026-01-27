@@ -73,11 +73,23 @@ class UpdateProductoRequest extends FormRequest
     public function rules(): array
     {
         $producto = $this->route('producto');
+
+        // 🔍 DEBUG: Verificar que el producto existe
+        if (!$producto || !$producto->id) {
+            \Log::error('⚠️ UpdateProductoRequest: $producto no válido o sin ID', [
+                'producto' => $producto,
+                'ruta' => $this->route(),
+                'url' => $this->url(),
+            ]);
+        } else {
+            \Log::info('✅ UpdateProductoRequest: Actualizando producto ID ' . $producto->id);
+        }
+
         $tiposPrecios = TipoPrecio::activos()->pluck('id')->toArray();
 
         return [
             'nombre'                   => ['required', 'string', 'max:255'],
-            'sku'                      => ['nullable', 'string', 'max:20', Rule::unique('productos', 'sku')->ignore($producto->id)],
+            'sku'                      => ['nullable', 'string', 'max:20', Rule::unique('productos', 'sku')->ignore($producto?->id)],
             'descripcion'              => ['nullable', 'string'],
             'peso'                     => ['nullable', 'numeric', 'min:0'],
             'unidad_medida_id'         => ['nullable', 'exists:unidades_medida,id'],

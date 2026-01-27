@@ -1437,6 +1437,7 @@ class ProductoController extends Controller
         $q             = $request->string('q');
         $limite        = $request->integer('limite', 10);
         $tipoBusqueda  = $request->string('tipo_busqueda', 'parcial'); // ✅ NUEVO: exacta o parcial
+        $tipo          = $request->string('tipo', 'venta'); // ✅ NUEVO: 'venta' o 'compra'
 
         // Obtener almacén: desde request > empresa autenticada > empresa principal > config
         // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
@@ -1455,6 +1456,7 @@ class ProductoController extends Controller
         Log::info('🔍 ProductoController::buscarApi', [
             'q'              => $q,
             'tipo_busqueda'  => $tipoBusqueda,
+            'tipo'           => $tipo,
             'almacen_id'     => $almacenId,
             'limite'         => $limite,
         ]);
@@ -1474,10 +1476,18 @@ class ProductoController extends Controller
             // ✨ NUEVO: Filtrar por empresa del usuario (si tiene empresa_id asignada)
             ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
             ->where('activo', true)
-            // ✅ NUEVO: Filtrar por stock disponible > 0 en el almacén seleccionado
-            ->whereHas('stock', function ($stockQuery) use ($almacenId) {
-                $stockQuery->where('almacen_id', $almacenId)
-                    ->where('cantidad_disponible', '>', 0);
+            // ✅ MODIFICADO: Solo filtrar por stock para VENTAS, no para COMPRAS
+            ->when($tipo === 'venta', function ($query) use ($almacenId) {
+                return $query->whereHas('stock', function ($stockQuery) use ($almacenId) {
+                    $stockQuery->where('almacen_id', $almacenId)
+                        ->where('cantidad_disponible', '>', 0);
+                });
+            })
+            ->when($tipo === 'compra', function ($query) use ($almacenId) {
+                // Para compras, solo verificar que exista el almacén (no filtrar por stock)
+                return $query->whereHas('stock', function ($stockQuery) use ($almacenId) {
+                    $stockQuery->where('almacen_id', $almacenId);
+                });
             })
             // ✅ NUEVO: Filtrar por precio de venta activo
             ->whereHas('precios', function ($preciosQuery) {

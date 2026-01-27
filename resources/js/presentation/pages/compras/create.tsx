@@ -756,7 +756,7 @@ export default function CompraForm() {
         )}
 
         {/* Indicador de caja abierta */}
-        {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
+        {!cargandoCaja && cajaInfo && cajaInfo.tiene_caja_abierta && (
           <Alert className={`${
             cajaInfo.es_de_hoy
               ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
@@ -988,6 +988,7 @@ export default function CompraForm() {
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Productos</h3>
 
           <ProductosTable
+            tipo="compra" // ✅ NUEVO: Indicar que es una compra (no filtrar por stock)
             productos={props.productos.map(p => ({
               id: p.id,
               nombre: p.nombre,

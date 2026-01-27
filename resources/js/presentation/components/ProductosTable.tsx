@@ -116,7 +116,8 @@ export default function ProductosTable({
             try {
                 const params = new URLSearchParams({
                     q: searchTerm,
-                    limite: '10'
+                    limite: '10',
+                    tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
                 });
 
                 // ✅ Pasar almacen_id si está disponible
@@ -164,7 +165,7 @@ export default function ProductosTable({
         const timeoutId = setTimeout(buscarProductos, 300);
 
         return () => clearTimeout(timeoutId);
-    }, [productSearch, almacen_id]);
+    }, [productSearch, almacen_id, tipo]); // ✅ AGREGADO: tipo como dependencia
 
     // ✅ MODIFICADO: Manejar resultado del escáner via API (búsqueda EXACTA)
     const handleScannerResult = async (result: string) => {
@@ -176,7 +177,8 @@ export default function ProductosTable({
                 const params = new URLSearchParams({
                     q: result,
                     tipo_busqueda: 'exacta', // ✅ NUEVO: Búsqueda exacta para código de barras
-                    limite: '1'
+                    limite: '1',
+                    tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
                 });
 
                 if (almacen_id) {

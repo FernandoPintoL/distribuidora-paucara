@@ -75,6 +75,7 @@ class StoreProductoRequest extends FormRequest
 
         return [
             'nombre'                   => ['required', 'string', 'max:255'],
+            'sku'                      => ['nullable', 'string', 'max:20', 'unique:productos,sku'],
             'descripcion'              => ['nullable', 'string'],
             'peso'                     => ['nullable', 'numeric', 'min:0'],
             'unidad_medida_id'         => ['nullable', 'exists:unidades_medida,id'],
