@@ -35,7 +35,23 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
     const [filtrosVisibles, setFiltrosVisibles] = useState(false);
 
     if (!cajaAbiertaHoy || movimientosHoy.length === 0) {
-        return null;
+        return (
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div className="p-6">
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <div className="text-5xl mb-4 opacity-50">📋</div>
+                        <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            Aún no hay movimientos
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {!cajaAbiertaHoy
+                                ? 'Abra una caja para registrar movimientos'
+                                : 'Los movimientos aparecerán aquí cuando se registren'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     // ✅ NUEVO: Determinar si la caja es de hoy o de otro día

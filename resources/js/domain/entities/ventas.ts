@@ -34,6 +34,13 @@ export interface Cliente extends BaseEntity {
     direccion?: string;
 }
 
+export interface ConversionVenta {
+    unidad_destino_id: Id;
+    unidad_destino_nombre?: string;
+    factor_conversion: number;
+    es_conversion_principal?: boolean;
+}
+
 export interface Producto extends BaseEntity {
     id: Id;
     nombre: string;
@@ -45,6 +52,11 @@ export interface Producto extends BaseEntity {
     stock?: number;
     peso?: number; // ✅ NUEVO: Peso del producto en kg
     codigos_barras?: string[]; // ✅ NUEVO: Array de códigos de barras
+    // ✅ NUEVO: Campos para productos fraccionados
+    es_fraccionado?: boolean;
+    unidad_medida_id?: Id;
+    unidad_medida_nombre?: string;
+    conversiones?: ConversionVenta[];
 }
 
 // =============== ENTIDADES PRINCIPALES ===============
@@ -137,6 +149,12 @@ export interface DetalleVentaFormData extends BaseFormData {
     precio_unitario: number;
     descuento: number;
     subtotal: number;
+    // ✅ NUEVO: Campos para productos fraccionados
+    es_fraccionado?: boolean;
+    unidad_medida_id?: Id;
+    unidad_medida_nombre?: string;
+    unidad_venta_id?: Id;
+    conversiones?: ConversionVenta[];
 }
 
 export interface VentaFormData extends BaseFormData {

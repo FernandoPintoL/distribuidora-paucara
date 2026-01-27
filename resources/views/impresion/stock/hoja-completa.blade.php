@@ -27,12 +27,15 @@
 <table class="tabla-productos">
     <thead>
         <tr>
-            <th style="width: 3%;">#</th>
-            <th style="width: 30%;">Producto</th>
-            <th style="width: 10%;">Código</th>
-            <th style="width: 10%;">SKU</th>
-            <th style="width: 17%;">Almacén</th>
-            <th style="width: 10%;" class="text-right">Cantidad</th>
+            <th style="width: 2%;">#</th>
+            <th style="width: 25%;">Producto</th>
+            <th style="width: 8%;">Código</th>
+            <th style="width: 8%;">SKU</th>
+            <th style="width: 12%;">Almacén</th>
+            <th style="width: 9%;" class="text-right">Total</th>
+            <th style="width: 9%;" class="text-right">Dispo</th>
+            <th style="width: 9%;" class="text-right">Reser</th>
+            <th style="width: 9%;" class="text-right">Valor Total</th>
         </tr>
     </thead>
     <tbody>
@@ -46,6 +49,9 @@
             <td>{{ $item['producto_sku'] }}</td>
             <td>{{ $item['almacen_nombre'] }}</td>
             <td class="text-right"><strong>{{ number_format($item['cantidad'], 2) }}</strong></td>
+            <td class="text-right">{{ number_format($item['cantidad_disponible'] ?? 0, 2) }}</td>
+            <td class="text-right">{{ number_format($item['cantidad_reservada'] ?? 0, 2) }}</td>
+            <td class="text-right"><strong>Bs{{ number_format(($item['cantidad'] ?? 0) * ($item['precio_venta'] ?? 0), 2) }}</strong></td>
         </tr>
         @endforeach
     </tbody>
@@ -63,6 +69,20 @@
         <tr class="subtotal-row">
             <td><strong>STOCK TOTAL:</strong></td>
             <td class="text-right">{{ number_format($stock->sum('cantidad'), 2) }} unidades</td>
+        </tr>
+        <tr class="subtotal-row">
+            <td><strong>DISPONIBLE:</strong></td>
+            <td class="text-right">{{ number_format($stock->sum('cantidad_disponible'), 2) }} unidades</td>
+        </tr>
+        <tr class="subtotal-row">
+            <td><strong>RESERVADO:</strong></td>
+            <td class="text-right">{{ number_format($stock->sum('cantidad_reservada'), 2) }} unidades</td>
+        </tr>
+        <tr class="total-final">
+            <td><strong>VALOR TOTAL INVENTARIO:</strong></td>
+            <td class="text-right">
+                <strong>Bs{{ number_format($stock->sum(function($item) { return ($item['cantidad'] ?? 0) * ($item['precio_venta'] ?? 0); }), 2) }}</strong>
+            </td>
         </tr>
     </table>
 </div>

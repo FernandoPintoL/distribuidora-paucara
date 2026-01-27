@@ -422,7 +422,7 @@
             <p style="margin-top: 5px;">
                 Impreso: {{ $fecha_impresion->format('d/m/Y H:i:s') }}
                 @if($usuario)
-                | Usuario: {{ $usuario }}
+                | Usuario: {{ is_string($usuario) ? $usuario : (isset($usuario->name) ? $usuario->name : 'Sistema') }}
                 @endif
             </p>
         </div>

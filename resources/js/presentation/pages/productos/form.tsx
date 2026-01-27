@@ -467,15 +467,23 @@ export default function ProductoForm({
 
           <CardContent>
             <Tabs defaultValue="datos" className="w-full">
-              <TabsList className={`grid w-full ${permite_productos_fraccionados && data.es_fraccionado ? 'grid-cols-5' : 'grid-cols-4'}`}>
+              <TabsList className={`grid w-full ${isEditing && permite_productos_fraccionados && data.es_fraccionado
+                  ? 'grid-cols-5'
+                  : isEditing || (permite_productos_fraccionados && data.es_fraccionado)
+                    ? 'grid-cols-4'
+                    : 'grid-cols-3'
+                }`}>
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
-                <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
+
                 {permite_productos_fraccionados && data.es_fraccionado && (
                   <TabsTrigger value="conversiones">
                     ✨ Conversiones
                   </TabsTrigger>
                 )}
-                <TabsTrigger value="precio-rango">Rango de Precios</TabsTrigger>
+                {isEditing && (
+                  <TabsTrigger value="precio-rango">Rango de Precios</TabsTrigger>
+                )}
+                <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
                 <TabsTrigger value="imagenes">Imágenes</TabsTrigger>
               </TabsList>
 

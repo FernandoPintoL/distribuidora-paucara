@@ -33,6 +33,11 @@ interface PageProps extends InertiaPageProps {
     almacen_seleccionado?: number;
 }
 
+// Helper function para redondear a 2 decimales
+const formatNumero = (valor: number): string => {
+    return (Math.round(valor * 100) / 100).toFixed(2);
+};
+
 const breadcrumbs = [
     {
         title: 'Inventario',
@@ -69,6 +74,38 @@ export default function AjusteInventario() {
         fetchTipos();
     }, [fetchTipos]);
 
+    // Recalcular el stock total cuando cambia el tipo de operación
+    useEffect(() => {
+        if (productoSeleccionado && ajustes[productoSeleccionado.id]) {
+            const id = typeof productoSeleccionado.id === 'string' ? parseInt(productoSeleccionado.id, 10) : productoSeleccionado.id;
+            const ajuste = ajustes[id];
+
+            if (ajuste?.inputCantidad && ajuste.inputCantidad.trim() !== '') {
+                const cantidad = parseInt(ajuste.inputCantidad, 10);
+                const cantidadActual = parseFloat(String(productoSeleccionado.cantidad));
+                let stockTotal = cantidadActual;
+
+                if (tipoOperacion === 'entrada') {
+                    stockTotal = cantidadActual + cantidad;
+                } else {
+                    stockTotal = cantidadActual - cantidad;
+                    if (stockTotal < 0) {
+                        stockTotal = 0;
+                    }
+                }
+
+                setAjustes(prev => ({
+                    ...prev,
+                    [id]: {
+                        ...prev[id],
+                        nueva_cantidad: stockTotal,
+                        tipoOperacion: tipoOperacion,
+                    },
+                }));
+            }
+        }
+    }, [tipoOperacion, productoSeleccionado]);
+
     // Función para obtener tipos a mostrar (filtrados o todos) - Memoizada
     const getTiposAMostrar = useCallback(() => {
         if (!tipos.length) return [];
@@ -91,12 +128,13 @@ export default function AjusteInventario() {
             const inputCantidad = ajustes[id]?.inputCantidad || String(productoSeleccionado.cantidad);
             const cantidad = inputCantidad === '' ? 0 : parseInt(inputCantidad, 10);
 
-            let stockTotal = productoSeleccionado.cantidad;
+            const cantidadActual = parseFloat(String(productoSeleccionado.cantidad));
+            let stockTotal = cantidadActual;
 
             if (nuevaOperacion === 'entrada') {
-                stockTotal = productoSeleccionado.cantidad + cantidad;
+                stockTotal = cantidadActual + cantidad;
             } else {
-                stockTotal = productoSeleccionado.cantidad - cantidad;
+                stockTotal = cantidadActual - cantidad;
                 if (stockTotal < 0) {
                     stockTotal = 0;
                 }
@@ -117,53 +155,21 @@ export default function AjusteInventario() {
     const getTiposFiltrados = useCallback(() => {
         if (!tipos.length) return [];
 
-        console.log('Tipos de ajuste disponibles:', tipos);
+        // console.log('Tipos de ajuste disponibles:', tipos);
         console.log('Operación seleccionada:', tipoOperacion);
-
-        // Si no hay tipos, devolver array vacío
-        if (!tipos || tipos.length === 0) {
-            console.log('No hay tipos de ajuste disponibles');
-            return [];
-        }
 
         // Filtrar tipos según la operación seleccionada
         const tiposFiltrados = tipos.filter(tipo => {
             if (!tipo) return false;
 
-            const nombre = tipo.label?.toLowerCase() || '';
-            const descripcion = tipo.descripcion?.toLowerCase() || '';
-            const clave = tipo.clave?.toLowerCase() || '';
+            // Si el tipo es para "ambos", siempre mostrarlo
+            if (tipo.tipo_operacion === 'ambos') return true;
 
-            console.log(`Evaluando tipo: ${tipo.label} (clave: ${tipo.clave})`);
-
-            if (tipoOperacion === 'entrada') {
-                const esEntrada = nombre.includes('entrada') || nombre.includes('ingreso') || nombre.includes('incremento') ||
-                    descripcion.includes('entrada') || descripcion.includes('ingreso') || descripcion.includes('incremento') ||
-                    clave.includes('entrada') || clave.includes('ingreso') || clave.includes('incremento');
-
-                console.log(`  Es entrada: ${esEntrada}`);
-                return esEntrada;
-            } else {
-                const esSalida = nombre.includes('salida') || nombre.includes('egreso') || nombre.includes('decremento') ||
-                    descripcion.includes('salida') || descripcion.includes('egreso') || descripcion.includes('decremento') ||
-                    clave.includes('salida') || clave.includes('egreso') || clave.includes('decremento');
-
-                console.log(`  Es salida: ${esSalida}`);
-                return esSalida;
-            }
+            // Si el tipo coincide con la operación seleccionada, mostrarlo
+            return tipo.tipo_operacion === tipoOperacion;
         });
 
         console.log(`Tipos filtrados para ${tipoOperacion}:`, tiposFiltrados);
-
-        // Si no se encontraron tipos filtrados, mostrar todos los tipos disponibles
-        if (tiposFiltrados.length === 0) {
-            console.log('No se encontraron tipos filtrados, mostrando todos los tipos disponibles');
-            return tipos.map(tipo => ({
-                ...tipo,
-                label: `${tipo.label} (${tipo.clave})`
-            }));
-        }
-
         return tiposFiltrados;
     }, [tipos, tipoOperacion]);
 
@@ -187,7 +193,11 @@ export default function AjusteInventario() {
         const id = typeof stockProductoId === 'string' ? parseInt(stockProductoId, 10) : stockProductoId;
         // Permitir vacío
         const input = nuevaCantidad.replace(/^0+(?!$)/, ''); // Elimina ceros a la izquierda excepto si es solo "0"
+
+        // console.log('📝 handleCantidadChange:', { id, nuevaCantidad, input, tipoOperacion });
+
         if (input === '') {
+            console.log('❌ Input vacío');
             setAjustes(prev => ({
                 ...prev,
                 [id]: {
@@ -198,6 +208,7 @@ export default function AjusteInventario() {
             return;
         }
         const cantidad = parseInt(input, 10);
+        console.log('🔢 Cantidad parseada:', { cantidad, isNaN: isNaN(cantidad) });
         const stockProducto = stock_productos.find(sp => sp.id === id);
         if (!stockProducto) return;
 
@@ -212,36 +223,44 @@ export default function AjusteInventario() {
         const tipoAjuste = tipos.find(t => t.id === tipoAjusteId);
 
         // Calcular el stock total automáticamente basado en la cantidad ingresada y el tipo de ajuste
-        let stockTotal = stockProducto.cantidad;
+        const cantidadActual = parseFloat(String(stockProducto.cantidad));
+        let stockTotal = cantidadActual;
+
+        console.log('📊 Stock actual:', cantidadActual, 'Tipo operación:', tipoOperacion);
 
         // Si hay un tipo de ajuste seleccionado, aplicar la lógica correspondiente
         if (tipoAjuste) {
             // Si el tipo de ajuste es de incremento (entrada)
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = cantidadActual + cantidad;
+                console.log('✅ ENTRADA (con tipo):', { base: cantidadActual, suma: cantidad, resultado: stockTotal });
             }
             // Si el tipo de ajuste es de decremento (salida)
             else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = cantidadActual - cantidad;
                 // Evitar stock negativo
                 if (stockTotal < 0) {
                     stockTotal = 0;
                 }
+                console.log('❌ SALIDA (con tipo):', { base: cantidadActual, resta: cantidad, resultado: stockTotal });
             }
         } else {
             // Si no hay tipo de ajuste, usar la lógica basada en la operación seleccionada
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = cantidadActual + cantidad;
+                console.log('✅ ENTRADA (sin tipo):', { base: cantidadActual, suma: cantidad, resultado: stockTotal });
             } else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = cantidadActual - cantidad;
                 if (stockTotal < 0) {
                     stockTotal = 0;
                 }
+                console.log('❌ SALIDA (sin tipo):', { base: cantidadActual, resta: cantidad, resultado: stockTotal });
             }
         }
 
         // Siempre guardar el cambio, incluso si es igual a la cantidad actual
         // Esto asegura que se registre en la base de datos
+        console.log('💾 Guardando ajuste:', { id, stockTotal, inputCantidad: input, tipoOperacion });
         setAjustes(prev => ({
             ...prev,
             [id]: {
@@ -268,14 +287,15 @@ export default function AjusteInventario() {
         const cantidad = inputCantidad === '' ? 0 : parseInt(inputCantidad, 10);
 
         // Calcular el nuevo stock total basado en el tipo de ajuste
-        let stockTotal = stockProducto.cantidad;
+        const cantidadActual = parseFloat(String(stockProducto.cantidad));
+        let stockTotal = cantidadActual;
 
         if (tipoAjuste) {
             // Usar la lógica basada en la operación seleccionada en lugar de la propiedad incrementa
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = cantidadActual + cantidad;
             } else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = cantidadActual - cantidad;
                 // Evitar stock negativo
                 if (stockTotal < 0) {
                     stockTotal = 0;
@@ -284,9 +304,9 @@ export default function AjusteInventario() {
         } else {
             // Si no hay tipo de ajuste, usar la lógica basada en la operación seleccionada
             if (tipoOperacion === 'entrada') {
-                stockTotal = stockProducto.cantidad + cantidad;
+                stockTotal = cantidadActual + cantidad;
             } else {
-                stockTotal = stockProducto.cantidad - cantidad;
+                stockTotal = cantidadActual - cantidad;
                 if (stockTotal < 0) {
                     stockTotal = 0;
                 }
@@ -319,15 +339,14 @@ export default function AjusteInventario() {
     const inicializarAjuste = useCallback((stockProducto: StockProducto) => {
         const id = typeof stockProducto.id === 'string' ? parseInt(stockProducto.id, 10) : stockProducto.id;
 
-        // Obtener el primer tipo de ajuste que sea de entrada (por defecto)
+        // Obtener el primer tipo de ajuste que coincida con la operación seleccionada
         let tipoAjusteIdDefault = undefined;
         if (tipos.length > 0) {
-            // Buscar un tipo de ajuste que sea de entrada
-            const tipoEntrada = tipos.find(t => {
-                const label = t.label?.toLowerCase() || '';
-                return label.includes('entrada') || label.includes('ingreso') || label.includes('incremento');
-            });
-            tipoAjusteIdDefault = tipoEntrada?.id || tipos[0]?.id;
+            // Buscar un tipo que sea específico de la operación actual o sea "ambos"
+            const tipoApropriado = tipos.find(t =>
+                t.tipo_operacion === tipoOperacion || t.tipo_operacion === 'ambos'
+            );
+            tipoAjusteIdDefault = tipoApropriado?.id || tipos[0]?.id;
         }
 
         setAjustes(prev => ({
@@ -347,6 +366,8 @@ export default function AjusteInventario() {
         const ajuste = ajustes[stockProductoId];
         const stockProducto = stock_productos.find(sp => sp.id === stockProductoId);
 
+        console.log('🔍 Validando ajuste:', { stockProductoId, ajuste, stockProducto });
+
         // Validar que exista el ajuste
         if (!ajuste) {
             toast.error('No hay cambios para guardar');
@@ -360,16 +381,23 @@ export default function AjusteInventario() {
         }
 
         // Validar que la cantidad haya cambiado
-        if (stockProducto && ajuste.nueva_cantidad === stockProducto.cantidad) {
+        const cantidadActualNum = parseFloat(String(stockProducto?.cantidad));
+        if (stockProducto && ajuste.nueva_cantidad === cantidadActualNum) {
+            console.log('❌ Cantidad no ha cambiado:', { nueva: ajuste.nueva_cantidad, actual: cantidadActualNum });
             toast.error('La cantidad no ha cambiado. Ingresa una cantidad diferente');
             return;
         }
 
+        console.log('✅ Cantidad cambió:', { nueva: ajuste.nueva_cantidad, actual: cantidadActualNum });
+
         // Validar que se haya seleccionado un tipo de ajuste
         if (!ajuste.tipo_ajuste_id) {
+            console.log('❌ No hay tipo_ajuste_id:', ajuste);
             toast.error('Debe seleccionar un tipo de ajuste');
             return;
         }
+
+        console.log('✅ Tipo ajuste seleccionado:', ajuste.tipo_ajuste_id);
 
         // Validar que se haya ingresado una observación
         if (!ajuste.observacion || ajuste.observacion.trim() === '') {
@@ -380,15 +408,14 @@ export default function AjusteInventario() {
         // Crear lista con solo este ajuste, filtrando propiedades innecesarias
         const ajustesList = [{
             stock_producto_id: ajuste.stock_producto_id,
-            nueva_cantidad: ajuste.nueva_cantidad,
+            nueva_cantidad: Math.round(ajuste.nueva_cantidad), // ✅ Redondear a entero
             observacion: ajuste.observacion,
             tipo_ajuste_id: ajuste.tipo_ajuste_id,
         }];
 
-        console.log('Enviando ajuste individual:', ajustesList);
-        setData('ajustes', ajustesList);
+        console.log('📤 Enviando ajuste individual:', ajustesList);
 
-        post('/inventario/ajuste', {
+        router.post('/inventario/ajuste', { ajustes: ajustesList }, {
             onSuccess: () => {
                 toast.success('Ajuste guardado correctamente');
                 // Eliminar solo este ajuste del estado
@@ -563,7 +590,7 @@ export default function AjusteInventario() {
                                                     }
 
                                                     // Agregar stock disponible
-                                                    descripciones.push(`Stock: ${p.cantidad}`);
+                                                    descripciones.push(`Stock: ${formatNumero(p.cantidad)}`);
 
                                                     return {
                                                         value: p.id,
@@ -648,7 +675,7 @@ export default function AjusteInventario() {
                                                 Stock Actual
                                             </div>
                                             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                                {productoSeleccionado.cantidad}
+                                                {formatNumero(productoSeleccionado.cantidad)}
                                             </div>
                                         </div>
                                     </div>
@@ -681,10 +708,10 @@ export default function AjusteInventario() {
                                                                 ? 'text-green-800 dark:text-green-300'
                                                                 : 'text-red-800 dark:text-red-300'
                                                                 }`}>
-                                                                {tipoOperacion === 'entrada' ? 'Entrada' : 'Salida'} de {Math.abs(diferencia)} unidades
+                                                                {tipoOperacion === 'entrada' ? 'Entrada' : 'Salida'} de {formatNumero(Math.abs(diferencia))} unidades
                                                             </div>
                                                             <div className="text-sm text-gray-600 dark:text-gray-400">
-                                                                Stock actual: {productoSeleccionado.cantidad} → Stock final: {ajustes[productoSeleccionado.id]?.nueva_cantidad || productoSeleccionado.cantidad}
+                                                                Stock actual: {formatNumero(productoSeleccionado.cantidad)} → Stock final: {formatNumero(ajustes[productoSeleccionado.id]?.nueva_cantidad || productoSeleccionado.cantidad)}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -709,7 +736,7 @@ export default function AjusteInventario() {
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
                                                 min="0"
-                                                value={productoSeleccionado.cantidad}
+                                                value={formatNumero(productoSeleccionado.cantidad)}
                                                 readOnly
                                                 className="block w-full pl-10 pr-3 py-2 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-gray-100 dark:bg-gray-800 font-semibold"
                                             />
@@ -765,7 +792,7 @@ export default function AjusteInventario() {
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
                                                 min="0"
-                                                value={ajustes[productoSeleccionado.id]?.nueva_cantidad !== undefined ? ajustes[productoSeleccionado.id].nueva_cantidad : productoSeleccionado.cantidad}
+                                                value={formatNumero(ajustes[productoSeleccionado.id]?.nueva_cantidad !== undefined ? ajustes[productoSeleccionado.id].nueva_cantidad : productoSeleccionado.cantidad)}
                                                 readOnly
                                                 className="block w-full pl-10 pr-3 py-2 rounded-md border-blue-300 dark:border-blue-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-blue-50 dark:bg-blue-900/20 font-bold text-blue-700 dark:text-blue-300"
                                             />

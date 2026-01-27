@@ -104,7 +104,7 @@ class ImpresionService
             'empresa' => $empresa,
             'plantilla' => $plantilla,
             'fecha_impresion' => now(),
-            'usuario' => auth()->user(),
+            'usuario' => auth()->user()?->name ?? 'Sistema',
             'opciones' => $opciones,
         ];
     }

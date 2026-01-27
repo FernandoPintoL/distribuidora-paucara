@@ -389,7 +389,7 @@ class ReporteInventarioApiController extends Controller
 
         // Encabezados basados en tipo de reporte
         $encabezados = match ($tipoReporte) {
-            'stock_actual' => ['Almacén', 'Código', 'Nombre Producto', 'Cantidad', 'Precio Compra', 'Precio Venta', 'Valor Compra', 'Valor Venta', 'Stock Mínimo', 'Fecha Actualización'],
+            'stock_actual' => ['Almacén', 'Código', 'Nombre Producto', 'Cantidad', 'Disponible', 'Reservado', 'Precio Compra', 'Precio Venta', 'Valor Compra', 'Valor Venta', 'Stock Mínimo', 'Fecha Actualización'],
             'movimientos' => ['Fecha', 'Almacén', 'Código', 'Nombre Producto', 'Tipo Movimiento', 'Cantidad', 'Motivo', 'Usuario', 'Referencia'],
             'stock_valorizado' => ['Almacén', 'Código', 'Nombre Producto', 'Cantidad', 'Valor Compra', 'Valor Venta', 'Margen Bruto', 'Margen %'],
             'productos_bajo_minimo' => ['Código', 'Nombre Producto', 'Almacén', 'Stock Actual', 'Stock Mínimo', 'Falta', 'Precio Compra', 'Precio Venta', 'Categoría'],

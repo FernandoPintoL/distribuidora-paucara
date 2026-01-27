@@ -140,52 +140,74 @@ export default function StockYProductos({
                                         Producto
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Código
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        SKU
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Almacén
                                     </th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Cantidad
+                                        Stock Total
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Disponible
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Reservado
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Valor Total
                                     </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                {stockFiltrado.map((stock) => (
-                                    <tr
-                                        key={stock.id}
-                                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                {stock.producto_nombre}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                {stock.producto_codigo_barra}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                {stock.producto_sku}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                                {stock.almacen_nombre}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                {parseFloat(String(stock.cantidad || 0)).toFixed(2)} unidades
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {stockFiltrado.map((stock) => {
+                                    const cantidadTotal = parseFloat(String(stock.cantidad || 0));
+                                    const cantidadDisponible = parseFloat(String(stock.cantidad_disponible || 0));
+                                    const cantidadReservada = parseFloat(String(stock.cantidad_reservada || 0));
+                                    const precioVenta = parseFloat(String(stock.precio_venta || 0));
+                                    const valorTotal = cantidadTotal * precioVenta;
+
+                                    return (
+                                        <tr
+                                            key={stock.id}
+                                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                    {stock.producto_nombre}
+                                                </p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    {stock.producto_codigo_barra}
+                                                </p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    {stock.producto_sku}
+                                                </p>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                                    {stock.almacen_nombre}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                    {cantidadTotal.toFixed(2)} unidades
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                    {cantidadDisponible.toFixed(2)} unidades
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                    {cantidadReservada.toFixed(2)} unidades
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                                    Bs{valorTotal.toFixed(2)}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

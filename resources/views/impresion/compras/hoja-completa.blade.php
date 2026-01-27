@@ -48,7 +48,7 @@
     <p style="color: #27ae60; font-weight: bold;">✓ Compra registrada correctamente en el sistema</p>
     <p style="font-size: 11px; color: #666;">Impreso: {{ now()->format('d/m/Y H:i') }}</p>
     @if(isset($usuario))
-        <p style="font-size: 10px; color: #999;">Por: {{ $usuario }}</p>
+        <p style="font-size: 10px; color: #999;">Por: {{ is_string($usuario) ? $usuario : (isset($usuario->name) ? $usuario->name : 'Sistema') }}</p>
     @endif
 </div>
 

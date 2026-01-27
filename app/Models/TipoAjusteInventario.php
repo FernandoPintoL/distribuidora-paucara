@@ -16,6 +16,7 @@ class TipoAjusteInventario extends Model
     protected $fillable = [
         'clave',
         'label',
+        'tipo_operacion',
         'descripcion',
         'color',
         'bg_color',

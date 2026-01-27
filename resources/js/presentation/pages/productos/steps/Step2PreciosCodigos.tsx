@@ -97,11 +97,22 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         porcentajeGanancia: number
     ) => {
         if (!props.data.es_fraccionado || !props.data.conversiones || props.data.conversiones.length === 0) {
+            console.log('⏭️ calcularPreciosPorUnidad: Saltado - No es fraccionado o sin conversiones');
             return;
         }
 
+        console.log('💰 CÁLCULO DE PRECIOS POR UNIDAD INICIADO', {
+            precioBase,
+            tipoPrecioId,
+            porcentajeGanancia,
+            esFraccionado: props.data.es_fraccionado,
+            unidadBaseId: props.data.unidad_medida_id,
+            conversiones: props.data.conversiones.length,
+        });
+
         // Precio para la unidad base (ej: CAJA = 45 Bs)
         const precioUnidadBase = precioBase * (1 + porcentajeGanancia / 100);
+        console.log(`📦 Precio Unidad Base: ${precioBase} Bs × (1 + ${porcentajeGanancia}%) = ${precioUnidadBase.toFixed(2)} Bs`);
 
         const nuevosPrecios: typeof preciosPorUnidad[number] = {
             [Number(props.data.unidad_medida_id)]: {
@@ -111,10 +122,11 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         };
 
         // Calcular precio para cada unidad destino
-        props.data.conversiones.forEach((conv: any) => {
+        props.data.conversiones.forEach((conv: any, idx: number) => {
             // Si es manual, no recalcular
             const esManual = preciosPorUnidad[tipoPrecioId]?.[conv.unidad_destino_id]?.manual;
             if (esManual) {
+                console.log(`⏸️ Conversión ${idx + 1}: Manual (no recalcular)`);
                 nuevosPrecios[conv.unidad_destino_id] = preciosPorUnidad[tipoPrecioId][conv.unidad_destino_id];
                 return;
             }
@@ -123,12 +135,15 @@ export default function Step2PreciosCodigos(props: Step2Props) {
             // Ej: 45 Bs / 30 = 1.5 Bs por tableta
             const precioUnidadDestino = precioUnidadBase / conv.factor_conversion;
 
+            console.log(`✨ Conversión ${idx + 1}: ${precioUnidadBase.toFixed(2)} Bs ÷ ${conv.factor_conversion} = ${precioUnidadDestino.toFixed(2)} Bs (Unidad destino ID: ${conv.unidad_destino_id})`);
+
             nuevosPrecios[conv.unidad_destino_id] = {
                 monto: Number(precioUnidadDestino.toFixed(2)),
                 manual: false,
             };
         });
 
+        console.log('📋 Nuevos precios por unidad:', nuevosPrecios);
         setPreciosPorUnidad(prev => ({
             ...prev,
             [tipoPrecioId]: nuevosPrecios,
@@ -141,6 +156,13 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         unidadId: number,
         nuevoMonto: number
     ) => {
+        console.log(`🔧 PRECIO POR UNIDAD MODIFICADO MANUALMENTE`, {
+            tipoPrecioId,
+            unidadId,
+            nuevoMonto,
+            marca: '🔒 AHORA ES MANUAL - No se recalculará automáticamente',
+        });
+
         setPreciosPorUnidad(prev => ({
             ...prev,
             [tipoPrecioId]: {
@@ -486,8 +508,15 @@ export default function Step2PreciosCodigos(props: Step2Props) {
     useEffect(() => {
         const costo = Number(props.precioCosto ?? 0);
         if (!Number.isFinite(costo) || costo < 0) {
+            console.log('⏭️ Recalc precios: Costo inválido o negativo');
             return;
         }
+
+        console.log('💵 SINCRONIZACIÓN AUTOMÁTICA DE PRECIOS', {
+            costoBases: costo,
+            tiposDePrecios: tipos_precio.length,
+            preciosActuales: data.precios?.length,
+        });
 
         // Mapa rápido de porcentaje por tipo_precio_id
         const pctById = new Map<number, number>();
@@ -495,8 +524,10 @@ export default function Step2PreciosCodigos(props: Step2Props) {
             const id = tpId(tp);
             const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
             const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
-            const pct = Number.isFinite(pctNum) ? pctNum : 0;
+            // ✅ Usar ?? (nullish coalescing) en lugar de || para respetar 0%
+            const pct = Number.isFinite(pctNum) && pctNum !== undefined ? pctNum : 0;
             pctById.set(id, pct);
+            console.log(`  📊 ${tpNombre(tp)}: ${pct}% ganancia`);
         }
 
         // Construye un array actualizado en memoria para evitar condiciones de carrera por múltiples setPrecio
@@ -508,10 +539,15 @@ export default function Step2PreciosCodigos(props: Step2Props) {
             const nuevaMoneda = p.moneda && p.moneda !== '' ? p.moneda : 'BOB';
             const nuevo: Precio = { ...p } as Precio;
             const esManual = manualOverrideIdsRef.current.has(Number(p.tipo_precio_id));
+
             if (!esManual && Number.isFinite(nuevoMonto) && p.monto !== nuevoMonto) {
+                console.log(`  ✅ Tipo ${p.tipo_precio_id}: ${costo} × (1 + ${pct}%) = ${nuevoMonto} Bs (antes: ${p.monto} Bs)`);
                 nuevo.monto = nuevoMonto;
                 huboCambios = true;
+            } else if (esManual) {
+                console.log(`  🔒 Tipo ${p.tipo_precio_id}: MANUAL (no cambiar ${p.monto} Bs)`);
             }
+
             if (p.moneda !== nuevaMoneda) {
                 nuevo.moneda = nuevaMoneda;
                 huboCambios = true;
@@ -520,7 +556,10 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         });
 
         if (huboCambios) {
+            console.log('📤 Actualizando precios en el estado');
             setPrecios(actualizados);
+        } else {
+            console.log('ℹ️ Sin cambios en los precios');
         }
     }, [props.precioCosto, data.precios, tipos_precio, setPrecios]);
 
@@ -682,7 +721,19 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
-                                                                            const pct = tp?.configuracion?.porcentaje_ganancia || props.porcentajeInteres;
+                                                                            // ✅ Usar ?? (nullish coalescing) en lugar de || para respetar porcentajes 0%
+                                                                            // El porcentaje está en tp?.porcentaje_ganancia, NO en tp?.configuracion?.porcentaje_ganancia
+                                                                            const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
+                                                                            const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
+                                                                            const pct = Number.isFinite(pctNum) && pctNum !== undefined ? pctNum : 0;
+
+                                                                            console.log('🔄 BOTÓN RECALCULAR PRESIONADO', {
+                                                                                tipoPrecio: tpNombre(tp),
+                                                                                tipoPrecioId: currId,
+                                                                                precioCosto: props.precioCosto,
+                                                                                porcentajeGanancia: pct,
+                                                                                nota: pct === 0 ? '⚠️ PORCENTAJE CERO (0%)' : '',
+                                                                            });
                                                                             calcularPreciosPorUnidad(props.precioCosto, currId, pct);
                                                                         }}
                                                                         className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
@@ -714,13 +765,13 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                                 {/* Other unit prices in a grid */}
                                                                 {props.data.conversiones && props.data.conversiones.length > 0 && (
                                                                     <div className="grid grid-cols-2 gap-2">
-                                                                        {props.data.conversiones.map((conv: any) => {
+                                                                        {props.data.conversiones.map((conv: any, convIndex: number) => {
                                                                             const unidadDestino = props.unidades?.find(u => u.id === conv.unidad_destino_id);
                                                                             const esManual = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.manual;
                                                                             const monto = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.monto || 0;
 
                                                                             return (
-                                                                                <div key={conv.id} className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-100 dark:border-blue-800">
+                                                                                <div key={`conv-${convIndex}-${conv.unidad_destino_id}`} className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-100 dark:border-blue-800">
                                                                                     <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[50px] font-medium">
                                                                                         {unidadDestino?.codigo || `ID:${conv.unidad_destino_id}`}:
                                                                                     </span>
@@ -783,7 +834,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                     <div className={compactCodigos ? 'grid gap-2 sm:grid-cols-2' : 'space-y-3'}>
                         {data.codigos.map((c: { codigo: string; es_principal?: boolean; tipo?: string }, i: number) => (
                             <div
-                                key={i}
+                                key={`codigo-${i}-${c.codigo || 'empty'}`}
                                 className={`rounded-lg border-2 ${compactCodigos ? 'p-3' : 'p-4'} ${c.es_principal ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20' : 'border-border bg-secondary'}`}
                             >
                                 <div className={compactCodigos ? 'space-y-2' : 'space-y-3'}>

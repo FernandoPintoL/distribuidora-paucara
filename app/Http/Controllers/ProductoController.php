@@ -125,6 +125,9 @@ class ProductoController extends Controller
                         ->orWhereRaw('LOWER(productos.descripcion) like ?', ["%$searchLower%"])
                         ->orWhereHas('codigosBarra', function ($q) use ($searchLower) {
                             $q->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
+                        })
+                        ->orWhereHas('proveedor', function ($q) use ($searchLower) {
+                            $q->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
                         });
                 });
             })
@@ -1471,6 +1474,18 @@ class ProductoController extends Controller
             // ✨ NUEVO: Filtrar por empresa del usuario (si tiene empresa_id asignada)
             ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
             ->where('activo', true)
+            // ✅ NUEVO: Filtrar por stock disponible > 0 en el almacén seleccionado
+            ->whereHas('stock', function ($stockQuery) use ($almacenId) {
+                $stockQuery->where('almacen_id', $almacenId)
+                    ->where('cantidad_disponible', '>', 0);
+            })
+            // ✅ NUEVO: Filtrar por precio de venta activo
+            ->whereHas('precios', function ($preciosQuery) {
+                $preciosQuery->where('activo', true)
+                    ->whereHas('tipoPrecio', function ($tipoQuery) {
+                        $tipoQuery->where('codigo', 'VENTA');
+                    });
+            })
             ->where(function ($query) use ($searchLower, $esExacta) {
                 if ($esExacta) {
                     // ✅ BÚSQUEDA EXACTA: Para código de barras (escáner)
@@ -1500,7 +1515,11 @@ class ProductoController extends Controller
                 'marca:id,nombre',
                 'proveedor:id,nombre,razon_social', // ✨ NUEVO
                 'unidad:id,nombre,codigo', // ✨ NUEVO - Corregido: era unidadMedida
-                'conversiones:id,producto_id,unidad_base_id,unidad_destino_id,factor_conversion,activo,es_conversion_principal', // ✨ NUEVO
+                'conversiones' => function ($q) { // ✅ MODIFICADO: Cargar conversiones con relaciones
+                    $q->where('activo', true)
+                        ->select('id', 'producto_id', 'unidad_base_id', 'unidad_destino_id', 'factor_conversion', 'activo', 'es_conversion_principal')
+                        ->with('unidadDestino:id,nombre,codigo'); // ✅ NUEVO: Cargar la unidad destino
+                },
                 'precios'      => function ($q) {
                     // Cargar SOLO precios activos
                     $q->where('activo', true)
@@ -1515,6 +1534,23 @@ class ProductoController extends Controller
             ->limit($limite)
             ->get()
             ->map(function ($producto) use ($almacenId) {
+                // ✅ DEBUG: Loguear producto con conversiones
+                Log::info('🔍 [buscarApi] Procesando producto', [
+                    'producto_id' => $producto->id,
+                    'producto_nombre' => $producto->nombre,
+                    'es_fraccionado' => $producto->es_fraccionado,
+                    'unidad_medida_id' => $producto->unidad_medida_id,
+                    'unidad_nombre' => $producto->unidad?->nombre,
+                    'conversiones_count' => $producto->conversiones->count(),
+                    'conversiones' => $producto->conversiones->map(fn($c) => [
+                        'id' => $c->id,
+                        'unidad_destino_id' => $c->unidad_destino_id,
+                        'unidad_destino_nombre' => $c->unidadDestino?->nombre,
+                        'factor' => $c->factor_conversion,
+                        'activo' => $c->activo,
+                    ])->toArray()
+                ]);
+
                 // Incluir códigos de barras en la respuesta
                 $codigosTexto = $producto->codigosBarra->pluck('codigo')->toArray();
 
@@ -1570,6 +1606,21 @@ class ProductoController extends Controller
                     'peso'             => $producto->peso, // ✅ NUEVO: Peso del producto
                     'categoria'        => $producto->categoria?->nombre ?? '',
                     'marca'            => $producto->marca?->nombre ?? '',
+
+                    // ✅ NUEVO: Información de fraccionamiento y conversiones para ventas
+                    'es_fraccionado'   => (bool) $producto->es_fraccionado,
+                    'unidad_medida_id' => $producto->unidad_medida_id,
+                    'unidad_medida_nombre' => $producto->unidad?->nombre ?? null,
+                    'conversiones'     => $producto->conversiones
+                        ->where('activo', true)
+                        ->map(fn($c) => [
+                            'unidad_destino_id' => $c->unidad_destino_id,
+                            'unidad_destino_nombre' => $c->unidadDestino?->nombre ?? null,
+                            'factor_conversion' => (float) $c->factor_conversion,
+                            'es_conversion_principal' => (bool) $c->es_conversion_principal,
+                        ])
+                        ->values()
+                        ->all(),
                 ];
             });
 

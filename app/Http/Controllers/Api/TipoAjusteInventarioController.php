@@ -23,13 +23,14 @@ class TipoAjusteInventarioController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'clave'       => 'required|string|unique:tipos_ajuste_inventario,clave',
-            'label'       => 'required|string',
-            'descripcion' => 'nullable|string',
-            'color'       => 'nullable|string',
-            'bg_color'    => 'nullable|string',
-            'text_color'  => 'nullable|string',
-            'activo'      => 'boolean',
+            'clave'           => 'required|string|unique:tipos_ajuste_inventario,clave',
+            'label'           => 'required|string',
+            'tipo_operacion'  => 'required|in:entrada,salida,ambos',
+            'descripcion'     => 'nullable|string',
+            'color'           => 'nullable|string',
+            'bg_color'        => 'nullable|string',
+            'text_color'      => 'nullable|string',
+            'activo'          => 'boolean',
         ]);
         $tipoAjuste = TipoAjusteInventario::create($validated);
         return response()->json(['data' => $tipoAjuste], 201);
@@ -49,13 +50,14 @@ class TipoAjusteInventarioController extends Controller
     public function update(Request $request, TipoAjusteInventario $tipoAjusteInventario)
     {
         $validated = $request->validate([
-            'clave'       => 'sometimes|required|string|unique:tipos_ajuste_inventario,clave,' . $tipoAjusteInventario->id,
-            'label'       => 'sometimes|required|string',
-            'descripcion' => 'nullable|string',
-            'color'       => 'nullable|string',
-            'bg_color'    => 'nullable|string',
-            'text_color'  => 'nullable|string',
-            'activo'      => 'boolean',
+            'clave'           => 'sometimes|required|string|unique:tipos_ajuste_inventario,clave,' . $tipoAjusteInventario->id,
+            'label'           => 'sometimes|required|string',
+            'tipo_operacion'  => 'sometimes|required|in:entrada,salida,ambos',
+            'descripcion'     => 'nullable|string',
+            'color'           => 'nullable|string',
+            'bg_color'        => 'nullable|string',
+            'text_color'      => 'nullable|string',
+            'activo'          => 'boolean',
         ]);
         $tipoAjusteInventario->update($validated);
         return response()->json(['data' => $tipoAjusteInventario]);

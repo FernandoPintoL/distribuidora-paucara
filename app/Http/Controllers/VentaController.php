@@ -283,76 +283,97 @@ class VentaController extends Controller
      *
      * Busca cajas abiertas de CUALQUIER DÍA, no solo del día actual
      */
-    public function checkCajaAbierta(Request $request)
+    public function checkCajaAbierta(Request $request): JsonResponse
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'tiene_caja_abierta' => false,
+                    'mensaje' => 'Usuario no autenticado',
+                ], 200);
+            }
+
+            // Cargar relaciones necesarias
+            $user->load('empleado.user');
+
+            // Verificar si es cajero
+            $esCajero = $user->empleado && $user->empleado->esCajero();
+            $esAdmin = $user->hasRole(['admin', 'administrador', 'super-admin', 'Super Admin', 'Admin']);
+
+            if (!$esCajero && !$esAdmin) {
+                // No requiere caja
+                return response()->json([
+                    'tiene_caja_abierta' => true,
+                    'es_cajero' => false,
+                    'mensaje' => 'Usuario no requiere caja',
+                ], 200);
+            }
+
+            // Obtener caja abierta (de CUALQUIER DÍA)
+            $apertura = null;
+
+            if ($esCajero) {
+                $apertura = $user->empleado->aperturasCaja()
+                    ->whereDoesntHave('cierre')
+                    ->latest()
+                    ->with('caja')
+                    ->first();
+            } else {
+                $apertura = \App\Models\AperturaCaja::whereDoesntHave('cierre')
+                    ->with('caja', 'usuario')
+                    ->latest('fecha')
+                    ->first();
+            }
+
+            if ($apertura) {
+                $hoy = today();
+                $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
+                    ? $apertura->fecha
+                    : \Carbon\Carbon::parse($apertura->fecha);
+
+                $esDeHoy = $fechaApertura->isSameDay($hoy);
+                $diasAtras = $hoy->diffInDays($fechaApertura);
+
+                return response()->json([
+                    'tiene_caja_abierta' => true,
+                    'es_cajero' => $esCajero,
+                    'caja_id' => $apertura->caja_id,
+                    'caja_nombre' => $apertura->caja?->nombre,
+                    'apertura_id' => $apertura->id,
+                    'apertura_fecha' => $apertura->fecha,
+                    'es_de_hoy' => $esDeHoy,
+                    'dias_atras' => $diasAtras,
+                    'usuario_caja' => $apertura->usuario?->name ?? 'Desconocido',
+                    'mensaje' => $esDeHoy
+                        ? '✅ Caja abierta hoy'
+                        : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
+                ], 200);
+            }
+
             return response()->json([
                 'tiene_caja_abierta' => false,
-                'mensaje' => 'Usuario no autenticado',
-            ]);
-        }
-
-        // Verificar si es cajero
-        $esCajero = $user->empleado && $user->empleado->esCajero();
-        $esAdmin = $user->hasRole(['admin', 'administrador', 'super-admin', 'Super Admin', 'Admin']);
-
-        if (!$esCajero && !$esAdmin) {
-            // No requiere caja
-            return response()->json([
-                'tiene_caja_abierta' => true,
-                'es_cajero' => false,
-                'mensaje' => 'Usuario no requiere caja',
-            ]);
-        }
-
-        // Obtener caja abierta (de CUALQUIER DÍA)
-        $apertura = null;
-
-        if ($esCajero) {
-            $apertura = $user->empleado->aperturasCaja()
-                ->whereDoesntHave('cierre')
-                ->latest()
-                ->with('caja')
-                ->first();
-        } else {
-            $apertura = \App\Models\AperturaCaja::whereDoesntHave('cierre')
-                ->with('caja', 'user')
-                ->latest('fecha')
-                ->first();
-        }
-
-        if ($apertura) {
-            $hoy = today();
-            $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
-                ? $apertura->fecha
-                : \Carbon\Carbon::parse($apertura->fecha);
-
-            $esDeHoy = $fechaApertura->isSameDay($hoy);
-            $diasAtras = $hoy->diffInDays($fechaApertura);
-
-            return response()->json([
-                'tiene_caja_abierta' => true,
                 'es_cajero' => $esCajero,
-                'caja_id' => $apertura->caja_id,
-                'caja_nombre' => $apertura->caja?->nombre,
-                'apertura_id' => $apertura->id,
-                'apertura_fecha' => $apertura->fecha,
-                'es_de_hoy' => $esDeHoy,
-                'dias_atras' => $diasAtras,
-                'usuario_caja' => $apertura->user?->name ?? 'Desconocido',
-                'mensaje' => $esDeHoy
-                    ? '✅ Caja abierta hoy'
-                    : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
-            ]);
-        }
+                'mensaje' => 'No hay caja abierta en el sistema',
+            ], 200);
 
-        return response()->json([
-            'tiene_caja_abierta' => false,
-            'es_cajero' => $esCajero,
-            'mensaje' => 'No hay caja abierta en el sistema',
-        ]);
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            Log::error('Error en checkCajaAbierta', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Return JSON error response instead of HTML error page
+            return response()->json([
+                'tiene_caja_abierta' => false,
+                'es_cajero' => false,
+                'mensaje' => 'Error al verificar caja abierta',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

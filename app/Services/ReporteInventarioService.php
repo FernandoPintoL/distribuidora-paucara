@@ -67,6 +67,8 @@ class ReporteInventarioService
                 'codigo_producto' => $codigo,
                 'nombre_producto' => $stock->producto->nombre,
                 'cantidad' => $stock->cantidad,
+                'cantidad_disponible' => $stock->cantidad_disponible ?? 0,
+                'cantidad_reservada' => $stock->cantidad_reservada ?? 0,
                 'precio_compra' => $precioCosto,
                 'precio_venta' => $precioVenta,
                 'valor_compra' => $stock->cantidad * $precioCosto,

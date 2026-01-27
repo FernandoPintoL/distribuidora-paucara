@@ -24,18 +24,44 @@
             <td style="font-weight: bold;">Stock Total:</td>
             <td style="text-align: right;">{{ number_format($stock->sum('cantidad'), 2) }}</td>
         </tr>
+        <tr>
+            <td style="font-weight: bold;">Disponible:</td>
+            <td style="text-align: right;">{{ number_format($stock->sum('cantidad_disponible'), 2) }}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Reservado:</td>
+            <td style="text-align: right;">{{ number_format($stock->sum('cantidad_reservada'), 2) }}</td>
+        </tr>
+        <tr style="border-top: 1px solid #000; font-weight: bold;">
+            <td>Valor Total:</td>
+            <td style="text-align: right;">Bs{{ number_format($stock->sum(function($item) { return ($item['cantidad'] ?? 0) * ($item['precio_venta'] ?? 0); }), 2) }}</td>
+        </tr>
     </table>
 </div>
 
 <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 3px 0;">
     @foreach($stock as $item)
-    <div style="margin-bottom: 8px; font-size: 8px;">
+    <div style="margin-bottom: 8px; font-size: 8px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
         <p style="margin: 0; font-weight: bold;">{{ substr($item['producto_nombre'], 0, 35) }}</p>
         <p style="margin: 2px 0; font-size: 7px;">{{ $item['producto_codigo'] }} - {{ $item['producto_sku'] }}</p>
         <div style="display: flex; justify-content: space-between; margin-top: 2px;">
             <span>{{ $item['almacen_nombre'] }}</span>
             <span style="font-weight: bold;">{{ number_format($item['cantidad'], 2) }} un.</span>
         </div>
+        <table style="width: 100%; font-size: 7px; margin-top: 2px;">
+            <tr>
+                <td>Disponible:</td>
+                <td style="text-align: right;">{{ number_format($item['cantidad_disponible'] ?? 0, 2) }}</td>
+            </tr>
+            <tr>
+                <td>Reservado:</td>
+                <td style="text-align: right;">{{ number_format($item['cantidad_reservada'] ?? 0, 2) }}</td>
+            </tr>
+            <tr style="font-weight: bold; border-top: 1px solid #ccc;">
+                <td>Valor Total:</td>
+                <td style="text-align: right;">Bs{{ number_format(($item['cantidad'] ?? 0) * ($item['precio_venta'] ?? 0), 2) }}</td>
+            </tr>
+        </table>
     </div>
     @endforeach
 </div>

@@ -157,7 +157,24 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
     };
 
     if (!historicoAperturas || historicoAperturas.length === 0) {
-        return null;
+        return (
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div className="p-6">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
+                        📋 Historial de Cajas Abiertas y Cerradas
+                    </h3>
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <div className="text-5xl mb-4 opacity-50">📦</div>
+                        <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            Aún no hay historial de aperturas
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            El historial aparecerá aquí cuando se abran cajas
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (

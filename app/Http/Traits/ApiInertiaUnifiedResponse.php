@@ -496,4 +496,45 @@ trait ApiInertiaUnifiedResponse
 
         return $this->respondSuccess($data, $successMessage, $redirectRoute);
     }
+
+    /**
+     * Manejo unificado de operaciones CRUD
+     * Ejecuta un callback y retorna la respuesta apropiada según el tipo de cliente
+     */
+    protected function handleCrudOperation(
+        Request $request,
+        callable $operation,
+        string $successMessage = 'Operación exitosa',
+        ?string $redirectRoute = null,
+        int $statusCode = 200
+    ): JsonResponse|RedirectResponse|InertiaResponse {
+        try {
+            // Ejecutar la operación
+            $result = $operation();
+
+            // Detectar tipo de cliente y retornar respuesta apropiada
+            if ($this->isModalRequest($request)) {
+                return $this->modalResponse($result ?? [], $successMessage);
+            }
+
+            // Si el redirectRoute es un nombre de ruta (sin /), convertirlo a URL usando route()
+            $finalRedirectRoute = $redirectRoute;
+            if ($redirectRoute && !str_starts_with($redirectRoute, '/')) {
+                $finalRedirectRoute = route($redirectRoute);
+            }
+
+            return $this->respondSuccess($result, $successMessage, $finalRedirectRoute, $statusCode);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en CRUD operation: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->respondError(
+                'Error: ' . $e->getMessage(),
+                [],
+                500
+            );
+        }
+    }
 }

@@ -89,7 +89,7 @@
 <div class="separador"></div>
 
 <div class="center" style="font-size: 6px; margin-top: 5px;">
-    <div>{{ $usuario->name }}</div>
+    <div>{{ is_string($usuario) ? $usuario : $usuario->name }}</div>
 </div>
 
 @endsection

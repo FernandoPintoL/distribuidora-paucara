@@ -4,6 +4,7 @@ namespace App\Models;
 use App\Models\Traits\GeneratesSequentialCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class Proveedor extends Model
 {
@@ -34,10 +35,27 @@ class Proveedor extends Model
 
         // Generar el código de proveedor DESPUÉS de crear, para poder usar el ID del proveedor
         static::created(function ($proveedor) {
-            if (! $proveedor->codigo_proveedor) {
-                $proveedor->codigo_proveedor = $proveedor->generateCodigoProveedor();
-                // Guardar en silencio para evitar eventos recursivos
-                $proveedor->saveQuietly();
+            try {
+                if (! $proveedor->codigo_proveedor) {
+                    $codigo = $proveedor->generateCodigoProveedor();
+                    Log::info('Generando código para proveedor', [
+                        'proveedor_id' => $proveedor->id,
+                        'codigo'       => $codigo,
+                    ]);
+
+                    // Usar update directo en lugar de saveQuietly para evitar problemas de listeners
+                    static::where('id', $proveedor->id)->update([
+                        'codigo_proveedor' => $codigo,
+                    ]);
+
+                    // Recargar el modelo
+                    $proveedor->refresh();
+                }
+            } catch (\Exception $e) {
+                Log::error('Error generando código para proveedor', [
+                    'error'        => $e->getMessage(),
+                    'proveedor_id' => $proveedor->id,
+                ]);
             }
         });
     }

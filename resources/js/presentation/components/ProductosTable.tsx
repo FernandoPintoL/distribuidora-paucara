@@ -16,6 +16,15 @@ export interface DetalleProducto {
     lote?: string;
     fecha_vencimiento?: string;
     precio_costo?: number; // ✅ NUEVO: Precio de costo registrado
+    unidad_venta_id?: number | string; // ✅ NUEVO: Unidad de venta para productos fraccionados
+    conversiones?: Array<{
+        unidad_destino_id: number | string;
+        unidad_destino_nombre?: string;
+        factor_conversion: number;
+    }>; // ✅ NUEVO: Conversiones disponibles
+    es_fraccionado?: boolean; // ✅ NUEVO: Indica si el producto es fraccionado
+    unidad_medida_id?: number | string; // ✅ NUEVO: Unidad base del producto
+    unidad_medida_nombre?: string; // ✅ NUEVO: Nombre de la unidad base
     producto?: {
         id: number | string;
         nombre: string;
@@ -25,6 +34,12 @@ export interface DetalleProducto {
         precio_compra?: number;
         precio_costo?: number; // ✅ NUEVO: Precio de costo
         peso?: number; // ✅ NUEVO: Peso del producto en kg
+        es_fraccionado?: boolean;
+        conversiones?: Array<{
+            unidad_destino_id: number | string;
+            unidad_destino_nombre?: string;
+            factor_conversion: number;
+        }>;
     };
 }
 
@@ -41,6 +56,7 @@ interface ProductosTableProps {
     almacen_id?: number; // ✅ NUEVO: Almacén para búsqueda API
     isCalculatingPrices?: boolean; // ✅ NUEVO: Mostrar indicador de carga al calcular precios
     readOnly?: boolean; // ✅ NUEVO: Deshabilitar edición de detalles (para APROBADO+)
+    onUpdateDetailUnidadConPrecio?: (index: number, unidadId: number, precio: number) => void; // ✅ NUEVO: Actualizar unidad y precio juntos
 }
 
 export default function ProductosTable({
@@ -51,7 +67,9 @@ export default function ProductosTable({
     onRemoveDetail,
     almacen_id,
     isCalculatingPrices = false, // ✅ NUEVO: Indicador de carga
-    readOnly = false // ✅ NUEVO: Modo solo lectura
+    readOnly = false, // ✅ NUEVO: Modo solo lectura
+    tipo = 'compra', // ✅ NUEVO: Tipo de documento (compra o venta)
+    onUpdateDetailUnidadConPrecio // ✅ NUEVO: Actualizar unidad y precio juntos
 }: ProductosTableProps) {
     // ✅ DEBUG: Loguear props recibidos
     /* console.log('📋 ProductosTable - Props recibidos:', {
@@ -124,7 +142,12 @@ export default function ProductosTable({
                     precio_costo: p.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
                     stock: p.stock_disponible || 0,
                     peso: p.peso,
-                    codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || []
+                    codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || [],
+                    // ✅ NUEVO: Campos para productos fraccionados
+                    es_fraccionado: p.es_fraccionado || false,
+                    unidad_medida_id: p.unidad_medida_id,
+                    unidad_medida_nombre: p.unidad_medida_nombre,
+                    conversiones: p.conversiones || []
                 }));
 
                 setProductosDisponibles(productosAPI);
@@ -179,7 +202,12 @@ export default function ProductosTable({
                         precio_costo: productoAPI.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
                         stock: productoAPI.stock_disponible || 0,
                         peso: productoAPI.peso,
-                        codigos_barras: productoAPI.codigosBarra?.map((cb: any) => cb.codigo) || []
+                        codigos_barras: productoAPI.codigosBarra?.map((cb: any) => cb.codigo) || [],
+                        // ✅ NUEVO: Campos para productos fraccionados
+                        es_fraccionado: productoAPI.es_fraccionado || false,
+                        unidad_medida_id: productoAPI.unidad_medida_id,
+                        unidad_medida_nombre: productoAPI.unidad_medida_nombre,
+                        conversiones: productoAPI.conversiones || []
                     };
 
                     onAddProduct(producto);
@@ -230,6 +258,20 @@ export default function ProductosTable({
     const handleAddProduct = (producto: Producto) => {
         onAddProduct(producto);
         setProductSearch(''); // Limpiar búsqueda después de agregar
+    };
+
+    // ✅ NUEVO: Calcular precio según unidad seleccionada
+    const calcularPrecioPorUnidad = (precioBase: number, unidadDestinoId: number | string | undefined, conversiones?: Array<any>): number => {
+        if (!unidadDestinoId || !conversiones || conversiones.length === 0) {
+            return precioBase;
+        }
+
+        const conversion = conversiones.find(c => c.unidad_destino_id === unidadDestinoId);
+        if (!conversion || conversion.factor_conversion === 0) {
+            return precioBase;
+        }
+
+        return precioBase / conversion.factor_conversion;
     };
 
     return (
@@ -326,12 +368,26 @@ export default function ProductosTable({
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Cantidad
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Costo Registrado
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Precio Compra
-                                </th>
+                                {tipo === 'venta' && (
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Unidad Venta
+                                    </th>
+                                )}
+                                {tipo === 'compra' && (
+                                    <>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Costo Registrado
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Precio Compra
+                                        </th>
+                                    </>
+                                )}
+                                {tipo === 'venta' && (
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Precio de Venta
+                                    </th>
+                                )}
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Subtotal
                                 </th>
@@ -355,15 +411,15 @@ export default function ProductosTable({
                                     buscandoEnArray: !detalle.producto
                                 });
 
-                                // ✅ NUEVO: Calcular diferencia entre precio ingresado y costo registrado
+                                // ✅ NUEVO: Calcular diferencia entre precio ingresado y costo registrado (solo para compras)
                                 const precioCosto = detalle.precio_costo || productoInfo?.precio_costo || 0;
-                                const tieneDiferencia = precioCosto > 0 && Math.abs(detalle.precio_unitario - precioCosto) > 0.01;
+                                const tieneDiferencia = tipo === 'compra' && precioCosto > 0 && Math.abs(detalle.precio_unitario - precioCosto) > 0.01;
                                 const esAumento = precioCosto > 0 && detalle.precio_unitario > precioCosto;
 
                                 return (
-                                    <tr key={detalle.producto_id} className={`hover:bg-gray-50 dark:hover:bg-zinc-800 ${tieneDiferencia && esAumento
+                                    <tr key={detalle.producto_id} className={`hover:bg-gray-50 dark:hover:bg-zinc-800 ${tipo === 'compra' && tieneDiferencia && esAumento
                                         ? 'bg-amber-50 dark:bg-amber-950/10'
-                                        : tieneDiferencia && !esAumento
+                                        : tipo === 'compra' && tieneDiferencia && !esAumento
                                             ? 'bg-green-50 dark:bg-green-950/10'
                                             : ''
                                         }`}>
@@ -391,35 +447,112 @@ export default function ProductosTable({
                                                 className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {precioCosto > 0 ? formatCurrency(precioCosto) : 'N/A'}
-                                            </div>
-                                            {tieneDiferencia && (
-                                                <div className={`text-xs font-semibold mt-1 ${esAumento
-                                                    ? 'text-amber-600 dark:text-amber-400'
-                                                    : 'text-green-600 dark:text-green-400'
-                                                    }`}>
-                                                    {esAumento ? '↑ Aumento' : '↓ Disminución'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
+                                        {tipo === 'venta' && (
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {(() => {
+                                                    console.log(`🔍 [ProductosTable] Detalle #${index}:`, {
+                                                        es_fraccionado: detalle.es_fraccionado,
+                                                        unidad_medida_id: detalle.unidad_medida_id,
+                                                        unidad_medida_nombre: detalle.unidad_medida_nombre,
+                                                        unidad_venta_id: detalle.unidad_venta_id,
+                                                        conversiones_count: detalle.conversiones?.length,
+                                                        conversiones: detalle.conversiones,
+                                                        precio_venta: detalle.producto?.precio_venta
+                                                    });
+
+                                                    if (detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0) {
+                                                        return (
+                                                            <select
+                                                                disabled={readOnly}
+                                                                value={detalle.unidad_venta_id || detalle.unidad_medida_id || ''}
+                                                                onChange={(e) => {
+                                                                    const unidadSeleccionada = Number(e.target.value);
+
+                                                                    // Recalcular precio según la unidad
+                                                                    const nuevoPrecio = calcularPrecioPorUnidad(
+                                                                        detalle.producto?.precio_venta || 0,
+                                                                        unidadSeleccionada,
+                                                                        detalle.conversiones
+                                                                    );
+
+                                                                    console.log(`💰 [ProductosTable] Cambio de unidad para detalle #${index}:`, {
+                                                                        unidad_anterior: detalle.unidad_venta_id,
+                                                                        unidad_nueva: unidadSeleccionada,
+                                                                        precio_base: detalle.producto?.precio_venta,
+                                                                        precio_nuevo: nuevoPrecio
+                                                                    });
+
+                                                                    // ✅ NUEVO: Usar el método que actualiza unidad y precio juntos
+                                                                    if (onUpdateDetailUnidadConPrecio) {
+                                                                        onUpdateDetailUnidadConPrecio(index, unidadSeleccionada, nuevoPrecio);
+                                                                    } else {
+                                                                        // Fallback: hacer dos llamadas (antiguo comportamiento)
+                                                                        handleUpdateDetail(index, 'unidad_venta_id', unidadSeleccionada);
+                                                                        handleUpdateDetail(index, 'precio_unitario', nuevoPrecio);
+                                                                    }
+                                                                }}
+                                                                className="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                <option value={detalle.unidad_medida_id || ''}>
+                                                                    {detalle.unidad_medida_nombre || 'Unidad Base'}
+                                                                </option>
+                                                                {detalle.conversiones.map((conv) => (
+                                                                    <option key={conv.unidad_destino_id} value={conv.unidad_destino_id}>
+                                                                        {conv.unidad_destino_nombre || `Unidad ${conv.unidad_destino_id}`}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        );
+                                                    } else {
+                                                        return (
+                                                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                                {detalle.unidad_medida_nombre || 'N/A'}
+                                                            </div>
+                                                        );
+                                                    }
+                                                })()}
+                                            </td>
+                                        )}
+                                        {tipo === 'compra' && (
+                                            <>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {precioCosto > 0 ? formatCurrency(precioCosto) : 'N/A'}
+                                                    </div>
+                                                    {tieneDiferencia && (
+                                                        <div className={`text-xs font-semibold mt-1 ${esAumento
+                                                            ? 'text-amber-600 dark:text-amber-400'
+                                                            : 'text-green-600 dark:text-green-400'
+                                                            }`}>
+                                                            {esAumento ? '↑ Aumento' : '↓ Disminución'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        disabled={readOnly}
+                                                        value={detalle.precio_unitario}
+                                                        onChange={(e) => handleUpdateDetail(index, 'precio_unitario', Number(e.target.value))}
+                                                        className={`w-24 px-2 py-1 text-sm border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${tieneDiferencia
+                                                            ? esAumento
+                                                                ? 'border-amber-300 dark:border-amber-700'
+                                                                : 'border-green-300 dark:border-green-700'
+                                                            : 'border-gray-300 dark:border-zinc-600'
+                                                            }`}
+                                                    />
+                                                </td>
+                                            </>
+                                        )}
+                                        {tipo === 'venta' && (
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {formatCurrency(detalle.precio_unitario)}
                                                 </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                disabled={readOnly}
-                                                value={detalle.precio_unitario}
-                                                onChange={(e) => handleUpdateDetail(index, 'precio_unitario', Number(e.target.value))}
-                                                className={`w-24 px-2 py-1 text-sm border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${tieneDiferencia
-                                                    ? esAumento
-                                                        ? 'border-amber-300 dark:border-amber-700'
-                                                        : 'border-green-300 dark:border-green-700'
-                                                    : 'border-gray-300 dark:border-zinc-600'
-                                                    }`}
-                                            />
-                                        </td>
+                                            </td>
+                                        )}
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                             {formatCurrency(detalle.subtotal)}
                                         </td>

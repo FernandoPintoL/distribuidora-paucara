@@ -1013,6 +1013,92 @@ class Producto extends Model
     }
 
     /**
+     * Calcular precios por unidad automáticamente para productos fraccionados
+     *
+     * Solo aplica para productos fraccionados con conversiones activas
+     * Los precios se calculan: precio_base / factor_conversion
+     *
+     * @return array Matriz de precios por unidad: [tipo_precio_id][unidad_destino_id] = monto
+     */
+    public function calcularPreciosPorUnidad(): array
+    {
+        $preciosPorUnidad = [];
+
+        // Solo calcular si el producto es fraccionado
+        if (!$this->es_fraccionado) {
+            return $preciosPorUnidad;
+        }
+
+        // Cargar conversiones activas
+        $conversiones = $this->conversiones()
+            ->where('activo', true)
+            ->get();
+
+        if ($conversiones->isEmpty()) {
+            return $preciosPorUnidad;
+        }
+
+        // Cargar precios activos
+        $precios = $this->precios()
+            ->where('activo', true)
+            ->get();
+
+        if ($precios->isEmpty()) {
+            return $preciosPorUnidad;
+        }
+
+        // Calcular precio para cada tipo de precio
+        foreach ($precios as $precio) {
+            $tipoPrecioId = $precio->tipo_precio_id;
+            $precioBase = (float) $precio->precio;
+
+            $preciosPorUnidad[$tipoPrecioId] = [];
+
+            // Precio para la unidad base (misma unidad del producto)
+            $preciosPorUnidad[$tipoPrecioId][$this->unidad_medida_id] = round($precioBase, 2);
+
+            // Calcular precio para cada conversión
+            foreach ($conversiones as $conversion) {
+                $precioPorUnidad = $precioBase / $conversion->factor_conversion;
+                $preciosPorUnidad[$tipoPrecioId][$conversion->unidad_destino_id] = round($precioPorUnidad, 2);
+            }
+        }
+
+        return $preciosPorUnidad;
+    }
+
+    /**
+     * Obtener precio por unidad específica
+     *
+     * @param int $tipoPrecioId ID del tipo de precio
+     * @param int $unidadDestinoId ID de la unidad destino (si es null, usa unidad base)
+     * @return float|null Precio calculado o null si no existe
+     */
+    public function obtenerPrecioPorUnidad(int $tipoPrecioId, ?int $unidadDestinoId = null): ?float
+    {
+        // Si no hay unidad destino, usar la unidad base
+        if ($unidadDestinoId === null) {
+            $unidadDestinoId = $this->unidad_medida_id;
+        }
+
+        // Solo para productos fraccionados
+        if (!$this->es_fraccionado) {
+            // Para productos no fraccionados, devolver el precio base
+            $precio = $this->precios()
+                ->where('tipo_precio_id', $tipoPrecioId)
+                ->where('activo', true)
+                ->first();
+
+            return $precio ? (float) $precio->precio : null;
+        }
+
+        // Calcular precios por unidad
+        $preciosPorUnidad = $this->calcularPreciosPorUnidad();
+
+        return $preciosPorUnidad[$tipoPrecioId][$unidadDestinoId] ?? null;
+    }
+
+    /**
      * Calcular precio por unidad específica
      *
      * @param string $tipoPrecio Tipo de precio (ej: 'VENTA_MOSTRADOR', 'VENTA_DISTRIBUIDOR')

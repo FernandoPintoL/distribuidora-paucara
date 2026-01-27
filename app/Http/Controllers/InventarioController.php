@@ -86,17 +86,28 @@ class InventarioController extends Controller
         $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
 
         // Stock por almacén - tabla completa de stock_productos
-        $stockPorAlmacen = StockProducto::with(['producto', 'producto.codigoPrincipal', 'almacen'])
+        $stockPorAlmacen = StockProducto::with(['producto', 'producto.codigoPrincipal', 'almacen', 'producto.precios'])
             ->where('cantidad', '>', 0)
             ->orderBy('almacen_id')
             ->orderBy('producto_id')
             ->get()
             ->map(function ($stock) {
+                // Obtener precio de venta base
+                $precioVenta = 0;
+                if ($stock->producto) {
+                    // Buscar el precio de venta base
+                    $precioVentaObj = $stock->producto->precios?->firstWhere('es_precio_base', true);
+                    $precioVenta = $precioVentaObj?->precio ?? $stock->producto->precio_venta ?? 0;
+                }
+
                 return [
                     'id'                    => $stock->id,
                     'producto_id'           => $stock->producto_id,
                     'almacen_id'            => $stock->almacen_id,
                     'cantidad'              => $stock->cantidad,
+                    'cantidad_disponible'   => $stock->cantidad_disponible,
+                    'cantidad_reservada'    => $stock->cantidad_reservada,
+                    'precio_venta'          => $precioVenta,
                     'producto_nombre'       => $stock->producto?->nombre ?? 'Desconocido',
                     'producto_codigo'       => $stock->producto?->codigo ?? '',
                     'producto_codigo_barra' => $stock->producto?->codigoPrincipal?->codigo ?? '',

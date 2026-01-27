@@ -134,7 +134,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::show
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:41
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:42
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 export const show = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -149,7 +149,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::show
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:41
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:42
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 show.url = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -177,7 +177,7 @@ show.url = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_i
 
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::show
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:41
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:42
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 show.get = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -186,7 +186,7 @@ show.get = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_i
 })
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::show
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:41
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:42
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 show.head = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -196,7 +196,7 @@ show.head = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_
 
     /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::show
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:41
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:42
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
     const showForm = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -206,7 +206,7 @@ show.head = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_
 
             /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::show
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:41
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:42
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
         showForm.get = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -215,7 +215,7 @@ show.head = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_
         })
             /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::show
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:41
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:42
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
         showForm.head = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -231,7 +231,7 @@ show.head = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_
     show.form = showForm
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::update
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:49
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:50
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 export const update = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -246,7 +246,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::update
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:49
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:50
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 update.url = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -274,7 +274,7 @@ update.url = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste
 
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::update
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:49
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:50
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 update.put = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -283,7 +283,7 @@ update.put = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste
 })
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::update
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:49
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:50
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 update.patch = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -293,7 +293,7 @@ update.patch = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajus
 
     /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::update
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:49
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:50
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
     const updateForm = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -308,7 +308,7 @@ update.patch = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajus
 
             /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::update
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:49
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:50
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
         updateForm.put = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -322,7 +322,7 @@ update.patch = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajus
         })
             /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::update
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:49
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:50
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
         updateForm.patch = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -338,7 +338,7 @@ update.patch = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajus
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::destroy
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:67
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:69
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 export const destroy = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -353,7 +353,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::destroy
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:67
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:69
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 destroy.url = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -381,7 +381,7 @@ destroy.url = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajust
 
 /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::destroy
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:67
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:69
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
 destroy.delete = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -391,7 +391,7 @@ destroy.delete = (args: { tipos_ajuste_inventario: string | number } | [tipos_aj
 
     /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::destroy
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:67
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:69
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
     const destroyForm = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -406,7 +406,7 @@ destroy.delete = (args: { tipos_ajuste_inventario: string | number } | [tipos_aj
 
             /**
 * @see \App\Http\Controllers\Api\TipoAjusteInventarioController::destroy
- * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:67
+ * @see app/Http/Controllers/Api/TipoAjusteInventarioController.php:69
  * @route '/api/tipos-ajuste-inventario/{tipos_ajuste_inventario}'
  */
         destroyForm.delete = (args: { tipos_ajuste_inventario: string | number } | [tipos_ajuste_inventario: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

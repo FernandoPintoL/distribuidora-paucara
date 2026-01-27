@@ -249,6 +249,7 @@ export default function VentaForm() {
     }, [data.cliente_id]);
 
     // ✅ NUEVO: Actualizar precios unitarios cuando cambia el carrito calculado
+    // ✅ MODIFICADO: NO actualizar productos fraccionados (el usuario elige la unidad manualmente)
     useEffect(() => {
         if (!precioRango.carritoCalculado || detallesWithProducts.length === 0) {
             return;
@@ -256,6 +257,12 @@ export default function VentaForm() {
 
         setDetallesWithProducts(prev =>
             prev.map(detalle => {
+                // ✅ NUEVO: Si es producto fraccionado, NO actualizar desde carrito calculado
+                if ((detalle as any).es_fraccionado) {
+                    console.log(`🔒 [useEffect] Ignorando actualización de rango para producto fraccionado ${detalle.producto_id}`);
+                    return detalle;
+                }
+
                 const detalleRango = precioRango.carritoCalculado?.detalles.find(
                     dr => dr.producto_id === detalle.producto_id
                 );
@@ -264,6 +271,8 @@ export default function VentaForm() {
                 if (detalleRango && detalleRango.precio_unitario !== detalle.precio_unitario) {
                     const nuevoPrecio = detalleRango.precio_unitario;
                     const nuevoSubtotal = (detalle.cantidad * nuevoPrecio) - (detalle.descuento || 0);
+
+                    console.log(`💰 [useEffect] Actualizando precio de rango para producto NO fraccionado ${detalle.producto_id}: ${detalle.precio_unitario} → ${nuevoPrecio}`);
 
                     return {
                         ...detalle,
@@ -335,7 +344,14 @@ export default function VentaForm() {
                 if (d.producto_id === producto.id) {
                     const newCantidad = d.cantidad + 1;
                     const newSubtotal = (newCantidad * d.precio_unitario) - d.descuento;
-                    return { ...d, cantidad: newCantidad, subtotal: newSubtotal };
+                    return {
+                        ...d,
+                        cantidad: newCantidad,
+                        subtotal: newSubtotal,
+                        // ✅ NUEVO: Preservar información de conversiones
+                        es_fraccionado: d.es_fraccionado || (producto as any).es_fraccionado || false,
+                        conversiones: d.conversiones || (producto as any).conversiones || [],
+                    };
                 }
                 return d;
             });
@@ -358,19 +374,39 @@ export default function VentaForm() {
             return;
         }
 
+        // ✅ DEBUG: Loguear información del producto
+        console.log('📦 [addProductToDetail] Producto que se agrega:', {
+            id: producto.id,
+            nombre: producto.nombre,
+            es_fraccionado: (producto as any).es_fraccionado,
+            unidad_medida_id: (producto as any).unidad_medida_id,
+            unidad_medida_nombre: (producto as any).unidad_medida_nombre,
+            conversiones: (producto as any).conversiones,
+            producto_keys: Object.keys(producto),
+            producto_completo: producto
+        });
+
         const newDetail: DetalleProducto = {
             producto_id: producto.id,
             cantidad: 1,
             precio_unitario: producto.precio_venta || 0,
             descuento: 0,
             subtotal: producto.precio_venta || 0,
-            producto: producto
+            producto: producto,
+            // ✅ NUEVO: Información de conversiones para productos fraccionados
+            es_fraccionado: (producto as any).es_fraccionado || false,
+            unidad_medida_id: (producto as any).unidad_medida_id,
+            unidad_medida_nombre: (producto as any).unidad_medida_nombre,
+            conversiones: (producto as any).conversiones || [],
+            unidad_venta_id: (producto as any).unidad_medida_id // Por defecto la unidad base
         };
 
-        /* console.log('📝 Nuevo detalle creado:', {
-            newDetail,
-            productoEnDetalle: newDetail.producto
-        }); */
+        console.log('📝 [addProductToDetail] Nuevo detalle creado:', {
+            es_fraccionado: newDetail.es_fraccionado,
+            unidad_medida_id: newDetail.unidad_medida_id,
+            conversiones_count: newDetail.conversiones?.length,
+            newDetail
+        });
 
         const newDetalles = [...detallesWithProducts, newDetail];
         setDetallesWithProducts(newDetalles);
@@ -387,6 +423,30 @@ export default function VentaForm() {
         calculatePeso(newDetalles);
     };
 
+    // ✅ NUEVO: Método para cambiar unidad y precio juntos (sin separar)
+    const updateDetailUnidadConPrecio = (index: number, unidadDestinoId: number, nuevoPrecio: number) => {
+        const updatedDetalles = [...detallesWithProducts];
+
+        // Actualizar ambos campos a la vez
+        updatedDetalles[index] = {
+            ...updatedDetalles[index],
+            unidad_venta_id: unidadDestinoId,
+            precio_unitario: nuevoPrecio,
+            // Recalcular subtotal con el nuevo precio
+            subtotal: (updatedDetalles[index].cantidad * nuevoPrecio) - (updatedDetalles[index].descuento || 0)
+        };
+
+        console.log(`🔄 [updateDetailUnidadConPrecio] Detalle #${index}:`, {
+            unidad_venta_id: unidadDestinoId,
+            precio_unitario: nuevoPrecio,
+            subtotal: updatedDetalles[index].subtotal
+        });
+
+        setDetallesWithProducts(updatedDetalles);
+        calculateTotals(updatedDetalles);
+        calculatePeso(updatedDetalles);
+    };
+
     const updateDetail = (index: number, field: keyof DetalleVentaFormData, value: number | string) => {
         const updatedDetalles = [...detallesWithProducts];
         const numericValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
@@ -401,10 +461,43 @@ export default function VentaForm() {
             updatedDetalles[index].subtotal = (Number(cantidad) * Number(precio)) - Number(descuento);
         }
 
+        // ✅ DEBUG: Loguear cambios en detalles
+        if (field === 'unidad_venta_id') {
+            console.log(`🔄 [updateDetail] Cambio de unidad_venta_id para detalle #${index}:`, {
+                anterior: detallesWithProducts[index].unidad_venta_id,
+                nuevo: numericValue,
+                precio_unitario: updatedDetalles[index].precio_unitario,
+                es_fraccionado: (updatedDetalles[index] as any).es_fraccionado,
+                detalle_antes: detallesWithProducts[index],
+                detalle_despues: updatedDetalles[index]
+            });
+        }
+
+        console.log(`📊 [updateDetail] Estado ANTES de setDetallesWithProducts, detalle #${index}:`, {
+            field,
+            valor_nuevo: numericValue,
+            unidad_venta_id: updatedDetalles[index].unidad_venta_id,
+            es_fraccionado: (updatedDetalles[index] as any).es_fraccionado,
+            all_detalles: updatedDetalles
+        });
+
         setDetallesWithProducts(updatedDetalles);
 
-        // 🔑 NUEVO: Si cambió la cantidad, recalcular precios por rango
-        if (field === 'cantidad') {
+        console.log(`📊 [updateDetail] Estado DESPUÉS de setDetallesWithProducts, detalle #${index}:`, {
+            field,
+            valor_nuevo: numericValue,
+            unidad_venta_id_guardado: updatedDetalles[index].unidad_venta_id
+        });
+
+        // ✅ MODIFICADO: Si cambió la cantidad O unidad de venta, recalcular precios por rango
+        // PERO: No recalcular si cambió precio_unitario (es cambio manual del usuario)
+        // y tampoco si cambió unidad_venta_id (el usuario está seleccionando otra unidad)
+        const esProductoFraccionado = (updatedDetalles[index] as any).es_fraccionado;
+        const esUnidadOPrecioFraccionado = esProductoFraccionado &&
+            (field === 'unidad_venta_id' || field === 'precio_unitario');
+
+        if (field === 'cantidad' && !esUnidadOPrecioFraccionado) {
+            console.log(`📊 [updateDetail] Recalculando rango para cantidad de producto ${updatedDetalles[index].producto_id}`);
             precioRango.calcularCarritoDebounced(
                 updatedDetalles.map(d => ({
                     producto_id: d.producto_id,
@@ -439,13 +532,23 @@ export default function VentaForm() {
         let subtotal = 0;
 
         // 🔑 NUEVO: Usar precios actualizados según rango si están disponibles
+        // ✅ PERO: Para productos fraccionados, usar el precio_unitario del detalle (ya calculado según unidad)
         detalles.forEach(detalle => {
-            const precioActualizado = precioRango.getPrecioActualizado(detalle.producto_id as number);
-            const precio = precioActualizado ?? detalle.precio_unitario;
-            const cantidad = detalle.cantidad;
-            const descuento = detalle.descuento || 0;
+            // ✅ NUEVO: Si es producto fraccionado, NO usar precio del mapa (mantener el precio de la unidad seleccionada)
+            if ((detalle as any).es_fraccionado) {
+                console.log(`💰 [calculateTotals] Producto fraccionado ${detalle.producto_id}: usando precio_unitario=${detalle.precio_unitario} (no del mapa)`);
+                const cantidad = detalle.cantidad;
+                const descuento = detalle.descuento || 0;
+                subtotal += (Number(cantidad) * Number(detalle.precio_unitario)) - Number(descuento);
+            } else {
+                // Para productos normales, usar el precio del mapa si está disponible
+                const precioActualizado = precioRango.getPrecioActualizado(detalle.producto_id as number);
+                const precio = precioActualizado ?? detalle.precio_unitario;
+                const cantidad = detalle.cantidad;
+                const descuento = detalle.descuento || 0;
 
-            subtotal += (Number(cantidad) * Number(precio)) - Number(descuento);
+                subtotal += (Number(cantidad) * Number(precio)) - Number(descuento);
+            }
         });
 
         const descuentoGeneral = data.descuento || 0;
@@ -655,7 +758,7 @@ export default function VentaForm() {
                 )}
 
                 {/* Indicador de caja abierta */}
-                {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
+                {/* {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
                     <div className={`border rounded-lg p-4 ${
                         cajaInfo.es_de_hoy
                             ? 'bg-green-50 dark:bg-green-900/20 border-green-300'
@@ -678,7 +781,7 @@ export default function VentaForm() {
                             </div>
                         </div>
                     </div>
-                )}
+                )} */}
 
                 {/* Banner de advertencia - caja sin abrir */}
                 {shouldShowBanner && (
@@ -889,6 +992,7 @@ export default function VentaForm() {
                         showLoteFields={false}
                         almacen_id={almacen_id_empresa} // ✅ MODIFICADO: Pasar almacén de la empresa
                         isCalculatingPrices={precioRango.loading} // ✅ NUEVO: Mostrar indicador de carga
+                        onUpdateDetailUnidadConPrecio={updateDetailUnidadConPrecio} // ✅ NUEVO: Actualizar unidad y precio juntos
                     />
                 </div>
 

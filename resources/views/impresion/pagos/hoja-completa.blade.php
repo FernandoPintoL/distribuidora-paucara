@@ -20,7 +20,7 @@
     </div>
     <div style="text-align: right;">
         <p style="margin: 0; font-size: 10px;"><strong>Fecha Pago:</strong> {{ \Carbon\Carbon::parse($pago['fecha_pago'])->format('d/m/Y') }}</p>
-        <p style="margin: 5px 0 0 0; font-size: 10px;"><strong>Usuario:</strong> {{ $usuario }}</p>
+        <p style="margin: 5px 0 0 0; font-size: 10px;"><strong>Usuario:</strong> {{ is_string($usuario) ? $usuario : (isset($usuario->name) ? $usuario->name : 'Sistema') }}</p>
     </div>
 </div>
 

@@ -3,7 +3,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Button } from '@/presentation/components/ui/button';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import SearchSelect from '@/presentation/components/ui/search-select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ConversionUnidad } from '@/domain/entities/productos';
 
 interface Option { value: number | string; label: string; description?: string }
@@ -50,12 +50,30 @@ export default function Step3Conversiones({
 
   const conversiones = data.conversiones || [];
 
+  // Auto-asignar la unidad base cuando cambia
+  useEffect(() => {
+    if (unidadBase?.id && !editingIndex) {
+      setFormConversion(prev => ({
+        ...prev,
+        unidad_base_id: String(unidadBase.id)
+      }));
+    }
+  }, [unidadBase?.id, editingIndex]);
+
   const handleAddConversion = () => {
     setValidationError('');
 
-    // Validaciones
-    if (!formConversion.unidad_base_id) {
-      setValidationError('Debe seleccionar una unidad base');
+    console.log('📋 Debug - Intento de agregar conversión:', {
+      unidadBase,
+      formConversion,
+      unidad_destino_id: formConversion.unidad_destino_id,
+      factor_conversion: formConversion.factor_conversion,
+    });
+
+    // La unidad base es auto-asignada del producto
+    if (!unidadBase?.id) {
+      setValidationError('No hay unidad base definida para el producto');
+      console.error('❌ Error: No hay unidad base');
       return;
     }
     if (!formConversion.unidad_destino_id) {
@@ -73,7 +91,7 @@ export default function Step3Conversiones({
 
     // Validar que no exista un duplicado (mismo unidad_base_id y unidad_destino_id)
     const isDuplicate = editingIndex === null && conversiones.some((c: any) =>
-      c.unidad_base_id === Number(formConversion.unidad_base_id) &&
+      c.unidad_base_id === Number(unidadBase?.id) &&
       c.unidad_destino_id === Number(formConversion.unidad_destino_id)
     );
 
@@ -93,12 +111,14 @@ export default function Step3Conversiones({
     }
 
     const newConversion: ConversionUnidad = {
-      unidad_base_id: Number(formConversion.unidad_base_id),
+      unidad_base_id: Number(unidadBase?.id),
       unidad_destino_id: Number(formConversion.unidad_destino_id),
       factor_conversion: Number(formConversion.factor_conversion),
       activo: formConversion.activo,
       es_conversion_principal: formConversion.es_conversion_principal,
     };
+
+    console.log('✅ Conversión creada:', newConversion);
 
     let updatedConversiones = [...conversiones];
 
@@ -106,6 +126,7 @@ export default function Step3Conversiones({
       // Editar conversión existente
       updatedConversiones[editingIndex] = newConversion;
       setEditingIndex(null);
+      console.log('✏️ Conversión actualizada en índice:', editingIndex);
     } else {
       // Agregar nueva conversión
       // Si esta es la conversión principal, desactivar otras
@@ -116,10 +137,12 @@ export default function Step3Conversiones({
         }));
       }
       updatedConversiones.push(newConversion);
+      console.log('➕ Nueva conversión agregada. Total:', updatedConversiones.length);
     }
 
     setData('conversiones', updatedConversiones);
     setFormConversion(initialFormConversion);
+    console.log('🔄 Formulario reseteado');
   };
 
   const handleEditConversion = (index: number) => {
@@ -206,7 +229,7 @@ export default function Step3Conversiones({
             <Label>Unidad Destino (Venta) *</Label>
             <SearchSelect
               options={unidadesOptions.filter(
-                u => u.value !== formConversion.unidad_base_id
+                u => u.value !== unidadBase?.id
               )}
               value={formConversion.unidad_destino_id}
               onChange={(value) => setFormConversion(prev => ({
@@ -259,6 +282,7 @@ export default function Step3Conversiones({
 
         <div className="flex gap-2">
           <Button
+            type="button"
             onClick={handleAddConversion}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
@@ -266,6 +290,7 @@ export default function Step3Conversiones({
           </Button>
           {editingIndex !== null && (
             <Button
+              type="button"
               onClick={handleCancel}
               variant="outline"
             >
@@ -301,7 +326,7 @@ export default function Step3Conversiones({
                     <td className="px-4 py-2">
                       <strong>{conv.factor_conversion}</strong>
                       <span className="text-xs text-muted-foreground ml-1">
-                        {unidadBase?.codigo || ''} → ?
+                        {unidadBase?.codigo || ''} → {getUnitLabel(conv.unidad_destino_id)}
                       </span>
                     </td>
                     <td className="px-4 py-2">{getUnitLabel(conv.unidad_destino_id)}</td>
@@ -313,6 +338,7 @@ export default function Step3Conversiones({
                     </td>
                     <td className="px-4 py-2 text-center space-x-1">
                       <Button
+                        type="button"
                         onClick={() => handleEditConversion(index)}
                         size="sm"
                         variant="outline"
@@ -321,6 +347,7 @@ export default function Step3Conversiones({
                         ✏️
                       </Button>
                       <Button
+                        type="button"
                         onClick={() => handleDeleteConversion(index)}
                         size="sm"
                         variant="outline"

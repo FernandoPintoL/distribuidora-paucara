@@ -23,6 +23,9 @@ export interface StockPorAlmacen {
     producto_id: number;
     almacen_id: number;
     cantidad: number;
+    cantidad_disponible: number;
+    cantidad_reservada: number;
+    precio_venta: number;
     producto_nombre: string;
     producto_codigo: string;
     producto_codigo_barra: string;
