@@ -1796,6 +1796,12 @@ class ProductoController extends Controller
 
                         if ($producto) {
                             $esNuevo = false;
+
+                            // Actualizar SKU si viene en el CSV
+                            if (!empty($datosFila['sku'])) {
+                                $producto->update(['sku' => $datosFila['sku']]);
+                            }
+
                             // Actualizar precios si existe
                             if (!empty($datosFila['precio_costo']) || !empty($datosFila['precio_venta'])) {
                                 $this->actualizarPreciosProducto($producto, $datosFila);

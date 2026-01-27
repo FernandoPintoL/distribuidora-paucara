@@ -144,31 +144,78 @@ export const proveedoresConfig: ModuleConfig<Proveedor, ProveedorFormData> = {
             section: 'Ubicación',
             description: 'Describe la dirección y cualquier observación útil para llegar al lugar',
         },
-        // Campo personalizado para ubicación en mapa
+        // Campo para habilitar/deshabilitar el mapa
         {
-            key: 'coordenadas',
-            label: 'Ubicación en el mapa',
+            key: 'mostrar_ubicacion',
+            label: 'Mostrar ubicación en mapa',
+            type: 'boolean',
+            colSpan: 3,
+            section: 'Ubicación',
+            visible: false, // No renderizar normalmente
+            defaultValue: false,
+        },
+        // Campo personalizado para ubicación en mapa (con botón integrado)
+        {
+            key: 'ubicacion_mapa',
+            label: '',
             type: 'custom',
             colSpan: 3,
-            fullWidth: true, // 🆕 Ocupa TODO el ancho de la pantalla
+            fullWidth: true,
             section: 'Ubicación',
-            render: ({ value, onChange, disabled, formData }) => {
-                // formData contiene latitud y longitud separados
+            render: ({ formData, onChange }) => {
+                const mostrarMapa = (formData as any)?.mostrar_ubicacion === true;
                 const latitud = (formData as any)?.latitud;
                 const longitud = (formData as any)?.longitud;
 
-                return createElement(MapPicker, {
-                    latitude: latitud,
-                    longitude: longitud,
-                    onLocationSelect: (lat: number, lng: number, address?: string) => {
-                        // Actualizar los campos latitud y longitud
-                        onChange({ latitud: lat, longitud: lng, address });
-                    },
-                    label: 'Ubicación del proveedor',
-                    description: 'Selecciona la ubicación del proveedor en el mapa',
-                    disabled: Boolean(disabled),
-                    height: '350px'
-                });
+                // Si el mapa está oculto, mostrar botón
+                if (!mostrarMapa) {
+                    return createElement('div', { className: 'flex gap-2' },
+                        createElement('button', {
+                            type: 'button',
+                            className: 'px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2',
+                            onClick: (e: any) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Actualizar el campo mostrar_ubicacion
+                                onChange({ mostrar_ubicacion: true });
+                            },
+                        },
+                            createElement('span', null, '📍'),
+                            createElement('span', null, 'Mostrar mapa')
+                        )
+                    );
+                }
+
+                // Si el mapa está habilitado, mostrar el MapPicker
+                return createElement('div', { className: 'space-y-3' },
+                    createElement('div', { className: 'flex gap-2' },
+                        createElement('button', {
+                            type: 'button',
+                            className: 'px-3 py-1 text-sm bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors flex items-center gap-2',
+                            onClick: (e: any) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Ocultar el mapa
+                                onChange({ mostrar_ubicacion: false });
+                            },
+                        },
+                            createElement('span', null, '❌'),
+                            createElement('span', null, 'Ocultar mapa')
+                        )
+                    ),
+                    createElement(MapPicker, {
+                        latitude: latitud,
+                        longitude: longitud,
+                        onLocationSelect: (lat: number, lng: number, address?: string) => {
+                            // Actualizar los campos latitud y longitud
+                            onChange({ latitud: lat, longitud: lng, address });
+                        },
+                        label: 'Ubicación del proveedor',
+                        description: 'Selecciona la ubicación del proveedor en el mapa',
+                        disabled: false,
+                        height: '350px'
+                    })
+                );
             }
         },
         // 📷 SECCIÓN DE FOTOS

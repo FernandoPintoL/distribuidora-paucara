@@ -110,16 +110,17 @@ class ProveedorController extends Controller
         $isModalRequest = $this->isModalRequest($request);
 
         $validationRules = [
-            'nombre'       => ['required', 'string', 'max:255', 'unique:proveedores,nombre'],
-            'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit'          => ['nullable', 'string', 'max:255'],
-            'telefono'     => ['nullable', 'string', 'max:100'],
-            'email'        => ['nullable', 'email', 'max:255'],
-            'direccion'    => ['nullable', 'string', 'max:255'],
-            'latitud'      => ['nullable', 'numeric', 'between:-90,90'],
-            'longitud'     => ['nullable', 'numeric', 'between:-180,180'],
-            'contacto'     => ['nullable', 'string', 'max:255'],
-            'activo'       => ['boolean'],
+            'nombre'              => ['required', 'string', 'max:255', 'unique:proveedores,nombre'],
+            'razon_social'        => ['nullable', 'string', 'max:255'],
+            'nit'                 => ['nullable', 'string', 'max:255'],
+            'telefono'            => ['nullable', 'string', 'max:100'],
+            'email'               => ['nullable', 'email', 'max:255'],
+            'direccion'           => ['nullable', 'string', 'max:255'],
+            'latitud'             => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'            => ['nullable', 'numeric', 'between:-180,180'],
+            'contacto'            => ['nullable', 'string', 'max:255'],
+            'codigo_proveedor'    => ['nullable', 'string', 'max:50', 'unique:proveedores,codigo_proveedor'],
+            'activo'              => ['boolean'],
         ];
 
         // Solo validar archivos si no es una petición de modal
@@ -197,19 +198,20 @@ class ProveedorController extends Controller
     public function update(Request $request, Proveedor $proveedore): RedirectResponse | JsonResponse | Response
     {
         $data = $request->validate([
-            'nombre'       => ['required', 'string', 'max:255', 'unique:proveedores,nombre,' . $proveedore->id],
-            'razon_social' => ['nullable', 'string', 'max:255'],
-            'nit'          => ['nullable', 'string', 'max:255'],
-            'telefono'     => ['nullable', 'string', 'max:100'],
-            'email'        => ['nullable', 'email', 'max:255'],
-            'direccion'    => ['nullable', 'string', 'max:255'],
-            'latitud'      => ['nullable', 'numeric', 'between:-90,90'],
-            'longitud'     => ['nullable', 'numeric', 'between:-180,180'],
-            'contacto'     => ['nullable', 'string', 'max:255'],
-            'activo'       => ['boolean'],
-            'foto_perfil'  => ['nullable', 'image', 'max:5120'],
-            'ci_anverso'   => ['nullable', 'image', 'max:5120'],
-            'ci_reverso'   => ['nullable', 'image', 'max:5120'],
+            'nombre'              => ['required', 'string', 'max:255', 'unique:proveedores,nombre,' . $proveedore->id],
+            'razon_social'        => ['nullable', 'string', 'max:255'],
+            'nit'                 => ['nullable', 'string', 'max:255'],
+            'telefono'            => ['nullable', 'string', 'max:100'],
+            'email'               => ['nullable', 'email', 'max:255'],
+            'direccion'           => ['nullable', 'string', 'max:255'],
+            'latitud'             => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'            => ['nullable', 'numeric', 'between:-180,180'],
+            'contacto'            => ['nullable', 'string', 'max:255'],
+            'codigo_proveedor'    => ['nullable', 'string', 'max:50', 'unique:proveedores,codigo_proveedor,' . $proveedore->id],
+            'activo'              => ['boolean'],
+            'foto_perfil'         => ['nullable', 'image', 'max:5120'],
+            'ci_anverso'          => ['nullable', 'image', 'max:5120'],
+            'ci_reverso'          => ['nullable', 'image', 'max:5120'],
         ]);
 
         return $this->handleCrudOperation(

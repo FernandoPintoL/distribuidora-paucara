@@ -52,7 +52,9 @@ class InventarioInicialController extends Controller
 
         // Renderizar el nuevo componente avanzado
         return Inertia::render('inventario/inventario-inicial', [
-            'almacenes' => $almacenes,
+            'productos'  => $productos,
+            'almacenes'  => $almacenes,
+            'tipoInventarioInicial' => $tipoInventarioInicial,
         ]);
     }
 
