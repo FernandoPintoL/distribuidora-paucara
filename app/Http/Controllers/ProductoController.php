@@ -1543,7 +1543,7 @@ class ProductoController extends Controller
             ])
             ->limit($limite)
             ->get()
-            ->map(function ($producto) use ($almacenId) {
+            ->map(function ($producto) use ($almacenId, $tipo) {
                 // ✅ DEBUG: Loguear producto con conversiones
                 Log::info('🔍 [buscarApi] Procesando producto', [
                     'producto_id' => $producto->id,
@@ -1573,10 +1573,13 @@ class ProductoController extends Controller
 
                 // ✅ MODIFICADO: Obtener precio de VENTA (tipos_precio.codigo = 'VENTA')
                 $precioVenta = $producto->precios
-                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'VENTA')?->precio;
+                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'VENTA')?->precio ?? 0;
 
                 // Fallback: Obtener precio base si no existe precio de venta
-                $precioBase = $precioVenta ?? $producto->precios->firstWhere('es_precio_base', true)?->precio ?? $producto->precios->first()?->precio ?? 0;
+                // En modo VENTA: NO debe retornar precio de costo, solo precio de venta
+                $precioBase = ($tipo === 'venta')
+                    ? $precioVenta
+                    : ($precioVenta ?? $producto->precios->firstWhere('es_precio_base', true)?->precio ?? $producto->precios->first()?->precio ?? 0);
 
                 // ✅ NUEVO: Obtener precio de COSTO
                 $precioCosto = $producto->precios

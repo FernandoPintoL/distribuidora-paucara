@@ -252,20 +252,34 @@ class Producto extends Model
     {
         $empresaId = $empresaId ?? auth()->user()?->empresa_id ?? 1;
 
-        // Buscar rango aplicable para esta cantidad
-        $rango = PrecioRangoCantidadProducto::obtenerRangoParaCantidad(
-            $this->id,
-            $cantidad,
-            $empresaId
-        );
+        // ✅ MEJORADO: Buscar CUALQUIER rango que aplique a esta cantidad
+        // Sin filtrar por tipo de precio - usa el tipo que esté configurado en el rango
+        $rango = PrecioRangoCantidadProducto::query()
+            ->where('producto_id', $this->id)
+            ->where('empresa_id', $empresaId)
+            ->activos()
+            ->vigentes()
+            ->where(function ($q) use ($cantidad) {
+                $q->where('cantidad_minima', '<=', $cantidad)
+                  ->where(function ($subQ) use ($cantidad) {
+                      $subQ->whereNull('cantidad_maxima')
+                           ->orWhere('cantidad_maxima', '>=', $cantidad);
+                  });
+            })
+            ->first();
 
         if ($rango) {
-            // Usar el precio del tipo asociado al rango
+            // ✅ Si hay rango, usar el precio del tipo_precio_id configurado en el rango
             return $this->obtenerPrecio($rango->tipo_precio_id)?->precio;
         }
 
-        // Fallback: usar precio normal sin rango (VENTA_NORMAL o el primer precio activo)
-        return $this->obtenerPrecio('VENTA_NORMAL')?->precio ?? $this->precios()->activos()->first()?->precio;
+        // ✅ Si NO hay rango, usar precio VENTA por defecto
+        $tipoVenta = TipoPrecio::where('codigo', 'VENTA')->first();
+        $tipoVentaId = $tipoVenta?->id ?? 2;
+
+        return $this->obtenerPrecio($tipoVentaId)?->precio
+               ?? $this->obtenerPrecio('VENTA_NORMAL')?->precio
+               ?? $this->precios()->activos()->first()?->precio;
     }
 
     /**
@@ -278,17 +292,31 @@ class Producto extends Model
         $precioUnitario = $this->obtenerPrecioConRango($cantidad, $empresaId);
         $subtotal = $cantidad * ($precioUnitario ?? 0);
 
-        $rangoActual = PrecioRangoCantidadProducto::obtenerRangoParaCantidad(
-            $this->id,
-            $cantidad,
-            $empresaId
-        );
+        // ✅ MEJORADO: Buscar CUALQUIER rango que aplique a esta cantidad
+        // Sin filtrar por tipo - usa el primer rango que matches
+        $rangoActual = PrecioRangoCantidadProducto::query()
+            ->where('producto_id', $this->id)
+            ->where('empresa_id', $empresaId)
+            ->activos()
+            ->vigentes()
+            ->where(function ($q) use ($cantidad) {
+                $q->where('cantidad_minima', '<=', $cantidad)
+                  ->where(function ($subQ) use ($cantidad) {
+                      $subQ->whereNull('cantidad_maxima')
+                           ->orWhere('cantidad_maxima', '>=', $cantidad);
+                  });
+            })
+            ->first();
 
-        $proximoRango = PrecioRangoCantidadProducto::obtenerProximoRango(
-            $this->id,
-            $cantidad,
-            $empresaId
-        );
+        // Buscar PRÓXIMO rango (el siguiente después del rango actual)
+        $proximoRango = PrecioRangoCantidadProducto::query()
+            ->where('producto_id', $this->id)
+            ->where('empresa_id', $empresaId)
+            ->activos()
+            ->vigentes()
+            ->where('cantidad_minima', '>', $cantidad)
+            ->orderBy('cantidad_minima')
+            ->first();
 
         $ahorro = null;
         if ($proximoRango) {

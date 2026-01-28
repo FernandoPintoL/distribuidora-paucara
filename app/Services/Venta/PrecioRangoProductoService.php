@@ -62,6 +62,13 @@ class PrecioRangoProductoService
 
             $cantidad = (int) $item['cantidad'];
 
+            // ✅ NUEVO: Log detallado del cálculo
+            Log::info('💰 [calcularCarrito] Procesando producto', [
+                'producto_id' => $producto->id,
+                'producto_nombre' => $producto->nombre,
+                'cantidad' => $cantidad,
+            ]);
+
             // ✅ VALIDAR LÍMITE DE VENTA
             if ($producto->limite_venta && $cantidad > $producto->limite_venta) {
                 Log::warning(
@@ -86,11 +93,26 @@ class PrecioRangoProductoService
             if ($precioInfo['rango_aplicado']) {
                 $tipoPrecioId     = $precioInfo['rango_aplicado']['tipo_precio_id'];
                 $tipoPrecioNombre = $precioInfo['rango_aplicado']['tipo_precio_nombre'];
+                Log::info('✅ [calcularCarrito] Rango aplicado', [
+                    'producto_id' => $producto->id,
+                    'cantidad' => $cantidad,
+                    'rango' => $precioInfo['rango_aplicado'],
+                    'tipo_precio_id' => $tipoPrecioId,
+                    'tipo_precio_nombre' => $tipoPrecioNombre,
+                    'precio_unitario' => $precioInfo['precio_unitario'],
+                ]);
             } else {
                                                                  // Fallback: Si no hay rango, obtener el tipo_precio de la venta normal
                 $precioVenta      = $producto->obtenerPrecio(2); // tipo_precio_id = 2 (VENTA)
                 $tipoPrecioId     = 2;
                 $tipoPrecioNombre = 'Precio de Venta';
+                Log::info('ℹ️ [calcularCarrito] Sin rango - usando precio normal', [
+                    'producto_id' => $producto->id,
+                    'cantidad' => $cantidad,
+                    'tipo_precio_id' => $tipoPrecioId,
+                    'tipo_precio_nombre' => $tipoPrecioNombre,
+                    'precio_unitario' => $precioInfo['precio_unitario'],
+                ]);
             }
 
             $detalle = [
@@ -122,6 +144,14 @@ class PrecioRangoProductoService
                 $ahorroTotalDisponible += $precioInfo['ahorro_proximo'];
             }
         }
+
+        // ✅ NUEVO: Log final del carrito calculado
+        Log::info('📊 [calcularCarrito] Carrito calculado correctamente', [
+            'cantidad_items' => count($detalles),
+            'subtotal' => $totalGeneral,
+            'ahorro_disponible' => $ahorroTotalDisponible,
+            'detalles' => $detalles,
+        ]);
 
         return [
             'detalles'                => $detalles,

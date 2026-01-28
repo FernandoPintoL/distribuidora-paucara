@@ -112,7 +112,41 @@ class PrecioRangoCarritoService {
             }
 
             // ✅ MODIFICADO: Solo loguear en consola, NO mostrar toast de éxito
-            console.log('✅ Precios actualizados según rango:', data);
+            console.log('✅ Respuesta completa de /api/carrito/calcular:', data);
+
+            // ✅ NUEVO: Logs detallados de cada detalle del carrito
+            const carritoData = data.data || data; // Manejar ambos formatos
+            if (carritoData?.detalles && Array.isArray(carritoData.detalles)) {
+                console.log('📋 ===== DETALLES DEL CARRITO CALCULADO =====');
+                carritoData.detalles.forEach((detalle: any, index: number) => {
+                    console.log(`\n📦 Detalle #${index}:`);
+                    console.log(`   Producto: ${detalle.producto_nombre} (ID: ${detalle.producto_id})`);
+                    console.log(`   Cantidad: ${detalle.cantidad}`);
+                    console.log(`   🏷️ Tipo Precio: ${detalle.tipo_precio_nombre} (ID: ${detalle.tipo_precio_id})`);
+                    console.log(`   💵 Precio Unitario: ${detalle.precio_unitario}`);
+                    console.log(`   📊 Subtotal: ${detalle.subtotal}`);
+                    if (detalle.rango_aplicado) {
+                        console.log(`   ✅ Rango Aplicado: ${detalle.rango_aplicado.cantidad_minima}-${detalle.rango_aplicado.cantidad_maxima || '∞'} unidades`);
+                        console.log(`      Tipo en Rango: ${detalle.rango_aplicado.tipo_precio_nombre}`);
+                    } else {
+                        console.log(`   ❌ Sin rango aplicado (precio normal)`);
+                    }
+                    if (detalle.proximo_rango) {
+                        console.log(`   📈 Próximo Rango: ${detalle.proximo_rango.cantidad_minima} unidades (falta: ${detalle.proximo_rango.falta_cantidad})`);
+                        if (detalle.ahorro_proximo) {
+                            console.log(`      💰 Ahorro Disponible: ${detalle.ahorro_proximo}`);
+                        }
+                    }
+                });
+                console.log(`\n💰 Resumen Total:`);
+                console.log(`   Subtotal: ${carritoData.subtotal}`);
+                console.log(`   Total: ${carritoData.total}`);
+                if (carritoData.ahorro_disponible) {
+                    console.log(`   Ahorro Disponible: ${carritoData.ahorro_disponible}`);
+                }
+                console.log('==========================================\n');
+            }
+
             return data;
         } catch (error) {
             console.error('❌ Error calculando carrito con rangos:', error);

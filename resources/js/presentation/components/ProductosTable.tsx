@@ -25,6 +25,8 @@ export interface DetalleProducto {
     es_fraccionado?: boolean; // ✅ NUEVO: Indica si el producto es fraccionado
     unidad_medida_id?: number | string; // ✅ NUEVO: Unidad base del producto
     unidad_medida_nombre?: string; // ✅ NUEVO: Nombre de la unidad base
+    tipo_precio_id?: number | string; // ✅ NUEVO: ID del tipo de precio aplicado
+    tipo_precio_nombre?: string; // ✅ NUEVO: Nombre del tipo de precio aplicado
     producto?: {
         id: number | string;
         nombre: string;
@@ -591,6 +593,11 @@ export default function ProductosTable({
                                                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                     {formatCurrency(detalle.precio_unitario)}
                                                 </div>
+                                                {detalle.tipo_precio_nombre && (
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        {detalle.tipo_precio_nombre}
+                                                    </div>
+                                                )}
                                             </td>
                                         )}
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">

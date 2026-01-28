@@ -248,8 +248,9 @@ export default function VentaForm() {
         }
     }, [data.cliente_id]);
 
-    // ✅ NUEVO: Actualizar precios unitarios cuando cambia el carrito calculado
-    // ✅ MODIFICADO: NO actualizar productos fraccionados (el usuario elige la unidad manualmente)
+    // ✅ NUEVO: Actualizar tipo de precio cuando cambia el carrito calculado
+    // ✅ SOLO actualiza tipo_precio_id y tipo_precio_nombre
+    // ✅ NO cambia el precio unitario ni subtotal
     useEffect(() => {
         if (!precioRango.carritoCalculado || detallesWithProducts.length === 0) {
             return;
@@ -257,27 +258,18 @@ export default function VentaForm() {
 
         setDetallesWithProducts(prev =>
             prev.map(detalle => {
-                // ✅ NUEVO: Si es producto fraccionado, NO actualizar desde carrito calculado
-                if ((detalle as any).es_fraccionado) {
-                    console.log(`🔒 [useEffect] Ignorando actualización de rango para producto fraccionado ${detalle.producto_id}`);
-                    return detalle;
-                }
-
                 const detalleRango = precioRango.carritoCalculado?.detalles.find(
                     dr => dr.producto_id === detalle.producto_id
                 );
 
-                // Si existe un detalle con precio actualizado, actualizarlo
-                if (detalleRango && detalleRango.precio_unitario !== detalle.precio_unitario) {
-                    const nuevoPrecio = detalleRango.precio_unitario;
-                    const nuevoSubtotal = (detalle.cantidad * nuevoPrecio) - (detalle.descuento || 0);
-
-                    console.log(`💰 [useEffect] Actualizando precio de rango para producto NO fraccionado ${detalle.producto_id}: ${detalle.precio_unitario} → ${nuevoPrecio}`);
+                // ✅ NUEVO: Solo actualizar tipo de precio, NO el precio unitario
+                if (detalleRango && detalleRango.tipo_precio_nombre !== detalle.tipo_precio_nombre) {
+                    console.log(`🏷️ [useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`);
 
                     return {
                         ...detalle,
-                        precio_unitario: nuevoPrecio,
-                        subtotal: nuevoSubtotal
+                        tipo_precio_id: detalleRango.tipo_precio_id,
+                        tipo_precio_nombre: detalleRango.tipo_precio_nombre
                     };
                 }
 
@@ -285,6 +277,7 @@ export default function VentaForm() {
             })
         );
     }, [precioRango.carritoCalculado]);
+
 
     // Función para manejar la creación de cliente
     const handleCreateCliente = (searchQuery: string) => {
@@ -359,6 +352,7 @@ export default function VentaForm() {
             setDetallesWithProducts(updatedDetalles);
 
             // Recalcular precios según rangos con la nueva cantidad
+            // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
             precioRango.calcularCarritoDebounced(
                 updatedDetalles.map(d => ({
                     producto_id: d.producto_id,
@@ -398,7 +392,10 @@ export default function VentaForm() {
             unidad_medida_id: (producto as any).unidad_medida_id,
             unidad_medida_nombre: (producto as any).unidad_medida_nombre,
             conversiones: (producto as any).conversiones || [],
-            unidad_venta_id: (producto as any).unidad_medida_id // Por defecto la unidad base
+            unidad_venta_id: (producto as any).unidad_medida_id, // Por defecto la unidad base
+            // ✅ NUEVO: Tipo de precio (por defecto VENTA)
+            tipo_precio_id: 2, // tipo_precio_id para VENTA
+            tipo_precio_nombre: 'Precio de Venta'
         };
 
         console.log('📝 [addProductToDetail] Nuevo detalle creado:', {
@@ -412,6 +409,7 @@ export default function VentaForm() {
         setDetallesWithProducts(newDetalles);
 
         // 🔑 NUEVO: Calcular precios según rangos
+        // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
         precioRango.calcularCarritoDebounced(
             newDetalles.map(d => ({
                 producto_id: d.producto_id,
@@ -498,6 +496,7 @@ export default function VentaForm() {
 
         if (field === 'cantidad' && !esUnidadOPrecioFraccionado) {
             console.log(`📊 [updateDetail] Recalculando rango para cantidad de producto ${updatedDetalles[index].producto_id}`);
+            // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
             precioRango.calcularCarritoDebounced(
                 updatedDetalles.map(d => ({
                     producto_id: d.producto_id,
@@ -515,6 +514,7 @@ export default function VentaForm() {
         setDetallesWithProducts(updatedDetalles);
 
         // 🔑 NUEVO: Recalcular rangos cuando se elimina un producto
+        // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
         if (updatedDetalles.length > 0) {
             precioRango.calcularCarritoDebounced(
                 updatedDetalles.map(d => ({

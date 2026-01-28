@@ -50,7 +50,8 @@ export default function StockYProductos({
                 (stock) =>
                     stock.producto_nombre.toLowerCase().includes(busquedaLower) ||
                     stock.producto_codigo.toLowerCase().includes(busquedaLower) ||
-                    stock.producto_sku.toLowerCase().includes(busquedaLower)
+                    stock.producto_sku.toLowerCase().includes(busquedaLower) ||
+                    stock.producto_codigo_barra.toLowerCase().includes(busquedaLower)
             );
         }
 
@@ -63,7 +64,7 @@ export default function StockYProductos({
         if (filtros.rangoStock !== 'todos') {
             const rango = RANGOS_STOCK[filtros.rangoStock as keyof typeof RANGOS_STOCK];
             resultado = resultado.filter(
-                (stock) => stock.cantidad >= rango.min && stock.cantidad < rango.max
+                (stock) => stock.cantidad >= rango.min && stock.cantidad <= rango.max
             );
         }
 
