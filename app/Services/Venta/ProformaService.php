@@ -574,6 +574,8 @@ class ProformaService
         $proforma = Proforma::with([
             'detalles.producto.categoria',
             'detalles.producto.marca',
+            // ✅ NUEVO: Cargar stock y almacén para mostrar en la tabla
+            'detalles.producto.stock',
             'cliente',
             'direccionSolicitada',
             'direccionConfirmada',

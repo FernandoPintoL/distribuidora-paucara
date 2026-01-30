@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
@@ -8,7 +8,10 @@ import { useExport } from '@/infrastructure/hooks/use-export';
 import { compraToExportData, getDefaultCompraExportOptions } from '@/lib/export-helpers';
 import { ExportButtons } from '@/presentation/components/Export/ExportButtons';
 import { PrintableContent } from '@/presentation/components/Export/PrintableContent';
-import { ArrowLeft, Edit, Printer, Package, User, Calendar, FileText, Hash, CreditCard, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Printer, Package, User, Calendar, FileText, Hash, CreditCard, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
+import AnularCompraModal from '@/presentation/components/compras/AnularCompraModal';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 
 // Importar tipos del domain
 import type { Compra } from '@/domain/entities/compras';
@@ -40,6 +43,44 @@ export default function CompraShow() {
     const { isExporting, exportToPDF, exportToExcel, exportToCSV, print, error } = useExport();
     const compra = props.compra;
     const printableRef = useRef<HTMLDivElement>(null);
+    const [mostrarModalAnular, setMostrarModalAnular] = useState(false);
+    const [isAnulando, setIsAnulando] = useState(false);
+    const [outputModal, setOutputModal] = useState(false);
+
+    // Verificar si la compra está APROBADA
+    const esAprobada = compra.estado_documento?.nombre?.toLowerCase() === 'aprobada' || compra.estado_documento?.codigo === 'APROBADO';
+
+    const handleAnularCompra = async (motivo?: string) => {
+        setIsAnulando(true);
+        try {
+            const response = await fetch(`/compras/${compra.id}/anular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ motivo }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                toast.error(data.message || 'Error al anular la compra');
+                return;
+            }
+
+            toast.success('Compra anulada exitosamente');
+            setMostrarModalAnular(false);
+
+            // Recargar la página
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (error) {
+            console.error('Error al anular compra:', error);
+            toast.error('Error al anular la compra');
+        } finally {
+            setIsAnulando(false);
+        }
+    };
 
     // Preparar datos para exportación
     const exportData = compraToExportData(compra);
@@ -90,7 +131,7 @@ export default function CompraShow() {
                     <div>
                         <div className="flex items-center space-x-3">
                             <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                                {compra.numero}
+                                #{compra.id} | {compra.numero}
                             </h1>
                             <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${getEstadoColor(compra.estado_documento)}`}>
                                 {compra.estado_documento?.nombre || 'Sin estado'}
@@ -109,33 +150,18 @@ export default function CompraShow() {
                 </div>
 
                 <div className="flex gap-3">
+                    {/* Botón Exportar/Imprimir */}
                     <button
-                        onClick={handlePrint}
-                        disabled={isExporting}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50"
+                        onClick={() => setOutputModal(true)}
+                        className="px-4 py-2 text-sm font-medium text-white bg-gray-600 border border-transparent rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:bg-gray-700 dark:hover:bg-gray-600 flex items-center gap-2 transition-colors"
+                        title="Exportar/Imprimir documento"
                     >
-                        {isExporting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Printer className="h-4 w-4" />
-                        )}
-                        {isExporting ? 'Procesando...' : 'Imprimir'}
+                        <Printer className="h-4 w-4" />
+                        Exportar
                     </button>
 
-                    <ExportButtons
-                        data={exportData}
-                        options={defaultExportOptions}
-                        disabled={isExporting}
-                        showPrint={false}
-                        showPDF={true}
-                        showExcel={true}
-                        showCSV={true}
-                        onExportStart={() => console.log('Iniciando exportación...')}
-                        onExportEnd={() => console.log('Exportación completada')}
-                        onExportError={(error) => console.error('Error en exportación:', error)}
-                    />
-
-                    {can('compras.update') && (
+                    {/* Botón Editar - Solo si NO está aprobada */}
+                    {can('compras.update') && !esAprobada && (
                         <Link
                             href={`/compras/${compra.id}/edit`}
                             className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
@@ -143,6 +169,18 @@ export default function CompraShow() {
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
                         </Link>
+                    )}
+
+                    {/* Botón Anular - Solo si está aprobada */}
+                    {can('compras.update') && esAprobada && (
+                        <button
+                            onClick={() => setMostrarModalAnular(true)}
+                            disabled={isAnulando}
+                            className="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50"
+                        >
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            {isAnulando ? 'Anulando...' : 'Anular'}
+                        </button>
                     )}
                 </div>
             </div>
@@ -411,12 +449,12 @@ export default function CompraShow() {
                         </div>
                         <div className="p-6">
                             <dl className="space-y-4">
-                                <div className="flex justify-between text-sm">
+                                {/* <div className="flex justify-between text-sm">
                                     <dt className="text-gray-600 dark:text-gray-400">Subtotal:</dt>
                                     <dd className="font-mono text-gray-900 dark:text-white">
                                         {formatCurrency(Number(compra.subtotal), compra.moneda?.simbolo || '$')}
                                     </dd>
-                                </div>
+                                </div> */}
 
                                 {compra.descuento > 0 && (
                                     <div className="flex justify-between text-sm">
@@ -501,6 +539,28 @@ export default function CompraShow() {
                     title={`Compra ${compra.numero}`}
                 />
             </div>
+
+            {/* Modal de anulación */}
+            <AnularCompraModal
+                isOpen={mostrarModalAnular}
+                onClose={() => setMostrarModalAnular(false)}
+                compraNumero={compra.numero}
+                onConfirm={handleAnularCompra}
+                isLoading={isAnulando}
+            />
+
+            {/* Modal de exportación/impresión */}
+            <OutputSelectionModal
+                isOpen={outputModal}
+                onClose={() => setOutputModal(false)}
+                documentoId={compra.id}
+                tipoDocumento="compra"
+                documentoInfo={{
+                    numero: compra.numero,
+                    fecha: compra.fecha ? new Date(compra.fecha).toLocaleDateString('es-ES') : undefined,
+                    monto: compra.total,
+                }}
+            />
         </AppLayout>
     );
 }

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar } from 'lucide-react';
+import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar, Printer } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { Venta, FiltrosVentas } from '@/domain/entities/ventas';
 import type { Pagination } from '@/domain/entities/shared';
 import ventasService from '@/infrastructure/services/ventas.service';
 import AnularVentaModal from './AnularVentaModal';
-import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { toast } from 'react-toastify';
 
 interface TablaVentasProps {
@@ -19,6 +19,7 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [anularModal, setAnularModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
     const [isAnulando, setIsAnulando] = useState(false);
+    const [outputModal, setOutputModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
 
     // ✅ DEBUG: Verificar datos de dirección en consola
     React.useEffect(() => {
@@ -272,12 +273,12 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                 <tr className="hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                            {venta.numero}
+                                            #{venta.id} | {venta.numero}
                                         </div>
                                         <div className="text-sm text-gray-900 dark:text-white">
                                             {formatDate(String(venta.fecha))}
                                         </div>
-                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(venta.estado_logistico || '')
+                                        <span className={`inline-flex py-1 text-xs font-semibold rounded-full ${getEstadoColor(venta.estado_logistico || '')
                                             }`}>
                                             {String(venta.estado_documento?.codigo ?? 'Sin estado')}
                                         </span>
@@ -356,8 +357,8 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 <Edit className="w-4 h-4" />
                                             </button> */}
 
-                                            {/* Anular */}
-                                            {venta.estado !== 'ANULADA' && (
+                                            {/* Anular - Solo si está APROBADO */}
+                                            {venta.estado_documento?.codigo === 'APROBADO' && (
                                                 <button
                                                     onClick={() => openAnularModal(venta)}
                                                     className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -367,12 +368,14 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 </button>
                                             )}
 
-                                            {/* ✅ Descargar en formato - Usar FormatoSelector */}
-                                            <FormatoSelector
-                                                documentoId={venta.id}
-                                                tipoDocumento="venta"
-                                                className="h-9 px-2"
-                                            />
+                                            {/* ✅ Descargar en formato - Usar OutputSelectionModal */}
+                                            <button
+                                                onClick={() => setOutputModal({ isOpen: true, venta })}
+                                                className="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                title="Exportar documento"
+                                            >
+                                                <Printer className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -561,6 +564,19 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                 ventaNumero={anularModal.venta?.numero || ''}
                 onConfirm={handleAnularVenta}
                 isLoading={isAnulando}
+            />
+
+            {/* Modal de exportación/impresión */}
+            <OutputSelectionModal
+                isOpen={outputModal.isOpen}
+                onClose={() => setOutputModal({ isOpen: false })}
+                documentoId={outputModal.venta?.id || ''}
+                tipoDocumento="venta"
+                documentoInfo={{
+                    numero: outputModal.venta?.numero,
+                    fecha: outputModal.venta?.fecha ? new Date(outputModal.venta.fecha).toLocaleDateString('es-ES') : undefined,
+                    monto: outputModal.venta?.total,
+                }}
             />
         </div>
     );

@@ -78,6 +78,42 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
         count: movs.length,
     }));
 
+    // ✅ NUEVO: Agrupar movimientos por tipo de pago y calcular totales
+    const movimientosAgrupadosPorTipoPago = movimientosHoy.reduce((acc: Record<string, any[]>, mov: any) => {
+        const tipoPagoNombre = mov.tipo_pago?.nombre || 'Sin tipo de pago';
+        if (!acc[tipoPagoNombre]) {
+            acc[tipoPagoNombre] = [];
+        }
+        acc[tipoPagoNombre].push(mov);
+        return acc;
+    }, {});
+
+    const totalesPorTipoPago = Object.entries(movimientosAgrupadosPorTipoPago).map(([tipoPago, movs]: [string, any]) => ({
+        tipoPago,
+        total: movs.reduce((sum, m) => sum + m.monto, 0),
+        count: movs.length,
+    }));
+
+    // ✅ NUEVO: Calcular rango de IDs de venta (venta_id)
+    const calcularRangoVentas = () => {
+        if (movimientosHoy.length === 0) return null;
+
+        // Extraer IDs de venta válidos
+        const ventaIds = movimientosHoy
+            .map((mov) => mov.venta_id)
+            .filter((id): id is number => id !== null && id !== undefined && id > 0);
+
+        if (ventaIds.length === 0) return null;
+
+        const minId = Math.min(...ventaIds);
+        const maxId = Math.max(...ventaIds);
+        const totalVentas = ventaIds.length;
+
+        return { minId, maxId, totalVentas };
+    };
+
+    const rangoVentas = calcularRangoVentas();
+
     // ✅ Obtener usuarios únicos
     const usuariosUnicos = Array.from(new Set(movimientosHoy.map(mov => mov.usuario?.name || 'Sin Usuario')))
         .filter(u => u !== 'Sin Usuario')
@@ -196,10 +232,36 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                         Movimientos {etiquetaPeriodo} ({movimientosAMostrar.length})
                     </h3>
+                    <br />
+                    {/* ✅ NUEVO: Rango de IDs de Venta */}
+                    <div className="display-block text-right">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            Rango de Ventas (ID)
+                        </p>
+                        {rangoVentas ? (
+                            <>
+                                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                    {rangoVentas.minId} - {rangoVentas.maxId}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {rangoVentas.totalVentas} venta{rangoVentas.totalVentas !== 1 ? 's' : ''}
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-lg font-bold text-gray-400 dark:text-gray-500">
+                                    —
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Sin ventas
+                                </p>
+                            </>
+                        )}
+                    </div>
                 </div>
                 {/* ✅ NUEVO: Resumen final */}
                 <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Total Mostrado (respeta filtro) */}
                         <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -265,6 +327,37 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                     </div>
                 </div>
 
+                {/* ✅ NUEVO: Resumen por Tipo de Pago */}
+                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                        💳 Resumen por Tipo de Pago
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {totalesPorTipoPago.length > 0 ? (
+                            totalesPorTipoPago.map((item) => (
+                                <div
+                                    key={item.tipoPago}
+                                    className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-lg p-4 border border-blue-200 dark:border-gray-600"
+                                >
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                        {item.tipoPago}
+                                    </p>
+                                    <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                                        {formatCurrency(item.total)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {item.count} movimiento{item.count !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Sin movimientos registrados
+                            </p>
+                        )}
+                    </div>
+                </div>
+
                 {/* ✅ NUEVO: Filtros por tipo */}
                 <div className="mb-6 flex flex-wrap gap-2 mt-4">
                     <button
@@ -301,236 +394,236 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
 
                 {/* ✅ NUEVO: Filtros Avanzados */}
                 {filtrosVisibles && (
-                <div className="mb-6 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
-                    {/* Filtro por Signo */}
-                    <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Tipo de Movimiento
-                        </p>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setFiltroSigno('todos')}
-                                className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'todos'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                    }`}
-                            >
-                                Todos
-                            </button>
-                            <button
-                                onClick={() => setFiltroSigno('ingresos')}
-                                className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'ingresos'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                    }`}
-                            >
-                                ⬆️ Ingresos
-                            </button>
-                            <button
-                                onClick={() => setFiltroSigno('egresos')}
-                                className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'egresos'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                    }`}
-                            >
-                                ⬇️ Egresos
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Filtro por Rango de Fechas */}
-                    <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Rango de Fechas
-                        </p>
-                        <div className="flex gap-2 flex-wrap items-center">
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-gray-600 dark:text-gray-400">Desde:</label>
-                                <input
-                                    type="datetime-local"
-                                    value={filtroFechaDesde}
-                                    onChange={(e) => setFiltroFechaDesde(e.target.value ? e.target.value.split('T')[0] : '')}
-                                    className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-gray-600 dark:text-gray-400">Hasta:</label>
-                                <input
-                                    type="datetime-local"
-                                    value={filtroFechaHasta}
-                                    onChange={(e) => setFiltroFechaHasta(e.target.value ? e.target.value.split('T')[0] : '')}
-                                    className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
-                                />
-                            </div>
-                            {(filtroFechaDesde || filtroFechaHasta) && (
+                    <div className="mb-6 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
+                        {/* Filtro por Signo */}
+                        <div>
+                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Tipo de Movimiento
+                            </p>
+                            <div className="flex gap-2">
                                 <button
-                                    onClick={() => {
-                                        setFiltroFechaDesde('');
-                                        setFiltroFechaHasta('');
-                                    }}
-                                    className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
-                                >
-                                    Limpiar
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Búsqueda por Descripción */}
-                    <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Buscar por Descripción
-                        </p>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="Buscar en observaciones, documento, tipo..."
-                                value={busquedaDescripcion}
-                                onChange={(e) => setBusquedaDescripcion(e.target.value)}
-                                className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
-                            />
-                            {busquedaDescripcion && (
-                                <button
-                                    onClick={() => setBusquedaDescripcion('')}
-                                    className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
-                                >
-                                    Limpiar
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Filtro por Rango de Monto */}
-                    <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Rango de Monto
-                        </p>
-                        <div className="flex gap-2 flex-wrap items-center">
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-gray-600 dark:text-gray-400">Min:</label>
-                                <input
-                                    type="number"
-                                    placeholder="0"
-                                    value={montoMin}
-                                    onChange={(e) => setMontoMin(e.target.value)}
-                                    className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm w-24"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-gray-600 dark:text-gray-400">Max:</label>
-                                <input
-                                    type="number"
-                                    placeholder="∞"
-                                    value={montoMax}
-                                    onChange={(e) => setMontoMax(e.target.value)}
-                                    className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm w-24"
-                                />
-                            </div>
-                            {(montoMin || montoMax) && (
-                                <button
-                                    onClick={() => {
-                                        setMontoMin('');
-                                        setMontoMax('');
-                                    }}
-                                    className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
-                                >
-                                    Limpiar
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Filtro por Usuario */}
-                    {usuariosUnicos.length > 0 && (
-                    <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Filtrar por Usuario
-                        </p>
-                        <div className="flex gap-2 flex-wrap">
-                            <button
-                                onClick={() => setFiltroUsuario('')}
-                                className={`px-3 py-1 rounded text-sm font-medium transition ${!filtroUsuario
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                    }`}
-                            >
-                                Todos
-                            </button>
-                            {usuariosUnicos.map(usuario => (
-                                <button
-                                    key={usuario}
-                                    onClick={() => setFiltroUsuario(usuario)}
-                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroUsuario === usuario
+                                    onClick={() => setFiltroSigno('todos')}
+                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'todos'
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
                                         }`}
                                 >
-                                    {usuario}
+                                    Todos
                                 </button>
-                            ))}
-                        </div>
-                    </div>
-                    )}
-
-                    {/* Filtro por Documento */}
-                    <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Buscar por Documento
-                        </p>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="Número de comprobante..."
-                                value={filtroDocumento}
-                                onChange={(e) => setFiltroDocumento(e.target.value)}
-                                className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
-                            />
-                            {filtroDocumento && (
                                 <button
-                                    onClick={() => setFiltroDocumento('')}
-                                    className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
+                                    onClick={() => setFiltroSigno('ingresos')}
+                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'ingresos'
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
+                                        }`}
                                 >
-                                    Limpiar
+                                    ⬆️ Ingresos
                                 </button>
-                            )}
+                                <button
+                                    onClick={() => setFiltroSigno('egresos')}
+                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'egresos'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    ⬇️ Egresos
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Ordenamiento */}
-                    <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Ordenar por
-                        </p>
-                        <div className="flex gap-2">
-                            <select
-                                value={ordenarPor}
-                                onChange={(e) => setOrdenarPor(e.target.value as 'fecha' | 'monto' | 'tipo')}
-                                className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
+                        {/* Filtro por Rango de Fechas */}
+                        <div>
+                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Rango de Fechas
+                            </p>
+                            <div className="flex gap-2 flex-wrap items-center">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-600 dark:text-gray-400">Desde:</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={filtroFechaDesde}
+                                        onChange={(e) => setFiltroFechaDesde(e.target.value ? e.target.value.split('T')[0] : '')}
+                                        className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-600 dark:text-gray-400">Hasta:</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={filtroFechaHasta}
+                                        onChange={(e) => setFiltroFechaHasta(e.target.value ? e.target.value.split('T')[0] : '')}
+                                        className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
+                                    />
+                                </div>
+                                {(filtroFechaDesde || filtroFechaHasta) && (
+                                    <button
+                                        onClick={() => {
+                                            setFiltroFechaDesde('');
+                                            setFiltroFechaHasta('');
+                                        }}
+                                        className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
+                                    >
+                                        Limpiar
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Búsqueda por Descripción */}
+                        <div>
+                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Buscar por Descripción
+                            </p>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Buscar en observaciones, documento, tipo..."
+                                    value={busquedaDescripcion}
+                                    onChange={(e) => setBusquedaDescripcion(e.target.value)}
+                                    className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
+                                />
+                                {busquedaDescripcion && (
+                                    <button
+                                        onClick={() => setBusquedaDescripcion('')}
+                                        className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
+                                    >
+                                        Limpiar
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Filtro por Rango de Monto */}
+                        <div>
+                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Rango de Monto
+                            </p>
+                            <div className="flex gap-2 flex-wrap items-center">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-600 dark:text-gray-400">Min:</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0"
+                                        value={montoMin}
+                                        onChange={(e) => setMontoMin(e.target.value)}
+                                        className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm w-24"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-600 dark:text-gray-400">Max:</label>
+                                    <input
+                                        type="number"
+                                        placeholder="∞"
+                                        value={montoMax}
+                                        onChange={(e) => setMontoMax(e.target.value)}
+                                        className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm w-24"
+                                    />
+                                </div>
+                                {(montoMin || montoMax) && (
+                                    <button
+                                        onClick={() => {
+                                            setMontoMin('');
+                                            setMontoMax('');
+                                        }}
+                                        className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
+                                    >
+                                        Limpiar
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Filtro por Usuario */}
+                        {usuariosUnicos.length > 0 && (
+                            <div>
+                                <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    Filtrar por Usuario
+                                </p>
+                                <div className="flex gap-2 flex-wrap">
+                                    <button
+                                        onClick={() => setFiltroUsuario('')}
+                                        className={`px-3 py-1 rounded text-sm font-medium transition ${!filtroUsuario
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
+                                            }`}
+                                    >
+                                        Todos
+                                    </button>
+                                    {usuariosUnicos.map(usuario => (
+                                        <button
+                                            key={usuario}
+                                            onClick={() => setFiltroUsuario(usuario)}
+                                            className={`px-3 py-1 rounded text-sm font-medium transition ${filtroUsuario === usuario
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
+                                                }`}
+                                        >
+                                            {usuario}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Filtro por Documento */}
+                        <div>
+                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Buscar por Documento
+                            </p>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Número de comprobante..."
+                                    value={filtroDocumento}
+                                    onChange={(e) => setFiltroDocumento(e.target.value)}
+                                    className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
+                                />
+                                {filtroDocumento && (
+                                    <button
+                                        onClick={() => setFiltroDocumento('')}
+                                        className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
+                                    >
+                                        Limpiar
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Ordenamiento */}
+                        <div>
+                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Ordenar por
+                            </p>
+                            <div className="flex gap-2">
+                                <select
+                                    value={ordenarPor}
+                                    onChange={(e) => setOrdenarPor(e.target.value as 'fecha' | 'monto' | 'tipo')}
+                                    className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
+                                >
+                                    <option value="fecha">📅 Por Fecha (más reciente)</option>
+                                    <option value="monto">💰 Por Monto (mayor primero)</option>
+                                    <option value="tipo">📋 Por Tipo de Operación</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Botón Exportar */}
+                        <div>
+                            <button
+                                onClick={exportarACSV}
+                                className="w-full px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 font-medium transition"
                             >
-                                <option value="fecha">📅 Por Fecha (más reciente)</option>
-                                <option value="monto">💰 Por Monto (mayor primero)</option>
-                                <option value="tipo">📋 Por Tipo de Operación</option>
-                            </select>
+                                📥 Exportar a CSV
+                            </button>
                         </div>
-                    </div>
 
-                    {/* Botón Exportar */}
-                    <div>
-                        <button
-                            onClick={exportarACSV}
-                            className="w-full px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 font-medium transition"
-                        >
-                            📥 Exportar a CSV
-                        </button>
+                        {/* Resumen de Filtros Activos */}
+                        {(filtroFechaDesde || filtroFechaHasta || filtroSigno !== 'todos' || busquedaDescripcion || montoMin || montoMax || filtroUsuario || filtroDocumento) && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-300 dark:border-gray-600">
+                                ✅ Mostrando <strong>{movimientosAMostrar.length}</strong> de <strong>{movimientosHoy.length}</strong> movimientos
+                            </div>
+                        )}
                     </div>
-
-                    {/* Resumen de Filtros Activos */}
-                    {(filtroFechaDesde || filtroFechaHasta || filtroSigno !== 'todos' || busquedaDescripcion || montoMin || montoMax || filtroUsuario || filtroDocumento) && (
-                        <div className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-300 dark:border-gray-600">
-                            ✅ Mostrando <strong>{movimientosAMostrar.length}</strong> de <strong>{movimientosHoy.length}</strong> movimientos
-                        </div>
-                    )}
-                </div>
                 )}
 
                 {/* ✅ NUEVO: Resumen por tipo */}
@@ -566,9 +659,9 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Descripcion
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Comprobantes
-                                </th>
+                                </th> */}
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Monto
                                 </th>
@@ -585,13 +678,27 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                                         </span>
                                         <br />
                                         {movimiento.numero_documento}
+                                        {(movimiento.venta_id || movimiento.pago_id) && (
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                {movimiento.venta_id && (
+                                                    <span className="inline-block mr-2">
+                                                        ID Venta: <span className="font-semibold text-gray-700 dark:text-gray-300">#{movimiento.venta_id}</span>
+                                                    </span>
+                                                )}
+                                                {movimiento.pago_id && (
+                                                    <span className="inline-block">
+                                                        ID Pago: <span className="font-semibold text-gray-700 dark:text-gray-300">#{movimiento.pago_id}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                         {movimiento.observaciones}
                                     </td>
-                                    <td className="px-6 py-4 text-sm">
+                                    {/*  <td className="px-6 py-4 text-sm">
                                         <ComprobantesMovimiento comprobantes={movimiento.comprobantes} />
-                                    </td>
+                                    </td> */}
                                     <td className="px-6 py-4 whitespace-nowrap text-right">
                                         <div className="flex items-center justify-end">
                                             {getMovimientoIcon(toNumber(movimiento.monto))}

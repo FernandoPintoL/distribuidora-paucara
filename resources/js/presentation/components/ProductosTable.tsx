@@ -152,11 +152,19 @@ export default function ProductosTable({
                 conversiones: p.conversiones || []
             }));
 
-            setProductosDisponibles(productosAPI);
+            // ✅ NUEVO: Filtrar productos válidos para ventas (stock > 0 y precio_venta > 0)
+            const productosValidos = productosAPI.filter(p => {
+                if (tipo === 'venta') {
+                    return p.stock > 0 && p.precio_venta > 0;
+                }
+                return true; // Para compras mostrar todos
+            });
 
-            // ✅ NUEVO: Si hay exactamente 1 resultado exacto, agregarlo automáticamente
-            if (productosAPI.length === 1 && productosAPI[0].codigo === term) {
-                handleAddProduct(productosAPI[0]);
+            setProductosDisponibles(productosValidos);
+
+            // ✅ NUEVO: Si hay exactamente 1 resultado válido, agregarlo automáticamente
+            if (productosValidos.length === 1) {
+                handleAddProduct(productosValidos[0]);
             }
         } catch (error) {
             console.error('Error buscando productos:', error);
@@ -195,6 +203,23 @@ export default function ProductosTable({
 
                 if (data.data && data.data.length > 0) {
                     const productoAPI = data.data[0];
+
+                    // ✅ NUEVO: Validar producto para ventas (stock > 0 y precio_venta > 0)
+                    if (tipo === 'venta') {
+                        const stock = productoAPI.stock_disponible || 0;
+                        const precioVenta = productoAPI.precio_base || 0;
+
+                        if (stock === 0) {
+                            NotificationService.error('Producto sin stock disponible');
+                            return;
+                        }
+
+                        if (precioVenta === 0) {
+                            NotificationService.error('Producto sin precio de venta configurado');
+                            return;
+                        }
+                    }
+
                     const producto: Producto = {
                         id: productoAPI.id,
                         nombre: productoAPI.nombre,
@@ -402,11 +427,18 @@ export default function ProductosTable({
                                 {tipo === 'compra' && (
                                     <>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Costo Registrado
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Precio Compra
                                         </th>
+                                        {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Unidad Compra
+                                        </th>
+                                         */}
+                                        {/* ✨ NUEVA COLUMNA: Precio por Unidad (solo si hay fraccionados) */}
+                                        {/* {detalles.some(d => d.es_fraccionado && d.conversiones && d.conversiones.length > 0) && (
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Precio / Unidad
+                                            </th>
+                                        )} */}
                                     </>
                                 )}
                                 {tipo === 'venta' && (
@@ -457,15 +489,15 @@ export default function ProductosTable({
                                                 {productoInfo?.codigo && (
                                                     <div>Código: {productoInfo.codigo}</div>
                                                 )}
-                                                {productoInfo?.sku && (
-                                                    <div>SKU: {productoInfo.sku}</div>
+                                                {productoInfo?.codigo_barras && (
+                                                    <div>Código Barras: {productoInfo.codigo_barras}</div>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <input
                                                 type="text"
-                                                inputMode="numeric" // ✅ Mostrar teclado numérico en móvil
+                                                inputMode="decimal" // ✅ Mostrar teclado numérico en móvil
                                                 disabled={readOnly}
                                                 value={detalle.cantidad}
                                                 onChange={(e) => {
@@ -495,10 +527,13 @@ export default function ProductosTable({
                                                     });
 
                                                     if (detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0) {
+                                                        // ✅ NUEVO: Determinar el valor inicial - si no hay unidad_venta_id, usar la primera conversión
+                                                        const unidadInicial = detalle.unidad_venta_id || detalle.conversiones[0].unidad_destino_id;
+
                                                         return (
                                                             <select
                                                                 disabled={readOnly}
-                                                                value={detalle.unidad_venta_id || detalle.unidad_medida_id || ''}
+                                                                value={unidadInicial || ''}
                                                                 onChange={(e) => {
                                                                     const unidadSeleccionada = Number(e.target.value);
 
@@ -549,19 +584,16 @@ export default function ProductosTable({
                                         )}
                                         {tipo === 'compra' && (
                                             <>
-                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                {/* ✅ SIMPLIFICADO: Solo mostrar unidad base, sin selector */}
+                                                {/* <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                        {detalle.unidad_medida_nombre || 'N/A'}
+                                                    </div>
                                                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                         {precioCosto > 0 ? formatCurrency(precioCosto) : 'N/A'}
                                                     </div>
-                                                    {tieneDiferencia && (
-                                                        <div className={`text-xs font-semibold mt-1 ${esAumento
-                                                            ? 'text-amber-600 dark:text-amber-400'
-                                                            : 'text-green-600 dark:text-green-400'
-                                                            }`}>
-                                                            {esAumento ? '↑ Aumento' : '↓ Disminución'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
-                                                        </div>
-                                                    )}
-                                                </td>
+                                                    
+                                                </td> */}
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <input
                                                         type="text"
@@ -585,7 +617,54 @@ export default function ProductosTable({
                                                             : 'border-gray-300 dark:border-zinc-600'
                                                             }`}
                                                     />
+                                                    {tieneDiferencia && (
+                                                        <div className={`text-xs font-semibold mt-1 ${esAumento
+                                                            ? 'text-amber-600 dark:text-amber-400'
+                                                            : 'text-green-600 dark:text-green-400'
+                                                            }`}>
+                                                            {esAumento ? '↑ Aumento' : '↓ Disminución'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
+                                                        </div>
+                                                    )}
+                                                    {/* ✨ NUEVA CELDA: Precio por Unidad en compras fraccionados */}
+                                                    {detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0 && (
+                                                        <td className="whitespace-nowrap">
+                                                            {(() => {
+                                                                // Encontrar el factor de conversión para la unidad seleccionada
+                                                                const unidadActual = detalle.unidad_venta_id || detalle.unidad_medida_id;
+
+                                                                // Si es la unidad base, no dividir
+                                                                if (unidadActual === detalle.unidad_medida_id) {
+                                                                    return (
+                                                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                                            {formatCurrency(detalle.precio_unitario)} / {detalle.unidad_medida_nombre || 'Base'}
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                // Si es una unidad de conversión
+                                                                const conversion = detalle.conversiones.find(
+                                                                    c => c.unidad_destino_id === unidadActual
+                                                                );
+
+                                                                if (conversion && conversion.factor_conversion > 0) {
+                                                                    const precioPorUnidad = detalle.precio_unitario / conversion.factor_conversion;
+                                                                    return (
+                                                                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                                                                            {formatCurrency(precioPorUnidad)} / {conversion.unidad_destino_nombre || `Unidad ${conversion.unidad_destino_id}`}
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                return (
+                                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                                        N/A
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </td>
+                                                    )}
                                                 </td>
+
                                             </>
                                         )}
                                         {tipo === 'venta' && (

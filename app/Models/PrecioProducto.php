@@ -20,6 +20,7 @@ class PrecioProducto extends Model
         'activo',
         'tipo_cliente',
         'tipo_precio_id', // Cambiado de tipo_precio a tipo_precio_id
+        'unidad_medida_id',
         'margen_ganancia',
         'porcentaje_ganancia',
         'es_precio_base',
@@ -50,6 +51,11 @@ class PrecioProducto extends Model
     public function tipoPrecio()
     {
         return $this->belongsTo(TipoPrecio::class, 'tipo_precio_id');
+    }
+
+    public function unidadMedida()
+    {
+        return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id');
     }
 
     public function configuracionGanancia()

@@ -31,6 +31,37 @@ class ImpresionService
 {
     protected ?Empresa $empresa = null;
 
+    /**
+     * Configuración de fuentes disponibles para impresoras térmicas
+     */
+    protected const FUENTES_TERMICAS = [
+        'consolas' => [
+            'nombre' => 'Consolas (Recomendado)',
+            'stack' => "'Consolas', 'Courier New', 'Courier', monospace",
+            'descripcion' => 'Fuente monoespaciada clara, óptima para impresoras SAT',
+        ],
+        'courier' => [
+            'nombre' => 'Courier New',
+            'stack' => "'Courier New', 'Courier', monospace",
+            'descripcion' => 'Fuente clásica monoespaciada',
+        ],
+        'monospace' => [
+            'nombre' => 'Monospace Genérica',
+            'stack' => "monospace",
+            'descripcion' => 'Fuente monoespaciada del sistema',
+        ],
+        'ocr-a' => [
+            'nombre' => 'OCR-A (ASCII Font A)',
+            'stack' => "'OCR-A', 'Courier New', monospace",
+            'descripcion' => 'Simula font A de impresoras térmicas',
+        ],
+        'roboto-mono' => [
+            'nombre' => 'Roboto Mono',
+            'stack' => "'Roboto Mono', 'Courier New', monospace",
+            'descripcion' => 'Fuente moderna monoespaciada',
+        ],
+    ];
+
     public function __construct()
     {
         try {
@@ -47,8 +78,8 @@ class ImpresionService
     /**
      * Generar PDF genérico para cualquier tipo de documento
      *
-     * @param string $tipoDocumento 'venta'|'proforma'|'envio'|'reporte'
-     * @param mixed $documento Modelo (Venta, Proforma, Envio, etc.) o datos para reportes
+     * @param string $tipoDocumento 'venta'|'proforma'|'envio'|'reporte'|'compra'
+     * @param mixed $documento Modelo (Venta, Proforma, Envio, Compra, etc.) o datos para reportes
      * @param string|null $formato 'A4'|'TICKET_80'|'TICKET_58'|null (usa default)
      * @param array $opciones Opciones adicionales para el template
      * @return \Barryvdh\DomPDF\PDF
@@ -63,11 +94,47 @@ class ImpresionService
         // Obtener plantilla adecuada
         $plantilla = PlantillaImpresion::obtenerDefault($tipoDocumento, $formato);
 
+        // Si no existe plantilla, intentar usar vistas hardcodeadas por defecto
         if (!$plantilla) {
-            throw new Exception(
-                "No existe plantilla activa para '{$tipoDocumento}'" .
-                ($formato ? " con formato '{$formato}'" : '')
-            );
+            $vistaFallback = $this->obtenerVistaFallback($tipoDocumento, $formato);
+            if (!$vistaFallback) {
+                throw new Exception(
+                    "No existe plantilla activa para '{$tipoDocumento}'" .
+                    ($formato ? " con formato '{$formato}'" : '') .
+                    " y no hay vista por defecto disponible"
+                );
+            }
+
+            // Usar vista fallback
+            $empresa = $this->empresa ?? Empresa::principal();
+
+            // Convertir logos a base64 para embebimiento en PDF
+            $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
+            $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
+
+            // Si el documento es un array, desglice sus datos
+            $datosAdjuntos = is_array($documento) ? $documento : [];
+
+            // Obtener fuente desde opciones o usar la por defecto
+            $nombreFuente = $opciones['fuente'] ?? 'consolas';
+            $fuente = $this->obtenerFuente($nombreFuente);
+
+            $datos = array_merge([
+                $tipoDocumento => $documento,
+                'documento' => $documento,
+                'empresa' => $empresa,
+                'fecha_impresion' => now(),
+                'usuario' => auth()->user() ?? 'Sistema',
+                'opciones' => $opciones,
+                'logo_principal_base64' => $logoPrincipalBase64,
+                'logo_footer_base64' => $logoFooterBase64,
+                'fuente_config' => $fuente,
+                'fuentes_disponibles' => $this->obtenerFuentesDisponibles(),
+            ], $datosAdjuntos);
+
+            $pdf = PDF::loadView($vistaFallback, $datos);
+            $this->aplicarConfiguracionFormato($pdf, $formato ?? 'A4');
+            return $pdf;
         }
 
         // Preparar datos para la vista
@@ -80,6 +147,55 @@ class ImpresionService
         $this->aplicarConfiguracionFormato($pdf, $plantilla->formato);
 
         return $pdf;
+    }
+
+    /**
+     * Obtener vista fallback para un tipo de documento
+     *
+     * @param string $tipoDocumento
+     * @param string|null $formato
+     * @return string|null
+     */
+    private function obtenerVistaFallback(string $tipoDocumento, ?string $formato = null): ?string
+    {
+        $formato = $formato ?? 'A4';
+
+        $fallbacks = [
+            'venta' => [
+                'A4' => 'impresion.ventas.hoja-completa',
+                'TICKET_80' => 'impresion.ventas.ticket-80',
+                'TICKET_58' => 'impresion.ventas.ticket-58',
+            ],
+            'compra' => [
+                'A4' => 'impresion.compras.hoja-completa',
+                'TICKET_80' => 'impresion.compras.ticket-80',
+                'TICKET_58' => 'impresion.compras.ticket-58',
+            ],
+            'proforma' => [
+                'A4' => 'impresion.proformas.hoja-completa',
+                'TICKET_80' => 'impresion.proformas.ticket-80',
+            ],
+            'envio' => [
+                'A4' => 'impresion.envios.hoja-completa',
+            ],
+            'cierre_caja' => [
+                'A4' => 'impresion.cajas.cierre-diario-a4',
+                'TICKET_80' => 'impresion.cajas.cierre-caja-ticket-80',
+                'TICKET_58' => 'impresion.cajas.cierre-caja-ticket-58',
+            ],
+            'movimientos_caja' => [
+                'A4' => 'impresion.cajas.movimientos-dia-a4',
+                'TICKET_80' => 'impresion.cajas.movimientos-caja-ticket-80',
+                'TICKET_58' => 'impresion.cajas.movimientos-caja-ticket-58',
+            ],
+            'cierre_diario_general' => [
+                'A4' => 'impresion.cajas.cierre-diario-a4',
+                'TICKET_80' => 'impresion.cajas.cierre-diario-ticket-80',
+                'TICKET_58' => 'impresion.cajas.cierre-diario-ticket-58',
+            ],
+        ];
+
+        return $fallbacks[$tipoDocumento][$formato] ?? null;
     }
 
     /**
@@ -99,6 +215,10 @@ class ImpresionService
             throw new Exception('No hay empresa configurada para generar documentos');
         }
 
+        // Convertir logos a base64 para embebimiento en PDF
+        $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
+        $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
+
         return [
             'documento' => $documento,
             'empresa' => $empresa,
@@ -106,6 +226,8 @@ class ImpresionService
             'fecha_impresion' => now(),
             'usuario' => auth()->user()?->name ?? 'Sistema',
             'opciones' => $opciones,
+            'logo_principal_base64' => $logoPrincipalBase64,
+            'logo_footer_base64' => $logoFooterBase64,
         ];
     }
 
@@ -164,6 +286,30 @@ class ImpresionService
     }
 
     /**
+     * Imprimir Compra
+     *
+     * @param \App\Models\Compra $compra
+     * @param string|null $formato
+     * @param array $opciones
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function imprimirCompra($compra, ?string $formato = 'A4', array $opciones = [])
+    {
+        // Cargar relaciones necesarias
+        $compra->load([
+            'proveedor',
+            'detalles.producto',
+            'usuario',
+            'tipoPago',
+            'moneda',
+            'estadoDocumento',
+            'almacen',
+        ]);
+
+        return $this->generarPDF('compra', $compra, $formato, $opciones);
+    }
+
+    /**
      * Imprimir Venta/Factura
      *
      * @param \App\Models\Venta $venta
@@ -176,12 +322,13 @@ class ImpresionService
         // Cargar relaciones necesarias
         $venta->load([
             'cliente',
-            'detalles.producto',
+            'detalles.producto.stock.almacen',
             'usuario',
             'tipoPago',
             'tipoDocumento',
             'moneda',
             'estadoDocumento',
+            'movimientoCaja.caja',
         ]);
 
         return $this->generarPDF('venta', $venta, $formato, $opciones);
@@ -310,6 +457,28 @@ class ImpresionService
     }
 
     /**
+     * Obtener todas las fuentes disponibles para impresoras térmicas
+     *
+     * @return array
+     */
+    public function obtenerFuentesDisponibles(): array
+    {
+        return self::FUENTES_TERMICAS;
+    }
+
+    /**
+     * Obtener la fuente actual según configuración
+     * Por defecto retorna 'consolas'
+     *
+     * @param string $fuente Nombre de la fuente (consolas, courier, ocr-a, roboto-mono, monospace)
+     * @return array|null
+     */
+    public function obtenerFuente(string $fuente = 'consolas'): ?array
+    {
+        return self::FUENTES_TERMICAS[$fuente] ?? self::FUENTES_TERMICAS['consolas'];
+    }
+
+    /**
      * Cambiar empresa activa para impresión (útil para multi-tenant)
      *
      * @param Empresa $empresa
@@ -319,5 +488,56 @@ class ImpresionService
     {
         $this->empresa = $empresa;
         return $this;
+    }
+
+    /**
+     * Convertir URL de logo a data URI base64
+     *
+     * @param string|null $logoUrl URL de la imagen (ej: /storage/logos/logo.png)
+     * @return string|null Data URI para uso en HTML/CSS
+     */
+    private function logoToBase64(?string $logoUrl): ?string
+    {
+        if (!$logoUrl) {
+            return null;
+        }
+
+        try {
+            // Si ya es un data URI, devolverlo tal cual
+            if (str_starts_with($logoUrl, 'data:')) {
+                return $logoUrl;
+            }
+
+            // Resolver la ruta absoluta
+            $logoPath = public_path($logoUrl);
+
+            if (!file_exists($logoPath)) {
+                \Log::warning('Logo no encontrado: ' . $logoPath);
+                return null;
+            }
+
+            $imageData = file_get_contents($logoPath);
+            $base64 = base64_encode($imageData);
+
+            // Detectar el tipo MIME desde la extensión del archivo
+            $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'png' => 'image/png',
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'image/png';
+
+            return "data:{$mimeType};base64,{$base64}";
+        } catch (Exception $e) {
+            \Log::warning('Error al convertir logo a base64', [
+                'error' => $e->getMessage(),
+                'logo_url' => $logoUrl
+            ]);
+            return null;
+        }
     }
 }

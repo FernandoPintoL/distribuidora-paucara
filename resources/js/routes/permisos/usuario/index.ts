@@ -103,7 +103,7 @@ editar.head = (args: { user: number | { id: number } } | [user: number | { id: n
     editar.form = editarForm
 /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:54
+ * @see app/Http/Controllers/PermissionController.php:64
  * @route '/permisos/usuario/{user}'
  */
 export const actualizar = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -118,7 +118,7 @@ actualizar.definition = {
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:54
+ * @see app/Http/Controllers/PermissionController.php:64
  * @route '/permisos/usuario/{user}'
  */
 actualizar.url = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -151,7 +151,7 @@ actualizar.url = (args: { user: number | { id: number } } | [user: number | { id
 
 /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:54
+ * @see app/Http/Controllers/PermissionController.php:64
  * @route '/permisos/usuario/{user}'
  */
 actualizar.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -161,7 +161,7 @@ actualizar.patch = (args: { user: number | { id: number } } | [user: number | { 
 
     /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:54
+ * @see app/Http/Controllers/PermissionController.php:64
  * @route '/permisos/usuario/{user}'
  */
     const actualizarForm = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -176,7 +176,7 @@ actualizar.patch = (args: { user: number | { id: number } } | [user: number | { 
 
             /**
 * @see \App\Http\Controllers\PermissionController::actualizar
- * @see app/Http/Controllers/PermissionController.php:54
+ * @see app/Http/Controllers/PermissionController.php:64
  * @route '/permisos/usuario/{user}'
  */
         actualizarForm.patch = (args: { user: number | { id: number } } | [user: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

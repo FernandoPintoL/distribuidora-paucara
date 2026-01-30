@@ -1,9 +1,12 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/application/hooks/use-auth';
-import { Eye, Edit, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, Edit, ChevronUp, ChevronDown, AlertCircle, Printer } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'react-toastify';
 import EliminarCompraDialog from './eliminar-compra-dialog';
-import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
+import AnularCompraModal from './AnularCompraModal';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { ComprasService } from '@/infrastructure/services/compras.service';
 
 // Importar tipos del domain
@@ -52,6 +55,9 @@ const getEstadoColor = (estado?: EstadoDocumento) => {
 export default function TablaCompras({ compras, sortBy = 'created_at', sortDir = 'desc', className = '' }: Props) {
     console.log('Renderizando TablaCompras con compras:', compras);
     const { can } = useAuth();
+    const [anularModal, setAnularModal] = useState<{ isOpen: boolean; compra?: Compra }>({ isOpen: false });
+    const [isAnulando, setIsAnulando] = useState(false);
+    const [outputModal, setOutputModal] = useState<{ isOpen: boolean; compra?: Compra }>({ isOpen: false });
 
     // Valor por defecto para evitar errores de undefined
     const comprasSeguras = compras || [];
@@ -64,6 +70,48 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
         currentParams.set('sort_dir', newSortDir);
 
         comprasService.search(Object.fromEntries(currentParams.entries()));
+    };
+
+    const openAnularModal = (compra: Compra) => {
+        setAnularModal({ isOpen: true, compra });
+    };
+
+    const closeAnularModal = () => {
+        setAnularModal({ isOpen: false });
+    };
+
+    const handleAnularCompra = async (motivo?: string) => {
+        if (!anularModal.compra) return;
+
+        setIsAnulando(true);
+        try {
+            const response = await fetch(`/compras/${anularModal.compra.id}/anular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ motivo }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                toast.error(data.message || 'Error al anular la compra');
+                return;
+            }
+
+            toast.success('Compra anulada exitosamente');
+            closeAnularModal();
+
+            // Recargar la página
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (error) {
+            console.error('Error al anular compra:', error);
+            toast.error('Error al anular la compra');
+        } finally {
+            setIsAnulando(false);
+        }
     };
 
     const getSortIcon = (field: string) => {
@@ -123,20 +171,10 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                     <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
                             <SortableHeader field="numero">Número</SortableHeader>
-                            <SortableHeader field="fecha">Fecha</SortableHeader>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                 Factura
                             </th>
                             <SortableHeader field="proveedor">Proveedor</SortableHeader>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Estado
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Tipo Pago
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Moneda
-                            </th>
                             <SortableHeader field="total">Total</SortableHeader>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                 Acciones
@@ -147,27 +185,23 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                         {comprasSeguras.map((compra) => (
                             <tr key={compra.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                    <Link
+                                    {/* <Link
                                         href={`/compras/${compra.id}`}
                                         className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                                     >
-                                        {compra.numero}
-                                    </Link>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    <div>
-                                        <div className="font-medium">
-                                            {new Date(compra.fecha).toLocaleDateString('es-ES', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}
-                                        </div>
-                                        <div className="text-xs text-gray-400">
-                                            {compra.created_at ? new Date(compra.created_at).toLocaleDateString('es-ES') : ''}
-                                        </div>
+                                       
+                                    </Link> */}
+                                    #{compra.id} | {compra.numero}
+                                    <div className="font-medium">
+                                        {new Date(compra.fecha).toLocaleDateString('es-ES', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                        })}
                                     </div>
+                                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getEstadoColor(compra.estado_documento)}`}>
+                                        {compra.estado_documento?.nombre ?? 'Sin estado'}
+                                    </span>
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -187,37 +221,10 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                                 {compra.proveedor?.nombre ?? 'Sin proveedor'}
                                             </div>
                                             <div className="text-xs text-gray-400">
-                                                {compra.usuario?.name}
+                                                <strong>Creador: </strong>{compra.usuario?.name}
                                             </div>
                                         </div>
                                     </div>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getEstadoColor(compra.estado_documento)}`}>
-                                        {compra.estado_documento?.nombre ?? 'Sin estado'}
-                                    </span>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {compra.tipo_pago ? (
-                                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${compra.tipo_pago.codigo === 'CONTADO'
-                                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                            : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'
-                                            }`}>
-                                            {compra.tipo_pago.nombre}
-                                        </span>
-                                    ) : (
-                                        <span className="text-gray-400 text-xs">Sin tipo</span>
-                                    )}
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {compra.moneda && (
-                                        <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs font-medium">
-                                            {compra.moneda.codigo}
-                                        </span>
-                                    )}
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right">
@@ -231,6 +238,16 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                             </div>
                                         )}
                                     </div>
+                                    {compra.tipo_pago ? (
+                                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${compra.tipo_pago.codigo === 'CONTADO'
+                                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                            : 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'
+                                            }`}>
+                                            {compra.tipo_pago.nombre}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400 text-xs">Sin tipo</span>
+                                    )}
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -245,17 +262,19 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                             </Link>
                                         )}
 
-                                        {/* Botón Imprimir - Solo si está APROBADO */}
+                                        {/* Botón Imprimir/Exportar - Solo si está APROBADO */}
                                         {compra.estado_documento?.codigo === 'APROBADO' && can('compras.show') && (
-                                            <FormatoSelector
-                                                documentoId={compra.id}
-                                                tipoDocumento="compra"
-                                                iconOnly={true}
-                                            />
+                                            <button
+                                                onClick={() => setOutputModal({ isOpen: true, compra })}
+                                                className="inline-flex items-center p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                                title="Exportar documento"
+                                            >
+                                                <Printer className="h-4 w-4" />
+                                            </button>
                                         )}
 
-                                        {/* Botón Editar - Solo si está APROBADO */}
-                                        {can('compras.update') && compra.estado_documento?.codigo === 'APROBADO' && (
+                                        {/* Botón Editar - Solo si está BORRADOR */}
+                                        {can('compras.update') && compra.estado_documento?.codigo === 'BORRADOR' && (
                                             <Link
                                                 href={`/compras/${compra.id}/edit`}
                                                 className="inline-flex items-center p-2 text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"
@@ -263,6 +282,18 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Link>
+                                        )}
+
+                                        {/* Botón Anular - Solo si está APROBADO */}
+                                        {can('compras.update') && compra.estado_documento?.codigo === 'APROBADO' && (
+                                            <button
+                                                onClick={() => openAnularModal(compra)}
+                                                disabled={isAnulando}
+                                                className="inline-flex items-center p-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Anular compra"
+                                            >
+                                                <AlertCircle className="h-4 w-4" />
+                                            </button>
                                         )}
 
                                         {can('compras.delete') && (
@@ -278,6 +309,28 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                     </tbody>
                 </table>
             </div>
+
+            {/* Modal de anulación */}
+            <AnularCompraModal
+                isOpen={anularModal.isOpen}
+                onClose={closeAnularModal}
+                compraNumero={anularModal.compra?.numero || ''}
+                onConfirm={handleAnularCompra}
+                isLoading={isAnulando}
+            />
+
+            {/* Modal de exportación/impresión */}
+            <OutputSelectionModal
+                isOpen={outputModal.isOpen}
+                onClose={() => setOutputModal({ isOpen: false })}
+                documentoId={outputModal.compra?.id || ''}
+                tipoDocumento="compra"
+                documentoInfo={{
+                    numero: outputModal.compra?.numero,
+                    fecha: outputModal.compra?.fecha ? new Date(outputModal.compra.fecha).toLocaleDateString('es-ES') : undefined,
+                    monto: outputModal.compra?.total,
+                }}
+            />
         </div>
     );
 }

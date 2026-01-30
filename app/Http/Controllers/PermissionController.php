@@ -39,16 +39,26 @@ class PermissionController extends Controller
         $todosLosPermisos = $this->permissionService->getPermissionsForUI();
         $rolesActuales = $user->roles->pluck('name')->toArray();
 
+        // ✅ NUEVO: Obtener todos los roles disponibles
+        $todosLosRoles = Role::all()->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'description' => $role->description ?? '',
+            ];
+        });
+
         return Inertia::render('admin/permisos/usuario', [
             'usuario' => $user,
             'permisosActuales' => $permisosActuales,
             'rolesActuales' => $rolesActuales,
             'todosLosPermisos' => $todosLosPermisos,
+            'todosLosRoles' => $todosLosRoles,
         ]);
     }
 
     /**
-     * ✅ API: Actualizar permisos de un usuario
+     * ✅ API: Actualizar permisos y roles de un usuario
      * Usado por: Panel web + APP móvil
      */
     public function actualizarUsuario(Request $request, User $user)
@@ -58,16 +68,32 @@ class PermissionController extends Controller
         $validated = $request->validate([
             'permisos' => 'array',
             'permisos.*' => 'exists:permissions,id',
+            'roles' => 'array',
+            'roles.*' => 'string|exists:roles,name',
         ]);
 
-        // Actualizar en BD
-        $this->permissionService->assignPermissionsToUser($user, $validated['permisos'] ?? []);
+        // ✅ PASO 1: Sincronizar roles primero
+        if (isset($validated['roles'])) {
+            $user->syncRoles($validated['roles']);
+        } else {
+            // Si no hay roles, limpiar todos
+            $user->syncRoles([]);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Permisos actualizados correctamente',
-            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
-        ]);
+        // ✅ PASO 2: Sincronizar permisos directos (esto limpia los viejos y añade los nuevos)
+        $permisosDirectos = [];
+        if (isset($validated['permisos']) && !empty($validated['permisos'])) {
+            // Convertir IDs a nombres de permisos
+            $permisosDirectos = Permission::whereIn('id', $validated['permisos'])
+                ->pluck('name')
+                ->toArray();
+        }
+
+        // Sincronizar permisos (esto limpia los anteriores y añade los nuevos)
+        $user->syncPermissions($permisosDirectos);
+
+        // ✅ Retornar respuesta Inertia (para que el frontend pueda manejar onSuccess)
+        return redirect()->back();
     }
 
     /**

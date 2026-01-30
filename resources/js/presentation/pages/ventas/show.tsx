@@ -1,11 +1,14 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { formatCurrency } from '@/lib/utils';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
-import { User } from 'lucide-react';
+import { User, Edit, AlertCircle, Printer } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '@/application/hooks/use-auth';
+import { toast } from 'react-toastify';
 import type { VentaShow, EstadoDocumento } from '@/domain/entities/ventas';
-import { FormatoSelector } from '@/presentation/components/impresion';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
+import AnularVentaModal from '@/presentation/components/ventas/AnularVentaModal';
 
 interface PageProps extends InertiaPageProps {
     venta: VentaShow;
@@ -13,7 +16,46 @@ interface PageProps extends InertiaPageProps {
 
 export default function VentaShow() {
     const { venta } = usePage<PageProps>().props;
+    const { can } = useAuth();
     const [imagenCargada, setImagenCargada] = useState(true);
+    const [anularModal, setAnularModal] = useState<{ isOpen: boolean }>({ isOpen: false });
+    const [isAnulando, setIsAnulando] = useState(false);
+    const [outputModal, setOutputModal] = useState(false);
+
+    // Verificar si la venta está APROBADA
+    const esAprobada = venta.estado_documento?.nombre?.toLowerCase() === 'aprobada' || venta.estado_documento?.codigo === 'APROBADO';
+
+    const handleAnularVenta = async (motivo?: string) => {
+        setIsAnulando(true);
+        try {
+            const response = await fetch(`/ventas/${venta.id}/anular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ motivo }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                toast.error(data.message || 'Error al anular la venta');
+                return;
+            }
+
+            toast.success('Venta anulada exitosamente');
+            setAnularModal({ isOpen: false });
+
+            // Recargar la página
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (error) {
+            console.error('Error al anular venta:', error);
+            toast.error('Error al anular la venta');
+        } finally {
+            setIsAnulando(false);
+        }
+    };
 
     // Debug: Verificar datos que llegan
     console.log('🔍 VentaShow - Venta cargada:', venta.numero);
@@ -62,11 +104,38 @@ export default function VentaShow() {
                     Venta {venta.numero}
                 </h1>
                 <div className="flex space-x-3">
-                    {/* Botón de Impresión */}
-                    <FormatoSelector
-                        documentoId={venta.id}
-                        tipoDocumento="venta"
-                    />
+                    {/* Botón de Impresión/Exportación */}
+                    <button
+                        onClick={() => setOutputModal(true)}
+                        className="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
+                        title="Exportar/Imprimir documento"
+                    >
+                        <Printer className="h-4 w-4 mr-2" />
+                        Imprimir
+                    </button>
+
+                    {/* Botón Editar - Solo si NO está aprobada */}
+                    {can('ventas.update') && !esAprobada && (
+                        <Link
+                            href={`/ventas/${venta.id}/edit`}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
+                        >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                        </Link>
+                    )}
+
+                    {/* Botón Anular - Solo si está aprobada */}
+                    {can('ventas.update') && esAprobada && (
+                        <button
+                            onClick={() => setAnularModal({ isOpen: true })}
+                            disabled={isAnulando}
+                            className="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50"
+                        >
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            {isAnulando ? 'Anulando...' : 'Anular'}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -495,6 +564,28 @@ export default function VentaShow() {
                     )}
                 </div>
             </div>
+
+            {/* Modal de anulación */}
+            <AnularVentaModal
+                isOpen={anularModal.isOpen}
+                onClose={() => setAnularModal({ isOpen: false })}
+                ventaNumero={venta.numero}
+                onConfirm={handleAnularVenta}
+                isLoading={isAnulando}
+            />
+
+            {/* Modal de exportación/impresión */}
+            <OutputSelectionModal
+                isOpen={outputModal}
+                onClose={() => setOutputModal(false)}
+                documentoId={venta.id}
+                tipoDocumento="venta"
+                documentoInfo={{
+                    numero: venta.numero,
+                    fecha: venta.fecha ? new Date(venta.fecha).toLocaleDateString('es-ES') : undefined,
+                    monto: venta.total,
+                }}
+            />
         </AppLayout>
     );
 }

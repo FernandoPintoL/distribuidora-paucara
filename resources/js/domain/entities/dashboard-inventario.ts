@@ -16,6 +16,18 @@ export interface Estadisticas {
 }
 
 /**
+ * Conversión de unidad para productos fraccionados
+ */
+export interface ConversionUnidad {
+    id: number;
+    unidad_origen_id: number;
+    unidad_destino_id: number;
+    unidad_destino_nombre: string;
+    factor_conversion: number;
+    cantidad_en_conversion: number; // Cantidad en unidad destino (calculated)
+}
+
+/**
  * Stock de productos por almacén (detalle de stock_productos)
  */
 export interface StockPorAlmacen {
@@ -31,6 +43,10 @@ export interface StockPorAlmacen {
     producto_codigo_barra: string;
     producto_sku: string;
     almacen_nombre: string;
+    // Campos para productos fraccionados
+    es_fraccionado: boolean;
+    unidad_medida_nombre?: string; // Unidad base del producto
+    conversiones?: ConversionUnidad[]; // Conversiones disponibles
 }
 
 /**

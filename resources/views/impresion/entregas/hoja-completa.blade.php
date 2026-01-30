@@ -160,10 +160,10 @@
 {{-- 1. INFORMACIÓN DE LA ENTREGA --}}
 @include('impresion.entregas.partials._informacion-entrega')
 
-{{-- 2. LISTA GENÉRICA DE PRODUCTOS --}}
+{{-- 2. LISTA GENÉRICA DE PRODUCTOS AGRUPADA --}}
 @php
     $impresionService = app(\App\Services\ImpresionEntregaService::class);
-    $productosGenerico = $impresionService->obtenerProductosGenerico($entrega);
+    $productosGenerico = $impresionService->obtenerProductosAgrupados($entrega);
 @endphp
 @include('impresion.entregas.partials._lista-generica')
 

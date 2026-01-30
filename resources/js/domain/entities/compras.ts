@@ -141,6 +141,7 @@ export interface CuentaPorPagarFormData extends BaseFormData {
 
 export interface FiltrosCompras {
     q?: string;
+    id?: string | number;
     proveedor_id?: string;
     estado_documento_id?: string;
     moneda_id?: string;

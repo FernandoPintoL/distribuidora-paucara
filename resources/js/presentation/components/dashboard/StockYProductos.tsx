@@ -1,10 +1,13 @@
 /**
  * Componente: Stock por Almacén y Productos Más Movidos
+ * Mejorado con soporte para productos fraccionados
  *
  * Renderiza tabla de stock_productos y productos con mayor movimiento
+ * Con visualización expandible de conversiones para productos fraccionados
  */
 
 import { useState, useMemo } from 'react';
+import React from 'react';
 import type { StockPorAlmacen, ProductoMasMovido } from '@/domain/entities/dashboard-inventario';
 import FiltrosStock, { type FiltrosState, RANGOS_STOCK } from './FiltrosStock';
 import { ImprimirStockButton } from '../impresion/ImprimirStockButton';
@@ -24,6 +27,9 @@ export default function StockYProductos({
         rangoStock: 'todos',
         ordenamiento: 'cantidad-desc',
     });
+
+    // Estado para filas expandidas (mostrar conversiones)
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
     // Obtener lista única de almacenes
     const almacenes = useMemo(() => {
@@ -87,6 +93,17 @@ export default function StockYProductos({
         return resultado;
     }, [stockPorAlmacen, filtros]);
 
+    // Toggle para expandir/colapsar filas
+    const toggleRow = (stockId: number) => {
+        const newExpanded = new Set(expandedRows);
+        if (newExpanded.has(stockId)) {
+            newExpanded.delete(stockId);
+        } else {
+            newExpanded.add(stockId);
+        }
+        setExpandedRows(newExpanded);
+    };
+
     return (
         <div className="flex flex-col gap-6">
             {/* Filtros */}
@@ -101,7 +118,7 @@ export default function StockYProductos({
                                 Stock de Productos por Almacén
                             </h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                Inventario detallado de stock_productos
+                                Inventario detallado con soporte para productos fraccionados
                             </p>
                         </div>
                         <div className="flex flex-col items-end gap-3">
@@ -137,8 +154,14 @@ export default function StockYProductos({
                         <table className="w-full">
                             <thead className="bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
                                 <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                                        {/* Columna para expandir */}
+                                    </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Producto
+                                    </th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Unidad
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Almacén
@@ -164,49 +187,144 @@ export default function StockYProductos({
                                     const cantidadReservada = parseFloat(String(stock.cantidad_reservada || 0));
                                     const precioVenta = parseFloat(String(stock.precio_venta || 0));
                                     const valorTotal = cantidadTotal * precioVenta;
+                                    const isExpanded = expandedRows.has(stock.id);
+                                    const hasFractionedInfo = stock.es_fraccionado && stock.conversiones && stock.conversiones.length > 0;
 
                                     return (
-                                        <tr
-                                            key={stock.id}
-                                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                                        >
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                    {stock.producto_nombre}
-                                                </p>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {stock.producto_codigo_barra}
-                                                </p>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {stock.producto_sku}
-                                                </p>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                                    {stock.almacen_nombre}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                    {cantidadTotal.toFixed(2)} unidades
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                    {cantidadDisponible.toFixed(2)} unidades
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                                    {cantidadReservada.toFixed(2)} unidades
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                                    Bs{valorTotal.toFixed(2)}
-                                                </span>
-                                            </td>
-                                        </tr>
+                                        <React.Fragment key={stock.id}>
+                                            {/* Fila principal */}
+                                            <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                    {hasFractionedInfo && (
+                                                        <button
+                                                            onClick={() => toggleRow(stock.id)}
+                                                            className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition text-gray-600 dark:text-gray-400"
+                                                            title={isExpanded ? 'Colapsar' : 'Expandir conversiones'}
+                                                        >
+                                                            <svg
+                                                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''
+                                                                    }`}
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M9 5l7 7-7 7"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                                {stock.producto_nombre}
+                                                                <br />
+                                                                {stock.es_fraccionado && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-300 dark:border-purple-700">
+                                                                        Fraccionado
+                                                                    </span>
+                                                                )}
+                                                            </p>
+
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {stock.producto_codigo_barra && (
+                                                                <>Código: {stock.producto_codigo_barra}</>
+                                                            )}
+                                                        </p>
+                                                        {stock.producto_sku && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                SKU: {stock.producto_sku}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                                                        {stock.unidad_medida_nombre}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                                        {stock.almacen_nombre}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                        {cantidadTotal.toFixed(2)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                        {cantidadDisponible.toFixed(2)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                        {cantidadReservada.toFixed(2)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                                        Bs{valorTotal.toFixed(2)}
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            {/* Fila expandible: conversiones de unidades */}
+                                            {hasFractionedInfo && isExpanded && (
+                                                <tr className="bg-gray-50 dark:bg-gray-700/50">
+                                                    <td colSpan={8} className="px-6 py-4">
+                                                        <div className="space-y-3">
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                                                                Conversiones de Unidades
+                                                            </h4>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                                {/* Unidad base */}
+                                                                <div className="p-3 rounded-lg border-2 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
+                                                                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
+                                                                        Unidad Base ({stock.unidad_medida_nombre})
+                                                                    </p>
+                                                                    <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
+                                                                        {cantidadTotal.toFixed(2)}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                                        Disponible: {cantidadDisponible.toFixed(2)}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Conversiones */}
+                                                                {stock.conversiones?.map((conv) => (
+                                                                    <div
+                                                                        key={conv.id}
+                                                                        className="p-3 rounded-lg border-2 border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20"
+                                                                    >
+                                                                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
+                                                                            {conv.unidad_destino_nombre}
+                                                                            <span className="text-orange-600 dark:text-orange-400 ml-1">
+                                                                                (÷ {conv.factor_conversion})
+                                                                            </span>
+                                                                        </p>
+                                                                        <p className="text-lg font-bold text-orange-700 dark:text-orange-400">
+                                                                            {conv.cantidad_en_conversion.toFixed(2)}
+                                                                        </p>
+                                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                                            Disponible:{' '}
+                                                                            {(cantidadDisponible * conv.factor_conversion).toFixed(2)}
+                                                                        </p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     );
                                 })}
                             </tbody>

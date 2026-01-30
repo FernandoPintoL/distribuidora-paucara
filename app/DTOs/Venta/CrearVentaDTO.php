@@ -31,6 +31,7 @@ class CrearVentaDTO extends BaseDTO
         public ?string $canal_origen = 'WEB',
         public ?int $estado_logistico_id = null,
         // Campos de política de pago
+        public ?int $tipo_pago_id = null,  // ✅ NUEVO: Tipo de pago seleccionado
         public ?string $politica_pago = 'ANTICIPADO_100',  // ✅ CAMBIO: Por defecto ANTICIPADO_100 para ventas directas
         public ?string $estado_pago = 'PAGADO',  // ✅ CAMBIO: Por defecto PAGADO (consistente con proformas)
         // Campos de SLA y compromisos de entrega
@@ -56,10 +57,20 @@ class CrearVentaDTO extends BaseDTO
         $empresaPrincipal = \App\Models\Empresa::principal();
         $almacenIdPorDefecto = $empresaPrincipal?->almacen_id ?? 1;
 
+        // ✨ CORREGIR: Transformar unidad_venta_id a unidad_medida_id para StockService
+        $detalles = $request->input('detalles', []);
+        $detallesCorregidos = array_map(function ($detalle) {
+            // Si viene unidad_venta_id, renombrarlo a unidad_medida_id para que StockService lo entienda
+            if (isset($detalle['unidad_venta_id']) && !isset($detalle['unidad_medida_id'])) {
+                $detalle['unidad_medida_id'] = $detalle['unidad_venta_id'];
+            }
+            return $detalle;
+        }, $detalles);
+
         return new self(
             cliente_id: (int) $request->input('cliente_id'),
             fecha: $request->input('fecha', today()->toDateString()),
-            detalles: $request->input('detalles', []),
+            detalles: $detallesCorregidos,
             subtotal: (float) $request->input('subtotal', 0),
             impuesto: (float) $request->input('impuesto', 0),
             total: (float) $request->input('total', 0),
@@ -72,6 +83,7 @@ class CrearVentaDTO extends BaseDTO
             requiere_envio: $request->has('requiere_envio') ? (bool) $request->input('requiere_envio') : false,  // ✅ IMPORTANTE: Asegurar que se envíe false si no viene
             canal_origen: $request->input('canal_origen', 'WEB'),
             estado_logistico_id: $request->has('estado_logistico_id') ? (int) $request->input('estado_logistico_id') : null,
+            tipo_pago_id: $request->has('tipo_pago_id') ? (int) $request->input('tipo_pago_id') : null,  // ✅ NUEVO: Tipo de pago
             politica_pago: $request->input('politica_pago', 'ANTICIPADO_100'),
             estado_pago: $request->input('estado_pago', 'PAGADO'),  // ✅ CAMBIO: Estado por defecto PAGADO (consistente con proformas)
             fecha_entrega_comprometida: $request->input('fecha_entrega_comprometida'),

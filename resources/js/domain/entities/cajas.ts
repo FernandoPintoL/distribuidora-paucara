@@ -59,6 +59,9 @@ export interface MovimientoCaja {
     fecha: string;
     created_at: string;
     tipo_operacion: TipoOperacion;
+    tipo_pago?: any;  // ✅ NUEVO: Tipo de pago
+    venta_id?: number;   // ✅ NUEVO: ID de venta para análisis de rango
+    pago_id?: number;    // ✅ NUEVO: ID de pago para análisis de rango
     comprobantes?: ComprobanteMovimiento[];
 }
 

@@ -44,6 +44,7 @@ export default function FiltrosCompras({ filtros, datosParaFiltros, className }:
 
     const [valoresLocales, setValoresLocales] = useState<FiltrosCompras>({
         q: filtrosSeguras.q || '',
+        id: filtrosSeguras.id || '',
         proveedor_id: filtrosSeguras.proveedor_id || '',
         estado_documento_id: filtrosSeguras.estado_documento_id || '',
         moneda_id: filtrosSeguras.moneda_id || '',
@@ -53,6 +54,11 @@ export default function FiltrosCompras({ filtros, datosParaFiltros, className }:
         sort_by: filtrosSeguras.sort_by || 'created_at',
         sort_dir: filtrosSeguras.sort_dir || 'desc',
     });
+
+    // Estado local para el input de búsqueda combinada
+    const [busquedaCombinada, setBusquedaCombinada] = useState<string>(
+        filtrosSeguras.q || filtrosSeguras.id || ''
+    );
 
     const aplicarFiltros = () => {
         const filtrosLimpios = Object.fromEntries(
@@ -65,6 +71,7 @@ export default function FiltrosCompras({ filtros, datosParaFiltros, className }:
     const limpiarFiltros = () => {
         setValoresLocales({
             q: '',
+            id: '',
             proveedor_id: '',
             estado_documento_id: '',
             moneda_id: '',
@@ -75,22 +82,33 @@ export default function FiltrosCompras({ filtros, datosParaFiltros, className }:
             sort_dir: 'desc',
         });
 
+        setBusquedaCombinada('');
         comprasService.clearFilters();
     };
 
     const busquedaRapida = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const filtrosParaBusqueda = {
+        // Detectar si la búsqueda es por ID (solo números) o búsqueda general (texto)
+        const filtrosParaBusqueda: FiltrosCompras = {
             ...Object.fromEntries(
                 Object.entries(valoresLocales).filter(([key, value]) =>
-                    key !== 'q' && value !== '' && value != null
+                    key !== 'q' && key !== 'id' && value !== '' && value != null
                 )
-            ),
-            q: valoresLocales.q
+            )
         };
 
-        comprasService.search(filtrosParaBusqueda as FiltrosCompras);
+        if (busquedaCombinada) {
+            if (/^\d+$/.test(busquedaCombinada)) {
+                // Solo números: buscar por ID
+                filtrosParaBusqueda.id = Number(busquedaCombinada);
+            } else {
+                // Contiene letras: búsqueda general
+                filtrosParaBusqueda.q = busquedaCombinada;
+            }
+        }
+
+        comprasService.search(filtrosParaBusqueda);
     };
 
     const hayFiltrosActivos = Object.values(filtrosSeguras).some(value =>
@@ -139,15 +157,16 @@ export default function FiltrosCompras({ filtros, datosParaFiltros, className }:
     return (
         <div className={cn('bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4', className)}>
             {/* Búsqueda rápida */}
-            <form onSubmit={busquedaRapida} className="flex gap-3">
-                <div className="flex-1">
+            <form onSubmit={busquedaRapida} className="flex gap-3 flex-wrap">
+                <div className="flex-1 min-w-[200px]">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
                             type="text"
-                            placeholder="Buscar por número, factura, proveedor..."
-                            value={valoresLocales.q}
-                            onChange={e => setValoresLocales(prev => ({ ...prev, q: e.target.value }))}
+                            placeholder="Buscar por ID, número, factura, proveedor..."
+                            title="Escribe un número para buscar por ID, o texto para búsqueda general"
+                            value={busquedaCombinada}
+                            onChange={e => setBusquedaCombinada(e.target.value)}
                             className="pl-10"
                         />
                     </div>
@@ -344,6 +363,11 @@ export default function FiltrosCompras({ filtros, datosParaFiltros, className }:
             {hayFiltrosActivos && (
                 <div className="flex flex-wrap gap-2 pt-2 border-t">
                     <span className="text-xs text-gray-500 dark:text-gray-400">Filtros activos:</span>
+                    {filtrosSeguras.id && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            ID: {filtrosSeguras.id}
+                        </span>
+                    )}
                     {filtrosSeguras.q && (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                             Búsqueda: {filtrosSeguras.q}

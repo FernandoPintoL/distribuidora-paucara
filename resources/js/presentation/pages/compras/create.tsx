@@ -1031,12 +1031,17 @@ export default function CompraForm() {
                 lote: '',
                 fecha_vencimiento: '',
                 precio_costo: precioCosto, // ✅ NUEVO: Precio de costo desde API
+                unidad_medida_id: producto.unidad_medida_id, // ✨ NUEVO: Para mostrar unidad como referencia
+                unidad_medida_nombre: producto.unidad_medida_nombre, // ✨ NUEVO: Nombre de unidad para referencia
+                es_fraccionado: producto.es_fraccionado || false, // ✨ NUEVO: Indicador de producto fraccionado
+                conversiones: producto.conversiones || [], // ✨ NUEVO: Conversiones para calcular precio/unidad como referencia
                 producto: { // ✅ NUEVO: Guardar objeto completo del producto
                   id: producto.id,
                   nombre: producto.nombre,
                   codigo: producto.codigo,
                   codigo_barras: producto.codigo_barras,
-                  precio_costo: precioCosto
+                  precio_costo: precioCosto,
+                  es_fraccionado: producto.es_fraccionado || false
                 }
               };
               const newDetalles = [...data.detalles, newDetalle];

@@ -37,6 +37,8 @@ const initialProductoData: ProductoFormData = {
   stock_minimo: 0,
   stock_maximo: 50,
   limite_venta: null, // ✨ NUEVO
+  principio_activo: null, // ✨ NUEVO
+  uso_de_medicacion: null, // ✨ NUEVO
   precios: [
     { monto: 0, tipo_precio_id: 1 },
     { monto: 0, tipo_precio_id: 2 },
@@ -53,7 +55,8 @@ export default function ProductoForm({
   tipos_precio,
   configuraciones_ganancias,
   historial_precios,
-  permite_productos_fraccionados // ✨ NUEVO
+  permite_productos_fraccionados, // ✨ NUEVO
+  es_farmacia // ✨ NUEVO - Indica si la empresa es farmacia
 }: ProductoFormPageProps) {
   // 🔍 LOGS PARA DEBUG
   console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
@@ -101,6 +104,8 @@ export default function ProductoForm({
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
       limite_venta: producto.limite_venta ?? null, // ✨ NUEVO
+      principio_activo: producto.principio_activo ?? null, // ✨ NUEVO
+      uso_de_medicacion: producto.uso_de_medicacion ?? null, // ✨ NUEVO
       precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
       codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
       conversiones: producto.conversiones?.length ? producto.conversiones : [], // ✨ NUEVO
@@ -235,6 +240,9 @@ export default function ProductoForm({
       if (p.tipo_precio_id != null) {
         formData.append(`precios[${i}][tipo_precio_id]`, String(p.tipo_precio_id));
       }
+      if (p.unidad_medida_id != null) {
+        formData.append(`precios[${i}][unidad_medida_id]`, String(p.unidad_medida_id));
+      }
       if (p.moneda) {
         formData.append(`precios[${i}][moneda]`, p.moneda);
       }
@@ -339,7 +347,10 @@ export default function ProductoForm({
       const nuevosPrecios = [...data.precios, nuevo];
       setData('precios', nuevosPrecios);
     } else if (!checked && exists) {
-      const preciosFiltrados = (data.precios || []).filter((p: Precio) => Number(p.tipo_precio_id) !== Number(tipoId));
+      // ✅ IMPORTANTE: Eliminar TODOS los precios de este tipo (todas las unidades)
+      const preciosFiltrados = (data.precios || []).filter(
+        (p: Precio) => Number(p.tipo_precio_id) !== Number(tipoId)
+      );
       setData('precios', preciosFiltrados);
     }
   };
@@ -500,6 +511,7 @@ export default function ProductoForm({
                     setData={setData}
                     getInputClassName={getInputClassName}
                     permite_productos_fraccionados={permite_productos_fraccionados} // ✨ NUEVO
+                    es_farmacia={es_farmacia} // ✨ NUEVO
                   />
                 </TabsContent>
 

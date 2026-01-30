@@ -21,6 +21,9 @@ class MovimientoCaja extends Model
         'observaciones',
         'numero_documento',
         'tipo_operacion_id',
+        'tipo_pago_id',  // ✅ NUEVO: Tipo de pago asociado al movimiento
+        'venta_id',      // ✅ NUEVO: ID de venta para análisis de rango
+        'pago_id',       // ✅ NUEVO: ID de pago para análisis de rango
     ];
 
     protected function casts(): array
@@ -45,6 +48,21 @@ class MovimientoCaja extends Model
     public function tipoOperacion()
     {
         return $this->belongsTo(TipoOperacionCaja::class, 'tipo_operacion_id');
+    }
+
+    public function tipoPago()  // ✅ NUEVO: Relación con tipo de pago
+    {
+        return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+    }
+
+    public function venta()  // ✅ NUEVO: Relación con venta
+    {
+        return $this->belongsTo(Venta::class, 'venta_id');
+    }
+
+    public function pago()  // ✅ NUEVO: Relación con pago
+    {
+        return $this->belongsTo(Pago::class, 'pago_id');
     }
 
     public function comprobantes()

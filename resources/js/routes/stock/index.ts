@@ -1,4 +1,208 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
+/**
+* @see \App\Http\Controllers\InventarioController::exportarExcel
+ * @see app/Http/Controllers/InventarioController.php:1841
+ * @route '/stock/{stock}/exportar-excel'
+ */
+export const exportarExcel = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarExcel.url(args, options),
+    method: 'get',
+})
+
+exportarExcel.definition = {
+    methods: ["get","head"],
+    url: '/stock/{stock}/exportar-excel',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\InventarioController::exportarExcel
+ * @see app/Http/Controllers/InventarioController.php:1841
+ * @route '/stock/{stock}/exportar-excel'
+ */
+exportarExcel.url = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { stock: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { stock: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    stock: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        stock: typeof args.stock === 'object'
+                ? args.stock.id
+                : args.stock,
+                }
+
+    return exportarExcel.definition.url
+            .replace('{stock}', parsedArgs.stock.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\InventarioController::exportarExcel
+ * @see app/Http/Controllers/InventarioController.php:1841
+ * @route '/stock/{stock}/exportar-excel'
+ */
+exportarExcel.get = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarExcel.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\InventarioController::exportarExcel
+ * @see app/Http/Controllers/InventarioController.php:1841
+ * @route '/stock/{stock}/exportar-excel'
+ */
+exportarExcel.head = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: exportarExcel.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\InventarioController::exportarExcel
+ * @see app/Http/Controllers/InventarioController.php:1841
+ * @route '/stock/{stock}/exportar-excel'
+ */
+    const exportarExcelForm = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportarExcel.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\InventarioController::exportarExcel
+ * @see app/Http/Controllers/InventarioController.php:1841
+ * @route '/stock/{stock}/exportar-excel'
+ */
+        exportarExcelForm.get = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarExcel.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\InventarioController::exportarExcel
+ * @see app/Http/Controllers/InventarioController.php:1841
+ * @route '/stock/{stock}/exportar-excel'
+ */
+        exportarExcelForm.head = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarExcel.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportarExcel.form = exportarExcelForm
+/**
+* @see \App\Http\Controllers\InventarioController::exportarPdf
+ * @see app/Http/Controllers/InventarioController.php:1863
+ * @route '/stock/{stock}/exportar-pdf'
+ */
+export const exportarPdf = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarPdf.url(args, options),
+    method: 'get',
+})
+
+exportarPdf.definition = {
+    methods: ["get","head"],
+    url: '/stock/{stock}/exportar-pdf',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\InventarioController::exportarPdf
+ * @see app/Http/Controllers/InventarioController.php:1863
+ * @route '/stock/{stock}/exportar-pdf'
+ */
+exportarPdf.url = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { stock: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { stock: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    stock: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        stock: typeof args.stock === 'object'
+                ? args.stock.id
+                : args.stock,
+                }
+
+    return exportarPdf.definition.url
+            .replace('{stock}', parsedArgs.stock.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\InventarioController::exportarPdf
+ * @see app/Http/Controllers/InventarioController.php:1863
+ * @route '/stock/{stock}/exportar-pdf'
+ */
+exportarPdf.get = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarPdf.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\InventarioController::exportarPdf
+ * @see app/Http/Controllers/InventarioController.php:1863
+ * @route '/stock/{stock}/exportar-pdf'
+ */
+exportarPdf.head = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: exportarPdf.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\InventarioController::exportarPdf
+ * @see app/Http/Controllers/InventarioController.php:1863
+ * @route '/stock/{stock}/exportar-pdf'
+ */
+    const exportarPdfForm = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportarPdf.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\InventarioController::exportarPdf
+ * @see app/Http/Controllers/InventarioController.php:1863
+ * @route '/stock/{stock}/exportar-pdf'
+ */
+        exportarPdfForm.get = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarPdf.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\InventarioController::exportarPdf
+ * @see app/Http/Controllers/InventarioController.php:1863
+ * @route '/stock/{stock}/exportar-pdf'
+ */
+        exportarPdfForm.head = (args: { stock: number | { id: number } } | [stock: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarPdf.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportarPdf.form = exportarPdfForm
 /**
 * @see \App\Http\Controllers\ImpresionStockController::imprimir
  * @see app/Http/Controllers/ImpresionStockController.php:17
@@ -156,7 +360,9 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     preview.form = previewForm
 const stock = {
-    imprimir,
+    exportarExcel,
+exportarPdf,
+imprimir,
 preview,
 }
 

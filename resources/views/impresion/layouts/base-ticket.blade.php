@@ -6,30 +6,20 @@
     <title>@yield('titulo', 'Ticket')</title>
     <style>
         * {
-            margin: 0;
-            padding: 0;
+            margin: 0 !important;
+            padding: 0 !important;
             box-sizing: border-box;
         }
 
         body {
-            font-family: 'Courier New', 'Courier', monospace;
-
-            font-size: {
+            font-family: {
                     {
-                    $empresa->configuracion_impresion['tamaño_fuente_ticket'] ?? '8px'
+                    isset($fuente_config) ? $fuente_config['stack']: "'Consolas', 'Courier New', 'Courier', monospace"
                 }
             }
 
-            ;
-            line-height: 1.3;
-
-            padding: {
-                    {
-                    $empresa->configuracion_impresion['margen_ticket'] ?? '2mm'
-                }
-            }
-
-            ;
+            margin: 0 !important;
+            padding: 0 !important;
             color: #000;
         }
 
@@ -57,50 +47,55 @@
         /* Header del ticket */
         .header {
             text-align: center;
-            margin-bottom: 10px;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 5px;
+            margin-bottom: 1px;
+            padding: 0;
+            /*border-bottom: 1px dashed #000;*/
         }
 
         .logo {
-            max-width: 60px;
-            max-height: 60px;
-            margin: 0 auto 5px;
+            max-width: 120px;
+            max-height: 80px;
+            margin: 0 auto 2px;
             display: block;
+            object-fit: contain;
         }
 
         .empresa-nombre {
-            font-size: 12px;
             font-weight: bold;
-            margin: 3px 0;
+            margin: 1px 0;
+            line-height: 1.1;
         }
 
         .empresa-info {
-            font-size: 7px;
-            margin: 1px 0;
+            margin: 0;
+            line-height: 1.1;
         }
 
         /* Separadores */
         .separador {
             border-top: 1px dashed #000;
-            margin: 8px 0;
+            margin: 3px 0;
+            padding: 0;
+            padding-top: 8px;
+            padding-bottom: 8px;
         }
 
         .separador-doble {
             border-top: 2px solid #000;
-            margin: 8px 0;
+            margin: 3px 0;
+            padding: 0;
         }
 
         .separador-simple {
             border-top: 1px solid #000;
-            margin: 5px 0;
+            margin: 2px 0;
+            padding: 0;
         }
 
         /* Tablas de items */
         table.items {
             width: 100%;
             margin: 5px 0;
-            font-size: 7px;
             border-collapse: collapse;
         }
 
@@ -114,14 +109,12 @@
         }
 
         table.items .item-detalle {
-            font-size: 6px;
             color: #333;
         }
 
         /* Totales */
         .totales {
             margin-top: 10px;
-            font-size: 9px;
         }
 
         .totales table {
@@ -133,7 +126,6 @@
         }
 
         .totales .total-final {
-            font-size: 11px;
             font-weight: bold;
             margin-top: 5px;
             padding-top: 5px;
@@ -142,7 +134,6 @@
 
         /* Información del documento */
         .documento-info {
-            font-size: 8px;
             margin: 5px 0;
         }
 
@@ -151,7 +142,6 @@
         }
 
         .documento-titulo {
-            font-size: 10px;
             font-weight: bold;
             text-align: center;
             margin: 5px 0;
@@ -159,7 +149,6 @@
 
         .documento-numero {
             text-align: center;
-            font-size: 9px;
             margin: 2px 0;
         }
 
@@ -167,7 +156,6 @@
         .footer {
             text-align: center;
             margin-top: 15px;
-            font-size: 7px;
             border-top: 1px dashed #000;
             padding-top: 5px;
         }
@@ -181,7 +169,6 @@
             margin-top: 8px;
             padding-top: 5px;
             border-top: 1px dashed #000;
-            font-size: 7px;
         }
 
         .observaciones strong {
@@ -203,8 +190,8 @@
         }
 
         .qr-code {
-            max-width: 60px;
-            max-height: 60px;
+            max-width: 120px;
+            max-height: 120px;
             width: 100%;
             height: auto;
             border: 1px solid #000;
@@ -213,70 +200,88 @@
         }
 
         .qr-label {
-            font-size: 6px;
             margin-top: 2px;
             color: #333;
         }
 
         @yield('estilos-adicionales')
 
+        /* Estilos para el selector de fuentes */
+        @media screen {
+            .font-selector {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #fff;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 10px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                z-index: 9999;
+            }
+
+            .font-selector label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: bold;
+                font-size: 12px;
+                color: #333;
+            }
+
+            .font-selector select {
+                width: 200px;
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                font-size: 12px;
+            }
+        }
+
     </style>
 </head>
 <body>
+    <!-- Selector de fuentes (solo en navegador) -->
+    {{-- @if(request()->query('accion') === 'stream')
+    <div class="font-selector">
+        <label for="font-select">Fuente de letra:</label>
+        <select id="font-select" onchange="cambiarFuente(this.value)">
+            @forelse($fuentes_disponibles ?? [] as $key => $fuente)
+            <option value="{{ $key }}" {{ ($fuente_config['nombre'] ?? '') === ($fuente['nombre'] ?? '') ? 'selected' : '' }}>
+    {{ $fuente['nombre'] }}
+    </option>
+    @empty
+    <option value="consolas" selected>Consolas (Por defecto)</option>
+    @endforelse
+    </select>
+    </div> --}}
+
+    {{-- <script>
+        function cambiarFuente(fuente) {
+            const url = new URL(window.location);
+            url.searchParams.set('fuente', fuente);
+            window.location.href = url.toString();
+        }
+    </script> 
+    @endif--}}
+
     <div class="ticket">
         {{-- Header compacto --}}
         <div class="header">
             @if(!empty($logo_principal_base64))
-            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 50px; max-height: 25px; object-fit: contain;">
-
-            @elseif($empresa->logo_compacto)
-            <img src="{{ $empresa->logo_compacto }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
-            @elseif($empresa->logo_principal)
-            <img src="{{ $empresa->logo_principal }}" class="logo" alt="{{ $empresa->nombre_comercial }}">
+            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 190px; max-height: 90px; object-fit: contain;">
             @endif
             <div class="empresa-nombre">{{ $empresa->nombre_comercial }}</div>
             <div class="empresa-info">NIT: {{ $empresa->nit }}</div>
             <div class="empresa-info">{{ $empresa->direccion }}</div>
-            <div class="empresa-info">{{ $empresa->ciudad }} - {{ $empresa->pais }}</div>
             @if($empresa->telefono)
             <div class="empresa-info">Tel: {{ $empresa->telefono }}</div>
             @endif
         </div>
+    </div>
 
-        {{-- Contenido específico del documento --}}
-        <div style="padding-left: 15px; padding-right: 15px;">
-            @yield('contenido')
-        </div>
+    {{-- Contenido específico del documento --}}
+    @yield('contenido')
 
-        {{-- Footer --}}
-        <div class="footer">
-            @if(!empty($logo_footer_base64))
-            <div style="margin-bottom: 5px;">
-                <img src="{{ $logo_footer_base64 }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
-            </div>
-            @elseif(!empty($logo_principal_base64))
-            <div style="margin-bottom: 5px;">
-                <img src="{{ $logo_principal_base64 }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
-            </div>
-            @elseif($empresa->logo_footer)
-            <div style="margin-bottom: 5px;">
-                <img src="{{ $empresa->logo_footer }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
-            </div>
-            @elseif($empresa->logo_principal)
-            <div style="margin-bottom: 5px;">
-                <img src="{{ $empresa->logo_principal }}" alt="Logo Footer" style="max-width: 50px; max-height: 25px; object-fit: contain;">
-            </div>
-            @endif
-            @if($empresa->mensaje_footer)
-            <div>{{ $empresa->mensaje_footer }}</div>
-            @endif
-            <div style="margin-top: 3px;">
-                {{ $fecha_impresion->format('d/m/Y H:i') }}
-                @if($usuario)
-                - {{ is_string($usuario) ? $usuario : (isset($usuario->name) ? $usuario->name : 'Sistema') }}
-                @endif
-            </div>
-        </div>
     </div>
 </body>
 </html>

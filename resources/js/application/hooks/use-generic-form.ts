@@ -20,7 +20,7 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
     if (entity) {
       // Filtrar campos de archivo que son strings (rutas) para no enviarlos en actualizaciones
       const entityData = { ...entity };
-      const fileFields = ['foto_perfil', 'ci_anverso', 'ci_reverso', 'imagen', 'foto', 'archivo', 'logo', 'perfil', 'galeria'];
+      const fileFields = ['foto_perfil', 'ci_anverso', 'ci_reverso', 'imagen', 'foto', 'archivo', 'logo', 'logo_principal', 'logo_compacto', 'logo_footer', 'perfil', 'galeria'];
 
       Object.keys(entityData).forEach((key) => {
         const value = entityData[key as keyof typeof entityData];

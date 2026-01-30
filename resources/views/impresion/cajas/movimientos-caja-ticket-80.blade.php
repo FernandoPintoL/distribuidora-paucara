@@ -5,14 +5,14 @@
 @section('contenido')
 
 <div class="center" style="margin-bottom: 8px;">
-    <h2 style="margin: 0; font-size: 12px; font-weight: bold;">MOVIMIENTOS DE CAJA</h2>
-    <p style="margin: 2px 0; font-size: 8px;">{{ $fecha_impresion->format('d/m/Y H:i') }}</p>
+    <h2 style="margin: 0; font-size: 16px; font-weight: bold;">MOVIMIENTOS DE CAJA</h2>
+    <p style="margin: 2px 0; font-size: 12px;">{{ $fecha_impresion->format('d/m/Y H:i') }}</p>
 </div>
 
 <div class="separador-doble"></div>
 
 <!-- Información de la apertura -->
-<div style="font-size: 7px; margin-bottom: 5px;">
+<div style="font-size: 16px; margin-bottom: 5px;">
     <table style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="width: 50%; padding: 1px;"><strong>Caja:</strong> {{ $apertura->caja->nombre }}</td>
@@ -28,7 +28,7 @@
 <div class="separador"></div>
 
 <!-- Tabla de movimientos -->
-<table style="width: 100%; font-size: 7px; border-collapse: collapse; margin-bottom: 5px;">
+<table style="width: 100%; font-size: 16px; border-collapse: collapse; margin-bottom: 5px;">
     <thead>
         <tr style="border-bottom: 1px dashed #000;">
             <th style="padding: 1px; text-align: left; width: 20%;">Hora</th>
@@ -40,17 +40,17 @@
     <tbody>
         @forelse($movimientos as $movimiento)
         <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 1px; font-size: 6px;">{{ $movimiento->fecha->format('H:i') }}</td>
-            <td style="padding: 1px; font-size: 6px;">{{ Str::limit($movimiento->tipoOperacion->nombre, 10) }}</td>
-            <td style="padding: 1px; font-size: 6px;">{{ Str::limit($movimiento->observaciones) }}</td>
-            <td style="padding: 1px; text-align: right; font-size: 6px; @if($movimiento->monto > 0) color: #27ae60; font-weight: bold; @else color: #e74c3c; @endif">
+            <td style="padding: 1px; font-size: 12px;">{{ $movimiento->fecha->format('H:i') }}</td>
+            <td style="padding: 1px; font-size: 12px;">{{ Str::limit($movimiento->tipoOperacion->nombre, 10) }}</td>
+            <td style="padding: 1px; font-size: 12px;">{{ Str::limit($movimiento->observaciones) }}</td>
+            <td style="padding: 1px; text-align: right; font-size: 12px; @if($movimiento->monto > 0) color: #030303; font-weight: bold; @else color: #0A0A0A; @endif">
                 @if($movimiento->monto > 0) + @endif
                 {{ number_format(abs($movimiento->monto), 2) }}
             </td>
         </tr>
         @empty
         <tr>
-            <td colspan="4" style="padding: 5px; text-align: center; font-size: 8px; color: #999;">Sin movimientos</td>
+            <td colspan="4" style="padding: 5px; text-align: center; font-size: 12px; color: #999;">Sin movimientos</td>
         </tr>
         @endforelse
     </tbody>
@@ -59,34 +59,63 @@
 <div class="separador-doble"></div>
 
 <!-- Resumen de totales -->
-<table style="width: 100%; font-size: 8px; border-collapse: collapse; text-align: right;">
+<table style="width: 100%; font-size: 12px; border-collapse: collapse; text-align: right;">
     <tr>
         <td style="padding: 1px; text-align: left;"><strong>M. Inicial:</strong></td>
         <td style="padding: 1px; width: 40%; font-weight: bold;">{{ number_format($apertura->monto_apertura, 2) }} Bs</td>
     </tr>
     <tr>
         <td style="padding: 1px; text-align: left;"><strong>Ingresos:</strong></td>
-        <td style="padding: 1px; width: 40%; color: #27ae60; font-weight: bold;">+{{ number_format($totalIngresos, 2) }}</td>
+        <td style="padding: 1px; width: 40%; color: #0D0E0D; font-weight: bold;">+{{ number_format($totalIngresos, 2) }}</td>
     </tr>
     <tr>
         <td style="padding: 1px; text-align: left;"><strong>Egresos:</strong></td>
-        <td style="padding: 1px; width: 40%; color: #e74c3c; font-weight: bold;">-{{ number_format($totalEgresos, 2) }}</td>
+        <td style="padding: 1px; width: 40%; color: #0E0D0D; font-weight: bold;">-{{ number_format($totalEgresos, 2) }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 1px; text-align: left;"><strong>Neto:</strong></td>
+        <td style="padding: 1px; width: 40%; color: {{ ($totalIngresos - $totalEgresos) >= 0 ? '#080808' : '#0E0D0D' }}; font-weight: bold;">{{ number_format($totalIngresos - $totalEgresos, 2) }}</td>
     </tr>
     <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000;">
         <td style="padding: 2px; text-align: left;"><strong>Total Día:</strong></td>
-        <td style="padding: 2px; width: 40%; font-weight: bold; font-size: 9px;">{{ number_format($totalDia, 2) }} Bs</td>
+        <td style="padding: 2px; width: 40%; font-weight: bold; font-size: 12px;">{{ number_format($totalDia, 2) }} Bs</td>
     </tr>
     <tr>
-        <td style="padding: 1px; text-align: left; font-size: 7px;">Transacciones:</td>
-        <td style="padding: 1px; width: 40%; font-size: 7px;">{{ $movimientos->count() }}</td>
+        <td style="padding: 1px; text-align: left; font-size: 12px;">Transacciones:</td>
+        <td style="padding: 1px; width: 40%; font-size: 12px;">{{ $movimientos->count() }}</td>
     </tr>
 </table>
 
 <div class="separador-doble"></div>
 
-<div style="font-size: 7px; text-align: center; color: #666;">
+{{-- Resumen por Tipo de Operación (compacto) --}}
+@php
+$operacionesAgrupadas = $movimientos->groupBy(function($item) {
+return $item->tipoOperacion->nombre;
+});
+@endphp
+
+@if($operacionesAgrupadas->count() > 1)
+<div style="font-size: 12px; margin-bottom: 5px;">
+    <p style="margin: 1px 0; font-weight: bold; text-align: center;">Resumen por Tipo de Operación</p>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        @foreach($operacionesAgrupadas as $tipo => $movs)
+        <tr style="border-bottom: 1px dashed #ddd;">
+            <td style="padding: 1px; width: 60%;">{{ Str::limit($tipo, 18) }}</td>
+            <td style="padding: 1px; text-align: right; width: 40%; font-weight: bold; color: {{ $movs->sum('monto') >= 0 ? '#0A0A0A' : '#0F0F0F' }}">
+                {{ number_format($movs->sum('monto'), 2) }}
+            </td>
+        </tr>
+        @endforeach
+    </table>
+</div>
+@endif
+
+<div class="separador"></div>
+
+<div style="font-size: 16px; text-align: center; color: #666;">
     <p style="margin: 2px 0;">{{ $empresa->nombre_comercial ?? 'Distribuidora Paucara' }}</p>
-    <p style="margin: 2px 0; font-size: 6px;">{{ $fecha_impresion->format('d/m/Y H:i:s') }}</p>
+    <p style="margin: 2px 0; font-size: 12px;">{{ $fecha_impresion->format('d/m/Y H:i:s') }}</p>
 </div>
 
 @endsection

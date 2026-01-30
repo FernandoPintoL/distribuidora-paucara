@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useCajaWarning } from '@/application/hooks/use-caja-warning';
 import { AlertSinCaja } from '@/presentation/components/cajas/alert-sin-caja';
 import VentaPreviewModal from '@/presentation/components/VentaPreviewModal';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import StockManager from '@/presentation/components/ventas/stock-manager';
 
 // Importar componentes y hooks adicionales
@@ -161,6 +162,10 @@ export default function VentaForm() {
     const [showCreateClienteModal, setShowCreateClienteModal] = useState(false);
     const [clienteSearchQuery, setClienteSearchQuery] = useState('');
 
+    // Estado para el modal de selección de salida (imprimir, Excel, PDF)
+    const [showOutputModal, setShowOutputModal] = useState(false);
+    const [ventaCreada, setVentaCreada] = useState<{ id: number; numero: string; fecha: string } | null>(null);
+
     const { data, setData, processing, errors, reset } = useForm({
         numero: venta?.numero || '', // Solo para edición, se genera automáticamente para nuevas ventas
         fecha: venta?.fecha || new Date().toISOString().split('T')[0],
@@ -248,9 +253,32 @@ export default function VentaForm() {
         }
     }, [data.cliente_id]);
 
+    // ✅ NUEVO: Sincronizar política de pago cuando se selecciona tipo de pago CREDITO
+    useEffect(() => {
+        // Acceder directamente a tipos_pago desde props sin usar tiposPagoSeguro para evitar problemas de dependencias
+        const tiposDisponibles = tipos_pago || [];
+        const tipoPagoSeleccionado = tiposDisponibles.find((t: any) => t.id === data.tipo_pago_id);
+
+        console.log(`🔍 useEffect triggerado - tipo_pago_id: ${data.tipo_pago_id}`, {
+            tipoPagoSeleccionado,
+            codigo: tipoPagoSeleccionado?.codigo,
+            politicaActual: data.politica_pago
+        });
+
+        if (tipoPagoSeleccionado?.codigo === 'CREDITO') {
+            // Si es CREDITO, cambiar política de pago a CREDITO
+            setData('politica_pago', 'CREDITO');
+            console.log(`💳 Tipo de pago CREDITO seleccionado - Política de pago actualizada a CREDITO`);
+        } else if (data.politica_pago === 'CREDITO') {
+            // Si no es CREDITO pero la política era CREDITO, revertir a ANTICIPADO_100
+            setData('politica_pago', 'ANTICIPADO_100');
+            console.log(`💵 Tipo de pago no-CREDITO seleccionado - Política de pago revertida a ANTICIPADO_100`);
+        }
+    }, [data.tipo_pago_id]);
+
     // ✅ NUEVO: Actualizar tipo de precio cuando cambia el carrito calculado
     // ✅ SOLO actualiza tipo_precio_id y tipo_precio_nombre
-    // ✅ NO cambia el precio unitario ni subtotal
+    // ✅ NO cambia el precio unitario, subtotal ni unidad_venta_id
     useEffect(() => {
         if (!precioRango.carritoCalculado || detallesWithProducts.length === 0) {
             return;
@@ -262,14 +290,17 @@ export default function VentaForm() {
                     dr => dr.producto_id === detalle.producto_id
                 );
 
-                // ✅ NUEVO: Solo actualizar tipo de precio, NO el precio unitario
+                // ✅ NUEVO: Solo actualizar tipo de precio, NO el precio unitario ni unidad_venta_id
                 if (detalleRango && detalleRango.tipo_precio_nombre !== detalle.tipo_precio_nombre) {
-                    console.log(`🏷️ [useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`);
+                    console.log(`🏷️ [useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`, {
+                        unidad_venta_id_preservada: detalle.unidad_venta_id
+                    });
 
                     return {
                         ...detalle,
                         tipo_precio_id: detalleRango.tipo_precio_id,
                         tipo_precio_nombre: detalleRango.tipo_precio_nombre
+                        // ✅ PRESERVADO: NO se modifica unidad_venta_id
                     };
                 }
 
@@ -341,9 +372,10 @@ export default function VentaForm() {
                         ...d,
                         cantidad: newCantidad,
                         subtotal: newSubtotal,
-                        // ✅ NUEVO: Preservar información de conversiones
+                        // ✅ NUEVO: Preservar información de conversiones y unidad_venta_id
                         es_fraccionado: d.es_fraccionado || (producto as any).es_fraccionado || false,
                         conversiones: d.conversiones || (producto as any).conversiones || [],
+                        unidad_venta_id: d.unidad_venta_id // ✅ PRESERVADO: Mantener la unidad_venta_id actual
                     };
                 }
                 return d;
@@ -380,19 +412,35 @@ export default function VentaForm() {
             producto_completo: producto
         });
 
+        // ✅ NUEVO: Determinar unidad_venta_id inicial - usar primera conversión si es fraccionado
+        const conversiones = (producto as any).conversiones || [];
+        const esProductoFraccionado = (producto as any).es_fraccionado && conversiones.length > 0;
+        const unidadVentaInicial = esProductoFraccionado
+            ? conversiones[0].unidad_destino_id
+            : (producto as any).unidad_medida_id;
+
+        // ✅ NUEVO: Calcular precio según la unidad de venta inicial
+        let precioUnitarioInicial = producto.precio_venta || 0;
+        if (esProductoFraccionado && conversiones.length > 0) {
+            const conversion = conversiones[0];
+            if (conversion.factor_conversion > 0) {
+                precioUnitarioInicial = (producto.precio_venta || 0) / conversion.factor_conversion;
+            }
+        }
+
         const newDetail: DetalleProducto = {
             producto_id: producto.id,
             cantidad: 1,
-            precio_unitario: producto.precio_venta || 0,
+            precio_unitario: precioUnitarioInicial,
             descuento: 0,
-            subtotal: producto.precio_venta || 0,
+            subtotal: precioUnitarioInicial,
             producto: producto,
             // ✅ NUEVO: Información de conversiones para productos fraccionados
             es_fraccionado: (producto as any).es_fraccionado || false,
             unidad_medida_id: (producto as any).unidad_medida_id,
             unidad_medida_nombre: (producto as any).unidad_medida_nombre,
             conversiones: (producto as any).conversiones || [],
-            unidad_venta_id: (producto as any).unidad_medida_id, // Por defecto la unidad base
+            unidad_venta_id: unidadVentaInicial, // ✅ MODIFICADO: Usa primera conversión si es fraccionado
             // ✅ NUEVO: Tipo de precio (por defecto VENTA)
             tipo_precio_id: 2, // tipo_precio_id para VENTA
             tipo_precio_nombre: 'Precio de Venta'
@@ -600,8 +648,12 @@ export default function VentaForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validar stock antes de continuar
-        if (!stockValido) {
+        // ✅ NUEVO: Permitir stock insuficiente para créditos
+        const tipoPagoSeleccionado = tipos_pago?.find((t: any) => t.id === data.tipo_pago_id);
+        const isCreditoPayment = tipoPagoSeleccionado?.codigo === 'CREDITO';
+
+        // Validar stock antes de continuar (SOLO si NO es crédito)
+        if (!stockValido && !isCreditoPayment) {
             NotificationService.error('No se puede proceder con la venta debido a stock insuficiente');
             return;
         }
@@ -631,11 +683,24 @@ export default function VentaForm() {
     const handleConfirmSubmit = async () => {
         setShowPreviewModal(false);
 
+        // ✅ NUEVO: Verificar si el tipo de pago seleccionado es CREDITO y ajustar política de pago
+        const tipoPagoSeleccionado = tipos_pago?.find((t: any) => t.id === data.tipo_pago_id);
+        const politicaPagoFinal = tipoPagoSeleccionado?.codigo === 'CREDITO' ? 'CREDITO' : (data.politica_pago ?? 'ANTICIPADO_100');
+
+        console.log(`🔍 handleConfirmSubmit - Verificación de tipo de pago:`, {
+            tipo_pago_id: data.tipo_pago_id,
+            tipoPagoSeleccionado: tipoPagoSeleccionado?.nombre,
+            codigoTipoPago: tipoPagoSeleccionado?.codigo,
+            politicaPagoOriginal: data.politica_pago,
+            politicaPagoFinal
+        });
+
         const submitData = {
             ...data,
             // ✅ IMPORTANTE: Asegurar que estos campos se envíen explícitamente
             requiere_envio: data.requiere_envio ?? false,
-            politica_pago: data.politica_pago ?? 'ANTICIPADO_100',
+            tipo_pago_id: data.tipo_pago_id ?? 1,  // ✅ NUEVO: Tipo de pago seleccionado
+            politica_pago: politicaPagoFinal,  // ✅ MODIFICADO: Usar politica_pago calculada
             estado_pago: data.estado_pago ?? 'PAGADO',
             detalles: detallesWithProducts.map(d => {
                 // 🔑 NUEVO: Usar precios calculados por rango si están disponibles
@@ -649,7 +714,10 @@ export default function VentaForm() {
                     cantidad: d.cantidad,
                     precio_unitario: precioFinal,
                     descuento: d.descuento,
-                    subtotal: subtotalFinal
+                    subtotal: subtotalFinal,
+                    // ✅ NUEVO: Enviar información de fraccionado para que backend calcule correctamente
+                    es_fraccionado: d.es_fraccionado || false,
+                    unidad_venta_id: d.unidad_venta_id || undefined
                 };
             })
         };
@@ -659,6 +727,29 @@ export default function VentaForm() {
             const method = isEditing && venta ? 'PUT' : 'POST';
             const url = isEditing && venta ? `/ventas/${venta.id}` : '/ventas';
 
+            // ✅ NUEVO: Log detallado de lo que se envía al backend
+            const requestBody = JSON.stringify(submitData);
+            console.group(`📤 PETICIÓN AL BACKEND - ${method} ${url}`);
+            console.log('Datos enviados (objeto):', submitData);
+            console.log('Detalles:', submitData.detalles.map((d, i) => ({
+                index: i,
+                producto_id: d.producto_id,
+                cantidad: d.cantidad,
+                precio_unitario: d.precio_unitario,
+                descuento: d.descuento,
+                subtotal: d.subtotal,
+                es_fraccionado: d.es_fraccionado,
+                unidad_venta_id: d.unidad_venta_id
+            })));
+            console.log('Totales:', {
+                subtotal: submitData.subtotal,
+                descuento: submitData.descuento,
+                impuesto: submitData.impuesto,
+                total: submitData.total
+            });
+            console.log('JSON a enviar:', requestBody);
+            console.groupEnd();
+
             const response = await fetch(url, {
                 method,
                 headers: {
@@ -667,15 +758,27 @@ export default function VentaForm() {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json',
                 },
-                body: JSON.stringify(submitData),
+                body: requestBody,
             });
 
             const result = await response.json();
 
+            // ✅ NUEVO: Log de la respuesta del backend
+            console.group(`📥 RESPUESTA DEL BACKEND - Status: ${response.status}`);
+            console.log('Respuesta completa:', result);
+            console.groupEnd();
+
             if (result.success && result.data?.id) {
-                // ✅ ÉXITO: Mostrar notificación, limpiar formulario y abrir imprimir
+                // ✅ ÉXITO: Mostrar notificación, limpiar formulario y mostrar modal de salida
                 const ventaId = result.data.id;
                 const mensaje = isEditing ? 'Venta actualizada exitosamente' : 'Venta creada exitosamente';
+
+                console.group(`✅ VENTA CREADA EXITOSAMENTE`);
+                console.log('ID:', result.data.id);
+                console.log('Número:', result.data.numero);
+                console.log('Total:', result.data.total);
+                console.log('Datos completos:', result.data);
+                console.groupEnd();
 
                 NotificationService.success(mensaje);
 
@@ -687,15 +790,48 @@ export default function VentaForm() {
                 setClienteDisplay(''); // Limpiar display del cliente
                 precioRango.reset(); // Limpiar estado del carrito de precios
 
-                // ✅ Abrir pantalla de imprimir en nueva ventana (formato 58mm)
-                window.open(`/ventas/${ventaId}/imprimir?formato=TICKET_58&accion=stream`, '_blank');
+                // ✅ NUEVO: Guardar datos de la venta y mostrar modal de selección de salida
+                setVentaCreada({
+                    id: ventaId,
+                    numero: result.data.numero,
+                    fecha: result.data.fecha
+                });
+                setShowOutputModal(true);
             } else {
                 // ❌ ERROR: Mostrar mensaje y mantener formulario
                 const errorMessage = result.message || 'Error al procesar la venta';
+
+                // ✅ NUEVO: Log detallado del error del backend
+                console.group(`❌ ERROR AL CREAR VENTA`);
+                console.log('Status HTTP:', response.status, response.statusText);
+                console.log('Mensaje:', result.message);
+                console.log('Errores detallados:');
+                if (result.errors) {
+                    Object.entries(result.errors).forEach(([campo, mensajes]) => {
+                        console.log(`  ${campo}:`, mensajes);
+                    });
+                }
+
+                // ✅ NUEVO: Mostrar información de debug si está disponible
+                if (result.debug) {
+                    console.group('🔍 INFORMACIÓN DE DEBUG DEL BACKEND');
+                    console.log('Detalles enviados:', result.debug.detalles_enviados);
+                    console.log('Subtotal enviado:', result.debug.subtotal_enviado);
+                    console.log('Total enviado:', result.debug.total_enviado);
+                    console.groupEnd();
+                }
+
+                console.log('Respuesta completa:', result);
+                console.groupEnd();
+
                 NotificationService.error(errorMessage);
             }
         } catch (error) {
-            console.error('Error en la petición:', error);
+            console.error('❌ Error en la petición:', {
+                error: error,
+                mensaje: error instanceof Error ? error.message : 'Error desconocido',
+                stack: error instanceof Error ? error.stack : undefined
+            });
             NotificationService.error('Error al procesar la venta. Intente nuevamente.');
         }
     };
@@ -1009,17 +1145,22 @@ export default function VentaForm() {
                                     Descuento general
                                 </label>
                                 <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={data.descuento}
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={data.descuento === 0 && data.descuento.toString() === '0' ? '' : data.descuento}
                                     onChange={(e) => {
-                                        const descuento = Number(e.target.value);
-                                        setData('descuento', descuento);
-                                        // Por ahora no se suma impuesto al total
-                                        setData('total', data.subtotal - descuento);
+                                        const valor = e.target.value;
+                                        // Permitir vacío o solo números y un punto decimal
+                                        if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
+                                            const descuento = valor === '' ? 0 : parseFloat(valor);
+                                            if (!isNaN(descuento) && descuento >= 0) {
+                                                setData('descuento', descuento);
+                                                setData('total', data.subtotal - descuento);
+                                            }
+                                        }
                                     }}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right"
+                                    placeholder="0"
                                 />
                             </div>
 
@@ -1029,26 +1170,32 @@ export default function VentaForm() {
                                     Monto Pagado
                                 </label>
                                 <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={data.monto_pagado_inicial}
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={data.monto_pagado_inicial === 0 && data.monto_pagado_inicial.toString() === '0' ? '' : data.monto_pagado_inicial}
                                     onChange={(e) => {
-                                        const monto = Number(e.target.value);
-                                        setData('monto_pagado_inicial', monto);
+                                        const valor = e.target.value;
+                                        // Permitir vacío o solo números y un punto decimal
+                                        if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
+                                            const monto = valor === '' ? 0 : parseFloat(valor);
+                                            if (!isNaN(monto) && monto >= 0) {
+                                                setData('monto_pagado_inicial', monto);
+                                            }
+                                        }
                                     }}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right"
+                                    placeholder="0"
                                 />
                             </div>
                         </div>
 
                         {/* ✅ NUEVO: Resumen completo de la transacción */}
                         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700 space-y-2">
-                            <div className="flex justify-between items-center text-sm">
+                            {/* <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-700 dark:text-gray-300">Subtotal:</span>
                                 <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrency(data.subtotal)}</span>
                             </div>
-
+ */}
                             {data.descuento > 0 && (
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="text-gray-700 dark:text-gray-300">Descuento:</span>
@@ -1089,21 +1236,30 @@ export default function VentaForm() {
                     >
                         Cancelar
                     </Link>
-                    <button
-                        type="submit"
-                        disabled={processing || detallesWithProducts.length === 0 || !stockValido}
-                        className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${!stockValido
-                            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                            : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-                            }`}
-                    >
-                        {processing
-                            ? 'Guardando...'
-                            : !stockValido
-                                ? 'Stock insuficiente'
-                                : (isEditing ? 'Actualizar venta' : 'Crear venta')
-                        }
-                    </button>
+                    {/* ✅ NUEVO: Permitir CREDITO incluso con stock insuficiente */}
+                    {(() => {
+                        const tipoPagoSeleccionado = tipos_pago?.find((t: any) => t.id === data.tipo_pago_id);
+                        const isCreditoPayment = tipoPagoSeleccionado?.codigo === 'CREDITO';
+                        const buttonDisabled = processing || detallesWithProducts.length === 0 || (!isCreditoPayment && !stockValido);
+
+                        return (
+                            <button
+                                type="submit"
+                                disabled={buttonDisabled}
+                                className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${!stockValido && !isCreditoPayment
+                                    ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                                    }`}
+                            >
+                                {processing
+                                    ? 'Guardando...'
+                                    : (!stockValido && !isCreditoPayment)
+                                        ? 'Stock insuficiente'
+                                        : (isEditing ? 'Actualizar venta' : 'Crear venta')
+                                }
+                            </button>
+                        );
+                    })()}
                 </div>
             </form>
 
@@ -1128,6 +1284,23 @@ export default function VentaForm() {
                 onClienteCreated={handleClienteCreated}
                 searchQuery={clienteSearchQuery}
             />
+
+            {/* Modal de Selección de Salida (Imprimir, Excel, PDF) */}
+            {ventaCreada && (
+                <OutputSelectionModal
+                    isOpen={showOutputModal}
+                    onClose={() => {
+                        setShowOutputModal(false);
+                        setVentaCreada(null);
+                    }}
+                    documentoId={ventaCreada.id}
+                    tipoDocumento="venta"
+                    documentoInfo={{
+                        numero: ventaCreada.numero,
+                        fecha: ventaCreada.fecha
+                    }}
+                />
+            )}
         </AppLayout >
     );
 }

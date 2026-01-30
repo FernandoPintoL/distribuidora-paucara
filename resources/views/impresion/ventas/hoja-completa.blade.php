@@ -9,7 +9,8 @@
     <div class="documento-info-grid">
         <div class="documento-info-seccion">
             <h2>{{ $documento->tipoDocumento->nombre ?? 'FACTURA' }} #{{ $documento->numero }}</h2>
-            <p><strong>Fecha:</strong> {{ $documento->fecha->format('d/m/Y') }}</p>
+            <p><strong>Fecha de Creación:</strong> {{ $documento->created_at->format('d/m/Y H:i') }}</p>
+            <p><strong>Fecha y Hora de Emisión:</strong> {{ now()->format('d/m/Y H:i') }}</p>
             <p><strong>Moneda:</strong> {{ $documento->moneda->codigo ?? 'BOB' }}</p>
             @if($documento->estadoDocumento)
                 <p><strong>Estado:</strong> {{ $documento->estadoDocumento->nombre }}</p>
@@ -17,10 +18,15 @@
             @if($documento->usuario)
                 <p><strong>Vendedor:</strong> {{ $documento->usuario->name }}</p>
             @endif
+            @if($documento->movimientoCaja && $documento->movimientoCaja->caja)
+                <p><strong>Caja:</strong> {{ $documento->movimientoCaja->caja->nombre }}</p>
+            @endif
         </div>
         <div class="documento-info-seccion" style="text-align: right;">
             {{-- Cliente --}}
             @include('impresion.ventas.partials._cliente')
+            {{-- Código del cliente --}}
+            <p style="margin-top: 10px;"><strong>Cód. Cliente:</strong> #{{ $documento->cliente->id }}</p>
         </div>
     </div>
 </div>
@@ -42,6 +48,25 @@
 
 {{-- ==================== OBSERVACIONES ==================== --}}
 @include('impresion.ventas.partials._observaciones')
+
+{{-- ==================== ALMACÉN ==================== --}}
+@if($documento->detalles && $documento->detalles->first())
+    @php
+        $primeraLinea = $documento->detalles->first();
+        $almacen = null;
+        if($primeraLinea && $primeraLinea->producto && $primeraLinea->producto->stock) {
+            $stock = $primeraLinea->producto->stock->first();
+            if($stock && $stock->almacen) {
+                $almacen = $stock->almacen;
+            }
+        }
+    @endphp
+    @if($almacen)
+    <div style="margin-top: 20px; padding: 10px; background-color: #f5f5f5; border-left: 4px solid #007bff;">
+        <p><strong>Almacén:</strong> {{ $almacen->nombre }}</p>
+    </div>
+    @endif
+@endif
 
 {{-- ==================== QR CODE ==================== --}}
 @include('impresion.ventas.partials._qr')

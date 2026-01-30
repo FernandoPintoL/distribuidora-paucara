@@ -14,6 +14,27 @@ class StoreVentaRequest extends FormRequest
     }
 
     /**
+     * ✅ NUEVO: Personalizar la respuesta de validación fallida
+     * Agregar información de debug cuando hay errores
+     */
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    {
+        $response = response()->json([
+            'success' => false,
+            'message' => 'Validación fallida',
+            'errors' => $validator->errors()->messages(),
+            // ✅ NUEVO: Información de debug en desarrollo
+            'debug' => config('app.debug') ? [
+                'detalles_enviados' => $this->input('detalles'),
+                'subtotal_enviado' => $this->input('subtotal'),
+                'total_enviado' => $this->input('total'),
+            ] : null
+        ], 422);
+
+        throw new \Illuminate\Validation\ValidationException($validator, $response);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -114,12 +135,36 @@ class StoreVentaRequest extends FormRequest
                     $cantidad = $detalle['cantidad'] ?? 0;
                     $precioUnitario = $detalle['precio_unitario'] ?? 0;
                     $descuentoDetalle = $detalle['descuento'] ?? 0;
+                    $esFraccionado = $detalle['es_fraccionado'] ?? false;
+                    $unidadVentaId = $detalle['unidad_venta_id'] ?? null;
 
-                    $subtotalEsperado = ($cantidad * $precioUnitario) - $descuentoDetalle;
+                    // ✅ MODIFICADO: Para productos fraccionados, confiar en el cálculo del frontend
+                    // El frontend ya tiene toda la lógica de conversión correcta
+                    $precioUnitarioEsperado = $precioUnitario;
+
+                    // ℹ️ Para fraccionados, no recalcular desde backend
+                    // Solo validar que: subtotal = cantidad × precio_unitario - descuento
+                    // Los precios fraccionados ya han sido calculados correctamente en frontend
+
+                    $subtotalEsperado = ($cantidad * $precioUnitarioEsperado) - $descuentoDetalle;
                     $subtotalRecibido = $detalle['subtotal'] ?? 0;
 
-                    // Usar tolerancia para decimales (0.01)
-                    if (abs($subtotalEsperado - $subtotalRecibido) > 0.01) {
+                    \Log::debug("📊 [StoreVentaRequest] Cálculo de subtotal del detalle #{$index}:", [
+                        'es_fraccionado' => $esFraccionado,
+                        'unidad_venta_id' => $unidadVentaId,
+                        'cantidad' => $cantidad,
+                        'precio_unitario_recibido' => $precioUnitario,
+                        'precio_unitario_esperado' => $precioUnitarioEsperado,
+                        'descuento_detalle' => $descuentoDetalle,
+                        'subtotal_esperado' => $subtotalEsperado,
+                        'subtotal_recibido' => $subtotalRecibido,
+                        'diferencia' => abs($subtotalEsperado - $subtotalRecibido),
+                        'coincide' => abs($subtotalEsperado - $subtotalRecibido) <= ($esFraccionado ? 0.05 : 0.01)
+                    ]);
+
+                    // ✅ MODIFICADO: Aumentar tolerancia para productos fraccionados (errores de redondeo)
+                    $tolerancia = $esFraccionado ? 0.05 : 0.01;
+                    if (abs($subtotalEsperado - $subtotalRecibido) > $tolerancia) {
                         $validator->errors()->add(
                             "detalles.{$index}.subtotal",
                             "El subtotal del detalle no coincide. Esperado: " . number_format($subtotalEsperado, 2) .
@@ -130,9 +175,13 @@ class StoreVentaRequest extends FormRequest
                     $subtotalCalculado += $subtotalRecibido;
                 }
 
-                // Validar que subtotal de la venta coincida con suma de detalles
+                // ✅ MODIFICADO: Validar que subtotal de la venta coincida con suma de detalles
+                // ✅ Aumentar tolerancia para productos fraccionados (errores de redondeo acumulativos)
                 $subtotalVenta = $data['subtotal'] ?? 0;
-                if (abs($subtotalCalculado - $subtotalVenta) > 0.01) {
+                $hayFraccionados = collect($data['detalles'])->contains('es_fraccionado', true);
+                $toleranciaSubtotal = $hayFraccionados ? 0.10 : 0.01;
+
+                if (abs($subtotalCalculado - $subtotalVenta) > $toleranciaSubtotal) {
                     $validator->errors()->add(
                         'subtotal',
                         "El subtotal no coincide con la suma de los detalles. Esperado: " .

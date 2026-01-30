@@ -256,6 +256,7 @@ class ProductoController extends Controller
             'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
             'almacenes'                     => Almacen::orderBy('nombre')->get(['id', 'nombre']),
             'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
+            'es_farmacia'                   => $empresa?->es_farmacia ?? false, // ✨ NUEVO
         ]);
     }
 
@@ -373,9 +374,11 @@ class ProductoController extends Controller
                         continue; // Si no existe el tipo de precio, saltarlo
                     }
 
-                    // Validar que no exista un precio activo para esta combinación producto_id + tipo_precio_id
+                    // ✅ IMPORTANTE: Validar que no exista un precio activo para ESTA COMBINACIÓN
+                    // producto_id + tipo_precio_id + unidad_medida_id (NULL para base)
                     $precioExistente = PrecioProducto::where('producto_id', $producto->id)
                         ->where('tipo_precio_id', $tipoPrecioId)
+                        ->where('unidad_medida_id', $p['unidad_medida_id'] ?? null)
                         ->where('activo', true)
                         ->first();
 
@@ -390,6 +393,7 @@ class ProductoController extends Controller
                         $precioExistente->update([
                             'nombre'                     => $nombre,
                             'precio'                     => $monto,
+                            'unidad_medida_id'           => $p['unidad_medida_id'] ?? null,
                             'es_precio_base'             => $esBase,
                             'margen_ganancia'            => $margen,
                             'porcentaje_ganancia'        => $porcentaje,
@@ -411,6 +415,7 @@ class ProductoController extends Controller
                         'nombre'                     => $nombre,
                         'precio'                     => $monto,
                         'tipo_precio_id'             => $tipoPrecioId,
+                        'unidad_medida_id'           => $p['unidad_medida_id'] ?? null,
                         'es_precio_base'             => $esBase,
                         'margen_ganancia'            => $margen,
                         'porcentaje_ganancia'        => $porcentaje,
@@ -524,7 +529,23 @@ class ProductoController extends Controller
                     'id'             => $pr->id,
                     'monto'          => (float) $pr->precio,
                     'tipo_precio_id' => (int) $pr->tipo_precio_id,
+                    'unidad_medida_id' => $pr->unidad_medida_id,
                 ];
+            })
+            ->values()
+            // ✅ Ordenar secundariamente por unidad_medida_id (NULL primero = precio base)
+            ->sort(function ($a, $b) {
+                // Si tienen diferente tipo_precio_id, mantener el orden anterior
+                if ($a['tipo_precio_id'] !== $b['tipo_precio_id']) {
+                    return $a['tipo_precio_id'] <=> $b['tipo_precio_id'];
+                }
+
+                // Mismo tipo_precio_id: ordenar por unidad_medida_id
+                // NULL (base) primero (-1), luego los números en orden ascendente
+                $aUnidad = $a['unidad_medida_id'] ?? -1;
+                $bUnidad = $b['unidad_medida_id'] ?? -1;
+
+                return $aUnidad <=> $bUnidad;
             })
             ->values();
 
@@ -623,6 +644,7 @@ class ProductoController extends Controller
             'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
             'almacenes'                     => Almacen::orderBy('nombre')->get(['id', 'nombre']),
             'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
+            'es_farmacia'                   => $empresa?->es_farmacia ?? false, // ✨ NUEVO
         ]);
     }
 
@@ -707,10 +729,11 @@ class ProductoController extends Controller
                             continue; // Si no existe el tipo de precio, saltarlo
                         }
 
-                        // Validar que no exista un precio activo para esta combinación producto_id + tipo_precio_id
-                        // (excepto si es actualización del mismo registro)
+                        // ✅ IMPORTANTE: Validar que no exista un precio activo para ESTA COMBINACIÓN
+                        // producto_id + tipo_precio_id + unidad_medida_id (NULL para base)
                         $precioExistente = PrecioProducto::where('producto_id', $producto->id)
                             ->where('tipo_precio_id', $tipoPrecioId)
+                            ->where('unidad_medida_id', $precioData['unidad_medida_id'] ?? null)
                             ->where('activo', false) // Buscamos el que ya desactivamos arriba
                             ->first();
 
@@ -725,6 +748,7 @@ class ProductoController extends Controller
                             $precioExistente->update([
                                 'nombre'                     => $nombre,
                                 'precio'                     => $monto,
+                                'unidad_medida_id'           => $precioData['unidad_medida_id'] ?? null,
                                 'es_precio_base'             => $esBase,
                                 'margen_ganancia'            => $margen,
                                 'porcentaje_ganancia'        => $porcentaje,
@@ -747,6 +771,7 @@ class ProductoController extends Controller
                             'nombre'                     => $nombre,
                             'precio'                     => $monto,
                             'tipo_precio_id'             => $tipoPrecioId,
+                            'unidad_medida_id'           => $precioData['unidad_medida_id'] ?? null,
                             'es_precio_base'             => $esBase,
                             'margen_ganancia'            => $margen,
                             'porcentaje_ganancia'        => $porcentaje,
@@ -1489,12 +1514,14 @@ class ProductoController extends Controller
                     $stockQuery->where('almacen_id', $almacenId);
                 });
             })
-            // ✅ NUEVO: Filtrar por precio de venta activo
-            ->whereHas('precios', function ($preciosQuery) {
-                $preciosQuery->where('activo', true)
-                    ->whereHas('tipoPrecio', function ($tipoQuery) {
-                        $tipoQuery->where('codigo', 'VENTA');
-                    });
+            // ✅ NUEVO: Filtrar por precio de venta activo SOLO PARA VENTAS
+            ->when($tipo === 'venta', function ($query) {
+                return $query->whereHas('precios', function ($preciosQuery) {
+                    $preciosQuery->where('activo', true)
+                        ->whereHas('tipoPrecio', function ($tipoQuery) {
+                            $tipoQuery->where('codigo', 'VENTA');
+                        });
+                });
             })
             ->where(function ($query) use ($searchLower, $esExacta) {
                 if ($esExacta) {

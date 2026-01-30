@@ -25,7 +25,7 @@ import {
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
-import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight } from 'lucide-react'
+import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight, Search, RefreshCw } from 'lucide-react'
 import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallback'
 import { FormatoSelector } from '@/presentation/components/impresion'
 
@@ -46,7 +46,6 @@ import { ProformaConvertirModal } from '@/presentation/pages/logistica/component
 import { ApprovalPaymentForm } from './components/ApprovalPaymentForm'
 import { LoadingOverlay } from '@/presentation/components/ui/LoadingOverlay'
 import { ProformaCard } from '@/presentation/components/ui/ProformaCard'
-import { Search } from 'lucide-react'
 
 interface Props {
     item: Proforma
@@ -55,13 +54,18 @@ interface Props {
 // Interfaz para detalle que devuelve el diálogo de selección
 interface ProformaDetalleDialogo {
     id: number
-    producto: Producto
+    producto?: Producto
     producto_id: Id
     producto_nombre: string
     sku?: string
     cantidad: number
     precio_unitario: number
     subtotal: number
+    // ✅ NUEVO: Datos de stock, peso, categoría y límite de venta para visualización
+    stock_disponible?: number
+    peso?: number
+    categoria?: string | null
+    limite_venta?: number | null
 }
 
 // Interfaz para detalle de proforma completo
@@ -113,7 +117,12 @@ function ProductSelectionDialog({
             sku: selectedProducto.sku, // Campo directo para mostrar código
             cantidad: Math.max(0.01, cantidad),
             precio_unitario: precioUnitario,
-            subtotal: (Math.max(0.01, cantidad)) * precioUnitario
+            subtotal: (Math.max(0.01, cantidad)) * precioUnitario,
+            // ✅ NUEVO: Incluir stock, peso, categoría y límite de venta del producto
+            stock_disponible: (selectedProducto as any).stock_disponible || 0,
+            peso: (selectedProducto as any).peso || 0,
+            categoria: (selectedProducto as any).categoria || undefined,
+            limite_venta: (selectedProducto as any).limite_venta || null
         }
 
         onSelectProducto(nuevoDetalle)
@@ -385,6 +394,9 @@ export default function ProformasShow({ item: proforma }: Props) {
     // ✅ NUEVO: Estado para error de caja no disponible
     const [showCajaErrorDialog, setShowCajaErrorDialog] = useState(false)
     const [cajaErrorMessage, setCajaErrorMessage] = useState('')
+    // ✅ NUEVO: Estado para verificar reservas al cargar la proforma
+    const [verificandoReservas, setVerificandoReservas] = useState(false)
+    const [reservasExpiradasAlCargar, setReservasExpiradasAlCargar] = useState(false)
 
     // ✅ NUEVO: Estados para navegación a siguiente proforma
     const [loadingSiguiente, setLoadingSiguiente] = useState(false)
@@ -396,6 +408,11 @@ export default function ProformasShow({ item: proforma }: Props) {
     // Estados para edición de detalles
     const [editableDetalles, setEditableDetalles] = useState(proforma.detalles.map(d => ({ ...d })))
     const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
+
+    // Estados para búsqueda rápida de productos
+    const [busquedaRapidaCodigo, setBusquedaRapidaCodigo] = useState('')
+    const [cargandoBusquedaRapida, setCargandoBusquedaRapida] = useState(false)
+    const [errorBusquedaRapida, setErrorBusquedaRapida] = useState<string | null>(null)
 
     // Hook para búsqueda de productos con debounce
     const {
@@ -427,43 +444,28 @@ export default function ProformasShow({ item: proforma }: Props) {
     }
 
     const defaultDelivery = (() => {
-        // Si ya hay fecha confirmada, usarla
-        if (proforma.fecha_entrega_confirmada) {
-            return {
-                fecha: proforma.fecha_entrega_confirmada,
-                hora: extractTime(proforma.hora_entrega_confirmada, '09:00'),
-                hora_fin: extractTime(proforma.hora_entrega_confirmada_fin, '17:00')
-            }
-        }
-
-        // Si hay fecha solicitada, usar día siguiente
-        if (proforma.fecha_entrega_solicitada) {
-            const fechaSolicitada = new Date(proforma.fecha_entrega_solicitada)
-            const fechaSiguiente = new Date(fechaSolicitada)
-            fechaSiguiente.setDate(fechaSiguiente.getDate() + 1)
-
-            // Convertir a formato YYYY-MM-DD
-            const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
-            const horaDefault = extractTime(proforma.hora_entrega_solicitada, '09:00')
-            const horaFinDefault = extractTime(proforma.hora_entrega_solicitada_fin, '17:00')
-
-            return {
-                fecha: fechaFormato,
-                hora: horaDefault,
-                hora_fin: horaFinDefault
-            }
-        }
-
-        // Si no hay nada, usar hoy + 1 día a las 09:00 - 17:00
+        // ✅ IMPORTANTE: Siempre usar hoy como fecha confirmada
         const hoy = new Date()
-        const manana = new Date(hoy)
-        manana.setDate(manana.getDate() + 1)
-        const fechaFormato = manana.toISOString().split('T')[0]
+        const year = hoy.getFullYear()
+        const month = String(hoy.getMonth() + 1).padStart(2, '0')
+        const day = String(hoy.getDate()).padStart(2, '0')
+        const fechaConfirmada = `${year}-${month}-${day}`
+
+        // Usar las horas guardadas en la proforma si existen
+        let horaConfirmada = '09:00'
+        let horaConfirmadaFin = '17:00'
+
+        if (proforma.hora_entrega_confirmada) {
+            horaConfirmada = extractTime(proforma.hora_entrega_confirmada, '09:00')
+        }
+        if (proforma.hora_entrega_confirmada_fin) {
+            horaConfirmadaFin = extractTime(proforma.hora_entrega_confirmada_fin, '17:00')
+        }
 
         return {
-            fecha: fechaFormato,
-            hora: '09:00',
-            hora_fin: '17:00'
+            fecha: fechaConfirmada,
+            hora: horaConfirmada,
+            hora_fin: horaConfirmadaFin
         }
     })()
 
@@ -475,8 +477,8 @@ export default function ProformasShow({ item: proforma }: Props) {
         comentario_coordinacion: proforma.comentario_coordinacion || '',
         notas_llamada: '',
         // Control de intentos
-        numero_intentos_contacto: proforma.numero_intentos_contacto || 0,
-        resultado_ultimo_intento: proforma.resultado_ultimo_intento || '',
+        numero_intentos_contacto: proforma.numero_intentos_contacto || 1,
+        resultado_ultimo_intento: proforma.resultado_ultimo_intento || 'Aceptado',
         // Datos de entrega realizada
         entregado_en: proforma.entregado_en || '',
         entregado_a: proforma.entregado_a || '',
@@ -533,39 +535,30 @@ export default function ProformasShow({ item: proforma }: Props) {
         console.log('📦 Datos de Proforma desde Backend:', proforma)
 
         // Calcular fecha/hora por defecto cuando cambia la proforma
+        // ✅ IMPORTANTE: Siempre usar la fecha de hoy para fecha_entrega_confirmada
         const defaultDeliveryEffect = (() => {
-            if (proforma.fecha_entrega_confirmada) {
-                return {
-                    fecha: proforma.fecha_entrega_confirmada,
-                    hora: extractTime(proforma.hora_entrega_confirmada, '09:00'),
-                    hora_fin: extractTime(proforma.hora_entrega_confirmada_fin, '17:00')
-                }
-            }
-
-            if (proforma.fecha_entrega_solicitada) {
-                const fechaSolicitada = new Date(proforma.fecha_entrega_solicitada)
-                const fechaSiguiente = new Date(fechaSolicitada)
-                fechaSiguiente.setDate(fechaSiguiente.getDate() + 1)
-                const fechaFormato = fechaSiguiente.toISOString().split('T')[0]
-                const horaDefault = extractTime(proforma.hora_entrega_solicitada, '09:00')
-                const horaFinDefault = extractTime(proforma.hora_entrega_solicitada_fin, '17:00')
-
-                return {
-                    fecha: fechaFormato,
-                    hora: horaDefault,
-                    hora_fin: horaFinDefault
-                }
-            }
-
+            // Siempre usar hoy como fecha confirmada (no la guardada en la proforma)
             const hoy = new Date()
-            const manana = new Date(hoy)
-            manana.setDate(manana.getDate() + 1)
-            const fechaFormato = manana.toISOString().split('T')[0]
+            const year = hoy.getFullYear()
+            const month = String(hoy.getMonth() + 1).padStart(2, '0')
+            const day = String(hoy.getDate()).padStart(2, '0')
+            const fechaConfirmada = `${year}-${month}-${day}`
+
+            // Usar las horas guardadas en la proforma si existen
+            let horaConfirmada = '09:00'
+            let horaConfirmadaFin = '17:00'
+
+            if (proforma.hora_entrega_confirmada) {
+                horaConfirmada = extractTime(proforma.hora_entrega_confirmada, '09:00')
+            }
+            if (proforma.hora_entrega_confirmada_fin) {
+                horaConfirmadaFin = extractTime(proforma.hora_entrega_confirmada_fin, '17:00')
+            }
 
             return {
-                fecha: fechaFormato,
-                hora: '09:00',
-                hora_fin: '17:00'
+                fecha: fechaConfirmada,
+                hora: horaConfirmada,
+                hora_fin: horaConfirmadaFin
             }
         })()
 
@@ -576,12 +569,39 @@ export default function ProformasShow({ item: proforma }: Props) {
             comentario_coordinacion: proforma.comentario_coordinacion || '',
             notas_llamada: '',
             numero_intentos_contacto: proforma.numero_intentos_contacto || 0,
-            resultado_ultimo_intento: proforma.resultado_ultimo_intento || '',
+            resultado_ultimo_intento: proforma.resultado_ultimo_intento || 'Aceptado',
             entregado_en: proforma.entregado_en || '',
             entregado_a: proforma.entregado_a || '',
             observaciones_entrega: proforma.observaciones_entrega || '',
         })
     }, [proforma.id, isFlowAprobacionConversion])
+
+    // ✅ NUEVO: Verificar reservas al cargar la proforma
+    useEffect(() => {
+        if (!proforma.id) return;
+
+        const verificarReservasAlCargar = async () => {
+            setVerificandoReservas(true);
+            try {
+                const response = await fetch(`/api/proformas/${proforma.id}/reservas`);
+                const data = await response.json();
+
+                if (data.success && data.data.reservas_expiradas) {
+                    console.log('⚠️ Se detectó que las reservas han expirado al cargar la proforma');
+                    setReservasExpiradasAlCargar(true);
+                } else {
+                    setReservasExpiradasAlCargar(false);
+                }
+            } catch (error) {
+                console.error('Error al verificar reservas:', error);
+                setReservasExpiradasAlCargar(false);
+            } finally {
+                setVerificandoReservas(false);
+            }
+        };
+
+        verificarReservasAlCargar();
+    }, [proforma.id])
 
     // Handlers para edición de detalles
     const handleEditarCantidad = (index: number, cantidad: number) => {
@@ -638,10 +658,37 @@ export default function ProformasShow({ item: proforma }: Props) {
                 cantidad: 1,
                 precio_unitario: (detalle as Producto).precio_base || 0,
                 descuento: 0,
-                subtotal: (detalle as Producto).precio_base || 0
+                subtotal: (detalle as Producto).precio_base || 0,
+                // ✅ NUEVO: Incluir stock, peso, categoría y límite de venta del producto
+                stock_disponible: (detalle as Producto).stock_disponible || 0,
+                peso: (detalle as Producto).peso || 0,
+                categoria: (detalle as Producto).categoria?.nombre || (detalle as any).categoria || undefined,
+                limite_venta: (detalle as Producto).limite_venta || null
             }
 
-        const nuevosDetalles = [...editableDetalles, nuevoDetalle]
+        // ✅ NUEVO: Verificar si el producto ya existe en la tabla
+        const productoExistente = editableDetalles.find(d => d.producto_id === nuevoDetalle.producto_id)
+
+        let nuevosDetalles: typeof editableDetalles
+
+        if (productoExistente) {
+            // ✅ Si el producto ya existe, incrementar su cantidad
+            nuevosDetalles = editableDetalles.map(d =>
+                d.producto_id === nuevoDetalle.producto_id
+                    ? {
+                        ...d,
+                        cantidad: d.cantidad + 1,
+                        subtotal: (d.cantidad + 1) * d.precio_unitario
+                    }
+                    : d
+            )
+            console.log(`📦 Producto "${nuevoDetalle.producto_nombre}" ya existe. Cantidad incrementada.`)
+        } else {
+            // ✅ Si es nuevo, agregarlo como una nueva fila
+            nuevosDetalles = [...editableDetalles, nuevoDetalle]
+            console.log(`📦 Nuevo producto "${nuevoDetalle.producto_nombre}" agregado.`)
+        }
+
         setEditableDetalles(nuevosDetalles)
         setShowAgregarProductoDialog(false)
 
@@ -651,6 +698,81 @@ export default function ProformasShow({ item: proforma }: Props) {
             cantidad: d.cantidad
         }))
         calcularCarritoDebounced(itemsParaCalcular)
+    }
+
+    // ✅ NUEVO: Función para búsqueda rápida por código/ID de producto
+    const handleBuscarYAgregarProducto = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault()
+
+        if (!busquedaRapidaCodigo.trim()) {
+            setErrorBusquedaRapida('Ingresa un código o ID de producto')
+            return
+        }
+
+        setCargandoBusquedaRapida(true)
+        setErrorBusquedaRapida(null)
+
+        try {
+            // Construir query params para la búsqueda
+            // tipo=venta asegura que busca productos aptos para venta
+            const params = new URLSearchParams({
+                q: busquedaRapidaCodigo.trim(),
+                tipo: 'venta', // ✅ Especificar que es para venta
+                tipo_busqueda: 'parcial' // ✅ Búsqueda parcial para mayor flexibilidad
+            })
+
+            const response = await fetch(`/api/productos/buscar?${params.toString()}`)
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    setErrorBusquedaRapida('Producto no encontrado')
+                } else {
+                    setErrorBusquedaRapida('Error al buscar el producto')
+                }
+                return
+            }
+
+            const data = await response.json()
+
+            // Validar que la respuesta tiene estructura correcta
+            if (!data.data || !Array.isArray(data.data)) {
+                setErrorBusquedaRapida('Formato de respuesta inválido del servidor')
+                return
+            }
+
+            // Obtener lista de productos encontrados
+            const productos = data.data as Producto[]
+
+            if (productos.length === 0) {
+                setErrorBusquedaRapida('Producto no encontrado')
+                return
+            }
+
+            // ✅ Si encuentra exactamente 1 producto, agregarlo automáticamente
+            if (productos.length === 1) {
+                const producto = productos[0]
+                handleAgregarProducto(producto)
+                setBusquedaRapidaCodigo('')
+                toast.success(`Producto "${producto.nombre}" agregado a la proforma`)
+                return
+            }
+
+            // ✅ Si encuentra más de 1 producto, mostrar una alerta al usuario
+            // El usuario debe ser más específico en su búsqueda
+            const productosTexto = productos
+                .slice(0, 5) // Mostrar máximo 5 opciones
+                .map((p, i) => `${i + 1}. ${p.nombre} (SKU: ${p.sku || 'N/A'})`)
+                .join('\n')
+
+            setErrorBusquedaRapida(
+                `Se encontraron ${productos.length} productos. Sé más específico:\n${productosTexto}`
+            )
+        } catch (error) {
+            console.error('Error en búsqueda rápida:', error)
+            setErrorBusquedaRapida('Error al conectar con el servidor')
+        } finally {
+            setCargandoBusquedaRapida(false)
+        }
     }
 
     // PRESENTATION LAYER: Handlers simples que delegan al hook
@@ -1018,6 +1140,46 @@ export default function ProformasShow({ item: proforma }: Props) {
 
             <div className="space-y-6 p-4">
                 {/* Banner de advertencia si hay error de reservas */}
+                {/* ✅ NUEVO: Banner de reservas expiradas al cargar */}
+                {reservasExpiradasAlCargar && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                                <h3 className="font-bold text-red-900 dark:text-red-200 mb-2 text-lg">
+                                    🚨 Las Reservas han Expirado
+                                </h3>
+                                <p className="text-sm text-red-800 dark:text-red-300 mb-4">
+                                    Las reservas de stock para esta proforma han expirado.
+                                    Para poder procesar la venta, necesitas renovarlas primero.
+                                </p>
+                                <Button
+                                    onClick={() => {
+                                        renovarReservas(() => {
+                                            console.log('✅ Reservas renovadas desde el banner inicial');
+                                            setReservasExpiradasAlCargar(false);
+                                        });
+                                    }}
+                                    disabled={isRenovandoReservas}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                                >
+                                    {isRenovandoReservas ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            Renovando Reservas...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshCw className="w-4 h-4" />
+                                            Renovar Reservas por 7 Días
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {convertErrorState?.code === 'RESERVAS_EXPIRADAS' && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
                         <div className="flex items-start gap-3">
@@ -1046,6 +1208,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 <p className="text-[var(--text-sm)] text-muted-foreground">
                                     Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
                                 </p>
+                                <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
 
                                 {/* Información adicional - Horizontal en una sola línea */}
                                 <div className="flex flex-wrap gap-4 mt-3 text-sm">
@@ -1172,7 +1335,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                         </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-[var(--space-sm)] flex-wrap items-center">
-                        <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
+
 
                         {puedeAprobar && (
                             <Button
@@ -1256,7 +1419,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     <Package className="h-5 w-5" />
                                     Detalles de la Proforma
                                 </CardTitle>
-                                {proforma.estado === 'PENDIENTE' && (
+                                {/* {proforma.estado === 'PENDIENTE' && (
                                     <Button
                                         size="sm"
                                         variant="default"
@@ -1266,77 +1429,190 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         <ShoppingCart className="h-4 w-4 mr-1" />
                                         + Agregar Producto
                                     </Button>
-                                )}
+                                )} */}
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="space-y-4">
+                                {/* ✅ NUEVO: Búsqueda rápida de productos por código */}
+                                {proforma.estado === 'PENDIENTE' && (
+                                    <form onSubmit={handleBuscarYAgregarProducto} className="space-y-2">
+                                        <div className="flex gap-2">
+                                            <div className="flex-1 relative">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 pointer-events-none" />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Búsqueda rápida: código, SKU o ID del producto..."
+                                                    value={busquedaRapidaCodigo}
+                                                    onChange={(e) => {
+                                                        setBusquedaRapidaCodigo(e.target.value)
+                                                        setErrorBusquedaRapida(null)
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !cargandoBusquedaRapida) {
+                                                            handleBuscarYAgregarProducto()
+                                                        }
+                                                    }}
+                                                    disabled={cargandoBusquedaRapida}
+                                                    className="pl-10"
+                                                />
+                                            </div>
+                                            <Button
+                                                type="submit"
+                                                variant="secondary"
+                                                size="sm"
+                                                disabled={cargandoBusquedaRapida || !busquedaRapidaCodigo.trim()}
+                                                onClick={() => handleBuscarYAgregarProducto()}
+                                            >
+                                                {cargandoBusquedaRapida ? (
+                                                    <>
+                                                        <div className="animate-spin h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full" />
+                                                        Buscando...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Search className="h-4 w-4 mr-1" />
+                                                        Buscar
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+
+                                        {/* Mensaje de error o ayuda */}
+                                        {errorBusquedaRapida && (
+                                            <div className="text-xs text-red-600 dark:text-red-400">
+                                                ⚠️ {errorBusquedaRapida}
+                                            </div>
+                                        )}
+                                        {!errorBusquedaRapida && !busquedaRapidaCodigo && (
+                                            <div className="text-xs text-muted-foreground">
+                                                💡 Escribe el código, SKU o ID del producto y presiona Enter o haz clic en Buscar
+                                            </div>
+                                        )}
+                                    </form>
+                                )}
+
+                                <Separator />
+
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-muted/50">
                                             <TableHead className="font-semibold">Producto</TableHead>
-                                            <TableHead className="font-semibold text-center">Cantidad</TableHead>
+                                            <TableHead className="font-semibold">Cantidad</TableHead>
                                             {/* <TableHead className="font-semibold text-center">Rango</TableHead> */}
-                                            <TableHead className="font-semibold text-right">Precio Unit.</TableHead>
-                                            <TableHead className="text-right font-semibold">Subtotal</TableHead>
+                                            <TableHead className="font-semibold">Precio Unit.</TableHead>
+                                            <TableHead className="font-semibold">Subtotal</TableHead>
                                             {proforma.estado === 'PENDIENTE' && <TableHead className="text-center font-semibold">Acciones</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {editableDetalles.map((detalle, index) => (
-                                            <TableRow
+                                        {editableDetalles.map((detalle, index) => {
+                                            const tieneSobrestock = parseFloat(String(detalle.cantidad || 0)) > parseFloat(String(detalle.stock_disponible || 0))
+
+                                            return (
+                                                <TableRow
                                                 key={detalle.id}
-                                                className={`transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
-                                                    }`}
+                                                className={`transition-colors hover:bg-muted/30 ${
+                                                    tieneSobrestock
+                                                        ? 'bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500'
+                                                        : index % 2 === 0
+                                                            ? 'bg-background'
+                                                            : 'bg-muted/10'
+                                                }`}
                                             >
                                                 <TableCell>
                                                     <div className="space-y-1">
-                                                        <div className="font-medium text-[var(--text-base)]">
+                                                        <div className="font-medium text-[var(--text-base)] flex items-center gap-2">
                                                             {detalle.producto?.nombre || detalle.producto_nombre || 'Producto sin datos'}
+                                                            {tieneSobrestock && (
+                                                                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" title="Cantidad supera el stock disponible" />
+                                                            )}
                                                         </div>
-                                                        {detalle.producto && (
+                                                        {/* {(detalle.producto || detalle.categoria) && (
                                                             <div className="text-[var(--text-sm)] text-muted-foreground">
-                                                                {detalle.producto.categoria?.nombre || 'Sin categoría'} - {detalle.producto.marca?.nombre || 'Sin marca'}
+                                                                {detalle.producto?.categoria?.nombre || detalle.categoria || 'Sin categoría'}
+                                                                {detalle.producto?.marca?.nombre && ` - ${detalle.producto.marca.nombre}`}
                                                             </div>
-                                                        )}
+                                                        )} */}
                                                         {(detalle.producto?.codigo || detalle.sku) && (
                                                             <div className="text-[var(--text-xs)] text-muted-foreground font-mono">
                                                                 Código: {detalle.producto?.codigo || detalle.sku}
                                                             </div>
                                                         )}
                                                     </div>
+                                                    <p className="font-medium">
+                                                        {Math.floor(detalle.stock_disponible || 0)} Unid. Dispobibles
+                                                    </p>
+                                                    {/* <p className="font-medium">
+                                                        {detalle.peso ? detalle.peso.toFixed(2) : '0.00'} Kg
+                                                    </p> */}
+                                                    <p>
+                                                        {detalle.limite_venta ? (
+                                                            <>
+                                                                <span className={`font-medium ${detalle.cantidad > detalle.limite_venta
+                                                                    ? 'text-red-600 dark:text-red-400'
+                                                                    : detalle.cantidad >= detalle.limite_venta * 0.8
+                                                                        ? 'text-yellow-600 dark:text-yellow-400'
+                                                                        : 'text-green-600 dark:text-green-400'
+                                                                    }`}>
+                                                                    Limite Venta: {Math.floor(detalle.limite_venta)}
+                                                                </span>
+                                                                {detalle.cantidad > detalle.limite_venta && (
+                                                                    <span className="text-xs text-red-600 dark:text-red-400 font-semibold">
+                                                                        ¡Excedido!
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                Sin límite
+                                                            </span>
+                                                        )}
+                                                    </p>
                                                 </TableCell>
-                                                <TableCell className="text-center">
+                                                <TableCell>
                                                     {proforma.estado === 'PENDIENTE' ? (
                                                         <Input
                                                             type="number"
-                                                            min="0.01"
-                                                            step="0.01"
-                                                            value={detalle.cantidad ? parseFloat(detalle.cantidad.toString()).toFixed(2) : ''}
+                                                            min="1"
+                                                            inputMode="numeric"
+                                                            value={detalle.cantidad && detalle.cantidad > 0 ? Math.floor(detalle.cantidad).toString() : ''}
                                                             onChange={(e) => {
                                                                 const valor = e.target.value
-                                                                if (valor === '' || valor === '0') {
-                                                                    handleEditarCantidad(index, 1)
+                                                                // ✅ MEJORADO: Permitir escribir y borrar libremente
+                                                                if (valor === '') {
+                                                                    // Permitir que quede vacío mientras escribe
+                                                                    handleEditarCantidad(index, 0)
                                                                 } else {
-                                                                    const cantidad = parseFloat(valor) || 1
-                                                                    handleEditarCantidad(index, parseFloat(cantidad.toFixed(2)))
+                                                                    const cantidad = parseInt(valor, 10)
+                                                                    // Solo actualizar si es un número válido (parseInt no falla)
+                                                                    if (!isNaN(cantidad)) {
+                                                                        handleEditarCantidad(index, Math.floor(cantidad))
+                                                                    }
                                                                 }
                                                             }}
                                                             onBlur={(e) => {
-                                                                const valor = parseFloat(e.target.value) || 0
-                                                                if (valor <= 0) {
+                                                                const valor = e.target.value.trim()
+                                                                // ✅ Al perder el foco, establecer valor por defecto si está vacío
+                                                                if (valor === '') {
                                                                     handleEditarCantidad(index, 1)
                                                                 } else {
-                                                                    handleEditarCantidad(index, parseFloat(valor.toFixed(2)))
+                                                                    const cantidad = Math.floor(parseInt(valor, 10) || 0)
+                                                                    handleEditarCantidad(index, Math.max(1, cantidad))
                                                                 }
                                                             }}
                                                             placeholder="1"
-                                                            className="w-24 text-center"
+                                                            className={`w-24 text-center ${
+                                                                tieneSobrestock
+                                                                    ? 'border-red-500 border-2 focus:ring-red-500'
+                                                                    : ''
+                                                            }`}
                                                         />
                                                     ) : (
-                                                        <span className="font-medium">{parseFloat(detalle.cantidad.toString()).toFixed(2)}</span>
+                                                        <span className="font-medium">{Math.floor(detalle.cantidad || 1)}</span>
                                                     )}
                                                 </TableCell>
+
                                                 {/* Precio actualizado según rango */}
-                                                <TableCell className="text-right font-medium">
+                                                <TableCell className="font-medium">
                                                     {(() => {
                                                         const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
                                                         const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
@@ -1356,7 +1632,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                     })()}
                                                 </TableCell>
                                                 {/* Subtotal actualizado */}
-                                                <TableCell className="text-right font-semibold">
+                                                <TableCell className="font-semibold">
                                                     {(() => {
                                                         const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
                                                         const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
@@ -1389,7 +1665,8 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                     </TableCell>
                                                 )}
                                             </TableRow>
-                                        ))}
+                                        )
+                                        })}
                                     </TableBody>
                                 </Table>
 
@@ -1411,11 +1688,11 @@ export default function ProformasShow({ item: proforma }: Props) {
                                             </p>
                                         </div>
                                     </div>
-                                    {totales.total !== proforma.subtotal && (
+                                    {/* {totales.total !== proforma.subtotal && (
                                         <p className="text-xs text-amber-600 dark:text-amber-400 text-right italic">
                                             ℹ️ Total modificado desde: Bs. {proforma.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                         </p>
-                                    )}
+                                    )} */}
                                 </div>
                             </CardContent>
                         </Card>
@@ -1619,6 +1896,54 @@ export default function ProformasShow({ item: proforma }: Props) {
                                             </div>
                                         </div>
 
+                                        {/* Control de Intentos de Contacto */}
+                                        <div className="space-y-[var(--space-md)]">
+                                            <h4 className="font-semibold text-[var(--text-sm)]">Control de Intentos de Contacto</h4>
+                                            <div className="grid md:grid-cols-2 gap-[var(--space-md)]">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="numero_intentos">
+                                                        Número de Intentos
+                                                    </Label>
+                                                    <Input
+                                                        id="numero_intentos"
+                                                        type="number"
+                                                        value={coordinacion.numero_intentos_contacto}
+                                                        onChange={(e) =>
+                                                            setCoordinacion({
+                                                                ...coordinacion,
+                                                                numero_intentos_contacto: parseInt(e.target.value) || 1,
+                                                            })
+                                                        }
+                                                        disabled={isGuardandoCoordinacion}
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="resultado_intento">
+                                                        Resultado del Último Intento
+                                                    </Label>
+                                                    <select
+                                                        id="resultado_intento"
+                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        value={coordinacion.resultado_ultimo_intento ?? 'Aceptado'}
+                                                        onChange={(e) =>
+                                                            setCoordinacion({
+                                                                ...coordinacion,
+                                                                resultado_ultimo_intento: e.target.value,
+                                                            })
+                                                        }
+                                                        disabled={isGuardandoCoordinacion}
+                                                    >
+                                                        <option value="">Seleccionar resultado...</option>
+                                                        <option value="Aceptado">Aceptado</option>
+                                                        <option value="No contactado">No contactado</option>
+                                                        <option value="Rechazado">Rechazado</option>
+                                                        <option value="Reagendar">Reagendar</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         {/* Comentario de coordinación */}
                                         <div className="space-y-2">
                                             <Label htmlFor="comentario" className='mb-2'>
@@ -1639,78 +1964,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                 className="resize-none mt-2"
                                             />
                                         </div>
-
-                                        {/* Notas de llamada */}
-                                        <div className="space-y-2">
-                                            <Label htmlFor="notas_llamada">
-                                                Notas de Llamada
-                                            </Label>
-                                            <Textarea
-                                                id="notas_llamada"
-                                                placeholder="Registra las notas de las llamadas realizadas con el cliente..."
-                                                value={coordinacion.notas_llamada}
-                                                onChange={(e) =>
-                                                    setCoordinacion({
-                                                        ...coordinacion,
-                                                        notas_llamada: e.target.value,
-                                                    })
-                                                }
-                                                disabled={isGuardandoCoordinacion}
-                                                rows={3}
-                                                className="resize-none mt-2"
-                                            />
-                                        </div>
-
                                         <Separator className="my-[var(--space-md)]" />
-
-                                        {/* Control de Intentos de Contacto */}
-                                        <div className="space-y-[var(--space-md)]">
-                                            <h4 className="font-semibold text-[var(--text-sm)]">Control de Intentos de Contacto</h4>
-                                            <div className="grid md:grid-cols-2 gap-[var(--space-md)]">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="numero_intentos">
-                                                        Número de Intentos
-                                                    </Label>
-                                                    <Input
-                                                        id="numero_intentos"
-                                                        type="number"
-                                                        min="0"
-                                                        value={coordinacion.numero_intentos_contacto}
-                                                        onChange={(e) =>
-                                                            setCoordinacion({
-                                                                ...coordinacion,
-                                                                numero_intentos_contacto: parseInt(e.target.value) || 0,
-                                                            })
-                                                        }
-                                                        disabled={isGuardandoCoordinacion}
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="resultado_intento">
-                                                        Resultado del Último Intento
-                                                    </Label>
-                                                    <select
-                                                        id="resultado_intento"
-                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                        value={coordinacion.resultado_ultimo_intento}
-                                                        onChange={(e) =>
-                                                            setCoordinacion({
-                                                                ...coordinacion,
-                                                                resultado_ultimo_intento: e.target.value,
-                                                            })
-                                                        }
-                                                        disabled={isGuardandoCoordinacion}
-                                                    >
-                                                        <option value="">Seleccionar resultado...</option>
-                                                        <option value="Aceptado">Aceptado</option>
-                                                        <option value="No contactado">No contactado</option>
-                                                        <option value="Rechazado">Rechazado</option>
-                                                        <option value="Reagendar">Reagendar</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
 
                                         {/* Datos de Entrega Realizada - Solo mostrar si ya se entregó */}
                                         {coordinacion.entregado_en && (
@@ -1804,6 +2058,16 @@ export default function ProformasShow({ item: proforma }: Props) {
                         onSubmit={handleAprobar}
                         onCancel={() => setShowAprobarDialog(false)}
                         isSubmitting={isSubmitting}
+                        errorState={convertErrorState}
+                        onRenovarReservas={() => {
+                            renovarReservas(() => {
+                                // Después de renovar, resetear el estado de error
+                                console.log('✅ Reservas renovadas, habilitando aprobación...');
+                                setConvertErrorState(null);
+                                // Permitir que el usuario intente de nuevo
+                            });
+                        }}
+                        isRenovando={isRenovandoReservas}
                     />
                 </DialogContent>
             </Dialog>

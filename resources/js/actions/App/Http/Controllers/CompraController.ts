@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/api/compras'
  */
 const index4669aa2d439683f739a27d1674132542 = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index4669aa2d439683f739a27d1674132542.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/api/compras'
  */
 index4669aa2d439683f739a27d1674132542.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index4669aa2d439683f739a27d1674132542.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/api/compras'
  */
 index4669aa2d439683f739a27d1674132542.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index4669aa2d439683f739a27d1674132542.get = (options?: RouteQueryOptions): Route
 })
 /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/api/compras'
  */
 index4669aa2d439683f739a27d1674132542.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index4669aa2d439683f739a27d1674132542.head = (options?: RouteQueryOptions): Rout
 
     /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/api/compras'
  */
     const index4669aa2d439683f739a27d1674132542Form = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index4669aa2d439683f739a27d1674132542.head = (options?: RouteQueryOptions): Rout
 
             /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/api/compras'
  */
         index4669aa2d439683f739a27d1674132542Form.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index4669aa2d439683f739a27d1674132542.head = (options?: RouteQueryOptions): Rout
         })
             /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/api/compras'
  */
         index4669aa2d439683f739a27d1674132542Form.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index4669aa2d439683f739a27d1674132542.head = (options?: RouteQueryOptions): Rout
     index4669aa2d439683f739a27d1674132542.form = index4669aa2d439683f739a27d1674132542Form
     /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/compras'
  */
 const index9cbbd7839a2ac09dbcdb834730c30725 = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ index9cbbd7839a2ac09dbcdb834730c30725.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/compras'
  */
 index9cbbd7839a2ac09dbcdb834730c30725.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ index9cbbd7839a2ac09dbcdb834730c30725.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/compras'
  */
 index9cbbd7839a2ac09dbcdb834730c30725.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ index9cbbd7839a2ac09dbcdb834730c30725.get = (options?: RouteQueryOptions): Route
 })
 /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/compras'
  */
 index9cbbd7839a2ac09dbcdb834730c30725.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ index9cbbd7839a2ac09dbcdb834730c30725.head = (options?: RouteQueryOptions): Rout
 
     /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/compras'
  */
     const index9cbbd7839a2ac09dbcdb834730c30725Form = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ index9cbbd7839a2ac09dbcdb834730c30725.head = (options?: RouteQueryOptions): Rout
 
             /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/compras'
  */
         index9cbbd7839a2ac09dbcdb834730c30725Form.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ index9cbbd7839a2ac09dbcdb834730c30725.head = (options?: RouteQueryOptions): Rout
         })
             /**
 * @see \App\Http\Controllers\CompraController::index
- * @see app/Http/Controllers/CompraController.php:35
+ * @see app/Http/Controllers/CompraController.php:43
  * @route '/compras'
  */
         index9cbbd7839a2ac09dbcdb834730c30725Form.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -163,7 +163,7 @@ export const index = {
 
 /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/api/compras'
  */
 const store4669aa2d439683f739a27d1674132542 = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -178,7 +178,7 @@ store4669aa2d439683f739a27d1674132542.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/api/compras'
  */
 store4669aa2d439683f739a27d1674132542.url = (options?: RouteQueryOptions) => {
@@ -187,7 +187,7 @@ store4669aa2d439683f739a27d1674132542.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/api/compras'
  */
 store4669aa2d439683f739a27d1674132542.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -197,7 +197,7 @@ store4669aa2d439683f739a27d1674132542.post = (options?: RouteQueryOptions): Rout
 
     /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/api/compras'
  */
     const store4669aa2d439683f739a27d1674132542Form = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -207,7 +207,7 @@ store4669aa2d439683f739a27d1674132542.post = (options?: RouteQueryOptions): Rout
 
             /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/api/compras'
  */
         store4669aa2d439683f739a27d1674132542Form.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -218,7 +218,7 @@ store4669aa2d439683f739a27d1674132542.post = (options?: RouteQueryOptions): Rout
     store4669aa2d439683f739a27d1674132542.form = store4669aa2d439683f739a27d1674132542Form
     /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/compras'
  */
 const store9cbbd7839a2ac09dbcdb834730c30725 = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -233,7 +233,7 @@ store9cbbd7839a2ac09dbcdb834730c30725.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/compras'
  */
 store9cbbd7839a2ac09dbcdb834730c30725.url = (options?: RouteQueryOptions) => {
@@ -242,7 +242,7 @@ store9cbbd7839a2ac09dbcdb834730c30725.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/compras'
  */
 store9cbbd7839a2ac09dbcdb834730c30725.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -252,7 +252,7 @@ store9cbbd7839a2ac09dbcdb834730c30725.post = (options?: RouteQueryOptions): Rout
 
     /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/compras'
  */
     const store9cbbd7839a2ac09dbcdb834730c30725Form = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -262,7 +262,7 @@ store9cbbd7839a2ac09dbcdb834730c30725.post = (options?: RouteQueryOptions): Rout
 
             /**
 * @see \App\Http\Controllers\CompraController::store
- * @see app/Http/Controllers/CompraController.php:374
+ * @see app/Http/Controllers/CompraController.php:388
  * @route '/compras'
  */
         store9cbbd7839a2ac09dbcdb834730c30725Form.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -279,7 +279,7 @@ export const store = {
 
 /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/api/compras/{compra}'
  */
 const show393676824d4f9c447fe0b228852aaa0e = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -294,7 +294,7 @@ show393676824d4f9c447fe0b228852aaa0e.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/api/compras/{compra}'
  */
 show393676824d4f9c447fe0b228852aaa0e.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -322,7 +322,7 @@ show393676824d4f9c447fe0b228852aaa0e.url = (args: { compra: string | number } | 
 
 /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/api/compras/{compra}'
  */
 show393676824d4f9c447fe0b228852aaa0e.get = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -331,7 +331,7 @@ show393676824d4f9c447fe0b228852aaa0e.get = (args: { compra: string | number } | 
 })
 /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/api/compras/{compra}'
  */
 show393676824d4f9c447fe0b228852aaa0e.head = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -341,7 +341,7 @@ show393676824d4f9c447fe0b228852aaa0e.head = (args: { compra: string | number } |
 
     /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/api/compras/{compra}'
  */
     const show393676824d4f9c447fe0b228852aaa0eForm = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -351,7 +351,7 @@ show393676824d4f9c447fe0b228852aaa0e.head = (args: { compra: string | number } |
 
             /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/api/compras/{compra}'
  */
         show393676824d4f9c447fe0b228852aaa0eForm.get = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -360,7 +360,7 @@ show393676824d4f9c447fe0b228852aaa0e.head = (args: { compra: string | number } |
         })
             /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/api/compras/{compra}'
  */
         show393676824d4f9c447fe0b228852aaa0eForm.head = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -376,7 +376,7 @@ show393676824d4f9c447fe0b228852aaa0e.head = (args: { compra: string | number } |
     show393676824d4f9c447fe0b228852aaa0e.form = show393676824d4f9c447fe0b228852aaa0eForm
     /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/compras/{compra}'
  */
 const show38f98b93ecee7d377531798daf1d6db6 = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -391,7 +391,7 @@ show38f98b93ecee7d377531798daf1d6db6.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/compras/{compra}'
  */
 show38f98b93ecee7d377531798daf1d6db6.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -419,7 +419,7 @@ show38f98b93ecee7d377531798daf1d6db6.url = (args: { compra: string | number } | 
 
 /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/compras/{compra}'
  */
 show38f98b93ecee7d377531798daf1d6db6.get = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -428,7 +428,7 @@ show38f98b93ecee7d377531798daf1d6db6.get = (args: { compra: string | number } | 
 })
 /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/compras/{compra}'
  */
 show38f98b93ecee7d377531798daf1d6db6.head = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -438,7 +438,7 @@ show38f98b93ecee7d377531798daf1d6db6.head = (args: { compra: string | number } |
 
     /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/compras/{compra}'
  */
     const show38f98b93ecee7d377531798daf1d6db6Form = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -448,7 +448,7 @@ show38f98b93ecee7d377531798daf1d6db6.head = (args: { compra: string | number } |
 
             /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/compras/{compra}'
  */
         show38f98b93ecee7d377531798daf1d6db6Form.get = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -457,7 +457,7 @@ show38f98b93ecee7d377531798daf1d6db6.head = (args: { compra: string | number } |
         })
             /**
 * @see \App\Http\Controllers\CompraController::show
- * @see app/Http/Controllers/CompraController.php:291
+ * @see app/Http/Controllers/CompraController.php:305
  * @route '/compras/{compra}'
  */
         show38f98b93ecee7d377531798daf1d6db6Form.head = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -479,7 +479,7 @@ export const show = {
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/api/compras/{compra}'
  */
 const update393676824d4f9c447fe0b228852aaa0e = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -494,7 +494,7 @@ update393676824d4f9c447fe0b228852aaa0e.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/api/compras/{compra}'
  */
 update393676824d4f9c447fe0b228852aaa0e.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -522,7 +522,7 @@ update393676824d4f9c447fe0b228852aaa0e.url = (args: { compra: string | number } 
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/api/compras/{compra}'
  */
 update393676824d4f9c447fe0b228852aaa0e.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -531,7 +531,7 @@ update393676824d4f9c447fe0b228852aaa0e.put = (args: { compra: string | number } 
 })
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/api/compras/{compra}'
  */
 update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -541,7 +541,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
 
     /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/api/compras/{compra}'
  */
     const update393676824d4f9c447fe0b228852aaa0eForm = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -556,7 +556,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
 
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/api/compras/{compra}'
  */
         update393676824d4f9c447fe0b228852aaa0eForm.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -570,7 +570,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
         })
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/api/compras/{compra}'
  */
         update393676824d4f9c447fe0b228852aaa0eForm.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -586,7 +586,7 @@ update393676824d4f9c447fe0b228852aaa0e.patch = (args: { compra: string | number 
     update393676824d4f9c447fe0b228852aaa0e.form = update393676824d4f9c447fe0b228852aaa0eForm
     /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/compras/{compra}'
  */
 const update38f98b93ecee7d377531798daf1d6db6 = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -601,7 +601,7 @@ update38f98b93ecee7d377531798daf1d6db6.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/compras/{compra}'
  */
 update38f98b93ecee7d377531798daf1d6db6.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -629,7 +629,7 @@ update38f98b93ecee7d377531798daf1d6db6.url = (args: { compra: string | number } 
 
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/compras/{compra}'
  */
 update38f98b93ecee7d377531798daf1d6db6.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -638,7 +638,7 @@ update38f98b93ecee7d377531798daf1d6db6.put = (args: { compra: string | number } 
 })
 /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/compras/{compra}'
  */
 update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -648,7 +648,7 @@ update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number 
 
     /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/compras/{compra}'
  */
     const update38f98b93ecee7d377531798daf1d6db6Form = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -663,7 +663,7 @@ update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number 
 
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/compras/{compra}'
  */
         update38f98b93ecee7d377531798daf1d6db6Form.put = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -677,7 +677,7 @@ update38f98b93ecee7d377531798daf1d6db6.patch = (args: { compra: string | number 
         })
             /**
 * @see \App\Http\Controllers\CompraController::update
- * @see app/Http/Controllers/CompraController.php:445
+ * @see app/Http/Controllers/CompraController.php:459
  * @route '/compras/{compra}'
  */
         update38f98b93ecee7d377531798daf1d6db6Form.patch = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -699,7 +699,7 @@ export const update = {
 
 /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:628
+ * @see app/Http/Controllers/CompraController.php:642
  * @route '/api/compras/{compra}'
  */
 export const destroy = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -714,7 +714,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:628
+ * @see app/Http/Controllers/CompraController.php:642
  * @route '/api/compras/{compra}'
  */
 destroy.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -742,7 +742,7 @@ destroy.url = (args: { compra: string | number } | [compra: string | number ] | 
 
 /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:628
+ * @see app/Http/Controllers/CompraController.php:642
  * @route '/api/compras/{compra}'
  */
 destroy.delete = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -752,7 +752,7 @@ destroy.delete = (args: { compra: string | number } | [compra: string | number ]
 
     /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:628
+ * @see app/Http/Controllers/CompraController.php:642
  * @route '/api/compras/{compra}'
  */
     const destroyForm = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -767,7 +767,7 @@ destroy.delete = (args: { compra: string | number } | [compra: string | number ]
 
             /**
 * @see \App\Http\Controllers\CompraController::destroy
- * @see app/Http/Controllers/CompraController.php:628
+ * @see app/Http/Controllers/CompraController.php:642
  * @route '/api/compras/{compra}'
  */
         destroyForm.delete = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -783,7 +783,7 @@ destroy.delete = (args: { compra: string | number } | [compra: string | number ]
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\CompraController::checkCajaAbierta
- * @see app/Http/Controllers/CompraController.php:225
+ * @see app/Http/Controllers/CompraController.php:239
  * @route '/compras/check-caja-abierta'
  */
 export const checkCajaAbierta = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -798,7 +798,7 @@ checkCajaAbierta.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::checkCajaAbierta
- * @see app/Http/Controllers/CompraController.php:225
+ * @see app/Http/Controllers/CompraController.php:239
  * @route '/compras/check-caja-abierta'
  */
 checkCajaAbierta.url = (options?: RouteQueryOptions) => {
@@ -807,7 +807,7 @@ checkCajaAbierta.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CompraController::checkCajaAbierta
- * @see app/Http/Controllers/CompraController.php:225
+ * @see app/Http/Controllers/CompraController.php:239
  * @route '/compras/check-caja-abierta'
  */
 checkCajaAbierta.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -816,7 +816,7 @@ checkCajaAbierta.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => 
 })
 /**
 * @see \App\Http\Controllers\CompraController::checkCajaAbierta
- * @see app/Http/Controllers/CompraController.php:225
+ * @see app/Http/Controllers/CompraController.php:239
  * @route '/compras/check-caja-abierta'
  */
 checkCajaAbierta.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -826,7 +826,7 @@ checkCajaAbierta.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
     /**
 * @see \App\Http\Controllers\CompraController::checkCajaAbierta
- * @see app/Http/Controllers/CompraController.php:225
+ * @see app/Http/Controllers/CompraController.php:239
  * @route '/compras/check-caja-abierta'
  */
     const checkCajaAbiertaForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -836,7 +836,7 @@ checkCajaAbierta.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
             /**
 * @see \App\Http\Controllers\CompraController::checkCajaAbierta
- * @see app/Http/Controllers/CompraController.php:225
+ * @see app/Http/Controllers/CompraController.php:239
  * @route '/compras/check-caja-abierta'
  */
         checkCajaAbiertaForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -845,7 +845,7 @@ checkCajaAbierta.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
         })
             /**
 * @see \App\Http\Controllers\CompraController::checkCajaAbierta
- * @see app/Http/Controllers/CompraController.php:225
+ * @see app/Http/Controllers/CompraController.php:239
  * @route '/compras/check-caja-abierta'
  */
         checkCajaAbiertaForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -861,7 +861,7 @@ checkCajaAbierta.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
     checkCajaAbierta.form = checkCajaAbiertaForm
 /**
 * @see \App\Http\Controllers\CompraController::create
- * @see app/Http/Controllers/CompraController.php:134
+ * @see app/Http/Controllers/CompraController.php:148
  * @route '/compras/create'
  */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -876,7 +876,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::create
- * @see app/Http/Controllers/CompraController.php:134
+ * @see app/Http/Controllers/CompraController.php:148
  * @route '/compras/create'
  */
 create.url = (options?: RouteQueryOptions) => {
@@ -885,7 +885,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CompraController::create
- * @see app/Http/Controllers/CompraController.php:134
+ * @see app/Http/Controllers/CompraController.php:148
  * @route '/compras/create'
  */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -894,7 +894,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CompraController::create
- * @see app/Http/Controllers/CompraController.php:134
+ * @see app/Http/Controllers/CompraController.php:148
  * @route '/compras/create'
  */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -904,7 +904,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CompraController::create
- * @see app/Http/Controllers/CompraController.php:134
+ * @see app/Http/Controllers/CompraController.php:148
  * @route '/compras/create'
  */
     const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -914,7 +914,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CompraController::create
- * @see app/Http/Controllers/CompraController.php:134
+ * @see app/Http/Controllers/CompraController.php:148
  * @route '/compras/create'
  */
         createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -923,7 +923,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CompraController::create
- * @see app/Http/Controllers/CompraController.php:134
+ * @see app/Http/Controllers/CompraController.php:148
  * @route '/compras/create'
  */
         createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -939,7 +939,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     create.form = createForm
 /**
 * @see \App\Http\Controllers\CompraController::edit
- * @see app/Http/Controllers/CompraController.php:301
+ * @see app/Http/Controllers/CompraController.php:315
  * @route '/compras/{compra}/edit'
  */
 export const edit = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -954,7 +954,7 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::edit
- * @see app/Http/Controllers/CompraController.php:301
+ * @see app/Http/Controllers/CompraController.php:315
  * @route '/compras/{compra}/edit'
  */
 edit.url = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -982,7 +982,7 @@ edit.url = (args: { compra: string | number } | [compra: string | number ] | str
 
 /**
 * @see \App\Http\Controllers\CompraController::edit
- * @see app/Http/Controllers/CompraController.php:301
+ * @see app/Http/Controllers/CompraController.php:315
  * @route '/compras/{compra}/edit'
  */
 edit.get = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -991,7 +991,7 @@ edit.get = (args: { compra: string | number } | [compra: string | number ] | str
 })
 /**
 * @see \App\Http\Controllers\CompraController::edit
- * @see app/Http/Controllers/CompraController.php:301
+ * @see app/Http/Controllers/CompraController.php:315
  * @route '/compras/{compra}/edit'
  */
 edit.head = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1001,7 +1001,7 @@ edit.head = (args: { compra: string | number } | [compra: string | number ] | st
 
     /**
 * @see \App\Http\Controllers\CompraController::edit
- * @see app/Http/Controllers/CompraController.php:301
+ * @see app/Http/Controllers/CompraController.php:315
  * @route '/compras/{compra}/edit'
  */
     const editForm = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1011,7 +1011,7 @@ edit.head = (args: { compra: string | number } | [compra: string | number ] | st
 
             /**
 * @see \App\Http\Controllers\CompraController::edit
- * @see app/Http/Controllers/CompraController.php:301
+ * @see app/Http/Controllers/CompraController.php:315
  * @route '/compras/{compra}/edit'
  */
         editForm.get = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1020,7 +1020,7 @@ edit.head = (args: { compra: string | number } | [compra: string | number ] | st
         })
             /**
 * @see \App\Http\Controllers\CompraController::edit
- * @see app/Http/Controllers/CompraController.php:301
+ * @see app/Http/Controllers/CompraController.php:315
  * @route '/compras/{compra}/edit'
  */
         editForm.head = (args: { compra: string | number } | [compra: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1036,7 +1036,7 @@ edit.head = (args: { compra: string | number } | [compra: string | number ] | st
     edit.form = editForm
 /**
 * @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1069
+ * @see app/Http/Controllers/CompraController.php:1083
  * @route '/compras/{compra}/imprimir'
  */
 export const imprimirCompra = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1051,7 +1051,7 @@ imprimirCompra.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1069
+ * @see app/Http/Controllers/CompraController.php:1083
  * @route '/compras/{compra}/imprimir'
  */
 imprimirCompra.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1084,7 +1084,7 @@ imprimirCompra.url = (args: { compra: number | { id: number } } | [compra: numbe
 
 /**
 * @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1069
+ * @see app/Http/Controllers/CompraController.php:1083
  * @route '/compras/{compra}/imprimir'
  */
 imprimirCompra.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1093,7 +1093,7 @@ imprimirCompra.get = (args: { compra: number | { id: number } } | [compra: numbe
 })
 /**
 * @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1069
+ * @see app/Http/Controllers/CompraController.php:1083
  * @route '/compras/{compra}/imprimir'
  */
 imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1103,7 +1103,7 @@ imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: numb
 
     /**
 * @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1069
+ * @see app/Http/Controllers/CompraController.php:1083
  * @route '/compras/{compra}/imprimir'
  */
     const imprimirCompraForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1113,7 +1113,7 @@ imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: numb
 
             /**
 * @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1069
+ * @see app/Http/Controllers/CompraController.php:1083
  * @route '/compras/{compra}/imprimir'
  */
         imprimirCompraForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1122,7 +1122,7 @@ imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: numb
         })
             /**
 * @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1069
+ * @see app/Http/Controllers/CompraController.php:1083
  * @route '/compras/{compra}/imprimir'
  */
         imprimirCompraForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1138,7 +1138,7 @@ imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: numb
     imprimirCompra.form = imprimirCompraForm
 /**
 * @see \App\Http\Controllers\CompraController::previewCompra
- * @see app/Http/Controllers/CompraController.php:1138
+ * @see app/Http/Controllers/CompraController.php:1119
  * @route '/compras/{compra}/preview'
  */
 export const previewCompra = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1153,7 +1153,7 @@ previewCompra.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraController::previewCompra
- * @see app/Http/Controllers/CompraController.php:1138
+ * @see app/Http/Controllers/CompraController.php:1119
  * @route '/compras/{compra}/preview'
  */
 previewCompra.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1186,7 +1186,7 @@ previewCompra.url = (args: { compra: number | { id: number } } | [compra: number
 
 /**
 * @see \App\Http\Controllers\CompraController::previewCompra
- * @see app/Http/Controllers/CompraController.php:1138
+ * @see app/Http/Controllers/CompraController.php:1119
  * @route '/compras/{compra}/preview'
  */
 previewCompra.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1195,7 +1195,7 @@ previewCompra.get = (args: { compra: number | { id: number } } | [compra: number
 })
 /**
 * @see \App\Http\Controllers\CompraController::previewCompra
- * @see app/Http/Controllers/CompraController.php:1138
+ * @see app/Http/Controllers/CompraController.php:1119
  * @route '/compras/{compra}/preview'
  */
 previewCompra.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1205,7 +1205,7 @@ previewCompra.head = (args: { compra: number | { id: number } } | [compra: numbe
 
     /**
 * @see \App\Http\Controllers\CompraController::previewCompra
- * @see app/Http/Controllers/CompraController.php:1138
+ * @see app/Http/Controllers/CompraController.php:1119
  * @route '/compras/{compra}/preview'
  */
     const previewCompraForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1215,7 +1215,7 @@ previewCompra.head = (args: { compra: number | { id: number } } | [compra: numbe
 
             /**
 * @see \App\Http\Controllers\CompraController::previewCompra
- * @see app/Http/Controllers/CompraController.php:1138
+ * @see app/Http/Controllers/CompraController.php:1119
  * @route '/compras/{compra}/preview'
  */
         previewCompraForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1224,7 +1224,7 @@ previewCompra.head = (args: { compra: number | { id: number } } | [compra: numbe
         })
             /**
 * @see \App\Http\Controllers\CompraController::previewCompra
- * @see app/Http/Controllers/CompraController.php:1138
+ * @see app/Http/Controllers/CompraController.php:1119
  * @route '/compras/{compra}/preview'
  */
         previewCompraForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1238,6 +1238,210 @@ previewCompra.head = (args: { compra: number | { id: number } } | [compra: numbe
         })
     
     previewCompra.form = previewCompraForm
-const CompraController = { index, store, show, update, destroy, checkCajaAbierta, create, edit, imprimirCompra, previewCompra }
+/**
+* @see \App\Http\Controllers\CompraController::exportarExcel
+ * @see app/Http/Controllers/CompraController.php:1225
+ * @route '/compras/{compra}/exportar-excel'
+ */
+export const exportarExcel = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarExcel.url(args, options),
+    method: 'get',
+})
+
+exportarExcel.definition = {
+    methods: ["get","head"],
+    url: '/compras/{compra}/exportar-excel',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CompraController::exportarExcel
+ * @see app/Http/Controllers/CompraController.php:1225
+ * @route '/compras/{compra}/exportar-excel'
+ */
+exportarExcel.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { compra: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { compra: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    compra: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        compra: typeof args.compra === 'object'
+                ? args.compra.id
+                : args.compra,
+                }
+
+    return exportarExcel.definition.url
+            .replace('{compra}', parsedArgs.compra.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CompraController::exportarExcel
+ * @see app/Http/Controllers/CompraController.php:1225
+ * @route '/compras/{compra}/exportar-excel'
+ */
+exportarExcel.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarExcel.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\CompraController::exportarExcel
+ * @see app/Http/Controllers/CompraController.php:1225
+ * @route '/compras/{compra}/exportar-excel'
+ */
+exportarExcel.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: exportarExcel.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\CompraController::exportarExcel
+ * @see app/Http/Controllers/CompraController.php:1225
+ * @route '/compras/{compra}/exportar-excel'
+ */
+    const exportarExcelForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportarExcel.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CompraController::exportarExcel
+ * @see app/Http/Controllers/CompraController.php:1225
+ * @route '/compras/{compra}/exportar-excel'
+ */
+        exportarExcelForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarExcel.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CompraController::exportarExcel
+ * @see app/Http/Controllers/CompraController.php:1225
+ * @route '/compras/{compra}/exportar-excel'
+ */
+        exportarExcelForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarExcel.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportarExcel.form = exportarExcelForm
+/**
+* @see \App\Http\Controllers\CompraController::exportarPdf
+ * @see app/Http/Controllers/CompraController.php:1249
+ * @route '/compras/{compra}/exportar-pdf'
+ */
+export const exportarPdf = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarPdf.url(args, options),
+    method: 'get',
+})
+
+exportarPdf.definition = {
+    methods: ["get","head"],
+    url: '/compras/{compra}/exportar-pdf',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CompraController::exportarPdf
+ * @see app/Http/Controllers/CompraController.php:1249
+ * @route '/compras/{compra}/exportar-pdf'
+ */
+exportarPdf.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { compra: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { compra: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    compra: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        compra: typeof args.compra === 'object'
+                ? args.compra.id
+                : args.compra,
+                }
+
+    return exportarPdf.definition.url
+            .replace('{compra}', parsedArgs.compra.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CompraController::exportarPdf
+ * @see app/Http/Controllers/CompraController.php:1249
+ * @route '/compras/{compra}/exportar-pdf'
+ */
+exportarPdf.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarPdf.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\CompraController::exportarPdf
+ * @see app/Http/Controllers/CompraController.php:1249
+ * @route '/compras/{compra}/exportar-pdf'
+ */
+exportarPdf.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: exportarPdf.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\CompraController::exportarPdf
+ * @see app/Http/Controllers/CompraController.php:1249
+ * @route '/compras/{compra}/exportar-pdf'
+ */
+    const exportarPdfForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportarPdf.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CompraController::exportarPdf
+ * @see app/Http/Controllers/CompraController.php:1249
+ * @route '/compras/{compra}/exportar-pdf'
+ */
+        exportarPdfForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarPdf.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CompraController::exportarPdf
+ * @see app/Http/Controllers/CompraController.php:1249
+ * @route '/compras/{compra}/exportar-pdf'
+ */
+        exportarPdfForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarPdf.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportarPdf.form = exportarPdfForm
+const CompraController = { index, store, show, update, destroy, checkCajaAbierta, create, edit, imprimirCompra, previewCompra, exportarExcel, exportarPdf }
 
 export default CompraController

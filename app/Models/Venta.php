@@ -761,9 +761,11 @@ class Venta extends Model
                 'tipo_operacion_id' => $tipoOperacion->id,
                 'numero_documento'  => $this->numero,
                 'descripcion'       => "Venta #{$this->numero} - Cliente: {$this->cliente?->nombre}",
-                'monto'   => $this->total,
-                'fecha'   => $this->fecha,
-                'user_id' => $this->usuario_id,
+                'monto'             => $this->total,
+                'fecha'             => $this->fecha,
+                'user_id'           => $this->usuario_id,
+                'venta_id'          => $this->id,              // ✅ Asignar ID de venta
+                'tipo_pago_id'      => $this->tipo_pago_id,    // ✅ Asignar tipo de pago
             ]);
 
             Log::info("Movimiento de caja generado para venta {$this->numero}");

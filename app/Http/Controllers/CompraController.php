@@ -12,6 +12,8 @@ use App\Models\Producto;
 use App\Models\Proveedor;
 use App\Models\TipoPago;
 use App\Services\DetectarCambiosPrecioService;
+use App\Services\ExcelExportService;
+use App\Services\ImpresionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +22,14 @@ use Inertia\Inertia;
 
 class CompraController extends Controller
 {
-    public function __construct()
+    private ExcelExportService $excelExportService;
+    private ImpresionService $impresionService;
+
+    public function __construct(ExcelExportService $excelExportService, ImpresionService $impresionService)
     {
+        $this->excelExportService = $excelExportService;
+        $this->impresionService   = $impresionService;
+
         $this->middleware('permission:compras.index')->only('index');
         $this->middleware('permission:compras.show')->only('show');
         $this->middleware('permission:compras.store')->only('store');
@@ -37,6 +45,7 @@ class CompraController extends Controller
         // Validar filtros
         $filtros = $request->validate([
             'q'                   => ['nullable', 'string', 'max:255'],
+            'id'                  => ['nullable', 'integer'],
             'proveedor_id'        => ['nullable', 'exists:proveedores,id'],
             'estado_documento_id' => ['nullable', 'exists:estados_documento,id'],
             'moneda_id'           => ['nullable', 'exists:monedas,id'],
@@ -49,6 +58,11 @@ class CompraController extends Controller
         ]);
 
         $query = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'tipoPago']);
+
+        // Filtro por ID de compra
+        if (! empty($filtros['id'])) {
+            $query->where('id', $filtros['id']);
+        }
 
         // Filtro de búsqueda general
         if (! empty($filtros['q'])) {
@@ -227,10 +241,10 @@ class CompraController extends Controller
         try {
             $user = Auth::user();
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'tiene_caja_abierta' => false,
-                    'mensaje' => 'Usuario no autenticado',
+                    'mensaje'            => 'Usuario no autenticado',
                 ]);
             }
 
@@ -243,7 +257,7 @@ class CompraController extends Controller
 
             // Si el usuario tiene caja abierta
             if ($apertura) {
-                $hoy = today();
+                $hoy           = today();
                 $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
                     ? $apertura->fecha
                     : \Carbon\Carbon::parse($apertura->fecha);
@@ -254,14 +268,14 @@ class CompraController extends Controller
 
                 return response()->json([
                     'tiene_caja_abierta' => true,
-                    'caja_id' => $apertura->caja_id,
-                    'caja_nombre' => $apertura->caja?->nombre,
-                    'apertura_id' => $apertura->id,
-                    'apertura_fecha' => $apertura->fecha,
-                    'es_de_hoy' => $esDeHoy,
-                    'dias_atras' => $diasAtras,
-                    'usuario_caja' => $apertura->usuario?->name ?? 'Desconocido', // ✅ CORREGIDO: usuario, no user
-                    'mensaje' => $esDeHoy
+                    'caja_id'            => $apertura->caja_id,
+                    'caja_nombre'        => $apertura->caja?->nombre,
+                    'apertura_id'        => $apertura->id,
+                    'apertura_fecha'     => $apertura->fecha,
+                    'es_de_hoy'          => $esDeHoy,
+                    'dias_atras'         => $diasAtras,
+                    'usuario_caja'       => $apertura->usuario?->name ?? 'Desconocido', // ✅ CORREGIDO: usuario, no user
+                    'mensaje'            => $esDeHoy
                         ? '✅ Caja abierta hoy'
                         : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
                 ]);
@@ -270,20 +284,20 @@ class CompraController extends Controller
             // Si no tiene caja abierta
             return response()->json([
                 'tiene_caja_abierta' => false,
-                'mensaje' => 'No hay caja abierta para este usuario',
+                'mensaje'            => 'No hay caja abierta para este usuario',
             ]);
         } catch (\Exception $e) {
             \Log::error('Error en checkCajaAbierta:', [
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
             ]);
 
             return response()->json([
                 'tiene_caja_abierta' => false,
-                'error' => true,
-                'mensaje' => 'Error al verificar el estado de la caja',
-                'debug' => config('app.debug') ? $e->getMessage() : null,
+                'error'              => true,
+                'mensaje'            => 'Error al verificar el estado de la caja',
+                'debug'              => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
@@ -411,7 +425,7 @@ class CompraController extends Controller
             }
 
             // ✅ Registrar movimiento de caja SOLO si el estado es APROBADO o FACTURADO (pago inmediato)
-            if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
+            /*if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
                 $this->registrarMovimientoCaja($compra, $cajaId, $data['total']);
 
                 Log::info('CompraController::store() - Compra creada como APROBADO - Inventario y movimiento de caja registrados', [
@@ -420,7 +434,7 @@ class CompraController extends Controller
                     'caja_id' => $cajaId,
                     'total' => $data['total'],
                 ]);
-            }
+            }*/
 
             DB::commit();
 
@@ -503,11 +517,11 @@ class CompraController extends Controller
                     $existingDetalles = $compra->detalles->toArray();
                     foreach ($data['detalles'] as $index => $newDetalle) {
                         $existingDetalle = $existingDetalles[$index] ?? null;
-                        if (!$existingDetalle ||
+                        if (! $existingDetalle ||
                             $existingDetalle['producto_id'] !== $newDetalle['producto_id'] ||
-                            (float)$existingDetalle['cantidad'] != (float)$newDetalle['cantidad'] ||
-                            (float)$existingDetalle['precio_unitario'] != (float)$newDetalle['precio_unitario'] ||
-                            (float)($existingDetalle['descuento'] ?? 0) != (float)($newDetalle['descuento'] ?? 0)) {
+                            (float) $existingDetalle['cantidad'] != (float) $newDetalle['cantidad'] ||
+                            (float) $existingDetalle['precio_unitario'] != (float) $newDetalle['precio_unitario'] ||
+                            (float) ($existingDetalle['descuento'] ?? 0) != (float) ($newDetalle['descuento'] ?? 0)) {
                             $detallesChanged = true;
                             break;
                         }
@@ -520,7 +534,7 @@ class CompraController extends Controller
             // Escenario 2: Usuario solo cambia estado BORRADOR→APROBADO → Mantener detalles sin cambios
             if ($detallesChanged) {
                 Log::info('CompraController::update() - Detalles han cambiado, recreando', [
-                    'compra_numero' => $compra->numero,
+                    'compra_numero'  => $compra->numero,
                     'detalles_count' => count($data['detalles']),
                 ]);
 
@@ -535,7 +549,7 @@ class CompraController extends Controller
                 $compra->load('detalles');
             } else if (isset($data['detalles'])) {
                 Log::info('CompraController::update() - Detalles sin cambios, manteniéndose', [
-                    'compra_numero' => $compra->numero,
+                    'compra_numero'  => $compra->numero,
                     'detalles_count' => $compra->detalles()->count(),
                 ]);
                 // Detalles no cambiaron, simplemente recargarlos
@@ -549,12 +563,12 @@ class CompraController extends Controller
             $compra->estado_documento_id == $estadoRecibido?->id;
 
             Log::info('CompraController::update() - Detectados cambios de estado', [
-                'compra_numero' => $compra->numero,
+                'compra_numero'     => $compra->numero,
                 'estadoAnterior_id' => $estadoAnterior,
-                'estadoNuevo_id' => $compra->estado_documento_id,
-                'cambioAAprobado' => $cambioAAprobado,
-                'cambioARecibido' => $cambioARecibido,
-                'detalles_count' => $compra->detalles->count(),
+                'estadoNuevo_id'    => $compra->estado_documento_id,
+                'cambioAAprobado'   => $cambioAAprobado,
+                'cambioARecibido'   => $cambioARecibido,
+                'detalles_count'    => $compra->detalles->count(),
             ]);
 
             // ✅ QUINTO: Si BORRADOR → APROBADO, registrar inventario Y movimiento de caja
@@ -565,16 +579,16 @@ class CompraController extends Controller
                 $escenario = $detallesChanged ? 'detalles-modificados' : 'estado-only-change';
 
                 Log::info("Registrando inventario para cambio a APROBADO", [
-                    'compra_numero' => $compra->numero,
+                    'compra_numero'  => $compra->numero,
                     'detalles_count' => $compra->detalles->count(),
-                    'escenario' => $escenario,
+                    'escenario'      => $escenario,
                 ]);
 
                 // 1️⃣ Registrar inventario (CON DETALLES NUEVOS si fueron modificados, CON DETALLES EXISTENTES si no)
                 foreach ($compra->detalles as $detalle) {
                     Log::info("Registrando inventario - Detalle", [
-                        'producto_id' => $detalle->producto_id,
-                        'cantidad' => $detalle->cantidad,
+                        'producto_id'     => $detalle->producto_id,
+                        'cantidad'        => $detalle->cantidad,
                         'precio_unitario' => $detalle->precio_unitario,
                     ]);
                     $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
@@ -585,22 +599,22 @@ class CompraController extends Controller
                 $this->registrarMovimientoCaja($compra, $cajaId, $data['total']);
 
                 // 3️⃣ ✨ NUEVO: Detectar cambios de precio de costo
-                $servicioPrecios = new DetectarCambiosPrecioService();
+                $servicioPrecios    = new DetectarCambiosPrecioService();
                 $productosConCambio = $servicioPrecios->procesarCompraAprobada($compra);
 
-                if (!empty($productosConCambio)) {
+                if (! empty($productosConCambio)) {
                     Log::info("Precios de costo actualizados, revisar precios de venta", [
-                        'compra_numero' => $compra->numero,
+                        'compra_numero'        => $compra->numero,
                         'productos_con_cambio' => count($productosConCambio),
-                        'detalles' => $productosConCambio,
+                        'detalles'             => $productosConCambio,
                     ]);
                 }
 
                 Log::info("Compra {$compra->numero} cambió a APROBADO - Inventario y movimiento de caja registrados", [
-                    'compra_id'  => $compra->id,
-                    'almacen_id' => $data['almacen_id'] ?? $compra->almacen_id,
-                    'caja_id' => $cajaId,
-                    'escenario' => $escenario,
+                    'compra_id'      => $compra->id,
+                    'almacen_id'     => $data['almacen_id'] ?? $compra->almacen_id,
+                    'caja_id'        => $cajaId,
+                    'escenario'      => $escenario,
                     'cambios_precio' => count($productosConCambio) ?? 0,
                 ]);
             }
@@ -1053,8 +1067,8 @@ class CompraController extends Controller
             ]);
 
             Log::info("Movimiento de caja generado para compra {$compra->numero}", [
-                'monto' => $montoRegistro,
-                'total_request' => $total,
+                'monto'           => $montoRegistro,
+                'total_request'   => $total,
                 'total_compra_db' => $compra->total,
             ]);
         } catch (\Exception $e) {
@@ -1071,63 +1085,30 @@ class CompraController extends Controller
         // Validar permiso
         $this->authorize('view', $compra);
 
-        // Validar y obtener parámetros
-        $validated = $request->validate([
-            'formato' => 'required|string|in:A4,TICKET_80,TICKET_58',
-            'accion' => 'required|string|in:stream,download',
-        ]);
-
-        // Convertir a string para evitar UnhandledMatchError con Stringable
-        $formato = (string) $validated['formato'];
-        $accion = (string) $validated['accion'];
-
-        // Eager load relaciones
-        $compra->load(['detalles.producto', 'proveedor', 'tipoPago', 'moneda', 'usuario', 'almacen', 'estadoDocumento']);
-
-        // Preparar datos para la vista
-        $datos = [
-            'compra' => $compra,
-            'empresa' => \App\Models\Empresa::first(),
-            'usuario' => auth()->user()->name ?? 'Sistema',
-        ];
-
-        // Seleccionar template según formato
-        $template = match ($formato) {
-            'A4' => 'impresion.compras.hoja-completa',
-            'TICKET_80' => 'impresion.compras.ticket-80',
-            'TICKET_58' => 'impresion.compras.ticket-58',
-            default => 'impresion.compras.hoja-completa',
-        };
+        $formato = $request->input('formato', 'A4');      // A4, TICKET_80, TICKET_58
+        $accion  = $request->input('accion', 'download'); // download | stream
 
         Log::info("Generando PDF de compra", [
             'compra_id' => $compra->id,
-            'formato' => $formato,
-            'accion' => $accion,
-            'template' => $template,
+            'formato'   => $formato,
+            'accion'    => $accion,
         ]);
 
         try {
-            // Generar PDF
-            $pdf = \PDF::loadView($template, $datos);
+            $pdf = $this->impresionService->imprimirCompra($compra, $formato);
 
-            // Aplicar configuración del formato
-            $pdf = $this->aplicarConfiguracionFormato($pdf, $formato);
+            $nombreArchivo = "compra_{$compra->numero}_{$formato}.pdf";
 
-            // Retornar según acción
-            $nombreArchivo = "Compra_{$compra->numero}_{$formato}.pdf";
-
-            if ($accion === 'download') {
-                return $pdf->download($nombreArchivo);
-            } else {
-                return $pdf->stream($nombreArchivo);
-            }
+            return $accion === 'stream'
+                ? $pdf->stream($nombreArchivo)
+                : $pdf->download($nombreArchivo);
         } catch (\Exception $e) {
             Log::error("Error generando PDF de compra", [
                 'compra_id' => $compra->id,
-                'error' => $e->getMessage(),
+                'error'     => $e->getMessage(),
             ]);
 
-            return back()->withErrors(['error' => 'Error al generar el PDF: ' . $e->getMessage()]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
         }
     }
 
@@ -1140,35 +1121,67 @@ class CompraController extends Controller
         // Validar permiso
         $this->authorize('view', $compra);
 
-        // Validar formato
-        $formato = $request->validate([
-            'formato' => 'required|string|in:A4,TICKET_80,TICKET_58',
-        ])['formato'];
+        $formato = $request->input('formato', 'A4');
 
-        // Convertir a string
-        $formato = (string) $formato;
+        try {
+            // Intentar obtener plantilla del sistema
+            $plantilla = \App\Models\PlantillaImpresion::obtenerDefault('compra', $formato);
 
-        // Eager load relaciones
-        $compra->load(['detalles.producto', 'proveedor', 'tipoPago', 'moneda', 'usuario', 'almacen', 'estadoDocumento']);
+            $empresa = \App\Models\Empresa::principal();
 
-        // Preparar datos
-        $datos = [
-            'compra' => $compra,
-            'empresa' => \App\Models\Empresa::first(),
-            'usuario' => auth()->user()->name ?? 'Sistema',
-        ];
+            // Convertir logos a base64 para embebimiento en PDF
+            $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
+            $logoFooterBase64    = $this->logoToBase64($empresa->logo_footer);
 
-        // Seleccionar template
-        $template = match ($formato) {
-            'A4' => 'impresion.compras.hoja-completa',
-            'TICKET_80' => 'impresion.compras.ticket-80',
-            'TICKET_58' => 'impresion.compras.ticket-58',
-            default => 'impresion.compras.hoja-completa',
-        };
+            // Cargar relaciones necesarias
+            $compra->load([
+                'proveedor',
+                'detalles.producto',
+                'usuario',
+                'tipoPago',
+                'moneda',
+                'estadoDocumento',
+                'almacen',
+            ]);
+
+            if ($plantilla) {
+                // Usar plantilla del sistema si existe
+                return view($plantilla->vista_blade, [
+                    'documento'             => $compra,
+                    'empresa'               => $empresa,
+                    'plantilla'             => $plantilla,
+                    'fecha_impresion'       => now(),
+                    'usuario'               => auth()->user(),
+                    'opciones'              => [],
+                    'logo_principal_base64' => $logoPrincipalBase64,
+                    'logo_footer_base64'    => $logoFooterBase64,
+                ]);
+            } else {
+                // Fallback a vistas hardcodeadas si no existe plantilla
+                $template = match ($formato) {
+                    'A4'        => 'impresion.compras.hoja-completa',
+                    'TICKET_80' => 'impresion.compras.ticket-80',
+                    'TICKET_58' => 'impresion.compras.ticket-58',
+                    default     => 'impresion.compras.hoja-completa',
+                };
+
+                return view($template, [
+                    'compra'                => $compra,
+                    'documento'             => $compra,
+                    'empresa'               => $empresa,
+                    'usuario'               => auth()->user()->name ?? 'Sistema',
+                    'fecha_impresion'       => now(),
+                    'logo_principal_base64' => $logoPrincipalBase64,
+                    'logo_footer_base64'    => $logoFooterBase64,
+                ]);
+            }
+        } catch (\Exception $e) {
+            abort(500, 'Error al generar preview: ' . $e->getMessage());
+        }
 
         Log::info("Preview de compra", [
             'compra_id' => $compra->id,
-            'formato' => $formato,
+            'formato'   => $formato,
         ]);
 
         // Retornar vista directamente
@@ -1180,21 +1193,21 @@ class CompraController extends Controller
      */
     private function aplicarConfiguracionFormato($pdf, $formato): void
     {
-        $configuracion = match($formato) {
-            'A4' => [
-                'paper' => 'A4',
+        $configuracion = match ($formato) {
+            'A4'        => [
+                'paper'       => 'A4',
                 'orientation' => 'portrait',
-                'margins' => ['left' => 10, 'right' => 10, 'top' => 10, 'bottom' => 10],
+                'margins'     => ['left' => 10, 'right' => 10, 'top' => 10, 'bottom' => 10],
             ],
             'TICKET_80' => [
-                'paper' => [0, 0, 226.77, 841.89], // 80mm ancho
+                'paper'       => [0, 0, 226.77, 841.89], // 80mm ancho
                 'orientation' => 'portrait',
-                'margins' => ['left' => 5, 'right' => 5, 'top' => 5, 'bottom' => 5],
+                'margins'     => ['left' => 5, 'right' => 5, 'top' => 5, 'bottom' => 5],
             ],
             'TICKET_58' => [
-                'paper' => [0, 0, 164.41, 841.89], // 58mm ancho
+                'paper'       => [0, 0, 164.41, 841.89], // 58mm ancho
                 'orientation' => 'portrait',
-                'margins' => ['left' => 3, 'right' => 3, 'top' => 3, 'bottom' => 3],
+                'margins'     => ['left' => 3, 'right' => 3, 'top' => 3, 'bottom' => 3],
             ],
         };
 
@@ -1203,5 +1216,109 @@ class CompraController extends Controller
         $pdf->setOption('margin_right', $configuracion['margins']['right']);
         $pdf->setOption('margin_top', $configuracion['margins']['top']);
         $pdf->setOption('margin_bottom', $configuracion['margins']['bottom']);
+    }
+
+    /**
+     * Exportar compra a Excel con formato profesional
+     * GET /compras/{compra}/exportar-excel
+     */
+    public function exportarExcel(Compra $compra)
+    {
+        Log::info('📊 [CompraController::exportarExcel] Exportando compra a Excel', [
+            'compra_id' => $compra->id,
+            'user_id'   => auth()->id(),
+        ]);
+
+        $this->authorize('view', $compra);
+
+        try {
+            return $this->excelExportService->exportarCompra($compra);
+        } catch (\Exception $e) {
+            Log::error('❌ [CompraController::exportarExcel] Error', [
+                'error'     => $e->getMessage(),
+                'compra_id' => $compra->id,
+            ]);
+            return back()->with('error', 'Error al generar Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exportar compra a PDF con formato seleccionado
+     * GET /compras/{compra}/exportar-pdf?formato=A4
+     */
+    public function exportarPdf(Compra $compra, Request $request)
+    {
+        Log::info('📄 [CompraController::exportarPdf] Exportando compra a PDF', [
+            'compra_id' => $compra->id,
+            'user_id'   => auth()->id(),
+        ]);
+
+        $this->authorize('view', $compra);
+
+        $formato = $request->input('formato', 'A4');
+
+        try {
+            return $this->imprimirCompra($compra, new Request([
+                'formato' => $formato,
+                'accion'  => 'download',
+            ]));
+        } catch (\Exception $e) {
+            Log::error('❌ [CompraController::exportarPdf] Error', [
+                'error'     => $e->getMessage(),
+                'compra_id' => $compra->id,
+            ]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Convertir URL de logo a data URI base64
+     *
+     * @param string|null $logoUrl URL de la imagen
+     * @return string|null Data URI para uso en HTML/CSS
+     */
+    private function logoToBase64(?string $logoUrl): ?string
+    {
+        if (! $logoUrl) {
+            return null;
+        }
+
+        try {
+            // Si ya es un data URI, devolverlo tal cual
+            if (str_starts_with($logoUrl, 'data:')) {
+                return $logoUrl;
+            }
+
+            // Resolver la ruta absoluta
+            $logoPath = public_path($logoUrl);
+
+            if (! file_exists($logoPath)) {
+                \Log::warning('Logo no encontrado: ' . $logoPath);
+                return null;
+            }
+
+            $imageData = file_get_contents($logoPath);
+            $base64    = base64_encode($imageData);
+
+            // Detectar el tipo MIME desde la extensión del archivo
+            $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'png'  => 'image/png',
+                'jpg'  => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'gif'  => 'image/gif',
+                'webp' => 'image/webp',
+                'svg'  => 'image/svg+xml',
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'image/png';
+
+            return "data:{$mimeType};base64,{$base64}";
+        } catch (\Exception $e) {
+            \Log::warning('Error al convertir logo a base64', [
+                'error'    => $e->getMessage(),
+                'logo_url' => $logoUrl,
+            ]);
+            return null;
+        }
     }
 }

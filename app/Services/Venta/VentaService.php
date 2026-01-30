@@ -71,27 +71,38 @@ class VentaService
         $dto->validarDetalles();
 
         // 2. Validar stock ANTES de la transacción
-        Log::info('🔄 [VentaService::crear] Validando stock disponible', [
-            'almacen_id'     => $dto->almacen_id,
-            'detalles_count' => count($dto->detalles),
-        ]);
+        // ✅ MODIFICADO: NO validar stock para CREDITO (son promesas de pago, no ventas inmediatas)
+        $esCREDITO = strtoupper($dto->politica_pago ?? '') === 'CREDITO';
 
-        $validacionStock = $this->stockService->validarDisponible(
-            $dto->detalles,
-            $dto->almacen_id
-        );
-
-        if (! $validacionStock->valido) {
-            Log::warning('❌ [VentaService::crear] Stock insuficiente', [
-                'detalles' => $validacionStock->detalles,
+        if (!$esCREDITO) {
+            Log::info('🔄 [VentaService::crear] Validando stock disponible', [
+                'almacen_id'     => $dto->almacen_id,
+                'detalles_count' => count($dto->detalles),
+                'politica_pago'  => $dto->politica_pago,
             ]);
-            throw StockInsuficientException::create($validacionStock->detalles);
+
+            $validacionStock = $this->stockService->validarDisponible(
+                $dto->detalles,
+                $dto->almacen_id
+            );
+
+            if (! $validacionStock->valido) {
+                Log::warning('❌ [VentaService::crear] Stock insuficiente', [
+                    'detalles' => $validacionStock->detalles,
+                ]);
+                throw StockInsuficientException::create($validacionStock->detalles);
+            }
+
+            Log::info('✅ [VentaService::crear] Stock validado exitosamente');
+        } else {
+            Log::info('⏭️ [VentaService::crear] Saltando validación de stock (CREDITO permite stock negativo)', [
+                'politica_pago' => $dto->politica_pago,
+            ]);
         }
 
-        Log::info('✅ [VentaService::crear] Stock validado exitosamente');
-
         // 3. Crear dentro de transacción
-        $venta = $this->transaction(function () use ($dto, $cajaId) {
+        // ✅ NUEVO: Pasar $esCREDITO al closure para permitir stock negativo
+        $venta = $this->transaction(function () use ($dto, $cajaId, $esCREDITO) {
             Log::debug('🔄 [VentaService::crear] Iniciando transacción', [
                 'proforma_id' => $dto->proforma_id,
             ]);
@@ -163,6 +174,7 @@ class VentaService
                 'canal_origen'               => $dto->canal_origen ?? 'WEB',
                 'estado_logistico_id'        => $dto->estado_logistico_id,
                 // Campos de política de pago
+                'tipo_pago_id'               => $dto->tipo_pago_id,  // ✅ NUEVO: Tipo de pago seleccionado
                 'politica_pago'              => $dto->politica_pago ?? 'CONTRA_ENTREGA',
                 'estado_pago'                => $estadoPago,                                             // ✅ Dinámico según pago inicial
                 'monto_pagado'               => $dto->monto_pagado_inicial ?? 0,                         // ✅ Si se pagó al aprobar
@@ -204,16 +216,20 @@ class VentaService
             // 3.3 Consumir stock (Service maneja su propia lógica dentro de transacción)
             Log::debug('🔄 [VentaService::crear] Procesando salida de stock', [
                 'venta_id' => $venta->id,
+                'politica_pago' => $dto->politica_pago,
             ]);
 
+            // ✅ NUEVO: Permitir stock negativo para CREDITO (son promesas de pago, no ventas inmediatas)
             $this->stockService->procesarSalidaVenta(
                 $dto->detalles,
                 "VENTA#{$venta->id}",
-                $dto->almacen_id
+                $dto->almacen_id,
+                permitirStockNegativo: $esCREDITO  // ✅ Permite stock negativo para CREDITO
             );
 
             Log::info('✅ [VentaService::crear] Stock procesado exitosamente', [
                 'venta_id' => $venta->id,
+                'politica_pago' => $dto->politica_pago,
             ]);
 
             // 3.4 Crear asiento contable (COMENTADO: Se habilitará cuando CuentasContables esté configurado)
@@ -375,6 +391,9 @@ class VentaService
                 'estadoLogistica',            // ✅ NUEVO: Para mostrar estado logístico en tabla
                 'detalles.producto',          // ✅ RECOMENDADO: Para verificar peso_total_estimado si es necesario
             ])
+                ->when($filtros['id'] ?? null, fn($q, $id) =>
+                    $q->where('id', $id)
+                )
                 ->when($filtros['estado'] ?? null, fn($q, $estado) =>
                     $q->where('estado', $estado)
                 )

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CierreDiarioGeneral;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -96,17 +97,20 @@ class CierreDiarioGeneralController extends Controller
     {
         $formato = $request->query('formato', 'A4');
         $accion = $request->query('accion', 'download');
+        $fuente = $request->query('fuente', 'consolas');
 
         $cierreDiarioGeneral->load(['usuario']);
 
-        // Renderizar vista blade según formato
-        $view = $this->obtenerVista($formato);
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
+        // Preparar datos para el servicio
+        $datos = [
             'cierre' => $cierreDiarioGeneral,
             'resumen' => $cierreDiarioGeneral->obtenerResumen(),
             'cajas_procesadas' => $cierreDiarioGeneral->detalle_cajas ?? [],
-        ])->setPaper($this->obtenerPaper($formato));
+        ];
+
+        // Usar ImpresionService para generar el PDF
+        $impresionService = app(\App\Services\ImpresionService::class);
+        $pdf = $impresionService->generarPDF('cierre_diario_general', $datos, $formato, ['fuente' => $fuente]);
 
         $nombreArchivo = 'cierre-diario-' . $cierreDiarioGeneral->fecha_ejecucion->format('Y-m-d-His') . '.pdf';
 
@@ -117,29 +121,4 @@ class CierreDiarioGeneralController extends Controller
         return $pdf->download($nombreArchivo);
     }
 
-    /**
-     * Obtener vista según formato
-     */
-    private function obtenerVista(string $formato): string
-    {
-        return match ($formato) {
-            'TICKET_58' => 'impresion.cajas.cierre-diario-ticket-58',
-            'TICKET_80' => 'impresion.cajas.cierre-diario-ticket-80',
-            'A4' => 'impresion.cajas.cierre-diario-a4',
-            default => 'impresion.cajas.cierre-diario-a4',
-        };
-    }
-
-    /**
-     * Obtener paper size según formato
-     */
-    private function obtenerPaper(string $formato): string|array
-    {
-        return match ($formato) {
-            'TICKET_58' => [0, 0, 210, 1000],  // 58mm × 200mm
-            'TICKET_80' => [0, 0, 226, 1000], // 80mm × 200mm
-            'A4' => 'a4',
-            default => 'a4',
-        };
-    }
 }

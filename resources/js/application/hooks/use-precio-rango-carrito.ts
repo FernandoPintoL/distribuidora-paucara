@@ -98,8 +98,10 @@ export function usePrecioRangoCarrito(debounceDelayMs: number = 500) {
                     mensajeUsuario = '⚠️ Error de validación: Verifica los datos ingresados';
                 } else {
                     mensajeUsuario = `⚠️ Error al calcular precios: ${errorMessage}`;
+                    console.error('Detalle del error:', mensajeUsuario);
                 }
 
+                // ✅ MEJORADO: Mostrar toast de error
                 NotificationService.error(mensajeUsuario);
             } catch (notifError) {
                 console.error('Error al mostrar notificación:', notifError);

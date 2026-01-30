@@ -70,6 +70,35 @@ class EntregaPdfController extends Controller
                 'reportes',
             ]);
 
+            // 🔍 DEBUG: Loguear información de la entrega para inspección
+            \Log::info('📦 [EntregaPdfController::descargar] Datos de entrega para imprimir', [
+                'entrega_id'            => $entrega->id,
+                'entrega_numero'        => $entrega->numero_entrega,
+                'fecha_asignacion'      => $entrega->fecha_asignacion,
+                'estado'                => $entrega->estado,
+                'peso_kg'               => $entrega->peso_kg,
+                'chofer_id'             => $entrega->chofer_id,
+                'chofer_tipo'           => gettype($entrega->chofer),
+                'chofer_es_null'        => $entrega->chofer === null,
+                'chofer_nombre'         => $entrega->chofer?->nombre ?? 'NULL',
+                'chofer_email'          => $entrega->chofer?->email ?? 'NULL',
+                'chofer_phone'          => $entrega->chofer?->phone ?? 'NULL',
+                'chofer_full_data'      => $entrega->chofer ? [
+                    'id' => $entrega->chofer->id,
+                    'name' => $entrega->chofer->name ?? $entrega->chofer->nombre ?? null,
+                    'email' => $entrega->chofer->email,
+                    'phone' => $entrega->chofer->phone ?? null,
+                ] : 'SIN CHOFER',
+                'vehiculo_id'           => $entrega->vehiculo_id,
+                'vehiculo_placa'        => $entrega->vehiculo?->placa ?? 'NULL',
+                'vehiculo_marca'        => $entrega->vehiculo?->marca ?? 'NULL',
+                'vehiculo_modelo'       => $entrega->vehiculo?->modelo ?? 'NULL',
+                'vehiculo_capacidad'    => $entrega->vehiculo?->capacidad_kg ?? 'NULL',
+                'ventas_count'          => $entrega->ventas?->count(),
+                'formato'               => $formato,
+                'accion'                => $accion,
+            ]);
+
             // Obtener empresa principal
             $empresa = \App\Models\Empresa::principal();
             if (!$empresa) {

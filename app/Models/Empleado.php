@@ -307,11 +307,15 @@ class Empleado extends Model
     }
 
     /**
-     * Verificar si es cajero
+     * Verificar si es cajero (acepta 'Cajero' o 'cajero')
      */
     public function esCajero(): bool
     {
-        return $this->user && $this->user->hasRole('Cajero');
+        if (!$this->user) {
+            return false;
+        }
+
+        return $this->user->hasRole('Cajero') || $this->user->hasRole('cajero');
     }
 
     /**

@@ -36,4 +36,6 @@ class TipoOperacionCaja extends Model
     const GASTO = 'GASTO';
 
     const INGRESO_EXTRA = 'INGRESO_EXTRA';
+
+    const CREDITO = 'CREDITO';  // ✅ NUEVO: Tipo de operación para créditos otorgados
 }

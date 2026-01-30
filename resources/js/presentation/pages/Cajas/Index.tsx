@@ -185,13 +185,13 @@ export default function Index(props: CajasIndexProps) {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Total Ingresos
+                                            Total Entradas
                                         </p>
                                         <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
                                             +{stats.ingresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                     </div>
-                                    <div className="text-4xl">💚</div>
+                                    <div className="text-4xl">➕</div>
                                 </div>
                             </div>
 
@@ -199,13 +199,13 @@ export default function Index(props: CajasIndexProps) {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Total Egresos
+                                            Total Salidas
                                         </p>
                                         <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
                                             -{stats.egresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                     </div>
-                                    <div className="text-4xl">❌</div>
+                                    <div className="text-4xl">➖</div>
                                 </div>
                             </div>
                         </div>
@@ -291,6 +291,7 @@ export default function Index(props: CajasIndexProps) {
                 onClose={handleCerrarModalCierre}
                 cajaAbierta={cajaAbiertaHoy}
                 montoEsperado={cajaAbiertaHoy ? toNumber(cajaAbiertaHoy.monto_apertura) + toNumber(totalMovimientos) : 0}
+                movimientos={movimientosHoy}
             />
 
             <RegistrarMovimientoModal
@@ -400,21 +401,19 @@ export default function Index(props: CajasIndexProps) {
                                                     <p className="text-gray-600 dark:text-gray-300">📊 Esperado</p>
                                                     <p className="font-semibold">${Number(cierre.monto_esperado || 0).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                                 </div>
-                                                <div className={`rounded p-1 ${
-                                                    cierre.diferencia > 0
-                                                        ? 'bg-green-100 dark:bg-green-900'
-                                                        : cierre.diferencia < 0
-                                                            ? 'bg-red-100 dark:bg-red-900'
-                                                            : 'bg-blue-100 dark:bg-blue-900'
-                                                }`}>
-                                                    <p className="text-gray-600 dark:text-gray-300">Δ Diferencia</p>
-                                                    <p className={`font-semibold ${
-                                                        cierre.diferencia > 0
-                                                            ? 'text-green-700 dark:text-green-300'
-                                                            : cierre.diferencia < 0
-                                                                ? 'text-red-700 dark:text-red-300'
-                                                                : 'text-blue-700 dark:text-blue-300'
+                                                <div className={`rounded p-1 ${cierre.diferencia > 0
+                                                    ? 'bg-green-100 dark:bg-green-900'
+                                                    : cierre.diferencia < 0
+                                                        ? 'bg-red-100 dark:bg-red-900'
+                                                        : 'bg-blue-100 dark:bg-blue-900'
                                                     }`}>
+                                                    <p className="text-gray-600 dark:text-gray-300">Δ Diferencia</p>
+                                                    <p className={`font-semibold ${cierre.diferencia > 0
+                                                        ? 'text-green-700 dark:text-green-300'
+                                                        : cierre.diferencia < 0
+                                                            ? 'text-red-700 dark:text-red-300'
+                                                            : 'text-blue-700 dark:text-blue-300'
+                                                        }`}>
                                                         {cierre.diferencia > 0 ? '+' : ''}{Number(cierre.diferencia || 0).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </p>
                                                 </div>
@@ -458,13 +457,12 @@ export default function Index(props: CajasIndexProps) {
                                     </div>
                                     <div className="text-center">
                                         <p className="text-slate-600 dark:text-slate-400">Δ Total</p>
-                                        <p className={`font-bold ${
-                                            cierresPendientesDetalle.reduce((sum: number, c: any) => sum + Number(c.diferencia || 0), 0) > 0
-                                                ? 'text-green-600'
-                                                : cierresPendientesDetalle.reduce((sum: number, c: any) => sum + Number(c.diferencia || 0), 0) < 0
-                                                    ? 'text-red-600'
-                                                    : 'text-slate-900 dark:text-white'
-                                        }`}>
+                                        <p className={`font-bold ${cierresPendientesDetalle.reduce((sum: number, c: any) => sum + Number(c.diferencia || 0), 0) > 0
+                                            ? 'text-green-600'
+                                            : cierresPendientesDetalle.reduce((sum: number, c: any) => sum + Number(c.diferencia || 0), 0) < 0
+                                                ? 'text-red-600'
+                                                : 'text-slate-900 dark:text-white'
+                                            }`}>
                                             ${cierresPendientesDetalle.reduce((sum: number, c: any) => sum + Number(c.diferencia || 0), 0).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                     </div>

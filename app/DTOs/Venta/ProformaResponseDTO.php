@@ -110,6 +110,14 @@ class ProformaResponseDTO extends BaseDTO
                 'cantidad' => $det->cantidad,
                 'precio_unitario' => (float) $det->precio_unitario,
                 'subtotal' => (float) $det->subtotal,
+                // ✅ NUEVO: Agregar información adicional del producto
+                'sku' => $det->producto->sku ?? null,
+                'peso' => (float) ($det->producto->peso ?? 0),
+                'categoria' => $det->producto->categoria?->nombre ?? null,
+                // ✅ NUEVO: Stock disponible del almacén principal
+                'stock_disponible' => $det->producto->stock?->first()?->cantidad_disponible ?? 0,
+                // ✅ NUEVO: Límite de venta del producto
+                'limite_venta' => $det->producto->limite_venta ? (int) $det->producto->limite_venta : null,
             ])->toArray(),
             politica_pago: $model->politica_pago ?? 'CONTRA_ENTREGA',
             canal_origen: $model->canal_origen ?? $model->canal ?? null,

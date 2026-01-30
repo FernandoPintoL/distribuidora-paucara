@@ -185,6 +185,7 @@ export interface VentaFormData extends BaseFormData {
 
 export interface FiltrosVentas {
     search?: string;
+    id?: number;
     numero?: string;
     cliente_id?: Id | null;
     estado_documento_id?: Id | null;

@@ -46,6 +46,7 @@ class VentaController extends Controller
         private VentaService $ventaService,
         private \App\Services\ImpresionService $impresionService,
         private \App\Services\PrinterService $printerService,
+        private \App\Services\ExcelExportService $excelExportService,
     ) {
         // ✅ ACTUALIZADO: Permisos solo para peticiones web, NO para API
         // Los clientes móviles acceden a sus propias ventas (filtradas por cliente_id autenticado)
@@ -82,6 +83,7 @@ class VentaController extends Controller
 
             // Extraer filtros del request
             $filtros = [
+                'id'                  => $request->input('id'),
                 'estado'              => $request->input('estado'),
                 'estado_documento_id' => $request->input('estado_documento_id'),
                 'cliente_id'          => $request->input('cliente_id'),
@@ -243,6 +245,7 @@ class VentaController extends Controller
         $tiposPago = TipoPago::activos()->select('id', 'nombre', 'codigo')->get()->map(fn($tipo) => [
             'id'     => $tipo->id,
             'nombre' => $tipo->nombre,
+            'codigo' => $tipo->codigo,  // ✅ NUEVO: Incluir codigo para que frontend pueda verificar si es CREDITO
             'icono'  => $tipo->getIcon(),
         ])->toArray();
 
@@ -847,6 +850,18 @@ class VentaController extends Controller
         $formato = $request->input('formato', 'A4');      // A4, TICKET_80, TICKET_58
         $accion  = $request->input('accion', 'download'); // download | stream
 
+        // 🔍 DEBUG: Loguear información de la venta antes de imprimir
+        \Log::info('📋 [VentaController::imprimir] Datos de venta para descargar/stream', [
+            'venta_id'           => $venta->id,
+            'venta_numero'       => $venta->numero,
+            'estado_pago'        => $venta->estado_pago,
+            'monto_pagado'       => $venta->monto_pagado,
+            'monto_pendiente'    => $venta->monto_pendiente,
+            'politica_pago'      => $venta->politica_pago,
+            'formato'            => $formato,
+            'accion'             => $accion,
+        ]);
+
         try {
             $pdf = $this->impresionService->imprimirVenta($venta, $formato);
 
@@ -887,25 +902,56 @@ class VentaController extends Controller
 
             $empresa = \App\Models\Empresa::principal();
 
+            // Convertir logos a base64 para embebimiento en PDF
+            $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
+            $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
+
             // Cargar relaciones necesarias
             $venta->load([
                 'cliente',
-                'detalles.producto',
+                'detalles.producto.stock.almacen',
                 'usuario',
                 'tipoPago',
                 'tipoDocumento',
                 'moneda',
                 'estadoDocumento',
                 'accessToken',
+                'movimientoCaja.caja',
+            ]);
+
+            // 🔍 DEBUG: Loguear información de la venta para inspección
+            \Log::info('📋 [VentaController::preview] Datos de venta para imprimir', [
+                'venta_id'           => $venta->id,
+                'venta_numero'       => $venta->numero,
+                'fecha_creacion'     => $venta->created_at,
+                'fecha_emision'      => $venta->fecha,
+                'subtotal'           => $venta->subtotal,
+                'descuento'          => $venta->descuento,
+                'total'              => $venta->total,
+                'estado_pago'        => $venta->estado_pago,
+                'monto_pagado'       => $venta->monto_pagado,
+                'monto_pendiente'    => $venta->monto_pendiente,
+                'politica_pago'      => $venta->politica_pago,
+                'cliente_id'         => $venta->cliente_id,
+                'cliente_nombre'     => $venta->cliente?->nombre,
+                'usuario_id'         => $venta->usuario_id,
+                'usuario_nombre'     => $venta->usuario?->name,
+                'movimientoCaja_id'  => $venta->movimientoCaja?->id,
+                'caja_id'            => $venta->movimientoCaja?->caja_id,
+                'caja_nombre'        => $venta->movimientoCaja?->caja?->nombre,
+                'detalles_count'     => $venta->detalles?->count(),
+                'formato'            => $formato,
             ]);
 
             return view($plantilla->vista_blade, [
-                'documento'       => $venta,
-                'empresa'         => $empresa,
-                'plantilla'       => $plantilla,
-                'fecha_impresion' => now(),
-                'usuario'         => auth()->user(),
-                'opciones'        => [],
+                'documento'              => $venta,
+                'empresa'                => $empresa,
+                'plantilla'              => $plantilla,
+                'fecha_impresion'        => now(),
+                'usuario'                => auth()->user(),
+                'opciones'               => [],
+                'logo_principal_base64'  => $logoPrincipalBase64,
+                'logo_footer_base64'     => $logoFooterBase64,
             ]);
         } catch (\Exception $e) {
             abort(500, 'Error al generar preview: ' . $e->getMessage());
@@ -931,6 +977,84 @@ class VentaController extends Controller
                 'success' => false,
                 'message' => 'Error al obtener formatos: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Exportar venta a Excel con formato profesional
+     *
+     * @param Venta $venta
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function exportarExcel(Venta $venta, Request $request)
+    {
+        Log::info('📊 [VentaController::exportarExcel] Exportando venta a Excel', [
+            'venta_id' => $venta->id,
+            'user_id'  => auth()->id(),
+        ]);
+
+        $user = auth()->user();
+
+        // ✅ AUTORIZACIÓN: Validar que el usuario tiene permiso
+        if (!$this->userCanAccessVenta($user, $venta)) {
+            Log::warning('❌ [VentaController::exportarExcel] Autorización fallida', [
+                'user_id'  => $user->id,
+                'venta_id' => $venta->id,
+            ]);
+            return response()->json(['message' => 'No tiene permiso para descargar esta venta'], 403);
+        }
+
+        try {
+            return $this->excelExportService->exportarVenta($venta);
+        } catch (\Exception $e) {
+            Log::error('❌ [VentaController::exportarExcel] Error', [
+                'error'    => $e->getMessage(),
+                'venta_id' => $venta->id,
+            ]);
+            return back()->with('error', 'Error al generar Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exportar venta a PDF
+     *
+     * @param Venta $venta
+     * @param Request $request
+     * @return mixed
+     */
+    public function exportarPdf(Venta $venta, Request $request)
+    {
+        Log::info('📄 [VentaController::exportarPdf] Exportando venta a PDF', [
+            'venta_id' => $venta->id,
+            'user_id'  => auth()->id(),
+        ]);
+
+        $user = auth()->user();
+
+        // ✅ AUTORIZACIÓN: Validar que el usuario tiene permiso
+        if (!$this->userCanAccessVenta($user, $venta)) {
+            Log::warning('❌ [VentaController::exportarPdf] Autorización fallida', [
+                'user_id'  => $user->id,
+                'venta_id' => $venta->id,
+            ]);
+            return response()->json(['message' => 'No tiene permiso para descargar esta venta'], 403);
+        }
+
+        $formato = $request->input('formato', 'A4');
+
+        try {
+            // Usar el mismo servicio de impresión para generar PDF
+            $pdf = $this->impresionService->imprimirVenta($venta, $formato);
+            $nombreArchivo = "venta_{$venta->numero}_{$formato}.pdf";
+
+            return $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('❌ [VentaController::exportarPdf] Error', [
+                'error'    => $e->getMessage(),
+                'venta_id' => $venta->id,
+            ]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
         }
     }
 
@@ -996,5 +1120,56 @@ class VentaController extends Controller
         Log::debug('❌ [userCanAccessVenta] No matching role found');
         // Si no es Super Admin, Admin, Cliente o Chofer, denegar acceso
         return false;
+    }
+
+    /**
+     * Convertir URL de logo a data URI base64
+     *
+     * @param string|null $logoUrl URL de la imagen
+     * @return string|null Data URI para uso en HTML/CSS
+     */
+    private function logoToBase64(?string $logoUrl): ?string
+    {
+        if (!$logoUrl) {
+            return null;
+        }
+
+        try {
+            // Si ya es un data URI, devolverlo tal cual
+            if (str_starts_with($logoUrl, 'data:')) {
+                return $logoUrl;
+            }
+
+            // Resolver la ruta absoluta
+            $logoPath = public_path($logoUrl);
+
+            if (!file_exists($logoPath)) {
+                \Log::warning('Logo no encontrado: ' . $logoPath);
+                return null;
+            }
+
+            $imageData = file_get_contents($logoPath);
+            $base64 = base64_encode($imageData);
+
+            // Detectar el tipo MIME desde la extensión del archivo
+            $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'png' => 'image/png',
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'image/png';
+
+            return "data:{$mimeType};base64,{$base64}";
+        } catch (\Exception $e) {
+            \Log::warning('Error al convertir logo a base64', [
+                'error' => $e->getMessage(),
+                'logo_url' => $logoUrl
+            ]);
+            return null;
+        }
     }
 }

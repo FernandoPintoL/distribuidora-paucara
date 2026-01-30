@@ -25,6 +25,10 @@ class Compra extends Model
         'almacen_id',
     ];
 
+    protected $casts = [
+        'fecha' => 'datetime',
+    ];
+
     // Relaciones
     public function proveedor()
     {

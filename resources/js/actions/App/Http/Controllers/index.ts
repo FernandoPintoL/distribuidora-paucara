@@ -52,6 +52,8 @@ import GastoController from './GastoController'
 import CierreDiarioGeneralController from './CierreDiarioGeneralController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import InventarioInicialController from './InventarioInicialController'
+import ReservaStockController from './ReservaStockController'
+import Inventario from './Inventario'
 import Web from './Web'
 import VendedorController from './VendedorController'
 import ChoferController from './ChoferController'
@@ -63,7 +65,6 @@ import ReporteCreditoController from './ReporteCreditoController'
 import ReporteVisitasController from './ReporteVisitasController'
 import ReporteInventarioController from './ReporteInventarioController'
 import ReporteVentasController from './ReporteVentasController'
-import ReservaStockController from './ReservaStockController'
 import ConteoFisicoController from './ConteoFisicoController'
 import AnalisisAbcController from './AnalisisAbcController'
 import ImpresionStockController from './ImpresionStockController'
@@ -123,6 +124,8 @@ GastoController,
 CierreDiarioGeneralController,
 TipoAjusteInventarioController,
 InventarioInicialController,
+ReservaStockController,
+Inventario,
 Web,
 VendedorController,
 ChoferController,
@@ -134,7 +137,6 @@ ReporteCreditoController,
 ReporteVisitasController,
 ReporteInventarioController,
 ReporteVentasController,
-ReservaStockController,
 ConteoFisicoController,
 AnalisisAbcController,
 ImpresionStockController,

@@ -101,21 +101,20 @@ class CajeroTestSeeder extends Seeder
             }
 
             // Crear caja asociada al cajero
-            /* $caja = Caja::firstOrCreate(
-                ['codigo' => 'CAJA-' . $cajeroData['empleado']['codigo_empleado']],
+            $caja = Caja::firstOrCreate(
+                ['user_id' => $user->id],
                 [
-                    'descripcion' => 'Caja de ' . $cajeroData['user']['name'],
-                    'empleado_id' => $empleado->id,
-                    'saldo_inicial' => 5000.00,
-                    'saldo_actual' => 5000.00,
-                    'estado' => 'cerrada',
-                    'fecha_apertura' => null,
-                    'fecha_cierre' => null,
+                    'nombre' => 'Caja de ' . $cajeroData['user']['name'],
+                    'ubicacion' => 'Mostrador',
+                    'monto_inicial_dia' => 5000.00,
+                    'activa' => true,
                 ]
-            ); */
+            );
 
-            $estado = $empleado->wasRecentlyCreated ? '✅ Creado' : '🔄 Actualizado';
-            $this->command->info("  {$estado}: {$cajeroData['user']['name']} ({$cajeroData['user']['email']})");
+            $estadoEmpleado = $empleado->wasRecentlyCreated ? '✅ Creado' : '🔄 Actualizado';
+            $estadoCaja = $caja->wasRecentlyCreated ? '📦 Nueva caja' : '📦 Caja existente';
+            $this->command->info("  {$estadoEmpleado}: {$cajeroData['user']['name']} ({$cajeroData['user']['email']})");
+            $this->command->info("    {$estadoCaja}: {$caja->nombre}");
         }
 
         $totalCajeros = User::role('Cajero')->count();
@@ -125,12 +124,17 @@ class CajeroTestSeeder extends Seeder
         $this->command->info("  Total cajeros: {$totalCajeros}");
         $this->command->info('');
         $this->command->info('🔑 Credenciales de acceso:');
-        $this->command->info('  Email: cajero[1-2]@paucara.test');
+        $this->command->info('  Email: cajero@principal.com');
         $this->command->info('  Contraseña: password');
         $this->command->info('');
         $this->command->info('✓ Permisos disponibles:');
         $this->command->info('  - Ver dashboard de vendedor/cajero');
         $this->command->info('  - Gestionar cajas');
         $this->command->info('  - Registrar ventas');
+        $this->command->info('');
+        $this->command->info('💼 Información:');
+        $this->command->info('  - Empleado: Cajero Principal');
+        $this->command->info('  - Código: CAJ001');
+        $this->command->info('  - Caja: Caja de Cajero Principal');
     }
 }

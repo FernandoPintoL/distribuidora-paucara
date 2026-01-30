@@ -12,8 +12,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { formatCurrency, toNumber, formatDateTime } from '@/lib/cajas.utils';
-import { Calendar, ChevronDown, ChevronRight, Loader } from 'lucide-react';
-import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
+import { Calendar, ChevronDown, ChevronRight, Loader, Printer } from 'lucide-react';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import type { AperturaHistorico, MovimientoCaja } from '@/domain/entities/cajas';
 
 interface Props {
@@ -35,6 +35,7 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
     const [expandedAperturaId, setExpandedAperturaId] = useState<number | null>(null);
     const [movimientosLoading, setMovimientosLoading] = useState<number | null>(null);
     const [movimientosCached, setMovimientosCached] = useState<Record<number, MovimientosData>>({});
+    const [outputModal, setOutputModal] = useState<{ isOpen: boolean; aperturaId?: number; printType?: 'cierre' | 'movimientos' }>({ isOpen: false });
 
     // Obtener cajas únicas para el filtro
     const cajasUnicas = useMemo(() => {
@@ -105,7 +106,7 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
         switch (estadoCierre.toUpperCase()) {
             case 'PENDIENTE':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
-                    ⏳ Pendiente
+                    ⏳ Pendiente de Consolidación
                 </span>;
             case 'CONSOLIDADA':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
@@ -279,30 +280,15 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                     Caja
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Fecha Apertura
+                                    Fechas
                                 </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Monto Apertura
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Estado
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Estado Cierre
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Fecha Cierre
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Monto Esperado
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Monto Real
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Diferencia
-                                </th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Acciones
                                 </th>
                             </tr>
@@ -312,7 +298,7 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                 <React.Fragment key={apertura.id}>
                                     <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                         <td
-                                            className="w-10 px-3 py-4 text-center cursor-pointer"
+                                            className="w-10 px-3 py-4 text-right cursor-pointer"
                                             onClick={() => cargarMovimientos(apertura.id)}
                                         >
                                             {movimientosLoading === apertura.id ? (
@@ -329,40 +315,33 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                             #{apertura.id} | {apertura.caja_nombre}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                                            {formatDateTime(apertura.fecha_apertura)}
+                                            Apertura: {formatDateTime(apertura.fecha_apertura)}
+                                            <br />
+                                            Cierre: {apertura.fecha_cierre != null ? formatDateTime(apertura.fecha_cierre) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700 dark:text-gray-300">
-                                            {apertura.monto_apertura != null ? formatCurrency(toNumber(apertura.monto_apertura)) : '-'}
+                                        <td className="px-6 py-4 whitespace-nowrap text-left text-sm text-gray-700 dark:text-gray-300">
+                                            <strong>Apertura:</strong> {apertura.monto_apertura != null ? formatCurrency(toNumber(apertura.monto_apertura)) : '-'}
+                                            <br />
+                                            <strong>Esperado:</strong> {apertura.monto_esperado != null ? formatCurrency(toNumber(apertura.monto_esperado)) : '-'}
+                                            <br />
+                                            <strong>Diferencia:</strong> {apertura.diferencia !== null ? formatCurrency(Math.abs(toNumber(apertura.diferencia))) : '-'}
+                                            <br />
+                                            <strong>Monto Real:</strong> {apertura.monto_real != null ? formatCurrency(toNumber(apertura.monto_real)) : '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             {getEstadoBadge(apertura.estado)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            <br />
                                             {apertura.estado_cierre ? getEstadoCierreBadge(apertura.estado_cierre) : '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                                            {apertura.fecha_cierre != null ? formatDateTime(apertura.fecha_cierre) : '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700 dark:text-gray-300">
-                                            {apertura.monto_esperado != null ? formatCurrency(toNumber(apertura.monto_esperado)) : '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700 dark:text-gray-300">
-                                            {apertura.monto_real != null ? formatCurrency(toNumber(apertura.monto_real)) : '-'}
-                                        </td>
-                                        <td className={`px-6 py-4 whitespace-nowrap text-right text-sm ${getDiferenciaColor(apertura.diferencia)}`}>
-                                            {apertura.diferencia !== null ? formatCurrency(Math.abs(toNumber(apertura.diferencia))) : '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             {apertura.estado === 'Cerrada' && apertura.id && (
-                                                <FormatoSelector
-                                                    documentoId={apertura.id}
-                                                    tipoDocumento="cajas-cierre"
-                                                    formatos={[
-                                                        { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Compacto' },
-                                                        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Muy compacto' },
-                                                    ]}
-                                                    className="text-xs"
-                                                />
+                                                <button
+                                                    onClick={() => setOutputModal({ isOpen: true, aperturaId: apertura.id, printType: 'cierre' })}
+                                                    className="inline-flex items-center p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                                    title="Imprimir cierre de caja"
+                                                >
+                                                    <Printer className="h-4 w-4" /> Imprimir Cierre
+                                                </button>
                                             )}
                                             {apertura.estado !== 'Cerrada' && (
                                                 <span className="text-xs text-gray-400 dark:text-gray-500">Sin cierre</span>
@@ -376,9 +355,19 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                             <td colSpan={11} className="px-6 py-4">
                                                 <div className="space-y-4">
                                                     <div>
-                                                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                                                            📊 Movimientos del período ({movimientosCached[apertura.id]?.count || 0})
-                                                        </h4>
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                                📊 Movimientos del período ({movimientosCached[apertura.id]?.count || 0})
+                                                            </h4>
+                                                            <button
+                                                                onClick={() => setOutputModal({ isOpen: true, aperturaId: apertura.id, printType: 'movimientos' })}
+                                                                className="inline-flex items-center p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                                                title="Imprimir movimientos"
+                                                            >
+                                                                <Printer className="h-4 w-4 mr-2" />
+                                                                <span className="text-sm font-medium">Imprimir Movimientos</span>
+                                                            </button>
+                                                        </div>
 
                                                         {movimientosCached[apertura.id]?.movimientos.length ? (
                                                             <div className="overflow-x-auto">
@@ -459,6 +448,16 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* Modal de Exportación/Impresión */}
+            <OutputSelectionModal
+                isOpen={outputModal.isOpen}
+                onClose={() => setOutputModal({ isOpen: false })}
+                documentoId={outputModal.aperturaId?.toString() || ''}
+                tipoDocumento="caja"
+                documentoInfo={{}}
+                printType={outputModal.printType}
+            />
         </div>
     );
 }

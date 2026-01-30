@@ -57,9 +57,12 @@ class RegisterCajaMovementFromVentaListener
                 return;
             }
 
-            // ✅ 2. Validar que hay monto a registrar
-            if ($venta->monto_pagado <= 0) {
-                Log::info('⏭️ RegisterCajaMovementFromVentaListener - Sin monto a pagar, no registra movimiento', [
+            // ✅ 2. Determinar si es CREDITO o tiene monto a registrar
+            $esCREDITO = $venta->politica_pago === 'CREDITO';
+            $tieneMontoAPagar = $venta->monto_pagado > 0;
+
+            if (!$esCREDITO && !$tieneMontoAPagar) {
+                Log::info('⏭️ RegisterCajaMovementFromVentaListener - Sin monto a pagar y no es crédito, no registra movimiento', [
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
                     'monto_pagado' => $venta->monto_pagado,
@@ -68,10 +71,10 @@ class RegisterCajaMovementFromVentaListener
                 return;
             }
 
-            // ✅ 3. Validar que la política requiere pago inmediato
-            $politicasConPagoInmediato = ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CONTRA_ENTREGA'];
+            // ✅ 3. Validar que la política requiere pago inmediato O es CREDITO
+            $politicasConPagoInmediato = ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CONTRA_ENTREGA', 'CREDITO'];
             if (!in_array($venta->politica_pago, $politicasConPagoInmediato)) {
-                Log::info('⏭️ RegisterCajaMovementFromVentaListener - Política no requiere pago inmediato', [
+                Log::info('⏭️ RegisterCajaMovementFromVentaListener - Política no requiere pago inmediato ni es crédito', [
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
                     'politica' => $venta->politica_pago,
@@ -89,7 +92,8 @@ class RegisterCajaMovementFromVentaListener
                 return;
             }
 
-            // ✅ 5. Obtener caja abierta del usuario
+            // ✅ 5. Obtener caja abierta del usuario (HOY o la más reciente si es Admin con caja de ayer)
+            // Primero intenta HOY
             $cajaAbierta = AperturaCaja::where('caja_id', $cajaId)
                 ->where('user_id', $usuario->id)
                 ->whereDate('fecha', today())
@@ -97,8 +101,35 @@ class RegisterCajaMovementFromVentaListener
                 ->with('caja')
                 ->first();
 
+            // Si no hay caja de hoy, busca la más reciente (posiblemente de ayer)
+            // ✅ NUEVO: Permite cajas de días anteriores (útil para Admins que usan caja de ayer sin cerrar)
             if (!$cajaAbierta) {
-                Log::warning('⚠️ RegisterCajaMovementFromVentaListener - Caja no abierta HOY por este usuario', [
+                $cajaAbierta = AperturaCaja::where('caja_id', $cajaId)
+                    ->where('user_id', $usuario->id)
+                    ->whereDoesntHave('cierre')
+                    ->with('caja')
+                    ->latest('fecha')
+                    ->first();
+
+                if ($cajaAbierta) {
+                    $fechaApertura = $cajaAbierta->fecha;
+                    $hoy = today();
+
+                    if ($fechaApertura < $hoy) {
+                        Log::info('⚠️ RegisterCajaMovementFromVentaListener - Usando caja de día anterior (permitido para Admin)', [
+                            'usuario_id' => $usuario->id,
+                            'usuario_nombre' => $usuario->name,
+                            'caja_id' => $cajaId,
+                            'apertura_fecha' => $fechaApertura,
+                            'venta_id' => $venta->id,
+                            'venta_numero' => $venta->numero,
+                        ]);
+                    }
+                }
+            }
+
+            if (!$cajaAbierta) {
+                Log::warning('⚠️ RegisterCajaMovementFromVentaListener - Caja no abierta por este usuario (ni hoy ni anterior)', [
                     'usuario_id' => $usuario->id,
                     'usuario_nombre' => $usuario->name,
                     'caja_id' => $cajaId,
@@ -122,7 +153,7 @@ class RegisterCajaMovementFromVentaListener
                         'venta_numero' => $venta->numero,
                         'politica' => $venta->politica_pago,
                         'monto_pagado' => $venta->monto_pagado,
-                        'motivo' => 'Usuario no tiene caja abierta HOY',
+                        'motivo' => 'Usuario no tiene caja abierta (ni hoy ni anterior)',
                     ],
                     'codigo_http' => 422,
                     'mensaje_error' => 'Usuario no tiene caja abierta para registrar pago',
@@ -133,13 +164,15 @@ class RegisterCajaMovementFromVentaListener
                 return;
             }
 
-            // ✅ 6. Obtener tipo de operación VENTA
-            $tipoOperacion = TipoOperacionCaja::where('codigo', 'VENTA')->first();
+            // ✅ 6. Obtener tipo de operación (CREDITO si es crédito, VENTA si es pago normal)
+            $codigoTipoOperacion = $esCREDITO ? 'CREDITO' : 'VENTA';  // ✅ NUEVO: Usar CREDITO para créditos
+            $tipoOperacion = TipoOperacionCaja::where('codigo', $codigoTipoOperacion)->first();
 
             if (!$tipoOperacion) {
-                Log::error('❌ RegisterCajaMovementFromVentaListener - Tipo operación VENTA no existe', [
+                Log::error("❌ RegisterCajaMovementFromVentaListener - Tipo operación {$codigoTipoOperacion} no existe", [
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
+                    'codigo_buscado' => $codigoTipoOperacion,
                 ]);
 
                 // ✅ REGISTRAR EN AUDITORÍA: Error de configuración
@@ -154,10 +187,11 @@ class RegisterCajaMovementFromVentaListener
                     'detalle_operacion' => [
                         'venta_id' => $venta->id,
                         'venta_numero' => $venta->numero,
-                        'motivo' => 'TipoOperacionCaja VENTA no existe en la BD',
+                        'motivo' => "TipoOperacionCaja {$codigoTipoOperacion} no existe en la BD",
+                        'codigo_buscado' => $codigoTipoOperacion,
                     ],
                     'codigo_http' => 500,
-                    'mensaje_error' => 'Tipo operación VENTA no encontrado',
+                    'mensaje_error' => "Tipo operación {$codigoTipoOperacion} no encontrado",
                     'ip_address' => request()->ip(),
                     'user_agent' => request()->userAgent(),
                 ]);
@@ -165,31 +199,38 @@ class RegisterCajaMovementFromVentaListener
                 return;
             }
 
-            // ✅ 7. Determinar descripción según la política
+            // ✅ 7. Determinar descripción y monto según la política
             $descripcionPolitica = match($venta->politica_pago) {
                 'ANTICIPADO_100' => '100% ANTICIPADO',
                 'MEDIO_MEDIO' => '50% ANTICIPO',
                 'CONTRA_ENTREGA' => 'ABONO CONTRA ENTREGA',
+                'CREDITO' => 'CREDITO OTORGADO',  // ✅ NUEVO: Descripción para crédito
                 default => 'ANTICIPO'
             };
+
+            // ✅ 7.5 Para CREDITO, registrar el monto total de la venta (no monto_pagado que sería 0)
+            $montoARegistrar = $esCREDITO ? $venta->total : $venta->monto_pagado;
 
             // ✅ 8. Crear movimiento de caja
             $movimiento = MovimientoCaja::create([
                 'caja_id' => $cajaAbierta->caja_id,
                 'user_id' => $usuario->id,
                 'tipo_operacion_id' => $tipoOperacion->id,
+                'tipo_pago_id' => $venta->tipo_pago_id,  // ✅ NUEVO: Guardar tipo de pago para análisis
                 'numero_documento' => $venta->numero,
-                'monto' => $venta->monto_pagado,
+                'monto' => $montoARegistrar,  // ✅ MODIFICADO: Usar montoARegistrar
                 'fecha' => now(),
                 'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - Creada directamente",
+                'venta_id' => $venta->id,  // ✅ NUEVO: Guardar ID de venta para rango
             ]);
 
             // ✅ 9. REGISTRAR EN AUDITORÍA: Éxito
+            $accionAuditoria = $esCREDITO ? 'CREDITO_OTORGADO' : 'PAGO_REGISTRADO';  // ✅ NUEVO: Diferente acción para CREDITO
             AuditoriaCaja::create([
                 'user_id' => $usuario->id,
                 'caja_id' => $cajaAbierta->caja_id,
                 'apertura_caja_id' => $cajaAbierta->id,
-                'accion' => 'PAGO_REGISTRADO',
+                'accion' => $accionAuditoria,
                 'operacion_intentada' => 'POST /ventas',
                 'operacion_tipo' => 'VENTA',
                 'exitosa' => true,
@@ -199,7 +240,9 @@ class RegisterCajaMovementFromVentaListener
                     'movimiento_caja_id' => $movimiento->id,
                     'caja_numero' => $cajaAbierta->caja?->nombre,
                     'politica' => $venta->politica_pago,
-                    'monto_pagado' => $venta->monto_pagado,
+                    'monto_registrado' => $montoARegistrar,  // ✅ NUEVO: Monto registrado en caja
+                    'monto_pagado_inicial' => $venta->monto_pagado,  // ✅ NUEVO: Monto pagado (0 para CREDITO)
+                    'es_credito' => $esCREDITO,  // ✅ NUEVO: Flag indicador
                     'descripcion_politica' => $descripcionPolitica,
                     'fuente' => 'Venta creada directamente (POST /ventas)',
                 ],
@@ -215,7 +258,9 @@ class RegisterCajaMovementFromVentaListener
                 'caja_nombre' => $cajaAbierta->caja?->nombre,
                 'usuario_id' => $usuario->id,
                 'usuario_nombre' => $usuario->name,
-                'monto' => $venta->monto_pagado,
+                'monto' => $montoARegistrar,  // ✅ MODIFICADO: Mostrar monto registrado (puede ser total para CREDITO)
+                'monto_pagado_inicial' => $venta->monto_pagado,  // ✅ NUEVO: Mostrar también monto pagado original
+                'es_credito' => $esCREDITO,  // ✅ NUEVO: Indicar si es crédito
                 'politica' => $venta->politica_pago,
                 'tipo_pago' => $descripcionPolitica,
                 'movimiento_id' => $movimiento->id,

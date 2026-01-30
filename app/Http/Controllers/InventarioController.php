@@ -19,16 +19,24 @@ use App\Models\TipoMerma;
 use App\Models\TipoOperacion;
 use App\Models\TransferenciaInventario;
 use App\Models\Vehiculo;
+use App\Services\ExcelExportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class InventarioController extends Controller
 {
+    private ExcelExportService $excelExportService;
+
+    public function __construct(ExcelExportService $excelExportService)
+    {
+        $this->excelExportService = $excelExportService;
+    }
     /**
      * Generar número secuencial para ajuste de inventario
      * Formato: AJ + YYYYMMDD + XXXX (ejemplo: AJ202510290001)
@@ -86,7 +94,14 @@ class InventarioController extends Controller
         $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
 
         // Stock por almacén - tabla completa de stock_productos
-        $stockPorAlmacen = StockProducto::with(['producto', 'producto.codigoPrincipal', 'almacen', 'producto.precios'])
+        $stockPorAlmacen = StockProducto::with([
+            'producto',
+            'producto.codigoPrincipal',
+            'almacen',
+            'producto.precios',
+            'producto.unidad',
+            'producto.conversiones.unidadDestino'
+        ])
             ->where('cantidad', '>', 0)
             ->orderBy('almacen_id')
             ->orderBy('producto_id')
@@ -98,6 +113,21 @@ class InventarioController extends Controller
                     // Buscar el precio de venta base
                     $precioVentaObj = $stock->producto->precios?->firstWhere('es_precio_base', true);
                     $precioVenta = $precioVentaObj?->precio ?? $stock->producto->precio_venta ?? 0;
+                }
+
+                // Procesar conversiones para productos fraccionados
+                $conversiones = [];
+                if ($stock->producto?->es_fraccionado && $stock->producto->conversiones) {
+                    $conversiones = $stock->producto->conversiones->map(function ($conv) use ($stock) {
+                        return [
+                            'id' => $conv->id,
+                            'unidad_origen_id' => $conv->unidad_origen_id,
+                            'unidad_destino_id' => $conv->unidad_destino_id,
+                            'unidad_destino_nombre' => $conv->unidadDestino?->nombre ?? '',
+                            'factor_conversion' => $conv->factor_conversion,
+                            'cantidad_en_conversion' => round($stock->cantidad * $conv->factor_conversion, 2),
+                        ];
+                    })->values()->toArray();
                 }
 
                 return [
@@ -113,6 +143,9 @@ class InventarioController extends Controller
                     'producto_codigo_barra' => $stock->producto?->codigoPrincipal?->codigo ?? '',
                     'producto_sku'          => $stock->producto?->sku ?? '',
                     'almacen_nombre'        => $stock->almacen?->nombre ?? 'Desconocido',
+                    'es_fraccionado'        => (bool) $stock->producto?->es_fraccionado,
+                    'unidad_medida_nombre'  => $stock->producto?->unidad?->nombre ?? 'Unidades',
+                    'conversiones'          => $conversiones,
                 ];
             });
 
@@ -1798,6 +1831,62 @@ class InventarioController extends Controller
             ]);
 
             return ApiResponse::error('Error al obtener estadísticas: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Exportar stock a Excel con formato profesional
+     * GET /stock/{stock}/exportar-excel
+     */
+    public function exportarExcel(StockProducto $stock)
+    {
+        Log::info('📊 [InventarioController::exportarExcel] Exportando stock a Excel', [
+            'stock_id' => $stock->id,
+            'user_id'  => auth()->id(),
+        ]);
+
+        try {
+            return $this->excelExportService->exportarInventario($stock);
+        } catch (\Exception $e) {
+            Log::error('❌ [InventarioController::exportarExcel] Error', [
+                'error'    => $e->getMessage(),
+                'stock_id' => $stock->id,
+            ]);
+            return back()->with('error', 'Error al generar Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exportar stock a PDF
+     * GET /stock/{stock}/exportar-pdf
+     */
+    public function exportarPdf(StockProducto $stock)
+    {
+        Log::info('📄 [InventarioController::exportarPdf] Exportando stock a PDF', [
+            'stock_id' => $stock->id,
+            'user_id'  => auth()->id(),
+        ]);
+
+        try {
+            // Generar PDF usando DomPDF
+            $stock->load(['producto.categoria', 'producto.marca', 'almacen']);
+
+            $datos = [
+                'stock'    => $stock,
+                'empresa'  => \App\Models\Empresa::first(),
+                'usuario'  => auth()->user()->name ?? 'Sistema',
+            ];
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('impresion.inventarios.reporte-a4', $datos);
+            $pdf->setPaper('A4', 'portrait');
+
+            return $pdf->download('stock_' . $stock->producto->codigo . '_' . now()->format('Y-m-d_H-i-s') . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('❌ [InventarioController::exportarPdf] Error', [
+                'error'    => $e->getMessage(),
+                'stock_id' => $stock->id,
+            ]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
         }
     }
 }

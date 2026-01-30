@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/presentation/components/ui/select';
-import { Banknote, Send, CreditCard, Truck, Split, CheckCircle2, AlertCircle, Info, Loader2 } from 'lucide-react';
+import { Banknote, Send, CreditCard, Truck, Split, CheckCircle2, AlertCircle, Info, Loader2, RefreshCw } from 'lucide-react';
 import type { Proforma, PaymentData } from '@/domain/entities/proformas';
 import type { CoordinacionData } from '@/application/hooks/use-proforma-actions';
 import { usePoliticasPago } from '@/application/hooks/use-politicas-pago';
@@ -30,6 +30,14 @@ interface ApprovalPaymentFormProps {
     onSubmit: () => void;
     onCancel: () => void;
     isSubmitting: boolean;
+    // Props para manejar reservas expiradas
+    errorState?: {
+        code?: string;
+        message?: string;
+        reservasExpiradas?: number;
+    } | null;
+    onRenovarReservas?: () => void;
+    isRenovando?: boolean;
 }
 
 export function ApprovalPaymentForm({
@@ -38,7 +46,10 @@ export function ApprovalPaymentForm({
     onCoordinacionChange,
     onSubmit,
     onCancel,
-    isSubmitting
+    isSubmitting,
+    errorState = null,
+    onRenovarReservas,
+    isRenovando = false
 }: ApprovalPaymentFormProps) {
 
     const [tiposPago, setTiposPago] = useState<TipoPago[]>([]);
@@ -70,9 +81,20 @@ export function ApprovalPaymentForm({
             .then(res => res.json())
             .then(data => {
                 setTiposPago(data.data || []);
-                // ✅ Establecer tipo de pago por defecto: EFECTIVO (si existe) o el primero activo
-                const efectivo = data.data?.find((t: TipoPago) => t.codigo === 'EFECTIVO' && t.activo);
-                const defaultTipo = efectivo || data.data?.find((t: TipoPago) => t.activo);
+
+                // ✅ MEJORADO: Establecer tipo de pago coherente con política
+                // Si la política es CREDITO, usar CREDITO tipo de pago
+                // Si no, usar EFECTIVO como default
+                let defaultTipo;
+
+                if (proforma.politica_pago === 'CREDITO') {
+                    defaultTipo = data.data?.find((t: TipoPago) => t.codigo === 'CREDITO' && t.activo);
+                    console.log('%c💳 Política es CREDITO, usando tipo CREDITO por defecto:', 'color: blue;');
+                } else {
+                    const efectivo = data.data?.find((t: TipoPago) => t.codigo === 'EFECTIVO' && t.activo);
+                    defaultTipo = efectivo || data.data?.find((t: TipoPago) => t.activo);
+                }
+
                 if (defaultTipo) {
                     console.log('%c💰 Tipo de pago por defecto:', 'color: green;', {
                         codigo: defaultTipo.codigo,
@@ -88,11 +110,12 @@ export function ApprovalPaymentForm({
                     { id: 1, codigo: 'EFECTIVO', nombre: 'Efectivo', activo: true },
                     { id: 2, codigo: 'TRANSFERENCIA', nombre: 'Transferencia', activo: true },
                 ]);
-                // ✅ Establecer EFECTIVO como default en fallback también
-                setPayment(prev => ({ ...prev, tipo_pago_id: 1 }));
+                // ✅ MEJORADO: Establecer default coherente en fallback también
+                const defaultId = proforma.politica_pago === 'CREDITO' ? 3 : 1; // 3 sería CREDITO si existiera
+                setPayment(prev => ({ ...prev, tipo_pago_id: proforma.politica_pago === 'CREDITO' ? undefined : 1 }));
             })
             .finally(() => setLoadingTiposPago(false));
-    }, []);
+    }, [proforma.politica_pago]);
 
     // ✅ NUEVO: Cargar cliente completo SIEMPRE (no solo si es CRÉDITO)
     // Esto es necesario para filtrar tipos de pago según puede_tener_credito
@@ -190,7 +213,26 @@ export function ApprovalPaymentForm({
         return calcularMinimo(payment.politica_pago as any, proforma.subtotal);
     };
 
-    // ✅ MEJORADO: Manejo de cambio de política con validación
+    // ✅ MEJORADO: Manejo de cambio de tipo de pago con sincronización a política
+    const handleTipoPagoChange = (tipoPagoIdStr: string) => {
+        const tipoPagoId = parseInt(tipoPagoIdStr) || undefined;
+        const tipoSeleccionado = tiposPago.find(t => t.id === tipoPagoId);
+
+        setPayment(prev => {
+            const nuevoPayment = { ...prev, tipo_pago_id: tipoPagoId };
+
+            // Si el tipo de pago seleccionado es CREDITO, sincronizar politica_pago a CREDITO
+            if (tipoSeleccionado?.codigo === 'CREDITO') {
+                console.log('%c🔄 Tipo de pago cambiado a CREDITO, sincronizando política de pago:', 'color: green;');
+                nuevoPayment.politica_pago = 'CREDITO' as any;
+                nuevoPayment.monto_pagado = 0;
+            }
+
+            return nuevoPayment;
+        });
+    };
+
+    // ✅ MEJORADO: Manejo de cambio de política con sincronización a tipo de pago
     const handlePolicyChange = (policy: string) => {
         // Validar si el cliente puede usar esta política
         if (!puedeUsarPolitica(policy as any)) {
@@ -201,12 +243,25 @@ export function ApprovalPaymentForm({
             return;
         }
 
-        setPayment(prev => ({
-            ...prev,
-            politica_pago: policy as any,
-            // Resetear monto si es contra entrega o crédito
-            monto_pagado: (policy === 'CONTRA_ENTREGA' || policy === 'CREDITO') ? 0 : prev.monto_pagado
-        }));
+        setPayment(prev => {
+            const nuevoPayment = {
+                ...prev,
+                politica_pago: policy as any,
+                // Resetear monto si es contra entrega o crédito
+                monto_pagado: (policy === 'CONTRA_ENTREGA' || policy === 'CREDITO') ? 0 : prev.monto_pagado
+            };
+
+            // Si la política seleccionada es CREDITO, sincronizar tipo_pago a CREDITO
+            if (policy === 'CREDITO') {
+                const creditoTipo = tiposPago.find(t => t.codigo === 'CREDITO');
+                if (creditoTipo) {
+                    console.log('%c🔄 Política de pago cambiada a CREDITO, sincronizando tipo de pago:', 'color: green;');
+                    nuevoPayment.tipo_pago_id = creditoTipo.id;
+                }
+            }
+
+            return nuevoPayment;
+        });
     };
 
     // Validar si el formulario de pago es válido
@@ -274,6 +329,42 @@ export function ApprovalPaymentForm({
 
     return (
         <div className="space-y-6 py-4">
+            {/* ⚠️ ADVERTENCIA: Reservas Expiradas */}
+            {errorState?.code === 'RESERVAS_EXPIRADAS' && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-amber-900 dark:text-amber-200 mb-2">
+                                ⚠️ Reservas Expiradas
+                            </h3>
+                            <p className="text-sm text-amber-800 dark:text-amber-300 mb-4">
+                                {errorState.reservasExpiradas} reserva(s) de esta proforma han expirado.
+                                Para continuar, necesitas renovar las reservas primero.
+                            </p>
+                            <Button
+                                onClick={onRenovarReservas}
+                                disabled={isRenovando || isSubmitting}
+                                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                                size="sm"
+                            >
+                                {isRenovando ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                        Renovando Reservas...
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCw className="w-4 h-4" />
+                                        Renovar Reservas
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Resumen de Coordinación de Entrega */}
             <Card>
                 <CardHeader>
@@ -281,8 +372,18 @@ export function ApprovalPaymentForm({
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                     <div className="flex justify-between">
+                        <span className="text-muted-foreground">Fecha solicitada:</span>
+                        <span className="font-medium">{proforma.fecha_entrega_solicitada || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
                         <span className="text-muted-foreground">Fecha confirmada:</span>
-                        <span className="font-medium">{coordinacion.fecha_entrega_confirmada}</span>
+                        <span className="font-medium">{coordinacion.fecha_entrega_confirmada || (() => {
+                            const hoy = new Date();
+                            const year = hoy.getFullYear();
+                            const month = String(hoy.getMonth() + 1).padStart(2, '0');
+                            const day = String(hoy.getDate()).padStart(2, '0');
+                            return `${year}-${month}-${day}`;
+                        })()}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Hora confirmada:</span>
@@ -305,17 +406,17 @@ export function ApprovalPaymentForm({
             {/* ✅ NUEVO: Resumen de Política Solicitada */}
             {proforma.politica_pago && (
                 <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-                    <CardHeader className="pb-3">
+                    {/* <CardHeader className="pb-3">
                         <div className="flex items-center gap-2">
                             <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
                                 Política Solicitada por el Cliente
                             </CardTitle>
                         </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
+                    </CardHeader> */}
+                    <CardContent className="text-sm">
                         <div className="flex justify-between">
-                            <span className="text-blue-700 dark:text-blue-300">Política:</span>
+                            <span className="text-blue-700 dark:text-blue-300">Política Solicitada:</span>
                             <span className="font-semibold text-blue-900 dark:text-blue-100">
                                 {proforma.politica_pago === 'CONTRA_ENTREGA' && 'Contra Entrega'}
                                 {proforma.politica_pago === 'ANTICIPADO_100' && '100% Anticipado'}
@@ -351,8 +452,8 @@ export function ApprovalPaymentForm({
                                         Crédito disponible:
                                     </p>
                                     <p className={`font-bold ${((clienteConCredito?.saldo_credito ?? 0) >= proforma.total)
-                                            ? 'text-green-900 dark:text-green-100'
-                                            : 'text-red-900 dark:text-red-100'
+                                        ? 'text-green-900 dark:text-green-100'
+                                        : 'text-red-900 dark:text-red-100'
                                         }`}>
                                         Bs. {(clienteConCredito?.saldo_credito ?? 0).toFixed(2)}
                                     </p>
@@ -387,10 +488,7 @@ export function ApprovalPaymentForm({
                         </Label>
                         <Select
                             value={payment.tipo_pago_id?.toString() || ''}
-                            onValueChange={(value) => setPayment(prev => ({
-                                ...prev,
-                                tipo_pago_id: parseInt(value) || undefined
-                            }))}
+                            onValueChange={handleTipoPagoChange}
                             disabled={isSubmitting || loadingTiposPago}
                         >
                             <SelectTrigger className="w-full">
@@ -532,7 +630,13 @@ export function ApprovalPaymentForm({
                                 <Input
                                     type="date"
                                     id="fecha_pago"
-                                    value={payment.fecha_pago || new Date().toISOString().split('T')[0]}
+                                    value={payment.fecha_pago || (() => {
+                                        const hoy = new Date();
+                                        const year = hoy.getFullYear();
+                                        const month = String(hoy.getMonth() + 1).padStart(2, '0');
+                                        const day = String(hoy.getDate()).padStart(2, '0');
+                                        return `${year}-${month}-${day}`;
+                                    })()}
                                     onChange={(e) => setPayment(prev => ({ ...prev, fecha_pago: e.target.value }))}
                                     disabled={isSubmitting}
                                 />
@@ -605,13 +709,13 @@ export function ApprovalPaymentForm({
                 <Button
                     variant="outline"
                     onClick={onCancel}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isRenovando || errorState?.code === 'RESERVAS_EXPIRADAS'}
                 >
                     Cancelar
                 </Button>
                 <Button
                     onClick={onSubmit}
-                    disabled={isSubmitting || !isPaymentValid()}
+                    disabled={isSubmitting || !isPaymentValid() || isRenovando || errorState?.code === 'RESERVAS_EXPIRADAS'}
                     className="bg-green-600 hover:bg-green-700 text-white"
                 >
                     {isSubmitting ? (

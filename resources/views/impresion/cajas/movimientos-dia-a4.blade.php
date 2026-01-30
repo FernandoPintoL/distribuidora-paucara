@@ -128,6 +128,10 @@
             <td style="text-align: right; color: #e74c3c; font-weight: bold;">-{{ number_format($totalEgresos, 2) }} Bs</td>
         </tr>
         <tr class="subtotal-row">
+            <td style="text-align: left; font-weight: bold;">Total Neto (Ingresos - Egresos):</td>
+            <td style="text-align: right; color: {{ ($totalIngresos - $totalEgresos) >= 0 ? '#27ae60' : '#e74c3c' }}; font-weight: bold; font-size: 11px;">{{ number_format($totalIngresos - $totalEgresos, 2) }} Bs</td>
+        </tr>
+        <tr class="subtotal-row">
             <td style="text-align: left; font-weight: bold;">Saldo Neto del Día:</td>
             <td style="text-align: right; color: #4F81BD; font-weight: bold; font-size: 11px;">{{ number_format($totalDia, 2) }} Bs</td>
         </tr>
@@ -137,6 +141,80 @@
         </tr>
     </table>
 </div>
+
+{{-- Resumen por Tipo de Pago --}}
+@php
+    $movimientosAgrupadosPago = $movimientos->groupBy(function($item) {
+        return $item->tipoPago ? $item->tipoPago->nombre : 'Sin tipo de pago';
+    });
+@endphp
+
+@if($movimientosAgrupadosPago->count() > 0)
+<h3 style="font-size: 11px; font-weight: bold; color: #4F81BD; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #4F81BD; padding-bottom: 5px;">Resumen por Tipo de Pago</h3>
+
+<table class="tabla-productos">
+    <thead>
+        <tr>
+            <th style="width: 50%; text-align: left;">Tipo de Pago</th>
+            <th style="width: 25%; text-align: center;">Cantidad</th>
+            <th style="width: 25%; text-align: right;">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($movimientosAgrupadosPago as $tipo => $movs)
+        <tr>
+            <td style="font-weight: bold;">{{ $tipo }}</td>
+            <td style="text-align: center;">{{ $movs->count() }}</td>
+            <td style="text-align: right; font-weight: bold; color: {{ $movs->sum('monto') >= 0 ? '#27ae60' : '#e74c3c' }}">
+                {{ number_format(abs($movs->sum('monto')), 2) }} Bs
+            </td>
+        </tr>
+        @endforeach
+        <tr style="border-top: 2px solid #4F81BD; background-color: #f0f0f0; font-weight: bold;">
+            <td>TOTAL POR TIPO DE PAGO</td>
+            <td style="text-align: center;">{{ $movimientos->count() }}</td>
+            <td style="text-align: right;">{{ number_format($totalIngresos - $totalEgresos, 2) }} Bs</td>
+        </tr>
+    </tbody>
+</table>
+@endif
+
+{{-- Resumen por Tipo de Operación --}}
+@php
+    $operacionesAgrupadas = $movimientos->groupBy(function($item) {
+        return $item->tipoOperacion->nombre;
+    });
+@endphp
+
+@if($operacionesAgrupadas->count() > 0)
+<h3 style="font-size: 11px; font-weight: bold; color: #4F81BD; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #4F81BD; padding-bottom: 5px;">Resumen por Tipo de Operación</h3>
+
+<table class="tabla-productos">
+    <thead>
+        <tr>
+            <th style="width: 50%; text-align: left;">Tipo de Operación</th>
+            <th style="width: 25%; text-align: center;">Cantidad</th>
+            <th style="width: 25%; text-align: right;">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($operacionesAgrupadas as $tipo => $movs)
+        <tr>
+            <td style="font-weight: bold;">{{ $tipo }}</td>
+            <td style="text-align: center;">{{ $movs->count() }}</td>
+            <td style="text-align: right; font-weight: bold; color: {{ $movs->sum('monto') >= 0 ? '#27ae60' : '#e74c3c' }}">
+                {{ number_format($movs->sum('monto'), 2) }} Bs
+            </td>
+        </tr>
+        @endforeach
+        <tr style="border-top: 2px solid #4F81BD; background-color: #f0f0f0; font-weight: bold;">
+            <td>TOTAL OPERACIONES</td>
+            <td style="text-align: center;">{{ $movimientos->count() }}</td>
+            <td style="text-align: right;">{{ number_format($totalIngresos - $totalEgresos, 2) }} Bs</td>
+        </tr>
+    </tbody>
+</table>
+@endif
 
 <div style="margin-top: 30px; padding-top: 15px; text-align: center; font-size: 8px; color: #999; border-top: 1px solid #ddd;">
     <p>Este es un reporte de movimientos de caja generado automáticamente por el sistema.</p>

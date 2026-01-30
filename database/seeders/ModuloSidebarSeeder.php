@@ -335,7 +335,7 @@ class ModuloSidebarSeeder extends Seeder
                 'submenu' => [
                     ['titulo' => 'Usuarios', 'ruta' => '/usuarios', 'icono' => 'Users', 'orden' => 1, 'permisos' => ['usuarios.index']],
                     ['titulo' => 'Roles', 'ruta' => '/roles', 'icono' => 'Shield', 'orden' => 2, 'permisos' => ['roles.index']],
-                    ['titulo' => 'Permisos', 'ruta' => '/permisos', 'icono' => 'Lock', 'orden' => 3, 'permisos' => ['permisos.index']],
+                    ['titulo' => 'Permisos', 'ruta' => '/permisos', 'icono' => 'Lock', 'orden' => 3, 'permisos' => ['permisos.index', 'usuarios.assign-permission']],
                     ['titulo' => 'Empresas', 'ruta' => '/empresas', 'icono' => 'Building', 'orden' => 4, 'permisos' => ['empresas.index']],
                 ],
             ],

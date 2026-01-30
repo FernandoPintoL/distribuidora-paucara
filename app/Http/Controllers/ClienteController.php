@@ -176,24 +176,24 @@ class ClienteController extends Controller
             Log::info('🔍 DEBUG CLIENTES INDEX', [
                 'is_api_request' => $this->isApiRequest(),
                 'total_clientes' => $clientes->total(),
-                'cliente_27' => $cliente27 ? [
-                    'id'                    => $cliente27->id,
-                    'nombre'                => $cliente27->nombre,
-                    'puede_tener_credito'   => $cliente27->puede_tener_credito,
-                    'limite_credito'        => $cliente27->limite_credito,
-                    'cuentasPorCobrar_count' => $cliente27->cuentasPorCobrar->count(),
+                'cliente_27'     => $cliente27 ? [
+                    'id'                          => $cliente27->id,
+                    'nombre'                      => $cliente27->nombre,
+                    'puede_tener_credito'         => $cliente27->puede_tener_credito,
+                    'limite_credito'              => $cliente27->limite_credito,
+                    'cuentasPorCobrar_count'      => $cliente27->cuentasPorCobrar->count(),
                     'cuentasPorCobrar_pendientes' => $cliente27->cuentasPorCobrar->where('estado', 'pendiente')->count(),
-                    'saldo_pendientes' => $cliente27->cuentasPorCobrar->where('estado', 'pendiente')->sum('saldo_pendiente'),
-                    'cuentasPorCobrar_parciales' => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->count(),
-                    'saldo_parciales' => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->sum('saldo_pendiente'),
-                    'cuentasPorCobrar_todos' => $cliente27->cuentasPorCobrar->map(function($c) {
+                    'saldo_pendientes'            => $cliente27->cuentasPorCobrar->where('estado', 'pendiente')->sum('saldo_pendiente'),
+                    'cuentasPorCobrar_parciales'  => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->count(),
+                    'saldo_parciales'             => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->sum('saldo_pendiente'),
+                    'cuentasPorCobrar_todos'      => $cliente27->cuentasPorCobrar->map(function ($c) {
                         return [
-                            'id' => $c->id,
-                            'estado' => $c->estado,
+                            'id'              => $c->id,
+                            'estado'          => $c->estado,
                             'saldo_pendiente' => $c->saldo_pendiente,
                         ];
                     })->toArray(),
-                    'credito_utilizado_accessor' => $cliente27->credito_utilizado,
+                    'credito_utilizado_accessor'  => $cliente27->credito_utilizado,
                 ] : null,
             ]);
 
@@ -885,10 +885,10 @@ class ClienteController extends Controller
         $todasLasCuentas = $cliente->cuentasPorCobrar()
             ->with([
                 'venta:id,numero,fecha,total,estado_pago',
-                'pagos' => function($q) {
+                'pagos' => function ($q) {
                     $q->with(['tipoPago:id,nombre', 'usuario:id,name'])
-                      ->orderBy('fecha_pago');
-                }
+                        ->orderBy('fecha_pago');
+                },
             ])
             ->orderByDesc('fecha_vencimiento')
             ->get(['id', 'venta_id', 'monto_original', 'saldo_pendiente', 'fecha_vencimiento', 'dias_vencido', 'estado']);
@@ -1054,7 +1054,7 @@ class ClienteController extends Controller
                 ->first();
 
             // 2️⃣ Si no hay caja hoy, buscar la más reciente (posiblemente de ayer)
-            if (!$aperturaCaja) {
+            if (! $aperturaCaja) {
                 $aperturaCaja = \App\Models\AperturaCaja::where('user_id', Auth::id())
                     ->whereDoesntHave('cierre')
                     ->latest('fecha')
@@ -1063,14 +1063,14 @@ class ClienteController extends Controller
                 // 3️⃣ Si hay una caja anterior sin cerrar, avisar pero permitir el pago
                 if ($aperturaCaja) {
                     $fechaApertura = \Carbon\Carbon::parse($aperturaCaja->fecha);
-                    $esDeOtroDia = !$fechaApertura->isToday();
+                    $esDeOtroDia   = ! $fechaApertura->isToday();
 
                     if ($esDeOtroDia) {
                         Log::warning('Usando caja de día anterior para registrar pago', [
-                            'user_id' => Auth::id(),
+                            'user_id'        => Auth::id(),
                             'apertura_fecha' => $aperturaCaja->fecha,
-                            'caja_id' => $aperturaCaja->caja_id,
-                            'cliente_id' => $cliente->id,
+                            'caja_id'        => $aperturaCaja->caja_id,
+                            'cliente_id'     => $cliente->id,
                         ]);
                     }
                 } else {
@@ -1085,7 +1085,7 @@ class ClienteController extends Controller
             // ✅ NUEVO: Obtener tipo de operación PAGO
             $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'PAGO')->first();
 
-            if (!$tipoOperacion) {
+            if (! $tipoOperacion) {
                 Log::error('Tipo de operación PAGO no encontrado en la base de datos');
                 return ApiResponse::error(
                     'Tipo de operación PAGO no configurado en el sistema. Contacte al administrador.',
@@ -1149,7 +1149,16 @@ class ClienteController extends Controller
             }
 
             // ✅ NUEVO: Registrar movimiento en caja
-            $observacionesCaja = $validated['observaciones'] ?? 'Pago de cuota - Venta #' . $cuenta->numero_venta;
+            // ✅ MEJORADO: Siempre incluir número de venta en observaciones
+            $venta = $cuenta->venta;
+            $numeroVenta = $venta ? $venta->numero : 'SIN_VENTA';
+
+            // Construir observaciones: observaciones del usuario + número de venta
+            $observacionesCaja = 'Pago de cuota - Venta #' . $numeroVenta;
+            if (!empty($validated['observaciones'])) {
+                $observacionesCaja = $validated['observaciones'] . "\n" . $observacionesCaja;
+            }
+
             $numeroCaja = $validated['numero_recibo'] ?? 'PAGO-' . $pago->id;
 
             \App\Models\MovimientoCaja::create([
@@ -1160,6 +1169,8 @@ class ClienteController extends Controller
                 'observaciones'     => $observacionesCaja,
                 'numero_documento'  => $numeroCaja,
                 'tipo_operacion_id' => $tipoOperacion->id,
+                'tipo_pago_id'      => $validated['tipo_pago_id'],  // ✅ NUEVO: Guardar tipo de pago para análisis
+                'pago_id'           => $pago->id,                    // ✅ NUEVO: Guardar ID de pago para rango
             ]);
 
             // ✅ NUEVO: Disparar evento para notificación WebSocket
@@ -1692,18 +1703,18 @@ class ClienteController extends Controller
         try {
             $this->authorize('view', $cliente);
 
-            $formato = (string) $request->string('formato', 'A4');
-            $accion = (string) $request->string('accion', 'stream');
+            $formato  = (string) $request->string('formato', 'A4');
+            $accion   = (string) $request->string('accion', 'stream');
             $cuentaId = $request->integer('cuenta_id', 0);
 
             // Validar formato
             $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
-            if (!in_array($formato, $formatosValidos)) {
+            if (! in_array($formato, $formatosValidos)) {
                 return response()->json(['error' => 'Formato inválido'], 400);
             }
 
             // Obtener detalles de crédito
-            $response = $this->obtenerDetallesCreditoApi($cliente);
+            $response    = $this->obtenerDetallesCreditoApi($cliente);
             $creditoData = json_decode($response->getContent(), true)['data'] ?? [];
 
             // Filtrar cuenta específica si se especifica cuenta_id
@@ -1714,27 +1725,27 @@ class ClienteController extends Controller
 
             // Preparar datos para la plantilla
             $datos = [
-                'cliente' => [
-                    'id' => $cliente->id,
-                    'nombre' => $cliente->nombre,
+                'cliente'              => [
+                    'id'             => $cliente->id,
+                    'nombre'         => $cliente->nombre,
                     'codigo_cliente' => $cliente->codigo_cliente,
-                    'nit' => $cliente->nit,
-                    'email' => $cliente->email,
-                    'telefono' => $cliente->telefono,
+                    'nit'            => $cliente->nit,
+                    'email'          => $cliente->email,
+                    'telefono'       => $cliente->telefono,
                 ],
-                'credito' => $creditoData['credito'] ?? [],
-                'cuentas_pendientes' => $creditoData['cuentas_pendientes'] ?? [],
-                'todas_las_cuentas' => $todasLasCuentas,
+                'credito'              => $creditoData['credito'] ?? [],
+                'cuentas_pendientes'   => $creditoData['cuentas_pendientes'] ?? [],
+                'todas_las_cuentas'    => $todasLasCuentas,
                 'es_cuenta_individual' => $cuentaId > 0,
-                'fecha_impresion' => now(),
-                'usuario' => auth()->user()?->name ?? 'Sistema',
-                'empresa' => \App\Models\Empresa::first(),
-                'opciones' => ['porcentaje_impuesto' => '13'],
+                'fecha_impresion'      => now(),
+                'usuario'              => auth()->user()?->name ?? 'Sistema',
+                'empresa'              => \App\Models\Empresa::first(),
+                'opciones'             => ['porcentaje_impuesto' => '13'],
             ];
 
             // Obtener template
-            $template = match($formato) {
-                'A4' => 'impresion.creditos.hoja-completa',
+            $template = match ($formato) {
+                'A4'        => 'impresion.creditos.hoja-completa',
                 'TICKET_80' => 'impresion.creditos.ticket-80',
                 'TICKET_58' => 'impresion.creditos.ticket-58',
             };
@@ -1756,8 +1767,8 @@ class ClienteController extends Controller
             }
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al generar reporte de crédito',
-                'mensaje' => $e->getMessage()
+                'error'   => 'Error al generar reporte de crédito',
+                'mensaje' => $e->getMessage(),
             ], 500);
         }
     }
@@ -1771,17 +1782,17 @@ class ClienteController extends Controller
         try {
             $this->authorize('view', $cliente);
 
-            $formato = (string) $request->string('formato', 'A4');
+            $formato  = (string) $request->string('formato', 'A4');
             $cuentaId = $request->integer('cuenta_id', 0);
 
             // Validar formato
             $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
-            if (!in_array($formato, $formatosValidos)) {
+            if (! in_array($formato, $formatosValidos)) {
                 abort(400, 'Formato inválido');
             }
 
             // Obtener detalles de crédito
-            $response = $this->obtenerDetallesCreditoApi($cliente);
+            $response    = $this->obtenerDetallesCreditoApi($cliente);
             $creditoData = json_decode($response->getContent(), true)['data'] ?? [];
 
             // Filtrar cuenta específica si se especifica cuenta_id
@@ -1792,27 +1803,27 @@ class ClienteController extends Controller
 
             // Preparar datos para la plantilla
             $datos = [
-                'cliente' => [
-                    'id' => $cliente->id,
-                    'nombre' => $cliente->nombre,
+                'cliente'              => [
+                    'id'             => $cliente->id,
+                    'nombre'         => $cliente->nombre,
                     'codigo_cliente' => $cliente->codigo_cliente,
-                    'nit' => $cliente->nit,
-                    'email' => $cliente->email,
-                    'telefono' => $cliente->telefono,
+                    'nit'            => $cliente->nit,
+                    'email'          => $cliente->email,
+                    'telefono'       => $cliente->telefono,
                 ],
-                'credito' => $creditoData['credito'] ?? [],
-                'cuentas_pendientes' => $creditoData['cuentas_pendientes'] ?? [],
-                'todas_las_cuentas' => $todasLasCuentas,
+                'credito'              => $creditoData['credito'] ?? [],
+                'cuentas_pendientes'   => $creditoData['cuentas_pendientes'] ?? [],
+                'todas_las_cuentas'    => $todasLasCuentas,
                 'es_cuenta_individual' => $cuentaId > 0,
-                'fecha_impresion' => now(),
-                'usuario' => auth()->user()?->name ?? 'Sistema',
-                'empresa' => \App\Models\Empresa::first(),
-                'opciones' => ['porcentaje_impuesto' => '13'],
+                'fecha_impresion'      => now(),
+                'usuario'              => auth()->user()?->name ?? 'Sistema',
+                'empresa'              => \App\Models\Empresa::first(),
+                'opciones'             => ['porcentaje_impuesto' => '13'],
             ];
 
             // Obtener template
-            $template = match($formato) {
-                'A4' => 'impresion.creditos.hoja-completa',
+            $template = match ($formato) {
+                'A4'        => 'impresion.creditos.hoja-completa',
                 'TICKET_80' => 'impresion.creditos.ticket-80',
                 'TICKET_58' => 'impresion.creditos.ticket-58',
             };
@@ -1838,11 +1849,11 @@ class ClienteController extends Controller
             }
 
             $formato = (string) $request->string('formato', 'TICKET_80');
-            $accion = (string) $request->string('accion', 'stream');
+            $accion  = (string) $request->string('accion', 'stream');
 
             // Validar formato
             $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
-            if (!in_array($formato, $formatosValidos)) {
+            if (! in_array($formato, $formatosValidos)) {
                 return response()->json(['error' => 'Formato inválido'], 400);
             }
 
@@ -1850,71 +1861,71 @@ class ClienteController extends Controller
             $pago->load(['cuentaPorCobrar.venta', 'venta.cliente', 'tipoPago', 'moneda', 'usuario']);
 
             // Obtener datos de venta y cuenta
-            $venta = null;
+            $venta  = null;
             $cuenta = null;
 
             if ($pago->cuentaPorCobrar) {
-                $cpc = $pago->cuentaPorCobrar;
+                $cpc   = $pago->cuentaPorCobrar;
                 $venta = $cpc->venta ? [
-                    'id' => $cpc->venta->id,
+                    'id'     => $cpc->venta->id,
                     'numero' => $cpc->venta->numero,
-                    'fecha' => $cpc->venta->fecha,
-                    'total' => $cpc->venta->total,
+                    'fecha'  => $cpc->venta->fecha,
+                    'total'  => $cpc->venta->total,
                 ] : null;
 
                 $cuenta = [
-                    'id' => $cpc->id,
-                    'monto_original' => $cpc->monto_original,
-                    'saldo_anterior' => $cpc->saldo_pendiente + $pago->monto,
-                    'saldo_pendiente' => $cpc->saldo_pendiente,
-                    'estado' => $cpc->estado,
+                    'id'                => $cpc->id,
+                    'monto_original'    => $cpc->monto_original,
+                    'saldo_anterior'    => $cpc->saldo_pendiente + $pago->monto,
+                    'saldo_pendiente'   => $cpc->saldo_pendiente,
+                    'estado'            => $cpc->estado,
                     'fecha_vencimiento' => $cpc->fecha_vencimiento,
                 ];
             } elseif ($pago->venta) {
                 $venta = [
-                    'id' => $pago->venta->id,
+                    'id'     => $pago->venta->id,
                     'numero' => $pago->venta->numero,
-                    'fecha' => $pago->venta->fecha,
-                    'total' => $pago->venta->total,
+                    'fecha'  => $pago->venta->fecha,
+                    'total'  => $pago->venta->total,
                 ];
             }
 
             // Preparar estructura de datos
             $datos = [
-                'pago' => [
-                    'id' => $pago->id,
-                    'monto' => $pago->monto,
-                    'fecha' => $pago->fecha,
-                    'fecha_pago' => $pago->fecha_pago,
-                    'numero_recibo' => $pago->numero_recibo,
+                'pago'            => [
+                    'id'                   => $pago->id,
+                    'monto'                => $pago->monto,
+                    'fecha'                => $pago->fecha,
+                    'fecha_pago'           => $pago->fecha_pago,
+                    'numero_recibo'        => $pago->numero_recibo,
                     'numero_transferencia' => $pago->numero_transferencia,
-                    'numero_cheque' => $pago->numero_cheque,
-                    'observaciones' => $pago->observaciones,
-                    'tipo_pago' => $pago->tipoPago?->nombre ?? 'No especificado',
-                    'moneda' => [
+                    'numero_cheque'        => $pago->numero_cheque,
+                    'observaciones'        => $pago->observaciones,
+                    'tipo_pago'            => $pago->tipoPago?->nombre ?? 'No especificado',
+                    'moneda'               => [
                         'simbolo' => $pago->moneda?->simbolo ?? 'Bs.',
-                        'codigo' => $pago->moneda?->codigo ?? 'BOB',
+                        'codigo'  => $pago->moneda?->codigo ?? 'BOB',
                     ],
-                    'usuario' => $pago->usuario?->name ?? 'Sistema',
+                    'usuario'              => $pago->usuario?->name ?? 'Sistema',
                 ],
-                'cliente' => [
-                    'id' => $cliente->id,
-                    'nombre' => $cliente->nombre,
+                'cliente'         => [
+                    'id'             => $cliente->id,
+                    'nombre'         => $cliente->nombre,
                     'codigo_cliente' => $cliente->codigo_cliente,
-                    'nit' => $cliente->nit,
-                    'email' => $cliente->email,
-                    'telefono' => $cliente->telefono,
+                    'nit'            => $cliente->nit,
+                    'email'          => $cliente->email,
+                    'telefono'       => $cliente->telefono,
                 ],
-                'venta' => $venta,
-                'cuenta' => $cuenta,
+                'venta'           => $venta,
+                'cuenta'          => $cuenta,
                 'fecha_impresion' => now(),
-                'usuario' => auth()->user()?->name ?? 'Sistema',
-                'empresa' => \App\Models\Empresa::first(),
+                'usuario'         => auth()->user()?->name ?? 'Sistema',
+                'empresa'         => \App\Models\Empresa::first(),
             ];
 
             // Obtener template
-            $template = match($formato) {
-                'A4' => 'impresion.pagos.hoja-completa',
+            $template = match ($formato) {
+                'A4'        => 'impresion.pagos.hoja-completa',
                 'TICKET_80' => 'impresion.pagos.ticket-80',
                 'TICKET_58' => 'impresion.pagos.ticket-58',
             };
@@ -1936,8 +1947,8 @@ class ClienteController extends Controller
             }
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al generar comprobante de pago',
-                'mensaje' => $e->getMessage()
+                'error'   => 'Error al generar comprobante de pago',
+                'mensaje' => $e->getMessage(),
             ], 500);
         }
     }
@@ -1960,7 +1971,7 @@ class ClienteController extends Controller
 
             // Validar formato
             $formatosValidos = ['A4', 'TICKET_80', 'TICKET_58'];
-            if (!in_array($formato, $formatosValidos)) {
+            if (! in_array($formato, $formatosValidos)) {
                 abort(400, 'Formato inválido');
             }
 
@@ -1968,71 +1979,71 @@ class ClienteController extends Controller
             $pago->load(['cuentaPorCobrar.venta', 'venta.cliente', 'tipoPago', 'moneda', 'usuario']);
 
             // Obtener datos de venta y cuenta
-            $venta = null;
+            $venta  = null;
             $cuenta = null;
 
             if ($pago->cuentaPorCobrar) {
-                $cpc = $pago->cuentaPorCobrar;
+                $cpc   = $pago->cuentaPorCobrar;
                 $venta = $cpc->venta ? [
-                    'id' => $cpc->venta->id,
+                    'id'     => $cpc->venta->id,
                     'numero' => $cpc->venta->numero,
-                    'fecha' => $cpc->venta->fecha,
-                    'total' => $cpc->venta->total,
+                    'fecha'  => $cpc->venta->fecha,
+                    'total'  => $cpc->venta->total,
                 ] : null;
 
                 $cuenta = [
-                    'id' => $cpc->id,
-                    'monto_original' => $cpc->monto_original,
-                    'saldo_anterior' => $cpc->saldo_pendiente + $pago->monto,
-                    'saldo_pendiente' => $cpc->saldo_pendiente,
-                    'estado' => $cpc->estado,
+                    'id'                => $cpc->id,
+                    'monto_original'    => $cpc->monto_original,
+                    'saldo_anterior'    => $cpc->saldo_pendiente + $pago->monto,
+                    'saldo_pendiente'   => $cpc->saldo_pendiente,
+                    'estado'            => $cpc->estado,
                     'fecha_vencimiento' => $cpc->fecha_vencimiento,
                 ];
             } elseif ($pago->venta) {
                 $venta = [
-                    'id' => $pago->venta->id,
+                    'id'     => $pago->venta->id,
                     'numero' => $pago->venta->numero,
-                    'fecha' => $pago->venta->fecha,
-                    'total' => $pago->venta->total,
+                    'fecha'  => $pago->venta->fecha,
+                    'total'  => $pago->venta->total,
                 ];
             }
 
             // Preparar estructura de datos
             $datos = [
-                'pago' => [
-                    'id' => $pago->id,
-                    'monto' => $pago->monto,
-                    'fecha' => $pago->fecha,
-                    'fecha_pago' => $pago->fecha_pago,
-                    'numero_recibo' => $pago->numero_recibo,
+                'pago'            => [
+                    'id'                   => $pago->id,
+                    'monto'                => $pago->monto,
+                    'fecha'                => $pago->fecha,
+                    'fecha_pago'           => $pago->fecha_pago,
+                    'numero_recibo'        => $pago->numero_recibo,
                     'numero_transferencia' => $pago->numero_transferencia,
-                    'numero_cheque' => $pago->numero_cheque,
-                    'observaciones' => $pago->observaciones,
-                    'tipo_pago' => $pago->tipoPago?->nombre ?? 'No especificado',
-                    'moneda' => [
+                    'numero_cheque'        => $pago->numero_cheque,
+                    'observaciones'        => $pago->observaciones,
+                    'tipo_pago'            => $pago->tipoPago?->nombre ?? 'No especificado',
+                    'moneda'               => [
                         'simbolo' => $pago->moneda?->simbolo ?? 'Bs.',
-                        'codigo' => $pago->moneda?->codigo ?? 'BOB',
+                        'codigo'  => $pago->moneda?->codigo ?? 'BOB',
                     ],
-                    'usuario' => $pago->usuario?->name ?? 'Sistema',
+                    'usuario'              => $pago->usuario?->name ?? 'Sistema',
                 ],
-                'cliente' => [
-                    'id' => $cliente->id,
-                    'nombre' => $cliente->nombre,
+                'cliente'         => [
+                    'id'             => $cliente->id,
+                    'nombre'         => $cliente->nombre,
                     'codigo_cliente' => $cliente->codigo_cliente,
-                    'nit' => $cliente->nit,
-                    'email' => $cliente->email,
-                    'telefono' => $cliente->telefono,
+                    'nit'            => $cliente->nit,
+                    'email'          => $cliente->email,
+                    'telefono'       => $cliente->telefono,
                 ],
-                'venta' => $venta,
-                'cuenta' => $cuenta,
+                'venta'           => $venta,
+                'cuenta'          => $cuenta,
                 'fecha_impresion' => now(),
-                'usuario' => auth()->user()?->name ?? 'Sistema',
-                'empresa' => \App\Models\Empresa::first(),
+                'usuario'         => auth()->user()?->name ?? 'Sistema',
+                'empresa'         => \App\Models\Empresa::first(),
             ];
 
             // Obtener template
-            $template = match($formato) {
-                'A4' => 'impresion.pagos.hoja-completa',
+            $template = match ($formato) {
+                'A4'        => 'impresion.pagos.hoja-completa',
                 'TICKET_80' => 'impresion.pagos.ticket-80',
                 'TICKET_58' => 'impresion.pagos.ticket-58',
             };
@@ -2048,21 +2059,21 @@ class ClienteController extends Controller
      */
     private function aplicarConfiguracionFormato($pdf, $formato): void
     {
-        $configuracion = match($formato) {
-            'A4' => [
-                'paper' => 'A4',
+        $configuracion = match ($formato) {
+            'A4'        => [
+                'paper'       => 'A4',
                 'orientation' => 'portrait',
-                'margins' => ['left' => 10, 'right' => 10, 'top' => 10, 'bottom' => 10],
+                'margins'     => ['left' => 10, 'right' => 10, 'top' => 10, 'bottom' => 10],
             ],
             'TICKET_80' => [
-                'paper' => [0, 0, 226.77, 841.89], // 80mm ancho
+                'paper'       => [0, 0, 226.77, 841.89], // 80mm ancho
                 'orientation' => 'portrait',
-                'margins' => ['left' => 5, 'right' => 5, 'top' => 5, 'bottom' => 5],
+                'margins'     => ['left' => 5, 'right' => 5, 'top' => 5, 'bottom' => 5],
             ],
             'TICKET_58' => [
-                'paper' => [0, 0, 164.41, 841.89], // 58mm ancho
+                'paper'       => [0, 0, 164.41, 841.89], // 58mm ancho
                 'orientation' => 'portrait',
-                'margins' => ['left' => 3, 'right' => 3, 'top' => 3, 'bottom' => 3],
+                'margins'     => ['left' => 3, 'right' => 3, 'top' => 3, 'bottom' => 3],
             ],
         };
 

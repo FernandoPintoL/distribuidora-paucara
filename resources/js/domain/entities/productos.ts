@@ -7,6 +7,7 @@ export interface Precio {
   id?: number;
   monto: number;
   tipo_precio_id: number;
+  unidad_medida_id?: number | null;
   moneda?: string;
   motivo_cambio?: string;
   fecha_aplicacion?: string;
@@ -49,6 +50,8 @@ export interface Producto extends BaseEntity {
   fecha_creacion?: string | null;
   es_alquilable?: boolean;
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
+  principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
+  uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
   categoria_id?: Id;
   marca_id?: Id;
   proveedor_id?: Id;
@@ -100,6 +103,8 @@ export interface ProductoFormData extends BaseFormData {
   limite_venta?: number | null; // ✨ NUEVO: Límite máximo por venta
   activo?: boolean;
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
+  principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
+  uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
   precios: Precio[];
   codigos: CodigoBarra[];
   almacenes?: StockAlmacen[];
@@ -118,6 +123,7 @@ export interface ProductoFormPageProps {
   historial_precios?: HistorialPrecio[];
   conversiones?: ConversionUnidad[]; // ✨ NUEVO: Conversiones existentes (si está editando)
   permite_productos_fraccionados?: boolean; // ✨ NUEVO: Indicador de empresa para mostrar/ocultar sección
+  es_farmacia?: boolean; // ✨ NUEVO: Indicador de empresa farmacia para mostrar/ocultar campos de medicamentos
 }
 
 export interface HistorialPrecio {

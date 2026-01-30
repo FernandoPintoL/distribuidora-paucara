@@ -7,9 +7,11 @@ use App\Models\Caja;
 use App\Models\CierreCaja;
 use App\Models\CierreDiarioGeneral;
 use App\Models\ComprobanteMovimiento;
+use App\Models\Empresa;
 use App\Models\EstadoCierre;
 use App\Models\MovimientoCaja;
 use App\Models\TipoOperacionCaja;
+use App\Services\ExcelExportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -21,8 +23,12 @@ use Inertia\Inertia;
 
 class CajaController extends Controller
 {
-    public function __construct()
+    private ExcelExportService $excelExportService;
+
+    public function __construct(ExcelExportService $excelExportService)
     {
+        $this->excelExportService = $excelExportService;
+
         $this->middleware('permission:cajas.index')->only('index');
         $this->middleware('permission:cajas.show')->only('estadoCajas');
         $this->middleware('permission:cajas.abrir')->only('abrirCaja');
@@ -91,7 +97,7 @@ class CajaController extends Controller
             $movimientosHoy = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
                 ->where('user_id', $usuarioDestino->id)
                 ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
-                ->with(['tipoOperacion', 'comprobantes'])
+                ->with(['tipoOperacion', 'tipoPago', 'comprobantes', 'usuario'])  // ✅ NUEVO: Agregar tipoPago y usuario
                 ->orderBy('fecha', 'desc')
                 ->get();
         }
@@ -602,7 +608,7 @@ class CajaController extends Controller
         // Obtener movimientos hoy del usuario
         $movimientosHoy = MovimientoCaja::where('user_id', $usuarioDestino->id)
             ->whereDate('fecha', today())
-            ->with(['tipoOperacion', 'caja'])
+            ->with(['tipoOperacion', 'tipoPago', 'caja', 'usuario'])  // ✅ NUEVO: Agregar tipoPago y usuario
             ->orderBy('fecha', 'desc')
             ->get();
 
@@ -1282,6 +1288,7 @@ class CajaController extends Controller
 
         $formato = $request->query('formato', 'TICKET_80');
         $accion  = $request->query('accion', 'download');
+        $fuente  = $request->query('fuente', 'consolas');
 
         // Validar que la caja tenga cierre
         if (! $aperturaCaja->cierre) {
@@ -1294,53 +1301,135 @@ class CajaController extends Controller
                 $aperturaCaja->fecha,
                 $aperturaCaja->cierre->created_at,
             ])
+            ->with(['tipoOperacion', 'comprobantes'])
+            ->orderBy('fecha', 'asc')
             ->get();
+
+        // Obtener ID del tipo de operación VENTA
+        $tipoOperacionVentaId = TipoOperacionCaja::where('nombre', 'Venta')->first()?->id;
+
+        // Obtener movimientos de venta del período para agrupar por tipos de pago
+        $movimientosVenta = collect();
+        if ($tipoOperacionVentaId) {
+            $movimientosVenta = MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
+                ->whereBetween('fecha', [
+                    $aperturaCaja->fecha,
+                    $aperturaCaja->cierre->created_at,
+                ])
+                ->where('tipo_operacion_id', $tipoOperacionVentaId)
+                ->with(['tipoPago'])
+                ->get();
+        }
 
         $totalIngresos = $movimientos->where('monto', '>', 0)->sum('monto');
         $totalEgresos  = abs($movimientos->where('monto', '<', 0)->sum('monto'));
 
-        // Preparar datos
-        $datos = [
-            'apertura'        => $aperturaCaja,
-            'cierre'          => $aperturaCaja->cierre,
-            'movimientos'     => $movimientos,
-            'totalIngresos'   => $totalIngresos,
-            'totalEgresos'    => $totalEgresos,
-            'empresa'         => auth()->user()->empresa ?? null,
-            'usuario'         => auth()->user(),
-            'fecha_impresion' => now(),
+        // Agrupar movimientos por tipo de operación
+        $movimientosAgrupados = $movimientos->groupBy(function ($mov) {
+            return $mov->tipoOperacion->nombre ?? 'Sin tipo';
+        });
+
+        // Agrupar TODOS los movimientos por tipo de pago
+        $ventasPorTipoPago = $movimientos->groupBy(function ($movimiento) {
+            return $movimiento->tipoPago?->nombre ?? 'Sin tipo de pago';
+        })->map(function ($movimientosGrupo) {
+            return [
+                'cantidad' => $movimientosGrupo->count(),
+                'total' => $movimientosGrupo->sum('monto'),
+            ];
+        });
+
+        // Rango de ventas y pagos
+        $primeraVenta = $movimientosVenta->min('fecha');
+        $ultimaVenta = $movimientosVenta->max('fecha');
+        $primerMovimiento = $movimientos->min('fecha');
+        $ultimoMovimiento = $movimientos->max('fecha');
+
+        // Rango de IDs de ventas - Usar venta_id de los movimientos
+        $ventaIds = $movimientosVenta
+            ->pluck('venta_id')
+            ->filter(fn($id) => !empty($id) && $id > 0)
+            ->unique()
+            ->sort();
+
+        $rangoVentasIds = [
+            'minId' => $ventaIds->isNotEmpty() ? $ventaIds->first() : null,
+            'maxId' => $ventaIds->isNotEmpty() ? $ventaIds->last() : null,
+            'totalVentas' => $ventaIds->count(),
         ];
 
-        // Seleccionar vista según formato
-        $vista = match ($formato) {
-            'TICKET_58' => 'impresion.cajas.cierre-caja-ticket-58',
-            'TICKET_80' => 'impresion.cajas.cierre-caja-ticket-80',
-            default     => 'impresion.cajas.cierre-caja-ticket-80',
-        };
+        // Calcular créditos y pagos de créditos
+        $creditosIds = $movimientosVenta
+            ->where('tipoPago.nombre', 'Crédito')
+            ->pluck('venta_id')
+            ->filter(fn($id) => !empty($id) && $id > 0)
+            ->unique()
+            ->sort();
 
-        // Configurar opciones de dompdf según formato
-        $options = [];
-        if ($formato === 'TICKET_58') {
-            $options['paper']         = [0, 0, 170, 5000]; // 58mm ancho
-            $options['margin_top']    = 0;
-            $options['margin_bottom'] = 0;
-            $options['margin_left']   = 0;
-            $options['margin_right']  = 0;
-        } elseif ($formato === 'TICKET_80') {
-            $options['paper']         = [0, 0, 226, 5000]; // 80mm ancho
-            $options['margin_top']    = 0;
-            $options['margin_bottom'] = 0;
-            $options['margin_left']   = 0;
-            $options['margin_right']  = 0;
-        }
+        $rangoCreditos = [
+            'minId' => $creditosIds->isNotEmpty() ? $creditosIds->first() : null,
+            'maxId' => $creditosIds->isNotEmpty() ? $creditosIds->last() : null,
+            'totalCreditos' => $creditosIds->count(),
+            'montoCreditos' => $movimientosVenta
+                ->where('tipoPago.nombre', 'Crédito')
+                ->sum('monto'),
+        ];
 
-        $pdf = Pdf::loadView($vista, $datos, $options);
+        // Contar pagos de créditos (movimientos donde tipoOperacion sea "Pago de Crédito" o similar)
+        $pagosCreditos = $movimientos
+            ->where('tipoOperacion.nombre', 'Pago de Crédito')
+            ->count();
+
+        $montoPagosCreditos = $movimientos
+            ->where('tipoOperacion.nombre', 'Pago de Crédito')
+            ->sum('monto');
+
+        // Calcular rango de pagos (movimientos donde tipoOperacion contenga "Pago")
+        $pagosMovimientos = $movimientos->filter(function($mov) {
+            $nombre = $mov->tipoOperacion->nombre ?? '';
+            return stripos($nombre, 'Pago') !== false;
+        });
+
+        $pagosIds = $pagosMovimientos
+            ->pluck('id')
+            ->unique()
+            ->sort();
+
+        $rangoPagos = [
+            'minId' => $pagosIds->isNotEmpty() ? $pagosIds->first() : null,
+            'maxId' => $pagosIds->isNotEmpty() ? $pagosIds->last() : null,
+            'totalPagos' => $pagosIds->count(),
+            'montoPagos' => $pagosMovimientos->sum('monto'),
+        ];
+
+        // Preparar datos para el servicio
+        $datos = [
+            'apertura'                => $aperturaCaja,
+            'cierre'                  => $aperturaCaja->cierre,
+            'movimientos'             => $movimientos,
+            'movimientosAgrupados'    => $movimientosAgrupados,
+            'ventasPorTipoPago'       => $ventasPorTipoPago,
+            'totalIngresos'           => $totalIngresos,
+            'totalEgresos'            => $totalEgresos,
+            'primeraVenta'            => $primeraVenta,
+            'ultimaVenta'             => $ultimaVenta,
+            'primerMovimiento'        => $primerMovimiento,
+            'ultimoMovimiento'        => $ultimoMovimiento,
+            'rangoVentasIds'          => $rangoVentasIds,
+            'rangoCreditos'           => $rangoCreditos,
+            'pagosCreditos'           => $pagosCreditos,
+            'montoPagosCreditos'      => $montoPagosCreditos,
+            'rangoPagos'              => $rangoPagos,
+        ];
+
+        // Usar ImpresionService para generar el PDF
+        $impresionService = app(\App\Services\ImpresionService::class);
+        $pdf = $impresionService->generarPDF('cierre_caja', $datos, $formato, ['fuente' => $fuente]);
 
         if ($accion === 'stream') {
             return $pdf->stream();
         }
 
-        // Descargar como PDF
         return $pdf->download('cierre-caja-' . $aperturaCaja->id . '.pdf');
     }
 
@@ -1357,6 +1446,7 @@ class CajaController extends Controller
 
         $formato = $request->query('formato', 'A4');
         $accion  = $request->query('accion', 'download');
+        $fuente  = $request->query('fuente', 'consolas');
 
         // Obtener movimientos
         $movimientos = MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
@@ -1378,7 +1468,7 @@ class CajaController extends Controller
         $totalIngresos = $movimientos->where('monto', '>', 0)->sum('monto');
         $totalEgresos  = abs($movimientos->where('monto', '<', 0)->sum('monto'));
 
-        // Preparar datos
+        // Preparar datos para el servicio
         $datos = [
             'apertura'             => $aperturaCaja,
             'movimientos'          => $movimientos,
@@ -1386,41 +1476,81 @@ class CajaController extends Controller
             'totalDia'             => $totalDia,
             'totalIngresos'        => $totalIngresos,
             'totalEgresos'         => $totalEgresos,
-            'empresa'              => auth()->user()->empresa ?? null,
-            'usuario'              => auth()->user(),
-            'fecha_impresion'      => now(),
         ];
 
-        // Seleccionar vista según formato
-        $vista = match ($formato) {
-            'TICKET_58' => 'impresion.cajas.movimientos-caja-ticket-58',
-            'TICKET_80' => 'impresion.cajas.movimientos-caja-ticket-80',
-            default     => 'impresion.cajas.movimientos-dia-a4',
-        };
-
-        // Configurar opciones de dompdf según formato
-        $options = [];
-        if ($formato === 'TICKET_58') {
-            $options['paper']         = [0, 0, 170, 5000]; // 58mm ancho
-            $options['margin_top']    = 0;
-            $options['margin_bottom'] = 0;
-            $options['margin_left']   = 0;
-            $options['margin_right']  = 0;
-        } elseif ($formato === 'TICKET_80') {
-            $options['paper']         = [0, 0, 226, 5000]; // 80mm ancho
-            $options['margin_top']    = 0;
-            $options['margin_bottom'] = 0;
-            $options['margin_left']   = 0;
-            $options['margin_right']  = 0;
-        }
-
-        $pdf = Pdf::loadView($vista, $datos, $options);
+        // Usar ImpresionService para generar el PDF
+        $impresionService = app(\App\Services\ImpresionService::class);
+        $pdf = $impresionService->generarPDF('movimientos_caja', $datos, $formato, ['fuente' => $fuente]);
 
         if ($accion === 'stream') {
             return $pdf->stream();
         }
 
-        // Descargar como PDF
         return $pdf->download('movimientos-caja-' . $aperturaCaja->id . '.pdf');
     }
+
+    /**
+     * Exportar caja a Excel con formato profesional
+     * GET /cajas/{caja}/movimientos/exportar-excel
+     */
+    public function exportarExcel(Caja $caja)
+    {
+        Log::info('📊 [CajaController::exportarExcel] Exportando caja a Excel', [
+            'caja_id' => $caja->id,
+            'user_id' => auth()->id(),
+        ]);
+
+        try {
+            return $this->excelExportService->exportarCaja($caja);
+        } catch (\Exception $e) {
+            Log::error('❌ [CajaController::exportarExcel] Error', [
+                'error'   => $e->getMessage(),
+                'caja_id' => $caja->id,
+            ]);
+            return back()->with('error', 'Error al generar Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exportar caja a PDF
+     * GET /cajas/{caja}/movimientos/exportar-pdf
+     */
+    public function exportarPdf(Caja $caja, Request $request)
+    {
+        Log::info('📄 [CajaController::exportarPdf] Exportando caja a PDF', [
+            'caja_id' => $caja->id,
+            'user_id' => auth()->id(),
+        ]);
+
+        $formato = $request->input('formato', 'A4');
+
+        try {
+            // Buscar la apertura de caja
+            $aperturaCaja = AperturaCaja::where('caja_id', $caja->id)
+                ->latest()
+                ->first();
+
+            if (!$aperturaCaja) {
+                return back()->with('error', 'No se encontró la apertura de caja');
+            }
+
+            return $this->imprimirMovimientosCaja($aperturaCaja, new Request([
+                'formato' => $formato,
+                'accion' => 'download'
+            ]));
+        } catch (\Exception $e) {
+            Log::error('❌ [CajaController::exportarPdf] Error', [
+                'error'   => $e->getMessage(),
+                'caja_id' => $caja->id,
+            ]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Convertir logo a base64 para embebimiento en PDF
+     *
+     * @param string|null $logoUrl URL del logo
+     * @return string|null Data URI con imagen codificada en base64
+     */
 }

@@ -160,7 +160,8 @@ class StockService
     public function procesarSalidaVenta(
         array $productos,
         string $referencia,
-        int $almacenId = 1
+        int $almacenId = 1,
+        bool $permitirStockNegativo = false  // ✅ NUEVO: Para CREDITO que permite stock negativo
     ): array {
         $movimientos = [];
 
@@ -192,13 +193,22 @@ class StockService
                     ->lockForUpdate()
                     ->get();
 
-                // Validar stock total
+                // ✅ MODIFICADO: Validar stock total SOLO si no permitimos stock negativo (es decir, NO es CREDITO)
                 $stockTotal = $stocks->sum('cantidad_disponible');
-                if ($stockTotal < $cantidadNecesaria) {
+                if (!$permitirStockNegativo && $stockTotal < $cantidadNecesaria) {
                     throw new Exception(
                         "Stock insuficiente para producto ID {$productoId}: " .
                         "Disponible: {$stockTotal}, Necesario: {$cantidadNecesaria}"
                     );
+                }
+
+                // ✅ NUEVO: Log para CREDITO o stock negativo
+                if ($permitirStockNegativo) {
+                    \Illuminate\Support\Facades\Log::info('⚠️ [StockService] Procesando salida con stock negativo permitido (CREDITO)', [
+                        'producto_id' => $productoId,
+                        'cantidad_necesaria' => $cantidadNecesaria,
+                        'stock_disponible' => $stockTotal,
+                    ]);
                 }
 
                 // Consumir según FIFO

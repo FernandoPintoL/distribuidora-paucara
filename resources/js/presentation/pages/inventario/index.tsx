@@ -87,6 +87,10 @@ export default function Dashboard() {
                     canViewVencidos={can('inventario.vencidos')}
                 />
 
+                <StockYProductos
+                    stockPorAlmacen={props.stock_por_almacen}
+                    productosMasMovidos={productosMasMovidos}
+                />
 
                 <MovimientosRecientes
                     movimientos={movimientosRecientes}
@@ -98,11 +102,6 @@ export default function Dashboard() {
                     canViewMovimientos={can('inventario.movimientos')}
                     canAdjust={can('inventario.ajuste.form')}
                     canViewReportes={can('inventario.reportes')}
-                />
-
-                <StockYProductos
-                    stockPorAlmacen={props.stock_por_almacen}
-                    productosMasMovidos={productosMasMovidos}
                 />
 
             </div>

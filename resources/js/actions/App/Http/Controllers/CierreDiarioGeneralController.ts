@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::index
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:20
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:21
  * @route '/cajas/admin/reportes-diarios'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::index
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:20
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:21
  * @route '/cajas/admin/reportes-diarios'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::index
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:20
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:21
  * @route '/cajas/admin/reportes-diarios'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::index
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:20
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:21
  * @route '/cajas/admin/reportes-diarios'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::index
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:20
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:21
  * @route '/cajas/admin/reportes-diarios'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::index
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:20
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:21
  * @route '/cajas/admin/reportes-diarios'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::index
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:20
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:21
  * @route '/cajas/admin/reportes-diarios'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::show
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:81
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:82
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}'
  */
 export const show = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::show
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:81
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:82
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}'
  */
 show.url = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -127,7 +127,7 @@ show.url = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiar
 
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::show
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:81
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:82
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}'
  */
 show.get = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -136,7 +136,7 @@ show.get = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiar
 })
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::show
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:81
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:82
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}'
  */
 show.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -146,7 +146,7 @@ show.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDia
 
     /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::show
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:81
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:82
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}'
  */
     const showForm = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -156,7 +156,7 @@ show.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDia
 
             /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::show
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:81
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:82
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}'
  */
         showForm.get = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -165,7 +165,7 @@ show.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDia
         })
             /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::show
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:81
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:82
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}'
  */
         showForm.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -181,7 +181,7 @@ show.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDia
     show.form = showForm
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::descargar
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:95
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:96
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}/descargar'
  */
 export const descargar = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -196,7 +196,7 @@ descargar.definition = {
 
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::descargar
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:95
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:96
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}/descargar'
  */
 descargar.url = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -229,7 +229,7 @@ descargar.url = (args: { cierreDiarioGeneral: number | { id: number } } | [cierr
 
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::descargar
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:95
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:96
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}/descargar'
  */
 descargar.get = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -238,7 +238,7 @@ descargar.get = (args: { cierreDiarioGeneral: number | { id: number } } | [cierr
 })
 /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::descargar
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:95
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:96
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}/descargar'
  */
 descargar.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -248,7 +248,7 @@ descargar.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cier
 
     /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::descargar
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:95
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:96
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}/descargar'
  */
     const descargarForm = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -258,7 +258,7 @@ descargar.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cier
 
             /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::descargar
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:95
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:96
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}/descargar'
  */
         descargarForm.get = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -267,7 +267,7 @@ descargar.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cier
         })
             /**
 * @see \App\Http\Controllers\CierreDiarioGeneralController::descargar
- * @see app/Http/Controllers/CierreDiarioGeneralController.php:95
+ * @see app/Http/Controllers/CierreDiarioGeneralController.php:96
  * @route '/cajas/admin/reportes-diarios/{cierreDiarioGeneral}/descargar'
  */
         descargarForm.head = (args: { cierreDiarioGeneral: number | { id: number } } | [cierreDiarioGeneral: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

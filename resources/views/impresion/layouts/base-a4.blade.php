@@ -13,37 +13,18 @@
         }
 
         body {
-            font-family: {
-                    {
-                    $empresa->configuracion_impresion['fuente_hoja'] ?? 'Arial'
-                }
-            }
-
-            ,
-            sans-serif;
-
-            font-size: {
-                    {
-                    $empresa->configuracion_impresion['tamaño_fuente_hoja'] ?? '10px'
-                }
-            }
-
-            ;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
             color: #333;
             line-height: 1.4;
+            margin: 0;
+            padding: 0;
         }
 
         .page {
             width: 210mm;
             min-height: 297mm;
-
-            padding: {
-                    {
-                    $empresa->configuracion_impresion['margen_hoja'] ?? '10mm'
-                }
-            }
-
-            ;
+            padding: 10mm;
             margin: 0 auto;
             box-sizing: border-box;
         }

@@ -283,6 +283,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::prefix('compras')->name('compras.')->group(function () {
         Route::get('{compra}/imprimir', [\App\Http\Controllers\CompraController::class, 'imprimirCompra'])->name('imprimir');
         Route::get('{compra}/preview', [\App\Http\Controllers\CompraController::class, 'previewCompra'])->name('preview');
+        Route::get('{compra}/exportar-excel', [\App\Http\Controllers\CompraController::class, 'exportarExcel'])->name('exportar-excel');
+        Route::get('{compra}/exportar-pdf', [\App\Http\Controllers\CompraController::class, 'exportarPdf'])->name('exportar-pdf');
     });
 
     // ==========================================
@@ -300,6 +302,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // ==========================================
     // RUTAS DE IMPRESIÓN - VENTAS
     // ==========================================
+    // ✅ NUEVAS RUTAS: Stock / Inventario - Exportación
+    Route::prefix('stock')->name('stock.')->group(function () {
+        Route::get('{stock}/exportar-excel', [\App\Http\Controllers\InventarioController::class, 'exportarExcel'])->name('exportar-excel')->middleware('permission:inventario.dashboard');
+        Route::get('{stock}/exportar-pdf', [\App\Http\Controllers\InventarioController::class, 'exportarPdf'])->name('exportar-pdf')->middleware('permission:inventario.dashboard');
+    });
+
     Route::prefix('ventas')->name('ventas.')->group(function () {
         // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
         Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
@@ -307,6 +315,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // Rutas con parámetros dinámicos van al final
         Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir');
         Route::get('{venta}/preview', [\App\Http\Controllers\VentaController::class, 'preview'])->name('preview');
+        Route::get('{venta}/exportar-excel', [\App\Http\Controllers\VentaController::class, 'exportarExcel'])->name('exportar-excel');
+        Route::get('{venta}/exportar-pdf', [\App\Http\Controllers\VentaController::class, 'exportarPdf'])->name('exportar-pdf');
     });
 
     // Rutas para gestión de stock en ventas
@@ -400,6 +410,16 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('/{aperturaCaja}/movimientos/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirMovimientos'])
             ->where('aperturaCaja', '[0-9]+')
             ->name('movimientos.imprimir')
+            ->middleware('permission:cajas.transacciones');
+
+        Route::get('/{caja}/movimientos/exportar-excel', [\App\Http\Controllers\CajaController::class, 'exportarExcel'])
+            ->where('caja', '[0-9]+')
+            ->name('movimientos.exportar-excel')
+            ->middleware('permission:cajas.transacciones');
+
+        Route::get('/{caja}/movimientos/exportar-pdf', [\App\Http\Controllers\CajaController::class, 'exportarPdf'])
+            ->where('caja', '[0-9]+')
+            ->name('movimientos.exportar-pdf')
             ->middleware('permission:cajas.transacciones');
     });
 
@@ -526,6 +546,14 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::post('draft/{borrador}/productos/search', [\App\Http\Controllers\InventarioInicialController::class, 'searchProductoInDraft'])->name('draft.productos.search');
             Route::delete('draft/{borrador}/items/{item}', [\App\Http\Controllers\InventarioInicialController::class, 'deleteDraftItem'])->name('draft.item.delete');
             Route::post('draft/{borrador}/complete', [\App\Http\Controllers\InventarioInicialController::class, 'completeDraft'])->middleware('permission:inventario.ajuste.procesar')->name('draft.complete');
+        });
+
+        // Rutas para gestión de reservas de inventario
+        Route::prefix('reservas')->name('reservas.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Inventario\ReservaProformaController::class, 'index'])->middleware('permission:inventario.reservas.index')->name('index');
+            Route::post('{id}/liberar', [\App\Http\Controllers\Inventario\ReservaProformaController::class, 'liberar'])->middleware('permission:inventario.reservas.liberar')->name('liberar');
+            Route::post('liberar-masivo', [\App\Http\Controllers\Inventario\ReservaProformaController::class, 'liberarMasivo'])->middleware('permission:inventario.reservas.liberar-masivo')->name('liberar-masivo');
+            Route::post('{id}/extender', [\App\Http\Controllers\Inventario\ReservaProformaController::class, 'extender'])->middleware('permission:inventario.reservas.extender')->name('extender');
         });
     });
 

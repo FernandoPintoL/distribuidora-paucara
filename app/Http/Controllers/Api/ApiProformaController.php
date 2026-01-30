@@ -2266,9 +2266,9 @@ class ApiProformaController extends Controller
                     throw $e;
                 }
 
-                // ✅ NUEVO: Registrar movimiento de caja para pagos inmediatos (anticipados)
-                // Se registra SOLO para políticas: ANTICIPADO_100, MEDIO_MEDIO
-                if (in_array($politica, ['ANTICIPADO_100', 'MEDIO_MEDIO'])) {
+                // ✅ NUEVO: Registrar movimiento de caja para pagos inmediatos (anticipados) y créditos
+                // Se registra para políticas: ANTICIPADO_100, MEDIO_MEDIO, CREDITO
+                if (in_array($politica, ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CREDITO'])) {
                     $this->registrarMovimientoCajaParaPago(
                         $venta,
                         $proforma,
@@ -2870,21 +2870,24 @@ class ApiProformaController extends Controller
         float $montoPagado,
         \App\Models\User $usuario
     ): void {
-        // ✅ Solo registrar si hay monto a pagar y la política lo requiere
-        if ($montoPagado <= 0) {
-            Log::info('⏭️ [registrarMovimientoCajaParaPago] Sin monto a pagar, no registra movimiento', [
+        // ✅ Solo registrar para políticas que requieren registro en caja
+        // Incluye: pagos anticipados (100%, 50%) y créditos
+        $politicasARegistrar = ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CREDITO'];
+        if (!in_array($politica, $politicasARegistrar)) {
+            Log::info('⏭️ [registrarMovimientoCajaParaPago] Política no requiere registro', [
                 'venta_id' => $venta->id,
-                'proforma_id' => $proforma->id,
-                'monto_pagado' => $montoPagado,
+                'politica' => $politica,
             ]);
             return;
         }
 
-        // ✅ Solo registrar para políticas que requieren pago inmediato
-        $politicasConPagoInmediato = ['ANTICIPADO_100', 'MEDIO_MEDIO'];
-        if (!in_array($politica, $politicasConPagoInmediato)) {
-            Log::info('⏭️ [registrarMovimientoCajaParaPago] Política no requiere registro inmediato', [
+        // ✅ Para políticas de pago inmediato, validar que hay monto
+        // Para crédito, puede ser 0
+        if ($politica !== 'CREDITO' && $montoPagado <= 0) {
+            Log::info('⏭️ [registrarMovimientoCajaParaPago] Sin monto a pagar, no registra movimiento', [
                 'venta_id' => $venta->id,
+                'proforma_id' => $proforma->id,
+                'monto_pagado' => $montoPagado,
                 'politica' => $politica,
             ]);
             return;
@@ -2970,6 +2973,7 @@ class ApiProformaController extends Controller
             $descripcionPolitica = match($politica) {
                 'ANTICIPADO_100' => '100% ANTICIPADO',
                 'MEDIO_MEDIO' => '50% ANTICIPO',
+                'CREDITO' => 'VENTA A CRÉDITO',
                 default => 'ANTICIPO'
             };
 

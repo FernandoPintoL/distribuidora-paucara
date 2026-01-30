@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: 'Courier New', 'Courier', monospace;
+            font-family: {{ isset($fuente_config) ? $fuente_config['stack'] : "'Consolas', 'Courier New', 'Courier', monospace" }};
             font-size: 9px;
             line-height: 1.3;
             width: 80mm;
@@ -104,10 +104,62 @@
             }
         }
 
+        /* Estilos para el selector de fuentes */
+        @media screen {
+            .font-selector {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #fff;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 10px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                z-index: 9999;
+            }
+            .font-selector label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: bold;
+                font-size: 12px;
+                color: #333;
+            }
+            .font-selector select {
+                width: 200px;
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                font-size: 12px;
+            }
+        }
+
         @yield('estilos-adicionales')
     </style>
 </head>
 <body>
+    <!-- Selector de fuentes (solo en navegador) -->
+    @if(request()->query('accion') === 'stream')
+    <div class="font-selector">
+        <label for="font-select">Fuente de letra:</label>
+        <select id="font-select" onchange="cambiarFuente(this.value)">
+            @forelse($fuentes_disponibles ?? [] as $key => $fuente)
+            <option value="{{ $key }}" {{ ($fuente_config['nombre'] ?? '') === ($fuente['nombre'] ?? '') ? 'selected' : '' }}>
+                {{ $fuente['nombre'] }}
+            </option>
+            @empty
+            <option value="consolas" selected>Consolas (Por defecto)</option>
+            @endforelse
+        </select>
+    </div>
+
+    <script>
+        function cambiarFuente(fuente) {
+            const url = new URL(window.location);
+            url.searchParams.set('fuente', fuente);
+            window.location.href = url.toString();
+        }
+    </script>
+    @endif
     <div class="ticket">
         @yield('contenido')
     </div>

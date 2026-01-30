@@ -5,20 +5,36 @@ import { NotificationService } from '@/infrastructure/services/notification.serv
 import { getRoleColor } from '@/lib/admin-permisos.utils';
 import type { AdminUsuario, PermissionGroup } from '@/domain/entities/admin-permisos';
 
+interface Rol {
+  id: number;
+  name: string;
+  description: string;
+}
+
 interface UsuarioEditProps {
   usuario: AdminUsuario;
   permisosActuales: number[];
   rolesActuales: string[];
   todosLosPermisos: PermissionGroup[];
+  todosLosRoles: Rol[];
 }
 
-export default function UsuarioEdit({ usuario, permisosActuales, rolesActuales, todosLosPermisos }: UsuarioEditProps) {
-  const { setData, patch, processing } = useForm({
+export default function UsuarioEdit({ usuario, permisosActuales, rolesActuales, todosLosPermisos, todosLosRoles }: UsuarioEditProps) {
+  const { data, setData, patch, processing } = useForm({
     permisos: permisosActuales,
+    roles: rolesActuales,
   });
 
   function handlePermisosChange(permisos: number[]) {
     setData('permisos', permisos);
+  }
+
+  function handleRolesChange(roleName: string) {
+    if (data.roles.includes(roleName)) {
+      setData('roles', data.roles.filter((r: string) => r !== roleName));
+    } else {
+      setData('roles', [...data.roles, roleName]);
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -49,22 +65,28 @@ export default function UsuarioEdit({ usuario, permisosActuales, rolesActuales, 
             </p>
           </div>
 
-          {/* Roles Information */}
-          {rolesActuales.length > 0 && (
-            <div className="mb-6 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Roles Actuales</h3>
-              <div className="flex flex-wrap gap-2">
-                {rolesActuales.map(role => (
-                  <span
-                    key={role}
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${getRoleColor(role)}`}
-                  >
-                    {role}
-                  </span>
-                ))}
-              </div>
+          {/* Roles Editor */}
+          <div className="mb-6 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Gestionar Roles</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {todosLosRoles.map(rol => (
+                <label key={rol.name} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer transition">
+                  <input
+                    type="checkbox"
+                    checked={data.roles.includes(rol.name)}
+                    onChange={() => handleRolesChange(rol.name)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 dark:text-white">{rol.name}</p>
+                    {rol.description && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{rol.description}</p>
+                    )}
+                  </div>
+                </label>
+              ))}
             </div>
-          )}
+          </div>
 
           {/* Permissions Editor */}
           <form onSubmit={handleSubmit}>

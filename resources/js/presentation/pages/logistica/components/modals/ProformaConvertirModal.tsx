@@ -109,6 +109,8 @@ export function ProformaConvertirModal({
     }
 
     // Modal normal de conversión
+    const fechaHoy = new Date().toISOString().split('T')[0];
+
     return (
         <AlertDialog open={isOpen} onOpenChange={onClose}>
             <AlertDialogContent>
@@ -118,14 +120,32 @@ export function ProformaConvertirModal({
                         ¿Estás seguro de que deseas convertir la proforma {proforma.numero} a una venta?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <div className="space-y-3 text-sm text-foreground px-6">
-                    <p>Esta acción:</p>
-                    <ul className="list-disc list-inside space-y-1 ml-2">
-                        <li>Creará una nueva venta con los detalles de esta proforma</li>
-                        <li>Consumirá el stock reservado de los productos</li>
-                        <li>Generará los números de serie correspondientes</li>
-                        <li>Marcará esta proforma como CONVERTIDA</li>
-                    </ul>
+                <div className="space-y-4 text-sm text-foreground px-6">
+                    {/* Fechas de Entrega */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                        <p className="font-semibold text-blue-900 dark:text-blue-200">Fechas de Entrega</p>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-foreground/70">Fecha Solicitada:</span>
+                                <span className="font-medium">{proforma.fecha_entrega_solicitada || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-foreground/70">Fecha Confirmada:</span>
+                                <span className="font-medium">{fechaHoy}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="space-y-2">
+                        <p>Esta acción:</p>
+                        <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>Creará una nueva venta con los detalles de esta proforma</li>
+                            <li>Consumirá el stock reservado de los productos</li>
+                            <li>Generará los números de serie correspondientes</li>
+                            <li>Marcará esta proforma como CONVERTIDA</li>
+                        </ul>
+                    </div>
                 </div>
                 <AlertDialogFooter>
                     <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>

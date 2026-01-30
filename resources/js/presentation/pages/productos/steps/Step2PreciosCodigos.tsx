@@ -90,6 +90,58 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         };
     }>({});
 
+    // ✨ Estado para porcentajes de ganancia editables por tipo de precio
+    const [porcentajesPorTipo, setPorcentajesPorTipo] = useState<{
+        [tipoPrecioId: number]: number;
+    }>({});
+
+    // ✨ Inicializar porcentajesPorTipo con los valores por defecto de tipos de precio
+    useEffect(() => {
+        const estadoInicial: typeof porcentajesPorTipo = {};
+
+        props.tipos_precio.forEach((tp: TipoPrecioOption) => {
+            const id = tpId(tp);
+            const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
+            const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
+            const pct = Number.isFinite(pctNum) && pctNum !== undefined ? pctNum : 0;
+            estadoInicial[id] = pct;
+        });
+
+        console.log('✅ Inicializando porcentajesPorTipo:', estadoInicial);
+        setPorcentajesPorTipo(estadoInicial);
+    }, [props.tipos_precio]);
+
+    // ✨ Inicializar preciosPorUnidad con los precios existentes (edición)
+    useEffect(() => {
+        if (!props.data.precios || props.data.precios.length === 0) {
+            return;
+        }
+
+        if (!props.data.es_fraccionado) {
+            return;
+        }
+
+        // Construir el estado inicial de preciosPorUnidad desde los precios existentes
+        const estadoInicial: typeof preciosPorUnidad = {};
+
+        props.data.precios.forEach((precio: Precio) => {
+            const tipoPrecioId = Number(precio.tipo_precio_id);
+            const unidadId = precio.unidad_medida_id ? Number(precio.unidad_medida_id) : Number(props.data.unidad_medida_id);
+
+            if (!estadoInicial[tipoPrecioId]) {
+                estadoInicial[tipoPrecioId] = {};
+            }
+
+            estadoInicial[tipoPrecioId][unidadId] = {
+                monto: precio.monto,
+                manual: true, // Marcar como manual al cargar (porque ya existen)
+            };
+        });
+
+        console.log('✅ Inicializando preciosPorUnidad desde precios existentes:', estadoInicial);
+        setPreciosPorUnidad(estadoInicial);
+    }, [props.data.precios, props.data.es_fraccionado, props.data.unidad_medida_id]);
+
     // ✨ Calcular precios automáticamente cuando cambia el precio base o el factor de conversión
     const calcularPreciosPorUnidad = useCallback((
         precioBase: number,
@@ -114,41 +166,59 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         const precioUnidadBase = precioBase * (1 + porcentajeGanancia / 100);
         console.log(`📦 Precio Unidad Base: ${precioBase} Bs × (1 + ${porcentajeGanancia}%) = ${precioUnidadBase.toFixed(2)} Bs`);
 
-        const nuevosPrecios: typeof preciosPorUnidad[number] = {
-            [Number(props.data.unidad_medida_id)]: {
+        // 1️⃣ PASO 1: Eliminar todos los precios de este tipo_precio_id (estrategia: eliminar y recrear)
+        const preciosOtrosTipos = (props.data.precios || []).filter(
+            (p: Precio) => Number(p.tipo_precio_id) !== Number(tipoPrecioId)
+        );
+
+        // 2️⃣ PASO 2: Crear precio para unidad base (SIN unidad_medida_id = NULL)
+        const nuevosPrecios: Precio[] = [
+            {
+                tipo_precio_id: tipoPrecioId,
                 monto: Number(precioUnidadBase.toFixed(2)),
-                manual: false,
-            },
-        };
-
-        // Calcular precio para cada unidad destino
-        props.data.conversiones.forEach((conv: any, idx: number) => {
-            // Si es manual, no recalcular
-            const esManual = preciosPorUnidad[tipoPrecioId]?.[conv.unidad_destino_id]?.manual;
-            if (esManual) {
-                console.log(`⏸️ Conversión ${idx + 1}: Manual (no recalcular)`);
-                nuevosPrecios[conv.unidad_destino_id] = preciosPorUnidad[tipoPrecioId][conv.unidad_destino_id];
-                return;
+                unidad_medida_id: undefined, // NULL en BD - precio de unidad base
             }
+        ];
 
+        // 3️⃣ PASO 3: Agregar precios para cada conversión (CON unidad_medida_id)
+        props.data.conversiones.forEach((conv: any, idx: number) => {
             // Calcular: Precio CAJA / Factor = Precio TABLETA
             // Ej: 45 Bs / 30 = 1.5 Bs por tableta
             const precioUnidadDestino = precioUnidadBase / conv.factor_conversion;
 
             console.log(`✨ Conversión ${idx + 1}: ${precioUnidadBase.toFixed(2)} Bs ÷ ${conv.factor_conversion} = ${precioUnidadDestino.toFixed(2)} Bs (Unidad destino ID: ${conv.unidad_destino_id})`);
 
-            nuevosPrecios[conv.unidad_destino_id] = {
+            nuevosPrecios.push({
+                tipo_precio_id: tipoPrecioId,
+                monto: Number(precioUnidadDestino.toFixed(2)),
+                unidad_medida_id: conv.unidad_destino_id,
+            });
+        });
+
+        // 4️⃣ PASO 4: Actualizar estado con todos los precios (otros tipos + nuevos calculados)
+        const preciosFinales = [...preciosOtrosTipos, ...nuevosPrecios];
+        console.log('📋 Precios finales (después de recalcular):', preciosFinales);
+        setPrecios(preciosFinales);
+
+        // 5️⃣ PASO 5: Actualizar estado visual de preciosPorUnidad para mostrar los calculados
+        const visualState: typeof preciosPorUnidad[number] = {
+            [Number(props.data.unidad_medida_id)]: {
+                monto: Number(precioUnidadBase.toFixed(2)),
+                manual: false,
+            },
+        };
+        props.data.conversiones.forEach((conv: any) => {
+            const precioUnidadDestino = precioUnidadBase / conv.factor_conversion;
+            visualState[conv.unidad_destino_id] = {
                 monto: Number(precioUnidadDestino.toFixed(2)),
                 manual: false,
             };
         });
-
-        console.log('📋 Nuevos precios por unidad:', nuevosPrecios);
         setPreciosPorUnidad(prev => ({
             ...prev,
-            [tipoPrecioId]: nuevosPrecios,
+            [tipoPrecioId]: visualState,
         }));
-    }, [props.data.es_fraccionado, props.data.conversiones, props.data.unidad_medida_id, preciosPorUnidad]);
+    }, [props.data.es_fraccionado, props.data.conversiones, props.data.unidad_medida_id, props.data.precios, setPrecios]);
 
     // ✨ Handler para cambio manual de precio por unidad
     const handlePrecioUnidadChange = (
@@ -173,6 +243,65 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                 },
             },
         }));
+    };
+
+    // ✨ Handler para cambio manual de porcentaje de ganancia
+    const handlePorcentajeChange = (tipoPrecioId: number, nuevoPorcentaje: number) => {
+        console.log(`📊 PORCENTAJE MODIFICADO MANUALMENTE`, {
+            tipoPrecioId,
+            nuevoPorcentaje,
+        });
+
+        setPorcentajesPorTipo(prev => ({
+            ...prev,
+            [tipoPrecioId]: nuevoPorcentaje,
+        }));
+    };
+
+    // ✨ Handler para recalcular monto basado en porcentaje editado (al hacer clic en botón refresh)
+    const handleRecalcularPorcentaje = (tipoPrecioId: number) => {
+        const costo = Number(props.precioCosto ?? 0);
+        if (!Number.isFinite(costo) || costo <= 0) {
+            console.log('⏭️ No se puede recalcular: costo inválido');
+            return;
+        }
+
+        // Obtener el porcentaje editado
+        const nuevoPct = porcentajesPorTipo[tipoPrecioId] ?? 0;
+
+        // ✨ Si es producto fraccionado, recalcular TODOS los precios (base + conversiones)
+        if (props.data.es_fraccionado && props.data.conversiones && props.data.conversiones.length > 0) {
+            console.log(`🔄 RECALCULANDO TODOS LOS PRECIOS (producto fraccionado)`, {
+                tipoPrecioId,
+                porcentaje: nuevoPct,
+                precioCosto: costo,
+            });
+            calcularPreciosPorUnidad(costo, tipoPrecioId, nuevoPct);
+            manualOverrideIdsRef.current.add(tipoPrecioId);
+            return;
+        }
+
+        // Si NO es fraccionado, solo recalcular el precio base
+        // Encontrar el precio base (unidad_medida_id = null/undefined) para este tipo
+        const precioBaseIdx = (data.precios || []).findIndex(
+            (p: Precio) => Number(p.tipo_precio_id) === tipoPrecioId && !p.unidad_medida_id
+        );
+
+        if (precioBaseIdx >= 0) {
+            // Recalcular el monto: costo × (1 + porcentaje%)
+            const nuevoMonto = Number((costo * (1 + nuevoPct / 100)).toFixed(2));
+
+            console.log(`🔄 RECALCULANDO MONTO (producto no fraccionado)`, {
+                tipoPrecioId,
+                porcentaje: nuevoPct,
+                precioBase: costo,
+                nuevoMonto,
+            });
+
+            // Actualizar el monto del precio base
+            setPrecio(precioBaseIdx, 'monto', nuevoMonto);
+            manualOverrideIdsRef.current.add(tipoPrecioId);
+        }
     };
 
     // Estado y refs para cámara y escaneo de códigos / fotos
@@ -657,9 +786,47 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                     <td className="px-3 py-3 text-xl group-hover:scale-110 transition-transform">{tpIcono(tp)}</td>
                                                     <td className="px-3 py-3 font-semibold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{tpNombre(tp)}</td>
                                                     <td className="px-3 py-3 text-center">
-                                                        <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold transition-all ${checked ? 'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-50' : 'bg-secondary text-foreground group-hover:bg-gray-300 dark:group-hover:bg-gray-600'}`}>
-                                                            {pct}%
-                                                        </span>
+                                                        {checked ? (
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    min="0"
+                                                                    value={porcentajesPorTipo[currId] ?? pct}
+                                                                    onChange={(e) => {
+                                                                        handlePorcentajeChange(currId, Number(e.target.value) || 0);
+                                                                    }}
+                                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    onFocus={(e) => {
+                                                                        e.stopPropagation();
+                                                                        e.target.select();
+                                                                    }}
+                                                                    className="w-20 h-8 text-xs font-mono text-center"
+                                                                    title="Editar porcentaje de ganancia"
+                                                                />
+                                                                <span className="text-xs font-bold text-foreground">%</span>
+                                                                {/* ✨ Botón de refresh para recalcular monto */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleRecalcularPorcentaje(currId);
+                                                                    }}
+                                                                    className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                                    title="Recalcular monto con el porcentaje especificado"
+                                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold transition-all bg-secondary text-foreground group-hover:bg-gray-300 dark:group-hover:bg-gray-600`}>
+                                                                {pct}%
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="px-3 py-3">
                                                         {checked ? (
@@ -718,14 +885,10 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                                     <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                                                                         Precios por unidad:
                                                                     </p>
-                                                                    <button
+                                                                    {/* <button
                                                                         type="button"
                                                                         onClick={() => {
-                                                                            // ✅ Usar ?? (nullish coalescing) en lugar de || para respetar porcentajes 0%
-                                                                            // El porcentaje está en tp?.porcentaje_ganancia, NO en tp?.configuracion?.porcentaje_ganancia
-                                                                            const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
-                                                                            const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
-                                                                            const pct = Number.isFinite(pctNum) && pctNum !== undefined ? pctNum : 0;
+                                                                            const pct = porcentajesPorTipo[currId] ?? 0;
 
                                                                             console.log('🔄 BOTÓN RECALCULAR PRESIONADO', {
                                                                                 tipoPrecio: tpNombre(tp),
@@ -740,7 +903,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                                         title="Recalcular precios automáticamente"
                                                                     >
                                                                         🔄 Recalcular
-                                                                    </button>
+                                                                    </button> */}
                                                                 </div>
 
                                                                 {/* Base unit price */}

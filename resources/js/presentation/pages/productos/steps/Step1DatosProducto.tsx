@@ -24,6 +24,8 @@ export interface Step1Props {
     stock_maximo?: number | null;
     limite_venta?: number | null; // ✨ NUEVO - Límite de cantidad por venta
     es_fraccionado?: boolean; // ✨ NUEVO
+    principio_activo?: string | null; // ✨ NUEVO - Ingrediente activo para medicamentos
+    uso_de_medicacion?: string | null; // ✨ NUEVO - Indicaciones de uso para medicamentos
   };
   errors: Record<string, string>;
   categoriasOptions: Option[];
@@ -32,6 +34,7 @@ export interface Step1Props {
   setData: (key: string, value: unknown) => void; // follows useForm API used in parent
   getInputClassName: (fieldName: keyof Record<string, string>) => string;
   permite_productos_fraccionados?: boolean; // ✨ NUEVO: Control de empresa
+  es_farmacia?: boolean; // ✨ NUEVO - Indica si la empresa es farmacia
 }
 
 export default function Step1DatosProducto({
@@ -42,7 +45,8 @@ export default function Step1DatosProducto({
   unidadesOptions,
   setData,
   getInputClassName,
-  permite_productos_fraccionados // ✨ NUEVO
+  permite_productos_fraccionados, // ✨ NUEVO
+  es_farmacia // ✨ NUEVO - Indica si la empresa es farmacia
 }: Step1Props) {
   // Estados para controlar la búsqueda de proveedores
   const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
@@ -130,6 +134,8 @@ export default function Step1DatosProducto({
       setData('stock_minimo', productoData.stock_minimo || 0);
       setData('stock_maximo', productoData.stock_maximo || 50);
       setData('limite_venta', productoData.limite_venta || null); // ✨ NUEVO
+      setData('principio_activo', productoData.principio_activo || null); // ✨ NUEVO
+      setData('uso_de_medicacion', productoData.uso_de_medicacion || null); // ✨ NUEVO
       setData('activo', productoData.activo ?? true);
 
       NotificationService.success(`Producto "${productoData.nombre}" cargado correctamente`);
@@ -236,7 +242,6 @@ export default function Step1DatosProducto({
             id="proveedor"
             label="Proveedor (opcional)"
             value={data.proveedor_id ?? ''}
-            displayValue={data.proveedor?.nombre} // ✅ NUEVO: Mostrar nombre del proveedor actual
             onChange={(value) => setData('proveedor_id', value ? Number(value) : '')}
             onSearch={searchProveedores}
             placeholder="busca o crea tu proveedor"
@@ -518,6 +523,61 @@ export default function Step1DatosProducto({
               Verás opciones de configuración una vez que marques esta casilla
             </p>
           )}
+        </div>
+      )}
+
+      {/* ✨ NUEVA SECCIÓN: Información de Medicamentos (solo para farmacias) */}
+      {es_farmacia && (
+        <div className="space-y-3 mt-6 p-5 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-lg shadow-sm">
+          <div className="flex items-start gap-3">
+            <svg className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m7.53-2a10 10 0 11-14.06 0M9 12l2 2 4-4m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            <div className="flex-1">
+              <Label className="font-semibold flex items-center gap-2 text-base">
+                <span>💊</span> Información de Medicamento
+              </Label>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-2 leading-relaxed">
+                Complete los campos de medicamento para identificar el principio activo e indicaciones de uso.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="space-y-1">
+              <Label htmlFor="principio_activo" className="flex items-center gap-2">
+                <span className="text-blue-600 dark:text-blue-400">⚗️</span> Principio Activo
+              </Label>
+              <Input
+                id="principio_activo"
+                value={data.principio_activo ?? ''}
+                onChange={e => setData('principio_activo', e.target.value || null)}
+                placeholder="Ej: Ibuprofeno, Paracetamol, Amoxicilina"
+                className={getInputClassName('principio_activo')}
+              />
+              {errors.principio_activo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.principio_activo}</div>}
+              <div className="text-xs text-muted-foreground mt-1">
+                💡 Ingresa el ingrediente activo del medicamento
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="uso_de_medicacion" className="flex items-center gap-2">
+                <span className="text-blue-600 dark:text-blue-400">📋</span> Uso / Indicaciones
+              </Label>
+              <Input
+                id="uso_de_medicacion"
+                value={data.uso_de_medicacion ?? ''}
+                onChange={e => setData('uso_de_medicacion', e.target.value || null)}
+                placeholder="Ej: Dolor, fiebre, inflamación / Infecciones bacterianas"
+                className={getInputClassName('uso_de_medicacion')}
+              />
+              {errors.uso_de_medicacion && <div className="text-red-500 text-sm mt-1">⚠️ {errors.uso_de_medicacion}</div>}
+              <div className="text-xs text-muted-foreground mt-1">
+                💡 Describe las indicaciones o usos principales del medicamento
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

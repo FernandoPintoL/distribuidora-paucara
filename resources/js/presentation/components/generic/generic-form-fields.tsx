@@ -281,9 +281,13 @@ export default function GenericFormFields<F extends BaseFormData>({
       case 'file':
         {
           const fileValue = value as File | string | null | undefined;
+          const previewValue = (data as any)[`${String(field.key)}_preview`];
           let previewSrc: string | null = null;
+
           if (fileValue instanceof File) {
             previewSrc = URL.createObjectURL(fileValue);
+          } else if (previewValue && typeof previewValue === 'string' && previewValue.length > 0) {
+            previewSrc = previewValue.startsWith('http') || previewValue.startsWith('data:') ? previewValue : previewValue.startsWith('/storage/') ? previewValue : `/storage/${previewValue}`;
           } else if (typeof fileValue === 'string' && fileValue.length > 0) {
             previewSrc = fileValue.startsWith('http') || fileValue.startsWith('data:') ? fileValue : `/storage/${fileValue}`;
           }

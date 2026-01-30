@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, X, Calendar, User, FileText, DollarSign } from 'lucide-react';
+import { Search, Filter, X, Calendar, DollarSign, Hash } from 'lucide-react';
 import type { FiltrosVentas, DatosParaFiltrosVentas } from '@/domain/entities/ventas';
 import ventasService from '@/infrastructure/services/ventas.service';
 import SearchSelect from '@/presentation/components/ui/search-select';
@@ -17,6 +17,7 @@ export default function FiltrosVentasComponent({
 }: FiltrosVentasProps) {
     const [filtros, setFiltros] = useState<FiltrosVentas>(filtrosIniciales);
     const [mostrarFiltrosAvanzados, setMostrarFiltrosAvanzados] = useState(false);
+    const [busquedaCombinada, setBusquedaCombinada] = useState<string>('');
 
     // Valores por defecto para datosParaFiltros
     const datosSeguros = {
@@ -55,19 +56,52 @@ export default function FiltrosVentasComponent({
         }
     };
 
-    const aplicarFiltros = () => {
-        ventasService.searchVentas(filtros);
+    // Detecta si el input es un número puro o contiene letras (para numero de venta)
+    const handleBusquedaCombinada = (valor: string, aplicarAhora: boolean = false) => {
+        setBusquedaCombinada(valor);
+
+        let nuevosFiltros = { ...filtros };
+
+        if (!valor) {
+            nuevosFiltros.id = null;
+            nuevosFiltros.numero = null;
+        } else if (/^\d+$/.test(valor)) {
+            // Si es un número puro, buscar por ID
+            nuevosFiltros.id = Number(valor);
+            nuevosFiltros.numero = null;
+        } else {
+            // Si contiene letras o caracteres especiales, buscar por número de venta
+            nuevosFiltros.numero = valor;
+            nuevosFiltros.id = null;
+        }
+
+        setFiltros(nuevosFiltros);
+
+        if (onFiltrosChange) {
+            onFiltrosChange(nuevosFiltros);
+        }
+
+        // Si se llama con aplicarAhora=true, envía al backend inmediatamente
+        if (aplicarAhora) {
+            aplicarFiltros(nuevosFiltros);
+        }
+    };
+
+    const aplicarFiltros = (filtrosAplicar?: FiltrosVentas) => {
+        ventasService.searchVentas(filtrosAplicar || filtros);
     };
 
     const limpiarFiltros = () => {
         const filtrosVacios: FiltrosVentas = {};
         setFiltros(filtrosVacios);
+        setBusquedaCombinada('');
         setMostrarFiltrosAvanzados(false);
         ventasService.clearFilters();
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
+            e.preventDefault();
             aplicarFiltros();
         }
     };
@@ -75,22 +109,29 @@ export default function FiltrosVentasComponent({
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 mb-6">
             {/* Filtros básicos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 
-                {/* Número de venta */}
+                {/* ID de venta o Número de venta (búsqueda combinada) */}
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FileText className="h-4 w-4 text-gray-400" />
+                        <Hash className="h-4 w-4 text-gray-400" />
                     </div>
                     <input
                         type="text"
-                        placeholder="Número de venta"
-                        value={filtros.numero || ''}
-                        onChange={(e) => handleFiltroChange('numero', e.target.value)}
-                        onKeyPress={handleKeyPress}
+                        placeholder="ID o Número"
+                        title="Buscar por ID (58, 100) o Número (VEN20260128-0010)"
+                        value={busquedaCombinada}
+                        onChange={(e) => handleBusquedaCombinada(e.target.value)}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleBusquedaCombinada(busquedaCombinada, true);
+                            }
+                        }}
                         className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                     />
                 </div>
+
 
                 {/* Cliente */}
                 <div>

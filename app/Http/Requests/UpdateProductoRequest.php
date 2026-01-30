@@ -106,6 +106,7 @@ class UpdateProductoRequest extends FormRequest
             'precios'                  => ['nullable', 'array'],
             'precios.*.monto'          => ['required_with:precios.*', 'numeric', 'min:0'],
             'precios.*.tipo_precio_id' => ['sometimes', 'integer', 'in:' . implode(',', $tiposPrecios)],
+            'precios.*.unidad_medida_id' => ['nullable', 'integer', 'exists:unidades_medida,id'],
 
             // Códigos
             'codigos'                  => ['nullable', 'array'],
@@ -127,6 +128,10 @@ class UpdateProductoRequest extends FormRequest
             'conversiones.*.factor_conversion' => ['required_with:conversiones', 'numeric', 'gt:0'],
             'conversiones.*.activo'    => ['nullable', 'boolean'],
             'conversiones.*.es_conversion_principal' => ['nullable', 'boolean'],
+
+            // Campos de medicamentos (para farmacias)
+            'principio_activo'         => ['nullable', 'string', 'max:255'], // ✨ NUEVO
+            'uso_de_medicacion'        => ['nullable', 'string'], // ✨ NUEVO
 
             'activo'                   => ['nullable', 'boolean'],
         ];
@@ -176,6 +181,8 @@ class UpdateProductoRequest extends FormRequest
             'precios.*.monto.min'                      => 'El monto del precio no puede ser negativo.',
             'precios.*.tipo_precio_id.integer'         => 'El tipo de precio debe ser un ID numérico.',
             'precios.*.tipo_precio_id.in'              => 'El tipo de precio seleccionado no existe o no está activo.',
+            'precios.*.unidad_medida_id.integer'       => 'El ID de la unidad de medida debe ser un número entero.',
+            'precios.*.unidad_medida_id.exists'        => 'La unidad de medida seleccionada no existe.',
 
             'codigos.array'                            => 'Los códigos deben ser un arreglo.',
             'codigos.*.string'                         => 'Cada código debe ser texto.',
@@ -210,6 +217,10 @@ class UpdateProductoRequest extends FormRequest
             'conversiones.*.factor_conversion.gt'      => 'El factor de conversión debe ser mayor que 0.',
             'conversiones.*.activo.boolean'            => 'El estado activo debe ser verdadero o falso.',
             'conversiones.*.es_conversion_principal.boolean' => 'El estado de conversión principal debe ser verdadero o falso.',
+
+            'principio_activo.string'                  => 'El principio activo debe ser texto.',
+            'principio_activo.max'                     => 'El principio activo no puede exceder 255 caracteres.',
+            'uso_de_medicacion.string'                 => 'El uso de medicación debe ser texto.',
 
             'activo.boolean'                           => 'El estado activo debe ser verdadero o falso.',
         ];
@@ -253,6 +264,9 @@ class UpdateProductoRequest extends FormRequest
             'conversiones.*.factor_conversion' => 'factor de conversión',
             'conversiones.*.activo' => 'estado de conversión',
             'conversiones.*.es_conversion_principal' => 'conversión principal',
+
+            'principio_activo'  => 'principio activo',
+            'uso_de_medicacion' => 'uso de medicación',
 
             'activo'            => 'estado activo',
         ];
@@ -312,6 +326,8 @@ class UpdateProductoRequest extends FormRequest
 
     /**
      * Validar que los precios de venta sean mayores al precio base
+     * ✅ IMPORTANTE: Solo valida precios de unidad base (unidad_medida_id = NULL)
+     * Los precios fraccionados se comparan con su precio base fraccionado, no con el precio base del paquete
      */
     private function validarCoherenciaPrecios(Validator $validator): void
     {
@@ -321,12 +337,18 @@ class UpdateProductoRequest extends FormRequest
             return;
         }
 
-        // Obtener precio base
+        // Obtener precio base de la UNIDAD BASE (unidad_medida_id = NULL)
         $precioBase = 0;
 
         foreach ($precios as $precio) {
             if (!is_array($precio)) {
                 continue;
+            }
+
+            // ✅ Solo considerar precios de unidad base
+            $unidadMedidaId = $precio['unidad_medida_id'] ?? null;
+            if ($unidadMedidaId !== null) {
+                continue; // Skip precios de unidades fraccionadas
             }
 
             $tipoPrecioId = $precio['tipo_precio_id'] ?? null;
@@ -342,10 +364,16 @@ class UpdateProductoRequest extends FormRequest
             }
         }
 
-        // Validar coherencia de precios
+        // Validar coherencia de precios (SOLO de unidad base)
         foreach ($precios as $index => $precio) {
             if (!is_array($precio)) {
                 continue;
+            }
+
+            // ✅ Solo validar precios de unidad base
+            $unidadMedidaId = $precio['unidad_medida_id'] ?? null;
+            if ($unidadMedidaId !== null) {
+                continue; // Skip precios de unidades fraccionadas
             }
 
             $tipoPrecioId = $precio['tipo_precio_id'] ?? null;

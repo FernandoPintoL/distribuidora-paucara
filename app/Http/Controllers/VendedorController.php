@@ -32,7 +32,9 @@ class VendedorController extends Controller
             abort(403, 'No hay un empleado asociado a tu cuenta. Por favor contacta al administrador.');
         }
 
-        if (!$empleado->esCajero()) {
+        // Verificar que tiene rol de Cajero (aceptar tanto 'Cajero' como 'cajero')
+        $tieneRolCajero = $user->hasRole('Cajero') || $user->hasRole('cajero');
+        if (!$tieneRolCajero && !$empleado->esCajero()) {
             abort(403, 'No tienes el rol de Cajero. Tu rol actual: ' . ($user->getRoleNames()->first() ?? 'ninguno'));
         }
 

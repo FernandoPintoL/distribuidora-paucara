@@ -180,4 +180,103 @@ class FormatHelper
             strtolower($text)
         );
     }
+
+    /**
+     * Convertir número a palabras (letras)
+     *
+     * @param float|int $numero Número a convertir
+     * @param string $moneda Nombre de la moneda (ej: "Bolivianos", "Pesos")
+     * @return string Número en palabras
+     *
+     * Ejemplo:
+     * FormatHelper::numeroALetras(150.50, 'Bolivianos')  // "Ciento cincuenta Bolivianos con 50 centavos"
+     * FormatHelper::numeroALetras(100)                   // "Cien"
+     */
+    public static function numeroALetras($numero, string $moneda = ''): string
+    {
+        $numero = round($numero, 2);
+        $partes = explode('.', (string)$numero);
+        $entero = (int)$partes[0];
+        $decimales = isset($partes[1]) ? (int)substr($partes[1], 0, 2) : 0;
+
+        $unidades = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+        $decenas = ['', '', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+        $adolecentes = ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
+        $centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+
+        $resultado = '';
+
+        if ($entero == 0) {
+            $resultado = 'cero';
+        } elseif ($entero < 10) {
+            $resultado = $unidades[$entero];
+        } elseif ($entero < 20) {
+            $resultado = $adolecentes[$entero - 10];
+        } elseif ($entero < 100) {
+            $decena = intdiv($entero, 10);
+            $unidad = $entero % 10;
+            $resultado = $decenas[$decena];
+            if ($unidad > 0) {
+                $resultado .= ' y ' . $unidades[$unidad];
+            }
+        } elseif ($entero < 1000) {
+            $centena = intdiv($entero, 100);
+            $resto = $entero % 100;
+            $resultado = $centenas[$centena];
+            if ($resto > 0) {
+                if ($resto < 10) {
+                    $resultado .= ' ' . $unidades[$resto];
+                } elseif ($resto < 20) {
+                    $resultado .= ' ' . $adolecentes[$resto - 10];
+                } else {
+                    $dec = intdiv($resto, 10);
+                    $uni = $resto % 10;
+                    $resultado .= ' ' . $decenas[$dec];
+                    if ($uni > 0) {
+                        $resultado .= ' y ' . $unidades[$uni];
+                    }
+                }
+            }
+        } elseif ($entero < 1000000) {
+            $miles = intdiv($entero, 1000);
+            $resto = $entero % 1000;
+
+            if ($miles == 1) {
+                $resultado = 'mil';
+            } else {
+                $resultado = self::numeroALetras($miles) . ' mil';
+            }
+
+            if ($resto > 0) {
+                $resultado .= ' ' . self::numeroALetras($resto);
+            }
+        } else {
+            $millones = intdiv($entero, 1000000);
+            $resto = $entero % 1000000;
+
+            if ($millones == 1) {
+                $resultado = 'un millón';
+            } else {
+                $resultado = self::numeroALetras($millones) . ' millones';
+            }
+
+            if ($resto > 0) {
+                $resultado .= ' ' . self::numeroALetras($resto);
+            }
+        }
+
+        $resultado = ucfirst($resultado);
+
+        if ($moneda) {
+            if ($decimales > 0) {
+                $resultado .= " $moneda con " . str_pad((string)$decimales, 2, '0', STR_PAD_LEFT) . " centavos";
+            } else {
+                $resultado .= " $moneda";
+            }
+        } elseif ($decimales > 0) {
+            $resultado .= " con " . str_pad((string)$decimales, 2, '0', STR_PAD_LEFT) . " centavos";
+        }
+
+        return $resultado;
+    }
 }

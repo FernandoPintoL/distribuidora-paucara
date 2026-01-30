@@ -32,6 +32,8 @@ class Empresa extends Model
         'es_principal',
         'almacen_id',
         'permite_productos_fraccionados',
+        'logistica_envios',      // ✨ NUEVO
+        'es_farmacia',           // ✨ NUEVO - Para habilitar campos de medicamentos
     ];
 
     protected function casts(): array
@@ -40,7 +42,9 @@ class Empresa extends Model
             'configuracion_impresion' => 'array',
             'activo' => 'boolean',
             'es_principal' => 'boolean',
-            'permite_productos_fraccionados' => 'boolean', // ✨ NUEVO
+            'permite_productos_fraccionados' => 'boolean',
+            'logistica_envios' => 'boolean',        // ✨ NUEVO
+            'es_farmacia' => 'boolean',             // ✨ NUEVO
         ];
     }
 
