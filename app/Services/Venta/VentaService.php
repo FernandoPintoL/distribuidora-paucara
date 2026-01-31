@@ -200,12 +200,22 @@ class VentaService
             // 3.2 Crear detalles
             Log::debug('📦 [VentaService::crear] Creando detalles de venta');
             foreach ($dto->detalles as $detalle) {
+                // ✅ MODIFICADO: Respetar el precio_unitario enviado desde el frontend
+                // El descuento también se considera al calcular el subtotal
+                $cantidad = $detalle['cantidad'] ?? 0;
+                $precio = $detalle['precio_unitario'] ?? 0;
+                $descuento = $detalle['descuento'] ?? 0;
+                $subtotal = ($cantidad * $precio) - $descuento;
+
                 \App\Models\DetalleVenta::create([
-                    'venta_id'        => $venta->id,
-                    'producto_id'     => $detalle['producto_id'],
-                    'cantidad'        => $detalle['cantidad'],
-                    'precio_unitario' => $detalle['precio_unitario'],
-                    'subtotal'        => $detalle['cantidad'] * $detalle['precio_unitario'],
+                    'venta_id'           => $venta->id,
+                    'producto_id'        => $detalle['producto_id'],
+                    'cantidad'           => $cantidad,
+                    'precio_unitario'    => $precio,
+                    'descuento'          => $descuento,
+                    'subtotal'           => $subtotal,
+                    'tipo_precio_id'     => $detalle['tipo_precio_id'] ?? null,    // ✅ NUEVO: Tipo de precio seleccionado
+                    'tipo_precio_nombre' => $detalle['tipo_precio_nombre'] ?? null, // ✅ NUEVO: Nombre del tipo de precio
                 ]);
             }
             Log::info('✅ [VentaService::crear] Detalles de venta creados', [

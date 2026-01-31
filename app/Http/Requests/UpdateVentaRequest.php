@@ -125,32 +125,15 @@ class UpdateVentaRequest extends FormRequest
                     $subtotalCalculado += $subtotalRecibido;
                 }
 
-                // Validar que subtotal de la venta coincida con suma de detalles (si se proporciona subtotal)
-                if (isset($data['subtotal'])) {
-                    $subtotalVenta = $data['subtotal'];
-                    if (abs($subtotalCalculado - $subtotalVenta) > 0.01) {
-                        $validator->errors()->add(
-                            'subtotal',
-                            "El subtotal no coincide con la suma de los detalles. Esperado: " .
-                            number_format($subtotalCalculado, 2) . ", Recibido: " . number_format($subtotalVenta, 2)
-                        );
-                    }
-                }
-
-                // Validar que total sea correcto (si se proporciona total)
-                if (isset($data['subtotal']) && isset($data['total'])) {
+                // ✅ MODIFICADO: Recalcular automáticamente subtotal y total basado en detalles
+                // Permite que usuarios editen manualmente precios sin rechazar la venta
+                if (isset($data['detalles']) && count($data['detalles']) > 0) {
                     $descuento = $data['descuento'] ?? 0;
                     $impuesto = $data['impuesto'] ?? 0;
-                    $totalCalculado = $data['subtotal'] - $descuento + $impuesto;
-                    $totalRecibido = $data['total'];
 
-                    if (abs($totalCalculado - $totalRecibido) > 0.01) {
-                        $validator->errors()->add(
-                            'total',
-                            "El total no coincide con el cálculo. Esperado: " . number_format($totalCalculado, 2) .
-                            ", Recibido: " . number_format($totalRecibido, 2)
-                        );
-                    }
+                    // Forzar subtotal = suma de detalles
+                    $data['subtotal'] = $subtotalCalculado;
+                    $data['total'] = $subtotalCalculado - $descuento + $impuesto;
                 }
             }
 

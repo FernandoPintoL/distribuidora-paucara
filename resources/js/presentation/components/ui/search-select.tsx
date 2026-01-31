@@ -149,23 +149,16 @@ export default function SearchSelect({
   };
 
   const defaultRenderOption = (option: SelectOption, isSelected: boolean) => (
-    <div className={`flex flex-col py-2 px-3 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-500' : ''}`}>
-      <span className="font-medium text-sm text-foreground">{option.label}</span>
+    <div className={`flex flex-col py-1.5 px-3 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-500' : ''}`}>
+      <span className="font-medium text-xs text-foreground">{option.label}</span>
       {option.description && (
-        <span className="text-xs text-muted-foreground mt-1">{option.description}</span>
+        <span className="text-xs text-muted-foreground">{option.description}</span>
       )}
     </div>
   );
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      {label && (
-        <Label htmlFor={id} className="block text-sm font-medium mb-1">
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </Label>
-      )}
-
       {/* Trigger Button */}
       <div
         className={`
@@ -179,20 +172,34 @@ export default function SearchSelect({
                 ? 'border-destructive hover:border-destructive'
                 : 'border-input hover:border-ring bg-background'
           }
+          ${label ? 'pt-3' : ''}
         `}
         onClick={handleToggle}
       >
-        <span className={selectedOption ? 'text-foreground' : 'text-muted-foreground'}>
-          {selectedOption ? selectedOption.label : placeholder}
+        {label && (
+          <label
+            htmlFor={id}
+            className={`absolute left-3 transition-all duration-200 pointer-events-none ${
+              selectedOption || isOpen
+                ? 'top-[-6px] text-xs font-medium text-primary'
+                : 'top-1/2 -translate-y-1/2 text-sm text-muted-foreground'
+            }`}
+          >
+            {label} {required && <span className="text-destructive">*</span>}
+          </label>
+        )}
+
+        <span className={`${label ? 'w-full' : ''} ${selectedOption ? 'text-foreground' : 'text-muted-foreground'}`}>
+          {selectedOption ? selectedOption.label : label ? '' : placeholder}
         </span>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {allowClear && selectedOption && !disabled && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-4 w-4 p-0 hover:bg-muted rounded-full"
+              className="h-5 w-5 p-0 hover:bg-muted rounded-full"
               onClick={handleClear}
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -202,7 +209,7 @@ export default function SearchSelect({
           )}
 
           <svg
-            className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -214,9 +221,9 @@ export default function SearchSelect({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border border-border rounded-md shadow-lg">
+        <div className="absolute z-50 w-full mt-0.5 bg-popover text-popover-foreground border border-border rounded-md shadow-lg">
           {/* Search Input with Close Button */}
-          <div className="p-2 border-b border-border flex gap-2 items-center">
+          <div className="p-1.5 border-b border-border flex gap-1.5 items-center">
             <Input
               ref={inputRef}
               type="text"
@@ -224,20 +231,20 @@ export default function SearchSelect({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="h-8 text-sm flex-1"
+              className="h-7 text-xs flex-1"
             />
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 hover:bg-muted rounded-md flex-shrink-0"
+              className="h-7 w-7 p-0 hover:bg-muted rounded-md flex-shrink-0"
               onClick={() => {
                 setIsOpen(false);
                 setSearchQuery('');
               }}
               title="Cerrar"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </Button>
@@ -249,17 +256,17 @@ export default function SearchSelect({
             style={{ maxHeight: `${maxHeight}px` }}
           >
             {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <div className="flex items-center justify-center py-2">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span className="text-sm">Cargando...</span>
+                  <span className="text-xs">Cargando...</span>
                 </div>
               </div>
             ) : filteredOptions.length === 0 ? (
-              <div className="py-4 text-center text-muted-foreground text-sm">
+              <div className="py-2 text-center text-muted-foreground text-xs">
                 {emptyText}
               </div>
             ) : (
@@ -288,7 +295,7 @@ export default function SearchSelect({
 
       {/* Error Message */}
       {error && (
-        <p className="mt-1 text-sm text-red-600">
+        <p className="mt-0.5 text-xs text-red-600">
           {error}
         </p>
       )}

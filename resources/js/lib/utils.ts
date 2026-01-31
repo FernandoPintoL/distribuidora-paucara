@@ -9,6 +9,15 @@ export function formatCurrency(amount: number, currency = 'BOB'): string {
     return new Intl.NumberFormat('es-BO', {
         style: 'currency',
         currency: currency === 'USD' ? 'USD' : 'BOB',
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4,
+    }).format(amount);
+}
+
+export function formatCurrencyWith2Decimals(amount: number, currency = 'BOB'): string {
+    return new Intl.NumberFormat('es-BO', {
+        style: 'currency',
+        currency: currency === 'USD' ? 'USD' : 'BOB',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(amount);

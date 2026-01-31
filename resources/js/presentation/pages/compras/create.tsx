@@ -1000,12 +1000,7 @@ export default function CompraForm() {
               {errors.observaciones && <p className="text-red-600 text-xs mt-1">{errors.observaciones}</p>}
             </div>
           </div>
-        </div>
-
-        {/* Detalles de productos */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Productos</h3>
-
+          <br />
           <ProductosTable
             tipo="compra" // ✅ NUEVO: Indicar que es una compra (no filtrar por stock)
             productos={props.productos.map(p => ({

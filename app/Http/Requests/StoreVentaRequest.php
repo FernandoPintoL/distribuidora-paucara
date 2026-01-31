@@ -175,33 +175,14 @@ class StoreVentaRequest extends FormRequest
                     $subtotalCalculado += $subtotalRecibido;
                 }
 
-                // ✅ MODIFICADO: Validar que subtotal de la venta coincida con suma de detalles
-                // ✅ Aumentar tolerancia para productos fraccionados (errores de redondeo acumulativos)
-                $subtotalVenta = $data['subtotal'] ?? 0;
-                $hayFraccionados = collect($data['detalles'])->contains('es_fraccionado', true);
-                $toleranciaSubtotal = $hayFraccionados ? 0.10 : 0.01;
-
-                if (abs($subtotalCalculado - $subtotalVenta) > $toleranciaSubtotal) {
-                    $validator->errors()->add(
-                        'subtotal',
-                        "El subtotal no coincide con la suma de los detalles. Esperado: " .
-                        number_format($subtotalCalculado, 2) . ", Recibido: " . number_format($subtotalVenta, 2)
-                    );
-                }
-
-                // Validar que total sea correcto (subtotal - descuento + impuesto)
+                // ✅ MODIFICADO: Recalcular automáticamente subtotal y total basado en detalles
+                // Permite que usuarios editen manualmente precios sin rechazar la venta
                 $descuento = $data['descuento'] ?? 0;
                 $impuesto = $data['impuesto'] ?? 0;
-                $totalCalculado = $subtotalVenta - $descuento + $impuesto;
-                $totalRecibido = $data['total'] ?? 0;
 
-                if (abs($totalCalculado - $totalRecibido) > 0.01) {
-                    $validator->errors()->add(
-                        'total',
-                        "El total no coincide con el cálculo. Esperado: " . number_format($totalCalculado, 2) .
-                        ", Recibido: " . number_format($totalRecibido, 2)
-                    );
-                }
+                // Forzar subtotal = suma de detalles
+                $data['subtotal'] = $subtotalCalculado;
+                $data['total'] = $subtotalCalculado - $descuento + $impuesto;
             }
 
             // Validar que el cliente esté activo

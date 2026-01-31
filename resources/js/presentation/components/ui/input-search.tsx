@@ -311,17 +311,23 @@ export default function InputSearch({
 
     return (
         <div className={`relative ${className}`}>
-            {label && (
-                <label htmlFor={id} className="block text-sm font-medium text-foreground mb-2">
-                    {label} {required && <span className="text-destructive">*</span>}
-                </label>
-            )}
-
             <div className="relative" ref={dropdownRef}>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Search className="h-4 w-4 text-muted-foreground" />
                     </div>
+
+                    {label && (
+                        <label
+                            htmlFor={id}
+                            className={`absolute left-9 transition-all duration-200 pointer-events-none ${query || isOpen
+                                ? 'top-[-6px] text-xs font-medium text-primary'
+                                : 'top-1/2 -translate-y-1/2 text-base text-muted-foreground'
+                                }`}
+                        >
+                            {label} {required && <span className="text-destructive">*</span>}
+                        </label>
+                    )}
 
                     <input
                         ref={inputRef}
@@ -331,7 +337,7 @@ export default function InputSearch({
                         onChange={handleInputChange}
                         onKeyDown={handleKeyDown}
                         onFocus={() => query.length >= 2 && (options.length > 0 || (showCreateButton && !!onCreateClick)) && setIsOpen(true)}
-                        placeholder={placeholder}
+                        placeholder={!label ? placeholder : ''}
                         disabled={disabled}
                         autoComplete="off" // ✅ Desabilita autocompletado del navegador
                         aria-invalid={!!error}
@@ -343,6 +349,7 @@ export default function InputSearch({
                             disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50
                             md:text-sm
                             aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
+                            ${label ? 'pt-2' : ''}
                         `}
                     />
 
@@ -402,17 +409,17 @@ export default function InputSearch({
 
                 {/* Dropdown de opciones mejorado */}
                 {isOpen && (
-                    <div className="absolute z-[2147483647] mt-2 w-full bg-background shadow-lg border border-border rounded-md overflow-hidden transform transition-all duration-200 ease-out">
+                    <div className="absolute z-[2147483647] mt-1 w-full bg-background shadow-lg border border-border rounded-md overflow-hidden transform transition-all duration-200 ease-out">
                         {/* Header del dropdown */}
-                        <div className="px-4 py-2 bg-muted border-b border-border">
+                        <div className="px-3 py-1.5 bg-muted border-b border-border">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                    <Search className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium text-foreground">
+                                <div className="flex items-center space-x-1.5">
+                                    <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-xs font-medium text-foreground">
                                         Resultados
                                     </span>
                                 </div>
-                                <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded">
+                                <span className="text-xs text-muted-foreground bg-background px-1.5 py-0.5 rounded">
                                     {options.length}
                                 </span>
                             </div>
@@ -421,48 +428,48 @@ export default function InputSearch({
                         {/* Contenedor de resultados con scroll mejorado */}
                         <div className="max-h-80 overflow-y-auto">
                             {options.length === 0 && !loading ? (
-                                <div className="px-6 py-8 text-center">
+                                <div className="px-4 py-4 text-center">
                                     {/* Banner de advertencia si hay búsqueda pero sin resultados */}
                                     {query.length >= 2 && showCreateButton && onCreateClick && (
-                                        <div className="mb-6 p-4 bg-destructive/5 border-l-4 border-destructive rounded-r">
-                                            <div className="flex items-start space-x-3">
-                                                <div className="text-2xl">⚠️</div>
+                                        <div className="mb-3 p-2.5 bg-destructive/5 border-l-4 border-destructive rounded-r">
+                                            <div className="flex items-start space-x-2">
+                                                <div className="text-lg">⚠️</div>
                                                 <div className="flex-1 text-left">
-                                                    <p className="text-sm font-semibold text-foreground">
+                                                    <p className="text-xs font-semibold text-foreground">
                                                         No encontramos "{query}"
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        Este elemento no existe. Puedes crearlo usando el botón de abajo.
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                        Puedes crearlo con el botón de abajo.
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
-                                    <div className="w-12 h-12 mx-auto mb-3 bg-muted rounded-full flex items-center justify-center">
-                                        <Search className="h-6 w-6 text-muted-foreground" />
+                                    <div className="w-10 h-10 mx-auto mb-2 bg-muted rounded-full flex items-center justify-center">
+                                        <Search className="h-5 w-5 text-muted-foreground" />
                                     </div>
-                                    <p className="text-sm text-foreground font-medium">
+                                    <p className="text-xs text-foreground font-medium">
                                         {emptyText}
                                     </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Intenta con otros términos de búsqueda
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        Intenta con otros términos
                                     </p>
 
                                     {/* Botón para crear nuevo elemento */}
                                     {showCreateButton && query.length >= 2 && onCreateClick && (
-                                        <div className="mt-6 pt-6 border-t border-border">
+                                        <div className="mt-3 pt-3 border-t border-border">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     console.log('🖱️ Botón crear clickeado con query:', query);
                                                     onCreateClick(query);
                                                 }}
-                                                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md transition-colors duration-150"
+                                                className="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md transition-colors duration-150"
                                             >
-                                                <span className="mr-2">➕</span>
+                                                <span className="mr-1.5">➕</span>
                                                 {createButtonText}
                                             </button>
-                                            <p className="text-xs text-muted-foreground mt-3 text-center">
+                                            <p className="text-xs text-muted-foreground mt-2 text-center">
                                                 Crear elemento con este nombre
                                             </p>
                                         </div>
@@ -475,34 +482,34 @@ export default function InputSearch({
                                             key={`${option.value}-${index}`}
                                             type="button"
                                             onClick={() => handleSelectOption(option)}
-                                            className={`w-full text-left px-4 py-3 transition-colors duration-150 group ${selectedIndex === index
+                                            className={`w-full text-left px-3 py-2 transition-colors duration-150 group ${selectedIndex === index
                                                 ? 'bg-accent border-l-4 border-primary'
                                                 : 'hover:bg-accent'
                                                 }`}
                                         >
-                                            <div className="flex items-start justify-between space-x-3">
+                                            <div className="flex items-start justify-between space-x-2">
                                                 {/* Información principal del producto */}
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center space-x-2 mb-1">
-                                                        <h4 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                                                    <div className="flex items-center space-x-1.5">
+                                                        <h4 className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                                                             {option.label}
                                                         </h4>
                                                         {option.codigos_barras && (
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                                                                <span className="mr-1">📱</span>
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary whitespace-nowrap">
+                                                                <span className="mr-0.5">📱</span>
                                                                 {option.codigos_barras}
                                                             </span>
                                                         )}
                                                     </div>
 
                                                     {option.description && (
-                                                        <p className="text-xs text-muted-foreground leading-relaxed mb-2 line-clamp-2">
+                                                        <p className="text-xs text-muted-foreground leading-tight line-clamp-1">
                                                             {option.description}
                                                         </p>
                                                     )}
 
                                                     {/* Información adicional en fila */}
-                                                    <div className="flex items-center space-x-4 text-xs">
+                                                    <div className="flex items-center space-x-3 text-xs mt-0.5">
                                                         {option.precio_base !== undefined && option.precio_base > 0 && (
                                                             <div className="flex items-center space-x-1">
                                                                 <span className="text-muted-foreground">Precio:</span>
@@ -552,10 +559,10 @@ export default function InputSearch({
 
                         {/* Footer con información adicional */}
                         {options.length > 0 && (
-                            <div className="px-4 py-2 bg-muted border-t border-border">
+                            <div className="px-3 py-1 bg-muted border-t border-border">
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                    <span>Presiona Enter o haz clic para seleccionar</span>
-                                    <span>↑↓ para navegar</span>
+                                    <span>Enter o click para seleccionar</span>
+                                    <span>↑↓ navegar</span>
                                 </div>
                             </div>
                         )}
@@ -564,7 +571,7 @@ export default function InputSearch({
             </div>
 
             {error && (
-                <p className="mt-1 text-sm text-destructive">{error}</p>
+                <p className="mt-0.5 text-xs text-destructive">{error}</p>
             )}
 
             {/* Modal del scanner */}

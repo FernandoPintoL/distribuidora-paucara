@@ -102,16 +102,45 @@ class PrecioRangoProductoService
                     'precio_unitario' => $precioInfo['precio_unitario'],
                 ]);
             } else {
-                                                                 // Fallback: Si no hay rango, obtener el tipo_precio de la venta normal
-                $precioVenta      = $producto->obtenerPrecio(2); // tipo_precio_id = 2 (VENTA)
-                $tipoPrecioId     = 2;
-                $tipoPrecioNombre = 'Precio de Venta';
+                // Fallback: Si no hay rango, obtener el tipo_precio de la venta normal
+                // ✅ MODIFICADO: Buscar el precio con código 'VENTA' en lugar de hardcodear ID 2
+                $precioVentaObj = $producto->precios()
+                    ->whereHas('tipoPrecio', function ($query) {
+                        $query->where('codigo', 'VENTA');
+                    })
+                    ->first();
+
+                if ($precioVentaObj) {
+                    $tipoPrecioId     = $precioVentaObj->tipo_precio_id;
+                    $tipoPrecioNombre = $precioVentaObj->nombre ?? $precioVentaObj->tipoPrecio->nombre ?? 'Precio de Venta';
+                    $precioVenta      = $precioVentaObj->precio;
+                } else {
+                    // Si no encuentra por código, buscar por nombre
+                    $precioVentaObj = $producto->precios()
+                        ->whereRaw('LOWER(nombre) LIKE ?', ['%venta%'])
+                        ->whereRaw('LOWER(nombre) NOT LIKE ?', ['%costo%'])
+                        ->first();
+
+                    if ($precioVentaObj) {
+                        $tipoPrecioId     = $precioVentaObj->tipo_precio_id;
+                        $tipoPrecioNombre = $precioVentaObj->nombre;
+                        $precioVenta      = $precioVentaObj->precio;
+                    } else {
+                        // Último recurso: usar el primero de la lista
+                        $precioVentaObj   = $producto->precios()->first();
+                        $tipoPrecioId     = $precioVentaObj->tipo_precio_id ?? 2;
+                        $tipoPrecioNombre = $precioVentaObj->nombre ?? 'Precio de Venta';
+                        $precioVenta      = $precioVentaObj->precio ?? 0;
+                    }
+                }
+
                 Log::info('ℹ️ [calcularCarrito] Sin rango - usando precio normal', [
                     'producto_id' => $producto->id,
                     'cantidad' => $cantidad,
                     'tipo_precio_id' => $tipoPrecioId,
                     'tipo_precio_nombre' => $tipoPrecioNombre,
                     'precio_unitario' => $precioInfo['precio_unitario'],
+                    'buscado_por_codigo' => 'VENTA',
                 ]);
             }
 

@@ -32,7 +32,7 @@ import type { TipoDocumento } from '@/domain/entities/tipos-documento';
 import type { Cliente } from '@/domain/entities/clientes';
 
 import ventasService from '@/infrastructure/services/ventas.service';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
 
 interface PageProps extends InertiaPageProps {
     clientes: Cliente[];
@@ -126,6 +126,9 @@ export default function VentaForm() {
 
     const [cajaInfo, setCajaInfo] = useState<CajaInfo | null>(null);
     const [cargandoCaja, setCargandoCaja] = useState(true);
+
+    // ✅ NUEVO: Rastrear qué tipos de precio han sido seleccionados manualmente por el usuario
+    const [manuallySelectedTipoPrecio, setManuallySelectedTipoPrecio] = useState<Record<number, boolean>>({});
 
     // Verificar si hay caja abierta (de cualquier día)
     useEffect(() => {
@@ -277,23 +280,29 @@ export default function VentaForm() {
     }, [data.tipo_pago_id]);
 
     // ✅ NUEVO: Actualizar tipo de precio cuando cambia el carrito calculado
-    // ✅ SOLO actualiza tipo_precio_id y tipo_precio_nombre
+    // ✅ SOLO actualiza tipo_precio_id y tipo_precio_nombre si NO ha sido seleccionado manualmente
     // ✅ NO cambia el precio unitario, subtotal ni unidad_venta_id
+    // ✅ RESPETA: Las selecciones manuales del usuario no son sobrescritas
     useEffect(() => {
         if (!precioRango.carritoCalculado || detallesWithProducts.length === 0) {
             return;
         }
 
         setDetallesWithProducts(prev =>
-            prev.map(detalle => {
+            prev.map((detalle, index) => {
                 const detalleRango = precioRango.carritoCalculado?.detalles.find(
                     dr => dr.producto_id === detalle.producto_id
                 );
 
-                // ✅ NUEVO: Solo actualizar tipo de precio, NO el precio unitario ni unidad_venta_id
-                if (detalleRango && detalleRango.tipo_precio_nombre !== detalle.tipo_precio_nombre) {
+                // ✅ MODIFICADO: Solo actualizar si NO ha sido seleccionado manualmente por el usuario
+                if (
+                    detalleRango &&
+                    detalleRango.tipo_precio_nombre !== detalle.tipo_precio_nombre &&
+                    !manuallySelectedTipoPrecio[index] // No actualizar si fue seleccionado manualmente
+                ) {
                     console.log(`🏷️ [useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`, {
-                        unidad_venta_id_preservada: detalle.unidad_venta_id
+                        unidad_venta_id_preservada: detalle.unidad_venta_id,
+                        fue_manual: manuallySelectedTipoPrecio[index] ? 'SÍ (IGNORADO)' : 'NO'
                     });
 
                     return {
@@ -304,10 +313,14 @@ export default function VentaForm() {
                     };
                 }
 
+                if (manuallySelectedTipoPrecio[index] && detalleRango) {
+                    console.log(`🔒 [useEffect] Tipo de precio manual PRESERVADO para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} (Backend propone: ${detalleRango.tipo_precio_nombre})`);
+                }
+
                 return detalle;
             })
         );
-    }, [precioRango.carritoCalculado]);
+    }, [precioRango.carritoCalculado, manuallySelectedTipoPrecio]);
 
 
     // Función para manejar la creación de cliente
@@ -428,6 +441,23 @@ export default function VentaForm() {
             }
         }
 
+        // ✅ MODIFICADO: Usar tipo_precio_id que viene del backend
+        // El backend devuelve tipo_precio_id_recomendado basado en el código VENTA
+        const tipoPrecioIdRecomendado = (producto as any).tipo_precio_id_recomendado;
+        const tipoPrecioNombreRecomendado = (producto as any).tipo_precio_nombre_recomendado;
+
+        // ✅ DEBUG: Loguear los IDs de precios disponibles para verificar coincidencias
+        const preciosConIds = (producto as any).precios?.map((p: any) => ({
+            nombre: p.nombre,
+            tipo_precio_id: p.tipo_precio_id
+        })) || [];
+
+        console.log(`🏷️ [addProductToDetail] Información de precios para producto ${producto.id}:`, {
+            tipoPrecioIdRecomendado,
+            tipoPrecioNombreRecomendado,
+            preciosDisponibles: preciosConIds
+        });
+
         const newDetail: DetalleProducto = {
             producto_id: producto.id,
             cantidad: 1,
@@ -441,16 +471,19 @@ export default function VentaForm() {
             unidad_medida_nombre: (producto as any).unidad_medida_nombre,
             conversiones: (producto as any).conversiones || [],
             unidad_venta_id: unidadVentaInicial, // ✅ MODIFICADO: Usa primera conversión si es fraccionado
-            // ✅ NUEVO: Tipo de precio (por defecto VENTA)
-            tipo_precio_id: 2, // tipo_precio_id para VENTA
-            tipo_precio_nombre: 'Precio de Venta'
+            // ✅ MODIFICADO: Usar tipo_precio_id que viene del backend
+            tipo_precio_id: tipoPrecioIdRecomendado,
+            tipo_precio_nombre: tipoPrecioNombreRecomendado
         };
 
         console.log('📝 [addProductToDetail] Nuevo detalle creado:', {
             es_fraccionado: newDetail.es_fraccionado,
             unidad_medida_id: newDetail.unidad_medida_id,
             conversiones_count: newDetail.conversiones?.length,
-            newDetail
+            precio_unitario: newDetail.precio_unitario,
+            tipo_precio_id: newDetail.tipo_precio_id,
+            tipo_precio_nombre: newDetail.tipo_precio_nombre,
+            nota: 'tipo_precio viene del backend - será respetado hasta que el usuario lo cambie manualmente'
         });
 
         const newDetalles = [...detallesWithProducts, newDetail];
@@ -561,6 +594,13 @@ export default function VentaForm() {
         const updatedDetalles = detallesWithProducts.filter((_, i) => i !== index);
         setDetallesWithProducts(updatedDetalles);
 
+        // ✅ NUEVO: Limpiar el estado de selección manual para el índice removido
+        setManuallySelectedTipoPrecio(prev => {
+            const updated = { ...prev };
+            delete updated[index];
+            return updated;
+        });
+
         // 🔑 NUEVO: Recalcular rangos cuando se elimina un producto
         // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
         if (updatedDetalles.length > 0) {
@@ -577,26 +617,11 @@ export default function VentaForm() {
     };
 
     const calculateTotals = (detalles: DetalleProducto[]) => {
+        // ✅ SIMPLIFICADO: Usar directamente el subtotal ya calculado en cada detalle
         let subtotal = 0;
 
-        // 🔑 NUEVO: Usar precios actualizados según rango si están disponibles
-        // ✅ PERO: Para productos fraccionados, usar el precio_unitario del detalle (ya calculado según unidad)
         detalles.forEach(detalle => {
-            // ✅ NUEVO: Si es producto fraccionado, NO usar precio del mapa (mantener el precio de la unidad seleccionada)
-            if ((detalle as any).es_fraccionado) {
-                console.log(`💰 [calculateTotals] Producto fraccionado ${detalle.producto_id}: usando precio_unitario=${detalle.precio_unitario} (no del mapa)`);
-                const cantidad = detalle.cantidad;
-                const descuento = detalle.descuento || 0;
-                subtotal += (Number(cantidad) * Number(detalle.precio_unitario)) - Number(descuento);
-            } else {
-                // Para productos normales, usar el precio del mapa si está disponible
-                const precioActualizado = precioRango.getPrecioActualizado(detalle.producto_id as number);
-                const precio = precioActualizado ?? detalle.precio_unitario;
-                const cantidad = detalle.cantidad;
-                const descuento = detalle.descuento || 0;
-
-                subtotal += (Number(cantidad) * Number(precio)) - Number(descuento);
-            }
+            subtotal += detalle.subtotal || 0;
         });
 
         const descuentoGeneral = data.descuento || 0;
@@ -703,9 +728,9 @@ export default function VentaForm() {
             politica_pago: politicaPagoFinal,  // ✅ MODIFICADO: Usar politica_pago calculada
             estado_pago: data.estado_pago ?? 'PAGADO',
             detalles: detallesWithProducts.map(d => {
-                // 🔑 NUEVO: Usar precios calculados por rango si están disponibles
-                const precioActualizado = precioRango.getPrecioActualizado(d.producto_id as number);
-                const precioFinal = precioActualizado ?? d.precio_unitario;
+                // ✅ MODIFICADO: Usar siempre d.precio_unitario (ya contiene valor editado manualmente o del tipo de precio)
+                // NO usar precioRango para no sobrescribir ediciones manuales
+                const precioFinal = d.precio_unitario;
                 const subtotalFinal = (Number(d.cantidad) * Number(precioFinal)) - Number(d.descuento);
 
                 return {
@@ -717,7 +742,10 @@ export default function VentaForm() {
                     subtotal: subtotalFinal,
                     // ✅ NUEVO: Enviar información de fraccionado para que backend calcule correctamente
                     es_fraccionado: d.es_fraccionado || false,
-                    unidad_venta_id: d.unidad_venta_id || undefined
+                    unidad_venta_id: d.unidad_venta_id || undefined,
+                    // ✅ NUEVO: Enviar tipo de precio seleccionado para guardar en BD
+                    tipo_precio_id: d.tipo_precio_id || undefined,
+                    tipo_precio_nombre: d.tipo_precio_nombre || undefined
                 };
             })
         };
@@ -931,9 +959,9 @@ export default function VentaForm() {
 
                 {/* Información básica */}
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
-                    <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                    {/* <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                         Información básica
-                    </h2>
+                    </h2> */}
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
                         {/* Campo número oculto - se genera automáticamente */}
@@ -1108,14 +1136,7 @@ export default function VentaForm() {
                             {errors.requiere_envio && <p className="mt-2 text-sm text-red-600">{errors.requiere_envio}</p>}
                         </div>
                     )}
-                </div>
-
-                {/* Productos */}
-                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
-                    <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                        Productos
-                    </h2>
-
+                    <br />
                     <ProductosTable
                         productos={productosSeguro}
                         detalles={detallesWithProducts}
@@ -1129,15 +1150,18 @@ export default function VentaForm() {
                         almacen_id={almacen_id_empresa} // ✅ MODIFICADO: Pasar almacén de la empresa
                         isCalculatingPrices={precioRango.loading} // ✅ NUEVO: Mostrar indicador de carga
                         onUpdateDetailUnidadConPrecio={updateDetailUnidadConPrecio} // ✅ NUEVO: Actualizar unidad y precio juntos
+                        onManualTipoPrecioChange={(index) => {
+                            // ✅ NUEVO: Marcar que el usuario ha seleccionado manualmente este tipo de precio
+                            setManuallySelectedTipoPrecio(prev => ({
+                                ...prev,
+                                [index]: true
+                            }));
+                        }} // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
                     />
                 </div>
-
                 {/* Totales */}
                 {detallesWithProducts.length > 0 && (
                     <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
-                        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4 text-right">
-                            Totales
-                        </h2>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-md ml-auto">
                             <div>
@@ -1199,13 +1223,13 @@ export default function VentaForm() {
                             {data.descuento > 0 && (
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="text-gray-700 dark:text-gray-300">Descuento:</span>
-                                    <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrency(data.descuento)}</span>
+                                    <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrencyWith2Decimals(data.descuento)}</span>
                                 </div>
                             )}
 
                             <div className="flex justify-between items-center text-lg font-bold pt-2 border-t border-gray-200 dark:border-zinc-700">
                                 <span className="text-gray-900 dark:text-white">Total:</span>
-                                <span className="text-gray-900 dark:text-white text-right">{formatCurrency(data.total)}</span>
+                                <span className="text-gray-900 dark:text-white text-right">{formatCurrencyWith2Decimals(data.total)}</span>
                             </div>
 
                             {data.monto_pagado_inicial > 0 && (

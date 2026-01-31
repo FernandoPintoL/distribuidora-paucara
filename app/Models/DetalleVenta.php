@@ -17,6 +17,8 @@ class DetalleVenta extends Model
         'descuento',
         'subtotal',
         'unidad_medida_id',
+        'tipo_precio_id',      // ✅ NUEVO: ID del tipo de precio seleccionado
+        'tipo_precio_nombre',   // ✅ NUEVO: Nombre del tipo de precio (referencia rápida)
     ];
 
     protected function casts(): array
@@ -43,5 +45,11 @@ class DetalleVenta extends Model
     public function unidadMedida()
     {
         return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id');
+    }
+
+    // ✅ NUEVO: Relación con TipoPrecio
+    public function tipoPrecio()
+    {
+        return $this->belongsTo(TipoPrecio::class, 'tipo_precio_id');
     }
 }

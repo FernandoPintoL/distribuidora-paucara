@@ -1493,36 +1493,58 @@ class ProductoController extends Controller
         // ✅ NUEVO: Determinar tipo de búsqueda
         $esExacta = $tipoBusqueda === 'exacta';
 
-        $productos = Producto::select([
-            'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
-            'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
-            'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id'
-        ])
-            // ✨ NUEVO: Filtrar por empresa del usuario (si tiene empresa_id asignada)
-            ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
-            ->where('activo', true)
-            // ✅ MODIFICADO: Solo filtrar por stock para VENTAS, no para COMPRAS
-            ->when($tipo === 'venta', function ($query) use ($almacenId) {
-                return $query->whereHas('stock', function ($stockQuery) use ($almacenId) {
-                    $stockQuery->where('almacen_id', $almacenId)
-                        ->where('cantidad_disponible', '>', 0);
-                });
-            })
-            ->when($tipo === 'compra', function ($query) use ($almacenId) {
-                // Para compras, solo verificar que exista el almacén (no filtrar por stock)
-                return $query->whereHas('stock', function ($stockQuery) use ($almacenId) {
-                    $stockQuery->where('almacen_id', $almacenId);
-                });
-            })
-            // ✅ NUEVO: Filtrar por precio de venta activo SOLO PARA VENTAS
-            ->when($tipo === 'venta', function ($query) {
-                return $query->whereHas('precios', function ($preciosQuery) {
-                    $preciosQuery->where('activo', true)
-                        ->whereHas('tipoPrecio', function ($tipoQuery) {
-                            $tipoQuery->where('codigo', 'VENTA');
+        // ✅ NUEVO: Función auxiliar para construir la query base
+        $construirQueryBase = function($query) use ($userEmpresaId, $almacenId, $tipo) {
+            return $query
+                ->select([
+                    'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
+                    'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
+                    'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id'
+                ])
+                ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
+                ->where('activo', true)
+                ->when($tipo === 'venta', function ($q) use ($almacenId) {
+                    return $q->whereHas('stock', function ($sq) use ($almacenId) {
+                        $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
+                    });
+                })
+                ->when($tipo === 'venta', function ($q) {
+                    return $q->whereHas('precios', function ($pq) {
+                        $pq->where('activo', true)->whereHas('tipoPrecio', function ($tq) {
+                            $tq->where('codigo', 'VENTA');
                         });
+                    });
                 });
-            })
+        };
+
+        // ✅ NUEVO: PRIORIDAD 1 - Buscar por ID exacto
+        $productoPorId = null;
+        if (is_numeric($q)) {
+            $productoPorId = $construirQueryBase(Producto::query())
+                ->where('id', $q)
+                ->limit(1)
+                ->get();
+        }
+
+        // Si encontró por ID, retornar inmediatamente
+        if ($productoPorId && $productoPorId->count() > 0) {
+            Log::info('✅ Producto encontrado por ID: ' . $q);
+            return $this->mapearProductos($productoPorId, $almacenId, $tipo);
+        }
+
+        // ✅ NUEVO: PRIORIDAD 2 - Buscar por SKU exacto (case-insensitive)
+        $productoPorSku = $construirQueryBase(Producto::query())
+            ->whereRaw('LOWER(sku) = ?', [$searchLower])
+            ->limit(1)
+            ->get();
+
+        if ($productoPorSku && $productoPorSku->count() > 0) {
+            Log::info('✅ Producto encontrado por SKU: ' . $q);
+            return $this->mapearProductos($productoPorSku, $almacenId, $tipo);
+        }
+
+        // ✅ PRIORIDAD 3 - Búsqueda normal (por nombre, código_barras, descripción, etc)
+        $productos = $construirQueryBase(Producto::query())
             ->where(function ($query) use ($searchLower, $esExacta) {
                 if ($esExacta) {
                     // ✅ BÚSQUEDA EXACTA: Para código de barras (escáner)
@@ -1542,112 +1564,119 @@ class ProductoController extends Controller
                         });
                 }
             })
-            ->with([
+            ->limit($limite)
+            ->get();
+
+        return $this->mapearProductos($productos, $almacenId, $tipo);
+    }
+
+    /**
+     * ✅ NUEVO: Método auxiliar para mapear productos con todas sus relaciones
+     */
+    private function mapearProductos($productos, $almacenId, $tipo): JsonResponse
+    {
+        // Cargar relaciones necesarias
+        $productosConRelaciones = $productos
+            ->load([
                 'codigosBarra' => function ($q) {
-                    // Cargar códigos de barra activos
-                    $q->where('activo', true)
-                        ->select('id', 'producto_id', 'codigo', 'tipo', 'es_principal');
+                    $q->where('activo', true)->select('id', 'producto_id', 'codigo', 'tipo', 'es_principal');
                 },
                 'categoria:id,nombre',
                 'marca:id,nombre',
-                'proveedor:id,nombre,razon_social', // ✨ NUEVO
-                'unidad:id,nombre,codigo', // ✨ NUEVO - Corregido: era unidadMedida
-                'conversiones' => function ($q) { // ✅ MODIFICADO: Cargar conversiones con relaciones
+                'proveedor:id,nombre,razon_social',
+                'unidad:id,nombre,codigo',
+                'conversiones' => function ($q) {
                     $q->where('activo', true)
                         ->select('id', 'producto_id', 'unidad_base_id', 'unidad_destino_id', 'factor_conversion', 'activo', 'es_conversion_principal')
-                        ->with('unidadDestino:id,nombre,codigo'); // ✅ NUEVO: Cargar la unidad destino
+                        ->with('unidadDestino:id,nombre,codigo');
                 },
-                'precios'      => function ($q) {
-                    // Cargar SOLO precios activos
+                'precios' => function ($q) {
                     $q->where('activo', true)
                         ->select('id', 'producto_id', 'tipo_precio_id', 'nombre', 'precio', 'es_precio_base')
                         ->with('tipoPrecio:id,nombre,codigo');
                 },
-                'stock'        => function ($query) {
-                    $query->select('id', 'producto_id', 'almacen_id', 'cantidad', 'cantidad_disponible', 'cantidad_reservada')
+                'stock' => function ($q) {
+                    $q->select('id', 'producto_id', 'almacen_id', 'cantidad', 'cantidad_disponible', 'cantidad_reservada')
                         ->with('almacen:id,nombre');
                 },
             ])
-            ->limit($limite)
-            ->get()
             ->map(function ($producto) use ($almacenId, $tipo) {
-                // ✅ DEBUG: Loguear producto con conversiones
-                Log::info('🔍 [buscarApi] Procesando producto', [
-                    'producto_id' => $producto->id,
-                    'producto_nombre' => $producto->nombre,
-                    'es_fraccionado' => $producto->es_fraccionado,
-                    'unidad_medida_id' => $producto->unidad_medida_id,
-                    'unidad_nombre' => $producto->unidad?->nombre,
-                    'conversiones_count' => $producto->conversiones->count(),
-                    'conversiones' => $producto->conversiones->map(fn($c) => [
-                        'id' => $c->id,
-                        'unidad_destino_id' => $c->unidad_destino_id,
-                        'unidad_destino_nombre' => $c->unidadDestino?->nombre,
-                        'factor' => $c->factor_conversion,
-                        'activo' => $c->activo,
-                    ])->toArray()
-                ]);
-
-                // Incluir códigos de barras en la respuesta
                 $codigosTexto = $producto->codigosBarra->pluck('codigo')->toArray();
-
-                // Obtener stock del almacén seleccionado
-                $stockAlmacen    = $producto->stock->firstWhere('almacen_id', $almacenId);
+                $stockAlmacen = $producto->stock->firstWhere('almacen_id', $almacenId);
                 $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
-
-                // Calcular stock total de todos los almacenes
                 $stockTotal = $producto->stock->sum('cantidad_disponible');
 
-                // ✅ MODIFICADO: Obtener precio de VENTA (tipos_precio.codigo = 'VENTA')
-                $precioVenta = $producto->precios
-                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'VENTA')?->precio ?? 0;
+                $precioVentaObj = $producto->precios
+                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'VENTA');
+                $precioVenta = $precioVentaObj?->precio ?? 0;
 
-                // Fallback: Obtener precio base si no existe precio de venta
-                // En modo VENTA: NO debe retornar precio de costo, solo precio de venta
                 $precioBase = ($tipo === 'venta')
                     ? $precioVenta
                     : ($precioVenta ?? $producto->precios->firstWhere('es_precio_base', true)?->precio ?? $producto->precios->first()?->precio ?? 0);
 
-                // ✅ NUEVO: Obtener precio de COSTO
                 $precioCosto = $producto->precios
                     ->first(fn($p) => $p->tipoPrecio?->codigo === 'COSTO')?->precio ?? 0;
 
-                // Obtener nombre del almacén
-                $almacenNombre = $stockAlmacen?->almacen?->nombre ?? 'Almacén Principal';
+                // ✅ NUEVO: Obtener tipo_precio_id recomendado
+                $tipoPrecioIdRecomendado = null;
+                $tipoPrecioNombreRecomendado = null;
 
-                // Obtener solo el string del segundo código de barra
+                // Estrategia 1: Buscar por tipoPrecio->codigo === 'VENTA'
+                foreach ($producto->precios as $precio) {
+                    if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'VENTA') {
+                        $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                        $tipoPrecioNombreRecomendado = $precio->nombre ?? $precio->tipoPrecio->nombre;
+                        break;
+                    }
+                }
+
+                // Estrategia 2: Si no encontró por código, buscar por nombre que contenga 'VENTA' (case-insensitive)
+                if (!$tipoPrecioIdRecomendado) {
+                    foreach ($producto->precios as $precio) {
+                        $nombre = strtoupper($precio->nombre ?? '');
+                        if (strpos($nombre, 'VENTA') !== false && strpos($nombre, 'COSTO') === false) {
+                            $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                            $tipoPrecioNombreRecomendado = $precio->nombre;
+                            break;
+                        }
+                    }
+                }
+
+                // Log para debugging
+                Log::info("🏷️ mapearProductos - Producto {$producto->id} ({$producto->nombre})", [
+                    'tipoPrecioIdRecomendado' => $tipoPrecioIdRecomendado,
+                    'tipoPrecioNombreRecomendado' => $tipoPrecioNombreRecomendado,
+                    'precios_count' => $producto->precios->count(),
+                    'precios_nombres' => $producto->precios->pluck('nombre')->toArray()
+                ]);
+
+                $almacenNombre = $stockAlmacen?->almacen?->nombre ?? 'Almacén Principal';
                 $segundoCodigoBarra = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';
 
                 return [
                     'id'               => $producto->id,
                     'nombre'           => $producto->nombre,
-                    'codigo'           => $producto->codigo, // ✅ NUEVO: Código del producto
-                    'sku'              => $producto->sku, // ✅ NUEVO: SKU del producto
+                    'codigo'           => $producto->codigo,
+                    'sku'              => $producto->sku,
                     'codigo_barras'    => $producto->codigo_barras,
                     'codigos_barras'   => $codigosTexto,
-                    'codigos_barra'    => $segundoCodigoBarra, // String simple del segundo código
-                    'precio_base'      => (float) $precioBase, // ✅ Ahora retorna precio de VENTA
-                    'precio_venta'     => (float) $precioBase, // ✅ NUEVO: Alias para compatibilidad
-                    'precio_costo'     => (float) $precioCosto, // ✅ NUEVO: Precio de costo registrado
+                    'codigos_barra'    => $segundoCodigoBarra,
+                    'precio_base'      => (float) $precioBase,
+                    'precio_venta'     => (float) $precioBase,
+                    'precio_costo'     => (float) $precioCosto,
                     'precios'          => $producto->precios,
-
-                    // Stock del almacén seleccionado
+                    // ✅ NUEVO: Tipo de precio recomendado basado en código VENTA
+                    'tipo_precio_id_recomendado' => $tipoPrecioIdRecomendado,
+                    'tipo_precio_nombre_recomendado' => $tipoPrecioNombreRecomendado,
                     'stock_disponible' => (int) $stockDisponible,
-                    'stock'            => (int) $stockDisponible, // ✅ NUEVO: Alias para compatibilidad
+                    'stock'            => (int) $stockDisponible,
                     'almacen_id'       => $almacenId,
                     'almacen_nombre'   => $almacenNombre,
-
-                    // Stock total de todos los almacenes
                     'stock_total'      => (int) $stockTotal,
-
-                    // ✨ Límite de venta
                     'limite_venta'     => $producto->limite_venta ? (int) $producto->limite_venta : null,
-
-                    'peso'             => $producto->peso, // ✅ NUEVO: Peso del producto
+                    'peso'             => $producto->peso,
                     'categoria'        => $producto->categoria?->nombre ?? '',
                     'marca'            => $producto->marca?->nombre ?? '',
-
-                    // ✅ NUEVO: Información de fraccionamiento y conversiones para ventas
                     'es_fraccionado'   => (bool) $producto->es_fraccionado,
                     'unidad_medida_id' => $producto->unidad_medida_id,
                     'unidad_medida_nombre' => $producto->unidad?->nombre ?? null,
@@ -1664,7 +1693,7 @@ class ProductoController extends Controller
                 ];
             });
 
-        return ApiResponse::success($productos);
+        return ApiResponse::success($productosConRelaciones->values()->all());
     }
 
     /**

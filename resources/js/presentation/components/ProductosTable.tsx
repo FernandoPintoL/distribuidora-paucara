@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import BarcodeScannerComponent from 'react-qr-barcode-scanner';
 import type { Producto } from '@/domain/entities/ventas';
@@ -42,6 +42,13 @@ export interface DetalleProducto {
             unidad_destino_nombre?: string;
             factor_conversion: number;
         }>;
+        // ✅ NUEVO: Incluir precios disponibles para selección de tipo de precio
+        precios?: Array<{
+            id: number | string;
+            tipo_precio_id: number | string;
+            nombre: string;
+            precio: number;
+        }>;
     };
 }
 
@@ -59,6 +66,7 @@ interface ProductosTableProps {
     isCalculatingPrices?: boolean; // ✅ NUEVO: Mostrar indicador de carga al calcular precios
     readOnly?: boolean; // ✅ NUEVO: Deshabilitar edición de detalles (para APROBADO+)
     onUpdateDetailUnidadConPrecio?: (index: number, unidadId: number, precio: number) => void; // ✅ NUEVO: Actualizar unidad y precio juntos
+    onManualTipoPrecioChange?: (index: number) => void; // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
 }
 
 export default function ProductosTable({
@@ -71,7 +79,8 @@ export default function ProductosTable({
     isCalculatingPrices = false, // ✅ NUEVO: Indicador de carga
     readOnly = false, // ✅ NUEVO: Modo solo lectura
     tipo = 'compra', // ✅ NUEVO: Tipo de documento (compra o venta)
-    onUpdateDetailUnidadConPrecio // ✅ NUEVO: Actualizar unidad y precio juntos
+    onUpdateDetailUnidadConPrecio, // ✅ NUEVO: Actualizar unidad y precio juntos
+    onManualTipoPrecioChange // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
 }: ProductosTableProps) {
     // ✅ DEBUG: Loguear props recibidos
     /* console.log('📋 ProductosTable - Props recibidos:', {
@@ -91,6 +100,11 @@ export default function ProductosTable({
     const [searchError, setSearchError] = useState<string | null>(null);
     const [showScannerModal, setShowScannerModal] = useState(false);
     const [scannerError, setScannerError] = useState<string | null>(null);
+    const [isFocused, setIsFocused] = useState(false);
+    // ✅ NUEVO: Estado local para edición de campos (previene re-renders mientras escribes)
+    const [editingField, setEditingField] = useState<{ index: number; field: string } | null>(null);
+    // ✅ NUEVO: Estado local para tipos de precio seleccionados (cache para re-renderización)
+    const [selectedTipoPrecio, setSelectedTipoPrecio] = useState<Record<number, number>>({});
 
     // ✅ NUEVO: Función para buscar productos manualmente (botón o Enter)
     const buscarProductos = async (searchTerm?: string) => {
@@ -149,7 +163,17 @@ export default function ProductosTable({
                 es_fraccionado: p.es_fraccionado || false,
                 unidad_medida_id: p.unidad_medida_id,
                 unidad_medida_nombre: p.unidad_medida_nombre,
-                conversiones: p.conversiones || []
+                conversiones: p.conversiones || [],
+                // ✅ NUEVO: Incluir precios disponibles para selección
+                precios: p.precios?.map((pr: any) => ({
+                    id: pr.id,
+                    tipo_precio_id: pr.tipo_precio_id,
+                    nombre: pr.nombre || pr.tipoPrecio?.nombre,
+                    precio: pr.precio
+                })) || [],
+                // ✅ NUEVO: Incluir tipo de precio recomendado del backend
+                tipo_precio_id_recomendado: p.tipo_precio_id_recomendado,
+                tipo_precio_nombre_recomendado: p.tipo_precio_nombre_recomendado
             }));
 
             // ✅ NUEVO: Filtrar productos válidos para ventas (stock > 0 y precio_venta > 0)
@@ -235,7 +259,14 @@ export default function ProductosTable({
                         es_fraccionado: productoAPI.es_fraccionado || false,
                         unidad_medida_id: productoAPI.unidad_medida_id,
                         unidad_medida_nombre: productoAPI.unidad_medida_nombre,
-                        conversiones: productoAPI.conversiones || []
+                        conversiones: productoAPI.conversiones || [],
+                        // ✅ NUEVO: Incluir precios disponibles para selección
+                        precios: productoAPI.precios?.map((pr: any) => ({
+                            id: pr.id,
+                            tipo_precio_id: pr.tipo_precio_id,
+                            nombre: pr.nombre || pr.tipoPrecio?.nombre,
+                            precio: pr.precio
+                        })) || []
                     };
 
                     onAddProduct(producto);
@@ -305,37 +336,53 @@ export default function ProductosTable({
         return precioBase / conversion.factor_conversion;
     };
 
+    // ✅ NUEVO: Formatear precio de venta - mostrar 2 decimales si tiene decimales, solo entero si no
+    const formatearPrecioVenta = (precio: number): string => {
+        const parteDecimal = precio % 1;
+        if (parteDecimal === 0) {
+            return Math.floor(precio).toString();
+        }
+        return precio.toFixed(2);
+    };
+
     return (
         <div>
             {/* Buscador de productos */}
-            <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Buscar productos
-                </label>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                buscarProductos();
-                            }
-                        }}
-                        autoComplete="off" // ✅ Deshabilitar autocompletado
-                        disabled={readOnly}
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        placeholder="Buscar por nombre o código... (Enter para buscar)"
-                    />
+            <div className="sticky top-0 z-10 bg-white dark:bg-zinc-900 pb-3 mb-3">
+                <div className="flex gap-1.5">
+                    <div className="flex-1 relative">
+                        <input
+                            type="text"
+                            value={productSearch}
+                            onChange={(e) => setProductSearch(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    buscarProductos();
+                                }
+                            }}
+                            onFocus={() => setIsFocused(true)}
+                            onBlur={() => setIsFocused(false)}
+                            autoComplete="off"
+                            disabled={readOnly}
+                            className={`w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${productSearch ? 'pt-3' : ''}`}
+                            placeholder=""
+                        />
+                        <label className={`absolute left-3 transition-all duration-200 pointer-events-none ${productSearch || isFocused
+                            ? 'top-[-20px] text-xs font-medium text-blue-600 dark:text-blue-400'
+                            : 'top-1/2 -translate-y-1/2 text-xs text-gray-600 dark:text-gray-400'
+                            }`}>
+                            Buscar productos
+                        </label>
+                    </div>
                     <button
                         type="button"
                         disabled={readOnly || isLoading}
                         onClick={() => buscarProductos()}
-                        className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-2 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Buscar producto"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </button>
@@ -343,10 +390,10 @@ export default function ProductosTable({
                         type="button"
                         disabled={readOnly}
                         onClick={openScannerModal}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-2 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Escanear código de barras"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01M12 18h4.01M12 9h4.01M12 6h4.01M12 3h4.01" />
                         </svg>
                     </button>
@@ -354,17 +401,17 @@ export default function ProductosTable({
 
                 {/* ✅ Mostrar resultados solo si hay búsqueda realizada */}
                 {(productosDisponibles.length > 0 || searchError || (productSearch && !isLoading && productosDisponibles.length === 0)) && (
-                    <div className="mt-2 max-h-32 overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
+                    <div className="mt-1 max-h-32 overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
                         {/* ✅ ESTADO: Cargando */}
                         {isLoading && (
-                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
-                                🔍 Buscando productos...
+                            <div className="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 text-center">
+                                🔍 Buscando...
                             </div>
                         )}
 
                         {/* ✅ ESTADO: Error */}
                         {searchError && !isLoading && (
-                            <div className="px-3 py-2 text-sm text-red-600 dark:text-red-400 text-center">
+                            <div className="px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400 text-center">
                                 ❌ {searchError}
                             </div>
                         )}
@@ -377,14 +424,14 @@ export default function ProductosTable({
                                     type="button"
                                     disabled={readOnly}
                                     onClick={() => handleAddProduct(producto)}
-                                    className="w-full text-left px-3 py-2 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full text-left px-2.5 py-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <div className="font-medium text-gray-900 dark:text-white">
+                                    <div className="font-medium text-xs text-gray-900 dark:text-white">
                                         {producto.nombre}
                                     </div>
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                        Código: {producto.codigo} | Precio: {formatCurrency(producto.precio_venta || 0)}
-                                        {(producto as any).stock_disponible && ` | Stock: ${(producto as any).stock_disponible}`}
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {producto.codigo} | {formatCurrency(producto.precio_venta || 0)}
+                                        {(producto as any).stock_disponible && ` | ${(producto as any).stock_disponible}`}
                                     </div>
                                 </button>
                             ))
@@ -392,8 +439,8 @@ export default function ProductosTable({
 
                         {/* ✅ ESTADO: Sin resultados */}
                         {!isLoading && productosDisponibles.length === 0 && !searchError && (
-                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
-                                No se encontraron productos con ese criterio
+                            <div className="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 text-center">
+                                No se encontraron productos
                             </div>
                         )}
                     </div>
@@ -405,28 +452,28 @@ export default function ProductosTable({
                 <div className="overflow-x-auto relative">
                     {/* ✅ NUEVO: Indicador de carga de precios */}
                     {isCalculatingPrices && (
-                        <div className="absolute top-0 right-0 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-bl-lg border-l border-b border-blue-200 dark:border-blue-800 z-10">
-                            <div className="w-4 h-4 border-2 border-blue-400 border-t-blue-700 dark:border-t-blue-300 rounded-full animate-spin"></div>
-                            <span className="text-sm font-medium">Actualizando precios...</span>
+                        <div className="absolute top-0 right-0 flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-bl-lg border-l border-b border-blue-200 dark:border-blue-800 z-10">
+                            <div className="w-3 h-3 border-2 border-blue-400 border-t-blue-700 dark:border-t-blue-300 rounded-full animate-spin"></div>
+                            <span className="text-xs font-medium">Actualizando...</span>
                         </div>
                     )}
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700">
                         <thead className="bg-gray-50 dark:bg-zinc-800">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Producto
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Cantidad
                                 </th>
                                 {tipo === 'venta' && (
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Unidad Venta
                                     </th>
                                 )}
                                 {tipo === 'compra' && (
                                     <>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Precio Compra
                                         </th>
                                         {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -435,21 +482,21 @@ export default function ProductosTable({
                                          */}
                                         {/* ✨ NUEVA COLUMNA: Precio por Unidad (solo si hay fraccionados) */}
                                         {/* {detalles.some(d => d.es_fraccionado && d.conversiones && d.conversiones.length > 0) && (
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                 Precio / Unidad
                                             </th>
                                         )} */}
                                     </>
                                 )}
                                 {tipo === 'venta' && (
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Precio de Venta
                                     </th>
                                 )}
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Subtotal
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Acciones
                                 </th>
                             </tr>
@@ -481,11 +528,11 @@ export default function ProductosTable({
                                             ? 'bg-green-50 dark:bg-green-950/10'
                                             : ''
                                         }`}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                            <div className="text-xs font-medium text-gray-900 dark:text-white">
                                                 {productoInfo?.nombre || 'Producto no encontrado'}
                                             </div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mt-1">
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 text-left">
                                                 {productoInfo?.codigo && (
                                                     <div>Código: {productoInfo.codigo}</div>
                                                 )}
@@ -494,14 +541,13 @@ export default function ProductosTable({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-4 py-2 whitespace-nowrap">
                                             <input
                                                 type="text"
-                                                inputMode="decimal" // ✅ Mostrar teclado numérico en móvil
+                                                inputMode="decimal"
                                                 disabled={readOnly}
                                                 value={detalle.cantidad}
                                                 onChange={(e) => {
-                                                    // ✅ Solo permitir números enteros positivos
                                                     const valor = e.target.value;
                                                     if (valor === '' || /^\d+$/.test(valor)) {
                                                         const num = valor === '' ? 0 : parseInt(valor, 10);
@@ -510,11 +556,11 @@ export default function ProductosTable({
                                                         }
                                                     }
                                                 }}
-                                                className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="w-16 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
                                         </td>
                                         {tipo === 'venta' && (
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-4 py-2 whitespace-nowrap">
                                                 {(() => {
                                                     console.log(`🔍 [ProductosTable] Detalle #${index}:`, {
                                                         es_fraccionado: detalle.es_fraccionado,
@@ -537,7 +583,6 @@ export default function ProductosTable({
                                                                 onChange={(e) => {
                                                                     const unidadSeleccionada = Number(e.target.value);
 
-                                                                    // Recalcular precio según la unidad
                                                                     const nuevoPrecio = calcularPrecioPorUnidad(
                                                                         detalle.producto?.precio_venta || 0,
                                                                         unidadSeleccionada,
@@ -551,16 +596,14 @@ export default function ProductosTable({
                                                                         precio_nuevo: nuevoPrecio
                                                                     });
 
-                                                                    // ✅ NUEVO: Usar el método que actualiza unidad y precio juntos
                                                                     if (onUpdateDetailUnidadConPrecio) {
                                                                         onUpdateDetailUnidadConPrecio(index, unidadSeleccionada, nuevoPrecio);
                                                                     } else {
-                                                                        // Fallback: hacer dos llamadas (antiguo comportamiento)
                                                                         handleUpdateDetail(index, 'unidad_venta_id', unidadSeleccionada);
                                                                         handleUpdateDetail(index, 'precio_unitario', nuevoPrecio);
                                                                     }
                                                                 }}
-                                                                className="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                className="w-28 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                                             >
                                                                 <option value={detalle.unidad_medida_id || ''}>
                                                                     {detalle.unidad_medida_nombre || 'Unidad Base'}
@@ -594,15 +637,28 @@ export default function ProductosTable({
                                                     </div>
                                                     
                                                 </td> */}
-                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                <td className="px-4 py-2 whitespace-nowrap">
                                                     <input
                                                         type="text"
-                                                        inputMode="decimal" // ✅ Mostrar teclado decimal en móvil
+                                                        inputMode="decimal"
                                                         disabled={readOnly}
-                                                        value={detalle.precio_unitario}
+                                                        value={editingField?.index === index && editingField?.field === 'precio_unitario'
+                                                            ? editingField.value
+                                                            : detalle.precio_unitario.toString()}
+                                                        placeholder="0.0000"
+                                                        onFocus={() => {
+                                                            setEditingField({
+                                                                index,
+                                                                field: 'precio_unitario',
+                                                                value: detalle.precio_unitario.toString()
+                                                            });
+                                                        }}
                                                         onChange={(e) => {
-                                                            // ✅ Solo permitir números decimales positivos
                                                             const valor = e.target.value;
+                                                            setEditingField(prev => prev && prev.index === index
+                                                                ? { ...prev, value: valor }
+                                                                : prev);
+                                                            // ✅ NUEVO: Actualizar en tiempo real mientras escribes
                                                             if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
                                                                 const num = valor === '' ? 0 : parseFloat(valor);
                                                                 if (num >= 0) {
@@ -610,7 +666,10 @@ export default function ProductosTable({
                                                                 }
                                                             }
                                                         }}
-                                                        className={`w-24 px-2 py-1 text-sm border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${tieneDiferencia
+                                                        onBlur={(e) => {
+                                                            setEditingField(null);
+                                                        }}
+                                                        className={`w-24 px-1.5 py-1 text-xs border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed font-mono ${tieneDiferencia
                                                             ? esAumento
                                                                 ? 'border-amber-300 dark:border-amber-700'
                                                                 : 'border-green-300 dark:border-green-700'
@@ -618,11 +677,11 @@ export default function ProductosTable({
                                                             }`}
                                                     />
                                                     {tieneDiferencia && (
-                                                        <div className={`text-xs font-semibold mt-1 ${esAumento
+                                                        <div className={`text-xs font-semibold mt-0.5 ${esAumento
                                                             ? 'text-amber-600 dark:text-amber-400'
                                                             : 'text-green-600 dark:text-green-400'
                                                             }`}>
-                                                            {esAumento ? '↑ Aumento' : '↓ Disminución'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
+                                                            {esAumento ? '↑' : '↓'} {formatCurrency(Math.abs(detalle.precio_unitario - precioCosto))}
                                                         </div>
                                                     )}
                                                     {/* ✨ NUEVA CELDA: Precio por Unidad en compras fraccionados */}
@@ -668,21 +727,114 @@ export default function ProductosTable({
                                             </>
                                         )}
                                         {tipo === 'venta' && (
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {formatCurrency(detalle.precio_unitario)}
-                                                </div>
-                                                {detalle.tipo_precio_nombre && (
-                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        {detalle.tipo_precio_nombre}
-                                                    </div>
-                                                )}
+                                            <td className="px-4 py-2 whitespace-nowrap">
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    disabled={readOnly}
+                                                    value={editingField?.index === index && editingField?.field === 'precio_venta'
+                                                        ? editingField.value
+                                                        : formatearPrecioVenta(detalle.precio_unitario)}
+                                                    placeholder="0"
+                                                    onFocus={() => {
+                                                        setEditingField({
+                                                            index,
+                                                            field: 'precio_venta',
+                                                            value: formatearPrecioVenta(detalle.precio_unitario)
+                                                        });
+                                                    }}
+                                                    onChange={(e) => {
+                                                        const valor = e.target.value;
+                                                        setEditingField(prev => prev && prev.index === index
+                                                            ? { ...prev, value: valor }
+                                                            : prev);
+                                                        // ✅ NUEVO: Actualizar en tiempo real mientras escribes
+                                                        if (valor === '' || /^\d+$/.test(valor)) {
+                                                            const num = valor === '' ? 0 : parseInt(valor, 10);
+                                                            if (num >= 0) {
+                                                                handleUpdateDetail(index, 'precio_unitario', num);
+                                                            }
+                                                        }
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const valor = e.target.value;
+                                                        if (valor === '' || /^\d+$/.test(valor)) {
+                                                            const num = valor === '' ? 0 : parseInt(valor, 10);
+                                                            if (num >= 0) {
+                                                                handleUpdateDetail(index, 'precio_unitario', num);
+                                                            }
+                                                        }
+                                                        setEditingField(null);
+                                                    }}
+                                                    className="w-20 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                />
+                                                <br />
+                                                {/* ✅ NUEVO: Selector de tipo de precio (solo tipos de venta, sin costo) */}
+                                                {(() => {
+                                                    // Obtener precios del detalle (vienen del producto adjunto)
+                                                    const precios = detalle.producto?.precios || [];
+
+                                                    // Filtrar precios: excluir "Precio de Costo" y similares
+                                                    const preciosVenta = precios.filter(p => {
+                                                        const nombre = (p.nombre || '').toLowerCase();
+                                                        return !nombre.includes('costo') && !nombre.includes('cost');
+                                                    });
+
+                                                    if (preciosVenta.length === 0) {
+                                                        // Si no hay precios de venta, mostrar al menos el tipo actual
+                                                        return detalle.tipo_precio_nombre ? (
+                                                            <div className="mt-1 px-2 py-1 text-xs text-gray-600 dark:text-gray-400">
+                                                                {detalle.tipo_precio_nombre}
+                                                            </div>
+                                                        ) : null;
+                                                    }
+
+                                                    return (
+                                                        <select
+                                                            disabled={readOnly}
+                                                            value={selectedTipoPrecio[index] ?? detalle.tipo_precio_nombre ?? preciosVenta[0]?.nombre ?? ''}
+                                                            onChange={(e) => {
+                                                                const nombreSeleccionado = e.target.value;
+                                                                const precioSeleccionado = preciosVenta.find(p => p.nombre === nombreSeleccionado);
+
+                                                                if (precioSeleccionado) {
+                                                                    // ✅ NUEVO: Notificar al padre que el usuario ha seleccionado manualmente
+                                                                    if (onManualTipoPrecioChange) {
+                                                                        onManualTipoPrecioChange(index);
+                                                                    }
+
+                                                                    // ✅ NUEVO: Actualizar estado local del select inmediatamente (usando nombre como key)
+                                                                    setSelectedTipoPrecio(prev => ({
+                                                                        ...prev,
+                                                                        [index]: nombreSeleccionado
+                                                                    }));
+
+                                                                    // ✅ Actualizar tipo de precio y precio en orden
+                                                                    // El precio_unitario gatilla el recalcuilo del subtotal y totales
+                                                                    handleUpdateDetail(index, 'tipo_precio_id', precioSeleccionado.tipo_precio_id);
+                                                                    handleUpdateDetail(index, 'tipo_precio_nombre', precioSeleccionado.nombre || '');
+                                                                    handleUpdateDetail(index, 'precio_unitario', precioSeleccionado.precio || 0);
+                                                                }
+                                                            }}
+                                                            className="mt-1 px-2 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            <option value="">Seleccionar tipo de precio</option>
+                                                            {preciosVenta.map((precio) => (
+                                                                <option key={precio.id || precio.tipo_precio_id} value={precio.nombre || ''}>
+                                                                    {precio.nombre || `Tipo ${precio.tipo_precio_id}`} - {formatCurrencyWith2Decimals(precio.precio || 0)}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    );
+                                                })()}
                                             </td>
                                         )}
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                            {formatCurrency(detalle.subtotal)}
+                                        <td className="px-4 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-white">
+                                            {tipo === 'venta'
+                                                ? formatCurrencyWith2Decimals(detalle.subtotal)
+                                                : formatCurrency(detalle.subtotal)}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-4 py-2 whitespace-nowrap text-xs font-medium">
                                             <button
                                                 type="button"
                                                 disabled={readOnly}
@@ -699,15 +851,15 @@ export default function ProductosTable({
                     </table>
                 </div>
             ) : (
-                <div className="text-center py-8">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="text-center py-4">
+                    <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                        No hay productos agregados
+                    <h3 className="mt-1.5 text-xs font-medium text-gray-900 dark:text-white">
+                        Sin productos
                     </h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Busca y agrega productos a la venta.
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Busca y agrega productos
                     </p>
                 </div>
             )}
@@ -715,26 +867,26 @@ export default function ProductosTable({
             {/* Modal del escáner de códigos de barras */}
             {showScannerModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 max-w-md w-full mx-4">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                                Escanear código de barras
+                    <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 max-w-md w-full mx-4">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                                Escanear código
                             </h3>
                             <button
                                 type="button"
                                 onClick={closeScannerModal}
                                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                             >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
 
-                        <div className="mb-4">
+                        <div className="mb-3">
                             <BarcodeScannerComponent
-                                width={300}
-                                height={300}
+                                width={280}
+                                height={280}
                                 onUpdate={(err, result) => {
                                     if (result) {
                                         handleScannerResult(result.getText());
@@ -746,18 +898,18 @@ export default function ProductosTable({
                         </div>
 
                         {scannerError && (
-                            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-                                <p className="text-sm text-red-600 dark:text-red-400">
+                            <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                                <p className="text-xs text-red-600 dark:text-red-400">
                                     {scannerError}
                                 </p>
                             </div>
                         )}
 
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1.5">
                             <button
                                 type="button"
                                 onClick={closeScannerModal}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-700 rounded-md hover:bg-gray-200 dark:hover:bg-zinc-600"
+                                className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-700 rounded-md hover:bg-gray-200 dark:hover:bg-zinc-600"
                             >
                                 Cancelar
                             </button>
