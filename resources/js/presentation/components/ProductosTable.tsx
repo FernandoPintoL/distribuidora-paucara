@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import BarcodeScannerComponent from 'react-qr-barcode-scanner';
+import { ModalComprasDiferenciaCostoComponent } from '@/presentation/components/precios/modal-compras-diferencia-costo';
+import { tienePreferenciaDiferencia } from '@/domain/types/cascada-precios.types';
+import { preciosService } from '@/application/services/precios.service'; // ✅ USAR SERVICIO EXISTENTE
 import type { Producto } from '@/domain/entities/ventas';
 
 // Tipos para el componente - más genéricos para compatibilidad
@@ -105,6 +108,23 @@ export default function ProductosTable({
     const [editingField, setEditingField] = useState<{ index: number; field: string } | null>(null);
     // ✅ NUEVO: Estado local para tipos de precio seleccionados (cache para re-renderización)
     const [selectedTipoPrecio, setSelectedTipoPrecio] = useState<Record<number, number>>({});
+
+    // ✅ NUEVO: Estado para modal de cascada de precios
+    const [modalCascadaState, setModalCascadaState] = useState<{
+        isOpen: boolean;
+        productoId: number | null;
+        precioActual: number | null;
+        precioCostoNuevo: number | null;
+        detalleIndex: number | null;
+        productoData: any;
+    }>({
+        isOpen: false,
+        productoId: null,
+        precioActual: null,
+        precioCostoNuevo: null,
+        detalleIndex: null,
+        productoData: null
+    });
 
     // ✅ NUEVO: Función para buscar productos manualmente (botón o Enter)
     const buscarProductos = async (searchTerm?: string) => {
@@ -321,6 +341,45 @@ export default function ProductosTable({
         setProductosDisponibles([]);
         setSearchError(null);
     };
+
+    // ✅ NUEVO: Handler para abrir modal de cascada de precios
+    const handleAbrirModalCascada = useCallback((index: number, detalle: DetalleProducto) => {
+        const precioCosto = detalle.precio_costo || detalle.producto?.precio_costo || 0;
+
+        // Validar que el producto tenga precios
+        // Abrir modal
+        setModalCascadaState({
+            isOpen: true,
+            productoId: detalle.producto_id as number,
+            precioActual: precioCosto,
+            precioCostoNuevo: detalle.precio_unitario,
+            detalleIndex: index,
+            productoData: detalle.producto
+        });
+    }, []);
+
+    // ✅ NUEVO: Handler para guardar precios desde modal
+    const handleGuardarPreciosModal = useCallback(async (
+        preciosCambiados: Array<{
+            precio_id: number;
+            precio_nuevo: number;
+            porcentaje_ganancia: number;
+            motivo: string;
+        }>
+    ) => {
+        return await preciosService.actualizarLote(preciosCambiados);
+    }, []);
+
+    // ✅ NUEVO: Handler cuando se guardan precios exitosamente
+    const handlePreciosActualizados = useCallback(() => {
+        setModalCascadaState(prev => ({ ...prev, isOpen: false }));
+        // El modal ya muestra el mensaje de éxito
+    }, []);
+
+    // ✅ NUEVO: Handler para cerrar modal
+    const handleCerrarModalCascada = useCallback(() => {
+        setModalCascadaState(prev => ({ ...prev, isOpen: false }));
+    }, []);
 
     // ✅ NUEVO: Calcular precio según unidad seleccionada
     const calcularPrecioPorUnidad = (precioBase: number, unidadDestinoId: number | string | undefined, conversiones?: Array<any>): number => {
@@ -834,7 +893,21 @@ export default function ProductosTable({
                                                 ? formatCurrencyWith2Decimals(detalle.subtotal)
                                                 : formatCurrency(detalle.subtotal)}
                                         </td>
-                                        <td className="px-4 py-2 whitespace-nowrap text-xs font-medium">
+                                        <td className="px-4 py-2 whitespace-nowrap text-xs font-medium flex gap-2">
+                                            {/* ✅ NUEVO: Botón para abrir modal de cascada si hay diferencia */}
+                                            {tipo === 'compra' && tieneDiferencia && (
+                                                <button
+                                                    type="button"
+                                                    disabled={readOnly}
+                                                    onClick={() => handleAbrirModalCascada(index, detalle)}
+                                                    className="p-1 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title="Actualizar cascada de precios"
+                                                >
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+                                                    </svg>
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 disabled={readOnly}
@@ -917,6 +990,17 @@ export default function ProductosTable({
                     </div>
                 </div>
             )}
+
+            {/* ✅ NUEVO: Modal de cascada de precios */}
+            <ModalComprasDiferenciaCostoComponent
+                isOpen={modalCascadaState.isOpen}
+                onClose={handleCerrarModalCascada}
+                producto={modalCascadaState.productoData}
+                precioActual={modalCascadaState.precioActual}
+                precioCostoNuevo={modalCascadaState.precioCostoNuevo}
+                onActualizarPrecios={handleGuardarPreciosModal}
+                onSuccess={handlePreciosActualizados}
+            />
         </div>
     );
 }

@@ -792,9 +792,21 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                                     type="number"
                                                                     step="0.01"
                                                                     min="0"
+                                                                    data-precio-porcentaje
                                                                     value={porcentajesPorTipo[currId] ?? pct}
                                                                     onChange={(e) => {
                                                                         handlePorcentajeChange(currId, Number(e.target.value) || 0);
+                                                                    }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault();
+                                                                            // Enfocar el siguiente input de monto en la misma fila
+                                                                            const tr = e.currentTarget.closest('tr');
+                                                                            const montoInput = tr?.querySelector('input[data-precio-monto]') as HTMLInputElement;
+                                                                            if (montoInput) {
+                                                                                setTimeout(() => montoInput.focus(), 0);
+                                                                            }
+                                                                        }
                                                                     }}
                                                                     onMouseDown={(e) => e.stopPropagation()}
                                                                     onClick={(e) => e.stopPropagation()}
@@ -834,6 +846,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                                 type="number"
                                                                 step="0.01"
                                                                 min="0"
+                                                                data-precio-monto
                                                                 value={precioSel ? (precioSel.monto === 0 ? '' : precioSel.monto) : ''}
                                                                 onChange={(e) => {
                                                                     if (precioIdx >= 0) {
@@ -841,6 +854,29 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                                         setPrecio(precioIdx, 'monto', e.target.value);
                                                                         if (precioSel && (precioSel.moneda === undefined || precioSel.moneda === '')) {
                                                                             setPrecio(precioIdx, 'moneda', 'BOB');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        e.preventDefault();
+                                                                        // Enfocar el siguiente input de porcentaje en la siguiente fila
+                                                                        const tr = e.currentTarget.closest('tr');
+                                                                        const nextTr = tr?.nextElementSibling as HTMLElement;
+                                                                        // Si la siguiente es una fila de error, saltar a la siguiente
+                                                                        if (nextTr?.classList.contains('bg-red-50') || nextTr?.classList.contains('bg-blue-50')) {
+                                                                            const nextNextTr = nextTr.nextElementSibling as HTMLElement;
+                                                                            if (nextNextTr) {
+                                                                                const porcentajeInput = nextNextTr.querySelector('input[data-precio-porcentaje]') as HTMLInputElement;
+                                                                                if (porcentajeInput) {
+                                                                                    setTimeout(() => porcentajeInput.focus(), 0);
+                                                                                }
+                                                                            }
+                                                                        } else if (nextTr) {
+                                                                            const porcentajeInput = nextTr.querySelector('input[data-precio-porcentaje]') as HTMLInputElement;
+                                                                            if (porcentajeInput) {
+                                                                                setTimeout(() => porcentajeInput.focus(), 0);
+                                                                            }
                                                                         }
                                                                     }
                                                                 }}

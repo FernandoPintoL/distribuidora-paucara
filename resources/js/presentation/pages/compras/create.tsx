@@ -368,6 +368,69 @@ export default function CompraForm() {
     };
   }, [hasUnsavedChanges, hasMinimumContent, autoSave]);
 
+  // ✅ NUEVO: Guardar automáticamente en localStorage con debounce
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isEditing) return; // No guardar si estamos editando una compra existente
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      try {
+        const datosAGuardar = {
+          data,
+          proveedorValue,
+          proveedorDisplay,
+        };
+        localStorage.setItem('compra-create-draft', JSON.stringify(datosAGuardar));
+        console.log('✅ Compra guardada en localStorage');
+      } catch (error) {
+        console.error('❌ Error guardando compra en localStorage:', error);
+      }
+    }, 1000); // Debounce de 1 segundo
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [data, proveedorValue, proveedorDisplay, isEditing]);
+
+  // ✅ NUEVO: Restaurar datos del localStorage al cargar
+  useEffect(() => {
+    if (isEditing) return; // No restaurar si estamos editando una compra existente
+
+    const datosGuardados = localStorage.getItem('compra-create-draft');
+    if (datosGuardados) {
+      try {
+        const parsed = JSON.parse(datosGuardados);
+        console.log('📋 Restaurando compra desde localStorage:', parsed);
+
+        // Restaurar datos del formulario
+        if (parsed.data) {
+          Object.keys(parsed.data).forEach((key: string) => {
+            setData(key as any, parsed.data[key]);
+          });
+        }
+
+        // Restaurar proveedor
+        if (parsed.proveedorValue !== null) {
+          setProveedorValue(parsed.proveedorValue);
+        }
+        if (parsed.proveedorDisplay) {
+          setProveedorDisplay(parsed.proveedorDisplay);
+        }
+
+        NotificationService.success('✅ Compra restaurada desde borrador anterior');
+      } catch (error) {
+        console.error('❌ Error restaurando compra desde localStorage:', error);
+      }
+    }
+  }, []); // Solo ejecutar al montar el componente
+
   // ✅ MEMOIZED: Convertir tipos de pago a opciones para SearchSelect
   const tipoPagoOptions: SelectOption[] = useMemo(() =>
     props.tipos_pago?.map(tipo => ({
@@ -597,6 +660,10 @@ export default function CompraForm() {
         if (loadingToast) {
           NotificationService.dismiss(loadingToast);
         }
+
+        // ✅ NUEVO: Limpiar localStorage después de envío exitoso
+        localStorage.removeItem('compra-create-draft');
+        console.log('✅ Borrador de compra eliminado del localStorage');
 
         // El mensaje del backend se manejará via session flash
         NotificationService.success(

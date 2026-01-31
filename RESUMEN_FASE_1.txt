@@ -1,0 +1,241 @@
+================================================================================
+                    FASE 1: IMPLEMENTACIÓN COMPLETADA ✅
+================================================================================
+
+DESCRIPCIÓN:
+Refactorización del modal de compras con diferencia de costo + creación de hook
+y utilidades para una arquitectura modular, testeable y reutilizable.
+
+================================================================================
+                           ARCHIVOS CREADOS
+================================================================================
+
+📁 /domain/hooks/useCascadaPreciosCompra.ts
+   └─ Hook principal con lógica de cascada de precios
+   └─ Funciones: calcularCascada(), validarCambios(), actualizarPrecio(), etc
+   └─ Estado: preciosPropuestos[], error
+   └─ ~250 líneas de código puro y testeable
+
+📁 /lib/precios.utils.ts
+   └─ 15+ funciones utilitarias para cálculos de precios
+   └─ redondearDos(), esPrecioValido(), calcularDiferencia(), etc
+   └─ Reutilizable en toda la app
+   └─ ~200 líneas
+
+📁 /domain/types/cascada-precios.types.ts
+   └─ Tipos, interfaces y validaciones de integración
+   └─ validarDatosParaModal()
+   └─ Documentación del flujo
+   └─ ~150 líneas
+
+📁 /domain/hooks/useCascadaPreciosCompra.example.tsx
+   └─ Ejemplo de cómo integrar en ProductosTable
+   └─ Paso a paso con pseudocódigo
+   └─ Tips y mejores prácticas
+   └─ ~200 líneas
+
+📄 /presentation/components/precios/modal-compras-diferencia-costo.tsx
+   └─ REFACTORIZADO
+   └─ Usa hook useCascadaPreciosCompra
+   └─ Props simplificados
+   └─ Manejo de errores con NotificationService
+   └─ ~350 líneas (antes eran 512)
+
+📄 VALIDACIONES_CASCADA_PRECIOS.md
+   └─ Documentación de validaciones implementadas
+   └─ Casos de validación cubiertos
+   └─ Flujo de validación completo
+   └─ Mejoras futuras
+
+📄 FASE_1_IMPLEMENTACION.md
+   └─ Resumen completo de la implementación
+   └─ Cambios de arquitectura
+   └─ Beneficios
+   └─ Próximos pasos
+
+================================================================================
+                         VALIDACIONES IMPLEMENTADAS
+================================================================================
+
+✅ Costo no puede ser 0 o negativo
+✅ Cambios significativos (> $0.01)
+✅ Precios no pueden ser negativos
+✅ Motivo de actualización requerido
+✅ Producto debe tener precios
+✅ Índices válidos en actualizaciones
+✅ Costo positivo para calcular ganancia %
+✅ Error handling elegante en modal
+✅ Validación previa antes de abrir modal
+✅ Validación final antes de guardar
+
+================================================================================
+                          CAMBIOS PRINCIPALES
+================================================================================
+
+1. ARQUITECTURA MÁS LIMPIA
+   Modal refactorizado
+   ├─ Antes: Todo mezclado (lógica + presentación)
+   └─ Después: Separa en Hook + Utilidades + Presentación
+
+2. REUTILIZACIÓN
+   ├─ Hook useCascadaPreciosCompra: Puede usarse en otros componentes
+   ├─ Utilidades precios.utils: Compartidas en toda la app
+   └─ Tipos bien documentados: Fácil de integrar
+
+3. TESTABILIDAD
+   ├─ Hook puro: Testeable sin React
+   ├─ Utils funcionales: Testeable independiente
+   └─ Modal: Solo testa presentación + integración
+
+4. ERROR HANDLING
+   ├─ Antes: alert() básico
+   └─ Después: NotificationService profesional + pantalla de error
+
+5. AGNÓSTICO
+   ├─ Antes: Modal esperaba data específica
+   └─ Después: Props simples, ProductosTable carga datos
+
+================================================================================
+                            PRÓXIMA FASE (2)
+================================================================================
+
+Para integrar en ProductosTable:
+
+1. Importar componentes:
+   import { ModalComprasDiferenciaCostoComponent } from '@/components/...';
+   import { tienePreferenciaDiferencia } from '@/domain/types/cascada-precios.types';
+
+2. Agregar estado para modal en ProductosTable
+
+3. Detectar diferencia en cada fila:
+   if (tipo === 'compra' && tienePreferenciaDiferencia(costo, compra_precio)) {
+       // Mostrar IconButton para abrir modal
+   }
+
+4. Al hacer clic, abrir modal con:
+   - producto: { id, nombre, sku, precios }
+   - precioActual: precio_costo_registrado
+   - precioCostoNuevo: precio_ingresado_en_compra
+   - onActualizarPrecios: callback para guardar en API
+
+5. API Backend requerido:
+   POST /api/precios/actualizar-cascada
+   {
+       producto_id: number,
+       precios: Array<{
+           precio_id: number,
+           precio_nuevo: number,
+           porcentaje_ganancia: number,
+           motivo: string
+       }>
+   }
+
+Ver archivo: /domain/hooks/useCascadaPreciosCompra.example.tsx
+
+================================================================================
+                          CHECKLIST COMPLETADO
+================================================================================
+
+Implementación:
+  ✅ Hook useCascadaPreciosCompra creado
+  ✅ Utilidades precios.utils creadas
+  ✅ Tipos y validaciones creados
+  ✅ Modal refactorizado
+  ✅ Documentación de ejemplo
+  ✅ Documentación de validaciones
+  ✅ Documentación de implementación
+
+Validaciones:
+  ✅ 10+ validaciones implementadas
+  ✅ Error handling elegante
+  ✅ Pantalla de error en modal
+  ✅ NotificationService integrado
+
+Arquitectura:
+  ✅ Separación de responsabilidades
+  ✅ Código reutilizable
+  ✅ Agnóstico (no acoplado)
+  ✅ Testeable
+
+Documentación:
+  ✅ Ejemplo de integración
+  ✅ Validaciones documentadas
+  ✅ Flujo explicado
+  ✅ Tips y mejores prácticas
+
+Próximo:
+  ⏳ Integración en ProductosTable (Fase 2)
+  ⏳ Tests unitarios (Fase 3)
+  ⏳ Backend API endpoints (Fase 3)
+
+================================================================================
+                             FICHEROS CRÍTICOS
+================================================================================
+
+LEER PRIMERO:
+  1. FASE_1_IMPLEMENTACION.md ← Resumen y arquitectura
+  2. /domain/hooks/useCascadaPreciosCompra.example.tsx ← Cómo integrar
+
+REFERENCIA:
+  3. VALIDACIONES_CASCADA_PRECIOS.md ← Qué se valida
+  4. /domain/types/cascada-precios.types.ts ← Tipos esperados
+  5. /lib/precios.utils.ts ← Funciones disponibles
+
+CÓDIGO:
+  6. /domain/hooks/useCascadaPreciosCompra.ts ← Hook
+  7. /presentation/components/precios/modal-compras-diferencia-costo.tsx ← Modal
+
+================================================================================
+                         OPINIÓN TÉCNICA RESUMIDA
+================================================================================
+
+✅ FORTALEZAS:
+
+  1. Lógica pura y agnóstica
+     - El hook no tiene dependencias de React UI
+     - Puede testearse sin render
+     - Reutilizable en múltiples contextos
+
+  2. Arquitectura modular
+     - Separación clara de responsabilidades
+     - Fácil de mantener y extender
+     - Reducción de acoplamiento
+
+  3. Validaciones centralizadas
+     - Mejora de seguridad de datos
+     - Consistencia en toda la app
+     - Error handling elegante
+
+  4. Documentación completa
+     - Ejemplo funcional incluido
+     - Tipos bien documentados
+     - Flujo explicado paso a paso
+
+⚠️  CONSIDERACIONES:
+
+  1. ProductosTable necesita cargar datos de producto
+     - Recomendación: Lazy load al abrir modal
+     - No cargar en cada render de la tabla
+
+  2. API Backend requerida
+     - Implementar endpoint POST /api/precios/actualizar-cascada
+     - Incluir auditoría de cambios
+
+  3. Tests unitarios pendientes
+     - Recomendación: +80% cobertura antes de ir a producción
+     - Incluir casos edge (costo 0, cambios mínimos, etc)
+
+================================================================================
+                            CONTACTO / PREGUNTAS
+================================================================================
+
+Si algo no está claro:
+  1. Revisar FASE_1_IMPLEMENTACION.md
+  2. Ver ejemplo en useCascadaPreciosCompra.example.tsx
+  3. Revisar validaciones en VALIDACIONES_CASCADA_PRECIOS.md
+
+Próxima reunión: Revisar Fase 2 (Integración en ProductosTable)
+
+================================================================================
+Fin de Fase 1
+================================================================================

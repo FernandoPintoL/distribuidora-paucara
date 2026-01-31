@@ -1,7 +1,7 @@
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useCajaWarning } from '@/application/hooks/use-caja-warning';
 import { AlertSinCaja } from '@/presentation/components/cajas/alert-sin-caja';
 import VentaPreviewModal from '@/presentation/components/VentaPreviewModal';
@@ -198,6 +198,85 @@ export default function VentaForm() {
         // ✅ NUEVO: Estado de pago por defecto PAGADO (consistente con proformas)
         estado_pago: venta?.estado_pago || 'PAGADO'
     });
+
+    // ✅ NUEVO: Guardar automáticamente en localStorage con debounce
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (isEditing) return; // No guardar si estamos editando una venta existente
+
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        debounceTimeoutRef.current = setTimeout(() => {
+            try {
+                const datosAGuardar = {
+                    data,
+                    detallesWithProducts,
+                    clienteValue,
+                    clienteDisplay,
+                    clienteSeleccionado,
+                    manuallySelectedTipoPrecio
+                };
+                localStorage.setItem('venta-create-draft', JSON.stringify(datosAGuardar));
+                console.log('✅ Venta guardada en localStorage');
+            } catch (error) {
+                console.error('❌ Error guardando venta en localStorage:', error);
+            }
+        }, 1000); // Debounce de 1 segundo
+
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
+    }, [data, detallesWithProducts, clienteValue, clienteDisplay, clienteSeleccionado, manuallySelectedTipoPrecio, isEditing]);
+
+    // ✅ NUEVO: Restaurar datos del localStorage al cargar
+    useEffect(() => {
+        if (isEditing) return; // No restaurar si estamos editando una venta existente
+
+        const datosGuardados = localStorage.getItem('venta-create-draft');
+        if (datosGuardados) {
+            try {
+                const parsed = JSON.parse(datosGuardados);
+                console.log('📋 Restaurando venta desde localStorage:', parsed);
+
+                // Restaurar datos del formulario
+                if (parsed.data) {
+                    Object.keys(parsed.data).forEach((key: string) => {
+                        setData(key as any, parsed.data[key]);
+                    });
+                }
+
+                // Restaurar detalles
+                if (parsed.detallesWithProducts && parsed.detallesWithProducts.length > 0) {
+                    setDetallesWithProducts(parsed.detallesWithProducts);
+                }
+
+                // Restaurar cliente
+                if (parsed.clienteValue !== null) {
+                    setClienteValue(parsed.clienteValue);
+                }
+                if (parsed.clienteDisplay) {
+                    setClienteDisplay(parsed.clienteDisplay);
+                }
+                if (parsed.clienteSeleccionado) {
+                    setClienteSeleccionado(parsed.clienteSeleccionado);
+                }
+
+                // Restaurar selecciones manuales de tipo de precio
+                if (parsed.manuallySelectedTipoPrecio) {
+                    setManuallySelectedTipoPrecio(parsed.manuallySelectedTipoPrecio);
+                }
+
+                NotificationService.success('✅ Venta restaurada desde borrador anterior');
+            } catch (error) {
+                console.error('❌ Error restaurando venta desde localStorage:', error);
+            }
+        }
+    }, []); // Solo ejecutar al montar el componente
 
     // Inicializar detalles con productos
     useEffect(() => {
@@ -809,6 +888,10 @@ export default function VentaForm() {
                 console.groupEnd();
 
                 NotificationService.success(mensaje);
+
+                // ✅ NUEVO: Limpiar localStorage después de envío exitoso
+                localStorage.removeItem('venta-create-draft');
+                console.log('✅ Borrador de venta eliminado del localStorage');
 
                 // ✅ Limpiar todo el formulario y estados
                 reset(); // Limpiar datos del formulario

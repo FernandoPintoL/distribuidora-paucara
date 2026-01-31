@@ -93,7 +93,7 @@ class InventarioController extends Controller
         $productosProximosVencer = Producto::where('activo', true)->proximosVencer(30)->count();
         $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
 
-        // Stock por almacén - tabla completa de stock_productos
+        // Stock por almacén - incluyendo productos sin stock_productos records
         $stockPorAlmacen = StockProducto::with([
             'producto',
             'producto.codigoPrincipal',
@@ -148,6 +148,42 @@ class InventarioController extends Controller
                     'conversiones'          => $conversiones,
                 ];
             });
+
+        // Obtener productos sin registros de stock_productos
+        $productosConStock = $stockPorAlmacen->pluck('producto_id')->unique();
+        $productossinStock = Producto::where('activo', true)
+            ->whereNotIn('id', $productosConStock)
+            ->with(['codigoPrincipal', 'precios', 'unidad', 'conversiones.unidadDestino'])
+            ->get();
+
+        // Mapear productos sin stock con cantidad 0
+        $stockSinRegistros = $productossinStock->map(function ($producto) {
+            // Obtener precio de venta base
+            $precioVenta = 0;
+            $precioVentaObj = $producto->precios?->firstWhere('es_precio_base', true);
+            $precioVenta = $precioVentaObj?->precio ?? $producto->precio_venta ?? 0;
+
+            return [
+                'id'                    => null,
+                'producto_id'           => $producto->id,
+                'almacen_id'            => null,
+                'cantidad'              => 0,
+                'cantidad_disponible'   => 0,
+                'cantidad_reservada'    => 0,
+                'precio_venta'          => $precioVenta,
+                'producto_nombre'       => $producto->nombre,
+                'producto_codigo'       => $producto->codigo ?? '',
+                'producto_codigo_barra' => $producto->codigoPrincipal?->codigo ?? '',
+                'producto_sku'          => $producto->sku ?? '',
+                'almacen_nombre'        => 'Sin Stock',
+                'es_fraccionado'        => (bool) $producto->es_fraccionado,
+                'unidad_medida_nombre'  => $producto->unidad?->nombre ?? 'Unidades',
+                'conversiones'          => [],
+            ];
+        });
+
+        // Combinar stock existente con productos sin stock
+        $stockPorAlmacen = $stockPorAlmacen->concat($stockSinRegistros)->sortBy(['almacen_nombre', 'producto_nombre'])->values();
 
         // Movimientos recientes (últimos 7 días)
         $movimientosRecientes = MovimientoInventario::with(['stockProducto.producto', 'stockProducto.almacen', 'user'])
