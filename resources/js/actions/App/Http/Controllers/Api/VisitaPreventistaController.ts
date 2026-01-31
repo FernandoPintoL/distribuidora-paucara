@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::store
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:26
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:28
  * @route '/api/visitas'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::store
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:26
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:28
  * @route '/api/visitas'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::store
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:26
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:28
  * @route '/api/visitas'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::store
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:26
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:28
  * @route '/api/visitas'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::store
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:26
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:28
  * @route '/api/visitas'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -56,7 +56,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::index
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:61
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:63
  * @route '/api/visitas'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -71,7 +71,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::index
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:61
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:63
  * @route '/api/visitas'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -80,7 +80,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::index
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:61
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:63
  * @route '/api/visitas'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -89,7 +89,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::index
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:61
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:63
  * @route '/api/visitas'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -99,7 +99,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::index
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:61
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:63
  * @route '/api/visitas'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -109,7 +109,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::index
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:61
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:63
  * @route '/api/visitas'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -118,7 +118,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::index
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:61
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:63
  * @route '/api/visitas'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -134,7 +134,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::estadisticas
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:127
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:129
  * @route '/api/visitas/estadisticas'
  */
 export const estadisticas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -149,7 +149,7 @@ estadisticas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::estadisticas
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:127
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:129
  * @route '/api/visitas/estadisticas'
  */
 estadisticas.url = (options?: RouteQueryOptions) => {
@@ -158,7 +158,7 @@ estadisticas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::estadisticas
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:127
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:129
  * @route '/api/visitas/estadisticas'
  */
 estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -167,7 +167,7 @@ estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::estadisticas
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:127
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:129
  * @route '/api/visitas/estadisticas'
  */
 estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -177,7 +177,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::estadisticas
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:127
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:129
  * @route '/api/visitas/estadisticas'
  */
     const estadisticasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -187,7 +187,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::estadisticas
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:127
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:129
  * @route '/api/visitas/estadisticas'
  */
         estadisticasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -196,7 +196,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::estadisticas
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:127
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:129
  * @route '/api/visitas/estadisticas'
  */
         estadisticasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -211,8 +211,86 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     estadisticas.form = estadisticasForm
 /**
+* @see \App\Http\Controllers\Api\VisitaPreventistaController::ordenDelDia
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:200
+ * @route '/api/visitas/orden-del-dia'
+ */
+export const ordenDelDia = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: ordenDelDia.url(options),
+    method: 'get',
+})
+
+ordenDelDia.definition = {
+    methods: ["get","head"],
+    url: '/api/visitas/orden-del-dia',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\VisitaPreventistaController::ordenDelDia
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:200
+ * @route '/api/visitas/orden-del-dia'
+ */
+ordenDelDia.url = (options?: RouteQueryOptions) => {
+    return ordenDelDia.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\VisitaPreventistaController::ordenDelDia
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:200
+ * @route '/api/visitas/orden-del-dia'
+ */
+ordenDelDia.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: ordenDelDia.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\VisitaPreventistaController::ordenDelDia
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:200
+ * @route '/api/visitas/orden-del-dia'
+ */
+ordenDelDia.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: ordenDelDia.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\VisitaPreventistaController::ordenDelDia
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:200
+ * @route '/api/visitas/orden-del-dia'
+ */
+    const ordenDelDiaForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: ordenDelDia.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\VisitaPreventistaController::ordenDelDia
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:200
+ * @route '/api/visitas/orden-del-dia'
+ */
+        ordenDelDiaForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: ordenDelDia.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\VisitaPreventistaController::ordenDelDia
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:200
+ * @route '/api/visitas/orden-del-dia'
+ */
+        ordenDelDiaForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: ordenDelDia.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    ordenDelDia.form = ordenDelDiaForm
+/**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::validarHorario
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:171
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:173
  * @route '/api/visitas/validar-horario'
  */
 export const validarHorario = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +305,7 @@ validarHorario.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::validarHorario
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:171
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:173
  * @route '/api/visitas/validar-horario'
  */
 validarHorario.url = (options?: RouteQueryOptions) => {
@@ -236,7 +314,7 @@ validarHorario.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::validarHorario
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:171
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:173
  * @route '/api/visitas/validar-horario'
  */
 validarHorario.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -245,7 +323,7 @@ validarHorario.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::validarHorario
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:171
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:173
  * @route '/api/visitas/validar-horario'
  */
 validarHorario.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -255,7 +333,7 @@ validarHorario.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::validarHorario
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:171
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:173
  * @route '/api/visitas/validar-horario'
  */
     const validarHorarioForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -265,7 +343,7 @@ validarHorario.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::validarHorario
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:171
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:173
  * @route '/api/visitas/validar-horario'
  */
         validarHorarioForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -274,7 +352,7 @@ validarHorario.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::validarHorario
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:171
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:173
  * @route '/api/visitas/validar-horario'
  */
         validarHorarioForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -290,7 +368,7 @@ validarHorario.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     validarHorario.form = validarHorarioForm
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::show
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:113
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:115
  * @route '/api/visitas/{visita}'
  */
 export const show = (args: { visita: number | { id: number } } | [visita: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -305,7 +383,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::show
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:113
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:115
  * @route '/api/visitas/{visita}'
  */
 show.url = (args: { visita: number | { id: number } } | [visita: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -338,7 +416,7 @@ show.url = (args: { visita: number | { id: number } } | [visita: number | { id: 
 
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::show
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:113
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:115
  * @route '/api/visitas/{visita}'
  */
 show.get = (args: { visita: number | { id: number } } | [visita: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -347,7 +425,7 @@ show.get = (args: { visita: number | { id: number } } | [visita: number | { id: 
 })
 /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::show
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:113
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:115
  * @route '/api/visitas/{visita}'
  */
 show.head = (args: { visita: number | { id: number } } | [visita: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -357,7 +435,7 @@ show.head = (args: { visita: number | { id: number } } | [visita: number | { id:
 
     /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::show
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:113
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:115
  * @route '/api/visitas/{visita}'
  */
     const showForm = (args: { visita: number | { id: number } } | [visita: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -367,7 +445,7 @@ show.head = (args: { visita: number | { id: number } } | [visita: number | { id:
 
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::show
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:113
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:115
  * @route '/api/visitas/{visita}'
  */
         showForm.get = (args: { visita: number | { id: number } } | [visita: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -376,7 +454,7 @@ show.head = (args: { visita: number | { id: number } } | [visita: number | { id:
         })
             /**
 * @see \App\Http\Controllers\Api\VisitaPreventistaController::show
- * @see app/Http/Controllers/Api/VisitaPreventistaController.php:113
+ * @see app/Http/Controllers/Api/VisitaPreventistaController.php:115
  * @route '/api/visitas/{visita}'
  */
         showForm.head = (args: { visita: number | { id: number } } | [visita: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -390,6 +468,6 @@ show.head = (args: { visita: number | { id: number } } | [visita: number | { id:
         })
     
     show.form = showForm
-const VisitaPreventistaController = { store, index, estadisticas, validarHorario, show }
+const VisitaPreventistaController = { store, index, estadisticas, ordenDelDia, validarHorario, show }
 
 export default VisitaPreventistaController

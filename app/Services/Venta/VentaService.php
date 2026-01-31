@@ -417,10 +417,17 @@ class VentaService
                 )
                 ->when($filtros['search'] ?? null, fn($q, $search) =>
                     $q->where(function ($subQuery) use ($search) {
-                        $subQuery->where('numero', 'like', '%' . $search . '%')
-                            ->orWhereHas('cliente', fn($qCli) =>
-                                $qCli->where('nombre', 'like', '%' . $search . '%')
-                            );
+                        // Si el término es un número, buscar por ID exacto primero
+                        if (is_numeric($search)) {
+                            $subQuery->where('id', '=', (int)$search)
+                                ->orWhere('numero', '=', $search); // Búsqueda exacta por número
+                        } else {
+                            // Para términos no numéricos, buscar al inicio del número (más exacto que parcial)
+                            $subQuery->where('numero', 'like', $search . '%')
+                                ->orWhereHas('cliente', fn($qCli) =>
+                                    $qCli->where('nombre', 'like', '%' . $search . '%')
+                                );
+                        }
                     })
                 )
                 ->when($filtros['monto_min'] ?? null, fn($q, $monto) =>

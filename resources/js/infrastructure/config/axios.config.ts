@@ -14,6 +14,23 @@ export function configureAxios() {
 
     // Configurar el interceptor de solicitud
     axios.interceptors.request.use((config) => {
+        // ✅ MEJORA: Normalizar URLs para evitar contenido mixto (Mixed Content)
+        // Convierte http:// a rutas relativas si están en el mismo dominio
+        if (config.url && config.url.startsWith('http://')) {
+            try {
+                const url = new URL(config.url);
+                const currentUrl = new URL(window.location.href);
+
+                // Si es el mismo dominio, convertir a URL relativa
+                if (url.hostname === currentUrl.hostname) {
+                    config.url = url.pathname + url.search + url.hash;
+                    console.warn(`[Axios] URL normalizada: http:// → ${config.url}`);
+                }
+            } catch (e) {
+                console.warn('[Axios] Error parseando URL:', config.url, e);
+            }
+        }
+
         // Obtener CSRF token de las cookies
         const csrfToken = getXsrfToken();
         if (csrfToken) {

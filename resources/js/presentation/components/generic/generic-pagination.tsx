@@ -10,8 +10,35 @@ interface GenericPaginationProps {
 }
 
 export default function GenericPagination({ links, isLoading = false }: GenericPaginationProps) {
+  // ✅ MEJORA: Normalizar URL para evitar contenido mixto
+  const normalizeUrl = (url: string): string => {
+    if (!url) return url;
+
+    // Si la URL comienza con http://, convertir a URL relativa
+    if (url.startsWith('http://')) {
+      try {
+        const parsedUrl = new URL(url);
+        const currentUrl = new URL(window.location.href);
+
+        // Si es el mismo dominio, usar ruta relativa
+        if (parsedUrl.hostname === currentUrl.hostname) {
+          const normalizedUrl = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
+          console.warn(`[Pagination] URL normalizada: ${url} → ${normalizedUrl}`);
+          return normalizedUrl;
+        }
+      } catch (e) {
+        console.warn('[Pagination] Error parseando URL:', url, e);
+      }
+    }
+
+    return url;
+  };
+
   const handlePageNavigation = (url: string | null, label: string) => {
     if (url && !isLoading) {
+      // ✅ MEJORA: Normalizar URL antes de navegar
+      const normalizedUrl = normalizeUrl(url);
+
       // Mostrar notificación de navegación más elegante
       const cleanLabel = getCleanLabel(label);
       if (cleanLabel.includes('Anterior')) {
@@ -22,7 +49,7 @@ export default function GenericPagination({ links, isLoading = false }: GenericP
         NotificationService.info(`Navegando a la página ${cleanLabel}...`);
       }
 
-      router.get(url, {}, {
+      router.get(normalizedUrl, {}, {
         preserveState: false,
         preserveScroll: false,
         onError: (errors) => {

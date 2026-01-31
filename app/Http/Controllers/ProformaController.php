@@ -95,9 +95,33 @@ class ProformaController extends Controller
     public function store(StoreProformaRequest $request): JsonResponse | RedirectResponse
     {
         try {
+            $usuarioAutenticado = auth()->id();
+
+            // ✅ Verificar que hay usuario autenticado
+            if (!$usuarioAutenticado) {
+                return $this->respondError(
+                    'Usuario no autenticado. No se puede crear proforma sin usuario.',
+                    statusCode: 401
+                );
+            }
+
             $dto = CrearProformaDTO::fromRequest($request);
 
+            Log::info('📋 [ProformaController::store] Creando proforma', [
+                'usuario_autenticado_id' => $usuarioAutenticado,
+                'cliente_id'             => $dto->cliente_id,
+                'dto_usuario_id'         => $dto->usuario_id,
+                'timestamp'              => now()->toIso8601String(),
+            ]);
+
             $proformaDTO = $this->proformaService->crear($dto);
+
+            Log::info('✅ [ProformaController::store] Proforma creada exitosamente', [
+                'proforma_id'            => $proformaDTO->id,
+                'usuario_creador_id'     => $usuarioAutenticado,
+                'usuario_autenticado_id' => $usuarioAutenticado,
+                'timestamp'              => now()->toIso8601String(),
+            ]);
 
             return $this->respondSuccess(
                 data: $proformaDTO,

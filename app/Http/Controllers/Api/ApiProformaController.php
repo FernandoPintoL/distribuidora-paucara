@@ -133,9 +133,9 @@ class ApiProformaController extends Controller
                 }
             }
 
-            // Obtener el usuario del cliente (user_id) para asociar como creador
-            // IMPORTANTE: usuario_creador_id debe ser el user_id del cliente, NO el cliente_id
-            $usuarioCreador = $cliente->user_id; // El usuario que representa al cliente
+            // ✅ Obtener el usuario autenticado que está creando la proforma
+            // IMPORTANTE: usuario_creador_id debe ser el usuario autenticado ACTUAL, no el user_id del cliente
+            $usuarioCreador = Auth::id(); // El usuario que CREA la proforma (quien hace la solicitud API)
 
             // ✅ NUEVO: Instanciar servicio de precios con rangos
             $precioRangoService = app(PrecioRangoProductoService::class);
@@ -299,6 +299,274 @@ class ApiProformaController extends Controller
             'success' => true,
             'data' => $proforma,
         ]);
+    }
+
+    // ✅ NUEVO: Actualizar una proforma existente (PUT)
+    public function update(Request $request, Proforma $proforma)
+    {
+        // Verificar que la proforma pertenece al cliente autenticado
+        if (Auth::user()->cliente_id && $proforma->cliente_id !== Auth::user()->cliente_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para actualizar esta proforma',
+            ], 403);
+        }
+
+        // Validar que la proforma está en estado PENDIENTE
+        if ($proforma->estado !== 'PENDIENTE') {
+            return response()->json([
+                'success' => false,
+                'message' => "No se puede actualizar una proforma en estado {$proforma->estado}. Solo se pueden actualizar proformas PENDIENTES.",
+            ], 422);
+        }
+
+        // Normalizar los datos del request
+        $requestData = $request->all();
+
+        // Normalizar tipo_entrega (default: DELIVERY si no viene)
+        if (!isset($requestData['tipo_entrega'])) {
+            $requestData['tipo_entrega'] = $proforma->tipo_entrega ?? 'DELIVERY';
+        }
+
+        // Si viene fecha_programada, convertir a fecha_entrega_solicitada
+        if ($request->filled('fecha_programada') && !$request->filled('fecha_entrega_solicitada')) {
+            try {
+                $requestData['fecha_entrega_solicitada'] = \Carbon\Carbon::parse($request->fecha_programada)->format('Y-m-d');
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Formato de fecha_programada inválido',
+                ], 422);
+            }
+        }
+
+        // Si viene hora_inicio_preferida
+        if ($request->filled('hora_inicio_preferida') && !$request->filled('hora_entrega_solicitada')) {
+            $requestData['hora_entrega_solicitada'] = $request->hora_inicio_preferida;
+        }
+
+        // Si viene hora_fin_preferida
+        if ($request->filled('hora_fin_preferida') && !$request->filled('hora_entrega_solicitada_fin')) {
+            $requestData['hora_entrega_solicitada_fin'] = $request->hora_fin_preferida;
+        }
+
+        // Normalizar política de pago
+        if (!isset($requestData['politica_pago'])) {
+            $requestData['politica_pago'] = $proforma->politica_pago ?? 'CONTRA_ENTREGA';
+        }
+
+        $validator = Validator::make($requestData, [
+            'cliente_id' => 'sometimes|exists:clientes,id',
+            'productos' => 'sometimes|array|min:1',
+            'productos.*.producto_id' => 'required_with:productos|exists:productos,id',
+            'productos.*.cantidad' => 'required_with:productos|numeric|min:1',
+            'tipo_entrega' => 'sometimes|in:DELIVERY,PICKUP',
+            'politica_pago' => 'sometimes|string|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
+            'fecha_entrega_solicitada' => 'sometimes|date',
+            'hora_entrega_solicitada' => 'nullable|date_format:H:i',
+            'hora_entrega_solicitada_fin' => 'nullable|date_format:H:i',
+            'direccion_entrega_solicitada_id' => 'required_if:tipo_entrega,DELIVERY|nullable|exists:direcciones_cliente,id',
+            'observaciones' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos de validación incorrectos',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Obtener el cliente (puede ser el mismo o uno nuevo)
+            $clienteId = $requestData['cliente_id'] ?? $proforma->cliente_id;
+            $cliente = Cliente::findOrFail($clienteId);
+
+            // Validar política de pago si es CREDITO
+            if ($requestData['politica_pago'] === 'CREDITO') {
+                if (!$cliente->puede_tener_credito) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito",
+                    ], 422);
+                }
+
+                if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado",
+                    ], 422);
+                }
+            }
+
+            // Validación condicional de dirección según tipo_entrega
+            if ($requestData['tipo_entrega'] === 'DELIVERY') {
+                if (!$request->filled('direccion_entrega_solicitada_id')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La dirección de entrega es requerida para pedidos de tipo DELIVERY',
+                    ], 422);
+                }
+
+                // Validar que la dirección pertenece al cliente
+                $direccion = \App\Models\DireccionCliente::findOrFail($request->direccion_entrega_solicitada_id);
+                if ($direccion->cliente_id !== $clienteId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La dirección seleccionada no pertenece al cliente',
+                    ], 422);
+                }
+            }
+
+            // Servicio de precios con rangos
+            $precioRangoService = app(PrecioRangoProductoService::class);
+            $empresaId = $cliente->empresa_id ?? auth()->user()->empresa_id ?? 1;
+
+            // Calcular totales con los nuevos productos
+            $subtotal = 0;
+            $productosValidados = [];
+            $stockInsuficiente = [];
+
+            if ($request->filled('productos')) {
+                foreach ($requestData['productos'] as $item) {
+                    $producto = Producto::with('stock')->findOrFail($item['producto_id']);
+                    $cantidad = (int) $item['cantidad'];
+
+                    // Calcular precio con rangos
+                    $precioUnitario = $producto->obtenerPrecioConRango($cantidad, $empresaId);
+
+                    if (!$precioUnitario || $precioUnitario <= 0) {
+                        throw new \Exception("El producto {$producto->nombre} no tiene precio definido para esta cantidad");
+                    }
+
+                    // Verificar stock disponible
+                    // NOTA: Al actualizar, sumamos el stock de la proforma antigua
+                    $stockDisponible = $producto->stock()->sum('cantidad_disponible');
+                    // Agregar de vuelta la cantidad que ya estaba reservada en esta proforma
+                    $cantidadReservadaAnterior = $proforma->detalles()
+                        ->where('producto_id', $producto->id)
+                        ->sum('cantidad');
+                    $stockDisponible += $cantidadReservadaAnterior;
+
+                    if ($stockDisponible < $cantidad) {
+                        $stockInsuficiente[] = [
+                            'producto' => $producto->nombre,
+                            'requerido' => $cantidad,
+                            'disponible' => $stockDisponible,
+                            'faltante' => $cantidad - $stockDisponible,
+                        ];
+                    }
+
+                    $subtotalItem = $cantidad * $precioUnitario;
+                    $subtotal += $subtotalItem;
+
+                    $productosValidados[] = [
+                        'producto_id' => $producto->id,
+                        'cantidad' => $cantidad,
+                        'precio_unitario' => $precioUnitario,
+                        'subtotal' => $subtotalItem,
+                    ];
+                }
+
+                if (!empty($stockInsuficiente)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stock insuficiente para algunos productos',
+                        'productos_sin_stock' => $stockInsuficiente,
+                    ], 422);
+                }
+            } else {
+                // Si no vienen productos, mantener los existentes
+                foreach ($proforma->detalles as $detalle) {
+                    $subtotal += $detalle->subtotal;
+                    $productosValidados[] = [
+                        'producto_id' => $detalle->producto_id,
+                        'cantidad' => $detalle->cantidad,
+                        'precio_unitario' => $detalle->precio_unitario,
+                        'subtotal' => $detalle->subtotal,
+                    ];
+                }
+            }
+
+            // Calcular impuestos
+            $impuesto = $subtotal * 0.13;
+            $total = $subtotal;
+
+            // Actualizar campos de cabecera
+            $proforma->update([
+                'cliente_id' => $clienteId,
+                'tipo_entrega' => $requestData['tipo_entrega'],
+                'subtotal' => $subtotal,
+                'impuesto' => $impuesto,
+                'total' => $total,
+                'politica_pago' => $requestData['politica_pago'],
+                'observaciones' => $requestData['observaciones'] ?? $proforma->observaciones,
+            ]);
+
+            // Actualizar información de entrega solicitada
+            if ($request->filled('fecha_entrega_solicitada')) {
+                $proforma->fecha_entrega_solicitada = $requestData['fecha_entrega_solicitada'];
+            }
+            if ($request->filled('hora_entrega_solicitada')) {
+                $proforma->hora_entrega_solicitada = $requestData['hora_entrega_solicitada'];
+            }
+            if ($request->filled('hora_entrega_solicitada_fin')) {
+                $proforma->hora_entrega_solicitada_fin = $requestData['hora_entrega_solicitada_fin'];
+            }
+
+            // Actualizar dirección solo si es DELIVERY
+            if ($requestData['tipo_entrega'] === 'DELIVERY' && $request->filled('direccion_entrega_solicitada_id')) {
+                $proforma->direccion_entrega_solicitada_id = $requestData['direccion_entrega_solicitada_id'];
+            } elseif ($requestData['tipo_entrega'] === 'PICKUP') {
+                $proforma->direccion_entrega_solicitada_id = null;
+            }
+
+            $proforma->save();
+
+            // Actualizar detalles: eliminar viejos y crear nuevos (solo si vienen productos)
+            if ($request->filled('productos')) {
+                $proforma->detalles()->delete();
+                foreach ($productosValidados as $detalle) {
+                    $proforma->detalles()->create($detalle);
+                }
+
+                // Liberar y regenerar reservas de stock
+                $proforma->liberarReservas();
+                $reservaExitosa = $proforma->reservarStock();
+                if (!$reservaExitosa) {
+                    \Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
+                }
+            }
+
+            // Cargar relaciones para respuesta
+            $proforma->load(['detalles.producto', 'cliente', 'direccionSolicitada', 'direccionConfirmada']);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Proforma actualizada exitosamente',
+                'data' => [
+                    'proforma' => $proforma,
+                    'numero' => $proforma->numero,
+                    'total' => $proforma->total,
+                    'estado' => $proforma->estado,
+                    'politica_pago' => $proforma->politica_pago,
+                    'subtotal' => $subtotal,
+                    'impuesto' => $impuesto,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error actualizando proforma',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -1408,7 +1676,7 @@ class ApiProformaController extends Controller
                 'total' => $total,
                 'moneda_id' => 1, // Bolivianos por defecto
                 'observaciones' => $request->observaciones,
-                'usuario_creador_id' => $user->id,
+                'usuario_creador_id' => Auth::id(),  // ✅ Usuario autenticado que crea la proforma
             ]);
 
             // 6. Crear detalles de la proforma

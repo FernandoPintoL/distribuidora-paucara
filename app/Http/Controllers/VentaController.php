@@ -100,22 +100,45 @@ class VentaController extends Controller
                 'estado_logistico'    => $request->input('estado_logistico'), // ✅ NUEVO: Para filtro de estado logístico
             ];
 
-            // ✅ NUEVO: Si es API, filtrar por cliente autenticado
-            if ($isApiRequest && auth()->check()) {
+            // ✅ VERIFICACIÓN DE ROL: Si el usuario tiene rol "Cliente", filtrar solo sus ventas
+            if (auth()->check()) {
                 $user = auth()->user();
-                // Obtener el cliente asociado al usuario autenticado
-                if ($user->cliente_id) {
-                    $filtros['cliente_id'] = $user->cliente_id;
-                    Log::debug('📋 API Ventas - Filtrando por cliente autenticado', [
+
+                // Si el usuario tiene rol de Cliente, mostrar solo sus propias ventas
+                if ($user->hasRole(['Cliente', 'cliente'])) {
+                    // ✅ CORREGIDO: Usar $user->cliente->id porque la relación es HasOne (FK en clientes.user_id)
+                    $clienteId = $user->cliente?->id;
+
+                    if ($clienteId) {
+                        $filtros['cliente_id'] = $clienteId;
+                        Log::debug('📋 Ventas - Usuario con rol Cliente', [
+                            'user_id'    => $user->id,
+                            'cliente_id' => $clienteId,
+                            'mensaje'    => 'Filtrando solo ventas del cliente autenticado',
+                        ]);
+                    } else {
+                        Log::warning('⚠️ Ventas - Usuario con rol Cliente pero sin cliente asociado', [
+                            'user_id' => $user->id,
+                            'mensaje' => 'El usuario tiene rol Cliente pero no tiene un cliente relacionado',
+                        ]);
+                    }
+                }
+                // Si es API y no es cliente, también filtrar por cliente_id si existe
+                elseif ($isApiRequest && $user->cliente) {
+                    $clienteId = $user->cliente->id;
+                    $filtros['cliente_id'] = $clienteId;
+                    Log::debug('📋 API Ventas - Filtrando por cliente asociado al usuario', [
                         'user_id'    => $user->id,
-                        'cliente_id' => $user->cliente_id,
+                        'cliente_id' => $clienteId,
+                        'roles'      => $user->getRoleNames()->toArray(),
                     ]);
                 }
             }
 
             // Delegar al Service
+            // ✅ MODIFICADO: por defecto 20 registros por página para mejor UX en móvil
             $ventasPaginadas = $this->ventaService->listar(
-                perPage: $request->input('per_page', 15),
+                perPage: $request->input('per_page', 20),
                 filtros: array_filter($filtros) // Solo filtros no vacíos
             );
 
@@ -142,6 +165,8 @@ class VentaController extends Controller
                     'observaciones'              => $venta->observaciones,
                     'requiere_envio'             => $venta->requiere_envio,
                     'canal_origen'               => $venta->canal_origen,
+                    'politica_pago'              => $venta->politica_pago, // ✅ NUEVO
+                    'tipo_pago_id'               => $venta->tipo_pago_id,   // ✅ NUEVO
                     'estado'                     => $venta->estado,
                     'estado_logistico'           => $venta->estado_logistico,
                     'estado_logistico_id'        => $venta->estado_logistico_id,
@@ -195,20 +220,29 @@ class VentaController extends Controller
                         'nombre'    => $venta->estadoLogistica->nombre,
                         'categoria' => $venta->estadoLogistica->categoria,
                     ] : null,
+                    'tipoPago'                   => $venta->tipoPago ? [
+                        'id'     => $venta->tipoPago->id,
+                        'nombre' => $venta->tipoPago->nombre,
+                        'codigo' => $venta->tipoPago->codigo,
+                    ] : null,
                 ];
             });
 
             // ✅ NUEVO: Responder diferente según si es API o Web
             if ($isApiRequest) {
-                // API Response - Para Flutter app
+                // ✅ Calcular si hay más páginas
+                $hasMorePages = $ventasPaginadas->currentPage() < $ventasPaginadas->lastPage();
+
+                // API Response - Para Flutter app (con paginación)
                 return response()->json([
-                    'success'      => true,
-                    'message'      => 'Ventas obtenidas exitosamente',
-                    'data'         => $ventasPaginadas->items(),
-                    'total'        => $ventasPaginadas->total(),
-                    'per_page'     => $ventasPaginadas->perPage(),
-                    'current_page' => $ventasPaginadas->currentPage(),
-                    'last_page'    => $ventasPaginadas->lastPage(),
+                    'success'         => true,
+                    'message'         => 'Ventas obtenidas exitosamente',
+                    'data'            => $ventasPaginadas->items(),
+                    'total'           => $ventasPaginadas->total(),
+                    'per_page'        => $ventasPaginadas->perPage(),
+                    'current_page'    => $ventasPaginadas->currentPage(),
+                    'last_page'       => $ventasPaginadas->lastPage(),
+                    'has_more_pages'  => $hasMorePages, // ✅ Para que Flutter sepa si cargar más
                 ], 200);
             }
 
@@ -1087,9 +1121,11 @@ class VentaController extends Controller
         // Cliente: solo puede acceder a sus propias ventas
         // ✅ Verificar ambas variaciones de rol: 'Cliente' y 'cliente'
         if ($user->hasRole(['Cliente', 'cliente'])) {
-            $canAccess = $venta->cliente_id === $user->cliente_id;
+            // ✅ CORREGIDO: Usar $user->cliente->id porque la relación es HasOne (FK en clientes.user_id)
+            $userClienteId = $user->cliente?->id;
+            $canAccess = $userClienteId && $venta->cliente_id === $userClienteId;
             Log::debug('🔐 [userCanAccessVenta] Cliente check', [
-                'user_cliente_id'  => $user->cliente_id,
+                'user_cliente_id'  => $userClienteId,
                 'venta_cliente_id' => $venta->cliente_id,
                 'can_access'       => $canAccess,
             ]);

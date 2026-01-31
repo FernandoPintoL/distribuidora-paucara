@@ -268,6 +268,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::get('/proformas/estadisticas', [ApiProformaController::class, 'stats']);       // Estadísticas (debe ir antes de {proforma})
     Route::post('/proformas', [ApiProformaController::class, 'store']);                   // Crear
     Route::get('/proformas/{proforma}', [ApiProformaController::class, 'show']);          // Ver detalle
+    Route::put('/proformas/{proforma}', [ApiProformaController::class, 'update']);        // ✅ NUEVO: Actualizar proforma
 
     // Acciones sobre proforma
     Route::post('/proformas/{proforma}/aprobar', [ApiProformaController::class, 'aprobar']);
@@ -1046,6 +1047,7 @@ Route::middleware(['auth:sanctum'])->prefix('visitas')->group(function () {
     Route::post('/', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'store']);
     Route::get('/', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'index']);
     Route::get('/estadisticas', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'estadisticas']);
+    Route::get('/orden-del-dia', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'ordenDelDia']); // ✅ NUEVO
     Route::get('/validar-horario', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'validarHorario']);
     Route::get('/{visita}', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'show']);
 });

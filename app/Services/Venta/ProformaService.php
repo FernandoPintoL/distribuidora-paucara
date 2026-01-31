@@ -98,6 +98,12 @@ class ProformaService
      */
     public function crear(CrearProformaDTO $dto): ProformaResponseDTO
     {
+        // ✅ CERTIFICACIÓN: Usuario autenticado actual
+        $usuarioCreadorId = Auth::id();
+        if (!$usuarioCreadorId) {
+            throw new \Exception('Usuario autenticado requerido para crear proforma');
+        }
+
         // 1. Validar datos
         $dto->validarDetalles();
 
@@ -131,7 +137,7 @@ class ProformaService
         }
 
         // 3. Crear dentro de transacción
-        $proforma = $this->transaction(function () use ($dto, $almacenId) {
+        $proforma = $this->transaction(function () use ($dto, $almacenId, $usuarioCreadorId) {
             // 3.1 Crear Proforma
             // ✅ Obtener el estado PENDIENTE para la proforma inicial
             $estadoPendiente = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE')
@@ -141,7 +147,7 @@ class ProformaService
             $proforma = Proforma::create([
                 'numero'             => $this->generarNumero(),
                 'cliente_id'         => $dto->cliente_id,
-                'usuario_creador_id' => $dto->usuario_id ?? Auth::id(),
+                'usuario_creador_id' => $usuarioCreadorId,  // ✅ CERTIFICADO: Usuario autenticado que crea la proforma
                 'fecha'              => $dto->fecha,
                 'fecha_vencimiento'  => $dto->fecha_vencimiento,
                 'subtotal'           => $dto->subtotal,
@@ -151,8 +157,8 @@ class ProformaService
                 'observaciones'      => $dto->observaciones,
                 'canal_origen'       => $dto->canal ?? 'PRESENCIAL',
                 'politica_pago'      => $dto->politica_pago ?? 'CONTRA_ENTREGA',
-                'moneda_id'          => 1,  // ✅ Bolivianos por defecto
-                // Nota: almacen_id no se asigna en proforma, se usa del usuario al convertir a venta
+                'moneda_id'          => 1, // ✅ Bolivianos por defecto
+                                           // Nota: almacen_id no se asigna en proforma, se usa del usuario al convertir a venta
             ]);
 
             // 3.2 Crear detalles
@@ -176,7 +182,7 @@ class ProformaService
                 'proforma_id' => $proforma->id,
             ]);
 
-            if (!$proforma->reservarStock()) {
+            if (! $proforma->reservarStock()) {
                 throw new \Exception(
                     'No se pudo reservar el stock requerido para la proforma. Verifica disponibilidad.'
                 );
@@ -315,7 +321,7 @@ class ProformaService
 
             // ✅ SIMPLIFICADO: Aceptar tanto PENDIENTE como APROBADA
             // Esto permite convertir directamente sin paso de aprobación manual
-            if (!in_array($proforma->estado, ['PENDIENTE', 'APROBADA'])) {
+            if (! in_array($proforma->estado, ['PENDIENTE', 'APROBADA'])) {
                 Log::warning('⚠️ [ProformaService::convertirAVenta] Estado inválido', [
                     'proforma_id'     => $proformaId,
                     'estado_actual'   => $proforma->estado,
@@ -502,14 +508,14 @@ class ProformaService
             ]);
 
             Log::debug('🔍 [ProformaService::convertirAVenta] Punto crítico: verificando proforma..', [
-                'proforma_id' => $proformaId,
+                'proforma_id'                => $proformaId,
                 'proforma_estado_en_memoria' => $proforma->estado,
             ]);
 
             // ✅ IMPORTANTE: Consumir las reservas de stock (manejado por modelo Proforma)
             // Esto marca las reservas_proforma como consumidas
             Log::info('🔄 [ProformaService::convertirAVenta] Consumiendo reservas de stock', [
-                'proforma_id' => $proformaId,
+                'proforma_id'       => $proformaId,
                 'transaction_level' => DB::transactionLevel(),
             ]);
 
@@ -517,13 +523,13 @@ class ProformaService
                 $resultadoConsumir = $proforma->consumirReservas();
                 Log::info('✅ consumirReservas() retornó', [
                     'proforma_id' => $proformaId,
-                    'resultado' => $resultadoConsumir,
+                    'resultado'   => $resultadoConsumir,
                 ]);
             } catch (\Exception $e) {
                 Log::error('❌ consumirReservas() lanzó excepción', [
                     'proforma_id' => $proformaId,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
+                    'error'       => $e->getMessage(),
+                    'trace'       => $e->getTraceAsString(),
                 ]);
                 throw $e;
             }

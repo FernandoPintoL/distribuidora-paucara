@@ -27,11 +27,12 @@ class CrearProformaDTO extends BaseDTO
 
     /**
      * Factory: Crear desde Request
+     *
+     * IMPORTANTE: usuario_id siempre será el usuario autenticado (Auth::id())
+     * NO el user_id de la relación cliente, sino el ID del usuario logueado
      */
     public static function fromRequest(Request $request): self
     {
-        $user = auth()->user();
-
         return new self(
             cliente_id: (int) $request->input('cliente_id'),
             fecha: $request->input('fecha', today()->toDateString()),
@@ -44,7 +45,7 @@ class CrearProformaDTO extends BaseDTO
             observaciones: $request->input('observaciones'),
             canal: $request->input('canal', 'PRESENCIAL'),
             politica_pago: $request->input('politica_pago', 'CONTRA_ENTREGA'),
-            usuario_id: $user ? $user->id : null,
+            usuario_id: \Illuminate\Support\Facades\Auth::id(),
         );
     }
 

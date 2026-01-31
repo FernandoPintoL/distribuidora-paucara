@@ -171,32 +171,6 @@ class ClienteController extends Controller
                 return $cliente;
             });
 
-            // 🔍 DEBUG: Log para ver qué datos se están enviando
-            $cliente27 = $clientes->getCollection()->firstWhere('id', 27);
-            Log::info('🔍 DEBUG CLIENTES INDEX', [
-                'is_api_request' => $this->isApiRequest(),
-                'total_clientes' => $clientes->total(),
-                'cliente_27'     => $cliente27 ? [
-                    'id'                          => $cliente27->id,
-                    'nombre'                      => $cliente27->nombre,
-                    'puede_tener_credito'         => $cliente27->puede_tener_credito,
-                    'limite_credito'              => $cliente27->limite_credito,
-                    'cuentasPorCobrar_count'      => $cliente27->cuentasPorCobrar->count(),
-                    'cuentasPorCobrar_pendientes' => $cliente27->cuentasPorCobrar->where('estado', 'pendiente')->count(),
-                    'saldo_pendientes'            => $cliente27->cuentasPorCobrar->where('estado', 'pendiente')->sum('saldo_pendiente'),
-                    'cuentasPorCobrar_parciales'  => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->count(),
-                    'saldo_parciales'             => $cliente27->cuentasPorCobrar->where('estado', 'parcial')->sum('saldo_pendiente'),
-                    'cuentasPorCobrar_todos'      => $cliente27->cuentasPorCobrar->map(function ($c) {
-                        return [
-                            'id'              => $c->id,
-                            'estado'          => $c->estado,
-                            'saldo_pendiente' => $c->saldo_pendiente,
-                        ];
-                    })->toArray(),
-                    'credito_utilizado_accessor'  => $cliente27->credito_utilizado,
-                ] : null,
-            ]);
-
             // Preparar datos adicionales para web
             $additionalData = [];
             if (! $this->isApiRequest()) {
@@ -1150,12 +1124,12 @@ class ClienteController extends Controller
 
             // ✅ NUEVO: Registrar movimiento en caja
             // ✅ MEJORADO: Siempre incluir número de venta en observaciones
-            $venta = $cuenta->venta;
+            $venta       = $cuenta->venta;
             $numeroVenta = $venta ? $venta->numero : 'SIN_VENTA';
 
             // Construir observaciones: observaciones del usuario + número de venta
             $observacionesCaja = 'Pago de cuota - Venta #' . $numeroVenta;
-            if (!empty($validated['observaciones'])) {
+            if (! empty($validated['observaciones'])) {
                 $observacionesCaja = $validated['observaciones'] . "\n" . $observacionesCaja;
             }
 
@@ -1169,8 +1143,8 @@ class ClienteController extends Controller
                 'observaciones'     => $observacionesCaja,
                 'numero_documento'  => $numeroCaja,
                 'tipo_operacion_id' => $tipoOperacion->id,
-                'tipo_pago_id'      => $validated['tipo_pago_id'],  // ✅ NUEVO: Guardar tipo de pago para análisis
-                'pago_id'           => $pago->id,                    // ✅ NUEVO: Guardar ID de pago para rango
+                'tipo_pago_id'      => $validated['tipo_pago_id'], // ✅ NUEVO: Guardar tipo de pago para análisis
+                'pago_id'           => $pago->id,                  // ✅ NUEVO: Guardar ID de pago para rango
             ]);
 
             // ✅ NUEVO: Disparar evento para notificación WebSocket
