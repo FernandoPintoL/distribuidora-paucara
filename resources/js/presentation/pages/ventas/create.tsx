@@ -935,7 +935,30 @@ export default function VentaForm() {
                 console.log('Respuesta completa:', result);
                 console.groupEnd();
 
-                NotificationService.error(errorMessage);
+                // ✅ MEJORADO: Extraer mensajes específicos de los errores y mostrar en toast
+                if (result.errors && Object.keys(result.errors).length > 0) {
+                    // Si hay errores específicos por campo, mostrar el primero de cada campo
+                    let primemerError = null;
+                    Object.entries(result.errors).forEach(([campo, mensajes]: [string, any]) => {
+                        if (Array.isArray(mensajes) && mensajes.length > 0) {
+                            const mensaje = mensajes[0]; // Tomar el primer mensaje del campo
+                            if (!primemerError) {
+                                primemerError = mensaje;
+                            }
+                            // Log cada error
+                            console.log(`❌ ${campo}:`, mensaje);
+                        }
+                    });
+
+                    // Mostrar el primer error específico en el toast
+                    if (primemerError) {
+                        NotificationService.error(primemerError);
+                    } else {
+                        NotificationService.error(errorMessage);
+                    }
+                } else {
+                    NotificationService.error(errorMessage);
+                }
             }
         } catch (error) {
             console.error('❌ Error en la petición:', {

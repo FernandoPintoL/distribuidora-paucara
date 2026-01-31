@@ -271,7 +271,6 @@
             <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 190px; max-height: 90px; object-fit: contain;">
             @endif
             <div class="empresa-nombre">{{ $empresa->nombre_comercial }}</div>
-            <div class="empresa-info">NIT: {{ $empresa->nit }}</div>
             <div class="empresa-info">{{ $empresa->direccion }}</div>
             @if($empresa->telefono)
             <div class="empresa-info">Tel: {{ $empresa->telefono }}</div>

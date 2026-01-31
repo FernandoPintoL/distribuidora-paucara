@@ -247,9 +247,14 @@ class Cliente extends Model
      */
     public function calcularSaldoDisponible(): float
     {
-        // Si el cliente no está habilitado para crédito o no tiene límite, retorna 0
-        if (!$this->puede_tener_credito || $this->limite_credito <= 0) {
+        // Si el cliente no está habilitado para crédito, retorna 0
+        if (!$this->puede_tener_credito) {
             return 0.0;
+        }
+
+        // ✅ MEJORADO: Si el límite es null o 0, significa SIN LÍMITE
+        if ($this->limite_credito === null || $this->limite_credito <= 0) {
+            return PHP_FLOAT_MAX; // Retorna un límite muy alto (sin restricción práctica)
         }
 
         // Sumar el saldo pendiente de todas las cuentas pendientes del cliente
@@ -271,28 +276,39 @@ class Cliente extends Model
     {
         $errores = [];
 
-        // Validar que el cliente esté habilitado para crédito
-        if (!$this->puede_tener_credito) {
-            $errores[] = "Cliente no está habilitado para crédito.";
+        // ✅ MEJORADO: Validar que el cliente esté activo PRIMERO
+        if (!$this->activo) {
+            $errores[] = "El cliente '{$this->nombre}' está inactivo. Debe estar activo para realizar compras a crédito.";
+            return [
+                'valido' => false,
+                'errores' => $errores,
+                'saldo_disponible' => 0.0,
+            ];
         }
 
-        // Validar que el cliente esté activo
-        if (!$this->activo) {
-            $errores[] = "Cliente inactivo.";
+        // ✅ MEJORADO: Validar que el cliente esté habilitado para crédito
+        if (!$this->puede_tener_credito) {
+            $errores[] = "El cliente '{$this->nombre}' no está habilitado para compras a crédito. Contacte a administración para habilitar esta opción.";
+            return [
+                'valido' => false,
+                'errores' => $errores,
+                'saldo_disponible' => 0.0,
+            ];
         }
 
         // Calcular saldo disponible
         $saldoDisponible = $this->calcularSaldoDisponible();
 
-        // Validar que el monto no exceda el saldo disponible
-        if ($monto > $saldoDisponible) {
-            $errores[] = "Monto excede saldo disponible. Disponible: Bs " . number_format($saldoDisponible, 2);
+        // ✅ MEJORADO: Validar que el monto no exceda el saldo disponible
+        // (excepto si el límite es sin restricción, donde saldoDisponible es PHP_FLOAT_MAX)
+        if ($saldoDisponible !== PHP_FLOAT_MAX && $monto > $saldoDisponible) {
+            $errores[] = "El monto de la compra (Bs " . number_format($monto, 2) . ") excede el saldo disponible (Bs " . number_format($saldoDisponible, 2) . "). Límite de crédito: Bs " . number_format($this->limite_credito, 2);
         }
 
         return [
             'valido' => empty($errores),
             'errores' => $errores,
-            'saldo_disponible' => $saldoDisponible,
+            'saldo_disponible' => $saldoDisponible === PHP_FLOAT_MAX ? $this->limite_credito ?? 0 : $saldoDisponible,
         ];
     }
 
