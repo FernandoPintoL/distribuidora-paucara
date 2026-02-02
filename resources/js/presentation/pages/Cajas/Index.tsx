@@ -137,15 +137,6 @@ export default function Index(props: CajasIndexProps) {
         );
     };
 
-    // ✅ NUEVO: Calcular estadísticas de EFECTIVO REAL (NO incluir ventas a crédito)
-    // Entradas = Ventas en Efectivo + Pagos de Crédito
-    // Salidas = Gastos
-    const stats = {
-        totalMovimientos: movimientosHoy?.length || 0,
-        ingresos: (props.efectivoEsperado?.ventas_efectivo || 0) + (props.efectivoEsperado?.pagos_credito || 0),
-        egresos: props.efectivoEsperado?.gastos || 0,
-    };
-
     return (
         <AppLayout>
             <Head title={titulo} />
@@ -176,56 +167,6 @@ export default function Index(props: CajasIndexProps) {
                         cierresPendientes={cierresPendientes}
                         isConsolidating={isConsolidating}
                     />
-
-                    {/* ✅ NUEVO: Cards de estadísticas rápidas */}
-                    {/* {cajaAbiertaHoy && movimientosHoy && movimientosHoy.length > 0 && (
-                        <>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                Total de Movimientos
-                                            </p>
-                                            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-                                                {stats.totalMovimientos}
-                                            </p>
-                                        </div>
-                                        <div className="text-4xl">📊</div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                Total Entradas
-                                            </p>
-                                            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                                                +{stats.ingresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </p>
-                                        </div>
-                                        <div className="text-4xl">➕</div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                Total Salidas
-                                            </p>
-                                            <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-                                                -{stats.egresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </p>
-                                        </div>
-                                        <div className="text-4xl">➖</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )} */}
 
                     {/* Tabs: Movimientos del Día vs Historial de Cajas */}
                     <Tabs defaultValue="movimientos" className="space-y-6">
@@ -275,6 +216,9 @@ export default function Index(props: CajasIndexProps) {
                                 ventasPorEstado={props.ventasPorEstado}
                                 pagosPorTipoPago={props.pagosPorTipoPago}
                                 gastosPorTipoPago={props.gastosPorTipoPago}
+                                ventasTotales={props.ventasTotales}
+                                ventasAnuladas={props.ventasAnuladas}
+                                ventasCredito={props.ventasCredito}
                             />
                         </TabsContent>
 

@@ -6,6 +6,7 @@ import compras from './compras'
 import precios from './precios'
 import productos from './productos'
 import cliente from './cliente'
+import pago from './pago'
 import creditos from './creditos'
 import geocoding from './geocoding'
 import entregas from './entregas'
@@ -180,6 +181,7 @@ compras,
 precios,
 productos,
 cliente,
+pago,
 creditos,
 geocoding,
 entregas,

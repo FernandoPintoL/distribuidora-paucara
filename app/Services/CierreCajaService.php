@@ -40,11 +40,24 @@ class CierreCajaService
         $movimientosVenta = $this->obtenerMovimientosVenta($aperturaCaja);
 
         // 3️⃣ Calcular totales básicos
-        // ✅ TotalIngresos: Ventas aprobadas (sin crédito) + Pagos de crédito realizados
+        // ✅ TotalIngresos: Ventas aprobadas (sin crédito) + Pagos de crédito REGISTRADOS
         $ventasAprobadasEfectivo = $this->calcularVentasAprobadasEfectivo($aperturaCaja);
-        $pagosCreditoTotales     = $movimientos->where('tipoOperacion.nombre', 'Pago de Crédito')->sum('monto');
-        $totalIngresos           = $ventasAprobadasEfectivo + $pagosCreditoTotales;
-        $totalEgresos            = abs($movimientos->where('monto', '<', 0)->sum('monto'));
+        $pagosCreditoTotales     = $movimientos
+            ->where('tipoOperacion.codigo', 'PAGO')
+            ->filter(function ($mov) {
+                // ✅ NUEVO: Solo contar pagos REGISTRADOS (excluir ANULADOS)
+                return $mov->pago?->estado === 'REGISTRADO';
+            })
+            ->sum('monto');
+        $totalIngresos = $ventasAprobadasEfectivo + $pagosCreditoTotales;
+        // ✅ MEJORADO: Excluir movimientos de pagos ANULADOS (solo contar egreso normal sin reversiones)
+        $totalEgresos = abs($movimientos
+                ->where('monto', '<', 0)
+                ->reject(function ($mov) {
+                    // Excluir movimientos de pagos con estado ANULADO
+                    return $mov->pago?->estado === 'ANULADO';
+                })
+                ->sum('monto'));
 
         // 4️⃣ Agrupar movimientos por tipo de operación
         $movimientosAgrupados = $this->agruparPorTipoOperacion($movimientos);
@@ -80,9 +93,21 @@ class CierreCajaService
         $rangoCreditos = $this->calcularRangoCreditos($movimientosVenta);
 
         // 1️⃣4️⃣ Rangos de pagos
-        $pagosCreditos      = $movimientos->where('tipoOperacion.nombre', 'Pago de Crédito')->count();
-        $montoPagosCreditos = $movimientos->where('tipoOperacion.nombre', 'Pago de Crédito')->sum('monto');
-        $rangoPagos         = $this->calcularRangoPagos($movimientos);
+        $pagosCreditos = $movimientos
+            ->where('tipoOperacion.codigo', 'PAGO')
+            ->filter(function ($mov) {
+                // ✅ NUEVO: Solo contar pagos REGISTRADOS (excluir ANULADOS)
+                return $mov->pago?->estado === 'REGISTRADO';
+            })
+            ->count();
+        $montoPagosCreditos = $movimientos
+            ->where('tipoOperacion.codigo', 'PAGO')
+            ->filter(function ($mov) {
+                // ✅ NUEVO: Solo contar pagos REGISTRADOS (excluir ANULADOS)
+                return $mov->pago?->estado === 'REGISTRADO';
+            })
+            ->sum('monto');
+        $rangoPagos = $this->calcularRangoPagos($movimientos);
 
         // 1️⃣5️⃣ SUMATORIA TOTAL DE VENTAS APROBADAS (todos los tipos de pago)
         $sumatorialVentas = $this->calcularVentasAprobadasTotal($aperturaCaja);
@@ -95,7 +120,7 @@ class CierreCajaService
 
         // 1️⃣6️⃣ SUMATORIA TOTAL DE GASTOS (sin agrupación)
         $sumatorialGastos = abs($movimientos
-                ->where('tipoOperacion.nombre', 'Gastos')
+                ->where('tipoOperacion.codigo', 'GASTOS')
                 ->sum('monto'));
 
         // 1️⃣7️⃣ SUMATORIA DE VENTAS ANULADAS
@@ -103,36 +128,36 @@ class CierreCajaService
 
         // 🎯 Retornar todos los datos calculados
         return [
-            'apertura'                 => $aperturaCaja,
-            'cierre'                   => $aperturaCaja->cierre,
-            'movimientos'              => $movimientos,
-            'movimientosAgrupados'     => $movimientosAgrupados,
-            'ventasPorTipoPago'        => $ventasPorTipoPago,
+            'apertura'                  => $aperturaCaja,
+            'cierre'                    => $aperturaCaja->cierre,
+            'movimientos'               => $movimientos,
+            'movimientosAgrupados'      => $movimientosAgrupados,
+            'ventasPorTipoPago'         => $ventasPorTipoPago,
             'ventasPorTipoPagoCompleto' => $ventasPorTipoPagoCompleto, // ✅ Incluye ceros
-            'movimientosPorTipoPago'   => $movimientosPorTipoPago,
-            'pagosCreditoPorTipoPago'  => $pagosCreditoPorTipoPago,
-            'gastosPorTipoPago'        => $gastosPorTipoPago,
-            'ventasPorEstado'          => $ventasPorEstado,
-            'efectivoEsperado'         => $efectivoEsperado,
-            'totalIngresos'            => $totalIngresos,
-            'totalEgresos'             => $totalEgresos,
-            'primeraVenta'             => $rangoFechas['primeraVenta'],
-            'ultimaVenta'              => $rangoFechas['ultimaVenta'],
-            'primerMovimiento'         => $rangoFechas['primerMovimiento'],
-            'ultimoMovimiento'         => $rangoFechas['ultimoMovimiento'],
-            'rangoVentasIds'           => $rangoVentasIds,
-            'rangoCreditos'            => $rangoCreditos,
-            'pagosCreditos'            => $pagosCreditos,
-            'montoPagosCreditos'       => $montoPagosCreditos,
-            'rangoPagos'               => $rangoPagos,
+            'movimientosPorTipoPago'    => $movimientosPorTipoPago,
+            'pagosCreditoPorTipoPago'   => $pagosCreditoPorTipoPago,
+            'gastosPorTipoPago'         => $gastosPorTipoPago,
+            'ventasPorEstado'           => $ventasPorEstado,
+            'efectivoEsperado'          => $efectivoEsperado,
+            'totalIngresos'             => $totalIngresos,
+            'totalEgresos'              => $totalEgresos,
+            'primeraVenta'              => $rangoFechas['primeraVenta'],
+            'ultimaVenta'               => $rangoFechas['ultimaVenta'],
+            'primerMovimiento'          => $rangoFechas['primerMovimiento'],
+            'ultimoMovimiento'          => $rangoFechas['ultimoMovimiento'],
+            'rangoVentasIds'            => $rangoVentasIds,
+            'rangoCreditos'             => $rangoCreditos,
+            'pagosCreditos'             => $pagosCreditos,
+            'montoPagosCreditos'        => $montoPagosCreditos,
+            'rangoPagos'                => $rangoPagos,
             // 💰 SUMATORIAS TOTALES (sin agrupación)
-            'sumatorialVentas'                    => $sumatorialVentas,
-            'ventasTotalAprobadas'                => $sumatorialVentas, // ✅ Alias explícito
-            'sumatorialVentasEfectivo'            => $sumatorialVentasEfectivo,
-            'sumatorialVentasCredito'             => $sumatorialVentasCredito,
-            'sumatorialGastos'                    => $sumatorialGastos,
-            'sumatorialVentasAnuladas'            => $sumatorialVentasAnuladas,
-            'ventasTotales'                       => $sumatorialVentasEfectivo + $sumatorialVentasCredito,
+            'sumatorialVentas'          => $sumatorialVentas,
+            'ventasTotalAprobadas'      => $sumatorialVentas, // ✅ Alias explícito
+            'sumatorialVentasEfectivo'  => $sumatorialVentasEfectivo,
+            'sumatorialVentasCredito'   => $sumatorialVentasCredito,
+            'sumatorialGastos'          => $sumatorialGastos,
+            'sumatorialVentasAnuladas'  => $sumatorialVentasAnuladas,
+            'ventasTotales'             => $sumatorialVentasEfectivo + $sumatorialVentasCredito,
         ];
     }
 
@@ -146,7 +171,7 @@ class CierreCajaService
                 $aperturaCaja->fecha,
                 $this->fechaFin,
             ])
-            ->with(['tipoOperacion', 'comprobantes', 'tipoPago', 'venta.estadoDocumento'])
+            ->with(['tipoOperacion', 'comprobantes', 'tipoPago', 'venta.estadoDocumento', 'pago']) // ✅ NUEVO: Cargar relación pago
             ->orderBy('fecha', 'asc')
             ->get();
     }
@@ -156,7 +181,7 @@ class CierreCajaService
      */
     private function obtenerMovimientosVenta(AperturaCaja $aperturaCaja)
     {
-        $tipoOperacionVentaId = TipoOperacionCaja::where('nombre', 'Venta')->first()?->id;
+        $tipoOperacionVentaId = TipoOperacionCaja::where('codigo', 'VENTA')->first()?->id;
 
         if (! $tipoOperacionVentaId) {
             return collect();
@@ -202,8 +227,8 @@ class CierreCajaService
                 }
 
                 // ✅ Incluye tanto VENTA como CREDITO
-                $tipoOp = $movimiento->tipoOperacion?->nombre;
-                return in_array($tipoOp, ['Venta', 'Crédito Otorgado']);
+                $tipoOp = $movimiento->tipoOperacion?->codigo;
+                return in_array($tipoOp, ['VENTA', 'CREDITO']);
             })
             ->groupBy(function ($movimiento) {
                 return $movimiento->tipoPago?->nombre ?? 'Sin tipo de pago';
@@ -220,18 +245,26 @@ class CierreCajaService
     }
 
     /**
-     * Calcular movimientos por tipo de pago (SOLO VENTAS APROBADAS + PAGOS + GASTOS)
+     * Calcular movimientos por tipo de pago (SOLO VENTAS APROBADAS + PAGOS REGISTRADOS + GASTOS)
      */
     private function calcularMovimientosPorTipoPago($movimientos)
     {
         return $movimientos->filter(function ($movimiento) {
+            // ✅ MEJORADO: Excluir movimientos de pagos ANULADOS (reversiones automáticas)
+            if ($movimiento->pago?->estado === 'ANULADO') {
+                return false;
+            }
             // ✅ Para ventas: solo aprobadas
-            // ✅ Para otros movimientos (Pagos, Gastos): todos
-            if ($movimiento->tipoOperacion->nombre === 'Venta') {
+            if ($movimiento->tipoOperacion->codigo === 'VENTA') {
                 $estado = $movimiento->venta?->estadoDocumento?->nombre;
                 return $estado === 'Aprobado';
             }
-            return true; // Pagos, Gastos, etc. se incluyen todos
+            // ✅ Para pagos: solo REGISTRADOS (excluir ANULADOS)
+            if ($movimiento->tipoOperacion->codigo === 'PAGO') {
+                return $movimiento->pago?->estado === 'REGISTRADO';
+            }
+            // ✅ Para otros movimientos (Gastos, etc): todos se incluyen
+            return true;
         })->groupBy(function ($movimiento) {
             return $movimiento->tipoPago?->nombre ?? 'Sin tipo de pago';
         })->map(function ($movimientosGrupo) {
@@ -248,7 +281,11 @@ class CierreCajaService
     private function calcularPagosCreditoPorTipoPago($movimientos)
     {
         return $movimientos
-            ->where('tipoOperacion.nombre', 'Pago de Crédito')
+            ->where('tipoOperacion.codigo', 'PAGO')
+            ->filter(function ($movimiento) {
+                // ✅ NUEVO: Solo contar pagos REGISTRADOS (excluir ANULADOS)
+                return $movimiento->pago?->estado === 'REGISTRADO';
+            })
             ->groupBy(function ($movimiento) {
                 return $movimiento->tipoPago?->nombre ?? 'Sin tipo de pago';
             })->map(function ($movimientosGrupo) {
@@ -418,8 +455,14 @@ class CierreCajaService
     private function calcularRangoPagos($movimientos)
     {
         $pagosMovimientos = $movimientos->filter(function ($mov) {
-            $nombre = $mov->tipoOperacion->nombre ?? '';
-            return stripos($nombre, 'Pago') !== false;
+            // ✅ MEJORADO: Usar codigo en lugar de nombre para mayor seguridad
+            $esPago = $mov->tipoOperacion->codigo === 'PAGO';
+
+            // ✅ NUEVO: Solo contar pagos REGISTRADOS (excluir ANULADOS)
+            if ($esPago) {
+                return $mov->pago?->estado === 'REGISTRADO';
+            }
+            return false;
         });
 
         $pagosIds = $pagosMovimientos
@@ -447,7 +490,7 @@ class CierreCajaService
             ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
             ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
             ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO']) // ← INCLUYE AMBOS
-            ->where('estados_documento.nombre', 'Aprobado') // ← SOLO APROBADAS
+            ->where('estados_documento.nombre', 'Aprobado')               // ← SOLO APROBADAS
             ->whereBetween('movimientos_caja.fecha', [
                 $aperturaCaja->fecha,
                 $this->fechaFin,
@@ -467,9 +510,9 @@ class CierreCajaService
             ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
             ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
             ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-            ->where('tipo_operacion_caja.codigo', 'VENTA')    // ← SOLO VENTA DIRECTA
-            ->where('estados_documento.nombre', 'Aprobado')   // ← SOLO APROBADAS
-            ->where('tipos_pago.nombre', 'Efectivo')          // ← SOLO EFECTIVO
+            ->where('tipo_operacion_caja.codigo', 'VENTA')  // ← SOLO VENTA DIRECTA
+            ->where('estados_documento.nombre', 'Aprobado') // ← SOLO APROBADAS
+            ->where('tipos_pago.nombre', 'Efectivo')        // ← SOLO EFECTIVO
             ->whereBetween('movimientos_caja.fecha', [
                 $aperturaCaja->fecha,
                 $this->fechaFin,
@@ -489,8 +532,8 @@ class CierreCajaService
                 ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-                ->where('tipo_operacion_caja.codigo', 'CREDITO')  // ← BUSCA CREDITO, NO VENTA
-                ->where('estados_documento.nombre', 'Aprobado')   // ← SOLO APROBADAS
+                ->where('tipo_operacion_caja.codigo', 'CREDITO') // ← BUSCA CREDITO, NO VENTA
+                ->where('estados_documento.nombre', 'Aprobado')  // ← SOLO APROBADAS
                 ->whereBetween('movimientos_caja.fecha', [
                     $aperturaCaja->fecha,
                     $this->fechaFin,
@@ -525,7 +568,7 @@ class CierreCajaService
             ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
             ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
             ->where('tipo_operacion_caja.codigo', 'VENTA')
-            ->where('estados_documento.nombre', 'Anulado') // ← SOLO ANULADAS
+            ->where('estados_documento.codigo', 'ANULADO')
             ->whereBetween('movimientos_caja.fecha', [
                 $aperturaCaja->fecha,
                 $this->fechaFin,
@@ -566,7 +609,7 @@ class CierreCajaService
 
             Log::info('✅ [calcularVentasPorTipoPagoConTodos] Todos los tipos de pago:', [
                 'total_tipos' => count($resultado),
-                'datos' => $resultado,
+                'datos'       => $resultado,
             ]);
 
             return $resultado;

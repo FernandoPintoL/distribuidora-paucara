@@ -515,6 +515,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('{cliente}/cuentas-vencidas', [ClienteController::class, 'obtenerCuentasVencidas'])->name('api.cliente.cuentas-vencidas');
         Route::get('{cliente}/pagos', [ClienteController::class, 'obtenerHistorialPagos'])->name('api.cliente.pagos');
         Route::post('{cliente}/registrar-pago', [ClienteController::class, 'registrarPagoApi'])->name('api.cliente.registrar-pago');
+        Route::post('pagos/{pago}/anular', [ClienteController::class, 'anularPago'])->name('api.pago.anular');
         Route::post('{cliente}/ajustar-limite', [ClienteController::class, 'ajustarLimiteCredito'])->name('api.cliente.ajustar-limite');
 
         // ✅ FASE 4: Rutas para impresión de reportes de crédito

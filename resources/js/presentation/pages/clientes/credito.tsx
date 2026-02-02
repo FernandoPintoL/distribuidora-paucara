@@ -65,6 +65,9 @@ export default function CreditoPage() {
     const [ordenarPor, setOrdenarPor] = useState<'vencimiento' | 'monto' | 'dias_vencido'>('vencimiento');
     const [buscarActivado, setBuscarActivado] = useState(true);
     const [filtrosVisibles, setFiltrosVisibles] = useState(false);
+    const [pagoAAnular, setPagoAAnular] = useState<{ id: number; monto: number } | null>(null);
+    const [motivoAnulacion, setMotivoAnulacion] = useState('');
+    const [anulando, setAnulando] = useState(false);
 
     useEffect(() => {
         cargarDetallesCredito();
@@ -90,6 +93,40 @@ export default function CreditoPage() {
             console.error('Error cargando detalles de crédito:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAnularPago = async () => {
+        if (!pagoAAnular) return;
+
+        try {
+            setAnulando(true);
+            const response = await fetch(`/api/clientes/pagos/${pagoAAnular.id}/anular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    motivo: motivoAnulacion,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                NotificationService.success(`Pago de Bs ${formatCurrency(pagoAAnular.monto)} anulado exitosamente`);
+                setPagoAAnular(null);
+                setMotivoAnulacion('');
+                await cargarDetallesCredito();
+            } else {
+                NotificationService.error(data.message || 'Error al anular el pago');
+            }
+        } catch (error) {
+            console.error('Error anulando pago:', error);
+            NotificationService.error('Error al anular el pago');
+        } finally {
+            setAnulando(false);
         }
     };
 
@@ -650,6 +687,8 @@ export default function CreditoPage() {
                                                                                     <th className="px-3 py-2 text-right text-gray-900 dark:text-white">Monto</th>
                                                                                     <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Tipo Pago</th>
                                                                                     <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Recibo</th>
+                                                                                    <th className="px-3 py-2 text-left text-gray-900 dark:text-white">N° Pago</th>
+                                                                                    <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Estado</th>
                                                                                     <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Registrado Por</th>
                                                                                     <th className="px-3 py-2 text-left text-gray-900 dark:text-white">Observaciones</th>
                                                                                     <th className="px-3 py-2 text-center text-gray-900 dark:text-white">Acciones</th>
@@ -664,14 +703,31 @@ export default function CreditoPage() {
                                                                                             <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{pago.tipo_pago || 'N/A'}</Badge>
                                                                                         </td>
                                                                                         <td className="px-3 py-2 font-mono text-xs">{pago.numero_recibo || '-'}</td>
+                                                                                        <td className="px-3 py-2 font-mono text-xs text-purple-600 dark:text-purple-400">{pago.numero_pago || '-'}</td>
+                                                                                        <td className="px-3 py-2">
+                                                                                            <Badge className={pago.estado === 'REGISTRADO'
+                                                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                                                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                                                            }>
+                                                                                                {pago.estado === 'REGISTRADO' ? '✅ Registrado' : '❌ Anulado'}
+                                                                                            </Badge>
+                                                                                        </td>
                                                                                         <td className="px-3 py-2">{pago.usuario || 'Sistema'}</td>
                                                                                         <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400">{pago.observaciones || '-'}</td>
-                                                                                        <td className="px-3 py-2 text-center">
+                                                                                        <td className="px-3 py-2 text-center flex gap-2 justify-center">
                                                                                             <ImprimirPagoButton
                                                                                                 clienteId={Number(clienteId)}
                                                                                                 pagoId={pago.id}
                                                                                                 montoFormato={formatCurrency(pago.monto)}
                                                                                             />
+                                                                                            <Button
+                                                                                                variant="destructive"
+                                                                                                size="sm"
+                                                                                                onClick={() => setPagoAAnular({ id: pago.id, monto: pago.monto })}
+                                                                                                title="Anular este pago"
+                                                                                            >
+                                                                                                ❌ Anular
+                                                                                            </Button>
                                                                                         </td>
                                                                                     </tr>
                                                                                 ))}
@@ -790,6 +846,65 @@ export default function CreditoPage() {
                     />
                 );
             })()}
+
+            {/* Modal de confirmación para anular pago */}
+            {pagoAAnular && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-red-600">
+                                ⚠️ Anular Pago
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                <p className="text-sm text-red-800 dark:text-red-300">
+                                    ¿Está seguro de que desea anular este pago de <strong>{formatCurrency(pagoAAnular.monto)}</strong>?
+                                </p>
+                                <p className="text-xs text-red-700 dark:text-red-400 mt-2">
+                                    Esta acción no puede deshacerse. Se revertirán todos los movimientos asociados.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-900 dark:text-white">
+                                    Motivo de anulación (opcional)
+                                </label>
+                                <textarea
+                                    value={motivoAnulacion}
+                                    onChange={(e) => setMotivoAnulacion(e.target.value)}
+                                    placeholder="Ej: Pago registrado erróneamente, cliente no confirma..."
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none"
+                                    rows={3}
+                                    disabled={anulando}
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setPagoAAnular(null);
+                                        setMotivoAnulacion('');
+                                    }}
+                                    disabled={anulando}
+                                    className="flex-1"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleAnularPago}
+                                    disabled={anulando}
+                                    className="flex-1"
+                                >
+                                    {anulando ? '⏳ Anulando...' : '❌ Anular Pago'}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </AppLayout>
     );
 }

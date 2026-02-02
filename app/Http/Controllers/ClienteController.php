@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -861,7 +862,8 @@ class ClienteController extends Controller
                 'venta:id,numero,fecha,total,estado_pago',
                 'pagos' => function ($q) {
                     $q->with(['tipoPago:id,nombre', 'usuario:id,name'])
-                        ->orderBy('fecha_pago');
+                        ->orderBy('fecha_pago')
+                        ->select('id', 'cuenta_por_cobrar_id', 'tipo_pago_id', 'monto', 'fecha_pago', 'numero_recibo', 'numero_pago', 'usuario_id', 'observaciones', 'estado'); // ✅ NUEVO: incluir estado y numero_pago
                 },
             ])
             ->orderByDesc('fecha_vencimiento')
@@ -891,7 +893,7 @@ class ClienteController extends Controller
             ])
             ->orderByDesc('fecha_pago')
             ->limit(10)
-            ->get(['id', 'venta_id', 'tipo_pago_id', 'monto', 'fecha_pago', 'numero_recibo', 'usuario_id', 'observaciones']);
+            ->get(['id', 'venta_id', 'tipo_pago_id', 'monto', 'fecha_pago', 'numero_recibo', 'numero_pago', 'usuario_id', 'observaciones', 'estado']); // ✅ NUEVO: incluir estado y numero_pago
 
         // Obtener auditoría de crédito
         $auditoria = \App\Models\ClienteAudit::where('cliente_id', $cliente->id)
@@ -964,8 +966,10 @@ class ClienteController extends Controller
                     'fecha_pago'    => $p->fecha_pago->format('Y-m-d H:i:s'),
                     'tipo_pago'     => $p->tipoPago?->nombre,
                     'numero_recibo' => $p->numero_recibo,
+                    'numero_pago'   => $p->numero_pago, // ✅ NUEVO: incluir número único de pago
                     'usuario'       => $p->usuario?->name,
                     'observaciones' => $p->observaciones,
+                    'estado'        => $p->estado, // ✅ NUEVO: incluir estado (REGISTRADO o ANULADO)
                 ]),
             ]),
             'historial_pagos'    => $historialPagos->map(fn($p) => [
@@ -977,8 +981,10 @@ class ClienteController extends Controller
                 'fecha_pago'    => $p->fecha_pago->format('Y-m-d H:i:s'),
                 'tipo_pago'     => $p->tipoPago?->nombre,
                 'numero_recibo' => $p->numero_recibo,
+                'numero_pago'   => $p->numero_pago, // ✅ NUEVO: incluir número único de pago
                 'usuario'       => $p->usuario?->name,
                 'observaciones' => $p->observaciones,
+                'estado'        => $p->estado, // ✅ NUEVO: incluir estado (REGISTRADO o ANULADO)
             ]),
             'auditoria'          => $auditoria->map(fn($a) => [
                 'id'          => $a->id,
@@ -1087,6 +1093,7 @@ class ClienteController extends Controller
 
             // ✅ Crear el pago con ambos campos de fecha y moneda
             $pago = \App\Models\Pago::create([
+                'numero_pago'          => \App\Models\Pago::generarNumeroPago(), // ✅ NUEVO: Número único de pago
                 'cuenta_por_cobrar_id' => $validated['cuenta_por_cobrar_id'],
                 'venta_id'             => $cuenta->venta_id,
                 'tipo_pago_id'         => $validated['tipo_pago_id'],
@@ -1099,6 +1106,7 @@ class ClienteController extends Controller
                 'observaciones'        => $validated['observaciones'] ?? null,
                 'usuario_id'           => Auth::id(),
                 'moneda_id'            => $validated['moneda_id'] ?? 1, // ✅ Por defecto: BOB (id=1)
+                'estado'               => 'REGISTRADO', // ✅ Estado inicial
             ]);
 
             // Actualizar el saldo pendiente de la cuenta
@@ -1133,7 +1141,11 @@ class ClienteController extends Controller
                 $observacionesCaja = $validated['observaciones'] . "\n" . $observacionesCaja;
             }
 
-            $numeroCaja = $validated['numero_recibo'] ?? 'PAGO-' . $pago->id;
+            // ✅ MEJORADO: Usar numero_pago como número_documento en la caja (respeta el número único de pago)
+            // Mantener numero_recibo en observaciones si existe
+            if (! empty($validated['numero_recibo'])) {
+                $observacionesCaja .= "\nRecibo: {$validated['numero_recibo']}";
+            }
 
             \App\Models\MovimientoCaja::create([
                 'caja_id'           => $aperturaCaja->caja_id,
@@ -1141,7 +1153,7 @@ class ClienteController extends Controller
                 'fecha'             => now(),
                 'monto'             => $validated['monto'],
                 'observaciones'     => $observacionesCaja,
-                'numero_documento'  => $numeroCaja,
+                'numero_documento'  => $pago->numero_pago, // ✅ MEJORADO: Usar numero_pago único del pago
                 'tipo_operacion_id' => $tipoOperacion->id,
                 'tipo_pago_id'      => $validated['tipo_pago_id'], // ✅ NUEVO: Guardar tipo de pago para análisis
                 'pago_id'           => $pago->id,                  // ✅ NUEVO: Guardar ID de pago para rango
@@ -1151,7 +1163,15 @@ class ClienteController extends Controller
             event(new CreditoPagoRegistrado($pago, $cuenta->fresh()));
 
             return ApiResponse::success([
-                'pago'   => $pago,
+                'pago'   => [
+                    'id'            => $pago->id,
+                    'numero_pago'   => $pago->numero_pago, // ✅ NUEVO: Número de pago
+                    'monto'         => $pago->monto,
+                    'fecha_pago'    => $pago->fecha_pago,
+                    'tipo_pago'     => $pago->tipoPago?->nombre,
+                    'numero_recibo' => $pago->numero_recibo,
+                    'estado'        => $pago->estado,
+                ],
                 'cuenta' => [
                     'id'              => $cuenta->id,
                     'saldo_anterior'  => $cuenta->getOriginal('saldo_pendiente'),
@@ -1167,6 +1187,145 @@ class ClienteController extends Controller
                 'trace'      => $e->getTraceAsString(),
             ]);
             return ApiResponse::error('Error al registrar el pago: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Anula un pago registrado y revierte todos sus movimientos
+     *
+     * Revierte:
+     * - Saldo pendiente de la cuenta por cobrar
+     * - Estado de la cuenta (vuelve a PARCIAL si estaba PAGADO)
+     * - Estado de pago en la venta (vuelve a PARCIAL si estaba PAGADO)
+     * - Crea movimiento de caja inverso (ANULACION)
+     *
+     * @param  int $pagoId ID del pago a anular
+     * @param  Request $request Con campo 'motivo' (opcional)
+     * @return JsonResponse
+     */
+    public function anularPago(int $pagoId, Request $request): JsonResponse
+    {
+        try {
+            // ✅ 1️⃣ Validación inicial
+            $validated = $request->validate([
+                'motivo' => 'nullable|string|max:500',
+            ]);
+
+            // ✅ 2️⃣ Buscar el pago
+            $pago = \App\Models\Pago::findOrFail($pagoId);
+
+            Log::info('🟠 [ANULAR PAGO] INICIO', [
+                'pago_id' => $pago->id,
+                'cliente_id' => $pago->cuentaPorCobrar?->cliente_id,
+                'monto' => $pago->monto,
+            ]);
+
+            // ✅ 3️⃣ Validar autorización
+            $this->authorize('update', $pago->cuentaPorCobrar->cliente);
+
+            // ✅ 4️⃣ Validar que existe cuenta por cobrar
+            $cuenta = $pago->cuentaPorCobrar;
+            if (!$cuenta) {
+                return ApiResponse::error('Cuenta por cobrar no encontrada para este pago', 404);
+            }
+
+            // ✅ 5️⃣ Procesar anulación en transacción (SIN crear MovimientoCaja)
+            DB::transaction(function () use (
+                $pago,
+                $cuenta,
+                $validated
+            ) {
+                // ✅ Recuperar valores anteriores para auditoría
+                $montoAnulado = $pago->monto;
+                $saldobAnterior = $cuenta->saldo_pendiente;
+
+                // ✅ Aumentar saldo pendiente (revertir descuento)
+                $nuevoSaldo = $cuenta->saldo_pendiente + $montoAnulado;
+
+                // ✅ Determinar nuevo estado
+                // Si el saldo ahora es > 0, la cuenta vuelve a PARCIAL
+                $nuevoEstado = $nuevoSaldo > 0 ? 'PARCIAL' : 'PAGADO';
+
+                // ✅ Actualizar cuenta por cobrar
+                $cuenta->update([
+                    'saldo_pendiente' => $nuevoSaldo,
+                    'estado' => $nuevoEstado,
+                ]);
+
+                Log::info('✅ [ANULAR PAGO] Cuenta actualizada', [
+                    'cuenta_id' => $cuenta->id,
+                    'saldo_anterior' => $saldobAnterior,
+                    'saldo_nuevo' => $nuevoSaldo,
+                    'estado' => $nuevoEstado,
+                ]);
+
+                // ✅ Cambiar estado del pago a ANULADO
+                $pago->update([
+                    'estado' => 'ANULADO',
+                ]);
+
+                Log::info('✅ [ANULAR PAGO] Pago marcado como ANULADO', [
+                    'pago_id' => $pago->id,
+                    'estado' => 'ANULADO',
+                ]);
+
+                // ✅ Si la cuenta vuelve a PARCIAL (había sido PAGADO), actualizar venta
+                if ($nuevoEstado === 'PARCIAL') {
+                    $venta = $cuenta->venta;
+                    if ($venta) {
+                        $venta->update([
+                            'estado_pago' => 'PARCIAL',
+                            'monto_pendiente' => $nuevoSaldo,
+                            'monto_pagado' => $venta->total - $nuevoSaldo,
+                        ]);
+
+                        Log::info('✅ [ANULAR PAGO] Venta revertida a PARCIAL', [
+                            'venta_id' => $venta->id,
+                            'estado_pago' => 'PARCIAL',
+                        ]);
+                    }
+                }
+
+                // ✅ MEJORADO: NO crear movimiento de caja de reversión
+                // El estado ANULADO del pago es suficiente para que CierreCajaService lo excluya de los cálculos
+                // Esto evita duplicar registros en la tabla movimientos_caja
+
+                Log::info('✅ [ANULAR PAGO] Pago anulado sin crear MovimientoCaja de reversión', [
+                    'pago_id' => $pago->id,
+                    'numero_pago' => $pago->numero_pago,
+                    'monto_anulado' => $montoAnulado,
+                ]);
+            });
+
+            Log::info('🟢 [ANULAR PAGO] COMPLETADO', [
+                'pago_id' => $pago->id,
+                'monto_anulado' => $pago->monto,
+                'motivo' => $validated['motivo'] ?? 'Sin especificar',
+            ]);
+
+            return ApiResponse::success([
+                'pago_id' => $pago->id,
+                'monto_anulado' => $pago->monto,
+                'cuenta' => [
+                    'id' => $cuenta->id,
+                    'saldo_pendiente' => $cuenta->fresh()->saldo_pendiente,
+                    'estado' => $cuenta->fresh()->estado,
+                ],
+            ], 'Pago anulado exitosamente', 200);
+
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            Log::warning('⚠️ [ANULAR PAGO] Acceso denegado', [
+                'pago_id' => $pagoId,
+                'user_id' => Auth::id(),
+            ]);
+            return ApiResponse::error('No tienes permiso para anular este pago', 403);
+        } catch (\Exception $e) {
+            Log::error('❌ [ANULAR PAGO] ERROR', [
+                'pago_id' => $pagoId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return ApiResponse::error('Error al anular el pago: ' . $e->getMessage(), 500);
         }
     }
 

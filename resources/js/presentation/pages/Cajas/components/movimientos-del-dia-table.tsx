@@ -22,6 +22,9 @@ interface Props {
     ventasPorEstado?: Array<{ estado: string; total: number; count: number }>;    // ✅ Viene del backend
     pagosPorTipoPago?: Array<{ tipo: string; total: number; count: number }>;     // ✅ Viene del backend
     gastosPorTipoPago?: Array<{ tipo: string; total: number; count: number }>;    // ✅ Viene del backend
+    ventasTotales?: number;  // ✅ NUEVO: Total de ventas de CierreCajaService
+    ventasAnuladas?: number;  // ✅ NUEVO: Ventas anuladas de CierreCajaService
+    ventasCredito?: number;  // ✅ NUEVO: Ventas a crédito de CierreCajaService
 }
 
 // ✅ NUEVO: Función para obtener colores según el tipo de operación
@@ -50,14 +53,8 @@ const getTipoOperacionColor = (codigo: string): string => {
     }
 };
 
-export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [] }: Props) {
-    console.log('MovimientosDelDiaTable renderizado con movimientosHoy:', movimientosHoy);
-    console.log('cajaAbiertaHoy:', cajaAbiertaHoy);
-    console.log('efectivoEsperado:', efectivoEsperado);
-    console.log('ventasPorTipoPago:', ventasPorTipoPago);
-    console.log('ventasPorEstado:', ventasPorEstado);
-    console.log('pagosPorTipoPago:', pagosPorTipoPago);
-    console.log('gastosPorTipoPago:', gastosPorTipoPago);
+export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0 }: Props) {
+
     const [filtroTipo, setFiltroTipo] = useState<string | null>(null);
     const [filtroFechaDesde, setFiltroFechaDesde] = useState<string>('');
     const [filtroFechaHasta, setFiltroFechaHasta] = useState<string>('');
@@ -330,6 +327,15 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2">
+                                        <strong>+ Ventas a Crédito</strong>
+                                    </td>
+                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
+                                        +{formatCurrency(ventasCredito)}
+                                    </td>
+                                </tr>
+
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2"><strong>+CXC Efectivo (Pagos de Crédito)</strong></td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
                                         +{formatCurrency(efectivoEsperado.pagos_credito)}
@@ -338,13 +344,13 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2">Devoluciones Venta</td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-gray-300">
-                                        {formatCurrency(ventasPorEstado.find(item => item.estado === 'Anulado')?.total || 0)}
+                                        {formatCurrency(ventasAnuladas)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2">Devoluciones Efectivo</td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-gray-300">
-                                        {formatCurrency(ventasPorEstado.find(item => item.estado === 'Anulado')?.total || 0)}
+                                        {formatCurrency(ventasAnuladas)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
@@ -368,7 +374,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                 <tr className="bg-yellow-100 dark:bg-green-900/30">
                                     <td className="py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200"><strong>VENTAS TOTALES</strong></td>
                                     <td className="text-right py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200 text-sm">
-                                        {formatCurrency(ventasPorEstado.find(item => item.estado === 'Aprobado')?.total || 0)}
+                                        {formatCurrency(ventasTotales)}
                                     </td>
                                 </tr>
                             </tbody>
@@ -377,7 +383,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                 )}
 
                 {/* ✅ NUEVO: Resumen de Ventas por Estado de Documento - COLAPSABLE */}
-                {ventasPorEstado && ventasPorEstado.length > 0 && (
+                {/* {ventasPorEstado && ventasPorEstado.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <button
                             onClick={() => setExpandirVentasEstado(!expandirVentasEstado)}
@@ -430,10 +436,10 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                             </table>
                         )}
                     </div>
-                )}
+                )} */}
 
                 {/* ✅ NUEVO: Resumen de PAGOS por Tipo de Pago - COLAPSABLE */}
-                {pagosPorTipoPago && pagosPorTipoPago.length > 0 && (
+                {/* {pagosPorTipoPago && pagosPorTipoPago.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <button
                             onClick={() => setExpandirPagos(!expandirPagos)}
@@ -486,10 +492,10 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                             </table>
                         )}
                     </div>
-                )}
+                )} */}
 
                 {/* ✅ NUEVO: Resumen de GASTOS por Tipo de Pago - COLAPSABLE */}
-                {gastosPorTipoPago && gastosPorTipoPago.length > 0 && (
+                {/*  {gastosPorTipoPago && gastosPorTipoPago.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <button
                             onClick={() => setExpandirGastos(!expandirGastos)}
@@ -542,7 +548,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                             </table>
                         )}
                     </div>
-                )}
+                )} */}
 
                 {/* ✅ NUEVO: Resumen por Tipo de Pago (todos los movimientos) */}
                 {/* <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">

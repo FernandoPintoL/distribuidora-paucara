@@ -9,6 +9,7 @@ class Pago extends Model
     use HasFactory;
 
     protected $fillable = [
+        'numero_pago', // ✅ NUEVO: Número único y secuencial de pago
         'cuenta_por_pagar_id',
         'cuenta_por_cobrar_id',
         'venta_id', // Mantener para compatibilidad con ventas
@@ -22,6 +23,7 @@ class Pago extends Model
         'observaciones',
         'usuario_id',
         'moneda_id',
+        'estado', // REGISTRADO o ANULADO
     ];
 
     protected function casts(): array
@@ -84,9 +86,49 @@ class Pago extends Model
             ->whereYear('fecha_pago', $año);
     }
 
+    // ✅ Scopes para filtrar por estado
+    public function scopeRegistrados($query)
+    {
+        return $query->where('estado', 'REGISTRADO');
+    }
+
+    public function scopeAnulados($query)
+    {
+        return $query->where('estado', 'ANULADO');
+    }
+
+    public function scopeActivos($query)
+    {
+        return $query->where('estado', '!=', 'ANULADO');
+    }
+
     // Métodos auxiliares
     public function getNumeroTransaccionAttribute()
     {
         return $this->numero_recibo ?? $this->numero_transferencia ?? $this->numero_cheque;
+    }
+
+    /**
+     * Generar número de pago único y secuencial
+     * Formato: PAGO-YYYYMMDD-00001 (ejemplo: PAGO-20260202-00001)
+     */
+    public static function generarNumeroPago(): string
+    {
+        $hoy = now()->format('Ymd');
+
+        // Obtener el último número de pago del día
+        $ultimoPago = static::where('numero_pago', 'like', "PAGO-{$hoy}-%")
+            ->orderByDesc('numero_pago')
+            ->first();
+
+        if ($ultimoPago) {
+            // Extraer el número secuencial del último pago
+            preg_match('/PAGO-\d+-(\d+)/', $ultimoPago->numero_pago, $matches);
+            $secuencial = (int) $matches[1] + 1;
+        } else {
+            $secuencial = 1;
+        }
+
+        return sprintf('PAGO-%s-%05d', $hoy, $secuencial);
     }
 }
