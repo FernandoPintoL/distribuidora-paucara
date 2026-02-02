@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 
 // Hooks
 import { useProformaFilters } from '@/application/hooks/use-proforma-filters';
-import { useProformaUnifiedModal } from '@/application/hooks/use-proforma-unified-modal';
+import { useProformaModals } from '@/application/hooks/use-proforma-modals';
 import { useProformaStats } from '@/application/hooks/use-proforma-stats';
 import { useLogisticaStats } from '@/application/hooks/use-logistica-stats';
 import { useDashboardWebSocket } from '@/application/hooks/use-dashboard-websocket';
@@ -13,7 +13,7 @@ import { useProformaNotifications } from '@/application/hooks/use-proforma-notif
 // Componentes
 import { DashboardStats } from './components/DashboardStats';
 import { ProformasSection } from './components/ProformasSection';
-import { ProformaUnifiedModal } from './components/modals/ProformaUnifiedModal';
+import { ProformaRechazoModal } from './components/modals/ProformaRechazoModal';
 
 // Domain entities (centralized type definitions)
 import type {
@@ -79,25 +79,19 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         console.log('================================');
     }, [stats, proformaStats, loadingProformaStats, proformaError, logisticaStats]);
 
-    // Hook de modal unificado
+    // Hook de modal de rechazo
     const {
-        mostrarModal,
+        mostrarModalRechazo,
         proformaSeleccionada,
-        tabActiva,
-        datosConfirmacion,
+        motivoRechazo,
         motivoRechazoSeleccionado,
-        motivoRechazoCustom,
-        notasLlamada,
-        cargandoDetalles,
-        setTabActiva,
-        setDatosConfirmacion,
+        procesandoId,
+        setMotivoRechazo,
         setMotivoRechazoSeleccionado,
-        setMotivoRechazoCustom,
-        setNotasLlamada,
-        cerrarModal,
-        aprobarProforma,
+        abrirModalRechazo,
+        cerrarModalRechazo,
         rechazarProforma,
-    } = useProformaUnifiedModal();
+    } = useProformaModals();
 
     // Actualizar proformas cuando cambian las props
     useEffect(() => {
@@ -140,6 +134,11 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
     // Ver proforma
     const handleVerProforma = (proforma: ProformaAppExterna) => {
         window.open(`/proformas/${proforma.id}`, '_blank');
+    };
+
+    // Rechazar proforma - Abre el modal de rechazo específico
+    const handleRechazarProforma = (proforma: ProformaAppExterna) => {
+        abrirModalRechazo(proforma);
     };
 
 
@@ -189,29 +188,22 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
                     estadosLogistica={estadosLogistica}
                     cambiarPagina={proformaFilters.cambiarPagina}
                     onVerProforma={handleVerProforma}
+                    onRechazarProforma={handleRechazarProforma}
                     getEstadoBadge={getEstadoBadge}
                     estaVencida={estaVencida}
                 />
 
-                {/* Modal Unificado */}
-                <ProformaUnifiedModal
-                    isOpen={mostrarModal}
-                    onClose={cerrarModal}
+                {/* Modal de Rechazo */}
+                <ProformaRechazoModal
+                    isOpen={mostrarModalRechazo}
+                    onClose={cerrarModalRechazo}
                     proforma={proformaSeleccionada}
-                    tabActiva={tabActiva}
-                    setTabActiva={setTabActiva}
-                    datosConfirmacion={datosConfirmacion}
-                    setDatosConfirmacion={setDatosConfirmacion}
                     motivoRechazoSeleccionado={motivoRechazoSeleccionado}
                     setMotivoRechazoSeleccionado={setMotivoRechazoSeleccionado}
-                    motivoRechazoCustom={motivoRechazoCustom}
-                    setMotivoRechazoCustom={setMotivoRechazoCustom}
-                    notasLlamada={notasLlamada}
-                    setNotasLlamada={setNotasLlamada}
-                    onAprobar={() => aprobarProforma()}
+                    motivoRechazo={motivoRechazo}
+                    setMotivoRechazo={setMotivoRechazo}
                     onRechazar={() => rechazarProforma(MOTIVOS_RECHAZO_PROFORMA)}
-                    isProcessing={false}
-                    cargandoDetalles={cargandoDetalles}
+                    isProcessing={procesandoId !== null}
                 />
             </div>
         </AppLayout>

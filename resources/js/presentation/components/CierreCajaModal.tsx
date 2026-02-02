@@ -166,330 +166,503 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
         }));
     };
 
+    // ✅ NUEVO: Calcular ventas en efectivo (VENTA + EFECTIVO)
+    const calcularVentasEnEfectivo = () => {
+        return movimientos
+            .filter(mov => mov.tipo_operacion?.codigo === 'VENTA' && mov.tipo_pago?.nombre === 'EFECTIVO')
+            .reduce((sum, mov) => sum + toNumber(mov.monto), 0);
+    };
+
+    // ✅ NUEVO: Calcular ventas a crédito (VENTA + CRÉDITO)
+    const calcularVentasACredito = () => {
+        return movimientos
+            .filter(mov => mov.tipo_operacion?.codigo === 'VENTA' && mov.tipo_pago?.nombre === 'CRÉDITO')
+            .reduce((sum, mov) => sum + toNumber(mov.monto), 0);
+    };
+
+    // ✅ NUEVO: Calcular pagos de crédito (PAGO con pago_id != null)
+    const calcularPagosDeCredito = () => {
+        return movimientos
+            .filter(mov => mov.tipo_operacion?.codigo === 'PAGO' && mov.pago_id !== null && mov.pago_id !== undefined)
+            .reduce((sum, mov) => sum + toNumber(mov.monto), 0);
+    };
+
+    // ✅ NUEVO: Calcular efectivo real = ventas en efectivo + pagos de crédito
+    const calcularEfectivoReal = () => {
+        return calcularVentasEnEfectivo() + calcularPagosDeCredito();
+    };
+
+    // ✅ NUEVO: Calcular ventas agrupadas por tipo de pago (SOLO VENTA por codigo)
+    const calcularVentasPorTipoPago = () => {
+        const ventasPorTipo: Record<string, { total: number; count: number }> = {};
+
+        movimientos
+            .filter(mov => mov.tipo_operacion?.codigo === 'VENTA' && mov.tipo_pago?.nombre)  // ✅ Solo VENTAS (por codigo) con tipo_pago
+            .forEach((mov) => {
+                const tipoPago = mov.tipo_pago.nombre;
+                if (!ventasPorTipo[tipoPago]) {
+                    ventasPorTipo[tipoPago] = { total: 0, count: 0 };
+                }
+                ventasPorTipo[tipoPago].total += toNumber(mov.monto);
+                ventasPorTipo[tipoPago].count += 1;
+            });
+
+        return Object.entries(ventasPorTipo).map(([tipo, datos]) => ({
+            tipo,
+            total: datos.total,
+            count: datos.count,
+        }));
+    };
+
+    // ⚠️ GUARD: Validar que cajaAbierta existe ANTES de cualquier cálculo
+    if (!cajaAbierta) return null;
+
     const rangoVentas = calcularRangoVentas();
     const montosPorTipoPago = calcularMontosPorTipoPago();
     const { ingresos, egresos } = calcularIngresosYEgresos();
     const totalesPorTipoOperacion = calcularTotalesPorTipoOperacion();
-    const diferencia = data.monto_real ? parseFloat(data.monto_real) - montoEsperado : 0;
+    const ventasPorTipoPago = calcularVentasPorTipoPago();
 
-    if (!cajaAbierta) return null;
+    // ✅ NUEVO: Cálculos mejorados para distinguir efectivo real vs crédito
+    const ventasEnEfectivo = calcularVentasEnEfectivo();
+    const ventasACredito = calcularVentasACredito();
+    const pagosDeCredito = calcularPagosDeCredito();
+    const efectivoReal = calcularEfectivoReal();
+    const totalEsperadoMejorado = cajaAbierta.monto_apertura + efectivoReal;
+    const deudaPendiente = ventasACredito - pagosDeCredito;
+
+    const diferencia = data.monto_real ? parseFloat(data.monto_real) - totalEsperadoMejorado : 0;
+
+    // 🔍 DEBUG: Logs en consola para verificar los datos
+    React.useEffect(() => {
+        console.log('📊 CierreCajaModal - Datos de Movimientos:', {
+            totalMovimientos: movimientos.length,
+            movimientos: movimientos,
+            ventasPorTipoPago: ventasPorTipoPago,
+            ventasPorTipoPayLength: ventasPorTipoPago.length,
+            ventasEnEfectivo: ventasEnEfectivo,
+            ventasACredito: ventasACredito,
+            pagosDeCredito: pagosDeCredito,
+            efectivoReal: efectivoReal,
+        });
+    }, [movimientos, ventasPorTipoPago, ventasEnEfectivo, ventasACredito, pagosDeCredito, efectivoReal]);
 
     return (
         <Fragment>
             <Dialog open={show} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[800px] flex flex-col max-h-[90vh]">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center">
-                        🔒 Cerrar Caja del Día
-                    </DialogTitle>
-                    <DialogDescription>
-                        Cuenta el dinero físico en caja y registra el cierre del día.
-                    </DialogDescription>
-                </DialogHeader>
+                <DialogContent className="sm:max-w-[800px] flex flex-col max-h-[90vh]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center">
+                            🔒 Cerrar Caja del Día
+                        </DialogTitle>
+                        <DialogDescription>
+                            Cuenta el dinero físico en caja y registra el cierre del día.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-                    <div className="space-y-4 overflow-y-auto flex-1 px-6">
-                        {/* Información de la caja */}
-                        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
-                                {cajaAbierta.caja.nombre}
-                            </h4>
-                            <div className="space-y-3">
-                                {/* <div>
+                    <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="space-y-4 overflow-y-auto flex-1 px-6">
+                            {/* Información de la caja */}
+                            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
+                                    {cajaAbierta.caja.nombre}
+                                </h4>
+                                <div className="space-y-3">
+                                    {/* <div>
                                     <span className="text-xs text-gray-600 dark:text-gray-400">Ubicación:</span>
                                     <p className="font-medium text-gray-900 dark:text-gray-100">{cajaAbierta.caja.ubicacion}</p>
                                 </div> */}
-                                <div>
-                                    <span className="text-xs text-gray-600 dark:text-gray-400">Fecha de Apertura:</span>
-                                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                                        {new Date(cajaAbierta.fecha).toLocaleDateString('es-BO', {
-                                            year: 'numeric',
-                                            month: '2-digit',
-                                            day: '2-digit'
-                                        })} - {new Date(cajaAbierta.fecha).toLocaleTimeString('es-BO', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </p>
-                                </div>
-                                <div className="border-t border-gray-300 dark:border-gray-500 pt-3">
-                                    <span className="text-xs text-gray-600 dark:text-gray-400">Fecha de Cierre:</span>
-                                    <input
-                                        type="date"
-                                        value={data.fecha_cierre}
-                                        onChange={(e) => setData('fecha_cierre', e.target.value)}
-                                        max={new Date().toISOString().split('T')[0]}
-                                        className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm"
-                                    />
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        ⚠️ Puedes cerrar hoy o en fechas anteriores
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Rango de Ventas */}
-                        {rangoVentas && (
-                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
-                                <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-3">
-                                    📊 Rango de Ventas (IDs)
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4">
                                     <div>
-                                        <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">ID Inicial</p>
-                                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">#{rangoVentas.minId}</p>
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">Fecha de Apertura:</span>
+                                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                                            {new Date(cajaAbierta.fecha).toLocaleDateString('es-BO', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit'
+                                            })} - {new Date(cajaAbierta.fecha).toLocaleTimeString('es-BO', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </p>
                                     </div>
-                                    <div className="flex items-center justify-center">
-                                        <p className="text-2xl text-blue-400 dark:text-blue-500">→</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">ID Final</p>
-                                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">#{rangoVentas.maxId}</p>
-                                    </div>
-                                </div>
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                                    Total de {rangoVentas.totalVentas} venta{rangoVentas.totalVentas !== 1 ? 's' : ''}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Totales de Ingresos y Egresos */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-700">
-                                <p className="text-xs text-green-600 dark:text-green-400 mb-2">⬆️ Total Ingresos</p>
-                                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                                    {formatCurrency(ingresos)}
-                                </p>
-                            </div>
-                            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-700">
-                                <p className="text-xs text-red-600 dark:text-red-400 mb-2">⬇️ Total Egresos</p>
-                                <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                                    {formatCurrency(egresos)}
-                                </p>
-                            </div>
-                            <div className={`p-4 rounded-lg border ${(ingresos - egresos) >= 0
-                                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700'
-                                : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700'
-                            }`}>
-                                <p className={`text-xs mb-2 ${(ingresos - egresos) >= 0
-                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                    : 'text-orange-600 dark:text-orange-400'
-                                }`}>💰 Total Neto</p>
-                                <p className={`text-2xl font-bold ${(ingresos - egresos) >= 0
-                                    ? 'text-emerald-700 dark:text-emerald-300'
-                                    : 'text-orange-700 dark:text-orange-300'
-                                }`}>
-                                    {formatCurrency(ingresos - egresos)}
-                                </p>
-                            </div>
-                        </div>
-                        {/* Montos por Tipo de Pago */}
-                        {montosPorTipoPago.length > 0 && (
-                            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
-                                <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">
-                                    💳 Montos por Tipo de Pago
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {montosPorTipoPago.map((item) => (
-                                        <div
-                                            key={item.tipo}
-                                            className="bg-white dark:bg-gray-800 p-3 rounded border border-purple-200 dark:border-purple-700"
-                                        >
-                                            <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">
-                                                {item.tipo}
-                                            </p>
-                                            <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
-                                                {formatCurrency(Math.abs(item.total))}
-                                            </p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                {item.count} movimiento{item.count !== 1 ? 's' : ''}
-                                            </p>
-                                        </div>
-                                    ))}
-                                    {/* Total por Tipo de Pago */}
-                                    <div className="bg-purple-700 dark:bg-purple-800 p-3 rounded border border-purple-700 dark:border-purple-600 col-span-1 md:col-span-2">
-                                        <p className="text-xs text-purple-100 mb-1">💰 Total</p>
-                                        <p className="text-xl font-bold text-white">
-                                            {formatCurrency(montosPorTipoPago.reduce((sum, item) => sum + Math.abs(item.total), 0))}
+                                    <div className="border-t border-gray-300 dark:border-gray-500 pt-3">
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">Fecha de Cierre:</span>
+                                        <input
+                                            type="date"
+                                            value={data.fecha_cierre}
+                                            onChange={(e) => setData('fecha_cierre', e.target.value)}
+                                            max={new Date().toISOString().split('T')[0]}
+                                            className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm"
+                                        />
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            ⚠️ Puedes cerrar hoy o en fechas anteriores
                                         </p>
                                     </div>
                                 </div>
                             </div>
-                        )}
+                            {/* Rango de Ventas */}
+                            {rangoVentas && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                                    <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-3">
+                                        📊 Rango de Ventas (IDs)
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div>
+                                            <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">ID Inicial</p>
+                                            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">#{rangoVentas.minId}</p>
+                                        </div>
+                                        <div className="flex items-center justify-center">
+                                            <p className="text-2xl text-blue-400 dark:text-blue-500">→</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">ID Final</p>
+                                            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">#{rangoVentas.maxId}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                                        Total de {rangoVentas.totalVentas} venta{rangoVentas.totalVentas !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            )}
 
-                        {/* Resumen por Tipo de Operación */}
-                        {totalesPorTipoOperacion.length > 0 && (
-                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-700">
-                                <h4 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-3">
-                                    📊 Resumen por Tipo de Operación
+                            {/* ✅ NUEVO: Resumen de Ventas por Tipo de Pago - MUESTRA TODOS LOS TIPOS */}
+                            <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-700">
+                                <h4 className="font-semibold text-teal-900 dark:text-teal-300 mb-3">
+                                    🛒 Resumen de Ventas por Tipo de Pago
                                 </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {totalesPorTipoOperacion.map((item) => {
-                                        const isPositive = item.total >= 0;
-                                        return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {ventasPorTipoPago.map((item) => (
+                                        <div
+                                            key={item.tipo}
+                                            className={`p-3 rounded border transition ${
+                                                item.total > 0
+                                                    ? 'bg-white dark:bg-gray-800 border-teal-200 dark:border-teal-700'
+                                                    : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                                            }`}
+                                        >
+                                            <p className={`text-xs mb-1 ${
+                                                item.total > 0
+                                                    ? 'text-teal-600 dark:text-teal-400'
+                                                    : 'text-gray-500 dark:text-gray-400'
+                                            }`}>
+                                                {item.tipo}
+                                            </p>
+                                            <p className={`text-lg font-bold ${
+                                                item.total > 0
+                                                    ? 'text-teal-700 dark:text-teal-300'
+                                                    : 'text-gray-600 dark:text-gray-300'
+                                            }`}>
+                                                {formatCurrency(item.total)}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                {item.count} venta{item.count !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    ))}
+                                    {/* Total de Ventas */}
+                                    <div className="bg-teal-700 dark:bg-teal-800 p-3 rounded border border-teal-700 dark:border-teal-600 col-span-1 md:col-span-2">
+                                        <p className="text-xs text-teal-100 mb-1">💰 Total de Ventas</p>
+                                        <p className="text-xl font-bold text-white">
+                                            {formatCurrency(ventasPorTipoPago.reduce((sum, item) => sum + item.total, 0))}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+
+
+                            {/* Montos por Tipo de Pago */}
+                            {montosPorTipoPago.length > 0 && (
+                                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                                    <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">
+                                        💳 Montos por Tipo de Pago
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {montosPorTipoPago.map((item) => (
                                             <div
                                                 key={item.tipo}
-                                                className={`p-3 rounded border ${isPositive
-                                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
-                                                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
-                                                    }`}
+                                                className="bg-white dark:bg-gray-800 p-3 rounded border border-purple-200 dark:border-purple-700"
                                             >
-                                                <p className={`text-xs mb-1 ${isPositive
-                                                    ? 'text-green-600 dark:text-green-400'
-                                                    : 'text-red-600 dark:text-red-400'
-                                                    }`}>
+                                                <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">
                                                     {item.tipo}
                                                 </p>
-                                                <p className={`text-lg font-bold ${isPositive
-                                                    ? 'text-green-700 dark:text-green-300'
-                                                    : 'text-red-700 dark:text-red-300'
-                                                    }`}>
-                                                    {formatCurrency(item.total)}
+                                                <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                                                    {formatCurrency(Math.abs(item.total))}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                     {item.count} movimiento{item.count !== 1 ? 's' : ''}
                                                 </p>
                                             </div>
-                                        );
-                                    })}
-                                    {/* Total por Tipo de Operación */}
-                                    <div className="bg-indigo-700 dark:bg-indigo-800 p-3 rounded border border-indigo-700 dark:border-indigo-600 col-span-1 md:col-span-2 lg:col-span-3">
-                                        <p className="text-xs text-indigo-100 mb-1">💵 Total General</p>
-                                        <p className="text-xl font-bold text-white">
-                                            {formatCurrency(totalesPorTipoOperacion.reduce((sum, item) => sum + item.total, 0))}
-                                        </p>
+                                        ))}
+                                        {/* Total por Tipo de Pago */}
+                                        <div className="bg-purple-700 dark:bg-purple-800 p-3 rounded border border-purple-700 dark:border-purple-600 col-span-1 md:col-span-2">
+                                            <p className="text-xs text-purple-100 mb-1">💰 Total</p>
+                                            <p className="text-xl font-bold text-white">
+                                                {formatCurrency(montosPorTipoPago.reduce((sum, item) => sum + Math.abs(item.total), 0))}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                        {/* Resumen financiero */}
-                        <div className="space-y-3 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">Monto Inicial:</span>
-                                <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(cajaAbierta.monto_apertura)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">Movimientos del día:</span>
-                                <span className="font-medium text-gray-900 dark:text-gray-100">
-                                    {formatCurrency(montoEsperado - cajaAbierta.monto_apertura)}
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-lg font-semibold border-t border-gray-300 dark:border-gray-600 pt-2">
-                                <span className="text-gray-900 dark:text-gray-100">Total Esperado:</span>
-                                <span className="text-green-600 dark:text-green-400">{formatCurrency(montoEsperado)}</span>
-                            </div>
-                        </div>
+                            )}
 
-                        {/* Mostrar diferencia si hay monto ingresado */}
-                        {data.monto_real && (
-                            <div className={`p-3 rounded-lg ${diferencia === 0
-                                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700'
-                                : diferencia > 0
-                                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700'
-                                    : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700'
-                                }`}>
-                                <div className="flex justify-between items-center">
-                                    <span className={`font-medium ${diferencia === 0
-                                        ? 'text-gray-900 dark:text-green-300'
-                                        : diferencia > 0
-                                            ? 'text-gray-900 dark:text-blue-300'
-                                            : 'text-gray-900 dark:text-red-300'
-                                        }`}>Diferencia:</span>
-                                    <span className={`font-bold text-lg ${diferencia === 0
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : diferencia > 0
-                                            ? 'text-blue-600 dark:text-blue-400'
-                                            : 'text-red-600 dark:text-red-400'
+                            {/* Totales de Ingresos y Egresos */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-700">
+                                    <p className="text-xs text-green-600 dark:text-green-400 mb-2">⬆️ Total Ingresos</p>
+                                    <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                                        {formatCurrency(ingresos)}
+                                    </p>
+                                </div>
+                                <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-700">
+                                    <p className="text-xs text-red-600 dark:text-red-400 mb-2">⬇️ Total Egresos</p>
+                                    <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                                        {formatCurrency(egresos)}
+                                    </p>
+                                </div>
+                                <div className={`p-4 rounded-lg border ${(ingresos - egresos) >= 0
+                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700'
+                                    : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700'
+                                    }`}>
+                                    <p className={`text-xs mb-2 ${(ingresos - egresos) >= 0
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-orange-600 dark:text-orange-400'
+                                        }`}>💰 Total Neto</p>
+                                    <p className={`text-2xl font-bold ${(ingresos - egresos) >= 0
+                                        ? 'text-emerald-700 dark:text-emerald-300'
+                                        : 'text-orange-700 dark:text-orange-300'
                                         }`}>
-                                        {diferencia === 0 ? '✅ ' : diferencia > 0 ? '📈 +' : '📉 '}
-                                        {formatCurrency(Math.abs(diferencia))}
+                                        {formatCurrency(ingresos - egresos)}
+                                    </p>
+                                </div>
+                            </div>
+
+
+                            {/* ✅ NUEVO: Desglose de Efectivo Real vs Crédito Pendiente */}
+                            {(ventasEnEfectivo > 0 || ventasACredito > 0 || pagosDeCredito > 0) && (
+                                <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg border border-cyan-200 dark:border-cyan-700">
+                                    <h4 className="font-semibold text-cyan-900 dark:text-cyan-300 mb-3">
+                                        💸 Desglose de Efectivo Real
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {ventasEnEfectivo > 0 && (
+                                            <div className="flex justify-between">
+                                                <span className="text-cyan-600 dark:text-cyan-400">Ventas en Efectivo:</span>
+                                                <span className="font-medium text-cyan-700 dark:text-cyan-300">{formatCurrency(ventasEnEfectivo)}</span>
+                                            </div>
+                                        )}
+                                        {pagosDeCredito > 0 && (
+                                            <div className="flex justify-between">
+                                                <span className="text-cyan-600 dark:text-cyan-400">Pagos de Crédito Recibidos:</span>
+                                                <span className="font-medium text-cyan-700 dark:text-cyan-300">{formatCurrency(pagosDeCredito)}</span>
+                                            </div>
+                                        )}
+                                        <div className="border-t border-cyan-300 dark:border-cyan-600 pt-2 flex justify-between font-semibold">
+                                            <span className="text-cyan-900 dark:text-cyan-200">= Efectivo Real:</span>
+                                            <span className="text-cyan-700 dark:text-cyan-300">{formatCurrency(efectivoReal)}</span>
+                                        </div>
+                                    </div>
+
+                                    {ventasACredito > 0 && (
+                                        <div className="mt-3 pt-3 border-t border-cyan-300 dark:border-cyan-600">
+                                            <p className="text-xs text-cyan-600 dark:text-cyan-400 mb-2">ℹ️ Ventas a Crédito Pendientes de Pago:</p>
+                                            <div className="flex justify-between">
+                                                <span className="text-cyan-600 dark:text-cyan-400">Monto Total:</span>
+                                                <span className="font-medium text-orange-600 dark:text-orange-400">{formatCurrency(ventasACredito)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-cyan-600 dark:text-cyan-400">Pagado:</span>
+                                                <span className="font-medium text-cyan-700 dark:text-cyan-300">{formatCurrency(Math.max(0, pagosDeCredito))}</span>
+                                            </div>
+                                            {deudaPendiente > 0 && (
+                                                <div className="flex justify-between mt-1 font-semibold border-t border-cyan-300 dark:border-cyan-600 pt-1">
+                                                    <span className="text-orange-600 dark:text-orange-400">⏳ Deuda Pendiente:</span>
+                                                    <span className="text-orange-700 dark:text-orange-300">{formatCurrency(deudaPendiente)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Resumen por Tipo de Operación */}
+                            {totalesPorTipoOperacion.length > 0 && (
+                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                                    <h4 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-3">
+                                        📊 Resumen por Tipo de Operación
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {totalesPorTipoOperacion.map((item) => {
+                                            const isPositive = item.total >= 0;
+                                            return (
+                                                <div
+                                                    key={item.tipo}
+                                                    className={`p-3 rounded border ${isPositive
+                                                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+                                                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+                                                        }`}
+                                                >
+                                                    <p className={`text-xs mb-1 ${isPositive
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : 'text-red-600 dark:text-red-400'
+                                                        }`}>
+                                                        {item.tipo}
+                                                    </p>
+                                                    <p className={`text-lg font-bold ${isPositive
+                                                        ? 'text-green-700 dark:text-green-300'
+                                                        : 'text-red-700 dark:text-red-300'
+                                                        }`}>
+                                                        {formatCurrency(item.total)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        {item.count} movimiento{item.count !== 1 ? 's' : ''}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                        {/* Total por Tipo de Operación */}
+                                        <div className="bg-indigo-700 dark:bg-indigo-800 p-3 rounded border border-indigo-700 dark:border-indigo-600 col-span-1 md:col-span-2 lg:col-span-3">
+                                            <p className="text-xs text-indigo-100 mb-1">💵 Total General</p>
+                                            <p className="text-xl font-bold text-white">
+                                                {formatCurrency(totalesPorTipoOperacion.reduce((sum, item) => sum + item.total, 0))}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Resumen financiero - ✅ MEJORADO: Usa efectivo real en lugar de todas las operaciones */}
+                            <div className="space-y-3 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600 dark:text-gray-400">Monto Inicial:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(cajaAbierta.monto_apertura)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600 dark:text-gray-400">Efectivo Ingresado (Venta + Pagos):</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {formatCurrency(efectivoReal)}
                                     </span>
                                 </div>
-                                <p className={`text-xs mt-1 ${diferencia === 0
-                                    ? 'text-gray-600 dark:text-green-300'
+                                <div className="flex justify-between text-lg font-semibold border-t border-gray-300 dark:border-gray-600 pt-2">
+                                    <span className="text-gray-900 dark:text-gray-100">Total Esperado:</span>
+                                    <span className="text-green-600 dark:text-green-400">{formatCurrency(totalEsperadoMejorado)}</span>
+                                </div>
+                                {montoEsperado !== totalEsperadoMejorado && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 italic pt-2 border-t border-gray-300 dark:border-gray-600">
+                                        ℹ️ Total esperado corregido: No incluye ventas a crédito pendientes de pago
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Mostrar diferencia si hay monto ingresado */}
+                            {data.monto_real && (
+                                <div className={`p-3 rounded-lg ${diferencia === 0
+                                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700'
                                     : diferencia > 0
-                                        ? 'text-gray-600 dark:text-blue-300'
-                                        : 'text-gray-600 dark:text-red-300'
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700'
+                                        : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700'
                                     }`}>
-                                    {diferencia === 0 && 'Perfecto! No hay diferencias.'}
-                                    {diferencia > 0 && 'Sobrante - Tienes más dinero del esperado.'}
-                                    {diferencia < 0 && 'Faltante - Tienes menos dinero del esperado.'}
+                                    <div className="flex justify-between items-center">
+                                        <span className={`font-medium ${diferencia === 0
+                                            ? 'text-gray-900 dark:text-green-300'
+                                            : diferencia > 0
+                                                ? 'text-gray-900 dark:text-blue-300'
+                                                : 'text-gray-900 dark:text-red-300'
+                                            }`}>Diferencia:</span>
+                                        <span className={`font-bold text-lg ${diferencia === 0
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : diferencia > 0
+                                                ? 'text-blue-600 dark:text-blue-400'
+                                                : 'text-red-600 dark:text-red-400'
+                                            }`}>
+                                            {diferencia === 0 ? '✅ ' : diferencia > 0 ? '📈 +' : '📉 '}
+                                            {formatCurrency(Math.abs(diferencia))}
+                                        </span>
+                                    </div>
+                                    <p className={`text-xs mt-1 ${diferencia === 0
+                                        ? 'text-gray-600 dark:text-green-300'
+                                        : diferencia > 0
+                                            ? 'text-gray-600 dark:text-blue-300'
+                                            : 'text-gray-600 dark:text-red-300'
+                                        }`}>
+                                        {diferencia === 0 && 'Perfecto! No hay diferencias.'}
+                                        {diferencia > 0 && 'Sobrante - Tienes más dinero del esperado.'}
+                                        {diferencia < 0 && 'Faltante - Tienes menos dinero del esperado.'}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="monto_real" className="text-gray-900 dark:text-gray-100">Dinero Físico Contado (Bs) *</Label>
+                                <Input
+                                    id="monto_real"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={data.monto_real}
+                                    onChange={(e) => setData('monto_real', e.target.value)}
+                                    placeholder="0.00"
+                                    className="text-right text-lg font-medium dark:text-gray-100 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                {errors.monto_real && (
+                                    <p className="text-sm text-red-600 dark:text-red-400">{errors.monto_real}</p>
+                                )}
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    Cuenta todo el dinero físico que tienes en la caja
                                 </p>
                             </div>
-                        )}
 
-                        <div className="space-y-2">
-                            <Label htmlFor="monto_real" className="text-gray-900 dark:text-gray-100">Dinero Físico Contado (Bs) *</Label>
-                            <Input
-                                id="monto_real"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={data.monto_real}
-                                onChange={(e) => setData('monto_real', e.target.value)}
-                                placeholder="0.00"
-                                className="text-right text-lg font-medium dark:text-gray-100 dark:bg-gray-700 dark:border-gray-600"
-                            />
-                            {errors.monto_real && (
-                                <p className="text-sm text-red-600 dark:text-red-400">{errors.monto_real}</p>
-                            )}
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Cuenta todo el dinero físico que tienes en la caja
-                            </p>
+                            <div className="space-y-2">
+                                <Label htmlFor="observaciones" className="text-gray-900 dark:text-gray-100">
+                                    Observaciones {diferencia !== 0 && '(Explica la diferencia)'}
+                                </Label>
+                                <Textarea
+                                    id="observaciones"
+                                    value={data.observaciones}
+                                    onChange={(e) => setData('observaciones', e.target.value)}
+                                    placeholder={
+                                        diferencia !== 0
+                                            ? "Explica el motivo de la diferencia..."
+                                            : "Notas adicionales sobre el cierre..."
+                                    }
+                                    rows={3}
+                                    className="dark:text-gray-100 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                {errors.observaciones && (
+                                    <p className="text-sm text-red-600 dark:text-red-400">{errors.observaciones}</p>
+                                )}
+                            </div>
+                            <div className='py-2'></div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="observaciones" className="text-gray-900 dark:text-gray-100">
-                                Observaciones {diferencia !== 0 && '(Explica la diferencia)'}
-                            </Label>
-                            <Textarea
-                                id="observaciones"
-                                value={data.observaciones}
-                                onChange={(e) => setData('observaciones', e.target.value)}
-                                placeholder={
-                                    diferencia !== 0
-                                        ? "Explica el motivo de la diferencia..."
-                                        : "Notas adicionales sobre el cierre..."
-                                }
-                                rows={3}
-                                className="dark:text-gray-100 dark:bg-gray-700 dark:border-gray-600"
-                            />
-                            {errors.observaciones && (
-                                <p className="text-sm text-red-600 dark:text-red-400">{errors.observaciones}</p>
-                            )}
+                        <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end space-x-2 bg-white dark:bg-gray-800 flex-shrink-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onClose}
+                                disabled={processing}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={processing || !data.monto_real}
+                                className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white"
+                            >
+                                {processing ? (
+                                    <span className="flex items-center">
+                                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Cerrando...
+                                    </span>
+                                ) : (
+                                    '🔒 Cerrar Caja'
+                                )}
+                            </Button>
                         </div>
-                        <div className='py-2'></div>
-                    </div>
-
-                    <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end space-x-2 bg-white dark:bg-gray-800 flex-shrink-0">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={onClose}
-                            disabled={processing}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={processing || !data.monto_real}
-                            className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white"
-                        >
-                            {processing ? (
-                                <span className="flex items-center">
-                                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Cerrando...
-                                </span>
-                            ) : (
-                                '🔒 Cerrar Caja'
-                            )}
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {outputModal.isOpen && outputModal.aperturaId && (
                 <OutputSelectionModal

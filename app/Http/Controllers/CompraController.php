@@ -832,6 +832,140 @@ class CompraController extends Controller
     }
 
     /**
+     * Anular una compra aprobada
+     *
+     * Revierte inventario, caja y actualiza estado a ANULADO
+     */
+    public function anular(Request $request, int $id): \Illuminate\Http\JsonResponse
+    {
+        try {
+            Log::info('🟠 [ANULAR COMPRA] INICIO', ['compra_id' => $id]);
+
+            // 1. Verificar permisos
+            if (!auth()->user()->hasRole(['admin', 'Admin'])) {
+                Log::warning('🟠 [ANULAR COMPRA] PERMISO DENEGADO', [
+                    'compra_id' => $id,
+                    'usuario_id' => auth()->id(),
+                    'roles' => auth()->user()?->getRoleNames(),
+                ]);
+                return response()->json(['message' => 'No tienes permiso'], 403);
+            }
+
+            $motivo = $request->input('motivo', 'Sin motivo especificado');
+
+            // 2. Cargar compra
+            $compra = Compra::with(['detalles.producto', 'cuentaPorPagar.pagos',
+                                    'movimientoCaja'])->findOrFail($id);
+
+            Log::info('🟠 [ANULAR COMPRA] COMPRA ENCONTRADA', [
+                'compra_id' => $compra->id,
+                'compra_numero' => $compra->numero,
+                'estado_actual' => $compra->estadoDocumento?->nombre,
+            ]);
+
+            // 3. Validar estado
+            if ($compra->estadoDocumento?->nombre === 'Anulado') {
+                Log::warning('🟠 [ANULAR COMPRA] YA ESTA ANULADA', ['compra_id' => $compra->id]);
+                return response()->json(['message' => 'Ya está anulada'], 422);
+            }
+
+            if ($compra->estadoDocumento?->codigo !== 'APROBADO') {
+                Log::warning('🟠 [ANULAR COMPRA] ESTADO NO PERMITIDO', [
+                    'compra_id' => $compra->id,
+                    'estado' => $compra->estadoDocumento?->nombre,
+                ]);
+                return response()->json([
+                    'message' => 'Solo se pueden anular compras APROBADAS'
+                ], 422);
+            }
+
+            // 4. Validar integridad
+            try {
+                $this->validarIntegridadReferencialCompra($compra);
+            } catch (\Exception $e) {
+                Log::warning('🟠 [ANULAR COMPRA] VALIDACIÓN FALLIDA', [
+                    'compra_id' => $compra->id,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            // 5. Ejecutar anulación
+            DB::transaction(function () use ($compra, $motivo) {
+                // Revertir inventario
+                if ($compra->estadoDocumento?->codigo === 'APROBADO') {
+                    try {
+                        $compra->revertirMovimientosInventario();
+                    } catch (\Exception $e) {
+                        Log::warning('No se pudo revertir inventario al anular compra', [
+                            'compra_id' => $compra->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // Revertir caja
+                if ($compra->movimientoCaja) {
+                    try {
+                        $compra->revertirMovimientoCaja();
+                        Log::info('✅ Movimiento de caja revertido automáticamente', [
+                            'compra_id' => $compra->id,
+                            'movimiento_caja_id' => $compra->movimientoCaja->id,
+                            'monto' => $compra->movimientoCaja->monto,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('⚠️ No se pudo revertir movimiento de caja al anular compra', [
+                            'compra_id' => $compra->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // Actualizar observaciones
+                $usuarioNombre = auth()->user()->name ?? 'Sistema';
+                $fechaActual = now()->toDateTimeString();
+                $observacionesExistentes = $compra->observaciones ?? '';
+
+                $observacionesFinal = $observacionesExistentes;
+                if (!empty($observacionesExistentes)) {
+                    $observacionesFinal .= "\n";
+                }
+                $observacionesFinal .= "[ANULADO] Motivo: {$motivo} - Anulado por: {$usuarioNombre} - {$fechaActual}";
+
+                // Cambiar estado
+                $estadoAnulado = EstadoDocumento::where('nombre', 'Anulado')->first();
+                if (!$estadoAnulado) {
+                    throw new \Exception('Estado "Anulado" no encontrado en la base de datos');
+                }
+
+                $compra->update([
+                    'estado_documento_id' => $estadoAnulado->id,
+                    'observaciones' => $observacionesFinal,
+                ]);
+
+                Log::info('🟢 [ANULAR COMPRA] COMPLETADO', [
+                    'compra_id' => $compra->id,
+                    'motivo' => $motivo,
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Compra anulada exitosamente',
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('🟠 [ANULAR COMPRA] ERROR', [
+                'compra_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Revertir movimientos de inventario al eliminar compra
      */
     private function revertirMovimientosInventario(Compra $compra): void

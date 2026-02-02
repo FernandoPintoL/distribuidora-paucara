@@ -22,7 +22,7 @@ import AperturaCajaModal from '@/presentation/components/AperturaCajaModal';
 import CierreCajaModal from '@/presentation/components/CierreCajaModal';
 import RegistrarMovimientoModal from '@/presentation/components/RegistrarGastoModal';
 import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
-import { CajaHeader, CajaEstadoCard, MovimientosDelDiaTable, HistorialAperturasTable } from './components';
+import { CajaEstadoCard, MovimientosDelDiaTable, HistorialAperturasTable } from './components';
 import { useCajas } from '@/application/hooks/use-cajas';
 import { toNumber } from '@/lib/cajas.utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/presentation/components/ui/tabs';
@@ -34,9 +34,18 @@ import {
     AlertDialogDescription,
     AlertDialogTitle,
 } from '@/presentation/components/ui/alert-dialog';
-import type { CajasIndexProps, MovimientoCaja } from '@/domain/entities/cajas';
+import type { CajasIndexProps } from '@/domain/entities/cajas';
 
 export default function Index(props: CajasIndexProps) {
+    // ✅ DEBUG: Ver todos los props que llegan del backend
+    console.log('🔍 [Cajas/Index] Props recibidos del backend:', {
+        efectivoEsperado: props.efectivoEsperado,
+        ventasPorTipoPago: props.ventasPorTipoPago,
+        resumenEfectivo: props.resumenEfectivo,
+        movimientosHoy: props.movimientosHoy?.length,
+        cajaAbiertaHoy: props.cajaAbiertaHoy?.id,
+    });
+
     const {
         showAperturaModal,
         showCierreModal,
@@ -93,7 +102,7 @@ export default function Index(props: CajasIndexProps) {
                     setIsConsolidating(false);
 
                     // Obtener el mensaje desde flash (Inertia lo proporciona en page.props.flash)
-                    const successMessage = page?.props?.flash?.success ||
+                    const successMessage = (page?.props?.flash as any)?.success ||
                         `✅ Cajas consolidadas exitosamente\n${cierresPendientes} cierre(s) consolidado(s)`;
 
                     console.log('Éxito:', successMessage);
@@ -127,11 +136,13 @@ export default function Index(props: CajasIndexProps) {
         );
     };
 
-    // ✅ NUEVO: Calcular estadísticas útiles
+    // ✅ NUEVO: Calcular estadísticas de EFECTIVO REAL (NO incluir ventas a crédito)
+    // Entradas = Ventas en Efectivo + Pagos de Crédito
+    // Salidas = Gastos
     const stats = {
         totalMovimientos: movimientosHoy?.length || 0,
-        ingresos: movimientosHoy?.filter((m: MovimientoCaja) => toNumber(m.monto) > 0).reduce((sum: number, m: MovimientoCaja) => sum + toNumber(m.monto), 0) || 0,
-        egresos: Math.abs(movimientosHoy?.filter((m: MovimientoCaja) => toNumber(m.monto) < 0).reduce((sum: number, m: MovimientoCaja) => sum + toNumber(m.monto), 0) || 0),
+        ingresos: (props.efectivoEsperado?.ventas_efectivo || 0) + (props.efectivoEsperado?.pagos_credito || 0),
+        egresos: props.efectivoEsperado?.gastos || 0,
     };
 
     return (
@@ -149,11 +160,12 @@ export default function Index(props: CajasIndexProps) {
                         </div>
                     )}
 
-                    <CajaHeader cajaAbiertaHoy={cajaAbiertaHoy} esVistaAdmin={esVistaAdmin} usuarioDestino={usuarioDestino} />
+                    {/* <CajaHeader cajaAbiertaHoy={cajaAbiertaHoy} esVistaAdmin={esVistaAdmin} usuarioDestino={usuarioDestino} /> */}
 
                     <CajaEstadoCard
                         cajaAbiertaHoy={cajaAbiertaHoy}
                         totalMovimientos={totalMovimientos}
+                        efectivoEsperado={props.efectivoEsperado}
                         onAbrirClick={handleAbrirModal}
                         onCerrarClick={handleAbrirCierreModal}
                         onGastoClick={() => setShowMovimientoModal(true)}
@@ -165,51 +177,54 @@ export default function Index(props: CajasIndexProps) {
                     />
 
                     {/* ✅ NUEVO: Cards de estadísticas rápidas */}
-                    {cajaAbiertaHoy && movimientosHoy && movimientosHoy.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Total de Movimientos
-                                        </p>
-                                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-                                            {stats.totalMovimientos}
-                                        </p>
-                                    </div>
-                                    <div className="text-4xl">📊</div>
-                                </div>
-                            </div>
+                    {/* {cajaAbiertaHoy && movimientosHoy && movimientosHoy.length > 0 && (
+                        <>
 
-                            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Total Entradas
-                                        </p>
-                                        <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                                            +{stats.ingresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                Total de Movimientos
+                                            </p>
+                                            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                                                {stats.totalMovimientos}
+                                            </p>
+                                        </div>
+                                        <div className="text-4xl">📊</div>
                                     </div>
-                                    <div className="text-4xl">➕</div>
                                 </div>
-                            </div>
 
-                            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Total Salidas
-                                        </p>
-                                        <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-                                            -{stats.egresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
+                                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                Total Entradas
+                                            </p>
+                                            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+                                                +{stats.ingresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                        <div className="text-4xl">➕</div>
                                     </div>
-                                    <div className="text-4xl">➖</div>
+                                </div>
+
+                                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                Total Salidas
+                                            </p>
+                                            <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
+                                                -{stats.egresos.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                        <div className="text-4xl">➖</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        </>
+                    )} */}
 
                     {/* Tabs: Movimientos del Día vs Historial de Cajas */}
                     <Tabs defaultValue="movimientos" className="space-y-6">
@@ -261,6 +276,11 @@ export default function Index(props: CajasIndexProps) {
                             <MovimientosDelDiaTable
                                 cajaAbiertaHoy={cajaAbiertaHoy}
                                 movimientosHoy={movimientosHoy}
+                                efectivoEsperado={props.efectivoEsperado}
+                                ventasPorTipoPago={props.ventasPorTipoPago}
+                                ventasPorEstado={props.ventasPorEstado}
+                                pagosPorTipoPago={props.pagosPorTipoPago}
+                                gastosPorTipoPago={props.gastosPorTipoPago}
                             />
                         </TabsContent>
 
@@ -298,6 +318,7 @@ export default function Index(props: CajasIndexProps) {
                 show={showMovimientoModal}
                 onClose={() => setShowMovimientoModal(false)}
                 tiposOperacion={props.tiposOperacion || []}
+                tiposPago={props.tiposPago || []}
             />
 
             {/* ✅ NUEVO: Diálogo de confirmación para consolidación - Mejorado */}

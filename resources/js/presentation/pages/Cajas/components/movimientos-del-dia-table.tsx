@@ -17,11 +17,47 @@ import { ComprobantesMovimiento } from '@/presentation/components/ComprobantesMo
 interface Props {
     cajaAbiertaHoy: AperturaCaja | null;
     movimientosHoy: MovimientoCaja[];
+    efectivoEsperado?: { apertura: number; ventas_efectivo: number; pagos_credito: number; gastos: number; total: number };  // ✅ Viene del backend
+    ventasPorTipoPago?: Array<{ tipo: string; total: number; count: number }>;   // ✅ Viene del backend
+    ventasPorEstado?: Array<{ estado: string; total: number; count: number }>;    // ✅ Viene del backend
+    pagosPorTipoPago?: Array<{ tipo: string; total: number; count: number }>;     // ✅ Viene del backend
+    gastosPorTipoPago?: Array<{ tipo: string; total: number; count: number }>;    // ✅ Viene del backend
 }
 
-export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props) {
+// ✅ NUEVO: Función para obtener colores según el tipo de operación
+const getTipoOperacionColor = (codigo: string): string => {
+    switch (codigo.toUpperCase()) {
+        case 'VENTA':
+            return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        case 'PAGO':
+            return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+        case 'GASTOS':
+            return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        case 'APERTURA':
+            return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        case 'CIERRE':
+            return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'AJUSTE':
+            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'COMPRA':
+            return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        case 'ANULACION':
+            return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        case 'CREDITO':
+            return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300';
+        default:
+            return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+    }
+};
+
+export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [] }: Props) {
     console.log('MovimientosDelDiaTable renderizado con movimientosHoy:', movimientosHoy);
     console.log('cajaAbiertaHoy:', cajaAbiertaHoy);
+    console.log('efectivoEsperado:', efectivoEsperado);
+    console.log('ventasPorTipoPago:', ventasPorTipoPago);
+    console.log('ventasPorEstado:', ventasPorEstado);
+    console.log('pagosPorTipoPago:', pagosPorTipoPago);
+    console.log('gastosPorTipoPago:', gastosPorTipoPago);
     const [filtroTipo, setFiltroTipo] = useState<string | null>(null);
     const [filtroFechaDesde, setFiltroFechaDesde] = useState<string>('');
     const [filtroFechaHasta, setFiltroFechaHasta] = useState<string>('');
@@ -33,6 +69,9 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
     const [filtroDocumento, setFiltroDocumento] = useState<string>('');
     const [ordenarPor, setOrdenarPor] = useState<'fecha' | 'monto' | 'tipo'>('fecha');
     const [filtrosVisibles, setFiltrosVisibles] = useState(false);
+    const [expandirVentasEstado, setExpandirVentasEstado] = useState(false);
+    const [expandirPagos, setExpandirPagos] = useState(false);
+    const [expandirGastos, setExpandirGastos] = useState(false);
 
     if (!cajaAbiertaHoy || movimientosHoy.length === 0) {
         return (
@@ -93,6 +132,9 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
         total: movs.reduce((sum, m) => sum + m.monto, 0),
         count: movs.length,
     }));
+
+    // ✅ MEJORADO: ventasPorTipoPago ahora viene del backend (MovimientoCajaService)
+    // No calcular localmente, simplemente usar lo que viene en props
 
     // ✅ NUEVO: Calcular rango de IDs de venta (venta_id)
     const calcularRangoVentas = () => {
@@ -259,78 +301,253 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                         )}
                     </div>
                 </div>
-                {/* ✅ NUEVO: Resumen final */}
-                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Total Mostrado (respeta filtro) */}
-                        <div>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                Total Mostrado
-                                {filtroTipo && ` (${filtroTipo})`}
-                            </p>
-                            {(() => {
-                                const totalMostrado = movimientosAMostrar.reduce((sum, m) => sum + toNumber(m.monto), 0);
-                                return (
-                                    <>
-                                        <p className={`text-lg font-bold ${getMovimientoColor(totalMostrado)}`}>
-                                            {formatCurrency(totalMostrado)}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            {movimientosAMostrar.length} movimiento{movimientosAMostrar.length !== 1 ? 's' : ''}
-                                        </p>
-                                    </>
-                                );
-                            })()}
-                        </div>
-
-                        {/* Total del Día (siempre todos sin filtro) */}
-                        <div>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                Total del Día
-                            </p>
-                            {(() => {
-                                const totalDia = movimientosHoy.reduce((sum, m) => sum + toNumber(m.monto), 0);
-                                return (
-                                    <>
-                                        <p className={`text-lg font-bold ${getMovimientoColor(totalDia)}`}>
-                                            {formatCurrency(totalDia)}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            {movimientosHoy.length} movimiento{movimientosHoy.length !== 1 ? 's' : ''}
-                                        </p>
-                                    </>
-                                );
-                            })()}
-                        </div>
-
-                        {/* Saldo Esperado */}
-                        <div>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                Saldo Esperado
-                            </p>
-                            {(() => {
-                                const apertura = toNumber(cajaAbiertaHoy.monto_apertura);
-                                const totalDia = movimientosHoy.reduce((sum, m) => sum + toNumber(m.monto), 0);
-                                const saldoEsperado = apertura + totalDia;
-                                return (
-                                    <>
-                                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                            {formatCurrency(saldoEsperado)}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Apertura: {formatCurrency(apertura)}
-                                        </p>
-                                    </>
-                                );
-                            })()}
-                        </div>
+                {/* ✅ NUEVO: Efectivo Esperado en Caja */}
+                {efectivoEsperado && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-3">
+                        <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                            💰 Efectivo Esperado en Caja
+                        </h4>
+                        <table className="w-full text-xs">
+                            <tbody>
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2">Apertura</td>
+                                    <td className="text-right py-1 px-2 font-semibold text-gray-700 dark:text-gray-300">
+                                        {formatCurrency(efectivoEsperado.apertura)}
+                                    </td>
+                                </tr>
+                                <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/5">
+                                    <td className="py-1 px-2">
+                                        <strong>+ Ventas Efectivo</strong>
+                                    </td>
+                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
+                                        +{formatCurrency(ventasPorTipoPago.find(item => item.tipo === 'Efectivo')?.total || 0)}
+                                    </td>
+                                </tr>
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2"><strong>+ Ventas en Efectivo + Transferencias</strong></td>
+                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
+                                        +{formatCurrency(efectivoEsperado.ventas_efectivo)}
+                                    </td>
+                                </tr>
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2"><strong>+CXC Efectivo (Pagos de Crédito)</strong></td>
+                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
+                                        +{formatCurrency(efectivoEsperado.pagos_credito)}
+                                    </td>
+                                </tr>
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2">Devoluciones Venta</td>
+                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-gray-300">
+                                        {formatCurrency(ventasPorEstado.find(item => item.estado === 'Anulado')?.total || 0)}
+                                    </td>
+                                </tr>
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2">Devoluciones Efectivo</td>
+                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-gray-300">
+                                        {formatCurrency(ventasPorEstado.find(item => item.estado === 'Anulado')?.total || 0)}
+                                    </td>
+                                </tr>
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2">+ Entrada Efectivo</td>
+                                    <td className="text-right py-1 px-2 font-semibold text-red-700 dark:text-gray-300">
+                                        Bs 0,00
+                                    </td>
+                                </tr>
+                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
+                                    <td className="py-1 px-2">- Salida Efectivo</td>
+                                    <td className="text-right py-1 px-2 font-semibold text-red-700 dark:text-red-300">
+                                        -{formatCurrency(efectivoEsperado.gastos)}
+                                    </td>
+                                </tr>
+                                <tr className="bg-yellow-100 dark:bg-yellow-900/30">
+                                    <td className="py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200">=  Efectivo Esperado Caja</td>
+                                    <td className="text-right py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200 text-sm">
+                                        {formatCurrency(efectivoEsperado.total)}
+                                    </td>
+                                </tr>
+                                <tr className="bg-yellow-100 dark:bg-green-900/30">
+                                    <td className="py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200"><strong>VENTAS TOTALES</strong></td>
+                                    <td className="text-right py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200 text-sm">
+                                        {formatCurrency(ventasPorEstado.find(item => item.estado === 'Aprobado')?.total || 0)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
+                )}
 
-                {/* ✅ NUEVO: Resumen por Tipo de Pago */}
-                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                {/* ✅ NUEVO: Resumen de Ventas por Estado de Documento - COLAPSABLE */}
+                {ventasPorEstado && ventasPorEstado.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                            onClick={() => setExpandirVentasEstado(!expandirVentasEstado)}
+                            className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded transition"
+                        >
+                            <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                📄 Ventas por Estado
+                            </h4>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                                    {formatCurrency(ventasPorEstado.reduce((sum, item) => sum + item.total, 0))}
+                                </span>
+                                <span className="text-xl text-gray-500">
+                                    {expandirVentasEstado ? '▼' : '▶'}
+                                </span>
+                            </div>
+                        </button>
+
+                        {expandirVentasEstado && (
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                                        <th className="text-left py-1 px-2 text-gray-600 dark:text-gray-400">Estado</th>
+                                        <th className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">Total</th>
+                                        <th className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">Cantidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ventasPorEstado.map((item) => (
+                                        <tr key={item.estado} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td className="py-1 px-2">{item.estado}</td>
+                                            <td className={`text-right py-1 px-2 font-semibold ${item.total > 0 ? 'text-blue-700 dark:text-blue-300' : 'text-gray-500'}`}>
+                                                {formatCurrency(item.total)}
+                                            </td>
+                                            <td className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">
+                                                {item.count}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    <tr className="border-t border-gray-300 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/20 font-semibold">
+                                        <td className="py-1 px-2">Total</td>
+                                        <td className="text-right py-1 px-2 text-blue-700 dark:text-blue-300">
+                                            {formatCurrency(ventasPorEstado.reduce((sum, item) => sum + item.total, 0))}
+                                        </td>
+                                        <td className="text-right py-1 px-2 text-blue-700 dark:text-blue-300">
+                                            {ventasPorEstado.reduce((sum, item) => sum + item.count, 0)}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                )}
+
+                {/* ✅ NUEVO: Resumen de PAGOS por Tipo de Pago - COLAPSABLE */}
+                {pagosPorTipoPago && pagosPorTipoPago.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                            onClick={() => setExpandirPagos(!expandirPagos)}
+                            className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded transition"
+                        >
+                            <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                💵 Pagos por creditos por (Tipo de Pago)
+                            </h4>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-green-700 dark:text-green-300">
+                                    {formatCurrency(pagosPorTipoPago.reduce((sum, item) => sum + item.total, 0))}
+                                </span>
+                                <span className="text-xl text-gray-500">
+                                    {expandirPagos ? '▼' : '▶'}
+                                </span>
+                            </div>
+                        </button>
+
+                        {expandirPagos && (
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                                        <th className="text-left py-1 px-2 text-gray-600 dark:text-gray-400">Tipo</th>
+                                        <th className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">Total</th>
+                                        <th className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">Cantidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pagosPorTipoPago.map((item) => (
+                                        <tr key={item.tipo} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td className="py-1 px-2">{item.tipo}</td>
+                                            <td className={`text-right py-1 px-2 font-semibold ${item.total > 0 ? 'text-green-700 dark:text-green-300' : 'text-gray-500'}`}>
+                                                {formatCurrency(item.total)}
+                                            </td>
+                                            <td className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">
+                                                {item.count}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    <tr className="border-t border-gray-300 dark:border-gray-600 bg-green-50 dark:bg-green-900/20 font-semibold">
+                                        <td className="py-1 px-2">Total</td>
+                                        <td className="text-right py-1 px-2 text-green-700 dark:text-green-300">
+                                            {formatCurrency(pagosPorTipoPago.reduce((sum, item) => sum + item.total, 0))}
+                                        </td>
+                                        <td className="text-right py-1 px-2 text-green-700 dark:text-green-300">
+                                            {pagosPorTipoPago.reduce((sum, item) => sum + item.count, 0)}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                )}
+
+                {/* ✅ NUEVO: Resumen de GASTOS por Tipo de Pago - COLAPSABLE */}
+                {gastosPorTipoPago && gastosPorTipoPago.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                            onClick={() => setExpandirGastos(!expandirGastos)}
+                            className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded transition"
+                        >
+                            <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                🔴 Gastos por (Tipo de Pago)
+                            </h4>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-red-700 dark:text-red-300">
+                                    {formatCurrency(Math.abs(gastosPorTipoPago.reduce((sum, item) => sum + item.total, 0)))}
+                                </span>
+                                <span className="text-xl text-gray-500">
+                                    {expandirGastos ? '▼' : '▶'}
+                                </span>
+                            </div>
+                        </button>
+
+                        {expandirGastos && (
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                                        <th className="text-left py-1 px-2 text-gray-600 dark:text-gray-400">Tipo</th>
+                                        <th className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">Total</th>
+                                        <th className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">Cantidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {gastosPorTipoPago.map((item) => (
+                                        <tr key={item.tipo} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td className="py-1 px-2">{item.tipo}</td>
+                                            <td className={`text-right py-1 px-2 font-semibold ${item.total > 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-500'}`}>
+                                                {formatCurrency(Math.abs(item.total))}
+                                            </td>
+                                            <td className="text-right py-1 px-2 text-gray-600 dark:text-gray-400">
+                                                {item.count}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    <tr className="border-t border-gray-300 dark:border-gray-600 bg-red-50 dark:bg-red-900/20 font-semibold">
+                                        <td className="py-1 px-2">Total</td>
+                                        <td className="text-right py-1 px-2 text-red-700 dark:text-red-300">
+                                            {formatCurrency(Math.abs(gastosPorTipoPago.reduce((sum, item) => sum + item.total, 0)))}
+                                        </td>
+                                        <td className="text-right py-1 px-2 text-red-700 dark:text-red-300">
+                                            {gastosPorTipoPago.reduce((sum, item) => sum + item.count, 0)}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                )}
+
+                {/* ✅ NUEVO: Resumen por Tipo de Pago (todos los movimientos) */}
+                {/* <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                        💳 Resumen por Tipo de Pago
+                        💳 Resumen por Tipo de Pago (Todos los Movimientos)
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                         {totalesPorTipoPago.length > 0 ? (
@@ -356,7 +573,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                             </p>
                         )}
                     </div>
-                </div>
+                </div> */}
 
                 {/* ✅ NUEVO: Filtros por tipo */}
                 <div className="mb-6 flex flex-wrap gap-2 mt-4">
@@ -627,7 +844,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                 )}
 
                 {/* ✅ NUEVO: Resumen por tipo */}
-                {totalesPorTipo.length > 1 && !filtroTipo && (
+                {/* {totalesPorTipo.length > 1 && !filtroTipo && (
                     <div className="mb-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {totalesPorTipo.map(({ tipo, total, count }) => (
                             <div
@@ -647,7 +864,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                             </div>
                         ))}
                     </div>
-                )}
+                )} */}
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -673,7 +890,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy }: Props
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                         {formatDateTime(movimiento.fecha)}
                                         <br />
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTipoOperacionColor(movimiento.tipo_operacion.codigo)}`}>
                                             {movimiento.tipo_operacion.nombre}
                                         </span>
                                         <br />

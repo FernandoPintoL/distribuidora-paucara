@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Entrega;
+use App\Services\ExcelExportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -38,6 +39,7 @@ class EntregaPdfController extends Controller
             'ventas_count' => $entrega->ventas?->count(),
             'vistas_disponibles' => [
                 'A4' => view()->exists('impresion.entregas.hoja-completa'),
+                'B1' => view()->exists('impresion.entregas.b1'),
                 'TICKET_80' => view()->exists('impresion.entregas.ticket-80'),
                 'TICKET_58' => view()->exists('impresion.entregas.ticket-58'),
             ],
@@ -128,6 +130,7 @@ class EntregaPdfController extends Controller
             match ($formato) {
                 'TICKET_80' => $this->configurarTicket80($pdf),
                 'TICKET_58' => $this->configurarTicket58($pdf),
+                'B1' => $this->configurarB1($pdf),
                 default => $this->configurarA4($pdf),
             };
 
@@ -199,6 +202,7 @@ class EntregaPdfController extends Controller
             match ($formato) {
                 'TICKET_80' => $this->configurarTicket80($pdf),
                 'TICKET_58' => $this->configurarTicket58($pdf),
+                'B1' => $this->configurarB1($pdf),
                 default => $this->configurarA4($pdf),
             };
 
@@ -253,9 +257,22 @@ class EntregaPdfController extends Controller
     }
 
     /**
+     * Configurar PDF para formato B1 (707mm × 1000mm)
+     */
+    private function configurarB1($pdf)
+    {
+        return $pdf
+            ->setPaper([0, 0, 2004, 2834], 'portrait')  // B1 = 707mm × 1000mm (≈ 2004 × 2834 pt)
+            ->setOption('margin-top', 20)
+            ->setOption('margin-bottom', 20)
+            ->setOption('margin-left', 20)
+            ->setOption('margin-right', 20);
+    }
+
+    /**
      * Obtener vista Blade según el formato de entrega
      *
-     * @param string $formato A4|TICKET_80|TICKET_58
+     * @param string $formato A4|TICKET_80|TICKET_58|B1
      * @return string Vista Blade
      */
     private function obtenerVistaEntrega(string $formato): string
@@ -263,6 +280,7 @@ class EntregaPdfController extends Controller
         return match ($formato) {
             'TICKET_80' => 'impresion.entregas.ticket-80',
             'TICKET_58' => 'impresion.entregas.ticket-58',
+            'B1' => 'impresion.entregas.b1',
             default => 'impresion.entregas.hoja-completa',
         };
     }
@@ -343,6 +361,28 @@ class EntregaPdfController extends Controller
                 'error' => $e->getMessage()
             ]);
             return null;
+        }
+    }
+
+    /**
+     * Exportar entrega a Excel
+     *
+     * GET /api/entregas/{entrega}/exportar-excel
+     *
+     * @param Entrega $entrega
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function exportarExcel(Entrega $entrega)
+    {
+        try {
+            $excelService = new ExcelExportService();
+            return $excelService->exportarEntrega($entrega);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generando Excel',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

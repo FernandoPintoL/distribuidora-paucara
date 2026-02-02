@@ -5,6 +5,7 @@ use App\DTOs\Venta\CrearVentaDTO;
 use App\DTOs\Venta\VentaResponseDTO;
 use App\Exceptions\Stock\StockInsuficientException;
 use App\Exceptions\Venta\EstadoInvalidoException;
+use App\Models\EstadoDocumento;
 use App\Models\Venta;
 use App\Services\Stock\StockService;
 use App\Services\Traits\LogsOperations;
@@ -232,7 +233,7 @@ class VentaService
             // ✅ NUEVO: Permitir stock negativo para CREDITO (son promesas de pago, no ventas inmediatas)
             $this->stockService->procesarSalidaVenta(
                 $dto->detalles,
-                "VENTA#{$venta->id}",
+                $venta->numero,
                 $dto->almacen_id,
                 permitirStockNegativo: $esCREDITO  // ✅ Permite stock negativo para CREDITO
             );
@@ -287,17 +288,17 @@ class VentaService
             $venta = Venta::lockForUpdate()->findOrFail($ventaId);
 
             // Validar transición de estado
-            if ($venta->estado !== 'PENDIENTE') {
+            if ($venta->estado !== 'Pendiente') {
                 throw EstadoInvalidoException::transicionInvalida(
                     'Venta',
                     $ventaId,
                     $venta->estado,
-                    'APROBADA'
+                    'Aprobado'
                 );
             }
 
             // Cambiar estado
-            $venta->update(['estado' => 'APROBADA']);
+            $venta->update(['estado_documento_id' => EstadoDocumento::where('nombre', 'Aprobado')->first()->id]);
 
             // Emitir evento
             event(new \App\Events\VentaAprobada($venta));
@@ -322,29 +323,30 @@ class VentaService
         $venta = $this->transaction(function () use ($ventaId, $motivo) {
             $venta = Venta::lockForUpdate()->findOrFail($ventaId);
 
-            // Si ya está entregada o pagada, no se puede rechazar
-            if (in_array($venta->estado, ['ENTREGADA', 'PAGADA', 'CERRADA'])) {
+            // Si ya está en estado final, no se puede rechazar
+            if (in_array($venta->estado, ['Facturado', 'Anulado', 'Cancelado'])) {
                 throw EstadoInvalidoException::transicionInvalida(
                     'Venta',
                     $ventaId,
                     $venta->estado,
-                    'RECHAZADA'
+                    'Cancelado'
                 );
             }
 
             // Revertir stock si ya se consumió
-            if ($venta->estado === 'APROBADA') {
+            if ($venta->estado === 'Aprobado') {
                 $this->stockService->devolverStock(
                     $venta->detalles->toArray(),
-                    "VENTA#{$ventaId}-RECHAZO",
+                    $venta->numero . "-RECHAZO",
                     $venta->almacen_id
                 );
             }
 
-            // Cambiar estado
+            // Cambiar estado a Cancelado
+            $estadoCancelado = EstadoDocumento::where('nombre', 'Cancelado')->first();
             $venta->update([
-                'estado'        => 'RECHAZADA',
-                'observaciones' => ($venta->observaciones ?? '') . "\nMotivo rechazo: {$motivo}",
+                'estado_documento_id' => $estadoCancelado->id,
+                'observaciones'       => ($venta->observaciones ?? '') . "\nMotivo rechazo: {$motivo}",
             ]);
 
             // Emitir evento

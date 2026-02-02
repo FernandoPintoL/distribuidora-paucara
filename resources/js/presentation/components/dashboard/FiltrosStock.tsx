@@ -25,12 +25,17 @@ export interface FiltrosState {
 
 const RANGOS_STOCK = {
     todos: { label: 'Todos', min: 0, max: Infinity },
+    cero: { label: 'Sin Stock (0)', min: 0, max: 0 },
     bajo: { label: 'Stock Bajo (< 10)', min: 0, max: 10 },
     normal: { label: 'Stock Normal (10-100)', min: 10, max: 100 },
     alto: { label: 'Stock Alto (> 100)', min: 100, max: Infinity },
 };
 
 export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStockProps) {
+    // Estado local para edición (no envía al padre inmediatamente)
+    const [busquedaLocal, setBusquedaLocal] = useState('');
+
+    // Estado de filtros aplicados (se envía al padre)
     const [filtros, setFiltros] = useState<FiltrosState>({
         busqueda: '',
         almacenId: '',
@@ -38,10 +43,25 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
         ordenamiento: 'cantidad-desc',
     });
 
+    // Aplica los filtros cuando se presiona Buscar o Enter
+    const aplicarBusqueda = () => {
+        const filtrosActualizados = { ...filtros, busqueda: busquedaLocal };
+        setFiltros(filtrosActualizados);
+        onFiltrosChange(filtrosActualizados);
+    };
+
+    // Aplica cambios en select inmediatamente (almacén, rango, ordenamiento)
     const handleFiltroChange = (nuevos: Partial<FiltrosState>) => {
         const filtrosActualizados = { ...filtros, ...nuevos };
         setFiltros(filtrosActualizados);
         onFiltrosChange(filtrosActualizados);
+    };
+
+    // Maneja Enter en el input de búsqueda
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            aplicarBusqueda();
+        }
     };
 
     const limpiarFiltros = () => {
@@ -51,6 +71,7 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
             rangoStock: 'todos',
             ordenamiento: 'cantidad-desc',
         };
+        setBusquedaLocal('');
         setFiltros(filtrosLimpios);
         onFiltrosChange(filtrosLimpios);
     };
@@ -72,19 +93,7 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Búsqueda por Producto */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Buscar Producto
-                    </label>
-                    <input
-                        type="text"
-                        placeholder="Nombre, código o SKU..."
-                        value={filtros.busqueda}
-                        onChange={(e) => handleFiltroChange({ busqueda: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                    />
-                </div>
+
 
                 {/* Filtro por Almacén */}
                 <div>
@@ -138,6 +147,28 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
                         <option value="producto">Producto (A-Z)</option>
                         <option value="almacen">Almacén (A-Z)</option>
                     </select>
+                </div>
+                {/* Búsqueda por Producto */}
+                <div className="lg:col-span-2 flex flex-col">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Buscar Producto (ID, SKU o Nombre)
+                    </label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="Presiona Enter para buscar..."
+                            value={busquedaLocal}
+                            onChange={(e) => setBusquedaLocal(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        />
+                        <button
+                            onClick={aplicarBusqueda}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition whitespace-nowrap"
+                        >
+                            Buscar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

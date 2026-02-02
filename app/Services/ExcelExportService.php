@@ -16,6 +16,8 @@ use App\Models\Compra;
 use App\Models\Credito;
 use App\Models\Caja;
 use App\Models\StockProducto;
+use App\Models\Entrega;
+use App\Services\ImpresionEntregaService;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -740,6 +742,262 @@ class ExcelExportService
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Exportar entrega a Excel
+     *
+     * @param Entrega $entrega
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function exportarEntrega(Entrega $entrega)
+    {
+        Log::info('📊 ExcelExportService::exportarEntrega', ['entrega_id' => $entrega->id]);
+
+        try {
+            // Cargar relaciones
+            $entrega->load([
+                'ventas.cliente',
+                'ventas.detalles.producto',
+                'chofer',
+                'vehiculo',
+                'localidad',
+            ]);
+
+            // Crear encabezado
+            $this->crearEncabezadoEntrega($entrega);
+
+            // Información general de la entrega
+            $this->crearSeccionInfoEntrega($entrega);
+
+            // Lista genérica de productos
+            $impresionService = app(ImpresionEntregaService::class);
+            $productosGenerico = $impresionService->obtenerProductosAgrupados($entrega);
+            $this->crearTablaProductosEntrega($productosGenerico);
+
+            // Detalle por venta
+            $this->crearSeccionVentas($entrega);
+
+            // Totales y pie
+            $this->crearSeccionTotalesEntrega($entrega, $productosGenerico);
+
+            // Aplicar estilos
+            $this->aplicarFormato();
+
+            $nombreArchivo = "Entrega_{$entrega->numero_entrega}_" . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+            return $this->descargarArchivo($this->spreadsheet, $nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('❌ Error al exportar entrega a Excel', [
+                'error' => $e->getMessage(),
+                'entrega_id' => $entrega->id
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Crear encabezado para entrega
+     */
+    private function crearEncabezadoEntrega(Entrega $entrega): void
+    {
+        if ($this->empresa) {
+            $this->agregarCelda($this->empresa->nombre, ['fontSize' => 14, 'bold' => true, 'color' => '1F2937']);
+            $this->currentRow++;
+
+            if ($this->empresa->nit) {
+                $this->agregarCelda('NIT: ' . $this->empresa->nit, ['fontSize' => 10, 'color' => '6B7280']);
+                $this->currentRow++;
+            }
+        }
+
+        $this->currentRow += 2;
+        $this->agregarCelda('ENTREGA #' . $entrega->numero_entrega, ['fontSize' => 12, 'bold' => true, 'color' => '1F2937']);
+        $this->currentRow++;
+        $this->agregarCelda('Fecha: ' . $entrega->fecha_asignacion->format('Y-m-d H:i'), ['fontSize' => 10, 'color' => '6B7280']);
+        $this->currentRow += 2;
+    }
+
+    /**
+     * Crear sección de información de entrega
+     */
+    private function crearSeccionInfoEntrega(Entrega $entrega): void
+    {
+        $this->agregarCelda('INFORMACIÓN DE LA ENTREGA', ['fontSize' => 10, 'bold' => true, 'color' => 'FFFFFF', 'bgColor' => '8B5CF6']);
+        $this->currentRow++;
+
+        // Estado
+        $this->agregarCelda('Estado: ' . $entrega->estado);
+        $this->currentRow++;
+
+        // Chofer
+        if ($entrega->chofer) {
+            $this->agregarCelda('Chofer: ' . ($entrega->chofer->name ?? $entrega->chofer->nombre));
+            $this->currentRow++;
+        }
+
+        // Vehículo
+        if ($entrega->vehiculo) {
+            $this->agregarCelda('Vehículo: ' . $entrega->vehiculo->placa . ' (' . $entrega->vehiculo->marca . ' ' . $entrega->vehiculo->modelo . ')');
+            $this->currentRow++;
+        }
+
+        // Peso
+        if ($entrega->peso_kg) {
+            $this->agregarCelda('Peso Total: ' . number_format($entrega->peso_kg, 2) . ' kg');
+            $this->currentRow++;
+        }
+
+        // Zona
+        if ($entrega->localidad) {
+            $this->agregarCelda('Zona: ' . $entrega->localidad->nombre);
+            $this->currentRow++;
+        }
+
+        // Observaciones
+        if ($entrega->observaciones) {
+            $this->agregarCelda('Observaciones: ' . $entrega->observaciones, ['wrapText' => true]);
+            $this->currentRow++;
+        }
+
+        $this->currentRow += 2;
+    }
+
+    /**
+     * Crear tabla de productos agrupados
+     */
+    private function crearTablaProductosEntrega($productosGenerico): void
+    {
+        $this->agregarCelda('LISTA GENÉRICA DE PRODUCTOS (CONSOLIDADO)', ['fontSize' => 10, 'bold' => true, 'color' => 'FFFFFF', 'bgColor' => '8B5CF6']);
+        $this->currentRow++;
+
+        // Headers
+        $headers = ['Producto', 'Cantidad Total', 'Precio Unit.', 'Cantidad Ventas', 'Subtotal'];
+        foreach ($headers as $index => $header) {
+            $col = chr(65 + $index);
+            $cell = $this->sheet->getCell($col . $this->currentRow);
+            $cell->setValue($header);
+            $style = $cell->getStyle();
+            $style->getFont()->setBold(true)->setColor(new Color('FFFFFF'));
+            $style->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('8B5CF6');
+            $style->getAlignment()->setHorizontal('center')->setVertical('center');
+        }
+
+        $this->currentRow++;
+
+        // Datos
+        foreach ($productosGenerico as $producto) {
+            $this->sheet->setCellValue('A' . $this->currentRow, $producto['producto_nombre']);
+            $this->sheet->setCellValue('B' . $this->currentRow, $producto['cantidad_total']);
+            $this->sheet->setCellValue('C' . $this->currentRow, $producto['precio_unitario']);
+            $this->sheet->setCellValue('D' . $this->currentRow, $producto['cantidad_ventas']);
+            $this->sheet->setCellValue('E' . $this->currentRow, $producto['subtotal_total']);
+
+            // Formatos
+            $this->sheet->getStyle('B' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            $this->sheet->getStyle('C' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            $this->sheet->getStyle('D' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0');
+            $this->sheet->getStyle('E' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            $this->currentRow++;
+        }
+
+        $this->currentRow += 2;
+    }
+
+    /**
+     * Crear sección de ventas
+     */
+    private function crearSeccionVentas(Entrega $entrega): void
+    {
+        if ($entrega->ventas->isEmpty()) {
+            return;
+        }
+
+        $this->agregarCelda('DETALLE POR VENTA', ['fontSize' => 10, 'bold' => true, 'color' => 'FFFFFF', 'bgColor' => '8B5CF6']);
+        $this->currentRow++;
+
+        foreach ($entrega->ventas as $venta) {
+            // Encabezado de venta
+            $this->agregarCelda('Venta #' . $venta->numero . ' - Cliente: ' . $venta->cliente->nombre, ['bold' => true, 'bgColor' => 'E9D5FF']);
+            $this->currentRow++;
+
+            // Headers para productos de esta venta
+            $headers = ['Producto', 'Cantidad', 'Precio Unit.', 'Subtotal'];
+            foreach ($headers as $index => $header) {
+                $col = chr(65 + $index);
+                $cell = $this->sheet->getCell($col . $this->currentRow);
+                $cell->setValue($header);
+                $style = $cell->getStyle();
+                $style->getFont()->setBold(true)->setSize(9);
+                $style->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('F3E8FF');
+            }
+
+            $this->currentRow++;
+
+            // Detalles de productos
+            $totalVenta = 0;
+            foreach ($venta->detalles as $detalle) {
+                $this->sheet->setCellValue('A' . $this->currentRow, $detalle->producto->nombre);
+                $this->sheet->setCellValue('B' . $this->currentRow, $detalle->cantidad);
+                $this->sheet->setCellValue('C' . $this->currentRow, $detalle->precio_unitario);
+                $this->sheet->setCellValue('D' . $this->currentRow, $detalle->subtotal);
+
+                $this->sheet->getStyle('B' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $this->sheet->getStyle('C' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $this->sheet->getStyle('D' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $totalVenta += $detalle->subtotal;
+                $this->currentRow++;
+            }
+
+            // Total de venta
+            $this->sheet->setCellValue('C' . $this->currentRow, 'Total:');
+            $this->sheet->setCellValue('D' . $this->currentRow, $totalVenta);
+            $style = $this->sheet->getStyle('C' . $this->currentRow);
+            $style->getFont()->setBold(true);
+            $style = $this->sheet->getStyle('D' . $this->currentRow);
+            $style->getFont()->setBold(true);
+            $style->getNumberFormat()->setFormatCode('#,##0.00');
+
+            $this->currentRow += 2;
+        }
+    }
+
+    /**
+     * Crear sección de totales de entrega
+     */
+    private function crearSeccionTotalesEntrega(Entrega $entrega, $productosGenerico): void
+    {
+        $this->currentRow += 1;
+        $this->agregarCelda('RESUMEN FINAL', ['fontSize' => 10, 'bold' => true]);
+        $this->currentRow += 2;
+
+        $totalCantidad = $productosGenerico->sum('cantidad_total');
+        $totalSubtotal = $productosGenerico->sum('subtotal_total');
+
+        $this->sheet->setCellValue('C' . $this->currentRow, 'Total Productos:');
+        $this->sheet->setCellValue('E' . $this->currentRow, $productosGenerico->count());
+        $this->currentRow++;
+
+        $this->sheet->setCellValue('C' . $this->currentRow, 'Total Cantidad:');
+        $this->sheet->setCellValue('E' . $this->currentRow, $totalCantidad);
+        $this->sheet->getStyle('E' . $this->currentRow)->getNumberFormat()->setFormatCode('#,##0.00');
+        $this->currentRow++;
+
+        $this->sheet->setCellValue('C' . $this->currentRow, 'TOTAL ENTREGA:');
+        $this->sheet->setCellValue('E' . $this->currentRow, $totalSubtotal);
+        $styleC = $this->sheet->getStyle('C' . $this->currentRow);
+        $styleC->getFont()->setBold(true)->setSize(12);
+        $styleE = $this->sheet->getStyle('E' . $this->currentRow);
+        $styleE->getFont()->setBold(true)->setSize(12)->setColor(new Color('8B5CF6'));
+        $styleE->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('F3E8FF');
+        $styleE->getNumberFormat()->setFormatCode('#,##0.00');
+
+        $this->currentRow += 3;
+
+        // Información de generación
+        $this->agregarCelda('Documento generado: ' . now()->format('d/m/Y H:i:s'), ['fontSize' => 8, 'color' => '9CA3AF']);
     }
 
     /**

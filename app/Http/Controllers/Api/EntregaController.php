@@ -7,6 +7,7 @@ use App\Events\UbicacionActualizada;
 use App\Events\MarcarLlegadaConfirmada;
 use App\Events\EntregaConfirmada;
 use App\Events\NovedadEntregaReportada;
+use App\Events\EntregaCancelada;
 use App\Http\Controllers\Controller;
 use App\Models\Entrega;
 use App\Models\EstadoLogistica;
@@ -1747,6 +1748,153 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error creando entrega consolidada',
+                'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'debug' => [
+                    'exception_class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => explode("\n", $e->getTraceAsString()),
+                ],
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/entregas/{id}/cancelar
+     * Cancelar una entrega consolidada sin afectar las ventas
+     *
+     * Request body:
+     * {
+     *   "motivo": "Falta disponibilidad del chofer",
+     *   "reabrir_ventas": true
+     * }
+     *
+     * Response:
+     * {
+     *   "success": true,
+     *   "message": "Entrega cancelada exitosamente",
+     *   "data": { ... }
+     * }
+     */
+    public function cancelarEntrega(\Illuminate\Http\Request $request, int $id)
+    {
+        try {
+            Log::info('📍 cancelarEntrega request received', [
+                'entrega_id' => $id,
+                'user_id' => Auth::id(),
+                'request_data' => $request->all(),
+            ]);
+
+            // ═══════════════════════════════════════════════════════════
+            // VALIDAR ENTRADA
+            // ═══════════════════════════════════════════════════════════
+            $validated = $request->validate([
+                'motivo' => 'required|string|max:500',
+                'reabrir_ventas' => 'nullable|boolean',
+            ]);
+
+            Log::info('✅ Validation passed', ['validated' => $validated]);
+
+            // ═══════════════════════════════════════════════════════════
+            // INSTANCIAR SERVICIO
+            // ═══════════════════════════════════════════════════════════
+            $service = app(\App\Services\Logistica\CancelarEntregaService::class);
+
+            Log::info('🔧 Service instantiated, calling cancelarEntrega...');
+
+            // ═══════════════════════════════════════════════════════════
+            // LLAMAR AL SERVICIO
+            // ═══════════════════════════════════════════════════════════
+            $entrega = $service->cancelarEntrega(
+                entregaId: $id,
+                motivo: $validated['motivo'],
+                reabrirVentas: $validated['reabrir_ventas'] ?? false,
+                usuarioId: Auth::id(),
+            );
+
+            Log::info('✅ Service call successful', ['entrega_id' => $id]);
+
+            // ═══════════════════════════════════════════════════════════
+            // DISPARAR EVENTO
+            // ═══════════════════════════════════════════════════════════
+            try {
+                event(new EntregaCancelada($entrega, $validated['motivo']));
+                Log::info('📢 Evento EntregaCancelada disparado exitosamente', [
+                    'entrega_id' => $id,
+                    'motivo' => $validated['motivo'],
+                ]);
+            } catch (\Exception $broadcastError) {
+                Log::warning('⚠️ Error al emitir evento de cancelación (no crítico)', [
+                    'entrega_id' => $id,
+                    'error' => $broadcastError->getMessage(),
+                ]);
+                // La entrega ya fue cancelada exitosamente, así que continuamos
+            }
+
+            // ═══════════════════════════════════════════════════════════
+            // CARGAR DATOS PARA RESPUESTA
+            // ═══════════════════════════════════════════════════════════
+            Log::info('📍 Loading relationships...', ['entrega_id' => $id]);
+            $entrega->load(['vehiculo:id,placa', 'chofer:id,name']);
+            Log::info('✅ Relationships loaded');
+
+            // Obtener ventas desvinculadas
+            Log::info('📍 Fetching related sales...');
+            $ventasCount = DB::table('entrega_venta')
+                ->where('entrega_id', $id)
+                ->count();
+
+            Log::info('✅ Sales count retrieved', ['count' => $ventasCount]);
+
+            // ═══════════════════════════════════════════════════════════
+            // RETORNAR RESPUESTA
+            // ═══════════════════════════════════════════════════════════
+            return response()->json([
+                'success' => true,
+                'message' => 'Entrega cancelada exitosamente',
+                'data' => [
+                    'id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'estado' => $entrega->estado,
+                    'fecha_cancelacion' => $entrega->updated_at,
+                    'vehiculo' => [
+                        'id' => $entrega->vehiculo?->id,
+                        'placa' => $entrega->vehiculo?->placa,
+                    ],
+                    'chofer' => [
+                        'id' => $entrega->chofer?->id,
+                        'nombre' => $entrega->chofer?->name,
+                    ],
+                    'ventas_desvinculadas' => $ventasCount,
+                    'ventas_reabiertos_para_reasignacion' => $validated['reabrir_ventas'] ?? false,
+                    'motivo_cancelacion' => $validated['motivo'],
+                ],
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('❌ Validation failed', ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validación fallida',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Throwable $e) {
+            $errorDetails = [
+                'exception_class' => get_class($e),
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ];
+
+            Log::error('❌ Exception in cancelarEntrega', $errorDetails);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error cancelando entrega',
                 'error' => $e->getMessage(),
                 'error_code' => $e->getCode(),
                 'debug' => [

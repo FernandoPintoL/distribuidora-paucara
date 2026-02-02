@@ -532,8 +532,15 @@ export default function ProductosTable({
                                 )}
                                 {tipo === 'compra' && (
                                     <>
+
                                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Precio Compra
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Lote
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Vencimiento
                                         </th>
                                         {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Unidad Compra
@@ -686,6 +693,8 @@ export default function ProductosTable({
                                         )}
                                         {tipo === 'compra' && (
                                             <>
+
+
                                                 {/* ✅ SIMPLIFICADO: Solo mostrar unidad base, sin selector */}
                                                 {/* <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -694,7 +703,7 @@ export default function ProductosTable({
                                                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                         {precioCosto > 0 ? formatCurrency(precioCosto) : 'N/A'}
                                                     </div>
-                                                    
+
                                                 </td> */}
                                                 <td className="px-4 py-2 whitespace-nowrap">
                                                     <input
@@ -781,6 +790,32 @@ export default function ProductosTable({
                                                             })()}
                                                         </td>
                                                     )}
+                                                </td>
+                                                {/* ✅ CELDA: Lote */}
+                                                <td className="px-4 py-2 whitespace-nowrap">
+                                                    <input
+                                                        type="text"
+                                                        disabled={readOnly}
+                                                        value={detalle.lote || ''}
+                                                        placeholder="Ej: LOT-001"
+                                                        onChange={(e) => {
+                                                            handleUpdateDetail(index, 'lote', e.target.value);
+                                                        }}
+                                                        className="w-28 px-2 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    />
+                                                </td>
+
+                                                {/* ✅ CELDA: Fecha de Vencimiento */}
+                                                <td className="px-4 py-2 whitespace-nowrap">
+                                                    <input
+                                                        type="date"
+                                                        disabled={readOnly}
+                                                        value={detalle.fecha_vencimiento || ''}
+                                                        onChange={(e) => {
+                                                            handleUpdateDetail(index, 'fecha_vencimiento', e.target.value);
+                                                        }}
+                                                        className="w-32 px-2 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    />
                                                 </td>
 
                                             </>

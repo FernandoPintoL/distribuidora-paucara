@@ -40,6 +40,7 @@ interface ProformasSectionProps {
     estadosLogistica: Array<{ id: number; nombre: string; codigo: string }>;
     cambiarPagina: (page: number) => void;
     onVerProforma: (proforma: ProformaAppExterna) => void;
+    onRechazarProforma?: (proforma: ProformaAppExterna) => void;
     getEstadoBadge: (estado: string, proforma: ProformaAppExterna) => any;
     estaVencida: (proforma: ProformaAppExterna) => boolean;
 }
@@ -71,6 +72,7 @@ export function ProformasSection({
     estadosLogistica,
     cambiarPagina,
     onVerProforma,
+    onRechazarProforma,
     getEstadoBadge,
     estaVencida,
 }: ProformasSectionProps) {
@@ -112,7 +114,7 @@ export function ProformasSection({
     const activeFiltersCount = countActiveFilters();
 
     // Función para obtener etiqueta del filtro activo
-    const getFilterLabel = (key: string, value: string): string => {
+    /* const getFilterLabel = (key: string, value: string): string => {
         switch (key) {
             case 'localidad':
                 return `Localidad: ${localidades.find(l => l.id.toString() === value)?.nombre || value}`;
@@ -141,7 +143,7 @@ export function ProformasSection({
             default:
                 return value;
         }
-    };
+    }; */
 
     // Función para manejar el click en headers para ordenar
     const handleSort = (field: SortField) => {
@@ -778,9 +780,21 @@ export function ProformasSection({
                                                 variant="ghost"
                                                 onClick={() => onVerProforma(proforma)}
                                                 className="dark:hover:bg-slate-700"
+                                                title="Ver proforma"
                                             >
                                                 <Eye className="h-4 w-4 dark:text-gray-400" />
                                             </Button>
+                                            {['PENDIENTE', 'APROBADA', 'VENCIDA'].includes(proforma.estado) && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => onRechazarProforma?.(proforma)}
+                                                    className="dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400"
+                                                    title="Rechazar proforma"
+                                                >
+                                                    <XCircle className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

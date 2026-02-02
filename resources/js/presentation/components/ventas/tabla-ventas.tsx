@@ -7,6 +7,7 @@ import type { Pagination } from '@/domain/entities/shared';
 import ventasService from '@/infrastructure/services/ventas.service';
 import AnularVentaModal from './AnularVentaModal';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
+import EstadoVentaBadge from './EstadoVentaBadge';
 import { toast } from 'react-toastify';
 
 interface TablaVentasProps {
@@ -59,8 +60,16 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
     const handleAnularVenta = async (motivo?: string) => {
         if (!anularModal.venta) return;
 
+        console.log('🔴 [ANULAR VENTA FRONTEND] INICIANDO', {
+            venta_id: anularModal.venta.id,
+            venta_numero: anularModal.venta.numero,
+            motivo: motivo,
+        });
+
         setIsAnulando(true);
         try {
+            console.log('🔴 [ANULAR VENTA FRONTEND] Enviando request al backend...');
+
             const response = await fetch(`/ventas/${anularModal.venta.id}/anular`, {
                 method: 'POST',
                 headers: {
@@ -70,46 +79,41 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                 body: JSON.stringify({ motivo }),
             });
 
+            console.log('🔴 [ANULAR VENTA FRONTEND] Response recibido', {
+                status: response.status,
+                ok: response.ok,
+            });
+
             const data = await response.json();
 
+            console.log('🔴 [ANULAR VENTA FRONTEND] Data del response', {
+                success: data.success,
+                message: data.message,
+                data: data.data,
+            });
+
             if (!response.ok) {
+                console.error('🔴 [ANULAR VENTA FRONTEND] Error en respuesta', data.message);
                 toast.error(data.message || 'Error al anular la venta');
                 return;
             }
 
+            console.log('🟢 [ANULAR VENTA FRONTEND] Anulación exitosa, mostrando toast y recargando...');
             toast.success('Venta anulada exitosamente');
             closeAnularModal();
 
             // Recargar la página
-            setTimeout(() => window.location.reload(), 1000);
+            console.log('🟢 [ANULAR VENTA FRONTEND] Recargando página en 1 segundo...');
+            setTimeout(() => {
+                console.log('🟢 [ANULAR VENTA FRONTEND] Ejecutando reload...');
+                window.location.reload();
+            }, 1000);
         } catch (error) {
-            console.error('Error al anular venta:', error);
+            console.error('🔴 [ANULAR VENTA FRONTEND] ERROR DE EXCEPCIÓN', error);
             toast.error('Error al anular la venta');
         } finally {
             setIsAnulando(false);
         }
-    };
-
-    const getEstadoLogisticoColor = (estado: string): string => {
-        // ✅ ACTUALIZADO: Incluir todos los estados posibles desde BD
-        const colorMap: { [key: string]: string } = {
-            // Estados de entrega
-            'SIN_ENTREGA': 'gray',
-            'PENDIENTE_ENVIO': 'yellow',    // ✅ NUEVO: Pendiente de envío
-            'PROGRAMADO': 'blue',
-            'EN_PREPARACION': 'yellow',
-            'PREPARANDO': 'yellow',         // ✅ NUEVO: Alias de preparación
-            'EN_TRANSITO': 'purple',
-            'ENVIADO': 'blue',              // ✅ NUEVO: En camino
-            'ENTREGADA': 'green',
-            'ENTREGADO': 'green',           // ✅ NUEVO: Ya entregado
-            'PROBLEMAS': 'red',
-            'CANCELADA': 'dark',
-            'CANCELADO': 'dark',            // ✅ NUEVO: Alias
-            'PENDIENTE_RETIRO': 'orange',   // ✅ NUEVO: Pendiente de retiro
-            'RETIRADO': 'green'             // ✅ NUEVO: Retirado
-        };
-        return colorMap[estado] || 'gray';
     };
 
     const getEstadoLogisticoLabel = (estado: string): string => {
@@ -133,16 +137,6 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
         return labelMap[estado] || 'Desconocido';
     };
 
-    /* const handleDelete = (venta: Venta) => {
-        ventasService.destroy(venta.id, {
-            onSuccess: () => {
-                if (onVentaDeleted) {
-                    onVentaDeleted(venta.id);
-                }
-            }
-        });
-    }; */
-
     const handleSort = (field: string) => {
         const currentSortDir = filtros?.sort_by === field && filtros?.sort_dir === 'asc' ? 'desc' : 'asc';
         ventasService.sort(field, currentSortDir);
@@ -155,21 +149,15 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
         return filtros?.sort_dir === 'asc' ? '↑' : '↓';
     };
 
-    const getEstadoColor = (estado: string): string => {
-        switch (estado.toLowerCase()) {
-            case 'pendiente':
-                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-            case 'completada':
-            case 'pagada':
-                return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-            case 'cancelada':
-                return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-            case 'facturada':
-                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-            default:
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-        }
-    };
+    /* const handleDelete = (venta: Venta) => {
+        ventasService.destroy(venta.id, {
+            onSuccess: () => {
+                if (onVentaDeleted) {
+                    onVentaDeleted(venta.id);
+                }
+            }
+        });
+    }; */
 
     if (!ventas.data || ventas.data.length === 0) {
         return (
@@ -275,13 +263,15 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">
                                             #{venta.id} | {venta.numero}
                                         </div>
-                                        <div className="text-sm text-gray-900 dark:text-white">
+                                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                                             {formatDate(String(venta.fecha))}
                                         </div>
-                                        <span className={`inline-flex py-1 text-xs font-semibold rounded-full ${getEstadoColor(venta.estado_logistico || '')
-                                            }`}>
-                                            {String(venta.estado_documento?.codigo ?? 'Sin estado')}
-                                        </span>
+                                        <EstadoVentaBadge
+                                            estado={venta.estado_documento?.codigo || 'PENDIENTE'}
+                                            tamaño="sm"
+                                            conIcono={true}
+                                            mostrarLabel={true}
+                                        />
                                     </td>
 
                                     <td className="px-6 py-4">
@@ -434,23 +424,21 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 <div className="flex items-start space-x-3">
                                                     <Package className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                                                     <div>
-                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
                                                             Estado Logístico
                                                         </h4>
-                                                        <div className="flex items-center space-x-2">
-                                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'blue' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                                                                getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                                                                    getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                                                                        getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'purple' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
-                                                                            getEstadoLogisticoColor(venta.estado_logistico || 'SIN_ENTREGA') === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                                                                                'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
-                                                                }`}>
-                                                                {getEstadoLogisticoLabel(venta.estado_logistico || 'SIN_ENTREGA')}
-                                                            </span>
-                                                            {/* ✅ NUEVO: Mostrar estado_logistico_id */}
+                                                        <div className="flex items-center space-x-3">
+                                                            {/* Badge mejorado del estado */}
+                                                            <EstadoVentaBadge
+                                                                estado={venta.estado_logistico || 'SIN_ENTREGA'}
+                                                                tamaño="md"
+                                                                conIcono={true}
+                                                                mostrarLabel={true}
+                                                            />
+                                                            {/* ID del estado */}
                                                             {venta.estado_logistico_id && (
-                                                                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                                                                    (ID: {venta.estado_logistico_id})
+                                                                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                                                                    ID: {venta.estado_logistico_id}
                                                                 </span>
                                                             )}
                                                         </div>

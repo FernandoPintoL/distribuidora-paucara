@@ -99,13 +99,13 @@ export const AdminCreditoGestor: React.FC<AdminCreditoGestorProps> = ({ onClient
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case 'disponible':
-        return <Badge className="bg-green-600">Disponible</Badge>;
+        return <Badge className="bg-green-600 text-white">Disponible</Badge>;
       case 'en_uso':
-        return <Badge className="bg-blue-600">En Uso</Badge>;
+        return <Badge className="bg-blue-600 text-white">En Uso</Badge>;
       case 'critico':
-        return <Badge className="bg-orange-600">Crítico</Badge>;
+        return <Badge className="bg-orange-600 text-white">Crítico</Badge>;
       case 'excedido':
-        return <Badge className="bg-red-600">Excedido</Badge>;
+        return <Badge className="bg-red-600 text-white">Excedido</Badge>;
       default:
         return <Badge>{estado}</Badge>;
     }
@@ -235,7 +235,6 @@ export const AdminCreditoGestor: React.FC<AdminCreditoGestorProps> = ({ onClient
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead className="text-right">Límite</TableHead>
                   <TableHead className="text-right">Utilizado</TableHead>
                   <TableHead className="text-right">Disponible</TableHead>
@@ -256,7 +255,6 @@ export const AdminCreditoGestor: React.FC<AdminCreditoGestorProps> = ({ onClient
                   filteredClientes.map((cliente) => (
                     <TableRow key={cliente.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
                       <TableCell className="font-medium">{cliente.nombre}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{cliente.email}</TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {formatCurrency(cliente.limite_credito)}
                       </TableCell>
@@ -302,14 +300,14 @@ export const AdminCreditoGestor: React.FC<AdminCreditoGestorProps> = ({ onClient
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
+                          {/* <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleEditarLimite(cliente)}
                             title="Editar límite"
                           >
                             <Edit2 className="w-4 h-4" />
-                          </Button>
+                          </Button> */}
                         </div>
                       </TableCell>
                     </TableRow>

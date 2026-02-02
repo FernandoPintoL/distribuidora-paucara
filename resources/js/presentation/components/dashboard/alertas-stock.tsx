@@ -24,7 +24,7 @@ export function AlertasStock({ alertas, loading = false, className = '' }: Alert
                 </h3>
                 <div className="animate-pulse space-y-4">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-3">
+                        <div key={`alert-skeleton-${i}`} className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded bg-neutral-300 dark:bg-neutral-700"></div>
                             <div className="flex-1">
                                 <div className="h-4 w-32 rounded bg-neutral-300 dark:bg-neutral-700"></div>
@@ -61,12 +61,12 @@ export function AlertasStock({ alertas, loading = false, className = '' }: Alert
 
             {alertas.productos_afectados && alertas.productos_afectados.length > 0 ? (
                 <div className="space-y-3">
-                    {alertas.productos_afectados.map((producto, index) => {
+                    {alertas.productos_afectados.map((producto) => {
                         const esCritico = producto.cantidad_actual <= (producto.stock_minimo * 0.5);
 
                         return (
                             <div
-                                key={index}
+                                key={`${producto.producto}-${producto.almacen}`}
                                 className={`flex items-center gap-3 rounded-lg border p-3 ${esCritico
                                         ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
                                         : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'

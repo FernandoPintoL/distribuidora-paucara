@@ -11,7 +11,7 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario';
+export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega';
 
 interface FormatoConfig {
     formato: string;
@@ -58,6 +58,12 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
     ],
     inventario: [
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
+    ],
+    entrega: [
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+        { formato: 'B1', nombre: 'Hoja Grande (B1)', descripcion: 'Formato B1 - 707mm × 1000mm' },
         { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
     ],
@@ -133,16 +139,32 @@ export function OutputSelectionModal({
                 // Por defecto usar movimientos
                 rutaBase = `/cajas/${documentoId}/movimientos`;
             }
+        } else if (tipoDocumento === 'entrega') {
+            // Para entregas, usar la ruta API específica
+            rutaBase = `/api/entregas/${documentoId}`;
         } else {
             rutaBase = `/${tipoDocumento}s/${documentoId}`;
         }
 
         if (tipo === 'excel') {
-            url = `${rutaBase}/exportar-excel`;
+            if (tipoDocumento === 'entrega') {
+                url = `${rutaBase}/exportar-excel`;
+            } else {
+                url = `${rutaBase}/exportar-excel`;
+            }
         } else if (tipo === 'pdf') {
-            url = `${rutaBase}/exportar-pdf?formato=${formato}`;
+            if (tipoDocumento === 'entrega') {
+                url = `${rutaBase}/descargar?formato=${formato}&accion=download`;
+            } else {
+                url = `${rutaBase}/exportar-pdf?formato=${formato}`;
+            }
         } else {
-            url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            // Para imprimir
+            if (tipoDocumento === 'entrega') {
+                url = `${rutaBase}/descargar?formato=${formato}&accion=stream`;
+            } else {
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            }
         }
 
         return url;

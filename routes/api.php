@@ -400,6 +400,7 @@ Route::group(['prefix' => 'contabilidad'], function () {
 Route::group(['prefix' => 'inventario'], function () {
     Route::get('buscar-productos', [InventarioController::class, 'buscarProductos']);
     Route::get('stock-producto/{producto}', [InventarioController::class, 'stockProducto']);
+    Route::get('stock-filtrado', [InventarioController::class, 'apiStockFiltrado']);
     Route::post('ajustes', [InventarioController::class, 'procesarAjusteApi']);
     Route::get('movimientos', [InventarioController::class, 'movimientosApi']);
     Route::post('movimientos', [InventarioController::class, 'crearMovimiento']);
@@ -732,6 +733,11 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
             ->middleware('auth')
             ->name('entregas.preview');
 
+        // 📊 Exportar entrega a Excel
+        Route::get('/{entrega}/exportar-excel', [\App\Http\Controllers\EntregaPdfController::class, 'exportarExcel'])
+            ->middleware('auth')
+            ->name('entregas.exportar-excel');
+
         // 🔍 Debug - Ver datos de entrega (TEMPORAL)
         Route::get('/{entrega}/debug', [\App\Http\Controllers\EntregaPdfController::class, 'debug'])
             ->middleware('auth')
@@ -767,6 +773,11 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/crear-consolidada', [EntregaController::class, 'crearEntregaConsolidada'])
             ->middleware('permission:entregas.create')
             ->name('entregas.crear-consolidada');
+
+        // Cancelar entrega consolidada sin afectar ventas
+        Route::post('/{id}/cancelar', [EntregaController::class, 'cancelarEntrega'])
+            ->middleware('permission:entregas.delete')
+            ->name('entregas.cancelar');
 
         // Confirmar venta cargada en almacén (confirmar_carga workflow)
         Route::post('/{id}/confirmar-venta/{venta_id}', [EntregaController::class, 'confirmarVentaCargada'])

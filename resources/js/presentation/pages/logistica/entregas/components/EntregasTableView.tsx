@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/components/ui/table';
-import { Eye, Truck, User, Plus, Route } from 'lucide-react';
+import { Eye, Truck, User, Plus, Route, XCircle, FileText } from 'lucide-react';
 import type { Entrega } from '@/domain/entities/entregas';
 import type { Pagination } from '@/domain/entities/shared';
 import { getEstadoBadgeVariant, getEstadoLabel, formatearFecha } from '@/lib/entregas.utils';
@@ -13,10 +13,12 @@ import { useState, useMemo, useCallback } from 'react';
 import { ModalOptimizacionRutas } from '@/presentation/components/logistica/modal-optimizacion-rutas';
 import { useDebouncedValue } from '@/application/hooks/use-debounce';
 import { useQueryParam } from '@/application/hooks/use-query-param';
-import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
+import EstadoEntregaBadge from '@/presentation/components/logistica/EstadoEntregaBadge';
 
 // Importar componente de filtros
 import { EntregasFilters, type FiltrosEntregas } from './EntregasFilters';
+import { CancelarEntregaModal } from './CancelarEntregaModal';
 
 interface Props {
     entregas: Pagination<Entrega>;
@@ -72,6 +74,14 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
     // Estados para selección y modal
     const [entregasSeleccionadas, setEntregasSeleccionadas] = useState<number[]>([]);
     const [mostrarOptimizacion, setMostrarOptimizacion] = useState(false);
+    const [mostrarCancelarModal, setMostrarCancelarModal] = useState(false);
+    const [entregaSeleccionadaParaCancelar, setEntregaSeleccionadaParaCancelar] = useState<{
+        id: number;
+        numero_entrega: string;
+        estado: string;
+    } | null>(null);
+    const [mostrarOutputSelection, setMostrarOutputSelection] = useState(false);
+    const [entregaSeleccionadaParaOutput, setEntregaSeleccionadaParaOutput] = useState<number | null>(null);
 
     // Handler para cambiar filtros y actualizar URL
     const handleFilterChange = useCallback((key: keyof FiltrosEntregas, value: string) => {
@@ -127,6 +137,29 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         setFechaDesdeURL('');
         setFechaHastaURL('');
     }, [setEstadoURL, setBusquedaURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL]);
+
+    // Handler para abrir modal de cancelación
+    const handleAbrirCancelarModal = useCallback((entrega: Entrega) => {
+        // Validar que la entrega puede ser cancelada
+        const estadosCancelables = ['PROGRAMADO', 'PENDIENTE', 'EN_TRANSITO', 'PREPARACION_CARGA'];
+        if (!estadosCancelables.includes(entrega.estado)) {
+            console.warn(`No se puede cancelar entrega en estado: ${entrega.estado}`);
+            return;
+        }
+
+        setEntregaSeleccionadaParaCancelar({
+            id: entrega.id,
+            numero_entrega: entrega.numero_entrega,
+            estado: entrega.estado,
+        });
+        setMostrarCancelarModal(true);
+    }, []);
+
+    // Handler para abrir modal de output selection
+    const handleAbrirOutputSelection = useCallback((entregaId: number) => {
+        setEntregaSeleccionadaParaOutput(entregaId);
+        setMostrarOutputSelection(true);
+    }, []);
 
     // ✅ FILTRADO MEJORADO: Usar búsqueda debounceada y filtros múltiples
     const entregasFiltradas = useMemo(() => {
@@ -289,11 +322,14 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                                                     onCheckedChange={() => toggleSeleccion(Number(entrega.id))}
                                                     aria-label={`Seleccionar entrega ${entrega.id}`}
                                                 /> */}
-                                                {entrega.numero_entrega || entrega.numero_envio || `#${entrega.id}`}
+                                                #{entrega.id} | {entrega.numero_entrega || entrega.numero_envio}
                                                 <br />
-                                                <Badge variant={getEstadoBadgeVariant(entrega.estado)}>
-                                                    {getEstadoLabel(entrega.estado)}
-                                                </Badge>
+                                                <EstadoEntregaBadge
+                                                    estado={entrega.estado}
+                                                    tamaño="sm"
+                                                    conIcono={true}
+                                                    mostrarLabel={true}
+                                                />
                                                 <br />
                                                 {formatearFecha(entrega.fecha_programada)}
                                             </TableCell>
@@ -349,11 +385,26 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                                                         <Eye className="h-4 w-4 mr-1" />
                                                         Ver
                                                     </Button>
-                                                    <FormatoSelector
-                                                        documentoId={entrega.id}
-                                                        tipoDocumento="entregas"
-                                                        className="h-9"
-                                                    />
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleAbrirOutputSelection(entrega.id)}
+                                                        title="Descargar o imprimir entrega"
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                    </Button>
+                                                    {/* Botón de cancelación - solo si el estado permite */}
+                                                    {['PROGRAMADO', 'PENDIENTE', 'EN_TRANSITO', 'PREPARACION_CARGA'].includes(entrega.estado) && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleAbrirCancelarModal(entrega)}
+                                                            className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                                            title="Cancelar entrega"
+                                                        >
+                                                            <XCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -394,6 +445,29 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                     )}
                 </CardContent>
             </Card>
+
+            {/* Modal de cancelación de entrega */}
+            <CancelarEntregaModal
+                isOpen={mostrarCancelarModal}
+                onClose={() => {
+                    setMostrarCancelarModal(false);
+                    setEntregaSeleccionadaParaCancelar(null);
+                }}
+                entrega={entregaSeleccionadaParaCancelar}
+            />
+
+            {/* Modal de selección de output (imprimir/descargar) */}
+            {entregaSeleccionadaParaOutput && (
+                <OutputSelectionModal
+                    isOpen={mostrarOutputSelection}
+                    onClose={() => {
+                        setMostrarOutputSelection(false);
+                        setEntregaSeleccionadaParaOutput(null);
+                    }}
+                    documentoId={entregaSeleccionadaParaOutput}
+                    tipoDocumento="entrega"
+                />
+            )}
 
             {/* Modal de optimización */}
             <ModalOptimizacionRutas

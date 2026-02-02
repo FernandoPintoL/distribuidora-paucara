@@ -22,15 +22,23 @@ interface TipoOperacion {
     nombre: string;
 }
 
+interface TipoPago {
+    id: number;
+    codigo: string;
+    nombre: string;
+}
+
 interface Props {
     show: boolean;
     onClose: () => void;
     tiposOperacion?: TipoOperacion[];
+    tiposPago?: TipoPago[];
 }
 
-export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion = [] }: Props) {
+export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion = [], tiposPago = [] }: Props) {
     const { data, setData, post, processing, errors, reset } = useForm({
         tipo_operacion_id: '',
+        tipo_pago_id: '',
         monto: '',
         numero_documento: '',
         categoria: '',
@@ -172,30 +180,30 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                             )}
                         </div>
 
-                    {/* Campo de categoría solo si es GASTO */}
-                    {esGasto && (
-                        <div className="space-y-2">
-                            <Label htmlFor="categoria" className="text-gray-900 dark:text-gray-100">Categoría *</Label>
-                            <Select
-                                value={data.categoria}
-                                onValueChange={(value) => setData('categoria', value)}
-                            >
-                                <SelectTrigger className="dark:text-gray-100 dark:bg-gray-700 dark:border-gray-600">
-                                    <SelectValue placeholder="Selecciona una categoría" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(CATEGORIAS_GASTO).map(([codigo, nombre]) => (
-                                        <SelectItem key={codigo} value={codigo}>
-                                            {nombre}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {errors.categoria && (
-                                <p className="text-sm text-red-600 dark:text-red-400">{errors.categoria}</p>
-                            )}
-                        </div>
-                    )}
+                        {/* Campo de categoría solo si es GASTO */}
+                        {esGasto && (
+                            <div className="space-y-2">
+                                <Label htmlFor="categoria" className="text-gray-900 dark:text-gray-100">Categoría *</Label>
+                                <Select
+                                    value={data.categoria}
+                                    onValueChange={(value) => setData('categoria', value)}
+                                >
+                                    <SelectTrigger className="dark:text-gray-100 dark:bg-gray-700 dark:border-gray-600">
+                                        <SelectValue placeholder="Selecciona una categoría" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(CATEGORIAS_GASTO).map(([codigo, nombre]) => (
+                                            <SelectItem key={codigo} value={codigo}>
+                                                {nombre}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.categoria && (
+                                    <p className="text-sm text-red-600 dark:text-red-400">{errors.categoria}</p>
+                                )}
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <Label htmlFor="monto" className="text-gray-900 dark:text-gray-100">Monto (Bs) *</Label>
@@ -221,6 +229,28 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                     Se registrará como egreso (monto negativo)
                                 </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="tipo_pago_id" className="text-gray-900 dark:text-gray-100">Tipo de Pago</Label>
+                            <Select
+                                value={data.tipo_pago_id}
+                                onValueChange={(value) => setData('tipo_pago_id', value)}
+                            >
+                                <SelectTrigger className="dark:text-gray-100 dark:bg-gray-700 dark:border-gray-600">
+                                    <SelectValue placeholder="Selecciona el tipo de pago (opcional)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {tiposPago.map((tipo) => (
+                                        <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                                            {tipo.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.tipo_pago_id && (
+                                <p className="text-sm text-red-600 dark:text-red-400">{errors.tipo_pago_id}</p>
                             )}
                         </div>
 
@@ -318,8 +348,9 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                             {errors.comprobante && (
                                 <p className="text-sm text-red-600 dark:text-red-400">{errors.comprobante}</p>
                             )}
+                            <br />
                         </div>
-                        </div>
+                    </div>
 
                     {/* Botones fijos al final */}
                     <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end space-x-2 bg-white dark:bg-gray-800 flex-shrink-0">

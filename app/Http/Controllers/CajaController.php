@@ -11,7 +11,10 @@ use App\Models\Empresa;
 use App\Models\EstadoCierre;
 use App\Models\MovimientoCaja;
 use App\Models\TipoOperacionCaja;
+use App\Models\Venta;
 use App\Services\ExcelExportService;
+use App\Services\MovimientoCajaService;
+use App\Services\CierreCajaService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,10 +27,12 @@ use Inertia\Inertia;
 class CajaController extends Controller
 {
     private ExcelExportService $excelExportService;
+    private MovimientoCajaService $movimientoCajaService;
 
-    public function __construct(ExcelExportService $excelExportService)
+    public function __construct(ExcelExportService $excelExportService, MovimientoCajaService $movimientoCajaService)
     {
         $this->excelExportService = $excelExportService;
+        $this->movimientoCajaService = $movimientoCajaService;
 
         $this->middleware('permission:cajas.index')->only('index');
         $this->middleware('permission:cajas.show')->only('estadoCajas');
@@ -129,15 +134,183 @@ class CajaController extends Controller
         // Obtener tipos de operación disponibles
         $tiposOperacion = TipoOperacionCaja::all(['id', 'codigo', 'nombre']);
 
+        // ✅ NUEVO: Obtener tipos de pago disponibles
+        $tiposPago = \App\Models\TipoPago::all(['id', 'codigo', 'nombre']);
+
+        // ✅ NUEVO: Calcular Efectivo Esperado y resúmenes
+        $efectivoEsperado = null;
+        $resumenEfectivo = null;
+        $ventasPorTipoPago = [];
+
+        if ($cajaAbiertaHoy && $movimientosHoy) {
+            $movimientosCollection = collect($movimientosHoy);
+
+            // ✅ NUEVO: Calcular EFECTIVO ESPERADO en caja
+            // = Apertura + Ventas en Efectivo + Pagos de Crédito - Gastos
+            $montoApertura = (float)$cajaAbiertaHoy->monto_apertura;
+
+            // Ventas que generan efectivo (SOLO estado APROBADO, sin Crédito)
+            // Incluye: Efectivo, Tarjeta, Transferencia (todo EXCEPTO Crédito)
+            $ventasEnEfectivo = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
+                ->where('user_id', $usuarioDestino->id)
+                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
+                ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'VENTA'))
+                // ✅ ACTUALIZADO: Excluir CREDITO (ventas que NO generan efectivo ahora)
+                ->whereHas('tipoPago', fn($q) => $q->where('codigo', '!=', 'CREDITO'))
+                ->whereHas('venta', fn($q) => $q
+                    ->whereHas('estadoDocumento', fn($q2) => $q2->where('nombre', 'Aprobado'))
+                )
+                ->sum('monto');
+
+            // Pagos de Crédito recibidos
+            $pagosCredito = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
+                ->where('user_id', $usuarioDestino->id)
+                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
+                ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'PAGO'))
+                ->whereNotNull('pago_id')
+                ->sum('monto');
+
+            // Gastos (egresos)
+            $totalGastos = abs(MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
+                ->where('user_id', $usuarioDestino->id)
+                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
+                ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'GASTOS'))
+                ->sum('monto'));
+
+            $efectivoEsperado = [
+                'apertura' => $montoApertura,
+                'ventas_efectivo' => (float)$ventasEnEfectivo,
+                'pagos_credito' => (float)$pagosCredito,
+                'gastos' => (float)$totalGastos,
+                'total' => $montoApertura + (float)$ventasEnEfectivo + (float)$pagosCredito - (float)$totalGastos,
+            ];
+
+            $resumenEfectivo = $this->movimientoCajaService->obtenerResumenEfectivo($movimientosCollection);
+
+            // ✅ NUEVO: Query MEJORADO para VENTAS agrupadas por tipo de pago
+            // Solo VENTAS APROBADAS - Incluye VENTA (efectivo) y CREDITO (ventas a crédito)
+            // Usa COALESCE para obtener tipo_pago_id de movimiento o venta
+            $ventasAgrupadas = DB::table('movimientos_caja')
+                ->select(
+                    DB::raw('COALESCE(movimientos_caja.tipo_pago_id, ventas.tipo_pago_id) as tipo_pago_id'),
+                    DB::raw('SUM(movimientos_caja.monto) as total'),
+                    DB::raw('COUNT(*) as count')
+                )
+                ->join('ventas', 'movimientos_caja.venta_id', '=', 'ventas.id')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $cajaAbiertaHoy->caja_id)
+                ->where('movimientos_caja.user_id', $usuarioDestino->id)
+                ->where('movimientos_caja.fecha', '>=', $cajaAbiertaHoy->fecha)
+                // ✅ IMPORTANTE: Incluir VENTA (pagos efectivo) y CREDITO (ventas a crédito)
+                ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO'])
+                ->where('estados_documento.nombre', 'Aprobado')
+                ->groupBy(DB::raw('COALESCE(movimientos_caja.tipo_pago_id, ventas.tipo_pago_id)'))
+                ->get();
+
+            $ventasAgrupadas = collect($ventasAgrupadas);
+
+            // Obtener todos los tipos de pago para mostrar incluso con 0
+            $todosTiposPago = \App\Models\TipoPago::where('activo', true)->orderBy('nombre')->get();
+
+            // Construir resultado con todos los tipos
+            $ventasPorTipoPago = [];
+            foreach ($todosTiposPago as $tipo) {
+                $venta = $ventasAgrupadas->firstWhere('tipo_pago_id', $tipo->id);
+                $ventasPorTipoPago[] = [
+                    'tipo' => $tipo->nombre,
+                    'total' => $venta ? (float)$venta->total : 0.0,
+                    'count' => $venta ? (int)$venta->count : 0,
+                ];
+            }
+
+            Log::info('📊 [CajaController] Ventas por tipo de pago:', [
+                'total_tipos' => count($ventasPorTipoPago),
+                'ventas' => $ventasPorTipoPago,
+            ]);
+
+            // ✅ NUEVO: Resumen de VENTAS por Estado de Documento
+            $ventasIds = collect($movimientosHoy)
+                ->whereNotNull('venta_id')
+                ->pluck('venta_id')
+                ->unique();
+
+            $ventasPorEstado = \App\Models\Venta::whereIn('id', $ventasIds)
+                ->with('estadoDocumento')
+                ->groupBy('estado_documento_id')
+                ->selectRaw('estado_documento_id, COUNT(*) as count, SUM(total) as total')
+                ->get();
+
+            // Obtener todos los estados para mostrar incluso con 0
+            $todosEstados = \App\Models\EstadoDocumento::where('activo', true)->orderBy('nombre')->get();
+
+            $ventasPorEstadoFormato = [];
+            foreach ($todosEstados as $estado) {
+                $venta = $ventasPorEstado->firstWhere('estado_documento_id', $estado->id);
+                $ventasPorEstadoFormato[] = [
+                    'estado' => $estado->nombre,
+                    'total' => $venta ? (float)$venta->total : 0.0,
+                    'count' => $venta ? (int)$venta->count : 0,
+                ];
+            }
+
+            // ✅ NUEVO: Resumen de PAGOS agrupados por tipo de pago
+            $pagosAgrupados = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
+                ->where('user_id', $usuarioDestino->id)
+                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
+                ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'PAGO'))
+                ->with('tipoPago')
+                ->groupBy('tipo_pago_id')
+                ->selectRaw('tipo_pago_id, SUM(monto) as total, COUNT(*) as count')
+                ->get();
+
+            $pagosFormato = [];
+            foreach ($todosTiposPago as $tipo) {
+                $pago = $pagosAgrupados->firstWhere('tipo_pago_id', $tipo->id);
+                $pagosFormato[] = [
+                    'tipo' => $tipo->nombre,
+                    'total' => $pago ? (float)$pago->total : 0.0,
+                    'count' => $pago ? (int)$pago->count : 0,
+                ];
+            }
+
+            // ✅ NUEVO: Resumen de GASTOS agrupados por tipo de pago
+            $gastosAgrupados = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
+                ->where('user_id', $usuarioDestino->id)
+                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
+                ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'GASTOS'))
+                ->with('tipoPago')
+                ->groupBy('tipo_pago_id')
+                ->selectRaw('tipo_pago_id, SUM(monto) as total, COUNT(*) as count')
+                ->get();
+
+            $gastosFormato = [];
+            foreach ($todosTiposPago as $tipo) {
+                $gasto = $gastosAgrupados->firstWhere('tipo_pago_id', $tipo->id);
+                $gastosFormato[] = [
+                    'tipo' => $tipo->nombre,
+                    'total' => $gasto ? (float)$gasto->total : 0.0,
+                    'count' => $gasto ? (int)$gasto->count : 0,
+                ];
+            }
+        }
+
         return Inertia::render('Cajas/Index', [
-            'cajas'              => $cajas,
-            'cajaAbiertaHoy'     => $cajaAbiertaHoy,
-            'movimientosHoy'     => $movimientosHoy,
-            'totalMovimientos'   => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
-            'historicoAperturas' => $historicoAperturas,
-            'tiposOperacion'     => $tiposOperacion,
-            'esVistaAdmin'       => ($aperturaCaja !== null || $userId !== null), // ✅ Identificar contexto (apertura específica o user_id)
-            'usuarioDestino'     => $usuarioDestino,                              // ✅ Pasar usuario destino
+            'cajas'                => $cajas,
+            'cajaAbiertaHoy'       => $cajaAbiertaHoy,
+            'movimientosHoy'       => $movimientosHoy,
+            'totalMovimientos'     => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
+            'historicoAperturas'   => $historicoAperturas,
+            'tiposOperacion'       => $tiposOperacion,
+            'tiposPago'            => $tiposPago,                      // ✅ NUEVO: Tipos de pago
+            'esVistaAdmin'         => ($aperturaCaja !== null || $userId !== null),
+            'usuarioDestino'       => $usuarioDestino,
+            'efectivoEsperado'     => $efectivoEsperado,              // ✅ Efectivo esperado en caja
+            'resumenEfectivo'      => $resumenEfectivo,               // ✅ Resumen de efectivo
+            'ventasPorTipoPago'    => $ventasPorTipoPago,             // ✅ Ventas por tipo de pago
+            'ventasPorEstado'      => $ventasPorEstadoFormato ?? [],  // ✅ Ventas por estado de documento
+            'pagosPorTipoPago'     => $pagosFormato ?? [],             // ✅ Pagos por tipo de pago
+            'gastosPorTipoPago'    => $gastosFormato ?? [],            // ✅ Gastos por tipo de pago
         ]);
     }
 
@@ -1172,6 +1345,7 @@ class CajaController extends Controller
     {
         $request->validate([
             'tipo_operacion_id' => 'required|exists:tipo_operacion_caja,id',
+            'tipo_pago_id'      => 'nullable|exists:tipos_pago,id',
             'monto'             => 'required|numeric|min:0.01',
             'numero_documento'  => 'nullable|string|max:50',
             'categoria'         => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,VARIOS',
@@ -1216,6 +1390,7 @@ class CajaController extends Controller
             $movimiento = MovimientoCaja::create([
                 'caja_id'           => $cajaAbierta->caja_id,
                 'tipo_operacion_id' => $request->tipo_operacion_id,
+                'tipo_pago_id'      => $request->tipo_pago_id,
                 'numero_documento'  => $request->numero_documento,
                 'descripcion'       => $tipoOperacion->nombre,
                 'monto'             => $monto,
@@ -1295,132 +1470,9 @@ class CajaController extends Controller
             return back()->withErrors(['error' => 'Esta caja aún no ha sido cerrada']);
         }
 
-        // Calcular movimientos y totales
-        $movimientos = MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
-            ->whereBetween('fecha', [
-                $aperturaCaja->fecha,
-                $aperturaCaja->cierre->created_at,
-            ])
-            ->with(['tipoOperacion', 'comprobantes'])
-            ->orderBy('fecha', 'asc')
-            ->get();
-
-        // Obtener ID del tipo de operación VENTA
-        $tipoOperacionVentaId = TipoOperacionCaja::where('nombre', 'Venta')->first()?->id;
-
-        // Obtener movimientos de venta del período para agrupar por tipos de pago
-        $movimientosVenta = collect();
-        if ($tipoOperacionVentaId) {
-            $movimientosVenta = MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
-                ->whereBetween('fecha', [
-                    $aperturaCaja->fecha,
-                    $aperturaCaja->cierre->created_at,
-                ])
-                ->where('tipo_operacion_id', $tipoOperacionVentaId)
-                ->with(['tipoPago'])
-                ->get();
-        }
-
-        $totalIngresos = $movimientos->where('monto', '>', 0)->sum('monto');
-        $totalEgresos  = abs($movimientos->where('monto', '<', 0)->sum('monto'));
-
-        // Agrupar movimientos por tipo de operación
-        $movimientosAgrupados = $movimientos->groupBy(function ($mov) {
-            return $mov->tipoOperacion->nombre ?? 'Sin tipo';
-        });
-
-        // Agrupar TODOS los movimientos por tipo de pago
-        $ventasPorTipoPago = $movimientos->groupBy(function ($movimiento) {
-            return $movimiento->tipoPago?->nombre ?? 'Sin tipo de pago';
-        })->map(function ($movimientosGrupo) {
-            return [
-                'cantidad' => $movimientosGrupo->count(),
-                'total' => $movimientosGrupo->sum('monto'),
-            ];
-        });
-
-        // Rango de ventas y pagos
-        $primeraVenta = $movimientosVenta->min('fecha');
-        $ultimaVenta = $movimientosVenta->max('fecha');
-        $primerMovimiento = $movimientos->min('fecha');
-        $ultimoMovimiento = $movimientos->max('fecha');
-
-        // Rango de IDs de ventas - Usar venta_id de los movimientos
-        $ventaIds = $movimientosVenta
-            ->pluck('venta_id')
-            ->filter(fn($id) => !empty($id) && $id > 0)
-            ->unique()
-            ->sort();
-
-        $rangoVentasIds = [
-            'minId' => $ventaIds->isNotEmpty() ? $ventaIds->first() : null,
-            'maxId' => $ventaIds->isNotEmpty() ? $ventaIds->last() : null,
-            'totalVentas' => $ventaIds->count(),
-        ];
-
-        // Calcular créditos y pagos de créditos
-        $creditosIds = $movimientosVenta
-            ->where('tipoPago.nombre', 'Crédito')
-            ->pluck('venta_id')
-            ->filter(fn($id) => !empty($id) && $id > 0)
-            ->unique()
-            ->sort();
-
-        $rangoCreditos = [
-            'minId' => $creditosIds->isNotEmpty() ? $creditosIds->first() : null,
-            'maxId' => $creditosIds->isNotEmpty() ? $creditosIds->last() : null,
-            'totalCreditos' => $creditosIds->count(),
-            'montoCreditos' => $movimientosVenta
-                ->where('tipoPago.nombre', 'Crédito')
-                ->sum('monto'),
-        ];
-
-        // Contar pagos de créditos (movimientos donde tipoOperacion sea "Pago de Crédito" o similar)
-        $pagosCreditos = $movimientos
-            ->where('tipoOperacion.nombre', 'Pago de Crédito')
-            ->count();
-
-        $montoPagosCreditos = $movimientos
-            ->where('tipoOperacion.nombre', 'Pago de Crédito')
-            ->sum('monto');
-
-        // Calcular rango de pagos (movimientos donde tipoOperacion contenga "Pago")
-        $pagosMovimientos = $movimientos->filter(function($mov) {
-            $nombre = $mov->tipoOperacion->nombre ?? '';
-            return stripos($nombre, 'Pago') !== false;
-        });
-
-        $pagosIds = $pagosMovimientos
-            ->pluck('id')
-            ->unique()
-            ->sort();
-
-        $rangoPagos = [
-            'minId' => $pagosIds->isNotEmpty() ? $pagosIds->first() : null,
-            'maxId' => $pagosIds->isNotEmpty() ? $pagosIds->last() : null,
-            'totalPagos' => $pagosIds->count(),
-            'montoPagos' => $pagosMovimientos->sum('monto'),
-        ];
-
-        // Preparar datos para el servicio
-        $datos = [
-            'apertura'                => $aperturaCaja,
-            'cierre'                  => $aperturaCaja->cierre,
-            'movimientos'             => $movimientos,
-            'movimientosAgrupados'    => $movimientosAgrupados,
-            'ventasPorTipoPago'       => $ventasPorTipoPago,
-            'totalIngresos'           => $totalIngresos,
-            'totalEgresos'            => $totalEgresos,
-            'primeraVenta'            => $primeraVenta,
-            'ultimaVenta'             => $ultimaVenta,
-            'primerMovimiento'        => $primerMovimiento,
-            'ultimoMovimiento'        => $ultimoMovimiento,
-            'rangoVentasIds'          => $rangoVentasIds,
-            'rangoCreditos'           => $rangoCreditos,
-            'pagosCreditos'           => $pagosCreditos,
-            'montoPagosCreditos'      => $montoPagosCreditos,
-            'rangoPagos'              => $rangoPagos,
-        ];
+        // ✅ Usar CierreCajaService para obtener TODOS los datos calculados
+        $cierreCajaService = new CierreCajaService();
+        $datos = $cierreCajaService->calcularDatos($aperturaCaja);
 
         // Usar ImpresionService para generar el PDF
         $impresionService = app(\App\Services\ImpresionService::class);

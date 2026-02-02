@@ -63,12 +63,10 @@
         .empresa-nombre {
             font-weight: bold;
             margin: 1px 0;
-            line-height: 1.1;
         }
 
         .empresa-info {
             margin: 0;
-            line-height: 1.1;
         }
 
         /* Separadores */
@@ -202,39 +200,6 @@
         .qr-label {
             margin-top: 2px;
             color: #333;
-        }
-
-        @yield('estilos-adicionales')
-
-        /* Estilos para el selector de fuentes */
-        @media screen {
-            .font-selector {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #fff;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                padding: 10px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                z-index: 9999;
-            }
-
-            .font-selector label {
-                display: block;
-                margin-bottom: 5px;
-                font-weight: bold;
-                font-size: 12px;
-                color: #333;
-            }
-
-            .font-selector select {
-                width: 200px;
-                padding: 5px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                font-size: 12px;
-            }
         }
 
     </style>

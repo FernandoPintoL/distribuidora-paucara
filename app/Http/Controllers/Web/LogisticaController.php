@@ -21,13 +21,23 @@ class LogisticaController extends Controller
         // Mostrar TODAS las proformas, no solo APP_EXTERNA
         $query = Proforma::with(['cliente.localidad', 'usuarioCreador', 'usuarioAprobador', 'estadoLogistica', 'direccionSolicitada']);
 
-        // Aplicar filtros desde query params
-        if (request()->has('estado') && request('estado') !== 'TODOS') {
-            // Mapear código de estado a ID
-            $estadoCodigo = request('estado');
-            $estadoId     = Proforma::obtenerIdEstado($estadoCodigo, 'proforma');
-            if ($estadoId) {
-                $query->where('estado_proforma_id', $estadoId);
+        // Aplicar filtros desde query params - default a PENDIENTE y APROBADA
+        if (request()->has('estado')) {
+            if (request('estado') !== 'TODOS') {
+                // Filtro específico solicitado
+                $estadoCodigo = request('estado');
+                $estadoId     = Proforma::obtenerIdEstado($estadoCodigo, 'proforma');
+                if ($estadoId) {
+                    $query->where('estado_proforma_id', $estadoId);
+                }
+            }
+            // Si estado === 'TODOS', no aplicar filtro (mostrar todos)
+        } else {
+            // Default: mostrar solo PENDIENTE y APROBADA si no se proporciona filtro de estado
+            $estadoPendienteId = Proforma::obtenerIdEstado('PENDIENTE', 'proforma');
+            $estadoAprobadaId = Proforma::obtenerIdEstado('APROBADA', 'proforma');
+            if ($estadoPendienteId && $estadoAprobadaId) {
+                $query->whereIn('estado_proforma_id', [$estadoPendienteId, $estadoAprobadaId]);
             }
         }
 

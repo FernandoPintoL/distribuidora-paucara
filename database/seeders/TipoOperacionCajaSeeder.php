@@ -41,6 +41,10 @@ class TipoOperacionCajaSeeder extends Seeder
                 'codigo' => 'PAGO',
                 'nombre' => 'Pago de Cuota/Crédito',
             ],
+            [
+                'codigo' => 'ANULACION',
+                'nombre' => 'Anulación de Venta',
+            ],
         ];
 
         foreach ($tiposOperacion as $tipo) {

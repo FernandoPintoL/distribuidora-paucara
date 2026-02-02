@@ -6,7 +6,7 @@
  * Con visualización expandible de conversiones para productos fraccionados
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import React from 'react';
 import type { StockPorAlmacen, ProductoMasMovido } from '@/domain/entities/dashboard-inventario';
 import FiltrosStock, { type FiltrosState, RANGOS_STOCK } from './FiltrosStock';
@@ -21,6 +21,7 @@ export default function StockYProductos({
     stockPorAlmacen,
     productosMasMovidos,
 }: StockYProductosProps) {
+
     const [filtros, setFiltros] = useState<FiltrosState>({
         busqueda: '',
         almacenId: '',
@@ -28,8 +29,12 @@ export default function StockYProductos({
         ordenamiento: 'cantidad-desc',
     });
 
+    // Estado para datos filtrados del backend
+    const [stockFiltradoApi, setStockFiltradoApi] = useState<StockPorAlmacen[]>(stockPorAlmacen);
+    const [cargando, setCargando] = useState(false);
+
     // Estado para filas expandidas (mostrar conversiones)
-    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+    const [expandedRows, setExpandedRows] = useState<Set<number | string>>(new Set());
 
     // Obtener lista única de almacenes
     const almacenes = useMemo(() => {
@@ -45,63 +50,62 @@ export default function StockYProductos({
         return Array.from(almacenesMap.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
     }, [stockPorAlmacen]);
 
-    // Aplicar filtros y ordenamiento
-    const stockFiltrado = useMemo(() => {
-        let resultado = [...stockPorAlmacen];
+    // Llamar al API cuando cambien los filtros
+    useEffect(() => {
+        const obtenerStockFiltrado = async () => {
+            try {
+                setCargando(true);
 
-        // Filtro por búsqueda
-        if (filtros.busqueda) {
-            const busquedaLower = filtros.busqueda.toLowerCase();
-            resultado = resultado.filter(
-                (stock) =>
-                    stock.producto_nombre.toLowerCase().includes(busquedaLower) ||
-                    stock.producto_codigo.toLowerCase().includes(busquedaLower) ||
-                    stock.producto_sku.toLowerCase().includes(busquedaLower) ||
-                    stock.producto_codigo_barra.toLowerCase().includes(busquedaLower)
-            );
-        }
+                const params = new URLSearchParams();
+                if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
+                if (filtros.almacenId) params.append('almacen_id', filtros.almacenId);
+                params.append('rango_stock', filtros.rangoStock);
+                params.append('ordenamiento', filtros.ordenamiento);
 
-        // Filtro por almacén
-        if (filtros.almacenId) {
-            resultado = resultado.filter((stock) => stock.almacen_id === parseInt(filtros.almacenId));
-        }
+                const response = await fetch(`/api/inventario/stock-filtrado?${params.toString()}`);
 
-        // Filtro por rango de cantidad
-        if (filtros.rangoStock !== 'todos') {
-            const rango = RANGOS_STOCK[filtros.rangoStock as keyof typeof RANGOS_STOCK];
-            resultado = resultado.filter(
-                (stock) => stock.cantidad >= rango.min && stock.cantidad <= rango.max
-            );
-        }
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
 
-        // Ordenamiento
-        switch (filtros.ordenamiento) {
-            case 'cantidad-asc':
-                resultado.sort((a, b) => a.cantidad - b.cantidad);
-                break;
-            case 'cantidad-desc':
-                resultado.sort((a, b) => b.cantidad - a.cantidad);
-                break;
-            case 'producto':
-                resultado.sort((a, b) => a.producto_nombre.localeCompare(b.producto_nombre));
-                break;
-            case 'almacen':
-                resultado.sort((a, b) => a.almacen_nombre.localeCompare(b.almacen_nombre));
-                break;
-        }
+                const json = await response.json();
 
-        return resultado;
-    }, [stockPorAlmacen, filtros]);
+                if (json.success) {
+                    setStockFiltradoApi(json.data);
+                } else {
+                    console.error('Error en respuesta API:', json.message);
+                    setStockFiltradoApi([]);
+                }
+            } catch (error) {
+                console.error('Error al obtener stock filtrado:', error);
+                setStockFiltradoApi([]);
+            } finally {
+                setCargando(false);
+            }
+        };
+
+        // Ejecutar inmediatamente (sin debounce) ya que la búsqueda requiere Enter o Botón
+        obtenerStockFiltrado();
+    }, [filtros]);
+
+    // Alias para mantener el nombre stockFiltrado en el resto del código
+    const stockFiltrado = stockFiltradoApi;
 
     // Toggle para expandir/colapsar filas
-    const toggleRow = (stockId: number) => {
+    const toggleRow = (stockIdOrKey: number | string) => {
         const newExpanded = new Set(expandedRows);
-        if (newExpanded.has(stockId)) {
-            newExpanded.delete(stockId);
+        if (newExpanded.has(stockIdOrKey)) {
+            newExpanded.delete(stockIdOrKey);
         } else {
-            newExpanded.add(stockId);
+            newExpanded.add(stockIdOrKey);
         }
         setExpandedRows(newExpanded);
+    };
+
+    // Función helper para formatear cantidades con 2 decimales
+    const formatCantidad = (valor: number | string): string => {
+        const num = typeof valor === 'string' ? parseFloat(valor) : valor;
+        return isNaN(num) ? '0.00' : num.toFixed(2);
     };
 
     return (
@@ -143,6 +147,15 @@ export default function StockYProductos({
                             No hay información de stock disponible
                         </p>
                     </div>
+                ) : cargando ? (
+                    <div className="p-6 text-center">
+                        <div className="flex justify-center items-center gap-2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                Filtrando datos...
+                            </p>
+                        </div>
+                    </div>
                 ) : stockFiltrado.length === 0 ? (
                     <div className="p-6 text-center">
                         <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -160,9 +173,6 @@ export default function StockYProductos({
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Producto
                                     </th>
-                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Unidad
-                                    </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Almacén
                                     </th>
@@ -175,6 +185,12 @@ export default function StockYProductos({
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Reservado
                                     </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Lote
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Vencimiento
+                                    </th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Valor Total
                                     </th>
@@ -182,24 +198,33 @@ export default function StockYProductos({
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                 {stockFiltrado.map((stock) => {
+                                    // Clave única por producto + almacén
+                                    const uniqueKey = `${stock.producto_id}-${stock.almacen_id}`;
                                     const cantidadTotal = parseFloat(String(stock.cantidad || 0));
                                     const cantidadDisponible = parseFloat(String(stock.cantidad_disponible || 0));
                                     const cantidadReservada = parseFloat(String(stock.cantidad_reservada || 0));
                                     const precioVenta = parseFloat(String(stock.precio_venta || 0));
                                     const valorTotal = cantidadTotal * precioVenta;
-                                    const isExpanded = expandedRows.has(stock.id);
-                                    const hasFractionedInfo = stock.es_fraccionado && stock.conversiones && stock.conversiones.length > 0;
+                                    const isExpanded = expandedRows.has(uniqueKey);
+
+                                    // Verificar si tiene detalles de lotes para expandir
+                                    const tieneLotes = stock.detalles_lotes && stock.detalles_lotes.length > 0;
+                                    const tieneMultiplesLotes = tieneLotes && stock.detalles_lotes.length > 1;
+
+                                    // Conversiones del primer detalle (para compatibilidad)
+                                    const primeraConversion = stock.detalles_lotes?.[0]?.conversiones || [];
+                                    const hasFractionedInfo = stock.es_fraccionado && primeraConversion.length > 0;
 
                                     return (
-                                        <React.Fragment key={stock.id}>
+                                        <React.Fragment key={uniqueKey}>
                                             {/* Fila principal */}
                                             <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                    {hasFractionedInfo && (
+                                                    {(hasFractionedInfo || tieneMultiplesLotes) && (
                                                         <button
-                                                            onClick={() => toggleRow(stock.id)}
+                                                            onClick={() => toggleRow(uniqueKey)}
                                                             className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition text-gray-600 dark:text-gray-400"
-                                                            title={isExpanded ? 'Colapsar' : 'Expandir conversiones'}
+                                                            title={isExpanded ? 'Colapsar' : 'Expandir detalles'}
                                                         >
                                                             <svg
                                                                 className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''
@@ -242,12 +267,10 @@ export default function StockYProductos({
                                                                 SKU: {stock.producto_sku}
                                                             </p>
                                                         )}
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                                                            {stock.unidad_medida_nombre}
+                                                        </span>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                                                        {stock.unidad_medida_nombre}
-                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
@@ -256,17 +279,37 @@ export default function StockYProductos({
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                        {cantidadTotal.toFixed(2)}
+                                                        {formatCantidad(cantidadTotal)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                        {cantidadDisponible.toFixed(2)}
+                                                        {formatCantidad(cantidadDisponible)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                                        {cantidadReservada.toFixed(2)}
+                                                        {formatCantidad(cantidadReservada)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {tieneMultiplesLotes ? (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                                                            {stock.detalles_lotes.length} lotes
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                                                            {tieneLotes ? stock.detalles_lotes[0].lote : '-'}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`text-sm font-medium ${
+                                                        stock.fecha_vencimiento_proximo
+                                                            ? 'text-gray-700 dark:text-gray-300'
+                                                            : 'text-gray-400 dark:text-gray-500'
+                                                    }`}>
+                                                        {stock.fecha_vencimiento_proximo ? stock.fecha_vencimiento_proximo : '-'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -276,50 +319,104 @@ export default function StockYProductos({
                                                 </td>
                                             </tr>
 
-                                            {/* Fila expandible: conversiones de unidades */}
-                                            {hasFractionedInfo && isExpanded && (
+                                            {/* Fila expandible: detalles por lote y conversiones */}
+                                            {isExpanded && (tieneMultiplesLotes || hasFractionedInfo) && (
                                                 <tr className="bg-gray-50 dark:bg-gray-700/50">
                                                     <td colSpan={8} className="px-6 py-4">
-                                                        <div className="space-y-3">
-                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                                                                Conversiones de Unidades
-                                                            </h4>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                                {/* Unidad base */}
-                                                                <div className="p-3 rounded-lg border-2 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
-                                                                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
-                                                                        Unidad Base ({stock.unidad_medida_nombre})
-                                                                    </p>
-                                                                    <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
-                                                                        {cantidadTotal.toFixed(2)}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                                        Disponible: {cantidadDisponible.toFixed(2)}
-                                                                    </p>
-                                                                </div>
-
-                                                                {/* Conversiones */}
-                                                                {stock.conversiones?.map((conv) => (
-                                                                    <div
-                                                                        key={conv.id}
-                                                                        className="p-3 rounded-lg border-2 border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20"
-                                                                    >
-                                                                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
-                                                                            {conv.unidad_destino_nombre}
-                                                                            <span className="text-orange-600 dark:text-orange-400 ml-1">
-                                                                                (÷ {conv.factor_conversion})
-                                                                            </span>
-                                                                        </p>
-                                                                        <p className="text-lg font-bold text-orange-700 dark:text-orange-400">
-                                                                            {conv.cantidad_en_conversion.toFixed(2)}
-                                                                        </p>
-                                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                                            Disponible:{' '}
-                                                                            {(cantidadDisponible * conv.factor_conversion).toFixed(2)}
-                                                                        </p>
+                                                        <div className="space-y-6">
+                                                            {/* Detalles por Lote */}
+                                                            {tieneMultiplesLotes && (
+                                                                <div>
+                                                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                                                                        📦 Detalles por Lote
+                                                                    </h4>
+                                                                    <div className="overflow-x-auto">
+                                                                        <table className="min-w-full text-xs border border-gray-300 dark:border-gray-600 rounded-lg">
+                                                                            <thead className="bg-gray-200 dark:bg-gray-600">
+                                                                                <tr>
+                                                                                    <th className="px-3 py-2 text-left font-medium">Lote</th>
+                                                                                    <th className="px-3 py-2 text-left font-medium">Vencimiento</th>
+                                                                                    <th className="px-3 py-2 text-right font-medium">Cantidad</th>
+                                                                                    <th className="px-3 py-2 text-right font-medium">Disponible</th>
+                                                                                    <th className="px-3 py-2 text-right font-medium">Reservado</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                                                                {stock.detalles_lotes?.map((lote, idx) => (
+                                                                                    <tr key={idx} className="hover:bg-gray-100 dark:hover:bg-gray-600">
+                                                                                        <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                                                                                            {lote.lote}
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
+                                                                                            {lote.fecha_vencimiento ? (
+                                                                                                <span className={lote.fecha_vencimiento === stock.fecha_vencimiento_proximo ? 'text-orange-600 dark:text-orange-400 font-semibold' : ''}>
+                                                                                                    {lote.fecha_vencimiento}
+                                                                                                </span>
+                                                                                            ) : (
+                                                                                                <span className="text-gray-400">-</span>
+                                                                                            )}
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 text-right text-gray-900 dark:text-white font-medium">
+                                                                                            {formatCantidad(lote.cantidad)}
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 text-right text-green-700 dark:text-green-400">
+                                                                                            {formatCantidad(lote.cantidad_disponible)}
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 text-right text-yellow-700 dark:text-yellow-400">
+                                                                                            {formatCantidad(lote.cantidad_reservada)}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
                                                                     </div>
-                                                                ))}
-                                                            </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Conversiones de Unidades */}
+                                                            {hasFractionedInfo && (
+                                                                <div>
+                                                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                                                                        Conversiones de Unidades
+                                                                    </h4>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                                        {/* Unidad base */}
+                                                                        <div className="p-3 rounded-lg border-2 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
+                                                                            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
+                                                                                Unidad Base ({stock.unidad_medida_nombre})
+                                                                            </p>
+                                                                            <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
+                                                                                {formatCantidad(cantidadTotal)}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                                                Disponible: {formatCantidad(cantidadDisponible)}
+                                                                            </p>
+                                                                        </div>
+
+                                                                        {/* Conversiones */}
+                                                                        {primeraConversion?.map((conv) => (
+                                                                            <div
+                                                                                key={conv.id}
+                                                                                className="p-3 rounded-lg border-2 border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20"
+                                                                            >
+                                                                                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
+                                                                                    {conv.unidad_destino_nombre}
+                                                                                    <span className="text-orange-600 dark:text-orange-400 ml-1">
+                                                                                        (÷ {formatCantidad(conv.factor_conversion)})
+                                                                                    </span>
+                                                                                </p>
+                                                                                <p className="text-lg font-bold text-orange-700 dark:text-orange-400">
+                                                                                    {formatCantidad(conv.cantidad_en_conversion)}
+                                                                                </p>
+                                                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                                                    Disponible:{' '}
+                                                                                    {formatCantidad(cantidadDisponible * conv.factor_conversion)}
+                                                                                </p>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>

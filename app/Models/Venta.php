@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\MovimientoCaja;
+use App\Models\TipoOperacionCaja;
 
 class Venta extends Model
 {
@@ -100,6 +102,26 @@ class Venta extends Model
                     return $relacion->codigo ?? 'SIN_ENTREGA';
                 }
                 return 'SIN_ENTREGA';
+            }
+        );
+    }
+
+    /**
+     * ✅ Accessor para obtener el nombre del estado desde la relación estadoDocumento
+     *
+     * Convierte estado_documento_id (FK) a estado (nombre)
+     * Permite acceder a $venta->estado en lugar de $venta->estadoDocumento->nombre
+     */
+    protected function estado(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                // Acceder a la relación estadoDocumento
+                $relacion = $this->getAttribute('estadoDocumento');
+                if ($relacion) {
+                    return $relacion->nombre;
+                }
+                return null;
             }
         );
     }
@@ -597,6 +619,7 @@ class Venta extends Model
             foreach ($movimientos as $movimiento) {
                 $stockProducto = $movimiento->stockProducto;
                 $cantidadADevolver = abs($movimiento->cantidad);
+                $cantidadAnterior = $stockProducto->cantidad;
 
                 // Actualizar stock usando UPDATE atómico
                 $affected = DB::table('stock_productos')
@@ -611,11 +634,8 @@ class Venta extends Model
                     throw new Exception("Error al revertir stock para stock_producto_id {$stockProducto->id}");
                 }
 
-                // Actualizar modelo en memoria
-                $cantidadAnterior = $stockProducto->cantidad;
-                $stockProducto->cantidad += $cantidadADevolver;
-                $stockProducto->cantidad_disponible += $cantidadADevolver;
-                $stockProducto->fecha_actualizacion = now();
+                // Obtener la cantidad actualizada
+                $cantidadNueva = $cantidadAnterior + $cantidadADevolver;
 
                 // Crear movimiento de reversión
                 MovimientoInventario::create([
@@ -625,15 +645,35 @@ class Venta extends Model
                     'observacion'       => "Reversión de venta #{$this->numero}",
                     'numero_documento'  => $this->numero . '-REV',
                     'cantidad_anterior' => $cantidadAnterior,
-                    'cantidad_posterior' => $stockProducto->cantidad,
+                    'cantidad_posterior' => $cantidadNueva,
                     'tipo'              => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
                     'user_id'           => Auth::id(),
                 ]);
+
+                // Si el lote queda en cantidad 0 o negativo, eliminarlo completamente (hard delete)
+                if ($cantidadNueva <= 0) {
+                    Log::info('Eliminando lote completamente por anulación de venta', [
+                        'venta' => $this->numero,
+                        'stock_producto_id' => $stockProducto->id,
+                        'producto_id' => $stockProducto->producto_id,
+                        'lote' => $stockProducto->lote,
+                        'almacen_id' => $stockProducto->almacen_id,
+                        'cantidad_final' => $cantidadNueva,
+                    ]);
+
+                    // ✅ Primero eliminar los movimientos de inventario asociados (para evitar FK constraint)
+                    \App\Models\MovimientoInventario::where('stock_producto_id', $stockProducto->id)
+                        ->forceDelete();
+
+                    // ✅ Luego eliminar el stock_producto - Hard delete
+                    $stockProducto->forceDelete();
+                }
 
                 Log::info('Stock revertido por eliminación de venta', [
                     'venta' => $this->numero,
                     'stock_producto_id' => $stockProducto->id,
                     'cantidad_devuelta' => $cantidadADevolver,
+                    'cantidad_final' => $cantidadNueva,
                 ]);
             }
 
@@ -649,6 +689,51 @@ class Venta extends Model
 
             Log::error('Error al revertir movimientos de venta', [
                 'venta' => $this->numero,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Revertir movimiento de caja al anular venta
+     *
+     * Crea un movimiento de egreso (monto negativo) para compensar el ingreso original
+     */
+    public function revertirMovimientoCaja(): void
+    {
+        if (!$this->movimientoCaja) {
+            return;
+        }
+
+        try {
+            $movimientoOriginal = $this->movimientoCaja;
+
+            // Obtener el tipo de operación ANULACION para la reversión
+            $tipoOperacionAnulacion = TipoOperacionCaja::where('codigo', 'ANULACION')->firstOrFail();
+
+            // Crear movimiento de reversión con monto negativo
+            MovimientoCaja::create([
+                'caja_id'             => $movimientoOriginal->caja_id,
+                'user_id'             => Auth::id(),
+                'fecha'               => now(),
+                'monto'               => -abs($movimientoOriginal->monto), // Negativo para restar
+                'observaciones'       => "Anulación de venta #{$this->numero}",
+                'numero_documento'    => $this->numero . '-ANU',
+                'tipo_operacion_id'   => $tipoOperacionAnulacion->id,
+                'tipo_pago_id'        => $movimientoOriginal->tipo_pago_id, // Mantener mismo tipo de pago
+                'venta_id'            => $this->id,
+            ]);
+
+            Log::info('Movimiento de caja revertido por anulación de venta', [
+                'venta'                  => $this->numero,
+                'movimiento_original_id' => $movimientoOriginal->id,
+                'monto_original'         => $movimientoOriginal->monto,
+                'monto_reversa'          => -abs($movimientoOriginal->monto),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al revertir movimiento de caja para venta ' . $this->numero, [
                 'error' => $e->getMessage(),
             ]);
 

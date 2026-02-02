@@ -14,7 +14,6 @@
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
             color: #333;
             line-height: 1.4;
             margin: 0;
@@ -366,7 +365,6 @@
             <div class="header-empresa">
                 <h1>{{ $empresa->nombre_comercial }}</h1>
                 <p><strong>{{ $empresa->razon_social }}</strong></p>
-                <p>NIT: {{ $empresa->nit }}</p>
                 <p>{{ $empresa->direccion }}</p>
                 <p>{{ $empresa->ciudad }} - {{ $empresa->pais }}</p>
                 @if($empresa->telefono)

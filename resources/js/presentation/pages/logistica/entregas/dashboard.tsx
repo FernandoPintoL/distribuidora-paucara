@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
@@ -14,6 +15,8 @@ import { TopChoferes } from './components/TopChoferes';
 import { EntregasUltimos7Dias } from './components/EntregasUltimos7Dias';
 import { EntregasPorEstado } from './components/EntregasPorEstado';
 import { EntregasRecientes } from './components/EntregasRecientes';
+import { CancelarEntregaModal } from './components/CancelarEntregaModal';
+import type { EntregaReciente } from '@/application/hooks/use-entregas-dashboard-stats';
 
 export default function DashboardEntregas() {
     // Hook para cargar estadísticas
@@ -27,8 +30,25 @@ export default function DashboardEntregas() {
         refreshInterval: 30, // Actualizar cada 30 segundos
     });
 
+    // Estados para modal de cancelación
+    const [mostrarCancelarModal, setMostrarCancelarModal] = useState(false);
+    const [entregaSeleccionadaParaCancelar, setEntregaSeleccionadaParaCancelar] = useState<{
+        id: number;
+        numero_entrega: string;
+        estado: string;
+    } | null>(null);
+
     const handleVerEntrega = (entregaId: number) => {
         window.location.href = `/logistica/entregas/${entregaId}`;
+    };
+
+    const handleAbrirCancelarModal = (entrega: EntregaReciente) => {
+        setEntregaSeleccionadaParaCancelar({
+            id: entrega.id,
+            numero_entrega: `ENT-${entrega.id}`,
+            estado: entrega.estado,
+        });
+        setMostrarCancelarModal(true);
     };
 
     if (!stats && loading) {
@@ -114,6 +134,17 @@ export default function DashboardEntregas() {
                     entregas={stats.entregas_recientes}
                     loading={loading}
                     onVerEntrega={handleVerEntrega}
+                    onCancelarEntrega={handleAbrirCancelarModal}
+                />
+
+                {/* Modal de cancelación */}
+                <CancelarEntregaModal
+                    isOpen={mostrarCancelarModal}
+                    onClose={() => {
+                        setMostrarCancelarModal(false);
+                        setEntregaSeleccionadaParaCancelar(null);
+                    }}
+                    entrega={entregaSeleccionadaParaCancelar}
                 />
             </div>
         </AppLayout>

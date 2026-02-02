@@ -357,10 +357,43 @@ class Proforma extends Model
             'observaciones_rechazo' => $motivo,
         ]);
 
-        // ✅ Disparar evento para notificaciones
+        // ✅ LIBERAR RESERVAS DE STOCK cuando se rechaza
+        // Obtener todas las reservas activas con su stock asociado
+        $reservasActivas = $this->reservas()
+            ->where('estado', ReservaProforma::ACTIVA)
+            ->with('stockProducto')
+            ->get();
+
+        // Liberar cada reserva en stock_productos (actualizar cantidad_disponible y cantidad_reservada)
+        foreach ($reservasActivas as $reserva) {
+            if ($reserva->stockProducto) {
+                $reserva->stockProducto->liberarReserva($reserva->cantidad_reservada);
+            }
+        }
+
+        // Marcar todas las reservas activas como LIBERADAS
+        $this->reservas()
+            ->where('estado', ReservaProforma::ACTIVA)
+            ->update(['estado' => ReservaProforma::LIBERADA]);
+
+        \Illuminate\Support\Facades\Log::info('Reservas liberadas por rechazo de proforma', [
+            'proforma_id' => $this->id,
+            'proforma_numero' => $this->numero,
+            'reservas_liberadas' => $reservasActivas->count(),
+            'cantidad_total_liberada' => $reservasActivas->sum('cantidad_reservada'),
+        ]);
+
+        // ✅ Disparar evento para notificaciones (no crítico si falla)
         // El evento ProformaRechazada dispara el listener SendProformaRejectedNotification
         // que utiliza ProformaNotificationService para enviar notificaciones
-        event(new \App\Events\ProformaRechazada($this->fresh(), $motivo));
+        try {
+            event(new \App\Events\ProformaRechazada($this->fresh(), $motivo));
+        } catch (\Exception $broadcastError) {
+            \Illuminate\Support\Facades\Log::warning('⚠️  Error al emitir evento de rechazo (no crítico)', [
+                'proforma_id' => $this->id,
+                'error' => $broadcastError->getMessage(),
+            ]);
+        }
 
         return true;
     }

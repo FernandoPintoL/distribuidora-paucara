@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Eye, XCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import type { EntregaReciente } from '@/application/hooks/use-entregas-dashboard-stats';
 import { EntregaEstadoBadge } from '@/presentation/components/entrega/EntregaEstadoBadge';
@@ -10,12 +10,14 @@ interface EntregasRecientesProps {
     entregas: EntregaReciente[];
     loading: boolean;
     onVerEntrega?: (entregaId: number) => void;
+    onCancelarEntrega?: (entrega: EntregaReciente) => void;
 }
 
 export function EntregasRecientes({
     entregas,
     loading,
     onVerEntrega,
+    onCancelarEntrega,
 }: EntregasRecientesProps) {
     // ✅ DEBUG: Verificar datos de entregas recientes
     useEffect(() => {
@@ -97,16 +99,30 @@ export function EntregasRecientes({
                                         </div>
                                     )}
                                 </div>
-                                {onVerEntrega && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onVerEntrega(entrega.id)}
-                                        className="ml-2 flex-shrink-0"
-                                    >
-                                        <Eye className="h-4 w-4" />
-                                    </Button>
-                                )}
+                                <div className="flex gap-1 flex-shrink-0">
+                                    {onVerEntrega && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => onVerEntrega(entrega.id)}
+                                            title="Ver entrega"
+                                        >
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                    {/* Botón de cancelación - solo si el estado permite */}
+                                    {onCancelarEntrega && ['PROGRAMADO', 'PENDIENTE', 'EN_TRANSITO', 'PREPARACION_CARGA'].includes(entrega.estado) && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => onCancelarEntrega(entrega)}
+                                            className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                            title="Cancelar entrega"
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         )
                     )}

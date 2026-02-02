@@ -272,6 +272,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // ✅ Ruta específica para verificar caja abierta (ANTES del resource para evitar conflictos)
     Route::get('compras/check-caja-abierta', [\App\Http\Controllers\CompraController::class, 'checkCajaAbierta'])->name('compras.check-caja-abierta');
 
+    // ✅ NUEVO: Ruta para anular compras
+    Route::post('compras/{compra}/anular', [\App\Http\Controllers\CompraController::class, 'anular'])->name('compras.anular');
+
     Route::resource('compras', \App\Http\Controllers\CompraController::class)->except(['destroy']);
 
     // Keep nested details routes
@@ -311,6 +314,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::prefix('ventas')->name('ventas.')->group(function () {
         // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
         Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
+
+        // Acciones personalizadas (POST)
+        Route::post('{venta}/anular', [\App\Http\Controllers\VentaController::class, 'anular'])->name('anular');
+        Route::post('{venta}/aprobar', [\App\Http\Controllers\VentaController::class, 'aprobar'])->name('aprobar');
+        Route::post('{venta}/rechazar', [\App\Http\Controllers\VentaController::class, 'rechazar'])->name('rechazar');
+        Route::post('{venta}/registrar-pago', [\App\Http\Controllers\VentaController::class, 'registrarPago'])->name('registrar-pago');
 
         // Rutas con parámetros dinámicos van al final
         Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir');

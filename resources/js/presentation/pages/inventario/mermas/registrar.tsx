@@ -291,7 +291,7 @@ const RegistrarMermaPage: React.FC = () => {
                                             setBusquedaProducto('');
                                             setProductosDisponibles([]);
                                         }}
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700"
                                     >
                                         <option value="">Seleccionar almacén</option>
                                         {almacenes.map(almacen => (
@@ -311,7 +311,7 @@ const RegistrarMermaPage: React.FC = () => {
                                             ...prev,
                                             tipo_merma: e.target.value as TipoMerma
                                         }))}
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700"
                                     >
                                         <option value="">Seleccionar tipo</option>
                                         {tipos.map(tipo => (
@@ -346,7 +346,7 @@ const RegistrarMermaPage: React.FC = () => {
                                             observaciones: e.target.value
                                         }))}
                                         rows={3}
-                                        className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700"
                                         placeholder="Observaciones adicionales..."
                                     />
                                 </div>
@@ -375,7 +375,7 @@ const RegistrarMermaPage: React.FC = () => {
                                 <div className="mb-6">
                                     <Label htmlFor="busqueda-producto">Buscar producto para agregar</Label>
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
                                         <Input
                                             id="busqueda-producto"
                                             type="text"
@@ -385,7 +385,7 @@ const RegistrarMermaPage: React.FC = () => {
                                                 setBusquedaProducto(e.target.value);
                                                 buscarProductos(e.target.value);
                                             }}
-                                            className="pl-10"
+                                            className="pl-10 dark:bg-gray-900 dark:text-white dark:border-gray-700"
                                         />
                                     </div>
 
@@ -462,7 +462,7 @@ const RegistrarMermaPage: React.FC = () => {
                                                         step="0.01"
                                                         value={producto.cantidad}
                                                         onChange={(e) => actualizarProducto(index, 'cantidad', parseFloat(e.target.value) || 0)}
-                                                        className="w-20"
+                                                        className="w-20 dark:bg-gray-900 dark:text-white dark:border-gray-700"
                                                     />
                                                 </div>
 
@@ -474,7 +474,7 @@ const RegistrarMermaPage: React.FC = () => {
                                                         step="0.01"
                                                         value={producto.costo_unitario || ''}
                                                         onChange={(e) => actualizarProducto(index, 'costo_unitario', parseFloat(e.target.value) || 0)}
-                                                        className="w-24"
+                                                        className="w-24 dark:bg-gray-900 dark:text-white dark:border-gray-700"
                                                         placeholder="0.00"
                                                     />
                                                 </div>
@@ -485,7 +485,7 @@ const RegistrarMermaPage: React.FC = () => {
                                                         type="text"
                                                         value={producto.lote || ''}
                                                         onChange={(e) => actualizarProducto(index, 'lote', e.target.value)}
-                                                        className="w-24"
+                                                        className="w-24 dark:bg-gray-900 dark:text-white dark:border-gray-700"
                                                         placeholder="Opcional"
                                                     />
                                                 </div>
@@ -496,7 +496,7 @@ const RegistrarMermaPage: React.FC = () => {
                                                         type="date"
                                                         value={producto.fecha_vencimiento || ''}
                                                         onChange={(e) => actualizarProducto(index, 'fecha_vencimiento', e.target.value)}
-                                                        className="w-36"
+                                                        className="w-36 dark:bg-gray-900 dark:text-white dark:border-gray-700"
                                                     />
                                                 </div>
 
@@ -504,7 +504,7 @@ const RegistrarMermaPage: React.FC = () => {
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => eliminarProducto(index)}
-                                                    className="text-red-600 border-red-600 hover:bg-red-50"
+                                                    className="text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>

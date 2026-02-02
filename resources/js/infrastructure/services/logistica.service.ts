@@ -452,7 +452,7 @@ export class LogisticaService implements BaseService<Entrega, AsignarEntregaData
                 throw new Error('El motivo de rechazo es obligatorio');
             }
 
-            const response = await axios.post(`/api/encargado/proformas/${proformaId}/rechazar`, { motivo });
+            const response = await axios.post(`/api/proformas/${proformaId}/rechazar`, { comentario: motivo });
             NotificationService.success('Proforma rechazada');
             return response.data;
         } catch (error: any) {

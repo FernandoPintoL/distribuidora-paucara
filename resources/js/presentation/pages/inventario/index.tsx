@@ -48,6 +48,8 @@ export default function Dashboard() {
         productos_mas_movidos: props.productos_mas_movidos,
     });
 
+    // console.log('Dashboard Inventario renderizado', data);
+
     // ✅ Validar permisos (única lógica de negocio)
     if (!can('inventario.dashboard')) {
         return (

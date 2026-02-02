@@ -27,7 +27,7 @@ export function ProductosMasVendidos({ productos, loading = false, className = '
                 </h3>
                 <div className="animate-pulse space-y-4">
                     {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="flex items-center gap-3">
+                        <div key={`product-skeleton-${i}`} className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded bg-neutral-300 dark:bg-neutral-700"></div>
                             <div className="flex-1">
                                 <div className="h-4 w-32 rounded bg-neutral-300 dark:bg-neutral-700"></div>
@@ -72,11 +72,11 @@ export function ProductosMasVendidos({ productos, loading = false, className = '
             </div>
 
             <div className="space-y-4">
-                {productos.map((producto, index) => {
+                {productos.map((producto) => {
                     const porcentaje = (producto.total_vendido / maxVendido) * 100;
 
                     return (
-                        <div key={index} className="group relative">
+                        <div key={`${producto.nombre}-${producto.total_vendido}`} className="group relative">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">

@@ -330,8 +330,8 @@ export function HistorialAperturasTable({ historicoAperturas }: Props) {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             {getEstadoBadge(apertura.estado)}
-                                            <br />
-                                            {apertura.estado_cierre ? getEstadoCierreBadge(apertura.estado_cierre) : '-'}
+                                            {/* <br />
+                                            {apertura.estado_cierre ? getEstadoCierreBadge(apertura.estado_cierre) : '-'} */}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             {apertura.estado === 'Cerrada' && apertura.id && (

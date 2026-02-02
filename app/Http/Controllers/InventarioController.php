@@ -9,7 +9,6 @@ use App\Http\Requests\StoreTransferenciaInventarioRequest;
 use App\Models\Almacen;
 use App\Models\Categoria;
 use App\Models\DetalleTransferenciaInventario;
-use App\Models\User;
 use App\Models\EstadoMerma;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
@@ -18,6 +17,7 @@ use App\Models\TipoAjusteInventario;
 use App\Models\TipoMerma;
 use App\Models\TipoOperacion;
 use App\Models\TransferenciaInventario;
+use App\Models\User;
 use App\Models\Vehiculo;
 use App\Services\ExcelExportService;
 use Illuminate\Http\JsonResponse;
@@ -93,50 +93,41 @@ class InventarioController extends Controller
         $productosProximosVencer = Producto::where('activo', true)->proximosVencer(30)->count();
         $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
 
-        // Stock por almacén - incluyendo productos sin stock_productos records
+        // Stock por almacén - agrupado por producto+almacén con detalles de lotes
         $stockPorAlmacen = StockProducto::with([
             'producto',
             'producto.codigoPrincipal',
             'almacen',
             'producto.precios',
             'producto.unidad',
-            'producto.conversiones.unidadDestino'
+            'producto.conversiones.unidadDestino',
         ])
+            ->withoutTrashed()  // Excluir registros soft deleted
             ->where('cantidad', '>', 0)
             ->orderBy('almacen_id')
             ->orderBy('producto_id')
-            ->get()
-            ->map(function ($stock) {
+            ->get();
+
+        // Agrupar por producto_id + almacen_id
+        $stockAgrupado = [];
+        foreach ($stockPorAlmacen as $stock) {
+            $clave = $stock->producto_id . '_' . $stock->almacen_id;
+
+            if (!isset($stockAgrupado[$clave])) {
                 // Obtener precio de venta base
                 $precioVenta = 0;
                 if ($stock->producto) {
-                    // Buscar el precio de venta base
                     $precioVentaObj = $stock->producto->precios?->firstWhere('es_precio_base', true);
-                    $precioVenta = $precioVentaObj?->precio ?? $stock->producto->precio_venta ?? 0;
+                    $precioVenta    = $precioVentaObj?->precio ?? $stock->producto->precio_venta ?? 0;
                 }
 
-                // Procesar conversiones para productos fraccionados
-                $conversiones = [];
-                if ($stock->producto?->es_fraccionado && $stock->producto->conversiones) {
-                    $conversiones = $stock->producto->conversiones->map(function ($conv) use ($stock) {
-                        return [
-                            'id' => $conv->id,
-                            'unidad_origen_id' => $conv->unidad_origen_id,
-                            'unidad_destino_id' => $conv->unidad_destino_id,
-                            'unidad_destino_nombre' => $conv->unidadDestino?->nombre ?? '',
-                            'factor_conversion' => $conv->factor_conversion,
-                            'cantidad_en_conversion' => round($stock->cantidad * $conv->factor_conversion, 2),
-                        ];
-                    })->values()->toArray();
-                }
-
-                return [
-                    'id'                    => $stock->id,
+                $stockAgrupado[$clave] = [
+                    'id'                    => null,
                     'producto_id'           => $stock->producto_id,
                     'almacen_id'            => $stock->almacen_id,
-                    'cantidad'              => $stock->cantidad,
-                    'cantidad_disponible'   => $stock->cantidad_disponible,
-                    'cantidad_reservada'    => $stock->cantidad_reservada,
+                    'cantidad'              => 0,
+                    'cantidad_disponible'   => 0,
+                    'cantidad_reservada'    => 0,
                     'precio_venta'          => $precioVenta,
                     'producto_nombre'       => $stock->producto?->nombre ?? 'Desconocido',
                     'producto_codigo'       => $stock->producto?->codigo ?? '',
@@ -145,12 +136,57 @@ class InventarioController extends Controller
                     'almacen_nombre'        => $stock->almacen?->nombre ?? 'Desconocido',
                     'es_fraccionado'        => (bool) $stock->producto?->es_fraccionado,
                     'unidad_medida_nombre'  => $stock->producto?->unidad?->nombre ?? 'Unidades',
-                    'conversiones'          => $conversiones,
+                    'fecha_vencimiento_proximo' => null,
+                    'detalles_lotes'        => [],
                 ];
-            });
+            }
+
+            // Acumular cantidades
+            $stockAgrupado[$clave]['cantidad'] += $stock->cantidad;
+            $stockAgrupado[$clave]['cantidad_disponible'] += $stock->cantidad_disponible;
+            $stockAgrupado[$clave]['cantidad_reservada'] += $stock->cantidad_reservada;
+
+            // Procesar conversiones para productos fraccionados
+            $conversiones = [];
+            if ($stock->producto?->es_fraccionado && $stock->producto->conversiones) {
+                $conversiones = $stock->producto->conversiones->map(function ($conv) use ($stock) {
+                    return [
+                        'id'                     => $conv->id,
+                        'unidad_origen_id'       => $conv->unidad_origen_id,
+                        'unidad_destino_id'      => $conv->unidad_destino_id,
+                        'unidad_destino_nombre'  => $conv->unidadDestino?->nombre ?? '',
+                        'factor_conversion'      => $conv->factor_conversion,
+                        'cantidad_en_conversion' => round($stock->cantidad * $conv->factor_conversion, 2),
+                    ];
+                })->values()->toArray();
+            }
+
+            // Agregar detalle de lote
+            $stockAgrupado[$clave]['detalles_lotes'][] = [
+                'id'                    => $stock->id,
+                'lote'                  => $stock->lote ?? 'Sin lote',
+                'fecha_vencimiento'     => $stock->fecha_vencimiento ? \Carbon\Carbon::parse($stock->fecha_vencimiento)->format('d/m/Y') : null,
+                'cantidad'              => $stock->cantidad,
+                'cantidad_disponible'   => $stock->cantidad_disponible,
+                'cantidad_reservada'    => $stock->cantidad_reservada,
+                'conversiones'          => $conversiones,
+            ];
+
+            // Actualizar próximo vencimiento (el más cercano)
+            if ($stock->fecha_vencimiento) {
+                $fechaParsed = \Carbon\Carbon::parse($stock->fecha_vencimiento);
+                if (!$stockAgrupado[$clave]['fecha_vencimiento_proximo'] ||
+                    $fechaParsed < \Carbon\Carbon::parse($stockAgrupado[$clave]['fecha_vencimiento_proximo'])) {
+                    $stockAgrupado[$clave]['fecha_vencimiento_proximo'] = $fechaParsed->format('d/m/Y');
+                }
+            }
+        }
+
+        // Convertir a Collection para las operaciones posteriores
+        $stockPorAlmacenCollection = collect($stockAgrupado);
 
         // Obtener productos sin registros de stock_productos
-        $productosConStock = $stockPorAlmacen->pluck('producto_id')->unique();
+        $productosConStock = $stockPorAlmacenCollection->pluck('producto_id')->unique();
         $productossinStock = Producto::where('activo', true)
             ->whereNotIn('id', $productosConStock)
             ->with(['codigoPrincipal', 'precios', 'unidad', 'conversiones.unidadDestino'])
@@ -159,9 +195,9 @@ class InventarioController extends Controller
         // Mapear productos sin stock con cantidad 0
         $stockSinRegistros = $productossinStock->map(function ($producto) {
             // Obtener precio de venta base
-            $precioVenta = 0;
+            $precioVenta    = 0;
             $precioVentaObj = $producto->precios?->firstWhere('es_precio_base', true);
-            $precioVenta = $precioVentaObj?->precio ?? $producto->precio_venta ?? 0;
+            $precioVenta    = $precioVentaObj?->precio ?? $producto->precio_venta ?? 0;
 
             return [
                 'id'                    => null,
@@ -178,12 +214,13 @@ class InventarioController extends Controller
                 'almacen_nombre'        => 'Sin Stock',
                 'es_fraccionado'        => (bool) $producto->es_fraccionado,
                 'unidad_medida_nombre'  => $producto->unidad?->nombre ?? 'Unidades',
-                'conversiones'          => [],
+                'fecha_vencimiento_proximo' => null,
+                'detalles_lotes'        => [],
             ];
         });
 
         // Combinar stock existente con productos sin stock
-        $stockPorAlmacen = $stockPorAlmacen->concat($stockSinRegistros)->sortBy(['almacen_nombre', 'producto_nombre'])->values();
+        $stockPorAlmacen = $stockPorAlmacenCollection->concat($stockSinRegistros)->sortBy(['almacen_nombre', 'producto_nombre'])->values()->toArray();
 
         // Movimientos recientes (últimos 7 días)
         $movimientosRecientes = MovimientoInventario::with(['stockProducto.producto', 'stockProducto.almacen', 'user'])
@@ -254,6 +291,7 @@ class InventarioController extends Controller
 
         // Obtener productos con stock bajo directamente desde StockProducto
         $query = StockProducto::with(['producto.categoria', 'producto.marca', 'almacen'])
+            ->withoutTrashed()  // Excluir registros soft deleted
             ->where('cantidad', '>', 0)
             ->whereHas('producto', function ($q) {
                 $q->where('activo', true)
@@ -317,6 +355,7 @@ class InventarioController extends Controller
         $fechaLimite = now()->addDays($diasAnticipacion);
 
         $query = StockProducto::with(['producto.categoria', 'producto.marca', 'almacen'])
+            ->withoutTrashed()  // Excluir registros soft deleted
             ->whereNotNull('fecha_vencimiento')
             ->where('fecha_vencimiento', '>', now()->toDateString())
             ->where('fecha_vencimiento', '<=', $fechaLimite)
@@ -372,6 +411,7 @@ class InventarioController extends Controller
 
         // Obtener productos vencidos directamente desde StockProducto
         $query = StockProducto::with(['producto.categoria', 'producto.marca', 'almacen'])
+            ->withoutTrashed()  // Excluir registros soft deleted
             ->whereNotNull('fecha_vencimiento')
             ->where('fecha_vencimiento', '<', now()->toDateString())
             ->where('cantidad', '>', 0)
@@ -517,7 +557,7 @@ class InventarioController extends Controller
         $estado_mermas = EstadoMerma::all();
 
         return Inertia::render('inventario/movimientos', [
-            'movimientos' => [
+            'movimientos'             => [
                 'data'         => $movimientos,
                 'current_page' => $movimientosPaginados->currentPage(),
                 'per_page'     => $movimientosPaginados->perPage(),
@@ -576,6 +616,7 @@ class InventarioController extends Controller
         $stockProductos = collect();
         if ($almacenId) {
             $stockProductos = StockProducto::where('almacen_id', $almacenId)
+                ->withoutTrashed()  // Excluir registros soft deleted
                 ->with(['producto:id,nombre,sku,codigo_barras,codigo_qr', 'producto.codigosBarra', 'almacen:id,nombre'])
                 ->orderBy('cantidad_disponible', 'desc')
                 ->get();
@@ -1119,9 +1160,9 @@ class InventarioController extends Controller
     {
         $choferes = User::role('Chofer')->get(['id', 'name'])->map(function ($user) {
             return [
-                'id'       => $user->id,
-                'nombre'   => $user->name,
-                'activo'   => true, // Los usuarios en el sistema están activos
+                'id'     => $user->id,
+                'nombre' => $user->name,
+                'activo' => true, // Los usuarios en el sistema están activos
             ];
         });
 
@@ -1501,10 +1542,10 @@ class InventarioController extends Controller
                     // Actualizar stock según la dirección
                     // IMPORTANTE: Mantener el invariante: cantidad = cantidad_disponible + cantidad_reservada
                     if ($esEntrada) {
-                        $stock->cantidad += $cantidad;
+                        $stock->cantidad            += $cantidad;
                         $stock->cantidad_disponible += $cantidad;
                     } else {
-                        $stock->cantidad -= $cantidad;
+                        $stock->cantidad            -= $cantidad;
                         $stock->cantidad_disponible -= $cantidad;
 
                         // Evitar stock negativo
@@ -1516,24 +1557,24 @@ class InventarioController extends Controller
                         }
                     }
 
-                    $stock->fecha_actualizacion = now();
+                    $stock->fecha_actualizacion  = now();
                     $stock->save();
 
                     // Ahora crear el movimiento CON los datos actualizados
                     $cantidadPosterior = $stock->cantidad;
 
                     $movimientoData = [
-                        'numero_documento'      => $numeroAjuste,
-                        'stock_producto_id'     => $ajuste['stock_producto_id'],
-                        'cantidad'              => $cantidad,
-                        'cantidad_anterior'     => $cantidadAnterior,
-                        'cantidad_posterior'    => $cantidadPosterior,
-                        'tipo'                  => $tipoMovimiento,
-                        'observacion'           => $ajuste['observacion'],
-                        'user_id'               => Auth::id(),
-                        'fecha'                 => now(),
-                        'referencia_tipo'       => 'CARGA_CSV',
-                        'referencia_id'         => $cargo->id, // Vincular al cargo CSV
+                        'numero_documento'   => $numeroAjuste,
+                        'stock_producto_id'  => $ajuste['stock_producto_id'],
+                        'cantidad'           => $cantidad,
+                        'cantidad_anterior'  => $cantidadAnterior,
+                        'cantidad_posterior' => $cantidadPosterior,
+                        'tipo'               => $tipoMovimiento,
+                        'observacion'        => $ajuste['observacion'],
+                        'user_id'            => Auth::id(),
+                        'fecha'              => now(),
+                        'referencia_tipo'    => 'CARGA_CSV',
+                        'referencia_id'      => $cargo->id, // Vincular al cargo CSV
                     ];
 
                     // Agregar campos específicos según el tipo de operación
@@ -1753,41 +1794,41 @@ class InventarioController extends Controller
     {
         try {
             // Parámetros opcionales de filtro
-            $almacenId = $request->integer('almacen_id');
+            $almacenId   = $request->integer('almacen_id');
             $categoriaId = $request->integer('categoria_id');
-            $fechaDesde = $request->date('fecha_desde');
-            $fechaHasta = $request->date('fecha_hasta');
+            $fechaDesde  = $request->date('fecha_desde');
+            $fechaHasta  = $request->date('fecha_hasta');
 
             // Query base de movimientos
-            $movimientosQuery = MovimientoInventario::when($almacenId, fn($q) => 
+            $movimientosQuery = MovimientoInventario::when($almacenId, fn($q) =>
                 $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId))
-            )->when($categoriaId, fn($q) => 
+            )->when($categoriaId, fn($q) =>
                 $q->whereHas('stockProducto.producto', fn($sq) => $sq->where('categoria_id', $categoriaId))
-            )->when($fechaDesde, fn($q) => 
+            )->when($fechaDesde, fn($q) =>
                 $q->whereDate('fecha', '>=', $fechaDesde)
-            )->when($fechaHasta, fn($q) => 
+            )->when($fechaHasta, fn($q) =>
                 $q->whereDate('fecha', '<=', $fechaHasta)
             );
 
             // Estadísticas por tipo de movimiento
-            $totalMovimientos = (clone $movimientosQuery)->count();
-            $totalEntradas = (clone $movimientosQuery)->where('tipo', 'like', 'ENTRADA%')->count();
-            $totalSalidas = (clone $movimientosQuery)->where('tipo', 'like', 'SALIDA%')->count();
+            $totalMovimientos    = (clone $movimientosQuery)->count();
+            $totalEntradas       = (clone $movimientosQuery)->where('tipo', 'like', 'ENTRADA%')->count();
+            $totalSalidas        = (clone $movimientosQuery)->where('tipo', 'like', 'SALIDA%')->count();
             $totalTransferencias = (clone $movimientosQuery)->where('tipo', 'like', '%TRANSFERENCIA%')->count();
-            $totalMermas = (clone $movimientosQuery)->where('tipo', 'like', '%MERMA%')->count();
-            $totalAjustes = (clone $movimientosQuery)->where('tipo', 'like', '%AJUSTE%')->count();
+            $totalMermas         = (clone $movimientosQuery)->where('tipo', 'like', '%MERMA%')->count();
+            $totalAjustes        = (clone $movimientosQuery)->where('tipo', 'like', '%AJUSTE%')->count();
 
             // Valor total de movimientos (usando cantidad como aproximación)
             $valorTotalEntradas = (clone $movimientosQuery)
                 ->where('tipo', 'like', 'ENTRADA%')
                 ->where('cantidad', '>', 0)
                 ->sum(DB::raw('cantidad'));
-            
+
             $valorTotalSalidas = (clone $movimientosQuery)
                 ->where('tipo', 'like', 'SALIDA%')
                 ->where('cantidad', '>', 0)
                 ->sum(DB::raw('cantidad'));
-            
+
             $valorTotalMermas = (clone $movimientosQuery)
                 ->where('tipo', 'like', '%MERMA%')
                 ->sum(DB::raw('ABS(cantidad)'));
@@ -1832,30 +1873,30 @@ class InventarioController extends Controller
                 ->sortBy('fecha')
                 ->values()
                 ->map(fn($item) => [
-                    'fecha' => $item->fecha,
-                    'entradas' => (int) $item->entradas,
-                    'salidas' => (int) $item->salidas,
+                    'fecha'          => $item->fecha,
+                    'entradas'       => (int) $item->entradas,
+                    'salidas'        => (int) $item->salidas,
                     'transferencias' => (int) $item->transferencias,
-                    'mermas' => (int) $item->mermas,
+                    'mermas'         => (int) $item->mermas,
                 ]);
 
             $estadisticas = [
-                'total_movimientos' => $totalMovimientos,
-                'total_entradas' => $totalEntradas,
-                'total_salidas' => $totalSalidas,
-                'total_transferencias' => $totalTransferencias,
-                'total_mermas' => $totalMermas,
-                'total_ajustes' => $totalAjustes,
-                'valor_total_entradas' => (float) $valorTotalEntradas,
-                'valor_total_salidas' => (float) $valorTotalSalidas,
-                'valor_total_mermas' => (float) $valorTotalMermas,
-                'productos_afectados' => $productosAfectados,
-                'almacenes_activos' => $almacenesActivos,
-                'stock_bajo' => $stockBajo,
-                'proximos_vencer' => $proximosVencer,
-                'vencidos' => $vencidos,
+                'total_movimientos'      => $totalMovimientos,
+                'total_entradas'         => $totalEntradas,
+                'total_salidas'          => $totalSalidas,
+                'total_transferencias'   => $totalTransferencias,
+                'total_mermas'           => $totalMermas,
+                'total_ajustes'          => $totalAjustes,
+                'valor_total_entradas'   => (float) $valorTotalEntradas,
+                'valor_total_salidas'    => (float) $valorTotalSalidas,
+                'valor_total_mermas'     => (float) $valorTotalMermas,
+                'productos_afectados'    => $productosAfectados,
+                'almacenes_activos'      => $almacenesActivos,
+                'stock_bajo'             => $stockBajo,
+                'proximos_vencer'        => $proximosVencer,
+                'vencidos'               => $vencidos,
                 'movimientos_pendientes' => 0,
-                'tendencia_semanal' => $tendenciaSemanal,
+                'tendencia_semanal'      => $tendenciaSemanal,
             ];
 
             return ApiResponse::success($estadisticas);
@@ -1908,9 +1949,9 @@ class InventarioController extends Controller
             $stock->load(['producto.categoria', 'producto.marca', 'almacen']);
 
             $datos = [
-                'stock'    => $stock,
-                'empresa'  => \App\Models\Empresa::first(),
-                'usuario'  => auth()->user()->name ?? 'Sistema',
+                'stock'   => $stock,
+                'empresa' => \App\Models\Empresa::first(),
+                'usuario' => auth()->user()->name ?? 'Sistema',
             ];
 
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('impresion.inventarios.reporte-a4', $datos);
@@ -1923,6 +1964,263 @@ class InventarioController extends Controller
                 'stock_id' => $stock->id,
             ]);
             return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * API: Obtener stock filtrado y ordenado
+     * Parámetros de query:
+     * - busqueda: Buscar por nombre, código o SKU
+     * - almacen_id: Filtrar por almacén
+     * - rango_stock: 'todos', 'cero', 'bajo', 'normal', 'alto'
+     * - ordenamiento: 'cantidad-asc', 'cantidad-desc', 'producto', 'almacen'
+     */
+    public function apiStockFiltrado(Request $request): JsonResponse
+    {
+        try {
+            $busqueda     = (string) $request->string('busqueda', '')->lower();
+            $almacenId    = (int) $request->integer('almacen_id', 0);
+            $rangoStock   = (string) $request->string('rango_stock', 'todos');
+            $ordenamiento = (string) $request->string('ordenamiento', 'cantidad-desc');
+
+            // Definir rangos de stock
+            $rangos = [
+                'todos'  => ['min' => 0, 'max' => PHP_INT_MAX],
+                'cero'   => ['min' => 0, 'max' => 0],
+                'bajo'   => ['min' => 0.01, 'max' => 10],
+                'normal' => ['min' => 10.01, 'max' => 100],
+                'alto'   => ['min' => 100.01, 'max' => PHP_INT_MAX],
+            ];
+
+            $rango = $rangos[$rangoStock] ?? $rangos['todos'];
+
+            // Obtener lista de almacenes activos
+            $almacenes = Almacen::where('activo', true)->get();
+
+            $stocks = [];
+
+            // Si hay búsqueda O si filtra por stock cero, comenzar desde Producto (incluye sin stock)
+            if ($busqueda || $rangoStock === 'cero') {
+                $productoQuery = Producto::with([
+                    'stock' => fn($q) => $q->withoutTrashed(),  // Excluir soft deleted
+                    'stock.almacen',
+                    'codigoPrincipal',
+                    'precios',
+                    'unidad',
+                    'conversiones.unidadDestino'
+                ]);
+
+                // Aplicar filtro de búsqueda solo si hay término de búsqueda
+                if ($busqueda) {
+                    $productoQuery->where(function ($q) use ($busqueda) {
+                        // Prioridad 1: Búsqueda exacta por ID si es numérico
+                        if (is_numeric($busqueda)) {
+                            $q->where('id', (int) $busqueda);
+                        } else {
+                            // Prioridad 2: Búsqueda exacta por SKU (no parcial)
+                            $q->where('sku', strtolower($busqueda));
+                        }
+
+                        // Prioridad 3: Si no coincide exacto, buscar parcial en SKU
+                        $q->orWhereRaw('LOWER(sku) like ?', ["%{$busqueda}%"]);
+
+                        // Prioridad 4: Buscar parcial en nombre
+                        $q->orWhereRaw('LOWER(nombre) like ?', ["%{$busqueda}%"]);
+
+                        // Prioridad 5: Buscar en código de barras
+                        $q->orWhereHas('codigoPrincipal', function ($cq) use ($busqueda) {
+                            $cq->whereRaw('LOWER(codigo) like ?', ["%{$busqueda}%"]);
+                        });
+                    });
+                }
+
+                $productoQuery = $productoQuery->get();
+
+                // Procesar productos encontrados
+                foreach ($productoQuery as $producto) {
+                    if ($producto->stock && $producto->stock->count() > 0) {
+                        // Producto tiene stock registrado
+                        foreach ($producto->stock as $stock) {
+                            // Aplicar filtros
+                            if ($almacenId > 0 && $stock->almacen_id != $almacenId) {
+                                continue;
+                            }
+
+                            if ($rangoStock === 'cero' && $stock->cantidad != 0) {
+                                continue;
+                            } elseif ($rangoStock !== 'cero' && !($stock->cantidad >= $rango['min'] && $stock->cantidad <= $rango['max'])) {
+                                continue;
+                            }
+
+                            $stocks[] = $stock;
+                        }
+                    } else {
+                        // Producto sin stock: crear registros virtuales (stock = 0)
+                        if ($rangoStock === 'cero' || $rangoStock === 'todos') {
+                            // Mostrar en todos los almacenes o solo el seleccionado
+                            $almacenesParaMostrar = $almacenId > 0
+                                ? [$almacenes->find($almacenId)]
+                                : $almacenes;
+
+                            foreach ($almacenesParaMostrar as $almacen) {
+                                if (!$almacen) continue;
+
+                                // Crear objeto StockProducto virtual con todas las propiedades
+                                $stockVirtual = new \stdClass();
+                                $stockVirtual->id = null;
+                                $stockVirtual->producto_id = $producto->id;
+                                $stockVirtual->almacen_id = $almacen->id;
+                                $stockVirtual->cantidad = 0;
+                                $stockVirtual->cantidad_disponible = 0;
+                                $stockVirtual->cantidad_reservada = 0;
+                                $stockVirtual->lote = null;
+                                $stockVirtual->ubicacion = null;
+                                $stockVirtual->fecha_vencimiento = null;
+                                $stockVirtual->fecha_registro = now();
+                                $stockVirtual->producto = $producto;
+                                $stockVirtual->almacen = $almacen;
+
+                                $stocks[] = $stockVirtual;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Sin búsqueda: usar la query original de stock_productos
+                $query = StockProducto::with([
+                    'producto',
+                    'producto.codigoPrincipal',
+                    'almacen',
+                    'producto.precios',
+                    'producto.unidad',
+                    'producto.conversiones.unidadDestino',
+                ])
+                    ->withoutTrashed();  // Excluir registros soft deleted
+
+                // Filtro por almacén
+                if ($almacenId > 0) {
+                    $query->where('almacen_id', $almacenId);
+                }
+
+                // Filtro por rango de stock
+                if ($rangoStock === 'cero') {
+                    $query->where('cantidad', '=', 0);
+                } else {
+                    $query->whereBetween('cantidad', [$rango['min'], $rango['max']]);
+                }
+
+                $stocks = $query->get();
+            }
+            $stockProductos = [];
+
+            // Construcción de datos con detalles de lote
+            $stockProductos = [];
+            $stockAgrupado = []; // Para agrupar por producto+almacén
+
+            foreach ($stocks as $stock) {
+                // Obtener precio de venta base
+                $precioVenta = 0;
+                if ($stock->producto) {
+                    $precioVentaObj = $stock->producto->precios?->firstWhere('es_precio_base', true);
+                    $precioVenta    = $precioVentaObj?->precio ?? $stock->producto->precio_venta ?? 0;
+                }
+
+                // Procesar conversiones para productos fraccionados
+                $conversiones = [];
+                if ($stock->producto?->es_fraccionado && $stock->producto->conversiones) {
+                    foreach ($stock->producto->conversiones as $conv) {
+                        $conversiones[] = [
+                            'id'                     => $conv->id,
+                            'unidad_origen_id'       => $conv->unidad_origen_id,
+                            'unidad_destino_id'      => $conv->unidad_destino_id,
+                            'unidad_destino_nombre'  => $conv->unidadDestino?->nombre ?? '',
+                            'factor_conversion'      => $conv->factor_conversion,
+                            'cantidad_en_conversion' => round($stock->cantidad * $conv->factor_conversion, 2),
+                        ];
+                    }
+                }
+
+                // Clave única para agrupar
+                $clave = $stock->producto_id . '_' . $stock->almacen_id;
+
+                // Si no existe el grupo, crearlo
+                if (!isset($stockAgrupado[$clave])) {
+                    $stockAgrupado[$clave] = [
+                        'id'                    => null, // No hay ID en grupo
+                        'producto_id'           => $stock->producto_id,
+                        'almacen_id'            => $stock->almacen_id,
+                        'cantidad'              => 0,
+                        'cantidad_disponible'   => 0,
+                        'cantidad_reservada'    => 0,
+                        'precio_venta'          => $precioVenta,
+                        'producto_nombre'       => $stock->producto?->nombre ?? 'Desconocido',
+                        'producto_codigo'       => $stock->producto?->codigo ?? '',
+                        'producto_codigo_barra' => $stock->producto?->codigoPrincipal?->codigo ?? '',
+                        'producto_sku'          => $stock->producto?->sku ?? '',
+                        'almacen_nombre'        => $stock->almacen?->nombre ?? 'Desconocido',
+                        'es_fraccionado'        => (bool) $stock->producto?->es_fraccionado,
+                        'unidad_medida_nombre'  => $stock->producto?->unidad?->nombre ?? 'Unidades',
+                        'fecha_vencimiento_proximo' => null, // Se calcula después
+                        'detalles_lotes'        => [],
+                    ];
+                }
+
+                // Acumular cantidades
+                $stockAgrupado[$clave]['cantidad'] += $stock->cantidad;
+                $stockAgrupado[$clave]['cantidad_disponible'] += $stock->cantidad_disponible;
+                $stockAgrupado[$clave]['cantidad_reservada'] += $stock->cantidad_reservada;
+
+                // Agregar detalle de lote
+                $stockAgrupado[$clave]['detalles_lotes'][] = [
+                    'id'                    => $stock->id,
+                    'lote'                  => $stock->lote ?? 'Sin lote',
+                    'fecha_vencimiento'     => $stock->fecha_vencimiento ? \Carbon\Carbon::parse($stock->fecha_vencimiento)->format('d/m/Y') : null,
+                    'cantidad'              => $stock->cantidad,
+                    'cantidad_disponible'   => $stock->cantidad_disponible,
+                    'cantidad_reservada'    => $stock->cantidad_reservada,
+                    'conversiones'          => $conversiones,
+                ];
+
+                // Actualizar próximo vencimiento (el más cercano)
+                if ($stock->fecha_vencimiento) {
+                    $fechaParsed = \Carbon\Carbon::parse($stock->fecha_vencimiento);
+                    if (!$stockAgrupado[$clave]['fecha_vencimiento_proximo'] ||
+                        $fechaParsed < \Carbon\Carbon::parse($stockAgrupado[$clave]['fecha_vencimiento_proximo'])) {
+                        $stockAgrupado[$clave]['fecha_vencimiento_proximo'] = $fechaParsed->format('d/m/Y');
+                    }
+                }
+            }
+
+            // Convertir a array de valores
+            $stockProductos = array_values($stockAgrupado);
+
+            // Ordenamiento
+            usort($stockProductos, function ($a, $b) use ($ordenamiento) {
+                return match ($ordenamiento) {
+                    'cantidad-asc'  => (int) $a['cantidad'] <=> (int) $b['cantidad'],
+                    'cantidad-desc' => (int) $b['cantidad'] <=> (int) $a['cantidad'],
+                    'producto'      => strcmp((string) $a['producto_nombre'], (string) $b['producto_nombre']),
+                    'almacen'       => strcmp((string) $a['almacen_nombre'], (string) $b['almacen_nombre']),
+                    default         => (int) $b['cantidad'] <=> (int) $a['cantidad'],
+                };
+            });
+
+            return response()->json([
+                'success' => true,
+                'data'    => $stockProductos,
+                'total'   => count($stockProductos),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en apiStockFiltrado', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener stock filtrado: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

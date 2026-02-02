@@ -63,6 +63,7 @@ export interface MovimientoCaja {
     venta_id?: number;   // ✅ NUEVO: ID de venta para análisis de rango
     pago_id?: number;    // ✅ NUEVO: ID de pago para análisis de rango
     comprobantes?: ComprobanteMovimiento[];
+    usuario?: Usuario;   // ✅ NUEVO: Usuario que realizó el movimiento
 }
 
 export interface AperturaHistorico {
@@ -87,6 +88,23 @@ export interface Usuario {
     email: string;
 }
 
+export interface EfectivoEsperado {
+    apertura: number;
+    ventas_efectivo: number;
+    pagos_credito: number;
+    gastos: number;
+    total: number;
+}
+
+export interface ResumenEfectivo {
+    ventas_en_efectivo: number;
+    ventas_a_credito: number;
+    pagos_de_credito: number;
+    efectivo_real: number;
+    deuda_pendiente: number;
+    ventas_por_tipo_pago: any;
+}
+
 /**
  * Props para el componente Index de Cajas
  */
@@ -97,6 +115,13 @@ export interface CajasIndexProps {
     totalMovimientos: number;
     historicoAperturas?: AperturaHistorico[];
     tiposOperacion?: TipoOperacion[];
+    tiposPago?: any[]; // ✅ NUEVO: Tipos de pago
     esVistaAdmin?: boolean; // ✅ NUEVO: Identificar si es vista admin
     usuarioDestino?: Usuario; // ✅ NUEVO: Usuario del cual se ve la caja
+    efectivoEsperado?: EfectivoEsperado; // ✅ NUEVO: Efectivo esperado en caja
+    resumenEfectivo?: ResumenEfectivo; // ✅ NUEVO: Resumen de efectivo
+    ventasPorTipoPago?: any; // ✅ NUEVO: Ventas agrupadas por tipo de pago
+    ventasPorEstado?: any; // ✅ NUEVO: Ventas agrupadas por estado
+    pagosPorTipoPago?: any; // ✅ NUEVO: Pagos agrupados por tipo de pago
+    gastosPorTipoPago?: any; // ✅ NUEVO: Gastos agrupados por tipo de pago
 }

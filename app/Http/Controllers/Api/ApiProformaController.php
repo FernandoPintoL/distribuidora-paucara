@@ -1216,10 +1216,11 @@ class ApiProformaController extends Controller
         ]);
 
         try {
-            if ($proforma->estado !== 'PENDIENTE') {
+            // ✅ Permitir rechazar proformas en estados: PENDIENTE, APROBADA, VENCIDA
+            if (!in_array($proforma->estado, ['PENDIENTE', 'APROBADA', 'VENCIDA'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo se pueden rechazar proformas pendientes',
+                    'message' => 'Solo se pueden rechazar proformas en estados PENDIENTE, APROBADA o VENCIDA',
                 ], 400);
             }
 

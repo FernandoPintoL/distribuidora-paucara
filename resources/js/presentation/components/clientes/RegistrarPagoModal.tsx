@@ -262,6 +262,28 @@ export default function RegistrarPagoModal({
         }).format(value);
     };
 
+    // ✅ NUEVO: Función para formatear días decimales a días y horas
+    const formatearDias = (diasDecimales: number): string => {
+        const dias = Math.floor(diasDecimales);
+        const horasDecimales = (diasDecimales - dias) * 24;
+        const horas = Math.round(horasDecimales);
+
+        if (dias === 0) {
+            return `${horas} hora${horas !== 1 ? 's' : ''}`;
+        }
+        if (horas === 0) {
+            return `${dias} día${dias !== 1 ? 's' : ''}`;
+        }
+        return `${dias} día${dias !== 1 ? 's' : ''} y ${horas} hora${horas !== 1 ? 's' : ''}`;
+    };
+
+    // ✅ NUEVO: Función para mejorar el mensaje de caja
+    const mejorarMensajeCaja = (mensaje: string, diasAtras?: number): string => {
+        if (!diasAtras) return mensaje;
+        const diasFormateados = formatearDias(diasAtras);
+        return mensaje.replace(/desde hace \d+\.?\d* día\(s\)/, `desde hace ${diasFormateados}`);
+    };
+
     return (
         <Dialog open={show} onOpenChange={onHide}>
             <DialogContent className="max-w-md bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 max-h-[90vh] flex flex-col">
@@ -292,15 +314,14 @@ export default function RegistrarPagoModal({
 
                     {/* Indicador de caja abierta (hoy o días anteriores) */}
                     {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
-                        <Alert className={`border text-xs ${
-                            cajaInfo.es_de_hoy
+                        <Alert className={`border text-xs ${cajaInfo.es_de_hoy
                                 ? 'border-green-300 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200'
                                 : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200'
-                        }`}>
+                            }`}>
                             <AlertDescription className="flex items-center gap-2">
                                 <span>{cajaInfo.es_de_hoy ? '✅' : '⚠️'}</span>
                                 <span>
-                                    {cajaInfo.mensaje}
+                                    {mejorarMensajeCaja(cajaInfo.mensaje, cajaInfo.dias_atras)}
                                     {cajaInfo.caja_nombre && (
                                         <span className="block text-xs mt-1">
                                             {cajaInfo.caja_nombre}

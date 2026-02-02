@@ -125,7 +125,7 @@ export default function ReporteCreditoPage() {
             key: 'saldo_disponible',
             label: 'Disponible',
             render: (value: number) => (
-                <span className="text-green-600 dark:text-green-400 font-medium">{formatCurrency(value)}</span>
+                <span className="text-green-600 dark:text-green-400 font-medium">{formatCurrency(Math.round(value * 100) / 100)}</span>
             ),
         },
         {

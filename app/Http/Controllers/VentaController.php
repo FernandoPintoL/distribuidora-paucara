@@ -20,6 +20,7 @@ use App\Services\Venta\VentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -125,7 +126,7 @@ class VentaController extends Controller
                 }
                 // Si es API y no es cliente, también filtrar por cliente_id si existe
                 elseif ($isApiRequest && $user->cliente) {
-                    $clienteId = $user->cliente->id;
+                    $clienteId             = $user->cliente->id;
                     $filtros['cliente_id'] = $clienteId;
                     Log::debug('📋 API Ventas - Filtrando por cliente asociado al usuario', [
                         'user_id'    => $user->id,
@@ -166,7 +167,7 @@ class VentaController extends Controller
                     'requiere_envio'             => $venta->requiere_envio,
                     'canal_origen'               => $venta->canal_origen,
                     'politica_pago'              => $venta->politica_pago, // ✅ NUEVO
-                    'tipo_pago_id'               => $venta->tipo_pago_id,   // ✅ NUEVO
+                    'tipo_pago_id'               => $venta->tipo_pago_id,  // ✅ NUEVO
                     'estado'                     => $venta->estado,
                     'estado_logistico'           => $venta->estado_logistico,
                     'estado_logistico_id'        => $venta->estado_logistico_id,
@@ -235,14 +236,14 @@ class VentaController extends Controller
 
                 // API Response - Para Flutter app (con paginación)
                 return response()->json([
-                    'success'         => true,
-                    'message'         => 'Ventas obtenidas exitosamente',
-                    'data'            => $ventasPaginadas->items(),
-                    'total'           => $ventasPaginadas->total(),
-                    'per_page'        => $ventasPaginadas->perPage(),
-                    'current_page'    => $ventasPaginadas->currentPage(),
-                    'last_page'       => $ventasPaginadas->lastPage(),
-                    'has_more_pages'  => $hasMorePages, // ✅ Para que Flutter sepa si cargar más
+                    'success'        => true,
+                    'message'        => 'Ventas obtenidas exitosamente',
+                    'data'           => $ventasPaginadas->items(),
+                    'total'          => $ventasPaginadas->total(),
+                    'per_page'       => $ventasPaginadas->perPage(),
+                    'current_page'   => $ventasPaginadas->currentPage(),
+                    'last_page'      => $ventasPaginadas->lastPage(),
+                    'has_more_pages' => $hasMorePages, // ✅ Para que Flutter sepa si cargar más
                 ], 200);
             }
 
@@ -279,7 +280,7 @@ class VentaController extends Controller
         $tiposPago = TipoPago::activos()->select('id', 'nombre', 'codigo')->get()->map(fn($tipo) => [
             'id'     => $tipo->id,
             'nombre' => $tipo->nombre,
-            'codigo' => $tipo->codigo,  // ✅ NUEVO: Incluir codigo para que frontend pueda verificar si es CREDITO
+            'codigo' => $tipo->codigo, // ✅ NUEVO: Incluir codigo para que frontend pueda verificar si es CREDITO
             'icono'  => $tipo->getIcon(),
         ])->toArray();
 
@@ -289,17 +290,17 @@ class VentaController extends Controller
 
         Log::info('📦 VentaController::create - Obteniendo productos con stock', [
             'almacen_id_empresa' => $almacenIdEmpresa,
-            'empresa_principal' => $empresaPrincipal?->nombre,
+            'empresa_principal'  => $empresaPrincipal?->nombre,
         ]);
 
-        // ✅ MODIFICADO: NO cargar productos en la página
-        // Los productos se obtienen via API (/api/productos/buscar) cuando el usuario busca
-        // Esto es más eficiente si hay 1000+ productos
+                                  // ✅ MODIFICADO: NO cargar productos en la página
+                                  // Los productos se obtienen via API (/api/productos/buscar) cuando el usuario busca
+                                  // Esto es más eficiente si hay 1000+ productos
         $productos = collect([]); // Array vacío (collection), se usan via API
 
         Log::info('✅ VentaController::create - Usando búsqueda API para productos', [
             'almacen_id_empresa' => $almacenIdEmpresa,
-            'nota' => 'Productos se cargan dinámicamente via /api/productos/buscar',
+            'nota'               => 'Productos se cargan dinámicamente via /api/productos/buscar',
         ]);
 
         return Inertia::render('ventas/create', [
@@ -310,7 +311,7 @@ class VentaController extends Controller
             'tipos_documento'    => TipoDocumento::activos()->select('id', 'codigo', 'nombre')->get(),
             'tipos_pago'         => $tiposPago,
             'estados_documento'  => EstadoDocumento::where('activo', true)->select('id', 'codigo', 'nombre')->get(), // ✅ NUEVO: Estados de documento
-            'almacen_id_empresa' => $almacenIdEmpresa, // ✅ NUEVO: Almacén de la empresa
+            'almacen_id_empresa' => $almacenIdEmpresa,                                                               // ✅ NUEVO: Almacén de la empresa
         ]);
     }
 
@@ -325,10 +326,10 @@ class VentaController extends Controller
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'tiene_caja_abierta' => false,
-                    'mensaje' => 'Usuario no autenticado',
+                    'mensaje'            => 'Usuario no autenticado',
                 ], 200);
             }
 
@@ -341,7 +342,7 @@ class VentaController extends Controller
 
             // Si el usuario tiene caja abierta
             if ($apertura) {
-                $hoy = today();
+                $hoy           = today();
                 $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
                     ? $apertura->fecha
                     : \Carbon\Carbon::parse($apertura->fecha);
@@ -352,14 +353,14 @@ class VentaController extends Controller
 
                 return response()->json([
                     'tiene_caja_abierta' => true,
-                    'caja_id' => $apertura->caja_id,
-                    'caja_nombre' => $apertura->caja?->nombre,
-                    'apertura_id' => $apertura->id,
-                    'apertura_fecha' => $apertura->fecha,
-                    'es_de_hoy' => $esDeHoy,
-                    'dias_atras' => $diasAtras,
-                    'usuario_caja' => $apertura->usuario?->name ?? 'Desconocido', // ✅ CORREGIDO: usuario, no user
-                    'mensaje' => $esDeHoy
+                    'caja_id'            => $apertura->caja_id,
+                    'caja_nombre'        => $apertura->caja?->nombre,
+                    'apertura_id'        => $apertura->id,
+                    'apertura_fecha'     => $apertura->fecha,
+                    'es_de_hoy'          => $esDeHoy,
+                    'dias_atras'         => $diasAtras,
+                    'usuario_caja'       => $apertura->usuario?->name ?? 'Desconocido', // ✅ CORREGIDO: usuario, no user
+                    'mensaje'            => $esDeHoy
                         ? '✅ Caja abierta hoy'
                         : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
                 ], 200);
@@ -367,23 +368,23 @@ class VentaController extends Controller
 
             return response()->json([
                 'tiene_caja_abierta' => false,
-                'mensaje' => 'No hay caja abierta para este usuario',
+                'mensaje'            => 'No hay caja abierta para este usuario',
             ], 200);
 
         } catch (\Exception $e) {
             // Log the error for debugging
             Log::error('Error en checkCajaAbierta', [
                 'user_id' => auth()->id(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
             // Return JSON error response instead of HTML error page
             return response()->json([
                 'tiene_caja_abierta' => false,
-                'es_cajero' => false,
-                'mensaje' => 'Error al verificar caja abierta',
-                'error' => $e->getMessage(),
+                'es_cajero'          => false,
+                'mensaje'            => 'Error al verificar caja abierta',
+                'error'              => $e->getMessage(),
             ], 500);
         }
     }
@@ -586,50 +587,221 @@ class VentaController extends Controller
     }
 
     /**
-     * Anular una venta (cambiar estado a ANULADA)
+     * Anular una venta (cambiar estado a ANULADO)
      *
      * POST /ventas/{id}/anular
+     *
+     * Consideraciones:
+     * - Restaura stock si ya fue consumido (estado Aprobado)
+     * - Anula movimientos de caja si existen
+     * - Anula asientos contables si existen
+     * - No permite anular ventas Facturadas o Canceladas
      */
     public function anular(Request $request, int $id): JsonResponse
     {
         try {
+            Log::info('🔴 [ANULAR VENTA] INICIO - Intentando anular venta', [
+                'venta_id' => $id,
+                'usuario_id' => auth()->id(),
+                'usuario_nombre' => auth()->user()?->name,
+            ]);
+
             // Verificar permiso
-            if (! auth()->user()->hasRole('Admin')) {
+            if (! auth()->user()->hasRole(['admin', 'Admin'])) {
+                Log::warning('🔴 [ANULAR VENTA] PERMISO DENEGADO', [
+                    'venta_id' => $id,
+                    'usuario_id' => auth()->id(),
+                    'roles' => auth()->user()?->getRoleNames(),
+                ]);
                 return $this->respondForbidden('No tienes permiso para anular ventas');
             }
 
-            $venta = Venta::findOrFail($id);
+            $motivo = $request->input('motivo', 'Sin motivo especificado');
+
+            $venta = Venta::with([
+                'detalles',
+                'movimientoCaja',
+                'asientoContable',
+                'pagos',
+            ])->findOrFail($id);
+
+            Log::info('🔴 [ANULAR VENTA] VENTA ENCONTRADA', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'estado_actual' => $venta->estado,
+            ]);
 
             // Validar que la venta pueda ser anulada
-            if ($venta->estado === 'ANULADA') {
+            if ($venta->estado === 'Anulado') {
+                Log::warning('🔴 [ANULAR VENTA] YA ESTA ANULADA', [
+                    'venta_id' => $venta->id,
+                ]);
                 return $this->respondError('Esta venta ya está anulada', 422);
             }
 
-            // Actualizar estado
-            $venta->update([
-                'estado'        => 'ANULADA',
-                'observaciones' => ($venta->observaciones ?? '') . "\n[ANULADA] " . ($request->input('motivo') ?? 'Sin motivo especificado') . " - " . now()->toDateTimeString(),
+            // No permitir anular ventas en ciertos estados (Facturado, Cancelado, etc)
+            if (in_array($venta->estado, ['Facturado', 'Cancelado'])) {
+                Log::warning('🔴 [ANULAR VENTA] ESTADO NO PERMITIDO', [
+                    'venta_id' => $venta->id,
+                    'estado' => $venta->estado,
+                ]);
+                return $this->respondError(
+                    "No se puede anular una venta con estado {$venta->estado}. Contacta con administración.",
+                    422
+                );
+            }
+
+            Log::info('🔴 [ANULAR VENTA] INICIANDO TRANSACCIÓN', [
+                'venta_id' => $venta->id,
             ]);
 
-            \Illuminate\Support\Facades\Log::info('Venta anulada', [
-                'venta_id'     => $venta->id,
-                'venta_numero' => $venta->numero,
-                'usuario_id'   => auth()->id(),
-                'motivo'       => $request->input('motivo'),
+            DB::transaction(function () use ($venta, $motivo) {
+                $estadoAnterior = $venta->estado;
+                $stockRevertido = false;
+                $cajaAnotada    = false;
+                $asientoAnotado = false;
+
+                // 1️⃣ Revertir movimientos de stock si la venta fue aprobada
+                if ($venta->estado === 'Aprobado') {
+                    try {
+                        $venta->revertirMovimientosStock();
+                        $stockRevertido = true;
+                    } catch (\Exception $e) {
+                        Log::warning('No se pudo revertir stock al anular venta', [
+                            'venta_id' => $venta->id,
+                            'error'    => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // 2️⃣ Revertir movimiento de caja si existe
+                if ($venta->movimientoCaja) {
+                    try {
+                        $venta->revertirMovimientoCaja();
+                        $cajaAnotada = true;
+                        Log::info('✅ Movimiento de caja revertido automáticamente', [
+                            'venta_id'           => $venta->id,
+                            'movimiento_caja_id' => $venta->movimientoCaja->id,
+                            'monto'              => $venta->movimientoCaja->monto,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('⚠️ No se pudo revertir movimiento de caja al anular venta', [
+                            'venta_id' => $venta->id,
+                            'error'    => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // 3️⃣ Registrar en observaciones sobre asiento contable si existe
+                if ($venta->asientoContable) {
+                    $asientoAnotado = true;
+                    Log::info('Asiento contable asociado a venta anulada', [
+                        'venta_id'   => $venta->id,
+                        'asiento_id' => $venta->asientoContable->id,
+                        'accion'     => 'Requiere reversión manual en contabilidad',
+                    ]);
+                }
+
+                // 4️⃣ Cambiar estado de la venta a ANULADO
+                Log::info('🔴 [ANULAR VENTA] PASO 4 - Actualizando estado', [
+                    'venta_id' => $venta->id,
+                    'estado_anterior' => $estadoAnterior,
+                ]);
+
+                $observacionesAdicionales = [];
+                if ($cajaAnotada) {
+                    $observacionesAdicionales[] = "[ATENCIÓN] Movimiento de caja asociado - Requiere revisión manual en caja";
+                }
+                if ($asientoAnotado) {
+                    $observacionesAdicionales[] = "[ATENCIÓN] Asiento contable asociado - Requiere reversión manual en contabilidad";
+                }
+
+                // ✅ CORRECCIÓN: Usar variables locales para evitar problemas en closure del transaction
+                $usuarioNombre = auth()->user()->name ?? 'Sistema';
+                $fechaActual = now()->toDateTimeString();
+                $observacionesExistentes = $venta->observaciones ?? '';
+
+                $observacionesFinal = $observacionesExistentes;
+                if (!empty($observacionesExistentes)) {
+                    $observacionesFinal .= "\n";
+                }
+                $observacionesFinal .= "[ANULADO] Motivo: {$motivo} - Anulado por: {$usuarioNombre} - {$fechaActual}";
+
+                Log::info('🔴 [ANULAR VENTA] DEBUG - Construcción de observaciones', [
+                    'observaciones_existentes' => substr($observacionesExistentes, 0, 100),
+                    'usuario_nombre' => $usuarioNombre,
+                    'fecha_actual' => $fechaActual,
+                    'observaciones_final_preview' => substr($observacionesFinal, 0, 200),
+                ]);
+
+                if (! empty($observacionesAdicionales)) {
+                    $observacionesFinal .= "\n" . implode("\n", $observacionesAdicionales);
+                }
+
+                // Obtener el ID del estado Anulado
+                $estadoAnulado = EstadoDocumento::where('nombre', 'Anulado')->first();
+                if (! $estadoAnulado) {
+                    throw new \Exception('Estado "Anulado" no encontrado en la base de datos');
+                }
+
+                $actualizado = $venta->update([
+                    'estado_documento_id' => $estadoAnulado->id,
+                    'observaciones'       => $observacionesFinal,
+                ]);
+
+                Log::info('🔴 [ANULAR VENTA] PASO 4 - Update completado', [
+                    'venta_id' => $venta->id,
+                    'actualizado' => $actualizado,
+                    'estado_nuevo' => $venta->fresh()->estado,
+                    'observaciones_guardadas' => substr($venta->fresh()->observaciones ?? '', 0, 300),
+                    'observaciones_length' => strlen($venta->fresh()->observaciones ?? ''),
+                ]);
+
+                // 5️⃣ Registrar auditoria
+                Log::info('🔴 [ANULAR VENTA] PASO 5 - Auditoria registrada', [
+                    'venta_id'                      => $venta->id,
+                    'venta_numero'                  => $venta->numero,
+                    'venta_estado_anterior'         => $estadoAnterior,
+                    'usuario_id'                    => auth()->id(),
+                    'usuario_nombre'                => auth()->user()->name,
+                    'motivo'                        => $motivo,
+                    'stock_revertido'               => $stockRevertido,
+                    'movimiento_caja_revertido'     => $cajaAnotada,
+                    'asiento_requiere_revision'     => $asientoAnotado,
+                ]);
+            });
+
+            Log::info('🟢 [ANULAR VENTA] TRANSACCIÓN COMPLETADA EXITOSAMENTE', [
+                'venta_id' => $id,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Venta anulada exitosamente',
-                'data'    => $venta,
+                'message' => 'Venta anulada exitosamente. Se ha restaurado el stock y se han anulado los movimientos asociados.',
+                'data'    => $venta->fresh([
+                    'detalles',
+                    'movimientoCaja',
+                    'asientoContable',
+                ]),
             ], 200);
 
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::error('🔴 [ANULAR VENTA] VENTA NO ENCONTRADA', [
+                'venta_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->respondError('Venta no encontrada', 404);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error al anular venta', [
+            Log::error('🔴 [ANULAR VENTA] ERROR EN TRANSACCIÓN', [
+                'venta_id' => $id,
+                'error' => $e->getMessage(),
+                'exception_class' => get_class($e),
+                'trace' => $e->getTraceAsString(),
                 'venta_id' => $id,
                 'error'    => $e->getMessage(),
+                'trace'    => $e->getTraceAsString(),
             ]);
-            return $this->respondError('Error al anular venta: ' . $e->getMessage());
+            return $this->respondError('Error al anular venta: ' . $e->getMessage(), 500);
         }
     }
 
@@ -794,7 +966,7 @@ class VentaController extends Controller
             $productos = $request->input('productos', []);
             $almacenId = $request->input('almacen_id');
 
-            $errores = [];
+            $errores  = [];
             $detalles = [];
 
             foreach ($productos as $producto) {
@@ -809,19 +981,19 @@ class VentaController extends Controller
                     ->sum('cantidad') ?? 0;
 
                 $cantidadSolicitada = $producto['cantidad'];
-                $tieneStock = $stockDisponible >= $cantidadSolicitada;
+                $tieneStock         = $stockDisponible >= $cantidadSolicitada;
 
-                if (!$tieneStock) {
+                if (! $tieneStock) {
                     $diferencia = $cantidadSolicitada - $stockDisponible;
-                    $errores[] = "{$productoData->nombre}: Faltan {$diferencia} unidades (solicitado: {$cantidadSolicitada}, disponible: {$stockDisponible})";
+                    $errores[]  = "{$productoData->nombre}: Faltan {$diferencia} unidades (solicitado: {$cantidadSolicitada}, disponible: {$stockDisponible})";
                 }
 
                 $detalles[] = [
-                    'producto_id' => $producto['producto_id'],
-                    'producto_nombre' => $productoData->nombre,
+                    'producto_id'         => $producto['producto_id'],
+                    'producto_nombre'     => $productoData->nombre,
                     'cantidad_solicitada' => $cantidadSolicitada,
-                    'stock_disponible' => $stockDisponible,
-                    'diferencia' => max(0, $cantidadSolicitada - $stockDisponible),
+                    'stock_disponible'    => $stockDisponible,
+                    'diferencia'          => max(0, $cantidadSolicitada - $stockDisponible),
                 ];
             }
 
@@ -829,9 +1001,9 @@ class VentaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'valido' => $valido,
-                    'errores' => $errores,
+                'data'    => [
+                    'valido'   => $valido,
+                    'errores'  => $errores,
                     'detalles' => $detalles,
                 ],
             ]);
@@ -886,14 +1058,14 @@ class VentaController extends Controller
 
         // 🔍 DEBUG: Loguear información de la venta antes de imprimir
         \Log::info('📋 [VentaController::imprimir] Datos de venta para descargar/stream', [
-            'venta_id'           => $venta->id,
-            'venta_numero'       => $venta->numero,
-            'estado_pago'        => $venta->estado_pago,
-            'monto_pagado'       => $venta->monto_pagado,
-            'monto_pendiente'    => $venta->monto_pendiente,
-            'politica_pago'      => $venta->politica_pago,
-            'formato'            => $formato,
-            'accion'             => $accion,
+            'venta_id'        => $venta->id,
+            'venta_numero'    => $venta->numero,
+            'estado_pago'     => $venta->estado_pago,
+            'monto_pagado'    => $venta->monto_pagado,
+            'monto_pendiente' => $venta->monto_pendiente,
+            'politica_pago'   => $venta->politica_pago,
+            'formato'         => $formato,
+            'accion'          => $accion,
         ]);
 
         try {
@@ -938,7 +1110,7 @@ class VentaController extends Controller
 
             // Convertir logos a base64 para embebimiento en PDF
             $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
-            $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
+            $logoFooterBase64    = $this->logoToBase64($empresa->logo_footer);
 
             // Cargar relaciones necesarias
             $venta->load([
@@ -955,37 +1127,37 @@ class VentaController extends Controller
 
             // 🔍 DEBUG: Loguear información de la venta para inspección
             \Log::info('📋 [VentaController::preview] Datos de venta para imprimir', [
-                'venta_id'           => $venta->id,
-                'venta_numero'       => $venta->numero,
-                'fecha_creacion'     => $venta->created_at,
-                'fecha_emision'      => $venta->fecha,
-                'subtotal'           => $venta->subtotal,
-                'descuento'          => $venta->descuento,
-                'total'              => $venta->total,
-                'estado_pago'        => $venta->estado_pago,
-                'monto_pagado'       => $venta->monto_pagado,
-                'monto_pendiente'    => $venta->monto_pendiente,
-                'politica_pago'      => $venta->politica_pago,
-                'cliente_id'         => $venta->cliente_id,
-                'cliente_nombre'     => $venta->cliente?->nombre,
-                'usuario_id'         => $venta->usuario_id,
-                'usuario_nombre'     => $venta->usuario?->name,
-                'movimientoCaja_id'  => $venta->movimientoCaja?->id,
-                'caja_id'            => $venta->movimientoCaja?->caja_id,
-                'caja_nombre'        => $venta->movimientoCaja?->caja?->nombre,
-                'detalles_count'     => $venta->detalles?->count(),
-                'formato'            => $formato,
+                'venta_id'          => $venta->id,
+                'venta_numero'      => $venta->numero,
+                'fecha_creacion'    => $venta->created_at,
+                'fecha_emision'     => $venta->fecha,
+                'subtotal'          => $venta->subtotal,
+                'descuento'         => $venta->descuento,
+                'total'             => $venta->total,
+                'estado_pago'       => $venta->estado_pago,
+                'monto_pagado'      => $venta->monto_pagado,
+                'monto_pendiente'   => $venta->monto_pendiente,
+                'politica_pago'     => $venta->politica_pago,
+                'cliente_id'        => $venta->cliente_id,
+                'cliente_nombre'    => $venta->cliente?->nombre,
+                'usuario_id'        => $venta->usuario_id,
+                'usuario_nombre'    => $venta->usuario?->name,
+                'movimientoCaja_id' => $venta->movimientoCaja?->id,
+                'caja_id'           => $venta->movimientoCaja?->caja_id,
+                'caja_nombre'       => $venta->movimientoCaja?->caja?->nombre,
+                'detalles_count'    => $venta->detalles?->count(),
+                'formato'           => $formato,
             ]);
 
             return view($plantilla->vista_blade, [
-                'documento'              => $venta,
-                'empresa'                => $empresa,
-                'plantilla'              => $plantilla,
-                'fecha_impresion'        => now(),
-                'usuario'                => auth()->user(),
-                'opciones'               => [],
-                'logo_principal_base64'  => $logoPrincipalBase64,
-                'logo_footer_base64'     => $logoFooterBase64,
+                'documento'             => $venta,
+                'empresa'               => $empresa,
+                'plantilla'             => $plantilla,
+                'fecha_impresion'       => now(),
+                'usuario'               => auth()->user(),
+                'opciones'              => [],
+                'logo_principal_base64' => $logoPrincipalBase64,
+                'logo_footer_base64'    => $logoFooterBase64,
             ]);
         } catch (\Exception $e) {
             abort(500, 'Error al generar preview: ' . $e->getMessage());
@@ -1031,7 +1203,7 @@ class VentaController extends Controller
         $user = auth()->user();
 
         // ✅ AUTORIZACIÓN: Validar que el usuario tiene permiso
-        if (!$this->userCanAccessVenta($user, $venta)) {
+        if (! $this->userCanAccessVenta($user, $venta)) {
             Log::warning('❌ [VentaController::exportarExcel] Autorización fallida', [
                 'user_id'  => $user->id,
                 'venta_id' => $venta->id,
@@ -1067,7 +1239,7 @@ class VentaController extends Controller
         $user = auth()->user();
 
         // ✅ AUTORIZACIÓN: Validar que el usuario tiene permiso
-        if (!$this->userCanAccessVenta($user, $venta)) {
+        if (! $this->userCanAccessVenta($user, $venta)) {
             Log::warning('❌ [VentaController::exportarPdf] Autorización fallida', [
                 'user_id'  => $user->id,
                 'venta_id' => $venta->id,
@@ -1079,7 +1251,7 @@ class VentaController extends Controller
 
         try {
             // Usar el mismo servicio de impresión para generar PDF
-            $pdf = $this->impresionService->imprimirVenta($venta, $formato);
+            $pdf           = $this->impresionService->imprimirVenta($venta, $formato);
             $nombreArchivo = "venta_{$venta->numero}_{$formato}.pdf";
 
             return $pdf->download($nombreArchivo);
@@ -1123,7 +1295,7 @@ class VentaController extends Controller
         if ($user->hasRole(['Cliente', 'cliente'])) {
             // ✅ CORREGIDO: Usar $user->cliente->id porque la relación es HasOne (FK en clientes.user_id)
             $userClienteId = $user->cliente?->id;
-            $canAccess = $userClienteId && $venta->cliente_id === $userClienteId;
+            $canAccess     = $userClienteId && $venta->cliente_id === $userClienteId;
             Log::debug('🔐 [userCanAccessVenta] Cliente check', [
                 'user_cliente_id'  => $userClienteId,
                 'venta_cliente_id' => $venta->cliente_id,
@@ -1166,7 +1338,7 @@ class VentaController extends Controller
      */
     private function logoToBase64(?string $logoUrl): ?string
     {
-        if (!$logoUrl) {
+        if (! $logoUrl) {
             return null;
         }
 
@@ -1179,31 +1351,31 @@ class VentaController extends Controller
             // Resolver la ruta absoluta
             $logoPath = public_path($logoUrl);
 
-            if (!file_exists($logoPath)) {
+            if (! file_exists($logoPath)) {
                 \Log::warning('Logo no encontrado: ' . $logoPath);
                 return null;
             }
 
             $imageData = file_get_contents($logoPath);
-            $base64 = base64_encode($imageData);
+            $base64    = base64_encode($imageData);
 
             // Detectar el tipo MIME desde la extensión del archivo
             $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
             $mimeTypes = [
-                'png' => 'image/png',
-                'jpg' => 'image/jpeg',
+                'png'  => 'image/png',
+                'jpg'  => 'image/jpeg',
                 'jpeg' => 'image/jpeg',
-                'gif' => 'image/gif',
+                'gif'  => 'image/gif',
                 'webp' => 'image/webp',
-                'svg' => 'image/svg+xml',
+                'svg'  => 'image/svg+xml',
             ];
             $mimeType = $mimeTypes[$extension] ?? 'image/png';
 
             return "data:{$mimeType};base64,{$base64}";
         } catch (\Exception $e) {
             \Log::warning('Error al convertir logo a base64', [
-                'error' => $e->getMessage(),
-                'logo_url' => $logoUrl
+                'error'    => $e->getMessage(),
+                'logo_url' => $logoUrl,
             ]);
             return null;
         }
