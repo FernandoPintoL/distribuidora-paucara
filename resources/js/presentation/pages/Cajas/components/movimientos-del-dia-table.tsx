@@ -349,8 +349,8 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2">+ Entrada Efectivo</td>
-                                    <td className="text-right py-1 px-2 font-semibold text-red-700 dark:text-gray-300">
-                                        Bs 0,00
+                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
+                                        +{formatCurrency(efectivoEsperado.pagos_credito)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">

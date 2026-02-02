@@ -7,14 +7,12 @@ use App\Models\Caja;
 use App\Models\CierreCaja;
 use App\Models\CierreDiarioGeneral;
 use App\Models\ComprobanteMovimiento;
-use App\Models\Empresa;
 use App\Models\EstadoCierre;
 use App\Models\MovimientoCaja;
 use App\Models\TipoOperacionCaja;
-use App\Models\Venta;
+use App\Services\CierreCajaService;
 use App\Services\ExcelExportService;
 use App\Services\MovimientoCajaService;
-use App\Services\CierreCajaService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -31,7 +29,7 @@ class CajaController extends Controller
 
     public function __construct(ExcelExportService $excelExportService, MovimientoCajaService $movimientoCajaService)
     {
-        $this->excelExportService = $excelExportService;
+        $this->excelExportService    = $excelExportService;
         $this->movimientoCajaService = $movimientoCajaService;
 
         $this->middleware('permission:cajas.index')->only('index');
@@ -102,7 +100,7 @@ class CajaController extends Controller
             $movimientosHoy = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
                 ->where('user_id', $usuarioDestino->id)
                 ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
-                ->with(['tipoOperacion', 'tipoPago', 'comprobantes', 'usuario'])  // ✅ NUEVO: Agregar tipoPago y usuario
+                ->with(['tipoOperacion', 'tipoPago', 'comprobantes', 'usuario']) // ✅ NUEVO: Agregar tipoPago y usuario
                 ->orderBy('fecha', 'desc')
                 ->get();
         }
@@ -138,8 +136,8 @@ class CajaController extends Controller
         $tiposPago = \App\Models\TipoPago::all(['id', 'codigo', 'nombre']);
 
         // ✅ NUEVO: Calcular Efectivo Esperado y resúmenes
-        $efectivoEsperado = null;
-        $resumenEfectivo = null;
+        $efectivoEsperado  = null;
+        $resumenEfectivo   = null;
         $ventasPorTipoPago = [];
 
         if ($cajaAbiertaHoy && $movimientosHoy) {
@@ -147,7 +145,7 @@ class CajaController extends Controller
 
             // ✅ NUEVO: Calcular EFECTIVO ESPERADO en caja
             // = Apertura + Ventas en Efectivo + Pagos de Crédito - Gastos
-            $montoApertura = (float)$cajaAbiertaHoy->monto_apertura;
+            $montoApertura = (float) $cajaAbiertaHoy->monto_apertura;
 
             // Ventas que generan efectivo (SOLO estado APROBADO, sin Crédito)
             // Incluye: Efectivo, Tarjeta, Transferencia (todo EXCEPTO Crédito)
@@ -155,10 +153,10 @@ class CajaController extends Controller
                 ->where('user_id', $usuarioDestino->id)
                 ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
                 ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'VENTA'))
-                // ✅ ACTUALIZADO: Excluir CREDITO (ventas que NO generan efectivo ahora)
+            // ✅ ACTUALIZADO: Excluir CREDITO (ventas que NO generan efectivo ahora)
                 ->whereHas('tipoPago', fn($q) => $q->where('codigo', '!=', 'CREDITO'))
                 ->whereHas('venta', fn($q) => $q
-                    ->whereHas('estadoDocumento', fn($q2) => $q2->where('nombre', 'Aprobado'))
+                        ->whereHas('estadoDocumento', fn($q2) => $q2->where('nombre', 'Aprobado'))
                 )
                 ->sum('monto');
 
@@ -172,17 +170,17 @@ class CajaController extends Controller
 
             // Gastos (egresos)
             $totalGastos = abs(MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
-                ->where('user_id', $usuarioDestino->id)
-                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
-                ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'GASTOS'))
-                ->sum('monto'));
+                    ->where('user_id', $usuarioDestino->id)
+                    ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
+                    ->whereHas('tipoOperacion', fn($q) => $q->where('codigo', 'GASTOS'))
+                    ->sum('monto'));
 
             $efectivoEsperado = [
-                'apertura' => $montoApertura,
-                'ventas_efectivo' => (float)$ventasEnEfectivo,
-                'pagos_credito' => (float)$pagosCredito,
-                'gastos' => (float)$totalGastos,
-                'total' => $montoApertura + (float)$ventasEnEfectivo + (float)$pagosCredito - (float)$totalGastos,
+                'apertura'        => $montoApertura,
+                'ventas_efectivo' => (float) $ventasEnEfectivo,
+                'pagos_credito'   => (float) $pagosCredito,
+                'gastos'          => (float) $totalGastos,
+                'total'           => $montoApertura + (float) $ventasEnEfectivo + (float) $pagosCredito - (float) $totalGastos,
             ];
 
             $resumenEfectivo = $this->movimientoCajaService->obtenerResumenEfectivo($movimientosCollection);
@@ -202,7 +200,7 @@ class CajaController extends Controller
                 ->where('movimientos_caja.caja_id', $cajaAbiertaHoy->caja_id)
                 ->where('movimientos_caja.user_id', $usuarioDestino->id)
                 ->where('movimientos_caja.fecha', '>=', $cajaAbiertaHoy->fecha)
-                // ✅ IMPORTANTE: Incluir VENTA (pagos efectivo) y CREDITO (ventas a crédito)
+            // ✅ IMPORTANTE: Incluir VENTA (pagos efectivo) y CREDITO (ventas a crédito)
                 ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO'])
                 ->where('estados_documento.nombre', 'Aprobado')
                 ->groupBy(DB::raw('COALESCE(movimientos_caja.tipo_pago_id, ventas.tipo_pago_id)'))
@@ -216,17 +214,17 @@ class CajaController extends Controller
             // Construir resultado con todos los tipos
             $ventasPorTipoPago = [];
             foreach ($todosTiposPago as $tipo) {
-                $venta = $ventasAgrupadas->firstWhere('tipo_pago_id', $tipo->id);
+                $venta               = $ventasAgrupadas->firstWhere('tipo_pago_id', $tipo->id);
                 $ventasPorTipoPago[] = [
-                    'tipo' => $tipo->nombre,
-                    'total' => $venta ? (float)$venta->total : 0.0,
-                    'count' => $venta ? (int)$venta->count : 0,
+                    'tipo'  => $tipo->nombre,
+                    'total' => $venta ? (float) $venta->total : 0.0,
+                    'count' => $venta ? (int) $venta->count : 0,
                 ];
             }
 
             Log::info('📊 [CajaController] Ventas por tipo de pago:', [
                 'total_tipos' => count($ventasPorTipoPago),
-                'ventas' => $ventasPorTipoPago,
+                'ventas'      => $ventasPorTipoPago,
             ]);
 
             // ✅ NUEVO: Resumen de VENTAS por Estado de Documento
@@ -246,11 +244,11 @@ class CajaController extends Controller
 
             $ventasPorEstadoFormato = [];
             foreach ($todosEstados as $estado) {
-                $venta = $ventasPorEstado->firstWhere('estado_documento_id', $estado->id);
+                $venta                    = $ventasPorEstado->firstWhere('estado_documento_id', $estado->id);
                 $ventasPorEstadoFormato[] = [
                     'estado' => $estado->nombre,
-                    'total' => $venta ? (float)$venta->total : 0.0,
-                    'count' => $venta ? (int)$venta->count : 0,
+                    'total'  => $venta ? (float) $venta->total : 0.0,
+                    'count'  => $venta ? (int) $venta->count : 0,
                 ];
             }
 
@@ -266,11 +264,11 @@ class CajaController extends Controller
 
             $pagosFormato = [];
             foreach ($todosTiposPago as $tipo) {
-                $pago = $pagosAgrupados->firstWhere('tipo_pago_id', $tipo->id);
+                $pago           = $pagosAgrupados->firstWhere('tipo_pago_id', $tipo->id);
                 $pagosFormato[] = [
-                    'tipo' => $tipo->nombre,
-                    'total' => $pago ? (float)$pago->total : 0.0,
-                    'count' => $pago ? (int)$pago->count : 0,
+                    'tipo'  => $tipo->nombre,
+                    'total' => $pago ? (float) $pago->total : 0.0,
+                    'count' => $pago ? (int) $pago->count : 0,
                 ];
             }
 
@@ -286,31 +284,31 @@ class CajaController extends Controller
 
             $gastosFormato = [];
             foreach ($todosTiposPago as $tipo) {
-                $gasto = $gastosAgrupados->firstWhere('tipo_pago_id', $tipo->id);
+                $gasto           = $gastosAgrupados->firstWhere('tipo_pago_id', $tipo->id);
                 $gastosFormato[] = [
-                    'tipo' => $tipo->nombre,
-                    'total' => $gasto ? (float)$gasto->total : 0.0,
-                    'count' => $gasto ? (int)$gasto->count : 0,
+                    'tipo'  => $tipo->nombre,
+                    'total' => $gasto ? (float) $gasto->total : 0.0,
+                    'count' => $gasto ? (int) $gasto->count : 0,
                 ];
             }
         }
 
         return Inertia::render('Cajas/Index', [
-            'cajas'                => $cajas,
-            'cajaAbiertaHoy'       => $cajaAbiertaHoy,
-            'movimientosHoy'       => $movimientosHoy,
-            'totalMovimientos'     => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
-            'historicoAperturas'   => $historicoAperturas,
-            'tiposOperacion'       => $tiposOperacion,
-            'tiposPago'            => $tiposPago,                      // ✅ NUEVO: Tipos de pago
-            'esVistaAdmin'         => ($aperturaCaja !== null || $userId !== null),
-            'usuarioDestino'       => $usuarioDestino,
-            'efectivoEsperado'     => $efectivoEsperado,              // ✅ Efectivo esperado en caja
-            'resumenEfectivo'      => $resumenEfectivo,               // ✅ Resumen de efectivo
-            'ventasPorTipoPago'    => $ventasPorTipoPago,             // ✅ Ventas por tipo de pago
-            'ventasPorEstado'      => $ventasPorEstadoFormato ?? [],  // ✅ Ventas por estado de documento
-            'pagosPorTipoPago'     => $pagosFormato ?? [],             // ✅ Pagos por tipo de pago
-            'gastosPorTipoPago'    => $gastosFormato ?? [],            // ✅ Gastos por tipo de pago
+            'cajas'              => $cajas,
+            'cajaAbiertaHoy'     => $cajaAbiertaHoy,
+            'movimientosHoy'     => $movimientosHoy,
+            'totalMovimientos'   => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
+            'historicoAperturas' => $historicoAperturas,
+            'tiposOperacion'     => $tiposOperacion,
+            'tiposPago'          => $tiposPago, // ✅ NUEVO: Tipos de pago
+            'esVistaAdmin'       => ($aperturaCaja !== null || $userId !== null),
+            'usuarioDestino'     => $usuarioDestino,
+            'efectivoEsperado'   => $efectivoEsperado,             // ✅ Efectivo esperado en caja
+            'resumenEfectivo'    => $resumenEfectivo,              // ✅ Resumen de efectivo
+            'ventasPorTipoPago'  => $ventasPorTipoPago,            // ✅ Ventas por tipo de pago
+            'ventasPorEstado'    => $ventasPorEstadoFormato ?? [], // ✅ Ventas por estado de documento
+            'pagosPorTipoPago'   => $pagosFormato ?? [],           // ✅ Pagos por tipo de pago
+            'gastosPorTipoPago'  => $gastosFormato ?? [],          // ✅ Gastos por tipo de pago
         ]);
     }
 
@@ -454,8 +452,22 @@ class CajaController extends Controller
             Carbon::createFromFormat('Y-m-d', $request->fecha_cierre)->endOfDay() :
             now();
 
-            // Calcular monto esperado hasta la fecha de cierre
-            $montoEsperado = $this->calcularMontoEsperado($apertura, $fechaCierre);
+            // ✅ MEJORADO: Usar CierreCajaService para calcular solo dinero REAL en caja
+            // (no incluye ventas anuladas, créditos sin aplicar, etc.)
+            $cierreCajaService = new CierreCajaService();
+            $datosCalculados = $cierreCajaService->calcularDatos($apertura);
+            $montoEsperado = $datosCalculados['efectivoEsperado']['total'] ?? 0;
+
+            Log::info('💰 [cerrarCaja] Monto esperado calculado', [
+                'apertura_id' => $apertura->id,
+                'monto_esperado' => $montoEsperado,
+                'detalle' => [
+                    'apertura' => $datosCalculados['efectivoEsperado']['apertura'] ?? 0,
+                    'ventas_efectivo' => $datosCalculados['efectivoEsperado']['ventas_efectivo'] ?? 0,
+                    'pagos_credito' => $datosCalculados['efectivoEsperado']['pagos_credito'] ?? 0,
+                    'gastos' => $datosCalculados['efectivoEsperado']['gastos'] ?? 0,
+                ]
+            ]);
 
             // Calcular diferencia
             $diferencia = $request->monto_real - $montoEsperado;
@@ -512,15 +524,112 @@ class CajaController extends Controller
                 'cerrada_por'    => $usuarioAutenticado->id,
             ]);
 
-            return back()->with('success', 'Caja cerrada exitosamente. Pendiente de verificación. Diferencia: ' . number_format($diferencia, 2) . ' Bs.');
+            // ✅ MEJORADO: Retornar JSON (sin redireccionar) para permitir abrir OutputSelectionModal
+            return response()->json([
+                'success' => true,
+                'message' => 'Caja cerrada exitosamente. Pendiente de verificación. Diferencia: ' . number_format($diferencia, 2) . ' Bs.',
+                'cierre_id' => $cierre->id,
+                'apertura_id' => $apertura->id,
+                'diferencia' => $diferencia,
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error cerrando caja: ' . $e->getMessage());
 
-            return back()->withErrors([
-                'caja' => 'Error al cerrar la caja. Intenta nuevamente.',
+            // ✅ MEJORADO: Retornar JSON en lugar de redireccionar
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cerrar la caja. Intenta nuevamente.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Obtener datos calculados de cierre de caja para el modal
+     *
+     * GET /api/cajas/{id}/datos-cierre
+     *
+     * Retorna TODOS los datos necesarios para el CierreCajaModal.tsx
+     * usando CierreCajaService para centralizar los cálculos
+     *
+     * @param AperturaCaja $aperturaCaja
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerDatosCierre(AperturaCaja $aperturaCaja)
+    {
+        try {
+            Log::info('🟦 [obtenerDatosCierre] INICIO', ['apertura_id' => $aperturaCaja->id]);
+
+            // ✅ Usar CierreCajaService para obtener TODOS los datos
+            // Nota: Si no existe cierre aún (modal abierto sin cerrar), se calcula con la apertura actual
+            $cierreCajaService = new CierreCajaService();
+            $datos             = $cierreCajaService->calcularDatos($aperturaCaja);
+
+            Log::info('🟦 [obtenerDatosCierre] Datos calculados correctamente');
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    // Información básica
+                    'apertura_id'                 => $aperturaCaja->id,
+                    'caja_nombre'                 => $aperturaCaja->caja->nombre,
+                    'fecha_apertura'              => $aperturaCaja->fecha,
+                    'fecha_cierre'                => $aperturaCaja->cierre?->created_at,
+
+                    // Sumatorias de ventas
+                    'sumatoria_ventas_total'      => (float) ($datos['sumatorialVentas'] ?? 0),
+                    'sumatoria_ventas_efectivo'   => (float) ($datos['sumatorialVentasEfectivo'] ?? 0),
+                    'sumatoria_ventas_credito'    => (float) ($datos['sumatorialVentasCredito'] ?? 0),
+                    'sumatoria_ventas_anuladas'   => (float) ($datos['sumatorialVentasAnuladas'] ?? 0),
+
+                    // Otros totales
+                    'sumatoria_gastos'            => (float) ($datos['sumatorialGastos'] ?? 0),
+                    'monto_pagos_creditos'        => (float) ($datos['montoPagosCreditos'] ?? 0),
+
+                    // Agrupaciones (para desglose)
+                    'movimientos_agrupados'       => collect($datos['movimientosAgrupados'])
+                        ->map(function ($items, $tipo) {
+                            return [
+                                'tipo'     => $tipo,
+                                'total'    => (float) $items->sum('monto'),
+                                'cantidad' => (int) $items->count(),
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                    'movimientos_por_tipo_pago'   => $datos['movimientosPorTipoPago'] ?? [],
+                    'ventas_por_tipo_pago'        => $datos['ventasPorTipoPago'] ?? [],
+                    'ventas_por_estado'           => $datos['ventasPorEstado'] ?? [],
+                    'pagos_credito_por_tipo_pago' => $datos['pagosCreditoPorTipoPago'] ?? [],
+                    'gastos_por_tipo_pago'        => $datos['gastosPorTipoPago'] ?? [],
+
+                    // Efectivo esperado
+                    'efectivo_esperado'           => $datos['efectivoEsperado'] ?? [],
+
+                    // Rangos
+                    'rango_ventas_ids'            => $datos['rangoVentasIds'] ?? [],
+                    'rango_creditos'              => $datos['rangoCreditos'] ?? [],
+                    'rango_pagos'                 => $datos['rangoPagos'] ?? [],
+
+                    // Totales básicos
+                    'total_ingresos'              => (float) ($datos['totalIngresos'] ?? 0),
+                    'total_egresos'               => (float) ($datos['totalEgresos'] ?? 0),
+                ],
             ]);
+        } catch (\Exception $e) {
+            Log::error('🔴 [obtenerDatosCierre] ERROR', [
+                'apertura_id' => $aperturaCaja->id,
+                'error'       => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error obteniendo datos de cierre',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -640,6 +749,19 @@ class CajaController extends Controller
      * Calcular monto esperado en caja
      * ✅ MODIFICADO: Acepta fecha de cierre para permitir cerrar cajas de días anteriores
      */
+    /**
+     * ❌ DEPRECADO: Esta función fue reemplazada por CierreCajaService::calcularEfectivoEsperado()
+     *
+     * El cálculo anterior era INCORRECTO porque sumaba TODOS los movimientos sin considerar:
+     * - Ventas anuladas (no debería contar)
+     * - Ventas a crédito sin pago (no hay dinero físico)
+     * - Otros movimientos no representativos
+     *
+     * La nueva función en CierreCajaService solo suma el dinero REAL que debería estar en caja:
+     * apertura + ventas_aprobadas_efectivo + pagos_credito_efectivo - gastos
+     *
+     * @deprecated Use CierreCajaService::calcularEfectivoEsperado() instead
+     */
     private function calcularMontoEsperado(AperturaCaja $apertura, $fechaCierre = null): float
     {
         // Si no se proporciona fecha de cierre, usar ahora
@@ -710,19 +832,19 @@ class CajaController extends Controller
         // ✅ NUEVO: Transformar aperturas para incluir estado del cierre (DESPUÉS de calcular métricas)
         $aperturas_hoy = $aperturasColleccion->map(function ($apertura) {
             return [
-                'id'               => $apertura->id,
-                'caja_id'          => $apertura->caja_id,
-                'user_id'          => $apertura->user_id,
-                'monto_apertura'   => $apertura->monto_apertura,
-                'fecha'            => $apertura->fecha,
-                'created_at'       => $apertura->created_at,
-                'cierre'           => $apertura->cierre ? [
-                    'id'         => $apertura->cierre->id,
-                    'monto_real' => $apertura->cierre->monto_real,
-                    'diferencia' => $apertura->cierre->diferencia,
+                'id'             => $apertura->id,
+                'caja_id'        => $apertura->caja_id,
+                'user_id'        => $apertura->user_id,
+                'monto_apertura' => $apertura->monto_apertura,
+                'fecha'          => $apertura->fecha,
+                'created_at'     => $apertura->created_at,
+                'cierre'         => $apertura->cierre ? [
+                    'id'           => $apertura->cierre->id,
+                    'monto_real'   => $apertura->cierre->monto_real,
+                    'diferencia'   => $apertura->cierre->diferencia,
                     'fecha_cierre' => $apertura->cierre->fecha,
-                    'estado'     => $apertura->cierre->estadoCierre?->nombre,
-                    'created_at' => $apertura->cierre->created_at,
+                    'estado'       => $apertura->cierre->estadoCierre?->nombre,
+                    'created_at'   => $apertura->cierre->created_at,
                 ] : null,
             ];
         });
@@ -781,7 +903,7 @@ class CajaController extends Controller
         // Obtener movimientos hoy del usuario
         $movimientosHoy = MovimientoCaja::where('user_id', $usuarioDestino->id)
             ->whereDate('fecha', today())
-            ->with(['tipoOperacion', 'tipoPago', 'caja', 'usuario'])  // ✅ NUEVO: Agregar tipoPago y usuario
+            ->with(['tipoOperacion', 'tipoPago', 'caja', 'usuario']) // ✅ NUEVO: Agregar tipoPago y usuario
             ->orderBy('fecha', 'desc')
             ->get();
 
@@ -931,7 +1053,7 @@ class CajaController extends Controller
             $totalMontoEsperado = 0;
             $totalMontoReal     = 0;
             $totalDiferencia    = 0;
-            $estadoConsolidada     = \App\Models\EstadoCierre::obtenerIdConsolidada();
+            $estadoConsolidada  = \App\Models\EstadoCierre::obtenerIdConsolidada();
 
             // Procesar cada cierre pendiente
             foreach ($cierresPendientes as $cierre) {
@@ -970,7 +1092,7 @@ class CajaController extends Controller
             DB::rollBack();
             Log::error('Error consolidando cajas: ' . $e->getMessage(), [
                 'exception' => $e,
-                'user_id' => $usuarioDestino->id,
+                'user_id'   => $usuarioDestino->id,
             ]);
 
             return back()->withErrors([
@@ -1003,9 +1125,9 @@ class CajaController extends Controller
         $usuarioAutenticado = Auth::user();
 
         // ✅ VALIDACIÓN: Solo admin/super-admin puede hacer cierre general
-        if (!$usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin'])) {
+        if (! $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin'])) {
             return back()->withErrors([
-                'cierre' => 'No tienes permiso para realizar el cierre diario general'
+                'cierre' => 'No tienes permiso para realizar el cierre diario general',
             ]);
         }
 
@@ -1013,16 +1135,16 @@ class CajaController extends Controller
             DB::beginTransaction();
 
             $reporte = [
-                'fecha_ejecucion' => now(),
-                'ejecutado_por' => $usuarioAutenticado->name,
-                'cajas_procesadas' => [],
-                'cajas_sin_apertura_abierta' => [],
-                'total_cajas_cerradas' => 0,
+                'fecha_ejecucion'              => now(),
+                'ejecutado_por'                => $usuarioAutenticado->name,
+                'cajas_procesadas'             => [],
+                'cajas_sin_apertura_abierta'   => [],
+                'total_cajas_cerradas'         => 0,
                 'total_cajas_con_discrepancia' => 0,
-                'total_diferencias' => 0,
-                'total_monto_esperado' => 0,
-                'total_monto_real' => 0,
-                'errores' => [],
+                'total_diferencias'            => 0,
+                'total_monto_esperado'         => 0,
+                'total_monto_real'             => 0,
+                'errores'                      => [],
             ];
 
             // Obtener todas las cajas activas
@@ -1041,21 +1163,23 @@ class CajaController extends Controller
 
                     if ($aperturasAbiertas->isEmpty()) {
                         $reporte['cajas_sin_apertura_abierta'][] = [
-                            'caja_id' => $caja->id,
+                            'caja_id'     => $caja->id,
                             'caja_nombre' => $caja->nombre,
-                            'usuario' => $caja->usuario->name ?? 'Sin asignar',
-                            'razon' => 'No hay aperturas sin cierre',
+                            'usuario'     => $caja->usuario->name ?? 'Sin asignar',
+                            'razon'       => 'No hay aperturas sin cierre',
                         ];
                         continue;
                     }
 
                     // Procesar cada apertura abierta
                     foreach ($aperturasAbiertas as $apertura) {
-                        // Calcular monto esperado
-                        $montoEsperado = $this->calcularMontoEsperado($apertura, now());
+                        // ✅ Usar CierreCajaService para calcular monto esperado (dinero REAL en caja)
+                        $cierreCajaService = new CierreCajaService();
+                        $datosCalculados = $cierreCajaService->calcularDatos($apertura);
+                        $montoEsperado = $datosCalculados['efectivoEsperado']['total'] ?? 0;
 
                         // El monto real será igual al esperado (sin diferencias)
-                        $montoReal = $montoEsperado;
+                        $montoReal  = $montoEsperado;
                         $diferencia = 0;
 
                         // Obtener estado PENDIENTE
@@ -1063,14 +1187,14 @@ class CajaController extends Controller
 
                         // Crear cierre de caja
                         $cierre = CierreCaja::create([
-                            'caja_id' => $caja->id,
-                            'user_id' => $apertura->user_id,
+                            'caja_id'          => $caja->id,
+                            'user_id'          => $apertura->user_id,
                             'apertura_caja_id' => $apertura->id,
-                            'fecha' => now(),
-                            'monto_esperado' => $montoEsperado,
-                            'monto_real' => $montoReal,
-                            'diferencia' => $diferencia,
-                            'observaciones' => 'Cierre automático diario general',
+                            'fecha'            => now(),
+                            'monto_esperado'   => $montoEsperado,
+                            'monto_real'       => $montoReal,
+                            'diferencia'       => $diferencia,
+                            'observaciones'    => 'Cierre automático diario general',
                             'estado_cierre_id' => $estadoPendiente,
                         ]);
 
@@ -1079,38 +1203,38 @@ class CajaController extends Controller
 
                         // Registrar auditoría
                         AuditoriaCaja::create([
-                            'user_id' => $usuarioAutenticado->id,
-                            'caja_id' => $caja->id,
-                            'apertura_caja_id' => $apertura->id,
-                            'accion' => 'CIERRE_DIARIO_GENERAL',
+                            'user_id'             => $usuarioAutenticado->id,
+                            'caja_id'             => $caja->id,
+                            'apertura_caja_id'    => $apertura->id,
+                            'accion'              => 'CIERRE_DIARIO_GENERAL',
                             'operacion_intentada' => 'POST /cajas/admin/cierre-diario-json',
-                            'exitosa' => true,
-                            'detalle_operacion' => [
-                                'monto_esperado' => (float)$montoEsperado,
-                                'monto_real' => (float)$montoReal,
-                                'diferencia' => (float)$diferencia,
-                                'tipo_cierre' => 'AUTOMÁTICO_CONSOLIDADO',
+                            'exitosa'             => true,
+                            'detalle_operacion'   => [
+                                'monto_esperado' => (float) $montoEsperado,
+                                'monto_real'     => (float) $montoReal,
+                                'diferencia'     => (float) $diferencia,
+                                'tipo_cierre'    => 'AUTOMÁTICO_CONSOLIDADO',
                             ],
-                            'ip_address' => $request->ip(),
-                            'user_agent' => $request->userAgent(),
+                            'ip_address'          => $request->ip(),
+                            'user_agent'          => $request->userAgent(),
                         ]);
 
                         // Agregar al reporte
                         $reporte['cajas_procesadas'][] = [
-                            'caja_id' => $caja->id,
-                            'caja_nombre' => $caja->nombre,
-                            'usuario' => $apertura->usuario->name ?? 'Sin asignar',
+                            'caja_id'        => $caja->id,
+                            'caja_nombre'    => $caja->nombre,
+                            'usuario'        => $apertura->usuario->name ?? 'Sin asignar',
                             'apertura_fecha' => $apertura->fecha->format('Y-m-d H:i:s'),
-                            'monto_esperado' => (float)$montoEsperado,
-                            'monto_real' => (float)$montoReal,
-                            'diferencia' => (float)$diferencia,
-                            'estado' => 'CONSOLIDADA',
+                            'monto_esperado' => (float) $montoEsperado,
+                            'monto_real'     => (float) $montoReal,
+                            'diferencia'     => (float) $diferencia,
+                            'estado'         => 'CONSOLIDADA',
                         ];
 
                         $reporte['total_cajas_cerradas']++;
                         $reporte['total_monto_esperado'] += $montoEsperado;
-                        $reporte['total_monto_real'] += $montoReal;
-                        $reporte['total_diferencias'] += $diferencia;
+                        $reporte['total_monto_real']     += $montoReal;
+                        $reporte['total_diferencias']    += $diferencia;
 
                         if ($diferencia != 0) {
                             $reporte['total_cajas_con_discrepancia']++;
@@ -1119,13 +1243,13 @@ class CajaController extends Controller
 
                 } catch (\Exception $e) {
                     $reporte['errores'][] = [
-                        'caja_id' => $caja->id,
+                        'caja_id'     => $caja->id,
                         'caja_nombre' => $caja->nombre,
-                        'error' => $e->getMessage(),
+                        'error'       => $e->getMessage(),
                     ];
                     Log::error('Error en cierre diario general para caja', [
                         'caja_id' => $caja->id,
-                        'error' => $e->getMessage(),
+                        'error'   => $e->getMessage(),
                     ]);
                 }
             }
@@ -1137,8 +1261,8 @@ class CajaController extends Controller
 
             // Log final
             Log::info('Cierre diario general ejecutado exitosamente', [
-                'ejecutado_por' => $usuarioAutenticado->id,
-                'cajas_cerradas' => $reporte['total_cajas_cerradas'],
+                'ejecutado_por'     => $usuarioAutenticado->id,
+                'cajas_cerradas'    => $reporte['total_cajas_cerradas'],
                 'total_diferencias' => $reporte['total_diferencias'],
             ]);
 
@@ -1148,7 +1272,7 @@ class CajaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error en cierre diario general: ' . $e->getMessage(), [
-                'exception' => $e,
+                'exception'  => $e,
                 'usuario_id' => $usuarioAutenticado->id,
             ]);
 
@@ -1191,16 +1315,16 @@ class CajaController extends Controller
             DB::beginTransaction();
 
             $reporte = [
-                'fecha_ejecucion' => now(),
-                'ejecutado_por' => $usuarioAutenticado->name,
-                'cajas_procesadas' => [],
-                'cajas_sin_apertura_abierta' => [],
-                'total_cajas_cerradas' => 0,
+                'fecha_ejecucion'              => now(),
+                'ejecutado_por'                => $usuarioAutenticado->name,
+                'cajas_procesadas'             => [],
+                'cajas_sin_apertura_abierta'   => [],
+                'total_cajas_cerradas'         => 0,
                 'total_cajas_con_discrepancia' => 0,
-                'total_diferencias' => 0,
-                'total_monto_esperado' => 0,
-                'total_monto_real' => 0,
-                'errores' => [],
+                'total_diferencias'            => 0,
+                'total_monto_esperado'         => 0,
+                'total_monto_real'             => 0,
+                'errores'                      => [],
             ];
 
             // Obtener todas las cajas activas
@@ -1219,21 +1343,23 @@ class CajaController extends Controller
 
                     if ($aperturasAbiertas->isEmpty()) {
                         $reporte['cajas_sin_apertura_abierta'][] = [
-                            'caja_id' => $caja->id,
+                            'caja_id'     => $caja->id,
                             'caja_nombre' => $caja->nombre,
-                            'usuario' => $caja->usuario->name ?? 'Sin asignar',
-                            'razon' => 'No hay aperturas sin cierre',
+                            'usuario'     => $caja->usuario->name ?? 'Sin asignar',
+                            'razon'       => 'No hay aperturas sin cierre',
                         ];
                         continue;
                     }
 
                     // Procesar cada apertura abierta
                     foreach ($aperturasAbiertas as $apertura) {
-                        // Calcular monto esperado
-                        $montoEsperado = $this->calcularMontoEsperado($apertura, now());
+                        // ✅ Usar CierreCajaService para calcular monto esperado (dinero REAL en caja)
+                        $cierreCajaService = new CierreCajaService();
+                        $datosCalculados = $cierreCajaService->calcularDatos($apertura);
+                        $montoEsperado = $datosCalculados['efectivoEsperado']['total'] ?? 0;
 
                         // El monto real será igual al esperado (sin diferencias)
-                        $montoReal = $montoEsperado;
+                        $montoReal  = $montoEsperado;
                         $diferencia = 0;
 
                         // Obtener estado PENDIENTE
@@ -1241,14 +1367,14 @@ class CajaController extends Controller
 
                         // Crear cierre de caja
                         $cierre = CierreCaja::create([
-                            'caja_id' => $caja->id,
-                            'user_id' => $apertura->user_id,
+                            'caja_id'          => $caja->id,
+                            'user_id'          => $apertura->user_id,
                             'apertura_caja_id' => $apertura->id,
-                            'fecha' => now(),
-                            'monto_esperado' => $montoEsperado,
-                            'monto_real' => $montoReal,
-                            'diferencia' => $diferencia,
-                            'observaciones' => 'Cierre automático diario general',
+                            'fecha'            => now(),
+                            'monto_esperado'   => $montoEsperado,
+                            'monto_real'       => $montoReal,
+                            'diferencia'       => $diferencia,
+                            'observaciones'    => 'Cierre automático diario general',
                             'estado_cierre_id' => $estadoPendiente,
                         ]);
 
@@ -1257,38 +1383,38 @@ class CajaController extends Controller
 
                         // Registrar auditoría
                         AuditoriaCaja::create([
-                            'user_id' => $usuarioAutenticado->id,
-                            'caja_id' => $caja->id,
-                            'apertura_caja_id' => $apertura->id,
-                            'accion' => 'CIERRE_DIARIO_GENERAL',
+                            'user_id'             => $usuarioAutenticado->id,
+                            'caja_id'             => $caja->id,
+                            'apertura_caja_id'    => $apertura->id,
+                            'accion'              => 'CIERRE_DIARIO_GENERAL',
                             'operacion_intentada' => 'POST /cajas/admin/cierre-diario',
-                            'exitosa' => true,
-                            'detalle_operacion' => [
-                                'monto_esperado' => (float)$montoEsperado,
-                                'monto_real' => (float)$montoReal,
-                                'diferencia' => (float)$diferencia,
-                                'tipo_cierre' => 'AUTOMÁTICO_CONSOLIDADO',
+                            'exitosa'             => true,
+                            'detalle_operacion'   => [
+                                'monto_esperado' => (float) $montoEsperado,
+                                'monto_real'     => (float) $montoReal,
+                                'diferencia'     => (float) $diferencia,
+                                'tipo_cierre'    => 'AUTOMÁTICO_CONSOLIDADO',
                             ],
-                            'ip_address' => $request->ip(),
-                            'user_agent' => $request->userAgent(),
+                            'ip_address'          => $request->ip(),
+                            'user_agent'          => $request->userAgent(),
                         ]);
 
                         // Agregar al reporte
                         $reporte['cajas_procesadas'][] = [
-                            'caja_id' => $caja->id,
-                            'caja_nombre' => $caja->nombre,
-                            'usuario' => $apertura->usuario->name ?? 'Sin asignar',
+                            'caja_id'        => $caja->id,
+                            'caja_nombre'    => $caja->nombre,
+                            'usuario'        => $apertura->usuario->name ?? 'Sin asignar',
                             'apertura_fecha' => $apertura->fecha->format('Y-m-d H:i:s'),
-                            'monto_esperado' => (float)$montoEsperado,
-                            'monto_real' => (float)$montoReal,
-                            'diferencia' => (float)$diferencia,
-                            'estado' => 'CONSOLIDADA',
+                            'monto_esperado' => (float) $montoEsperado,
+                            'monto_real'     => (float) $montoReal,
+                            'diferencia'     => (float) $diferencia,
+                            'estado'         => 'CONSOLIDADA',
                         ];
 
                         $reporte['total_cajas_cerradas']++;
                         $reporte['total_monto_esperado'] += $montoEsperado;
-                        $reporte['total_monto_real'] += $montoReal;
-                        $reporte['total_diferencias'] += $diferencia;
+                        $reporte['total_monto_real']     += $montoReal;
+                        $reporte['total_diferencias']    += $diferencia;
 
                         if ($diferencia != 0) {
                             $reporte['total_cajas_con_discrepancia']++;
@@ -1297,13 +1423,13 @@ class CajaController extends Controller
 
                 } catch (\Exception $e) {
                     $reporte['errores'][] = [
-                        'caja_id' => $caja->id,
+                        'caja_id'     => $caja->id,
                         'caja_nombre' => $caja->nombre,
-                        'error' => $e->getMessage(),
+                        'error'       => $e->getMessage(),
                     ];
                     Log::error('Error en cierre diario general para caja', [
                         'caja_id' => $caja->id,
-                        'error' => $e->getMessage(),
+                        'error'   => $e->getMessage(),
                     ]);
                 }
             }
@@ -1312,14 +1438,14 @@ class CajaController extends Controller
 
             // Log final
             Log::info('Cierre diario general ejecutado exitosamente', [
-                'ejecutado_por' => $usuarioAutenticado->id,
-                'cajas_cerradas' => $reporte['total_cajas_cerradas'],
+                'ejecutado_por'     => $usuarioAutenticado->id,
+                'cajas_cerradas'    => $reporte['total_cajas_cerradas'],
                 'total_diferencias' => $reporte['total_diferencias'],
             ]);
 
             $mensaje = "✅ Cierre diario general completado\n" .
-                $reporte['total_cajas_cerradas'] . " caja(s) cerrada(s) y consolidada(s)\n" .
-                "Diferencia total: " . number_format($reporte['total_diferencias'], 2) . " Bs.";
+            $reporte['total_cajas_cerradas'] . " caja(s) cerrada(s) y consolidada(s)\n" .
+            "Diferencia total: " . number_format($reporte['total_diferencias'], 2) . " Bs.";
 
             return back()->with('success', $mensaje)
                 ->with('reporte_cierre', $reporte);
@@ -1327,7 +1453,7 @@ class CajaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error en cierre diario general: ' . $e->getMessage(), [
-                'exception' => $e,
+                'exception'  => $e,
                 'usuario_id' => $usuarioAutenticado->id,
             ]);
 
@@ -1472,11 +1598,11 @@ class CajaController extends Controller
 
         // ✅ Usar CierreCajaService para obtener TODOS los datos calculados
         $cierreCajaService = new CierreCajaService();
-        $datos = $cierreCajaService->calcularDatos($aperturaCaja);
+        $datos             = $cierreCajaService->calcularDatos($aperturaCaja);
 
         // Usar ImpresionService para generar el PDF
         $impresionService = app(\App\Services\ImpresionService::class);
-        $pdf = $impresionService->generarPDF('cierre_caja', $datos, $formato, ['fuente' => $fuente]);
+        $pdf              = $impresionService->generarPDF('cierre_caja', $datos, $formato, ['fuente' => $fuente]);
 
         if ($accion === 'stream') {
             return $pdf->stream();
@@ -1532,7 +1658,7 @@ class CajaController extends Controller
 
         // Usar ImpresionService para generar el PDF
         $impresionService = app(\App\Services\ImpresionService::class);
-        $pdf = $impresionService->generarPDF('movimientos_caja', $datos, $formato, ['fuente' => $fuente]);
+        $pdf              = $impresionService->generarPDF('movimientos_caja', $datos, $formato, ['fuente' => $fuente]);
 
         if ($accion === 'stream') {
             return $pdf->stream();
@@ -1582,13 +1708,13 @@ class CajaController extends Controller
                 ->latest()
                 ->first();
 
-            if (!$aperturaCaja) {
+            if (! $aperturaCaja) {
                 return back()->with('error', 'No se encontró la apertura de caja');
             }
 
             return $this->imprimirMovimientosCaja($aperturaCaja, new Request([
                 'formato' => $formato,
-                'accion' => 'download'
+                'accion'  => 'download',
             ]));
         } catch (\Exception $e) {
             Log::error('❌ [CajaController::exportarPdf] Error', [

@@ -305,6 +305,7 @@ export function OutputSelectionModal({
                                 {!accion ? (
                                     <div className="space-y-3">
                                         <button
+                                            autoFocus
                                             onClick={() => {
                                                 setAccion('imprimir');
                                                 setCargarImpresoras(true);

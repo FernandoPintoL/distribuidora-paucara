@@ -416,6 +416,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->name('cierre.imprimir')
             ->middleware('permission:cajas.cerrar');
 
+        Route::get('/{aperturaCaja}/datos-cierre', [\App\Http\Controllers\CajaController::class, 'obtenerDatosCierre'])
+            ->where('aperturaCaja', '[0-9]+')
+            ->name('datos-cierre')
+            ->middleware('permission:cajas.cerrar');
+
         Route::get('/{aperturaCaja}/movimientos/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirMovimientos'])
             ->where('aperturaCaja', '[0-9]+')
             ->name('movimientos.imprimir')

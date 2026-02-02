@@ -21,7 +21,7 @@ import AppLayout from '@/layouts/app-layout';
 import AperturaCajaModal from '@/presentation/components/AperturaCajaModal';
 import CierreCajaModal from '@/presentation/components/CierreCajaModal';
 import RegistrarMovimientoModal from '@/presentation/components/RegistrarGastoModal';
-import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
+import { OutputSelectionModal, type TipoDocumento } from '@/presentation/components/impresion/OutputSelectionModal';
 import { CajaEstadoCard, MovimientosDelDiaTable, HistorialAperturasTable } from './components';
 import { useCajas } from '@/application/hooks/use-cajas';
 import { toNumber } from '@/lib/cajas.utils';
@@ -60,6 +60,7 @@ export default function Index(props: CajasIndexProps) {
     const [showMovimientoModal, setShowMovimientoModal] = useState(false);
     const [isConsolidating, setIsConsolidating] = useState(false);
     const [showConsolidateDialog, setShowConsolidateDialog] = useState(false);
+    const [outputModal, setOutputModal] = useState<{ isOpen: boolean; printType?: 'cierre' | 'movimientos' }>({ isOpen: false });
 
     const { movimientosHoy, totalMovimientos, esVistaAdmin = false, usuarioDestino, historicoAperturas } = props;
 
@@ -243,29 +244,22 @@ export default function Index(props: CajasIndexProps) {
                                 <div className="flex gap-2">
                                     {/* Impresión de movimientos */}
                                     {cajaAbiertaHoy && movimientosHoy && movimientosHoy.length > 0 && (
-                                        <FormatoSelector
-                                            documentoId={cajaAbiertaHoy.id}
-                                            tipoDocumento="cajas"
-                                            formatos={[
-                                                { formato: 'A4', nombre: 'Reporte A4', descripcion: 'Hoja completa' },
-                                                { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Compacto' },
-                                                { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Muy compacto' },
-                                            ]}
-                                            className="text-sm"
-                                        />
+                                        <button
+                                            onClick={() => setOutputModal({ isOpen: true, printType: 'movimientos' })}
+                                            className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                                        >
+                                            📊 Movimientos
+                                        </button>
                                     )}
 
                                     {/* Impresión de cierre */}
                                     {cajaAbiertaHoy?.cierre && (
-                                        <FormatoSelector
-                                            documentoId={cajaAbiertaHoy.id}
-                                            tipoDocumento="cajas-cierre"
-                                            formatos={[
-                                                { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Compacto' },
-                                                { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Muy compacto' },
-                                            ]}
-                                            className="text-sm"
-                                        />
+                                        <button
+                                            onClick={() => setOutputModal({ isOpen: true, printType: 'cierre' })}
+                                            className="px-3 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+                                        >
+                                            🔒 Cierre de Caja
+                                        </button>
                                     )}
                                 </div>
                             </div>
@@ -311,7 +305,6 @@ export default function Index(props: CajasIndexProps) {
                 onClose={handleCerrarModalCierre}
                 cajaAbierta={cajaAbiertaHoy}
                 montoEsperado={cajaAbiertaHoy ? toNumber(cajaAbiertaHoy.monto_apertura) + toNumber(totalMovimientos) : 0}
-                movimientos={movimientosHoy}
             />
 
             <RegistrarMovimientoModal
@@ -516,6 +509,17 @@ export default function Index(props: CajasIndexProps) {
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ✅ Modal de selección de formato/acción para impresión */}
+            {cajaAbiertaHoy && (
+                <OutputSelectionModal
+                    isOpen={outputModal.isOpen}
+                    onClose={() => setOutputModal({ isOpen: false })}
+                    documentoId={cajaAbiertaHoy.id}
+                    tipoDocumento={'caja' as TipoDocumento}
+                    printType={outputModal.printType}
+                />
+            )}
 
             {/* ✅ NUEVO: Toaster para notificaciones */}
             <Toaster

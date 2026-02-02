@@ -17,6 +17,7 @@ interface TablaVentasProps {
 }
 
 export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
+    console.log('🚀 ~ file: tabla-ventas.tsx:22 ~ TablaVentas ~ ventas:', ventas);
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [anularModal, setAnularModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
     const [isAnulando, setIsAnulando] = useState(false);
@@ -287,7 +288,11 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
 
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                            {formatCurrency(venta.total, venta.moneda?.codigo)}
+                                            {/* {typeof venta.total === 'string'
+                                                ? formatCurrency(parseFloat(venta.total), venta.moneda?.codigo)
+                                                : formatCurrency(venta.total, venta.moneda?.codigo)
+                                            } */}
+                                            {venta.total}
                                         </div>
                                         {venta.moneda && (
                                             <div className="text-sm text-gray-500 dark:text-gray-400">
