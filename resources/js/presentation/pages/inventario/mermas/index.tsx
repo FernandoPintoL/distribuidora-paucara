@@ -456,7 +456,7 @@ export default function MermasIndex() {
                                                 <TipoMermaBadge tipo={merma.tipo_merma} />
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                                {merma.almacen.nombre}
+                                                {merma.almacen?.nombre || 'Sin almacén'}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm text-gray-900 dark:text-gray-100">
@@ -476,7 +476,7 @@ export default function MermasIndex() {
                                                 </div>
                                                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                                                     <User className="w-4 h-4 mr-1" />
-                                                    {merma.usuario.name}
+                                                    {merma.usuario?.name || 'Sistema'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

@@ -88,7 +88,7 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             movimientos.map((movimiento) => (
                                 <TableRow key={movimiento.id}>
                                     <TableCell className="font-medium">
-                                        {movimiento.numero}
+                                        {movimiento.referencia || movimiento.numero}
                                     </TableCell>
                                     <TableCell>
                                         {new Date(movimiento.fecha).toLocaleDateString()}

@@ -22,12 +22,17 @@ class StoreMermaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'stock_producto_id' => ['required', 'integer', 'exists:stock_productos,id'],
-            'cantidad' => ['required', 'integer', 'min:1'],
+            'almacen_id' => ['required', 'integer', 'exists:almacenes,id'],
+            'tipo_merma' => ['required', 'string', 'max:100'],
             'motivo' => ['required', 'string', 'max:500'],
-            'fecha_merma' => ['nullable', 'date', 'before_or_equal:today'],
-            'tipo_merma_id' => ['nullable', 'integer', 'exists:tipos_merma,id'],
-            'estado_merma_id' => ['nullable', 'integer', 'exists:estado_mermas,id'],
+            'observaciones' => ['nullable', 'string', 'max:1000'],
+            'productos' => ['required', 'array', 'min:1'],
+            'productos.*.producto_id' => ['required', 'integer', 'exists:productos,id'],
+            'productos.*.cantidad' => ['required', 'numeric', 'min:0.01'],
+            'productos.*.costo_unitario' => ['nullable', 'numeric', 'min:0'],
+            'productos.*.lote' => ['nullable', 'string', 'max:100'],
+            'productos.*.fecha_vencimiento' => ['nullable', 'date'],
+            'productos.*.observaciones' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -39,15 +44,15 @@ class StoreMermaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'stock_producto_id.required' => 'El producto es requerido',
-            'stock_producto_id.exists' => 'El producto seleccionado no existe',
-            'cantidad.required' => 'La cantidad es requerida',
-            'cantidad.min' => 'La cantidad debe ser al menos 1',
+            'almacen_id.required' => 'El almacén es requerido',
+            'almacen_id.exists' => 'El almacén seleccionado no existe',
+            'tipo_merma.required' => 'El tipo de merma es requerido',
             'motivo.required' => 'El motivo de la merma es requerido',
-            'motivo.max' => 'El motivo no puede exceder 500 caracteres',
-            'fecha_merma.before_or_equal' => 'La fecha de merma no puede ser futura',
-            'tipo_merma_id.exists' => 'El tipo de merma seleccionado no existe',
-            'estado_merma_id.exists' => 'El estado de merma seleccionado no existe',
+            'productos.required' => 'Debe agregar al menos un producto',
+            'productos.*.producto_id.required' => 'El producto es requerido',
+            'productos.*.producto_id.exists' => 'El producto seleccionado no existe',
+            'productos.*.cantidad.required' => 'La cantidad es requerida',
+            'productos.*.cantidad.min' => 'La cantidad debe ser mayor a 0',
         ];
     }
 
@@ -59,25 +64,11 @@ class StoreMermaRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'stock_producto_id' => 'producto',
-            'cantidad' => 'cantidad',
+            'almacen_id' => 'almacén',
+            'tipo_merma' => 'tipo de merma',
             'motivo' => 'motivo',
-            'fecha_merma' => 'fecha de merma',
-            'tipo_merma_id' => 'tipo de merma',
-            'estado_merma_id' => 'estado de merma',
+            'observaciones' => 'observaciones',
+            'productos' => 'productos',
         ];
-    }
-
-    /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
-    {
-        // Si no se proporciona fecha_merma, usar la fecha actual
-        if (!$this->has('fecha_merma')) {
-            $this->merge([
-                'fecha_merma' => now()->toDateString(),
-            ]);
-        }
     }
 }

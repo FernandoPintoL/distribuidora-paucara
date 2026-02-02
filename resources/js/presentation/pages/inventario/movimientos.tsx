@@ -49,6 +49,7 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
     almacenes = [],
     productos = []
 }) => {
+    console.log('MovimientosInventarioPage renderizado', { movimientos, filtros, stats });
     // ✅ Estado de UI
     const [activeTab, setActiveTab] = useState<'lista' | 'estadisticas'>('lista');
 

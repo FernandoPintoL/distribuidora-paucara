@@ -78,18 +78,65 @@ const RegistrarMermaPage: React.FC = () => {
     ];
 
     const buscarProductos = useCallback(async (termino: string) => {
-        if (termino.length < 2 || !formData.almacen_id) {
+        if (!termino.trim() || !formData.almacen_id) {
             setProductosDisponibles([]);
             return;
         }
 
         setCargandoProductos(true);
         try {
-            const response = await fetch(`/api/inventario/buscar-productos?q=${encodeURIComponent(termino)}&almacen_id=${formData.almacen_id}`);
+            const params = new URLSearchParams();
+            params.append('busqueda', termino);
+            params.append('almacen_id', formData.almacen_id);
+            params.append('rango_stock', 'todos');
+            params.append('ordenamiento', 'producto');
+
+            console.log('📤 [MERMAS] Enviando búsqueda:', {
+                url: `/api/inventario/stock-filtrado?${params.toString()}`,
+                parametros: {
+                    busqueda: termino,
+                    almacen_id: formData.almacen_id,
+                    rango_stock: 'todos',
+                    ordenamiento: 'producto'
+                }
+            });
+
+            const response = await fetch(`/api/inventario/stock-filtrado?${params.toString()}`);
             const data = await response.json();
-            setProductosDisponibles(data.data || []);
+
+            console.log('📥 [MERMAS] Respuesta recibida:', data);
+
+            if (data.success && Array.isArray(data.data)) {
+                // Convertir respuesta de stock-filtrado al formato esperado
+                // Filtrar duplicados por producto_id (tomar el primero de cada producto)
+                const productosMap = new Map();
+                for (const stock of data.data) {
+                    if (!productosMap.has(stock.producto_id)) {
+                        productosMap.set(stock.producto_id, {
+                            id: stock.producto_id,
+                            nombre: stock.producto_nombre,
+                            codigo: stock.producto_codigo_barra || stock.producto_sku || stock.producto_codigo,
+                            stock_actual: stock.cantidad,
+                            precio_venta: stock.precio_venta || 0
+                        });
+                    }
+                }
+                const productosFormatados = Array.from(productosMap.values());
+                console.log('✅ [MERMAS] Productos encontrados:', productosFormatados);
+
+                // Si hay un solo resultado, agregarlo automáticamente
+                if (productosFormatados.length === 1) {
+                    console.log('🎯 [MERMAS] Un solo resultado encontrado, agregando automáticamente...');
+                    agregarProducto(productosFormatados[0]);
+                } else {
+                    setProductosDisponibles(productosFormatados);
+                }
+            } else {
+                console.warn('⚠️ [MERMAS] No se encontraron resultados o error en respuesta:', data.message);
+                setProductosDisponibles([]);
+            }
         } catch (error) {
-            console.error('Error al buscar productos:', error);
+            console.error('❌ [MERMAS] Error al buscar productos:', error);
             setProductosDisponibles([]);
         } finally {
             setCargandoProductos(false);
@@ -107,7 +154,7 @@ const RegistrarMermaPage: React.FC = () => {
             producto_id: producto.id,
             producto,
             cantidad: 1,
-            costo_unitario: 0,
+            costo_unitario: (producto as any).precio_venta || 0,
             lote: '',
             fecha_vencimiento: '',
             observaciones: ''
@@ -374,19 +421,30 @@ const RegistrarMermaPage: React.FC = () => {
                             {formData.almacen_id && (
                                 <div className="mb-6">
                                     <Label htmlFor="busqueda-producto">Buscar producto para agregar</Label>
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                                        <Input
-                                            id="busqueda-producto"
-                                            type="text"
-                                            placeholder="Buscar productos por nombre o código..."
-                                            value={busquedaProducto}
-                                            onChange={(e) => {
-                                                setBusquedaProducto(e.target.value);
-                                                buscarProductos(e.target.value);
-                                            }}
-                                            className="pl-10 dark:bg-gray-900 dark:text-white dark:border-gray-700"
-                                        />
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                            <Input
+                                                id="busqueda-producto"
+                                                type="text"
+                                                placeholder="Buscar por nombre, SKU o código..."
+                                                value={busquedaProducto}
+                                                onChange={(e) => setBusquedaProducto(e.target.value)}
+                                                onKeyPress={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        buscarProductos(busquedaProducto);
+                                                    }
+                                                }}
+                                                className="pl-10 dark:bg-gray-900 dark:text-white dark:border-gray-700"
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            onClick={() => buscarProductos(busquedaProducto)}
+                                            disabled={cargandoProductos || !busquedaProducto.trim()}
+                                        >
+                                            {cargandoProductos ? 'Buscando...' : 'Buscar'}
+                                        </Button>
                                     </div>
 
                                     {/* Resultados de búsqueda */}
