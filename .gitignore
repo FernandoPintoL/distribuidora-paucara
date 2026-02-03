@@ -3,6 +3,7 @@
 /node_modules
 /public/build
 /public/hot
+/public/storage
 /storage/*.key
 /storage/pail
 /vendor
@@ -29,7 +30,3 @@ yarn-error.log
 /distribuidora-app
 /docs
 nul
-
-# Excepciones: Permitir la carpeta de productos
-!/storage/app/public/productos/
-!/storage/app/public/productos/**
