@@ -8,6 +8,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/presentation/components/ui/dialog';
 import { Plus, Eye, CreditCard, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
 import type { CuentasPorPagarIndexResponse, CuentaPorPagar, FiltrosCuentasPorPagar } from '@/domain/entities/compras';
 
 // Helper functions
@@ -44,6 +45,58 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
             newExpandedRows.add(cuentaId);
         }
         setExpandedRows(newExpandedRows);
+    };
+
+    // Estados para el modal de pago
+    const [mostrarModalPago, setMostrarModalPago] = useState(false);
+    const [cuentaSeleccionadaPago, setCuentaSeleccionadaPago] = useState<CuentaPorPagar | null>(null);
+    const [cuentasDelProveedor, setCuentasDelProveedor] = useState<any[]>([]);
+
+    const handleAbrirModalPago = (cuenta: CuentaPorPagar) => {
+        // Cargar cuentas del proveedor ANTES de abrir el modal
+        cargarCuentasDelProveedor(cuenta.compra?.proveedor?.id);
+
+        // Esperar un tick para asegurar que cuentasDelProveedor se actualice antes de abrir
+        setTimeout(() => {
+            setCuentaSeleccionadaPago(cuenta);
+            setMostrarModalPago(true);
+            console.log('✅ Modal de pago abierto con cuenta preseleccionada:', {
+                cuenta_id: cuenta.id,
+                proveedor_id: cuenta.compra?.proveedor?.id,
+                saldo: cuenta.saldo_pendiente
+            });
+        }, 50);
+    };
+
+    const cargarCuentasDelProveedor = async (proveedorId?: number) => {
+        if (!proveedorId) return;
+        try {
+            // Filtrar cuentas pendientes del proveedor actual de los datos que ya tenemos
+            const cuentasPendientes = cuentasPorPagar.cuentas_por_pagar.data.filter(
+                (c) => c.compra?.proveedor?.id === proveedorId
+            );
+            const cuentasFormateadas = cuentasPendientes.map((c) => ({
+                id: c.id,
+                venta_id: c.compra_id, // Para compras, usamos compra_id como venta_id
+                numero_venta: c.compra?.numero || `#${c.compra_id}`,
+                referencia_documento: '',
+                fecha_venta: c.compra?.fecha || '',
+                monto_original: c.monto_original,
+                saldo_pendiente: c.saldo_pendiente,
+                fecha_vencimiento: c.fecha_vencimiento,
+                dias_vencido: c.dias_vencido,
+                estado: c.estado,
+            }));
+            setCuentasDelProveedor(cuentasFormateadas);
+            console.log('✅ Cuentas cargadas para proveedor:', { proveedorId, cantidad: cuentasFormateadas.length, cuentas: cuentasFormateadas });
+        } catch (error) {
+            console.error('Error cargando cuentas del proveedor:', error);
+        }
+    };
+
+    const handlePagoRegistrado = () => {
+        // Recargar la página para actualizar los datos
+        router.get('/compras/cuentas-por-pagar');
     };
 
     // Validación defensiva para evitar errores si cuentasPorPagar es undefined
@@ -371,7 +424,7 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                                 {cuenta.estado !== 'PAGADO' && (
                                                     <Button
                                                         size="sm"
-                                                        onClick={() => router.get(`/compras/pagos/create?cuenta_por_pagar_id=${cuenta.id}`)}
+                                                        onClick={() => handleAbrirModalPago(cuenta)}
                                                         className="bg-green-600 hover:bg-green-700"
                                                     >
                                                         Pagar
@@ -523,7 +576,7 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                         <Button
                                             onClick={() => {
                                                 setModalDetalle({ isOpen: false });
-                                                router.get(`/compras/pagos/create?cuenta_por_pagar_id=${modalDetalle.cuenta!.id}`);
+                                                handleAbrirModalPago(modalDetalle.cuenta!);
                                             }}
                                             className="bg-green-600 hover:bg-green-700"
                                         >
@@ -535,6 +588,20 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                         )}
                     </DialogContent>
                 </Dialog>
+
+                {/* Modal para Registrar Pago */}
+                <RegistrarPagoModal
+                    show={mostrarModalPago}
+                    onHide={() => {
+                        setMostrarModalPago(false);
+                        setCuentaSeleccionadaPago(null);
+                    }}
+                    clienteId={0}
+                    cuentasPendientes={cuentasDelProveedor}
+                    onPagoRegistrado={handlePagoRegistrado}
+                    cuentaIdPreseleccionada={cuentaSeleccionadaPago?.id}
+                    tipo="compras"
+                />
             </div>
         </AppLayout>
     );
