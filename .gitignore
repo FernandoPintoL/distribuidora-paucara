@@ -26,7 +26,10 @@ yarn-error.log
 /.claude
 /.junie
 /websocket-paucara
-/documentaciones
 /distribuidora-app
 /docs
 nul
+
+# Excepciones: Permitir la carpeta de productos
+!/storage/app/public/productos/
+!/storage/app/public/productos/**
