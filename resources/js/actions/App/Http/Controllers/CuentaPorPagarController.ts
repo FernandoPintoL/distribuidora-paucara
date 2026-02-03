@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
+ * @see app/Http/Controllers/CuentaPorPagarController.php:17
  * @route '/compras/cuentas-por-pagar'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
+ * @see app/Http/Controllers/CuentaPorPagarController.php:17
  * @route '/compras/cuentas-por-pagar'
  */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
+ * @see app/Http/Controllers/CuentaPorPagarController.php:17
  * @route '/compras/cuentas-por-pagar'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
+ * @see app/Http/Controllers/CuentaPorPagarController.php:17
  * @route '/compras/cuentas-por-pagar'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
+ * @see app/Http/Controllers/CuentaPorPagarController.php:17
  * @route '/compras/cuentas-por-pagar'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
+ * @see app/Http/Controllers/CuentaPorPagarController.php:17
  * @route '/compras/cuentas-por-pagar'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CuentaPorPagarController::index
- * @see app/Http/Controllers/CuentaPorPagarController.php:11
+ * @see app/Http/Controllers/CuentaPorPagarController.php:17
  * @route '/compras/cuentas-por-pagar'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
+ * @see app/Http/Controllers/CuentaPorPagarController.php:191
  * @route '/compras/cuentas-por-pagar/export'
  */
 export const exportMethod = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ exportMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
+ * @see app/Http/Controllers/CuentaPorPagarController.php:191
  * @route '/compras/cuentas-por-pagar/export'
  */
 exportMethod.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ exportMethod.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
+ * @see app/Http/Controllers/CuentaPorPagarController.php:191
  * @route '/compras/cuentas-por-pagar/export'
  */
 exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
+ * @see app/Http/Controllers/CuentaPorPagarController.php:191
  * @route '/compras/cuentas-por-pagar/export'
  */
 exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
+ * @see app/Http/Controllers/CuentaPorPagarController.php:191
  * @route '/compras/cuentas-por-pagar/export'
  */
     const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
+ * @see app/Http/Controllers/CuentaPorPagarController.php:191
  * @route '/compras/cuentas-por-pagar/export'
  */
         exportMethodForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\CuentaPorPagarController::exportMethod
- * @see app/Http/Controllers/CuentaPorPagarController.php:95
+ * @see app/Http/Controllers/CuentaPorPagarController.php:191
  * @route '/compras/cuentas-por-pagar/export'
  */
         exportMethodForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +157,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     exportMethod.form = exportMethodForm
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
+ * @see app/Http/Controllers/CuentaPorPagarController.php:79
  * @route '/compras/cuentas-por-pagar/{cuenta}/show'
  */
 export const show = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -172,7 +172,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
+ * @see app/Http/Controllers/CuentaPorPagarController.php:79
  * @route '/compras/cuentas-por-pagar/{cuenta}/show'
  */
 show.url = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -205,7 +205,7 @@ show.url = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: 
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
+ * @see app/Http/Controllers/CuentaPorPagarController.php:79
  * @route '/compras/cuentas-por-pagar/{cuenta}/show'
  */
 show.get = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -214,7 +214,7 @@ show.get = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: 
 })
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
+ * @see app/Http/Controllers/CuentaPorPagarController.php:79
  * @route '/compras/cuentas-por-pagar/{cuenta}/show'
  */
 show.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -224,7 +224,7 @@ show.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id:
 
     /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
+ * @see app/Http/Controllers/CuentaPorPagarController.php:79
  * @route '/compras/cuentas-por-pagar/{cuenta}/show'
  */
     const showForm = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -234,7 +234,7 @@ show.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id:
 
             /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
+ * @see app/Http/Controllers/CuentaPorPagarController.php:79
  * @route '/compras/cuentas-por-pagar/{cuenta}/show'
  */
         showForm.get = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -243,7 +243,7 @@ show.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id:
         })
             /**
 * @see \App\Http\Controllers\CuentaPorPagarController::show
- * @see app/Http/Controllers/CuentaPorPagarController.php:73
+ * @see app/Http/Controllers/CuentaPorPagarController.php:79
  * @route '/compras/cuentas-por-pagar/{cuenta}/show'
  */
         showForm.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -259,7 +259,7 @@ show.head = (args: { cuenta: number | { id: number } } | [cuenta: number | { id:
     show.form = showForm
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
- * @see app/Http/Controllers/CuentaPorPagarController.php:82
+ * @see app/Http/Controllers/CuentaPorPagarController.php:88
  * @route '/compras/cuentas-por-pagar/{cuenta}/estado'
  */
 export const actualizarEstado = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -274,7 +274,7 @@ actualizarEstado.definition = {
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
- * @see app/Http/Controllers/CuentaPorPagarController.php:82
+ * @see app/Http/Controllers/CuentaPorPagarController.php:88
  * @route '/compras/cuentas-por-pagar/{cuenta}/estado'
  */
 actualizarEstado.url = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -307,7 +307,7 @@ actualizarEstado.url = (args: { cuenta: number | { id: number } } | [cuenta: num
 
 /**
 * @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
- * @see app/Http/Controllers/CuentaPorPagarController.php:82
+ * @see app/Http/Controllers/CuentaPorPagarController.php:88
  * @route '/compras/cuentas-por-pagar/{cuenta}/estado'
  */
 actualizarEstado.patch = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -317,7 +317,7 @@ actualizarEstado.patch = (args: { cuenta: number | { id: number } } | [cuenta: n
 
     /**
 * @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
- * @see app/Http/Controllers/CuentaPorPagarController.php:82
+ * @see app/Http/Controllers/CuentaPorPagarController.php:88
  * @route '/compras/cuentas-por-pagar/{cuenta}/estado'
  */
     const actualizarEstadoForm = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -332,7 +332,7 @@ actualizarEstado.patch = (args: { cuenta: number | { id: number } } | [cuenta: n
 
             /**
 * @see \App\Http\Controllers\CuentaPorPagarController::actualizarEstado
- * @see app/Http/Controllers/CuentaPorPagarController.php:82
+ * @see app/Http/Controllers/CuentaPorPagarController.php:88
  * @route '/compras/cuentas-por-pagar/{cuenta}/estado'
  */
         actualizarEstadoForm.patch = (args: { cuenta: number | { id: number } } | [cuenta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

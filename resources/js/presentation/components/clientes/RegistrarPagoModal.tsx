@@ -217,10 +217,9 @@ export default function RegistrarPagoModal({
                     observaciones: formData.observaciones || null,
                 };
             } else {
-                // Para cuentas por pagar (compras) - mantener estructura antigua
-                url = `/api/clientes/${clienteId}/pagos`;
+                // Para cuentas por pagar (compras)
+                url = `/compras/cuentas-por-pagar/${formData.cuenta_id}/registrar-pago`;
                 payload = {
-                    cuenta_por_cobrar_id: Number(formData.cuenta_id),
                     tipo_pago_id: Number(formData.tipo_pago_id),
                     monto: parseFloat(formData.monto),
                     fecha_pago: formData.fecha_pago,
@@ -228,7 +227,6 @@ export default function RegistrarPagoModal({
                     numero_transferencia: formData.numero_transferencia || null,
                     numero_cheque: formData.numero_cheque || null,
                     observaciones: formData.observaciones || null,
-                    moneda_id: 1,  // ✅ Moneda por defecto: BOB
                 };
             }
 

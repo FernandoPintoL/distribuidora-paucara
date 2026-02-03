@@ -2,8 +2,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\CuentaPorPagar;
+use App\Models\Pago;
 use App\Models\Proveedor;
+use App\Models\TipoPago;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class CuentaPorPagarController extends Controller
@@ -90,6 +96,96 @@ class CuentaPorPagarController extends Controller
         ]);
 
         return back()->with('success', 'Estado actualizado correctamente.');
+    }
+
+    public function registrarPago(Request $request, CuentaPorPagar $cuentaPorPagar): \Illuminate\Http\JsonResponse
+    {
+        try {
+            \Illuminate\Support\Facades\Log::info('📝 [PAGO CUENTAS POR PAGAR] Iniciando registro de pago', [
+                'cuenta_id'  => $cuentaPorPagar->id,
+                'usuario_id' => Auth::id(),
+            ]);
+
+            // Validar datos
+            $validated = $request->validate([
+                'monto'                => 'required|numeric|min:0.01',
+                'tipo_pago_id'         => [
+                    'required',
+                    'integer',
+                    function ($attribute, $value, $fail) {
+                        $tipoPago = \App\Models\TipoPago::find($value);
+                        if (! $tipoPago) {
+                            $fail('El tipo de pago seleccionado no existe.');
+                        }
+                    },
+                ],
+                'fecha_pago'           => 'required|date',
+                'numero_recibo'        => 'nullable|string',
+                'numero_transferencia' => 'nullable|string',
+                'numero_cheque'        => 'nullable|string',
+                'observaciones'        => 'nullable|string',
+            ]);
+
+            // Ejecutar en transacción
+            $pago = Illuminate\Support\Facades\DB::transaction(function () use ($validated, $cuentaPorPagar) {
+                // Crear registro de pago
+                $pago = \App\Models\Pago::create([
+                    'numero_pago'          => \App\Models\Pago::generarNumeroPago(),
+                    'cuenta_por_pagar_id'  => $cuentaPorPagar->id,
+                    'monto'                => $validated['monto'],
+                    'tipo_pago_id'         => $validated['tipo_pago_id'],
+                    'fecha'                => now(),
+                    'fecha_pago'           => $validated['fecha_pago'],
+                    'numero_recibo'        => $validated['numero_recibo'],
+                    'numero_transferencia' => $validated['numero_transferencia'],
+                    'numero_cheque'        => $validated['numero_cheque'],
+                    'observaciones'        => $validated['observaciones'],
+                    'usuario_id'           => Auth::id(),
+                    'estado'               => 'REGISTRADO',
+                ]);
+
+                // Actualizar saldo pendiente
+                $nuevoSaldo = $cuentaPorPagar->saldo_pendiente - $validated['monto'];
+                $cuentaPorPagar->update([
+                    'saldo_pendiente' => max(0, $nuevoSaldo),
+                    'estado'          => $nuevoSaldo <= 0 ? 'PAGADO' : 'PARCIAL',
+                ]);
+
+                Illuminate\Support\Facades\Log::info('✅ [PAGO CUENTAS POR PAGAR] Pago registrado exitosamente', [
+                    'pago_id'     => $pago->id,
+                    'cuenta_id'   => $cuentaPorPagar->id,
+                    'monto'       => $validated['monto'],
+                    'nuevo_saldo' => $nuevoSaldo,
+                ]);
+
+                return $pago;
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pago registrado exitosamente',
+                'data'    => [
+                    'pago'   => $pago,
+                    'cuenta' => $cuentaPorPagar->fresh(),
+                ],
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Illuminate\Support\Facades\Log::error('❌ [PAGO CUENTAS POR PAGAR] Error registrando pago', [
+                'cuenta_id'  => $cuentaPorPagar->id,
+                'error'      => $e->getMessage(),
+                'usuario_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'message' => 'Error al registrar el pago: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function export(Request $request)
