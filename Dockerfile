@@ -62,6 +62,7 @@ RUN npm ci
 # Create .env from environment variables (Railway provides these at build time)
 # This allows Vite to interpolate variables correctly during npm run build
 RUN cat > /app/.env << EOF
+NODE_ENV=production
 VITE_APP_NAME=${VITE_APP_NAME}
 VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
 VITE_WEBSOCKET_URL=${VITE_WEBSOCKET_URL}
