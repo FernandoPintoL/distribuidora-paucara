@@ -98,10 +98,10 @@ class CuentaPorPagarController extends Controller
         return back()->with('success', 'Estado actualizado correctamente.');
     }
 
-    public function registrarPago(Request $request, CuentaPorPagar $cuentaPorPagar): \Illuminate\Http\JsonResponse
+    public function registrarPago(Request $request, CuentaPorPagar $cuentaPorPagar): JsonResponse
     {
         try {
-            \Illuminate\Support\Facades\Log::info('📝 [PAGO CUENTAS POR PAGAR] Iniciando registro de pago', [
+            Log::info('📝 [PAGO CUENTAS POR PAGAR] Iniciando registro de pago', [
                 'cuenta_id'  => $cuentaPorPagar->id,
                 'usuario_id' => Auth::id(),
             ]);
@@ -113,7 +113,7 @@ class CuentaPorPagarController extends Controller
                     'required',
                     'integer',
                     function ($attribute, $value, $fail) {
-                        $tipoPago = \App\Models\TipoPago::find($value);
+                        $tipoPago = TipoPago::find($value);
                         if (! $tipoPago) {
                             $fail('El tipo de pago seleccionado no existe.');
                         }
@@ -127,10 +127,10 @@ class CuentaPorPagarController extends Controller
             ]);
 
             // Ejecutar en transacción
-            $pago = Illuminate\Support\Facades\DB::transaction(function () use ($validated, $cuentaPorPagar) {
+            $pago = DB::transaction(function () use ($validated, $cuentaPorPagar) {
                 // Crear registro de pago
-                $pago = \App\Models\Pago::create([
-                    'numero_pago'          => \App\Models\Pago::generarNumeroPago(),
+                $pago = Pago::create([
+                    'numero_pago'          => Pago::generarNumeroPago(),
                     'cuenta_por_pagar_id'  => $cuentaPorPagar->id,
                     'monto'                => $validated['monto'],
                     'tipo_pago_id'         => $validated['tipo_pago_id'],
@@ -151,7 +151,7 @@ class CuentaPorPagarController extends Controller
                     'estado'          => $nuevoSaldo <= 0 ? 'PAGADO' : 'PARCIAL',
                 ]);
 
-                Illuminate\Support\Facades\Log::info('✅ [PAGO CUENTAS POR PAGAR] Pago registrado exitosamente', [
+                Log::info('✅ [PAGO CUENTAS POR PAGAR] Pago registrado exitosamente', [
                     'pago_id'     => $pago->id,
                     'cuenta_id'   => $cuentaPorPagar->id,
                     'monto'       => $validated['monto'],
@@ -176,7 +176,7 @@ class CuentaPorPagarController extends Controller
                 'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            Illuminate\Support\Facades\Log::error('❌ [PAGO CUENTAS POR PAGAR] Error registrando pago', [
+            Log::error('❌ [PAGO CUENTAS POR PAGAR] Error registrando pago', [
                 'cuenta_id'  => $cuentaPorPagar->id,
                 'error'      => $e->getMessage(),
                 'usuario_id' => Auth::id(),
