@@ -30,3 +30,7 @@ yarn-error.log
 /distribuidora-app
 /docs
 nul
+
+# EXCEPCIÓN: Permitir subir la carpeta de productos
+!/storage/app/public/productos/
+!/storage/app/public/productos/**
