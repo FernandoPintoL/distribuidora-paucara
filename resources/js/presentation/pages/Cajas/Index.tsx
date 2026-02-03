@@ -242,6 +242,7 @@ export default function Index(props: CajasIndexProps) {
                 show={showAperturaModal}
                 onClose={handleCerrarModalApertura}
                 cajas={cajas}
+                cajaUsuarioId={cajas && cajas.length > 0 ? cajas[0].id : undefined}
             />
 
             <CierreCajaModal

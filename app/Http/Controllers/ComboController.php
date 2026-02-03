@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,34 +51,49 @@ class ComboController extends Controller
 
         $combo = null;
 
-        DB::transaction(function () use ($request, &$combo) {
-            $this->validarItems($request->items);
+        try {
+            DB::transaction(function () use ($request, &$combo) {
+                $this->validarItems($request->items);
 
-            $combo = Producto::create([
-                'sku'            => $request->sku,
-                'nombre'         => $request->nombre,
-                'descripcion'    => $request->descripcion,
-                'precio_venta'   => $request->precio_venta,
-                'es_combo'       => true,
-                'activo'         => true,
-                'empresa_id'     => auth()->user()?->empresa_id,
-                'fecha_creacion' => now(),
+                $combo = Producto::create([
+                    'sku'            => $request->sku,
+                    'nombre'         => $request->nombre,
+                    'descripcion'    => $request->descripcion,
+                    'precio_venta'   => $request->precio_venta,
+                    'es_combo'       => true,
+                    'activo'         => true,
+                    'empresa_id'     => auth()->user()?->empresa_id,
+                    'fecha_creacion' => now(),
+                ]);
+
+                $this->crearItems($combo->id, $request->items);
+
+                // Crear precios para el combo (venta y costo con el mismo valor)
+                $this->crearPreciosProducto($combo->id, $request->precio_venta);
+
+                Log::info('✅ [ComboController::store] Combo creado', [
+                    'combo_id'       => $combo->id,
+                    'sku'            => $combo->sku,
+                    'cantidad_items' => count($request->items),
+                ]);
+            });
+
+            return redirect()->route('combos.index')
+                ->with('success', "Combo \"{$combo->nombre}\" creado exitosamente.");
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return back()
+                ->withErrors(['sku' => 'El SKU ya existe. Por favor, usa un SKU único.'])
+                ->withInput();
+        } catch (\Exception $e) {
+            Log::error('❌ [ComboController::store] Error al crear combo', [
+                'error' => $e->getMessage(),
+                'sku'   => $request->sku,
             ]);
 
-            $this->crearItems($combo->id, $request->items);
-
-            // Crear precios para el combo (venta y costo con el mismo valor)
-            $this->crearPreciosProducto($combo->id, $request->precio_venta);
-
-            Log::info('✅ [ComboController::store] Combo creado', [
-                'combo_id'       => $combo->id,
-                'sku'            => $combo->sku,
-                'cantidad_items' => count($request->items),
-            ]);
-        });
-
-        return redirect()->route('combos.index')
-            ->with('success', "Combo \"{$combo->nombre}\" creado exitosamente.");
+            return back()
+                ->withErrors(['general' => 'Ocurrió un error al crear el combo. Por favor, intenta nuevamente.'])
+                ->withInput();
+        }
     }
 
     public function show(Producto $combo): Response
@@ -102,7 +118,7 @@ class ComboController extends Controller
     public function update(Request $request, Producto $combo): RedirectResponse
     {
         abort_unless($combo->es_combo, 404);
-        $this->validarRequest($request);
+        $this->validarRequest($request, $combo->id);
 
         DB::transaction(function () use ($request, $combo) {
             $this->validarItems($request->items, comboId: $combo->id);
@@ -144,10 +160,24 @@ class ComboController extends Controller
 
     // ── Privados ────────────────────────────────────────────────
 
-    private function validarRequest(Request $request): void
+    private function validarRequest(Request $request, ?int $comboId = null): void
     {
+        // Normalizar el SKU a mayúsculas
+        $skuNormalizado = strtoupper(trim($request->sku ?? ''));
+
+        // Validación personalizada (closure) para verificar SKU duplicado (case-insensitive)
+        $validarSkuUnico = function ($attribute, $value, $fail) use ($comboId, $skuNormalizado) {
+            $existe = Producto::whereRaw('UPPER(sku) = ?', [$skuNormalizado])
+                ->when($comboId, fn($q) => $q->where('id', '!=', $comboId))
+                ->exists();
+
+            if ($existe) {
+                $fail('El SKU ya existe. Por favor, usa un SKU único.');
+            }
+        };
+
         $request->validate([
-            'sku'                    => ['required', 'string', 'min:2', 'max:255'],
+            'sku'                    => ['required', 'string', 'min:2', 'max:255', $validarSkuUnico],
             'nombre'                 => ['required', 'string', 'min:2', 'max:255'],
             'descripcion'            => ['nullable', 'string', 'max:1000'],
             'precio_venta'           => ['required', 'numeric', 'min:0'],
@@ -156,6 +186,11 @@ class ComboController extends Controller
             'items.*.cantidad'       => ['required', 'numeric', 'min:0.01'],
             'items.*.precio_unitario'=> ['required', 'numeric', 'min:0'],
             'items.*.tipo_precio_id' => ['nullable', 'integer', 'exists:tipos_precio,id'],
+        ], [
+            'sku.required' => 'El SKU es requerido.',
+            'nombre.required' => 'El nombre es requerido.',
+            'items.required' => 'Debes agregar al menos un producto al combo.',
+            'items.min' => 'Debes agregar al menos un producto al combo.',
         ]);
     }
 
@@ -233,6 +268,7 @@ class ComboController extends Controller
     {
         return [
             'id'           => $combo->id,
+            'sku'          => $combo->sku,
             'nombre'       => $combo->nombre,
             'descripcion'  => $combo->descripcion,
             'precio_venta' => (float) $combo->precio_venta,

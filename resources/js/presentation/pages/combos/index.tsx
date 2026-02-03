@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { Link } from '@inertiajs/react';
+import { toast } from 'react-toastify';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/presentation/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -36,10 +45,29 @@ interface CombosIndexProps {
 }
 
 export default function CombosIndex({ combos }: CombosIndexProps) {
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDelete = (id: number) => {
-    if (confirm('¿Está seguro de que desea eliminar este combo?')) {
-      router.delete(routes.destroy(id).url);
-    }
+    setIsDeleting(true);
+    router.delete(routes.destroy(id).url, {
+      onSuccess: () => {
+        toast.success('Combo eliminado exitosamente', {
+          position: 'top-right',
+          autoClose: 3000,
+        });
+        setDeleteConfirm(null);
+      },
+      onError: (error) => {
+        toast.error('Error al eliminar el combo', {
+          position: 'top-right',
+          autoClose: 4000,
+        });
+      },
+      onFinish: () => {
+        setIsDeleting(false);
+      },
+    });
   };
 
   return (
@@ -80,8 +108,8 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                       <TableHead>Nombre</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead className="text-right">Items</TableHead>
-                      <TableHead className="text-right">Precio Venta</TableHead>
-                      <TableHead className="text-right">Costo Calculado</TableHead>
+                      <TableHead className="text-center">Precio Venta</TableHead>
+                      <TableHead className="text-center">Costo Calculado</TableHead>
                       <TableHead className="text-center">Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -91,12 +119,12 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                       <TableRow key={combo.id}>
                         <TableCell className="font-medium">{combo.nombre}</TableCell>
                         <TableCell>{combo.sku}</TableCell>
-                        <TableCell className="text-right">{combo.cantidad_items}</TableCell>
+                        <TableCell className="text-center">{combo.cantidad_items}</TableCell>
                         <TableCell className="text-right">
-                          ${combo.precio_venta.toFixed(2)}
+                          Bs {combo.precio_venta.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${combo.subtotal_costo.toFixed(2)}
+                          Bs {combo.subtotal_costo.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant={combo.activo ? 'default' : 'secondary'}>
@@ -113,7 +141,7 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(combo.id)}
+                              onClick={() => setDeleteConfirm(combo.id)}
                               className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 size={18} />
@@ -135,6 +163,30 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Diálogo de confirmación para eliminar */}
+        <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+          <AlertDialogContent>
+            <AlertDialogTitle>¿Eliminar combo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El combo será eliminado permanentemente.
+            </AlertDialogDescription>
+            <div className="flex gap-3 justify-end mt-4">
+              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteConfirm) {
+                    handleDelete(deleteConfirm);
+                  }
+                }}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );

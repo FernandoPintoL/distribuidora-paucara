@@ -20,11 +20,12 @@ interface Props {
     show: boolean;
     onClose: () => void;
     cajas: Caja[];
+    cajaUsuarioId?: number;
 }
 
-export default function AperturaCajaModal({ show, onClose, cajas }: Props) {
+export default function AperturaCajaModal({ show, onClose, cajas, cajaUsuarioId }: Props) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        caja_id: '',
+        caja_id: cajaUsuarioId?.toString() || '',
         monto_apertura: '',
         observaciones: ''
     });
@@ -81,7 +82,6 @@ export default function AperturaCajaModal({ show, onClose, cajas }: Props) {
                                     <SelectItem key={caja.id} value={caja.id.toString()}>
                                         <div className="flex flex-col">
                                             <span className="font-medium">{caja.nombre}</span>
-                                            <span className="text-sm text-gray-500">{caja.ubicacion}</span>
                                             <span className="text-xs text-blue-600">
                                                 Sugerido: {formatCurrency(caja.monto_inicial_dia)}
                                             </span>

@@ -57,6 +57,15 @@ class Producto extends Model
         ];
     }
 
+    /**
+     * Mutator: Convertir SKU a mayúsculas automáticamente
+     * Esto asegura consistencia y previene duplicados por diferencias de mayúsculas
+     */
+    public function setSku(?string $value): void
+    {
+        $this->attributes['sku'] = $value ? strtoupper(trim($value)) : null;
+    }
+
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);

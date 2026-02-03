@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
+import { toast } from 'react-toastify';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
@@ -181,12 +182,37 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
   }, [items]);
 
   const handleSelectProducto = (producto: Producto) => {
-    setSelectedProducto(producto);
-    setSearchQuery(producto.nombre);
+    // Verificar que el producto no esté ya en el combo
+    if (items.some(item => item.producto_id === producto.id)) {
+      alert('Este producto ya está en el combo');
+      return;
+    }
+
+    // Agregar directamente a la tabla
+    const newComboItem: ComboItem = {
+      producto_id: producto.id,
+      producto_nombre: producto.nombre,
+      producto_sku: producto.sku,
+      cantidad: 1,
+      precio_unitario: producto.precio_venta || 0,
+      tipo_precio_id: producto.tipo_precio_id_recomendado,
+      tipo_precio_nombre: producto.precios?.find(
+        p => p.tipo_precio_id === producto.tipo_precio_id_recomendado
+      )?.tipoPrecio?.nombre,
+      precios: producto.precios,
+    };
+
+    const updatedItems = [...items, newComboItem];
+    setItems(updatedItems);
+    setData('items', normalizeItems(updatedItems));
+
+    // Limpiar la búsqueda
+    setSearchQuery('');
     setShowResults(false);
     setSearchResults([]);
-    // Cargar precio de venta del producto
-    setPrecioUnitario(producto.precio_venta || 0);
+    setSelectedProducto(null);
+    setCantidad(1);
+    setPrecioUnitario(0);
   };
 
   const handleAddItem = () => {
@@ -264,6 +290,20 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     setData('items', normalizeItems(updatedItems));
   };
 
+  const handleUpdatePrecioUnitario = (productoId: number, nuevoPrecio: number) => {
+    const updatedItems = items.map(item => {
+      if (item.producto_id === productoId) {
+        return {
+          ...item,
+          precio_unitario: nuevoPrecio,
+        };
+      }
+      return item;
+    });
+    setItems(updatedItems);
+    setData('items', normalizeItems(updatedItems));
+  };
+
   const totalCosto = useMemo(() => {
     return items.reduce((sum, item) => {
       return sum + parseFloat(item.precio_unitario.toString()) * parseFloat(item.cantidad.toString());
@@ -286,6 +326,20 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     setPreviousTotalCosto(totalCosto);
   }, [totalCosto, items.length]);
 
+  // Mostrar toasts para errores
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      Object.entries(errors).forEach(([field, message]) => {
+        if (typeof message === 'string') {
+          toast.error(message, {
+            position: 'top-right',
+            autoClose: 4000,
+          });
+        }
+      });
+    }
+  }, [errors]);
+
   const margen = useMemo(() => {
     if (!data.precio_venta || totalCosto === 0) return 0;
     return ((parseFloat(data.precio_venta.toString()) - totalCosto) / totalCosto) * 100;
@@ -295,7 +349,10 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     e.preventDefault();
 
     if (items.length === 0) {
-      alert('Debes agregar al menos un producto al combo');
+      toast.error('Debes agregar al menos un producto al combo', {
+        position: 'top-right',
+        autoClose: 4000,
+      });
       return;
     }
 
@@ -305,9 +362,25 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     };
 
     if (isEditing) {
-      put(routes.update(combo.id).url, { data: formData });
+      put(routes.update(combo.id).url, {
+        data: formData,
+        onSuccess: () => {
+          toast.success('Combo actualizado exitosamente', {
+            position: 'top-right',
+            autoClose: 3000,
+          });
+        },
+      });
     } else {
-      post(routes.store().url, { data: formData });
+      post(routes.store().url, {
+        data: formData,
+        onSuccess: () => {
+          toast.success('Combo creado exitosamente', {
+            position: 'top-right',
+            autoClose: 3000,
+          });
+        },
+      });
     }
   };
 
@@ -410,7 +483,13 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                         type="text"
                         placeholder="Escribe SKU, ID o nombre del producto..."
                         value={searchQuery}
-                        onChange={(e) => handleSearch(e.target.value)}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSearch(searchQuery);
+                          }
+                        }}
                         onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
                         className="pl-10 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
                       />
@@ -429,6 +508,15 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                         </button>
                       )}
                     </div>
+                    <Button
+                      type="button"
+                      onClick={() => handleSearch(searchQuery)}
+                      disabled={loadingSearch || searchQuery.trim().length < 2}
+                      className="gap-2"
+                    >
+                      <Search size={18} />
+                      Buscar
+                    </Button>
                   </div>
 
                   {/* Resultados de búsqueda */}
@@ -495,17 +583,22 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                       onChange={(e) => setPrecioUnitario(parseFloat(e.target.value) || 0)}
                     />
                   </div>
+                  <div>
+                    <Button
+                      type="button"
+                      onClick={handleAddItem}
+                      className="w-full"
+                      disabled={!selectedProducto}
+                    >
+                      Agregar a la Tabla
+                    </Button>
+                  </div>
+
                 </div>
+
               )}
 
-              <Button
-                type="button"
-                onClick={handleAddItem}
-                className="w-full"
-                disabled={!selectedProducto}
-              >
-                Agregar a la Tabla
-              </Button>
+
             </CardContent>
           </Card>
 
@@ -521,11 +614,11 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Producto</TableHead>
-                        <TableHead className="text-right">Cantidad</TableHead>
-                        <TableHead className="text-right">Precio Unit.</TableHead>
-                        <TableHead className="text-right">Subtotal</TableHead>
+                        <TableHead className="text-center">Cantidad</TableHead>
+                        <TableHead className="text-center">Precio Unit.</TableHead>
+                        <TableHead className="text-center">Subtotal</TableHead>
                         <TableHead>Tipo de Precio</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
+                        <TableHead className="text-center">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -547,11 +640,20 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                               className="w-20 px-2 py-1 text-sm"
                             />
                           </TableCell>
-                          <TableCell className="text-right">
-                            ${parseFloat(item.precio_unitario.toString()).toFixed(2)}
+                          <TableCell className='text-center'>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              value={item.precio_unitario}
+                              onChange={(e) =>
+                                handleUpdatePrecioUnitario(item.producto_id, parseFloat(e.target.value) || 0)
+                              }
+                              className="w-24 px-2 py-1 text-sm"
+                            />
                           </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ${(parseFloat(item.precio_unitario.toString()) * parseFloat(item.cantidad.toString())).toFixed(2)}
+                          <TableCell className="text-center font-medium">
+                            Bs {(parseFloat(item.precio_unitario.toString()) * parseFloat(item.cantidad.toString())).toFixed(2)}
                           </TableCell>
                           <TableCell>
                             <select
@@ -572,7 +674,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                               ))}
                             </select>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-center">
                             <Button
                               type="button"
                               variant="ghost"
@@ -601,11 +703,11 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b dark:border-gray-700">
                   <span className="text-gray-600 dark:text-gray-400">Costo Total Calculado:</span>
-                  <span className="font-semibold dark:text-gray-100">${totalCosto.toFixed(2)}</span>
+                  <span className="font-semibold dark:text-gray-100">Bs {totalCosto.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b dark:border-gray-700">
                   <span className="text-gray-600 dark:text-gray-400">Precio de Venta:</span>
-                  <span className="font-semibold dark:text-gray-100">${typeof data.precio_venta === 'number' ? data.precio_venta.toFixed(2) : parseFloat(data.precio_venta.toString() || '0').toFixed(2)}</span>
+                  <span className="font-semibold dark:text-gray-100">Bs {typeof data.precio_venta === 'number' ? data.precio_venta.toFixed(2) : parseFloat(data.precio_venta.toString() || '0').toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">Margen de Ganancia:</span>
