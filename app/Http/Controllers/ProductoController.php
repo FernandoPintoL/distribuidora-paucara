@@ -1464,6 +1464,7 @@ class ProductoController extends Controller
         $limite        = $request->integer('limite', 10);
         $tipoBusqueda  = $request->string('tipo_busqueda', 'parcial'); // ✅ NUEVO: exacta o parcial
         $tipo          = $request->string('tipo', 'venta'); // ✅ NUEVO: 'venta' o 'compra'
+        $incluirCombos = $request->boolean('incluir_combos', false); // ✅ NUEVO: permitir búsqueda de combos
 
         // Obtener almacén: desde request > empresa autenticada > empresa principal > config
         // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
@@ -1485,6 +1486,7 @@ class ProductoController extends Controller
             'tipo'           => $tipo,
             'almacen_id'     => $almacenId,
             'limite'         => $limite,
+            'incluir_combos' => $incluirCombos,
         ]);
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
@@ -1534,10 +1536,38 @@ class ProductoController extends Controller
         }
 
         // ✅ NUEVO: PRIORIDAD 2 - Buscar por SKU exacto (case-insensitive)
-        $productoPorSku = $construirQueryBase(Producto::query())
-            ->whereRaw('LOWER(sku) = ?', [$searchLower])
-            ->limit(1)
-            ->get();
+        // Si incluir_combos=true, permitimos retornar combos incluso sin stock
+        // Si incluir_combos=false, excluimos combos completamente
+        $queryProductoPorSku = Producto::query()
+            ->select([
+                'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
+                'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
+                'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo'
+            ])
+            ->where('activo', true)
+            ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
+            ->whereRaw('LOWER(sku) = ?', [$searchLower]);
+
+        // Si NO incluimos combos, excluir combos y aplicar filtro de stock normal
+        if (!$incluirCombos) {
+            $queryProductoPorSku->where('es_combo', false); // ✅ NUEVO: Excluir combos
+            if ($tipo === 'venta') {
+                $queryProductoPorSku->whereHas('stock', function ($sq) use ($almacenId) {
+                    $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
+                });
+            }
+        }
+
+        $productoPorSku = $queryProductoPorSku->limit(1)->get();
+
+        // ✅ DEBUG: Log para verificar búsqueda por SKU
+        Log::info('🔍 Búsqueda por SKU', [
+            'sku' => $searchLower,
+            'incluir_combos' => $incluirCombos,
+            'resultados_encontrados' => $productoPorSku->count(),
+            'tipo' => $tipo,
+            'empresa_id' => $userEmpresaId
+        ]);
 
         if ($productoPorSku && $productoPorSku->count() > 0) {
             Log::info('✅ Producto encontrado por SKU: ' . $q);
@@ -1546,6 +1576,8 @@ class ProductoController extends Controller
 
         // ✅ PRIORIDAD 3 - Búsqueda normal (por nombre, código_barras, descripción, etc)
         $productos = $construirQueryBase(Producto::query())
+            // ✅ NUEVO: Excluir combos si incluir_combos=false
+            ->when(!$incluirCombos, fn($q) => $q->where('es_combo', false))
             ->where(function ($query) use ($searchLower, $esExacta) {
                 if ($esExacta) {
                     // ✅ BÚSQUEDA EXACTA: Para código de barras (escáner)
@@ -1600,6 +1632,16 @@ class ProductoController extends Controller
                     $q->select('id', 'producto_id', 'almacen_id', 'cantidad', 'cantidad_disponible', 'cantidad_reservada')
                         ->with('almacen:id,nombre');
                 },
+                'comboItems' => function ($q) {
+                    $q->select('id', 'combo_id', 'producto_id', 'cantidad', 'precio_unitario', 'tipo_precio_id')
+                        ->with([
+                            'producto' => function ($pq) {
+                                $pq->select('id', 'nombre', 'sku', 'codigo_barras', 'precio_venta', 'unidad_medida_id');
+                            },
+                            'producto.unidad:id,nombre,codigo',
+                            'tipoPrecio:id,nombre,codigo'
+                        ]);
+                },
             ])
             ->map(function ($producto) use ($almacenId, $tipo) {
                 $codigosTexto = $producto->codigosBarra->pluck('codigo')->toArray();
@@ -1607,16 +1649,59 @@ class ProductoController extends Controller
                 $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
                 $stockTotal = $producto->stock->sum('cantidad_disponible');
 
+                // ✅ MEJORADO: Buscar precio de venta con múltiples estrategias
+                $precioVentaObj = null;
+
+                // Estrategia 1: Buscar por tipoPrecio->codigo === 'VENTA'
                 $precioVentaObj = $producto->precios
                     ->first(fn($p) => $p->tipoPrecio?->codigo === 'VENTA');
+
+                // Estrategia 2: Si no encontró, buscar por tipoPrecio->nombre que contenga 'VENTA' (case-insensitive)
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios
+                        ->first(fn($p) => stripos($p->tipoPrecio?->nombre ?? '', 'VENTA') !== false);
+                }
+
+                // Estrategia 3: Si no encontró, buscar por nombre del precio que contenga 'VENTA'
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios
+                        ->first(fn($p) => stripos($p->nombre ?? '', 'VENTA') !== false);
+                }
+
+                // Estrategia 4: Si no encontró, buscar por es_precio_base
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios
+                        ->firstWhere('es_precio_base', true);
+                }
+
+                // Estrategia 5: Último recurso - usar el primer precio
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios->first();
+                }
+
                 $precioVenta = $precioVentaObj?->precio ?? 0;
+                $precioBase = $precioVenta;
 
-                $precioBase = ($tipo === 'venta')
-                    ? $precioVenta
-                    : ($precioVenta ?? $producto->precios->firstWhere('es_precio_base', true)?->precio ?? $producto->precios->first()?->precio ?? 0);
+                // ✅ MEJORADO: Buscar precio de costo con múltiples estrategias
+                $precioCostoObj = null;
 
-                $precioCosto = $producto->precios
-                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'COSTO')?->precio ?? 0;
+                // Estrategia 1: Buscar por tipoPrecio->codigo === 'COSTO'
+                $precioCostoObj = $producto->precios
+                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'COSTO');
+
+                // Estrategia 2: Si no encontró, buscar por tipoPrecio->nombre que contenga 'COSTO'
+                if (!$precioCostoObj) {
+                    $precioCostoObj = $producto->precios
+                        ->first(fn($p) => stripos($p->tipoPrecio?->nombre ?? '', 'COSTO') !== false);
+                }
+
+                // Estrategia 3: Si no encontró, buscar por nombre del precio que contenga 'COSTO'
+                if (!$precioCostoObj) {
+                    $precioCostoObj = $producto->precios
+                        ->first(fn($p) => stripos($p->nombre ?? '', 'COSTO') !== false);
+                }
+
+                $precioCosto = $precioCostoObj?->precio ?? 0;
 
                 // ✅ NUEVO: Obtener tipo_precio_id recomendado
                 $tipoPrecioIdRecomendado = null;
@@ -1654,6 +1739,28 @@ class ProductoController extends Controller
                 $almacenNombre = $stockAlmacen?->almacen?->nombre ?? 'Almacén Principal';
                 $segundoCodigoBarra = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';
 
+                // ✅ NUEVO: Preparar items del combo si es_combo = true
+                $comboItems = [];
+                if ($producto->es_combo && $producto->comboItems->count() > 0) {
+                    $comboItems = $producto->comboItems
+                        ->map(fn($item) => [
+                            'id'                    => $item->id,
+                            'combo_id'              => $item->combo_id,
+                            'producto_id'           => $item->producto_id,
+                            'producto_nombre'       => $item->producto?->nombre ?? '',
+                            'producto_sku'          => $item->producto?->sku ?? '',
+                            'producto_codigo_barras'=> $item->producto?->codigo_barras ?? '',
+                            'cantidad'              => (float) $item->cantidad,
+                            'precio_unitario'       => (float) $item->precio_unitario,
+                            'tipo_precio_id'        => $item->tipo_precio_id,
+                            'tipo_precio_nombre'    => $item->tipoPrecio?->nombre ?? '',
+                            'unidad_medida_id'      => $item->producto?->unidad_medida_id,
+                            'unidad_medida_nombre'  => $item->producto?->unidad?->nombre ?? null,
+                        ])
+                        ->values()
+                        ->all();
+                }
+
                 return [
                     'id'               => $producto->id,
                     'nombre'           => $producto->nombre,
@@ -1679,6 +1786,7 @@ class ProductoController extends Controller
                     'categoria'        => $producto->categoria?->nombre ?? '',
                     'marca'            => $producto->marca?->nombre ?? '',
                     'es_fraccionado'   => (bool) $producto->es_fraccionado,
+                    'es_combo'         => (bool) $producto->es_combo,
                     'unidad_medida_id' => $producto->unidad_medida_id,
                     'unidad_medida_nombre' => $producto->unidad?->nombre ?? null,
                     'conversiones'     => $producto->conversiones
@@ -1691,6 +1799,7 @@ class ProductoController extends Controller
                         ])
                         ->values()
                         ->all(),
+                    'combo_items'      => $comboItems,
                 ];
             });
 

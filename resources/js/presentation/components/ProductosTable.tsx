@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Fragment } from 'react';
 import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import BarcodeScannerComponent from 'react-qr-barcode-scanner';
@@ -108,6 +108,10 @@ export default function ProductosTable({
     const [editingField, setEditingField] = useState<{ index: number; field: string } | null>(null);
     // ✅ NUEVO: Estado local para tipos de precio seleccionados (cache para re-renderización)
     const [selectedTipoPrecio, setSelectedTipoPrecio] = useState<Record<number, number>>({});
+    // ✅ NUEVO: Estado para incluir combos en búsquedas (solo para ventas)
+    const [incluirCombos, setIncluirCombos] = useState(false);
+    // ✅ NUEVO: Estado para controlar qué combos están expandidos
+    const [expandedCombos, setExpandedCombos] = useState<Record<number, boolean>>({});
 
     // ✅ NUEVO: Estado para modal de cascada de precios
     const [modalCascadaState, setModalCascadaState] = useState<{
@@ -154,6 +158,11 @@ export default function ProductosTable({
                 tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
             });
 
+            // ✅ Pasar incluir_combos solo si es venta y está marcado
+            if (tipo === 'venta' && incluirCombos) {
+                params.append('incluir_combos', 'true');
+            }
+
             // ✅ Pasar almacen_id si está disponible
             if (almacen_id) {
                 params.append('almacen_id', almacen_id.toString());
@@ -166,6 +175,8 @@ export default function ProductosTable({
             }
 
             const data = await response.json();
+
+            console.log('📡 Respuesta API completa:', data.data);
 
             // Transformar respuesta de API a formato Producto
             const productosAPI = data.data.map((p: any) => ({
@@ -193,16 +204,43 @@ export default function ProductosTable({
                 })) || [],
                 // ✅ NUEVO: Incluir tipo de precio recomendado del backend
                 tipo_precio_id_recomendado: p.tipo_precio_id_recomendado,
-                tipo_precio_nombre_recomendado: p.tipo_precio_nombre_recomendado
+                tipo_precio_nombre_recomendado: p.tipo_precio_nombre_recomendado,
+                // ✅ NUEVO: Incluir es_combo
+                es_combo: p.es_combo || false,
+                combo_items: p.combo_items || []
             }));
 
+            console.log('✅ Productos transformados:', productosAPI);
+
             // ✅ NUEVO: Filtrar productos válidos para ventas (stock > 0 y precio_venta > 0)
+            // IMPORTANTE: Si incluirCombos=true, permitir combos sin stock ni precio_venta (se calcula de los componentes)
             const productosValidos = productosAPI.filter(p => {
                 if (tipo === 'venta') {
+                    const esCombo = (p as any).es_combo || false;
+                    const tieneComponentes = ((p as any).combo_items?.length || 0) > 0;
+
+                    // ✅ DEBUG: Log para verificar filtrado
+                    console.log(`📦 Filtrando producto ${p.nombre}:`, {
+                        es_combo: esCombo,
+                        incluir_combos: incluirCombos,
+                        stock: p.stock,
+                        precio_venta: p.precio_venta,
+                        tiene_componentes: tieneComponentes,
+                        resultado: esCombo && incluirCombos ? tieneComponentes : (p.stock > 0 && p.precio_venta > 0)
+                    });
+
+                    // Si es combo e incluirCombos=true, solo requerir que tenga componentes
+                    if (esCombo && incluirCombos) {
+                        return tieneComponentes;
+                    }
+
+                    // Para productos normales, siempre requiere stock y precio
                     return p.stock > 0 && p.precio_venta > 0;
                 }
                 return true; // Para compras mostrar todos
             });
+
+            console.log(`🔍 Productos encontrados: ${productosAPI.length}, Válidos: ${productosValidos.length}`, { productosValidos });
 
             setProductosDisponibles(productosValidos);
 
@@ -233,6 +271,11 @@ export default function ProductosTable({
                     tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
                 });
 
+                // ✅ Pasar incluir_combos solo si es venta y está marcado
+                if (tipo === 'venta' && incluirCombos) {
+                    params.append('incluir_combos', 'true');
+                }
+
                 if (almacen_id) {
                     params.append('almacen_id', almacen_id.toString());
                 }
@@ -249,16 +292,33 @@ export default function ProductosTable({
                     const productoAPI = data.data[0];
 
                     // ✅ NUEVO: Validar producto para ventas (stock > 0 y precio_venta > 0)
+                    // IMPORTANTE: Si es combo e incluirCombos=true, no requiere stock ni precio (se calcula de componentes)
                     if (tipo === 'venta') {
                         const stock = productoAPI.stock_disponible || 0;
                         const precioVenta = productoAPI.precio_base || 0;
+                        const esCombo = productoAPI.es_combo || false;
+                        const tieneComponentes = (productoAPI.combo_items?.length || 0) > 0;
 
-                        if (stock === 0) {
+                        // Si NO es combo, requerir stock
+                        if (!esCombo && stock === 0) {
                             NotificationService.error('Producto sin stock disponible');
                             return;
                         }
 
-                        if (precioVenta === 0) {
+                        // Si es combo pero NO está marcado incluirCombos, rechazar
+                        if (esCombo && !incluirCombos) {
+                            NotificationService.error('Para buscar combos, marca la opción "Incluir combos"');
+                            return;
+                        }
+
+                        // Si es combo, debe tener componentes
+                        if (esCombo && !tieneComponentes) {
+                            NotificationService.error('Combo sin productos componentes configurados');
+                            return;
+                        }
+
+                        // Si NO es combo, requiere precio
+                        if (!esCombo && precioVenta === 0) {
                             NotificationService.error('Producto sin precio de venta configurado');
                             return;
                         }
@@ -456,6 +516,22 @@ export default function ProductosTable({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01M12 18h4.01M12 9h4.01M12 6h4.01M12 3h4.01" />
                         </svg>
                     </button>
+
+                    {/* ✅ NUEVO: Checkbox para incluir combos (solo en ventas) */}
+                    {tipo === 'venta' && (
+                        <label className="flex items-center gap-1.5 px-2 py-2 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/20 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <input
+                                type="checkbox"
+                                checked={incluirCombos}
+                                onChange={(e) => setIncluirCombos(e.target.checked)}
+                                disabled={readOnly}
+                                className="w-3.5 h-3.5 rounded border-gray-300 dark:border-zinc-600 text-purple-600 focus:ring-purple-500 dark:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <span className="text-xs font-medium text-purple-700 dark:text-purple-400 whitespace-nowrap">
+                                Incluir combos
+                            </span>
+                        </label>
+                    )}
                 </div>
 
                 {/* ✅ Mostrar resultados solo si hay búsqueda realizada */}
@@ -572,6 +648,7 @@ export default function ProductosTable({
                                 // ✅ MODIFICADO: Usar detalle.producto si existe, sino buscar en productos
                                 // detalle.producto ya tiene toda la información necesaria
                                 const productoInfo = detalle.producto || productos.find(p => p.id === detalle.producto_id);
+                                const esCombo = productoInfo && (productoInfo as any).es_combo;
 
                                 // ✅ DEBUG: Loguear búsqueda de producto
                                 console.log(`🔍 Detalle #${index}:`, {
@@ -587,7 +664,7 @@ export default function ProductosTable({
                                 const tieneDiferencia = tipo === 'compra' && precioCosto > 0 && Math.abs(detalle.precio_unitario - precioCosto) > 0.01;
                                 const esAumento = precioCosto > 0 && detalle.precio_unitario > precioCosto;
 
-                                return (
+                                const content = (
                                     <tr key={detalle.producto_id} className={`hover:bg-gray-50 dark:hover:bg-zinc-800 ${tipo === 'compra' && tieneDiferencia && esAumento
                                         ? 'bg-amber-50 dark:bg-amber-950/10'
                                         : tipo === 'compra' && tieneDiferencia && !esAumento
@@ -929,6 +1006,22 @@ export default function ProductosTable({
                                                 : formatCurrency(detalle.subtotal)}
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap text-xs font-medium flex gap-2">
+                                            {/* ✅ NUEVO: Botón para expandir/contraer combo */}
+                                            {detalle.producto && (detalle.producto as any).es_combo && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExpandedCombos(prev => ({
+                                                        ...prev,
+                                                        [index]: !prev[index]
+                                                    }))}
+                                                    className="p-1 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded transition-colors"
+                                                    title={expandedCombos[index] ? "Ocultar componentes" : "Mostrar componentes"}
+                                                >
+                                                    <svg className={`w-4 h-4 transition-transform ${expandedCombos[index] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                                    </svg>
+                                                </button>
+                                            )}
                                             {/* ✅ NUEVO: Botón para abrir modal de cascada si hay diferencia */}
                                             {tipo === 'compra' && tieneDiferencia && (
                                                 <button
@@ -957,6 +1050,63 @@ export default function ProductosTable({
                                         </td>
                                     </tr>
                                 );
+
+                                // Si es combo, envolver en Fragment con componentes
+                                if (esCombo && expandedCombos[index]) {
+                                    return (
+                                        <Fragment key={`combo-${index}`}>
+                                            {content}
+                                            {/* Mostrar componentes del combo */}
+                                            {((productoInfo as any).combo_items || []).map((item: any, itemIndex: number) => (
+                                                <tr key={`combo-item-${index}-${itemIndex}`} className="bg-purple-50 dark:bg-purple-900/10 border-l-4 border-purple-400">
+                                                    <td className="px-4 py-2 whitespace-nowrap">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-4 h-4 flex items-center justify-center">
+                                                                <svg className="w-3 h-3 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                                </svg>
+                                                            </div>
+                                                            <div className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                                                                {item.producto_nombre}
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            SKU: {item.producto_sku}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-medium">
+                                                        {item.cantidad}
+                                                    </td>
+                                                    {tipo === 'venta' && (
+                                                        <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300">
+                                                            {item.unidad_medida_nombre || 'N/A'}
+                                                        </td>
+                                                    )}
+                                                    {tipo === 'compra' && (
+                                                        <>
+                                                            <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-mono">
+                                                                {formatCurrency(item.precio_unitario)}
+                                                            </td>
+                                                            <td colSpan={2}></td>
+                                                        </>
+                                                    )}
+                                                    {tipo === 'venta' && (
+                                                        <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-mono">
+                                                            {formatCurrency(item.precio_unitario)}
+                                                        </td>
+                                                    )}
+                                                    <td className="px-4 py-2 whitespace-nowrap text-xs font-medium text-purple-700 dark:text-purple-300">
+                                                        {formatCurrency(item.cantidad * item.precio_unitario)}
+                                                    </td>
+                                                    <td className="px-4 py-2 whitespace-nowrap"></td>
+                                                </tr>
+                                            ))}
+                                        </Fragment>
+                                    );
+                                }
+
+                                // Si no es combo o no está expandido, retornar solo la fila
+                                return content;
                             })}
                         </tbody>
                     </table>
