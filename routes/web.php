@@ -108,6 +108,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('productos/paginados/listar', [\App\Http\Controllers\ProductoController::class, 'getPaginados'])->middleware('permission:productos.manage')->name('productos.paginados');
     Route::get('productos/filtros/datos', [\App\Http\Controllers\ProductoController::class, 'getFiltrosData'])->middleware('permission:productos.manage')->name('productos.filtros-data');
 
+    // Rutas para combos (productos virtuales que agrupan otros productos)
+    Route::resource('combos', \App\Http\Controllers\ComboController::class)->middleware('permission:productos.manage');
+
     // Resource route DESPUÉS de las rutas específicas
     Route::resource('productos', \App\Http\Controllers\ProductoController::class)->except(['show'])->middleware('permission:productos.manage');
     Route::get('productos/{producto}/historial-precios', [\App\Http\Controllers\ProductoController::class, 'historialPrecios'])->middleware('permission:productos.manage')->name('productos.historial-precios');
@@ -255,6 +258,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('cuentas-por-pagar/{cuenta}/show', [\App\Http\Controllers\CuentaPorPagarController::class, 'show'])->name('cuentas-por-pagar.show');
         Route::patch('cuentas-por-pagar/{cuenta}/estado', [\App\Http\Controllers\CuentaPorPagarController::class, 'actualizarEstado'])->name('cuentas-por-pagar.actualizar-estado');
         Route::post('cuentas-por-pagar/{cuentaPorPagar}/registrar-pago', [\App\Http\Controllers\CuentaPorPagarController::class, 'registrarPago'])->name('cuentas-por-pagar.registrar-pago');
+        Route::post('cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}', [\App\Http\Controllers\CuentaPorPagarController::class, 'anularPago'])->name('cuentas-por-pagar.anular-pago');
 
         // Sistema de Pagos
         Route::get('pagos', [\App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');

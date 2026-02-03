@@ -32,6 +32,7 @@ import MarcaController from './MarcaController'
 import AlmacenController from './AlmacenController'
 import ConfiguracionGlobalController from './ConfiguracionGlobalController'
 import EmpresaController from './EmpresaController'
+import ComboController from './ComboController'
 import CodigoBarraController from './CodigoBarraController'
 import ReporteCodigosBarraController from './ReporteCodigosBarraController'
 import UnidadMedidaController from './UnidadMedidaController'
@@ -107,6 +108,7 @@ MarcaController,
 AlmacenController,
 ConfiguracionGlobalController,
 EmpresaController,
+ComboController,
 CodigoBarraController,
 ReporteCodigosBarraController,
 UnidadMedidaController,

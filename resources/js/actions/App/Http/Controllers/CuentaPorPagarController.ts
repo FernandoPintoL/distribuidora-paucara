@@ -346,6 +346,161 @@ actualizarEstado.patch = (args: { cuenta: number | { id: number } } | [cuenta: n
         })
     
     actualizarEstado.form = actualizarEstadoForm
-const CuentaPorPagarController = { index, exportMethod, show, actualizarEstado, export: exportMethod }
+/**
+* @see \App\Http\Controllers\CuentaPorPagarController::registrarPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:101
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/registrar-pago'
+ */
+export const registrarPago = (args: { cuentaPorPagar: number | { id: number } } | [cuentaPorPagar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: registrarPago.url(args, options),
+    method: 'post',
+})
+
+registrarPago.definition = {
+    methods: ["post"],
+    url: '/compras/cuentas-por-pagar/{cuentaPorPagar}/registrar-pago',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\CuentaPorPagarController::registrarPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:101
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/registrar-pago'
+ */
+registrarPago.url = (args: { cuentaPorPagar: number | { id: number } } | [cuentaPorPagar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { cuentaPorPagar: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { cuentaPorPagar: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    cuentaPorPagar: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        cuentaPorPagar: typeof args.cuentaPorPagar === 'object'
+                ? args.cuentaPorPagar.id
+                : args.cuentaPorPagar,
+                }
+
+    return registrarPago.definition.url
+            .replace('{cuentaPorPagar}', parsedArgs.cuentaPorPagar.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CuentaPorPagarController::registrarPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:101
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/registrar-pago'
+ */
+registrarPago.post = (args: { cuentaPorPagar: number | { id: number } } | [cuentaPorPagar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: registrarPago.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\CuentaPorPagarController::registrarPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:101
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/registrar-pago'
+ */
+    const registrarPagoForm = (args: { cuentaPorPagar: number | { id: number } } | [cuentaPorPagar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: registrarPago.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\CuentaPorPagarController::registrarPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:101
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/registrar-pago'
+ */
+        registrarPagoForm.post = (args: { cuentaPorPagar: number | { id: number } } | [cuentaPorPagar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: registrarPago.url(args, options),
+            method: 'post',
+        })
+    
+    registrarPago.form = registrarPagoForm
+/**
+* @see \App\Http\Controllers\CuentaPorPagarController::anularPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:210
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}'
+ */
+export const anularPago = (args: { cuentaPorPagar: number | { id: number }, pago: number | { id: number } } | [cuentaPorPagar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: anularPago.url(args, options),
+    method: 'post',
+})
+
+anularPago.definition = {
+    methods: ["post"],
+    url: '/compras/cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\CuentaPorPagarController::anularPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:210
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}'
+ */
+anularPago.url = (args: { cuentaPorPagar: number | { id: number }, pago: number | { id: number } } | [cuentaPorPagar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions) => {
+    if (Array.isArray(args)) {
+        args = {
+                    cuentaPorPagar: args[0],
+                    pago: args[1],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        cuentaPorPagar: typeof args.cuentaPorPagar === 'object'
+                ? args.cuentaPorPagar.id
+                : args.cuentaPorPagar,
+                                pago: typeof args.pago === 'object'
+                ? args.pago.id
+                : args.pago,
+                }
+
+    return anularPago.definition.url
+            .replace('{cuentaPorPagar}', parsedArgs.cuentaPorPagar.toString())
+            .replace('{pago}', parsedArgs.pago.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CuentaPorPagarController::anularPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:210
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}'
+ */
+anularPago.post = (args: { cuentaPorPagar: number | { id: number }, pago: number | { id: number } } | [cuentaPorPagar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: anularPago.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\CuentaPorPagarController::anularPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:210
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}'
+ */
+    const anularPagoForm = (args: { cuentaPorPagar: number | { id: number }, pago: number | { id: number } } | [cuentaPorPagar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: anularPago.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\CuentaPorPagarController::anularPago
+ * @see app/Http/Controllers/CuentaPorPagarController.php:210
+ * @route '/compras/cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}'
+ */
+        anularPagoForm.post = (args: { cuentaPorPagar: number | { id: number }, pago: number | { id: number } } | [cuentaPorPagar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: anularPago.url(args, options),
+            method: 'post',
+        })
+    
+    anularPago.form = anularPagoForm
+const CuentaPorPagarController = { index, exportMethod, show, actualizarEstado, registrarPago, anularPago, export: exportMethod }
 
 export default CuentaPorPagarController

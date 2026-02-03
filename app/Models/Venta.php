@@ -587,13 +587,16 @@ class Venta extends Model
             ];
         })->toArray();
 
+        // Después de construir $productos y antes del try:
+        $productosParaStock = $stockService->expandirCombos($productos);
+
         try {
             // ✅ CORRECCIÓN CR#1: NO validar stock aquí
             // La validación ocurre DENTRO de procesarSalidaVenta() con lockForUpdate()
             // Esto previene race conditions TOC/TOU
 
             // Procesar salida de stock (incluye validación con lock)
-            $stockService->procesarSalidaVenta($productos, $this->numero, $almacenId);
+            $stockService->procesarSalidaVenta($productosParaStock, $this->numero, $almacenId);
 
         } catch (Exception $e) {
             Log::error("Error procesando stock para venta {$this->numero}: " . $e->getMessage());

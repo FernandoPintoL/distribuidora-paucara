@@ -206,4 +206,87 @@ class CuentaPorPagarController extends Controller
         // Por ahora retornamos los datos como JSON para testing
         return response()->json($cuentas);
     }
+
+    public function anularPago(Request $request, CuentaPorPagar $cuentaPorPagar, Pago $pago): JsonResponse
+    {
+        try {
+            Log::info('🗑️ [ANULAR PAGO CUENTAS POR PAGAR] Iniciando anulación', [
+                'pago_id' => $pago->id,
+                'cuenta_id' => $cuentaPorPagar->id,
+                'usuario_id' => Auth::id(),
+            ]);
+
+            // Verificar permisos
+            if (!auth()->user()->hasRole(['admin', 'Admin'])) {
+                return response()->json(['message' => 'No tienes permiso'], 403);
+            }
+
+            // Validar que el pago pertenece a la cuenta
+            if ($pago->cuenta_por_pagar_id !== $cuentaPorPagar->id) {
+                return response()->json(['message' => 'El pago no pertenece a esta cuenta'], 422);
+            }
+
+            $motivo = $request->input('motivo', 'Sin motivo especificado');
+
+            // Ejecutar en transacción
+            DB::transaction(function () use ($pago, $cuentaPorPagar, $motivo) {
+                // Revertir movimiento de caja
+                if ($pago->movimientoCaja) {
+                    $movOriginal = $pago->movimientoCaja;
+                    $tipoAnulacion = \App\Models\TipoOperacionCaja::where('codigo', 'ANULACION')->firstOrFail();
+
+                    \App\Models\MovimientoCaja::create([
+                        'caja_id' => $movOriginal->caja_id,
+                        'tipo_operacion_id' => $tipoAnulacion->id,
+                        'numero_documento' => $cuentaPorPagar->compra?->numero ?? "CuentaPorPagar#{$cuentaPorPagar->id}",
+                        'observaciones' => "REVERSIÓN por anulación de pago #{$pago->id}",
+                        'monto' => abs($movOriginal->monto) * -1, // NEGATIVO (inverso del egreso)
+                        'fecha' => now(),
+                        'user_id' => Auth::id(),
+                    ]);
+                }
+
+                // Actualizar saldo de la cuenta (restaurar lo que se restó)
+                $nuevoSaldo = $cuentaPorPagar->saldo_pendiente + $pago->monto;
+                $cuentaPorPagar->update([
+                    'saldo_pendiente' => $nuevoSaldo,
+                    'estado' => $nuevoSaldo >= $cuentaPorPagar->monto_original ? 'PENDIENTE' : 'PARCIAL',
+                ]);
+
+                // Marcar pago como anulado
+                $pago->update([
+                    'estado' => 'ANULADO',
+                ]);
+
+                Log::info('✅ [ANULAR PAGO CUENTAS POR PAGAR] Pago anulado exitosamente', [
+                    'pago_id' => $pago->id,
+                    'cuenta_id' => $cuentaPorPagar->id,
+                    'monto' => $pago->monto,
+                    'nuevo_saldo' => $nuevoSaldo,
+                    'motivo' => $motivo,
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pago anulado exitosamente',
+                'data' => [
+                    'pago' => $pago->fresh(),
+                    'cuenta' => $cuentaPorPagar->fresh(),
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ [ANULAR PAGO CUENTAS POR PAGAR] Error anulando pago', [
+                'pago_id' => $pago->id,
+                'cuenta_id' => $cuentaPorPagar->id,
+                'error' => $e->getMessage(),
+                'usuario_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'message' => 'Error al anular el pago: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

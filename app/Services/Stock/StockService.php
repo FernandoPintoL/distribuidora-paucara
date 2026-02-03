@@ -416,4 +416,42 @@ class StockService
             now()->addDays($dias),
         ])->with('producto')->get();
     }
+
+    /**
+     * Expandir combos en sus componentes para operaciones de stock.
+     * Transformación pura: no escribe a DB. Si no hay combos, retorna entrada sin cambios.
+     * Agrega cantidades si el mismo producto aparece en varios combos o como línea independiente.
+     */
+    public function expandirCombos(array $productos): array
+    {
+        $ids = array_map(fn($item) => $item['producto_id'] ?? $item['id'], $productos);
+
+        $combos = Producto::whereIn('id', $ids)
+            ->where('es_combo', true)
+            ->with('comboItems')
+            ->get()
+            ->keyBy('id');
+
+        $expandido = [];
+
+        foreach ($productos as $item) {
+            $productoId = $item['producto_id'] ?? $item['id'];
+            $cantidad   = (float) $item['cantidad'];
+
+            if (isset($combos[$productoId])) {
+                foreach ($combos[$productoId]->comboItems as $comboItem) {
+                    $id = $comboItem->producto_id;
+                    $expandido[$id] = ($expandido[$id] ?? 0) + ((float) $comboItem->cantidad * $cantidad);
+                }
+            } else {
+                $expandido[$productoId] = ($expandido[$productoId] ?? 0) + $cantidad;
+            }
+        }
+
+        return array_map(
+            fn($prodId, $cant) => ['producto_id' => $prodId, 'cantidad' => $cant],
+            array_keys($expandido),
+            array_values($expandido)
+        );
+    }
 }

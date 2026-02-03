@@ -468,16 +468,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                         Monto Original
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Saldo Pendiente
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Vencimiento
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Estado
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Urgencia
                                     </th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Acciones
@@ -491,8 +482,6 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm text-gray-900 dark:text-white">
                                                     {cuenta.venta?.numero || `${cuenta.referencia_documento}`} | #{cuenta.id}
-
-
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -502,29 +491,27 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {formatCurrency(cuenta.monto_original)}
-                                                </div>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    Mont. Org.: {formatCurrency(cuenta.monto_original)}
+                                                </p>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    Saldo: {formatCurrency(cuenta.saldo_pendiente)}
+                                                </p>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {formatCurrency(cuenta.saldo_pendiente)}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900 dark:text-white">
+                                                <p className="text-sm text-gray-900 dark:text-white">
                                                     {formatDate(cuenta.fecha_vencimiento)}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <Badge variant={getEstadoBadge(cuenta.estado) as "default" | "secondary" | "destructive" | "outline"}>
-                                                    {cuenta.estado}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <Badge variant={getUrgenciaBadge(cuenta.dias_vencido) as "default" | "secondary" | "destructive" | "outline"}>
-                                                    {cuenta.dias_vencido > 0 ? `${cuenta.dias_vencido} días` : 'Al día'}
-                                                </Badge>
+                                                </p>
+                                                <p>
+                                                    <Badge variant={getEstadoBadge(cuenta.estado) as "default" | "secondary" | "destructive" | "outline"}>
+                                                        {cuenta.estado}
+                                                    </Badge>
+                                                </p>
+                                                <p>
+                                                    <Badge variant={getUrgenciaBadge(cuenta.dias_vencido) as "default" | "secondary" | "destructive" | "outline"}>
+                                                        {cuenta.dias_vencido > 0 ? `${cuenta.dias_vencido} días` : 'Al día'}
+                                                    </Badge>
+                                                </p>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex justify-end space-x-2">

@@ -31,6 +31,7 @@ class Producto extends Model
         'fecha_creacion',
         'es_alquilable',
         'es_fraccionado',
+        'es_combo',
         'categoria_id',
         'marca_id',
         'proveedor_id',
@@ -49,6 +50,7 @@ class Producto extends Model
             'activo' => 'boolean',
             'es_alquilable' => 'boolean',
             'es_fraccionado' => 'boolean',
+            'es_combo' => 'boolean',
             'fecha_creacion' => 'datetime',
             'precio_compra' => 'decimal:2',
             'precio_venta' => 'decimal:2',
@@ -83,6 +85,11 @@ class Producto extends Model
     public function precios()
     {
         return $this->hasMany(PrecioProducto::class, 'producto_id');
+    }
+
+    public function comboItems()
+    {
+        return $this->hasMany(ComboItem::class, 'combo_id');
     }
 
     public function stock()

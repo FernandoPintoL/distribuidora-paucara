@@ -6,9 +6,11 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/presentation/components/ui/dialog';
-import { Plus, Eye, CreditCard, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
+import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
+import { Plus, Eye, CreditCard, AlertTriangle, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
+import { toast } from 'react-toastify';
 import type { CuentasPorPagarIndexResponse, CuentaPorPagar, FiltrosCuentasPorPagar } from '@/domain/entities/compras';
 
 // Helper functions
@@ -99,6 +101,45 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
         router.get('/compras/cuentas-por-pagar');
     };
 
+    // Estados para anular pagos
+    const [pagoAAnular, setPagoAAnular] = useState<{ id: number; monto: number; cuenta_id: number } | null>(null);
+    const [motivoAnulacion, setMotivoAnulacion] = useState('');
+    const [anulandoPago, setAnulandoPago] = useState(false);
+
+    const handleAnularPago = async () => {
+        if (!pagoAAnular) return;
+
+        try {
+            setAnulandoPago(true);
+            const response = await fetch(`/compras/cuentas-por-pagar/${pagoAAnular.cuenta_id}/anular-pago/${pagoAAnular.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    motivo: motivoAnulacion,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(`✅ Pago de ${formatCurrency(pagoAAnular.monto)} anulado exitosamente`);
+                setPagoAAnular(null);
+                setMotivoAnulacion('');
+                router.get('/compras/cuentas-por-pagar');
+            } else {
+                toast.error(data.message || 'Error al anular el pago');
+            }
+        } catch (error) {
+            console.error('Error anulando pago:', error);
+            toast.error('Error al anular el pago');
+        } finally {
+            setAnulandoPago(false);
+        }
+    };
+
     // Validación defensiva para evitar errores si cuentasPorPagar es undefined
     if (!cuentasPorPagar || !cuentasPorPagar.filtros) {
         return (
@@ -145,6 +186,18 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
         if (diasVencido > 15) return 'secondary';
         if (diasVencido > 0) return 'default';
         return 'outline';
+    };
+
+    const getEstadoPagoBadge = (estado: string) => {
+        const colores = {
+            'REGISTRADO': 'secondary',
+            'CONFIRMADO': 'secondary',
+            'PENDIENTE': 'default',
+            'PROCESANDO': 'default',
+            'RECHAZADO': 'destructive',
+            'ANULADO': 'destructive',
+        };
+        return colores[estado as keyof typeof colores] || 'default';
     };
 
     return (
@@ -343,16 +396,7 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                         Monto Original
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Saldo Pendiente
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Vencimiento
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Estado
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Urgencia
                                     </th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Acciones
@@ -362,110 +406,124 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                 {cuentasPorPagar.cuentas_por_pagar.data.map((cuenta) => (
                                     <React.Fragment key={cuenta.id}>
-                                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 dark:text-white">
-                                                {cuenta.compra?.numero || `#${cuenta.compra_id}`}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 dark:text-white">
-                                                {cuenta.compra?.proveedor?.nombre || 'Sin proveedor'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {formatCurrency(cuenta.monto_original)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {formatCurrency(cuenta.saldo_pendiente)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 dark:text-white">
-                                                {formatDate(cuenta.fecha_vencimiento)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <Badge variant={getEstadoBadge(cuenta.estado) as "default" | "secondary" | "destructive" | "outline"}>
-                                                {cuenta.estado}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <Badge variant={getUrgenciaBadge(cuenta.dias_vencido) as "default" | "secondary" | "destructive" | "outline"}>
-                                                {cuenta.dias_vencido > 0 ? `${cuenta.dias_vencido} días` : 'Al día'}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <div className="flex justify-end space-x-2">
-                                                {cuenta.pagos && cuenta.pagos.length > 0 && (
+                                        <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900 dark:text-white">
+                                                    {cuenta.compra?.numero || `#${cuenta.compra_id}`}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900 dark:text-white">
+                                                    {cuenta.compra?.proveedor?.nombre || 'Sin proveedor'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    Mont. Orig.: {formatCurrency(cuenta.monto_original)}
+                                                </p>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    Saldo: {formatCurrency(cuenta.saldo_pendiente)}
+                                                </p>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <p className="text-sm text-gray-900 dark:text-white">
+                                                    {formatDate(cuenta.fecha_vencimiento)}
+                                                </p>
+                                                <p>
+                                                    <Badge variant={getEstadoBadge(cuenta.estado) as "default" | "secondary" | "destructive" | "outline"}>
+                                                        {cuenta.estado}
+                                                    </Badge>
+                                                </p>
+                                                <p>
+                                                    <Badge variant={getUrgenciaBadge(cuenta.dias_vencido) as "default" | "secondary" | "destructive" | "outline"}>
+                                                        {cuenta.dias_vencido > 0 ? `${cuenta.dias_vencido} días` : 'Al día'}
+                                                    </Badge>
+                                                </p>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <div className="flex justify-end space-x-2">
+                                                    {cuenta.pagos && cuenta.pagos.length > 0 && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => toggleRowExpanded(cuenta.id)}
+                                                            title={expandedRows.has(cuenta.id) ? 'Ocultar pagos' : 'Mostrar pagos'}
+                                                        >
+                                                            {expandedRows.has(cuenta.id) ? (
+                                                                <ChevronUp className="w-4 h-4" />
+                                                            ) : (
+                                                                <ChevronDown className="w-4 h-4" />
+                                                            )}
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => toggleRowExpanded(cuenta.id)}
-                                                        title={expandedRows.has(cuenta.id) ? 'Ocultar pagos' : 'Mostrar pagos'}
+                                                        onClick={() => setModalDetalle({ isOpen: true, cuenta })}
                                                     >
-                                                        {expandedRows.has(cuenta.id) ? (
-                                                            <ChevronUp className="w-4 h-4" />
-                                                        ) : (
-                                                            <ChevronDown className="w-4 h-4" />
-                                                        )}
+                                                        <Eye className="w-4 h-4" />
                                                     </Button>
-                                                )}
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => setModalDetalle({ isOpen: true, cuenta })}
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </Button>
-                                                {cuenta.estado !== 'PAGADO' && (
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => handleAbrirModalPago(cuenta)}
-                                                        className="bg-green-600 hover:bg-green-700"
-                                                    >
-                                                        Pagar
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {expandedRows.has(cuenta.id) && cuenta.pagos && cuenta.pagos.length > 0 && (
-                                        <tr className="bg-gray-50 dark:bg-gray-800/50">
-                                            <td colSpan={8} className="px-6 py-4">
-                                                <div className="space-y-2">
-                                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Historial de Pagos</h4>
-                                                    <div className="space-y-2">
-                                                        {cuenta.pagos.map((pago) => (
-                                                            <div
-                                                                key={pago.id}
-                                                                className="flex justify-between items-center p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
-                                                            >
-                                                                <div className="flex-1">
-                                                                    <div className="flex items-center gap-2 mb-1">
-                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                            {formatCurrency(pago.monto)}
-                                                                        </p>
-                                                                    </div>
-                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                                        {formatDate(pago.fecha_pago)} - {pago.tipo_pago?.nombre || 'Sin tipo'}
-                                                                    </p>
-                                                                </div>
-                                                                {pago.observaciones && (
-                                                                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                                                                        {pago.observaciones}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                                    {cuenta.estado !== 'PAGADO' && (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleAbrirModalPago(cuenta)}
+                                                            className="bg-green-600 hover:bg-green-700"
+                                                        >
+                                                            Pagar
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
-                                    )}
+                                        {expandedRows.has(cuenta.id) && cuenta.pagos && cuenta.pagos.length > 0 && (
+                                            <tr className="bg-gray-50 dark:bg-gray-800/50">
+                                                <td colSpan={8} className="px-6 py-4">
+                                                    <div className="space-y-2">
+                                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Historial de Pagos</h4>
+                                                        <div className="space-y-2">
+                                                            {cuenta.pagos.map((pago) => (
+                                                                <div
+                                                                    key={pago.id}
+                                                                    className="flex justify-between items-center p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
+                                                                >
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center gap-2 mb-1">
+                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                                {formatCurrency(pago.monto)}
+                                                                            </p>
+                                                                            {pago.estado && (
+                                                                                <Badge variant={getEstadoPagoBadge(pago.estado) as "default" | "secondary" | "destructive" | "outline"}>
+                                                                                    {pago.estado}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                            {formatDate(pago.fecha_pago)} - {pago.tipo_pago?.nombre || 'Sin tipo'}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {pago.observaciones && (
+                                                                            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                                                                                {pago.observaciones}
+                                                                            </p>
+                                                                        )}
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            onClick={() => setPagoAAnular({ id: pago.id, monto: pago.monto, cuenta_id: cuenta.id })}
+                                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                                            title="Anular pago"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </React.Fragment>
                                 ))}
                             </tbody>
@@ -547,9 +605,16 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                             {modalDetalle.cuenta.pagos.map((pago) => (
                                                 <div key={pago.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                     <div>
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                            {formatCurrency(pago.monto)}
-                                                        </p>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                {formatCurrency(pago.monto)}
+                                                            </p>
+                                                            {pago.estado && (
+                                                                <Badge variant={getEstadoPagoBadge(pago.estado) as "default" | "secondary" | "destructive" | "outline"}>
+                                                                    {pago.estado}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
                                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                                             {formatDate(pago.fecha_pago)} - {pago.tipo_pago?.nombre}
                                                         </p>
@@ -603,6 +668,68 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     tipo="compras"
                     verificarCaja={false}
                 />
+
+                {/* Modal de confirmación para anular pago */}
+                {pagoAAnular && (
+                    <Dialog open={!!pagoAAnular} onOpenChange={() => {
+                        setPagoAAnular(null);
+                        setMotivoAnulacion('');
+                    }}>
+                        <DialogContent className="max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-red-600">
+                                    ⚠️ Anular Pago
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                <Alert variant="destructive" className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertDescription className="text-red-800 dark:text-red-200">
+                                        ¿Está seguro de que desea anular este pago de <strong>{formatCurrency(pagoAAnular.monto)}</strong>?
+                                        <p className="text-xs mt-2">
+                                            Esta acción no puede deshacerse. Se revertirán todos los movimientos asociados.
+                                        </p>
+                                    </AlertDescription>
+                                </Alert>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                                        Motivo de anulación (opcional)
+                                    </label>
+                                    <textarea
+                                        value={motivoAnulacion}
+                                        onChange={(e) => setMotivoAnulacion(e.target.value)}
+                                        placeholder="Ej: Pago registrado erróneamente, proveedor no confirma..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none"
+                                        rows={3}
+                                        disabled={anulandoPago}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setPagoAAnular(null);
+                                        setMotivoAnulacion('');
+                                    }}
+                                    disabled={anulandoPago}
+                                    className="flex-1"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleAnularPago}
+                                    disabled={anulandoPago}
+                                    className="flex-1"
+                                >
+                                    {anulandoPago ? '⏳ Anulando...' : '❌ Anular Pago'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
         </AppLayout>
     );

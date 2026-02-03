@@ -75,6 +75,10 @@ class VentaService
         // ✅ MODIFICADO: NO validar stock para CREDITO (son promesas de pago, no ventas inmediatas)
         $esCREDITO = strtoupper($dto->politica_pago ?? '') === 'CREDITO';
 
+        // COMBO: expandir antes de validar y decrementar stock.
+        // $dto->detalles se preserva sin cambios para DetalleVenta.
+        $detallesParaStock = $this->stockService->expandirCombos($dto->detalles);
+
         if (!$esCREDITO) {
             Log::info('🔄 [VentaService::crear] Validando stock disponible', [
                 'almacen_id'     => $dto->almacen_id,
@@ -83,7 +87,7 @@ class VentaService
             ]);
 
             $validacionStock = $this->stockService->validarDisponible(
-                $dto->detalles,
+                $detallesParaStock,
                 $dto->almacen_id
             );
 
@@ -103,7 +107,7 @@ class VentaService
 
         // 3. Crear dentro de transacción
         // ✅ NUEVO: Pasar $esCREDITO al closure para permitir stock negativo
-        $venta = $this->transaction(function () use ($dto, $cajaId, $esCREDITO) {
+        $venta = $this->transaction(function () use ($dto, $cajaId, $esCREDITO, $detallesParaStock) {
             Log::debug('🔄 [VentaService::crear] Iniciando transacción', [
                 'proforma_id' => $dto->proforma_id,
             ]);
@@ -232,7 +236,7 @@ class VentaService
 
             // ✅ NUEVO: Permitir stock negativo para CREDITO (son promesas de pago, no ventas inmediatas)
             $this->stockService->procesarSalidaVenta(
-                $dto->detalles,
+                $detallesParaStock,
                 $venta->numero,
                 $dto->almacen_id,
                 permitirStockNegativo: $esCREDITO  // ✅ Permite stock negativo para CREDITO
