@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Fragment } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
@@ -7,7 +7,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/presentation/components/ui/dialog';
-import { Plus, Eye, CreditCard, AlertTriangle } from 'lucide-react';
+import { Plus, Eye, CreditCard, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import type { CuentasPorPagarIndexResponse, CuentaPorPagar, FiltrosCuentasPorPagar } from '@/domain/entities/compras';
 
 // Helper functions
@@ -32,6 +32,19 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
     const filtrosDefault: FiltrosCuentasPorPagar = {};
     const [filtros, setFiltros] = useState<FiltrosCuentasPorPagar>(cuentasPorPagar?.filtros || filtrosDefault);
     const [modalDetalle, setModalDetalle] = useState<{ isOpen: boolean; cuenta?: CuentaPorPagar }>({ isOpen: false });
+
+    // Estados para expandir/contraer filas de pagos
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+    const toggleRowExpanded = (cuentaId: number) => {
+        const newExpandedRows = new Set(expandedRows);
+        if (newExpandedRows.has(cuentaId)) {
+            newExpandedRows.delete(cuentaId);
+        } else {
+            newExpandedRows.add(cuentaId);
+        }
+        setExpandedRows(newExpandedRows);
+    };
 
     // Validación defensiva para evitar errores si cuentasPorPagar es undefined
     if (!cuentasPorPagar || !cuentasPorPagar.filtros) {
@@ -95,13 +108,13 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Cuentas por Pagar</h1>
                         <p className="text-gray-600 dark:text-gray-400">Gestión de deudas con proveedores</p>
                     </div>
-                    <Button
+                    {/* <Button
                         onClick={() => router.get('/compras/cuentas-por-pagar/create')}
                         className="bg-blue-600 hover:bg-blue-700"
                     >
                         <Plus className="w-5 h-5 mr-2" />
                         Nueva Cuenta por Pagar
-                    </Button>
+                    </Button> */}
                 </div>
 
                 {/* Estadísticas Rápidas */}
@@ -109,11 +122,11 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     <Card>
                         <CardContent className="p-6">
                             <div className="flex items-center">
-                                <div className="p-3 bg-blue-100 rounded-lg">
-                                    <CreditCard className="w-6 h-6 text-blue-600" />
+                                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                                    <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Total Pendiente</p>
+                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Pendiente</p>
                                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                         {formatCurrency(cuentasPorPagar.estadisticas.monto_total_pendiente)}
                                     </p>
@@ -125,11 +138,11 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     <Card>
                         <CardContent className="p-6">
                             <div className="flex items-center">
-                                <div className="p-3 bg-red-100 rounded-lg">
-                                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                                <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                                    <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
                                 </div>
                                 <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Vencidas</p>
+                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Vencidas</p>
                                     <p className="text-2xl font-bold text-red-600">
                                         {formatCurrency(cuentasPorPagar.estadisticas.monto_total_vencido)}
                                     </p>
@@ -141,11 +154,11 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     <Card>
                         <CardContent className="p-6">
                             <div className="flex items-center">
-                                <div className="p-3 bg-yellow-100 rounded-lg">
-                                    <CreditCard className="w-6 h-6 text-yellow-600" />
+                                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                                    <CreditCard className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                                 </div>
                                 <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Cuentas Vencidas</p>
+                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cuentas Vencidas</p>
                                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                         {cuentasPorPagar.estadisticas.cuentas_vencidas}
                                     </p>
@@ -157,11 +170,11 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     <Card>
                         <CardContent className="p-6">
                             <div className="flex items-center">
-                                <div className="p-3 bg-green-100 rounded-lg">
-                                    <CreditCard className="w-6 h-6 text-green-600" />
+                                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                                    <CreditCard className="w-6 h-6 text-green-600 dark:text-green-400" />
                                 </div>
                                 <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Promedio Días</p>
+                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Promedio Días</p>
                                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                         {cuentasPorPagar.estadisticas.promedio_dias_pago}
                                     </p>
@@ -176,18 +189,19 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     <CardContent className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Buscar</label>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Buscar</label>
                                 <Input
                                     value={filtros.q || ''}
                                     onChange={(e) => handleFiltroChange('q', e.target.value)}
                                     placeholder="Buscar por proveedor, número..."
+                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Proveedor</label>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Proveedor</label>
                                 <select
-                                    className="w-full p-2 border border-gray-300 rounded-md"
+                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
                                     value={filtros.proveedor_id || ''}
                                     onChange={(e) => handleFiltroChange('proveedor_id', e.target.value)}
                                 >
@@ -201,9 +215,9 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Estado</label>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
                                 <select
-                                    className="w-full p-2 border border-gray-300 rounded-md"
+                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
                                     value={filtros.estado || ''}
                                     onChange={(e) => handleFiltroChange('estado', e.target.value)}
                                 >
@@ -221,28 +235,30 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                         type="checkbox"
                                         checked={filtros.solo_vencidas || false}
                                         onChange={(e) => handleFiltroChange('solo_vencidas', e.target.checked)}
-                                        className="rounded border-gray-300"
+                                        className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800"
                                     />
-                                    <span className="text-sm text-gray-700">Solo vencidas</span>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">Solo vencidas</span>
                                 </label>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Fecha vencimiento desde</label>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha vencimiento desde</label>
                                 <Input
                                     type="date"
                                     value={filtros.fecha_vencimiento_desde || ''}
                                     onChange={(e) => handleFiltroChange('fecha_vencimiento_desde', e.target.value)}
+                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Fecha vencimiento hasta</label>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha vencimiento hasta</label>
                                 <Input
                                     type="date"
                                     value={filtros.fecha_vencimiento_hasta || ''}
                                     onChange={(e) => handleFiltroChange('fecha_vencimiento_hasta', e.target.value)}
+                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                                 />
                             </div>
                         </div>
@@ -261,38 +277,39 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                 {/* Tabla de Cuentas por Pagar */}
                 <Card>
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-800">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Compra
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Proveedor
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Monto Original
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Saldo Pendiente
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Vencimiento
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Estado
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Urgencia
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Acciones
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
+                            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                 {cuentasPorPagar.cuentas_por_pagar.data.map((cuenta) => (
-                                    <tr key={cuenta.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <React.Fragment key={cuenta.id}>
+                                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-900 dark:text-white">
                                                 {cuenta.compra?.numero || `#${cuenta.compra_id}`}
@@ -330,6 +347,20 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex justify-end space-x-2">
+                                                {cuenta.pagos && cuenta.pagos.length > 0 && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => toggleRowExpanded(cuenta.id)}
+                                                        title={expandedRows.has(cuenta.id) ? 'Ocultar pagos' : 'Mostrar pagos'}
+                                                    >
+                                                        {expandedRows.has(cuenta.id) ? (
+                                                            <ChevronUp className="w-4 h-4" />
+                                                        ) : (
+                                                            <ChevronDown className="w-4 h-4" />
+                                                        )}
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
@@ -349,6 +380,40 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                             </div>
                                         </td>
                                     </tr>
+                                    {expandedRows.has(cuenta.id) && cuenta.pagos && cuenta.pagos.length > 0 && (
+                                        <tr className="bg-gray-50 dark:bg-gray-800/50">
+                                            <td colSpan={8} className="px-6 py-4">
+                                                <div className="space-y-2">
+                                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Historial de Pagos</h4>
+                                                    <div className="space-y-2">
+                                                        {cuenta.pagos.map((pago) => (
+                                                            <div
+                                                                key={pago.id}
+                                                                className="flex justify-between items-center p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
+                                                            >
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                            {formatCurrency(pago.monto)}
+                                                                        </p>
+                                                                    </div>
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {formatDate(pago.fecha_pago)} - {pago.tipo_pago?.nombre || 'Sin tipo'}
+                                                                    </p>
+                                                                </div>
+                                                                {pago.observaciones && (
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                                                                        {pago.observaciones}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>
@@ -356,9 +421,9 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
 
                     {cuentasPorPagar.cuentas_por_pagar.data.length === 0 && (
                         <div className="text-center py-12">
-                            <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
+                            <CreditCard className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
                             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay cuentas por pagar</h3>
-                            <p className="mt-1 text-sm text-gray-500">No se encontraron cuentas con los filtros aplicados.</p>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No se encontraron cuentas con los filtros aplicados.</p>
                         </div>
                     )}
                 </Card>
@@ -376,37 +441,37 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Compra</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Compra</label>
                                         <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                             {modalDetalle.cuenta.compra?.numero || `#${modalDetalle.cuenta.compra_id}`}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Proveedor</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Proveedor</label>
                                         <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                             {modalDetalle.cuenta.compra?.proveedor?.nombre || 'Sin proveedor'}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Monto Original</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monto Original</label>
                                         <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
                                             {formatCurrency(modalDetalle.cuenta.monto_original)}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Saldo Pendiente</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Saldo Pendiente</label>
                                         <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
                                             {formatCurrency(modalDetalle.cuenta.saldo_pendiente)}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Fecha Vencimiento</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Vencimiento</label>
                                         <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                             {formatDate(modalDetalle.cuenta.fecha_vencimiento)}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Estado</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
                                         <Badge variant={getEstadoBadge(modalDetalle.cuenta.estado) as "default" | "secondary" | "destructive" | "outline"}>
                                             {modalDetalle.cuenta.estado}
                                         </Badge>
@@ -415,7 +480,7 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
 
                                 {modalDetalle.cuenta.observaciones && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Observaciones</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Observaciones</label>
                                         <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                             {modalDetalle.cuenta.observaciones}
                                         </p>
@@ -424,7 +489,7 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
 
                                 {modalDetalle.cuenta.pagos && modalDetalle.cuenta.pagos.length > 0 && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Historial de Pagos</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Historial de Pagos</label>
                                         <div className="space-y-2">
                                             {modalDetalle.cuenta.pagos.map((pago) => (
                                                 <div key={pago.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -432,12 +497,12 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                             {formatCurrency(pago.monto)}
                                                         </p>
-                                                        <p className="text-xs text-gray-500">
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
                                                             {formatDate(pago.fecha_pago)} - {pago.tipo_pago?.nombre}
                                                         </p>
                                                     </div>
                                                     {pago.observaciones && (
-                                                        <p className="text-xs text-gray-500 max-w-xs truncate">
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
                                                             {pago.observaciones}
                                                         </p>
                                                     )}

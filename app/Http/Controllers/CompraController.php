@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCompraRequest;
 use App\Http\Requests\UpdateCompraRequest;
 use App\Models\Compra;
+use App\Models\CuentaPorPagar;
 use App\Models\DetalleCompra;
 use App\Models\EstadoDocumento;
 use App\Models\Moneda;
@@ -36,8 +37,8 @@ class CompraController extends Controller
         $this->middleware('permission:compras.update')->only('update');
         $this->middleware('permission:compras.destroy')->only('destroy');
 
-        // ✅ Validar que el usuario tiene caja abierta ANTES de crear compras
-        $this->middleware('caja.abierta')->only(['store']);
+        // ✅ REMOVIDO: Las compras no requieren caja abierta
+        // $this->middleware('caja.abierta')->only(['store']);
     }
 
     public function index(Request $request)
@@ -229,79 +230,6 @@ class CompraController extends Controller
         return Inertia::render('compras/create', $data);
     }
 
-    /**
-     * Verificar si hay caja abierta (para validación frontend)
-     * GET /compras/check-caja-abierta
-     *
-     * Busca cajas abiertas de CUALQUIER DÍA, no solo del día actual
-     * (Una caja puede estar abierta desde días anteriores sin cerrarse)
-     */
-    public function checkCajaAbierta(Request $request)
-    {
-        try {
-            $user = Auth::user();
-
-            if (! $user) {
-                return response()->json([
-                    'tiene_caja_abierta' => false,
-                    'mensaje'            => 'Usuario no autenticado',
-                ]);
-            }
-
-            // ✅ SIMPLIFICADO: Buscar directamente caja abierta del usuario por user_id
-            $apertura = \App\Models\AperturaCaja::where('user_id', $user->id)
-                ->whereDoesntHave('cierre')
-                ->with('caja', 'usuario') // ✅ CORREGIDO: La relación se llama 'usuario', no 'user'
-                ->latest('fecha')
-                ->first();
-
-            // Si el usuario tiene caja abierta
-            if ($apertura) {
-                $hoy           = today();
-                $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
-                    ? $apertura->fecha
-                    : \Carbon\Carbon::parse($apertura->fecha);
-
-                $esDeHoy = $fechaApertura->isSameDay($hoy);
-                // ✅ CORREGIDO: Calcular días correctamente
-                $diasAtras = $esDeHoy ? 0 : abs($fechaApertura->diffInDays($hoy));
-
-                return response()->json([
-                    'tiene_caja_abierta' => true,
-                    'caja_id'            => $apertura->caja_id,
-                    'caja_nombre'        => $apertura->caja?->nombre,
-                    'apertura_id'        => $apertura->id,
-                    'apertura_fecha'     => $apertura->fecha,
-                    'es_de_hoy'          => $esDeHoy,
-                    'dias_atras'         => $diasAtras,
-                    'usuario_caja'       => $apertura->usuario?->name ?? 'Desconocido', // ✅ CORREGIDO: usuario, no user
-                    'mensaje'            => $esDeHoy
-                        ? '✅ Caja abierta hoy'
-                        : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
-                ]);
-            }
-
-            // Si no tiene caja abierta
-            return response()->json([
-                'tiene_caja_abierta' => false,
-                'mensaje'            => 'No hay caja abierta para este usuario',
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error en checkCajaAbierta:', [
-                'error' => $e->getMessage(),
-                'file'  => $e->getFile(),
-                'line'  => $e->getLine(),
-            ]);
-
-            return response()->json([
-                'tiene_caja_abierta' => false,
-                'error'              => true,
-                'mensaje'            => 'Error al verificar el estado de la caja',
-                'debug'              => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
-    }
-
     public function show($id)
     {
         $compra = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'tipoPago', 'detalles.producto'])
@@ -394,8 +322,7 @@ class CompraController extends Controller
             'detalles_count' => count($request->input('detalles', [])),
         ]);
 
-        $data   = $request->validated();
-        $cajaId = $request->attributes->get('caja_id'); // ✅ Del middleware
+        $data = $request->validated();
 
         Log::info('CompraController::store() - Validación exitosa, datos listos', [
             'numero_detalles' => count($data['detalles'] ?? []),
@@ -424,17 +351,31 @@ class CompraController extends Controller
                 }
             }
 
-            // ✅ Registrar movimiento de caja SOLO si el estado es APROBADO o FACTURADO (pago inmediato)
-            /*if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
-                $this->registrarMovimientoCaja($compra, $cajaId, $data['total']);
+            // ✅ NUEVO: Manejo de compras a CRÉDITO vs CONTADO
+            // Cargar la relación tipoPago para verificar si es crédito
+            $compra->load('tipoPago');
+            $esCredito = $compra->tipoPago?->es_credito ?? false;
 
-                Log::info('CompraController::store() - Compra creada como APROBADO - Inventario y movimiento de caja registrados', [
-                    'compra_numero' => $compra->numero,
-                    'almacen_id' => $data['almacen_id'] ?? null,
-                    'caja_id' => $cajaId,
-                    'total' => $data['total'],
-                ]);
-            }*/
+            Log::info('CompraController::store() - Tipo de pago evaluado', [
+                'compra_numero'   => $compra->numero,
+                'tipo_pago'       => $compra->tipoPago?->nombre,
+                'es_credito'      => $esCredito,
+                'estado_documento' => $compra->estadoDocumento?->nombre,
+            ]);
+
+            // ✅ Si es APROBADO o FACTURADO, procesar el pago
+            if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
+                if ($esCredito) {
+                    // 1️⃣ COMPRA A CRÉDITO: Crear CuentaPorPagar
+                    $this->crearCuentaPorPagar($compra, $data['total']);
+
+                    Log::info('CompraController::store() - Compra creada a CRÉDITO - CuentaPorPagar registrada', [
+                        'compra_numero'   => $compra->numero,
+                        'total'           => $data['total'],
+                        'almacen_id'      => $data['almacen_id'] ?? null,
+                    ]);
+                }
+            }
 
             DB::commit();
 
@@ -571,7 +512,7 @@ class CompraController extends Controller
                 'detalles_count'    => $compra->detalles->count(),
             ]);
 
-            // ✅ QUINTO: Si BORRADOR → APROBADO, registrar inventario Y movimiento de caja
+            // ✅ QUINTO: Si BORRADOR → APROBADO, registrar inventario Y movimiento de caja (o CuentaPorPagar si es crédito)
             if ($cambioAAprobado && $compra->detalles()->exists()) {
                 // Determine which scenario:
                 // Escenario 1: Detalles fueron modificados (recreadas)
@@ -594,9 +535,21 @@ class CompraController extends Controller
                     $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
                 }
 
-                // 2️⃣ Registrar movimiento de caja (si es pago inmediato)
-                $cajaId = $request->attributes->get('caja_id');
-                $this->registrarMovimientoCaja($compra, $cajaId, $data['total']);
+                // 2️⃣ ✨ NUEVO: Registrar CuentaPorPagar si es CRÉDITO
+                $compra->load('tipoPago');
+                $esCredito = $compra->tipoPago?->es_credito ?? false;
+
+                if ($esCredito) {
+                    // COMPRA A CRÉDITO: Crear CuentaPorPagar
+                    $this->crearCuentaPorPagar($compra, $data['total']);
+
+                    Log::info("Compra {$compra->numero} cambió a APROBADO - CuentaPorPagar registrada", [
+                        'compra_id'      => $compra->id,
+                        'tipo_pago'      => $compra->tipoPago?->nombre,
+                        'total'          => $data['total'],
+                        'escenario'      => $escenario,
+                    ]);
+                }
 
                 // 3️⃣ ✨ NUEVO: Detectar cambios de precio de costo
                 $servicioPrecios    = new DetectarCambiosPrecioService();
@@ -610,12 +563,12 @@ class CompraController extends Controller
                     ]);
                 }
 
-                Log::info("Compra {$compra->numero} cambió a APROBADO - Inventario y movimiento de caja registrados", [
-                    'compra_id'      => $compra->id,
-                    'almacen_id'     => $data['almacen_id'] ?? $compra->almacen_id,
-                    'caja_id'        => $cajaId,
-                    'escenario'      => $escenario,
-                    'cambios_precio' => count($productosConCambio) ?? 0,
+                Log::info("Compra {$compra->numero} cambió a APROBADO - Procesamiento completado", [
+                    'compra_id'       => $compra->id,
+                    'almacen_id'      => $data['almacen_id'] ?? $compra->almacen_id,
+                    'es_credito'      => $esCredito,
+                    'escenario'       => $escenario,
+                    'cambios_precio'  => count($productosConCambio) ?? 0,
                 ]);
             }
 
@@ -854,8 +807,7 @@ class CompraController extends Controller
             $motivo = $request->input('motivo', 'Sin motivo especificado');
 
             // 2. Cargar compra
-            $compra = Compra::with(['detalles.producto', 'cuentaPorPagar.pagos',
-                                    'movimientoCaja'])->findOrFail($id);
+            $compra = Compra::with(['detalles.producto', 'cuentaPorPagar.pagos'])->findOrFail($id);
 
             Log::info('🟠 [ANULAR COMPRA] COMPRA ENCONTRADA', [
                 'compra_id' => $compra->id,
@@ -904,22 +856,6 @@ class CompraController extends Controller
                     }
                 }
 
-                // Revertir caja
-                if ($compra->movimientoCaja) {
-                    try {
-                        $compra->revertirMovimientoCaja();
-                        Log::info('✅ Movimiento de caja revertido automáticamente', [
-                            'compra_id' => $compra->id,
-                            'movimiento_caja_id' => $compra->movimientoCaja->id,
-                            'monto' => $compra->movimientoCaja->monto,
-                        ]);
-                    } catch (\Exception $e) {
-                        Log::warning('⚠️ No se pudo revertir movimiento de caja al anular compra', [
-                            'compra_id' => $compra->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
 
                 // Actualizar observaciones
                 $usuarioNombre = auth()->user()->name ?? 'Sistema';
@@ -1150,6 +1086,48 @@ class CompraController extends Controller
 
         // Si después de todos los intentos no se generó, usar timestamp como fallback
         return sprintf('COMP%s-%s', $fecha, substr(microtime(true) * 10000, -6));
+    }
+
+    /**
+     * Crear cuenta por pagar para compra a crédito
+     *
+     * Registra una CuentaPorPagar cuando la compra es a crédito,
+     * calculando fecha de vencimiento (7 días desde la compra)
+     *
+     * @param Compra $compra
+     * @param float $monto Monto total de la compra
+     */
+    private function crearCuentaPorPagar(Compra $compra, float $monto): void
+    {
+        try {
+            $fechaVencimiento = $compra->fecha->addDays(7);
+
+            $cuentaPorPagar = CuentaPorPagar::create([
+                'compra_id'           => $compra->id,
+                'monto_original'      => $monto,
+                'saldo_pendiente'     => $monto,
+                'fecha_vencimiento'   => $fechaVencimiento,
+                'dias_vencido'        => 0,
+                'estado'              => 'PENDIENTE',
+                'observaciones'       => "Compra #{$compra->numero} - Proveedor: {$compra->proveedor?->nombre}",
+            ]);
+
+            Log::info('CuentaPorPagar creada para compra a crédito', [
+                'compra_id'              => $compra->id,
+                'compra_numero'          => $compra->numero,
+                'cuenta_por_pagar_id'    => $cuentaPorPagar->id,
+                'monto'                  => $monto,
+                'fecha_vencimiento'      => $fechaVencimiento,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al crear CuentaPorPagar para compra', [
+                'compra_id'   => $compra->id,
+                'compra_numero' => $compra->numero,
+                'error'       => $e->getMessage(),
+            ]);
+
+            throw new \Exception('Error al registrar cuenta por pagar: ' . $e->getMessage());
+        }
     }
 
     /**

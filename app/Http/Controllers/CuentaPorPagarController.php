@@ -10,7 +10,7 @@ class CuentaPorPagarController extends Controller
 {
     public function index(Request $request)
     {
-        $query = CuentaPorPagar::with(['compra.proveedor'])
+        $query = CuentaPorPagar::with(['compra.proveedor', 'pagos.tipoPago'])
             ->when($request->estado, function ($q) use ($request) {
                 $q->where('estado', $request->estado);
             })
